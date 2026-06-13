@@ -81,15 +81,16 @@ class TestStripeSignatureVerification:
     @patch("backend.routers.stripe_webhooks.stripe.Webhook.construct_event")
     @pytest.mark.asyncio
     async def test_invalid_signature_returns_400(self, mock_construct):
+        import stripe
         from backend.routers.stripe_webhooks import stripe_webhook
         from fastapi import HTTPException
 
-        # Simulate SignatureVerificationError
-        class FakeSignatureError(Exception):
-            pass
-
-        FakeSignatureError.__name__ = "SignatureVerificationError"
-        mock_construct.side_effect = FakeSignatureError("bad sig")
+        # GH #99: raise the REAL stripe.SignatureVerificationError. The old test
+        # spoofed a fake exception's __name__ to exercise the buggy string-match
+        # union; the corrected contract is that a genuine signature error -> 400.
+        mock_construct.side_effect = stripe.SignatureVerificationError(
+            "bad sig", "sig_header"
+        )
 
         request = MagicMock()
         request.headers = {"stripe-signature": "bad_sig"}
@@ -103,6 +104,29 @@ class TestStripeSignatureVerification:
             await stripe_webhook(request)
         assert exc_info.value.status_code == 400
         assert "Invalid signature" in exc_info.value.detail
+
+    @patch("backend.routers.stripe_webhooks.stripe.Webhook.construct_event")
+    @pytest.mark.asyncio
+    async def test_unexpected_construct_error_returns_500(self, mock_construct):
+        # GH #99: a non-signature, non-payload error (misconfigured secret, SDK
+        # fault) must surface as 500 so Stripe RETRIES, not a bare re-raise or a
+        # misleading 400. The old union collapsed this path.
+        from backend.routers.stripe_webhooks import stripe_webhook
+        from fastapi import HTTPException
+
+        mock_construct.side_effect = RuntimeError("boom")
+
+        request = MagicMock()
+        request.headers = {"stripe-signature": "whatever"}
+
+        async def mock_body():
+            return b'{"test": true}'
+
+        request.body = mock_body
+
+        with pytest.raises(HTTPException) as exc_info:
+            await stripe_webhook(request)
+        assert exc_info.value.status_code == 500
 
 
 # ── Event routing tests ──────────────────────────────────────

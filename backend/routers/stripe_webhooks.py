@@ -39,12 +39,20 @@ async def stripe_webhook(request: Request):
         event = stripe.Webhook.construct_event(
             payload, sig_header, settings.stripe_webhook_secret
         )
+    except stripe.SignatureVerificationError:
+        # Bad signature is a client error (or a spoof attempt): 400, no retry.
+        logger.warning("Stripe webhook signature verification failed")
+        raise HTTPException(status_code=400, detail="Invalid signature")
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid payload")
-    except (stripe.SignatureVerificationError, Exception) as exc:
-        if "SignatureVerification" in type(exc).__name__:
-            raise HTTPException(status_code=400, detail="Invalid signature")
-        raise
+    except Exception:
+        # An unexpected error constructing the event (misconfigured secret,
+        # SDK fault) is a server problem: 500 so Stripe retries, and it is
+        # logged distinctly from bad-signature attempts. (GH #99: the old
+        # `except (SignatureVerificationError, Exception)` union collapsed to
+        # Exception and bare-re-raised everything else as an opaque 500.)
+        logger.exception("Stripe webhook event construction failed")
+        raise HTTPException(status_code=500, detail="Webhook verification failed")
 
     event_type = event["type"]
     data = event["data"]["object"]
