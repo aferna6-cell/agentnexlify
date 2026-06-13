@@ -118,6 +118,15 @@ def _get_api_key_client(x_api_key: str = Header(...)) -> dict:
             ),
         )
 
+    # Gate on subscription status too: a churned tenant (plan still 'growth'
+    # but plan_status 'cancelled'/'past_due') must lose Zapier access. (GH #107)
+    plan_status = tenant.get("plan_status") or "active"
+    if plan_status not in {"active", "trialing"}:
+        raise HTTPException(
+            status_code=402,
+            detail="Zapier integration requires an active subscription.",
+        )
+
     # Per-key rate limit (in-memory per worker; effective ~4x with 4 uvicorn workers).
     # Fail-open on internal error — paying tenants must not be blocked by limiter outage.
     rpm_limit = key_row.get("rate_limit_rpm") or 100

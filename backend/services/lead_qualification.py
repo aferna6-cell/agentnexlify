@@ -43,6 +43,7 @@ from backend.services.managed_agents_registry import (
     ManagedAgentNotConfigured,
     lead_qualifier,
 )
+from backend.services.qualification_rubrics import get_qualification_rubric
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +83,9 @@ def _build_prompt(lead: dict[str, Any], tenant: dict[str, Any]) -> str:
         lines.append(f"- Tenant business: {business_name}")
     if tenant.get("business_type"):
         lines.append(f"- Tenant business type: {tenant['business_type']}")
+    lines.append("")
+    lines.append("Qualification guidance for this trade:")
+    lines.append(get_qualification_rubric(tenant.get("business_type")))
     lines.append("")
     lines.append(
         "Return ONLY the structured JSON summary described in your system "
@@ -243,11 +247,56 @@ def _run_qualifier_session(
     return terminal, "\n".join(c for c in assistant_chunks if c)
 
 
-def qualify_lead(lead_id: str) -> dict[str, Any] | None:
+def _load_qualifier_settings(db: Any, tenant_id: str) -> tuple[bool, int]:
+    """Read the per-tenant qualifier kill switch + cost threshold.
+
+    Isolated from the main tenant read so a deploy that ships this code
+    before migration 147 lands does NOT break qualification for every
+    tenant: a missing-column PostgREST error here falls back to the safe
+    defaults ``(enabled=True, min_intent=0)`` (matches pre-147 behavior).
+
+    Returns:
+        ``(qualifier_enabled, qualifier_min_intent)``. ``min_intent`` is
+        clamped to the 0-10 ``lead_score`` scale.
+    """
+    try:
+        res = (
+            db.table("tenants")
+            .select("qualifier_enabled, qualifier_min_intent")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception as exc:  # noqa: BLE001 — columns may not exist pre-147
+        logger.info(
+            "lead_qualification: qualifier settings unavailable for tenant %s "
+            "(%s); using defaults",
+            tenant_id,
+            exc,
+        )
+        return True, 0
+
+    row = res.data[0] if res.data else {}
+    enabled = row.get("qualifier_enabled")
+    enabled = True if enabled is None else bool(enabled)
+    raw_min = row.get("qualifier_min_intent") or 0
+    try:
+        min_intent = max(0, min(10, int(raw_min)))
+    except (TypeError, ValueError):
+        min_intent = 0
+    return enabled, min_intent
+
+
+def qualify_lead(lead_id: str, client_id: str | None = None) -> dict[str, Any] | None:
     """Run the qualifier agent for one lead and persist the result.
 
     Returns the persisted qualification dict, or None if qualification
     was skipped (free tier, missing data, not configured).
+
+    When ``client_id`` is supplied the lead read and write are scoped to that
+    tenant. The service-role key bypasses RLS, so callers handling an
+    externally-influenced ``lead_id`` MUST pass the requesting tenant to stop a
+    cross-tenant read/write (IDOR). ``None`` is for trusted internal callers.
 
     Raises:
         LeadQualificationError: the agent ran but its output could not
@@ -255,14 +304,18 @@ def qualify_lead(lead_id: str) -> dict[str, Any] | None:
     """
     db = get_service_supabase()
 
-    # 1. Load lead
-    lead_res = (
+    # 1. Load lead (scoped to the calling tenant when known)
+    lead_query = (
         db.table("leads")
-        .select("id, client_id, name, email, phone, areas_of_interest, timeline, budget")
+        .select(
+            "id, client_id, name, email, phone, areas_of_interest, "
+            "timeline, budget, lead_score"
+        )
         .eq("id", lead_id)
-        .limit(1)
-        .execute()
     )
+    if client_id:
+        lead_query = lead_query.eq("client_id", client_id)
+    lead_res = lead_query.limit(1).execute()
     if not lead_res.data:
         logger.warning("lead_qualification: lead %s not found, skipping", lead_id)
         return None
@@ -291,6 +344,35 @@ def qualify_lead(lead_id: str) -> dict[str, Any] | None:
         logger.info(
             "lead_qualification: skipping lead %s — plan %r not eligible",
             lead_id, plan,
+        )
+        return None
+
+    # Per-tenant kill switch + cost gate (migration 147). Read in an
+    # isolated query that falls back to safe defaults if the columns
+    # aren't deployed yet, so this code is safe to ship before/with the
+    # migration.
+    qualifier_enabled, min_intent = _load_qualifier_settings(db, tenant_id)
+
+    # Owners can pause AI qualification without dropping their plan.
+    if not qualifier_enabled:
+        logger.info(
+            "lead_qualification: skipping lead %s — qualifier disabled for tenant %s",
+            lead_id,
+            tenant_id,
+        )
+        return None
+
+    # Only spend on the AI qualifier when the cheap rule-based lead_score
+    # (1-10) clears the owner's threshold. Default 0 means always qualify
+    # eligible leads.
+    rule_score = lead.get("lead_score")
+    if min_intent and isinstance(rule_score, (int, float)) and rule_score < min_intent:
+        logger.info(
+            "lead_qualification: skipping lead %s — lead_score %s below "
+            "tenant threshold %s",
+            lead_id,
+            rule_score,
+            min_intent,
         )
         return None
 
@@ -348,7 +430,9 @@ def qualify_lead(lead_id: str) -> dict[str, Any] | None:
         "qualification_recommendation": normalized["recommendation"],
         "qualified_at": datetime.now(timezone.utc).isoformat(),
     }
-    db.table("leads").update(update_payload).eq("id", lead_id).execute()
+    db.table("leads").update(update_payload).eq("id", lead_id).eq(
+        "client_id", tenant_id
+    ).execute()
 
     # 7. Activity log entry (best-effort)
     try:
@@ -381,13 +465,19 @@ def qualify_lead(lead_id: str) -> dict[str, Any] | None:
     return normalized
 
 
-def qualify_lead_background(lead_id: str) -> None:
-    """Fire-and-forget wrapper for FastAPI BackgroundTasks."""
+def qualify_lead_background(lead_id: str, client_id: str | None = None) -> None:
+    """Fire-and-forget wrapper for FastAPI BackgroundTasks.
+
+    Pass ``client_id`` so qualification stays scoped to the tenant that owns the
+    lead. The service-role key bypasses RLS, so this is the only guard against a
+    cross-tenant read/write when ``lead_id`` is attacker-influenced (IDOR).
+    """
     try:
-        qualify_lead(lead_id)
+        qualify_lead(lead_id, client_id=client_id)
     except LeadQualificationError as exc:
         logger.warning("lead_qualification: %s", exc)
     except Exception:
         logger.exception(
-            "lead_qualification: unexpected failure for lead %s", lead_id,
+            "lead_qualification: unexpected failure for lead %s",
+            lead_id,
         )

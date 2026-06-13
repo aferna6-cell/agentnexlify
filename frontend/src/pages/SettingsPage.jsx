@@ -436,6 +436,8 @@ export default function SettingsPage({ onNavigate }) {
         apiBase={apiBase}
         onNavigate={onNavigate}
         logout={logout}
+        tenantId={user?.tenantId}
+        token={token}
         form={form}
         setForm={setForm}
         saving={saving}

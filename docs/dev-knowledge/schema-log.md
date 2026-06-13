@@ -4,6 +4,21 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## widget_health service (2026-06-13) — NO NEW MIGRATION
+
+Ported from PR #212 / GH #215. `backend/services/widget_health.py` probes existing tables:
+- `widget_configs.tenant_id` + `widget_configs.allowed_domains` — existed since migration 001
+- `integrations.tenant_id` + `integrations.provider` — migration 109
+- `activity_log.tenant_id` — migration 004
+- `leads.client_id` (NOT tenant_id) + `conversations.client_id` (NOT tenant_id) — invariant
+- `appointments.tenant_id`
+
+New endpoint `PUT /api/v1/widget/config/{tenant_id}/allowed-domains` writes back to `widget_configs.allowed_domains` (TEXT[] column, migration 001).
+
+Applied: N/A — no migration needed.
+
+---
+
 ## 131_os_engine_telemetry.sql (2026-06-06)
 
 **What:** Two `client_id`-scoped tables for the Agent OS engine's run record (the parts `os_agent_runs` doesn't capture):
@@ -479,7 +494,7 @@ New values added: accounting, bakery, bar_nightclub, cafe, catering, chiropracti
 
 Existing values retained: auto_shop, dental, fitness, legal, medical, other, plumbing, realestate, restaurant, salon
 
-**Applied:** Pending — created 2026-04-01. Apply via Supabase MCP. **Critical: must be applied before any new signups, otherwise new industry types will fail at DB insert.**
+**Applied:** 2026-06-13 (verified live via Supabase introspection — `tenants.business_type` CHECK lists all 28 industry types). Was logged "Pending" but had in fact been applied; signups across these industries work in production. The schema-sync "CRITICAL pending" alert was a stale-log false positive.
 
 ### 079 — Wizard Drop-Off Events
 Creates `wizard_events` table for onboarding wizard funnel analytics. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), step (INTEGER CHECK 1-6), action (TEXT CHECK: enter/complete/skip/abandon), created_at (TIMESTAMPTZ). Indexed on tenant_id and step. RLS enabled with service_role full access. Used by the `POST /api/v1/onboarding/wizard-event` endpoint to track conversion through the 6-step onboarding wizard.
@@ -557,7 +572,7 @@ Creates `admin_promotions` table: tenant_id, promotion_type (free_tier/discount/
 ### 090 — Add Autopilot Plan to CHECK Constraint
 Drops and recreates `tenants_plan_check` to include `autopilot`: `CHECK (plan IN ('free', 'growth', 'professional', 'autopilot', 'enterprise'))`. Fixes constraint violations when creating autopilot subscriptions.
 
-**Applied:** Pending — created 2026-04-06. **Critical: autopilot subscriptions fail until this is applied.**
+**Applied:** 2026-06-13 (verified live via Supabase introspection — `tenants_plan_check` includes `autopilot`). Was logged "Pending" but had in fact been applied; autopilot subscriptions work in production. The schema-sync "CRITICAL pending" alert was a stale-log false positive.
 
 ### 091 — RLS and Guards for Migrations 086-089
 Enables RLS and creates tenant isolation policies on all tables from migrations 086-089: ab_tests, ab_test_variants, ab_test_sends, automation_rules, automation_rule_logs, campaign_analytics_aggregates, admin_promotions. Uses `IF NOT EXISTS` guards throughout.
@@ -1171,3 +1186,53 @@ Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID
   columns (migration 146) are still used. `conversations.notified_at` +
   `idx_conversations_unnotified` are now VESTIGIAL (no reader) — harmless; drop in
   a future cleanup migration if desired.
+
+---
+
+## Verification audit — 2026-06-13 (live prod introspection, project pxserpybmajixqrmzaly)
+
+The daily Schema Sync workflow escalated "CRITICAL: pending migrations — blocks
+production" off this file's `Applied: Pending` text. Live introspection proved
+that is a **stale-log false alarm, not a prod schema gap**. Confirmed applied:
+
+- 065 client_accounts; 087 automation_rules; 070 automations/pipeline; 086 A/B
+  test tables (×3); 088 campaign_analytics_aggregates.
+- 078 business_type CHECK (28 industries); 090 plan CHECK (includes `autopilot`)
+  — the two "CRITICAL" ones; markers corrected above.
+- Applied under RENAMED objects: 066 → `waitlist_entries`, 067/084 → `scoring_configs`
+  (+ `leads.lead_score`); 069 → `leads.email_bounced`; 095 → conversation memory
+  column; 098 → `tenants.daily_briefing_enabled`.
+
+No live match (need feature-level confirmation before any apply — do NOT blind-apply,
+the feature may store data differently / under another name):
+- 077 widget knowledge base — no `*knowledge_base*` table (KB likely file/pgvector-backed).
+- 079 `wizard_dropoff_events` — no table by that name.
+- 085 `password_reset_tokens` — no table, though password reset ships (auth_password_reset.py); confirm token storage.
+
+114 public tables total. Bottom line: most "Pending" entries are stale; the
+schema-sync heuristic trusts this file's text rather than the DB. Follow-up:
+either flip the remaining verified-applied `Pending` markers, or upgrade the
+schema-sync check to introspect the live DB.
+
+---
+
+### 147 — Qualifier Settings (per-tenant AI qualifier controls, GH #216)
+
+Adds two owner-facing columns to `tenants` for the AI lead qualifier
+(`backend/services/lead_qualification.py`), both additive + idempotent
+(`ADD COLUMN IF NOT EXISTS`) with behavior-preserving defaults:
+
+- `qualifier_enabled BOOLEAN NOT NULL DEFAULT true` — kill switch.
+- `qualifier_min_intent INTEGER NOT NULL DEFAULT 0` — only spend AI-qualifier
+  budget when the cheap rule-based `leads.lead_score` (0-10) clears this gate.
+  CHECK `qualifier_min_intent BETWEEN 0 AND 10`.
+
+Ported from PR #212 (migration 134 on `gap-3-research-worker-87IXF`),
+renumbered 147. Pairs with the per-vertical rubric service
+(`backend/services/qualification_rubrics.py`) and the owner-controls router
+(`backend/routers/qualifier_config.py`, `/api/v1/qualifier/*`) + the
+`AgentQualifierSettings` dashboard component.
+
+**Applied:** 2026-06-13 via `mcp__supabase__apply_migration` (project
+pxserpybmajixqrmzaly). Verified: both columns present with defaults
+`true` / `0`.

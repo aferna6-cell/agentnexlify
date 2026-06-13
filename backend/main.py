@@ -74,6 +74,7 @@ from backend.routers import (
     resend_webhooks,
     revenue,
     reviews,
+    qualifier_config,
     scoring_config,
     sequences,
     smart_lists,
@@ -113,6 +114,7 @@ from backend.routers import (
     os_sync as os_sync_router,
     os_files,
     push_subscriptions,
+    widget_health,
 )
 
 # --- JSON logging ---
@@ -875,6 +877,7 @@ app.include_router(channels_instagram.router)
 app.include_router(embed_instructions.router)
 app.include_router(pipeline_automations.router)
 app.include_router(scoring_config.router)
+app.include_router(qualifier_config.router)
 app.include_router(waitlist.router)
 app.include_router(wizard_analytics.router)
 app.include_router(content_repurpose.router)
@@ -894,6 +897,7 @@ app.include_router(os_inbound.router)
 app.include_router(os_sync_router.router)
 app.include_router(push_subscriptions.router)
 app.include_router(pricing_experiment.router)
+app.include_router(widget_health.router)
 
 
 # --- Static files (widget) ---

@@ -136,7 +136,7 @@ jobs:
 
       - name: Run backend tests with coverage
         run: |
-          python -m pytest tests backend/tests/test_local_seo_handlers.py backend/tests/test_billing_amount_to_plan.py backend/tests/test_fraud_guard.py backend/tests/test_twilio_webhooks.py -q --cov=backend --cov-report=xml:coverage-python.xml
+          python -m pytest tests backend/tests/test_local_seo_handlers.py backend/tests/test_billing_amount_to_plan.py backend/tests/test_fraud_guard.py backend/tests/test_twilio_webhooks.py backend/tests/test_zapier_auth.py backend/tests/test_qualification_rubrics.py backend/tests/test_qualifier_config.py backend/tests/test_lead_qualification.py backend/tests/test_activity.py backend/tests/test_widget_health.py -q --cov=backend --cov-report=xml:coverage-python.xml
 
       - name: Audit backend Python dependencies
         continue-on-error: true
@@ -188,15 +188,25 @@ jobs:
 
       - name: Check migration numbering
         run: |
+          # Only fail when a migration ADDED in this PR collides with an existing
+          # number — the intent (catch new collisions like PR #212's 133/134/135).
+          # Pre-existing historical duplicates (e.g. 005/007 from early dev) are
+          # out of scope and must not block every future migration PR.
           CHANGED_MIGRATIONS=$(git diff --name-only "$COMPARE_REF" HEAD -- migrations/ 2>/dev/null || true)
           if [ -n "$CHANGED_MIGRATIONS" ]; then
             echo "New/changed migrations:"
             echo "$CHANGED_MIGRATIONS"
-            DUPES=$(ls migrations/*.sql 2>/dev/null | sed 's/.*\///' | grep -oP '^\d+' | sort | uniq -d)
-            if [ -n "$DUPES" ]; then
-              echo "::error::Duplicate migration numbers: $DUPES"
-              exit 1
-            fi
+            FAIL=0
+            NEW_NUMS=$(echo "$CHANGED_MIGRATIONS" | sed 's#.*/##' | grep -oE '^[0-9]+' | sort -u)
+            for n in $NEW_NUMS; do
+              COUNT=$(ls "migrations/${n}_"*.sql 2>/dev/null | wc -l)
+              if [ "$COUNT" -gt 1 ]; then
+                echo "::error::Migration number $n is duplicated — a migration added in this PR collides with an existing one. Renumber to the next free number."
+                ls "migrations/${n}_"*.sql
+                FAIL=1
+              fi
+            done
+            [ "$FAIL" -eq 0 ] || exit 1
           fi
 
       - name: Widget sync check
