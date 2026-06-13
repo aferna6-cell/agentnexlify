@@ -479,7 +479,7 @@ New values added: accounting, bakery, bar_nightclub, cafe, catering, chiropracti
 
 Existing values retained: auto_shop, dental, fitness, legal, medical, other, plumbing, realestate, restaurant, salon
 
-**Applied:** Pending — created 2026-04-01. Apply via Supabase MCP. **Critical: must be applied before any new signups, otherwise new industry types will fail at DB insert.**
+**Applied:** 2026-06-13 (verified live via Supabase introspection — `tenants.business_type` CHECK lists all 28 industry types). Was logged "Pending" but had in fact been applied; signups across these industries work in production. The schema-sync "CRITICAL pending" alert was a stale-log false positive.
 
 ### 079 — Wizard Drop-Off Events
 Creates `wizard_events` table for onboarding wizard funnel analytics. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), step (INTEGER CHECK 1-6), action (TEXT CHECK: enter/complete/skip/abandon), created_at (TIMESTAMPTZ). Indexed on tenant_id and step. RLS enabled with service_role full access. Used by the `POST /api/v1/onboarding/wizard-event` endpoint to track conversion through the 6-step onboarding wizard.
@@ -557,7 +557,7 @@ Creates `admin_promotions` table: tenant_id, promotion_type (free_tier/discount/
 ### 090 — Add Autopilot Plan to CHECK Constraint
 Drops and recreates `tenants_plan_check` to include `autopilot`: `CHECK (plan IN ('free', 'growth', 'professional', 'autopilot', 'enterprise'))`. Fixes constraint violations when creating autopilot subscriptions.
 
-**Applied:** Pending — created 2026-04-06. **Critical: autopilot subscriptions fail until this is applied.**
+**Applied:** 2026-06-13 (verified live via Supabase introspection — `tenants_plan_check` includes `autopilot`). Was logged "Pending" but had in fact been applied; autopilot subscriptions work in production. The schema-sync "CRITICAL pending" alert was a stale-log false positive.
 
 ### 091 — RLS and Guards for Migrations 086-089
 Enables RLS and creates tenant isolation policies on all tables from migrations 086-089: ab_tests, ab_test_variants, ab_test_sends, automation_rules, automation_rule_logs, campaign_analytics_aggregates, admin_promotions. Uses `IF NOT EXISTS` guards throughout.
