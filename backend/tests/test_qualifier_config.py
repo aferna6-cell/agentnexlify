@@ -70,7 +70,9 @@ class TestGetQualifierSettings:
 
     def test_requires_auth(self, mock_supabase):
         resp = _client().get(f"/api/v1/qualifier/{_CLIENT_ID}")
-        assert resp.status_code in (401, 403)
+        # Missing Authorization header → FastAPI rejects at the header dependency
+        # (422 field-required); a present-but-invalid token would be 401/403.
+        assert resp.status_code in (401, 403, 422)
 
     def test_pre_migration_falls_back_to_defaults(self, mock_supabase):
         # Columns not present yet → the read raises and the router returns defaults.
