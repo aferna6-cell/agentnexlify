@@ -66,7 +66,7 @@ export function ConversationEmailNotificationsCard({
     <div className="settings-card">
       <h3>Conversation Email Alerts</h3>
       <p className="settings-card-desc">
-        Email the full transcript whenever a website chat wraps up.
+        Get emailed the moment a new conversation comes in from your website chat.
       </p>
       <div className="settings-field">
         <label>Send alerts to</label>
@@ -87,7 +87,7 @@ export function ConversationEmailNotificationsCard({
           }));
           setSaved(false);
         }}
-        label="Email me each conversation when it ends"
+        label="Email me when a new conversation comes in"
       />
       <SaveButton
         saving={saving}
