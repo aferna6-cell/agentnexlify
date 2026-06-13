@@ -297,7 +297,7 @@ class TestProcessOneTenant:
         with patch("backend.services.activation_nudges.send_email", mock_send), \
              patch("backend.services.activation_nudges.log_activity", mock_log):
             from backend.services.activation_nudges import _process_one_tenant
-            await _process_one_tenant(
+            sent = await _process_one_tenant(
                 db=db,
                 tenant_id="t99",
                 email="o@t.com",
@@ -306,6 +306,8 @@ class TestProcessOneTenant:
                 activity_type="activation_nudge_d3",
                 settings_url="http://x/settings",
             )
+        # One nudge sent for this tenant (success path returns 1).
+        assert sent == 1
         mock_log.assert_called_once_with(
             tenant_id="t99",
             activity_type="activation_nudge_d3",

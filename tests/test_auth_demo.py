@@ -274,7 +274,9 @@ class TestDemoOutboundGuards:
         event = next(iter(wd.SUPPORTED_EVENTS))
         with patch("backend.services.demo_guard.is_demo_tenant", return_value=True), \
              patch.object(wd, "get_service_supabase") as mock_db:
-            await wd.fire_event("demo-t1", event, {"lead_id": "x"})
+            result = await wd.fire_event("demo-t1", event, {"lead_id": "x"})
+        # Demo tenant short-circuits before any dispatch work (returns None).
+        assert result is None
         mock_db.assert_not_called()
 
     def test_demo_daily_turn_cap_reached(self):
