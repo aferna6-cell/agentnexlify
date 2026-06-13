@@ -71,7 +71,9 @@ describe("IntegrationHealthDashboard", () => {
     const onNavigate = vi.fn();
     render(<IntegrationHealthDashboard onNavigate={onNavigate} />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Configure" }));
+    const btn = await screen.findByRole("button", { name: "Configure" });
+    expect(btn).toBeInTheDocument();
+    fireEvent.click(btn);
     expect(onNavigate).toHaveBeenCalledWith("settings");
   });
 

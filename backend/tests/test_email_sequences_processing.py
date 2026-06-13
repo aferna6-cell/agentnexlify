@@ -72,12 +72,16 @@ class _FakeQuery:
 
 class _FakeDB:
     def __init__(self, *, steps=None, leads=None, tenants=None,
-                 step_rows=None, enroll_rows=None):
+                 step_rows=None, enroll_rows=None,
+                 sequences=None, enrollments=None, due=None):
         self.steps = steps or {}            # id -> row
         self.leads = leads or {}            # id -> row
         self.tenants = tenants or {}        # id -> row
         self.step_rows = step_rows or []    # [{sequence_id: ...}, ...]
         self.enroll_rows = enroll_rows or []
+        self.sequences = sequences or []    # list_sequences rows
+        self.enrollments = enrollments or []  # list_enrollments rows
+        self.due = due or []                # email_sequence_sends pending rows
         self.writes = []
 
     def table(self, name):
@@ -90,9 +94,22 @@ class _FakeDB:
         if table == "email_sequence_enrollments" and "sequence_id" in in_:
             sel = in_["sequence_id"]
             return _FakeResult([r for r in self.enroll_rows if r["sequence_id"] in sel])
+        if table == "email_sequences":
+            # ownership check (.eq id) returns a single row; list (.eq tenant_id) returns all
+            if "id" in filters:
+                row = next((s for s in self.sequences if s["id"] == filters["id"]), None)
+                return _FakeResult([row] if row else [])
+            return _FakeResult(list(self.sequences))
+        if table == "email_sequence_enrollments":
+            return _FakeResult(list(self.enrollments))
+        if table == "email_sequence_sends":
+            return _FakeResult(list(self.due))
         if table == "email_sequence_steps":
             row = self.steps.get(filters.get("id"))
             return _FakeResult([row] if row else [])
+        if table == "leads" and "id" in in_:
+            sel = in_["id"]
+            return _FakeResult([r for r in self.leads.values() if r["id"] in sel])
         if table == "leads":
             row = self.leads.get(filters.get("id"))
             return _FakeResult([row] if row else [])
@@ -141,9 +158,17 @@ def _patch_send(monkeypatch, *, success=True, detail="boom"):
     async def _fake_send_email(**kwargs):
         return {"success": success, "detail": detail}
 
+    def _render(tmpl, ctx):
+        # Model real templating: substitute {name}/{business_name}/etc. like
+        # the production render_template does (not a bare echo of the input).
+        try:
+            return tmpl.format(**ctx)
+        except (KeyError, IndexError, ValueError):
+            return tmpl
+
     monkeypatch.setattr(es, "send_email", _fake_send_email)
-    monkeypatch.setattr(es, "render_template", lambda tmpl, ctx: tmpl)
-    monkeypatch.setattr(es, "build_unsubscribe_url", lambda lead, ten: "http://u")
+    monkeypatch.setattr(es, "render_template", _render)
+    monkeypatch.setattr(es, "build_unsubscribe_url", lambda lead, ten: f"http://u/{lead}")
     monkeypatch.setattr(es, "log_activity", lambda **k: None)
     monkeypatch.setattr(es, "_increment_runs_total", lambda *a, **k: None)
     monkeypatch.setattr(es, "_maybe_complete_enrollment", lambda *a, **k: None)
@@ -249,3 +274,64 @@ def test_process_sequences_endpoint_rejects_bad_key(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         asyncio.run(es.process_sequences(x_internal_key="wrong"))
     assert exc.value.status_code == 401
+
+
+# --------------------------------------------------------------------------- #
+# GH #112 — endpoint-level coverage for the bulk-query paths
+# --------------------------------------------------------------------------- #
+
+
+def test_list_sequences_enriches_counts(monkeypatch):
+    db = _FakeDB(
+        sequences=[{"id": "seq1", "name": "A"}, {"id": "seq2", "name": "B"}],
+        step_rows=[{"sequence_id": "seq1"}, {"sequence_id": "seq1"}, {"sequence_id": "seq2"}],
+        enroll_rows=[{"sequence_id": "seq1"}],
+    )
+    monkeypatch.setattr(es, "get_service_supabase", lambda: db)
+
+    res = asyncio.run(es.list_sequences(claims={"tenant_id": "ten1"}))
+    by_id = {s["id"]: s for s in res["sequences"]}
+    assert res["total"] == 2
+    assert by_id["seq1"]["step_count"] == 2
+    assert by_id["seq1"]["enrollment_count"] == 1
+    assert by_id["seq2"]["step_count"] == 1
+    assert by_id["seq2"]["enrollment_count"] == 0
+
+
+def test_list_enrollments_attaches_leads_in_bulk(monkeypatch):
+    db = _FakeDB(
+        sequences=[{"id": "seq1", "name": "A"}],
+        enrollments=[
+            {"id": "e1", "lead_id": "lead1"},
+            {"id": "e2", "lead_id": "lead2"},
+            {"id": "e3", "lead_id": "missing"},
+        ],
+        leads={
+            "lead1": {"id": "lead1", "name": "Ana", "email": "a@x.com", "phone": "1", "status": "new"},
+            "lead2": {"id": "lead2", "name": "Bo", "email": "b@x.com", "phone": "2", "status": "won"},
+        },
+    )
+    monkeypatch.setattr(es, "get_service_supabase", lambda: db)
+
+    res = asyncio.run(es.list_enrollments("seq1", claims={"tenant_id": "ten1"}))
+    by_id = {e["id"]: e for e in res["enrollments"]}
+    assert res["total"] == 3
+    assert by_id["e1"]["lead"]["name"] == "Ana"
+    assert by_id["e2"]["lead"]["status"] == "won"
+    assert by_id["e3"]["lead"] is None  # unmatched lead_id -> None, no crash
+
+
+def test_list_enrollments_unknown_sequence_404(monkeypatch):
+    from fastapi import HTTPException
+
+    db = _FakeDB(sequences=[])  # ownership check finds nothing
+    monkeypatch.setattr(es, "get_service_supabase", lambda: db)
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(es.list_enrollments("nope", claims={"tenant_id": "ten1"}))
+    assert exc.value.status_code == 404
+
+
+def test_query_due_sends_returns_pending():
+    rows = [_due("s1"), _due("s2")]
+    db = _FakeDB(due=rows)
+    assert es._query_due_sends(db) == rows
