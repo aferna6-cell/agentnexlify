@@ -261,9 +261,11 @@ async def stripe_webhook(request: Request):
 
 
 AMOUNT_TO_PLAN: dict[int, str] = {
-    # Monthly only (current pricing)
-    9900: "growth",
-    89900: "enterprise",
+    # Monthly only (current pricing) — see CLAUDE.md "Plan names + prices"
+    9900: "growth",          # $99 Starter
+    15000: "autopilot",      # $150 Growth
+    25000: "professional",   # $250 Pro
+    89900: "enterprise",     # $899
     # Legacy monthly pricing (keep for existing subscribers)
     24900: "growth",
     29900: "autopilot",

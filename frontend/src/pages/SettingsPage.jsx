@@ -48,6 +48,8 @@ export default function SettingsPage({ onNavigate }) {
     owner_name: "",
     notification_phone: "",
     sms_notifications_enabled: false,
+    conversation_notify_email: "",
+    conversation_email_notify_enabled: false,
     google_review_link: "",
     review_request_config: { enabled: false, delay_hours: 24, method: "email" },
     daily_briefing_enabled: false,
@@ -107,6 +109,9 @@ export default function SettingsPage({ onNavigate }) {
         owner_name: tenant.owner_name || "",
         notification_phone: tenant.notification_phone || "",
         sms_notifications_enabled: tenant.sms_notifications_enabled || false,
+        conversation_notify_email: tenant.conversation_notify_email || "",
+        conversation_email_notify_enabled:
+          tenant.conversation_email_notify_enabled || false,
         google_review_link: tenant.google_review_link || "",
         review_request_config: tenant.review_request_config || {
           enabled: false,
