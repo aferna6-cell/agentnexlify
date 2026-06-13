@@ -16,6 +16,10 @@ stripe>=11.0.0,<12
 # Broke Railway build. backend/services/twilio_service.py uses raw httpx, zero SDK imports anywhere.
 # Dead dep. Re-add only if SDK becomes required; pin to <10 and check PyPI first.
 python-jose[cryptography]>=3.3.0
+# Pin cryptography explicitly (transitive via python-jose) to a range with
+# prebuilt cp312 manylinux wheels — removes the unpinned-resolution ambiguity
+# behind the pyo3 PanicException on import. See GH #185. CI runs Python 3.12.
+cryptography>=43.0.1,<45
 bcrypt>=4.0.0
 sentry-sdk[fastapi]==2.20.0
 python-json-logger==3.3.0
