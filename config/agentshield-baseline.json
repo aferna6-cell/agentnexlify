@@ -1,6 +1,402 @@
 {
-  "version": 1,
-  "timestamp": "2026-05-26T23:45:05.684Z",
+  "timestamp": "2026-06-13T22:08:28.061Z",
+  "targetPath": "/home/user/agentnexlify",
+  "findings": [
+    {
+      "id": "agents-bash-access-.claude/agents/a11y-architect.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude/agents/a11y-architect.md",
+      "description": "This agent has Bash tool access, allowing arbitrary command running. Consider if it truly needs shell access, or if Read/Write/Edit would suffice.",
+      "file": ".claude/agents/a11y-architect.md"
+    },
+    {
+      "id": "agents-escalation-chain-.claude/agents/a11y-architect.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has full escalation chain: .claude/agents/a11y-architect.md",
+      "description": "This agent has discovery tools (Glob/Grep), Read, Write/Edit, AND Bash access. This forms a complete escalation chain: find files → read contents → modify code → execute commands. Consider whether it truly needs all four capabilities, or if it can be split into narrower roles.",
+      "file": ".claude/agents/a11y-architect.md",
+      "evidence": "Discovery: Grep, Glob + Read + Write: Write, Edit + Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude/agents/chief-of-staff.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude/agents/chief-of-staff.md",
+      "description": "This agent has Bash tool access, allowing arbitrary command running. Consider if it truly needs shell access, or if Read/Write/Edit would suffice.",
+      "file": ".claude/agents/chief-of-staff.md"
+    },
+    {
+      "id": "agents-escalation-chain-.claude/agents/chief-of-staff.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has full escalation chain: .claude/agents/chief-of-staff.md",
+      "description": "This agent has discovery tools (Glob/Grep), Read, Write/Edit, AND Bash access. This forms a complete escalation chain: find files → read contents → modify code → execute commands. Consider whether it truly needs all four capabilities, or if it can be split into narrower roles.",
+      "file": ".claude/agents/chief-of-staff.md",
+      "evidence": "Discovery: Grep, Glob + Read + Write: Edit, Write + Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude/agents/code-explorer.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude/agents/code-explorer.md",
+      "description": "This agent has Bash tool access, allowing arbitrary command running. Consider if it truly needs shell access, or if Read/Write/Edit would suffice.",
+      "file": ".claude/agents/code-explorer.md"
+    },
+    {
+      "id": "agents-bash-access-.claude/agents/code-simplifier.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude/agents/code-simplifier.md",
+      "description": "This agent has Bash tool access, allowing arbitrary command running. Consider if it truly needs shell access, or if Read/Write/Edit would suffice.",
+      "file": ".claude/agents/code-simplifier.md"
+    },
+    {
+      "id": "agents-escalation-chain-.claude/agents/code-simplifier.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has full escalation chain: .claude/agents/code-simplifier.md",
+      "description": "This agent has discovery tools (Glob/Grep), Read, Write/Edit, AND Bash access. This forms a complete escalation chain: find files → read contents → modify code → execute commands. Consider whether it truly needs all four capabilities, or if it can be split into narrower roles.",
+      "file": ".claude/agents/code-simplifier.md",
+      "evidence": "Discovery: Grep, Glob + Read + Write: Write, Edit + Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude/agents/comment-analyzer.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude/agents/comment-analyzer.md",
+      "description": "This agent has Bash tool access, allowing arbitrary command running. Consider if it truly needs shell access, or if Read/Write/Edit would suffice.",
+      "file": ".claude/agents/comment-analyzer.md"
+    },
+    {
+      "id": "agents-bash-access-.claude/agents/gan-evaluator.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude/agents/gan-evaluator.md",
+      "description": "This agent has Bash tool access, allowing arbitrary command running. Consider if it truly needs shell access, or if Read/Write/Edit would suffice.",
+      "file": ".claude/agents/gan-evaluator.md"
+    },
+    {
+      "id": "agents-escalation-chain-.claude/agents/gan-evaluator.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has full escalation chain: .claude/agents/gan-evaluator.md",
+      "description": "This agent has discovery tools (Glob/Grep), Read, Write/Edit, AND Bash access. This forms a complete escalation chain: find files → read contents → modify code → execute commands. Consider whether it truly needs all four capabilities, or if it can be split into narrower roles.",
+      "file": ".claude/agents/gan-evaluator.md",
+      "evidence": "Discovery: Grep, Glob + Read + Write: Write + Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude/agents/gan-generator.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude/agents/gan-generator.md",
+      "description": "This agent has Bash tool access, allowing arbitrary command running. Consider if it truly needs shell access, or if Read/Write/Edit would suffice.",
+      "file": ".claude/agents/gan-generator.md"
+    },
+    {
+      "id": "agents-escalation-chain-.claude/agents/gan-generator.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has full escalation chain: .claude/agents/gan-generator.md",
+      "description": "This agent has discovery tools (Glob/Grep), Read, Write/Edit, AND Bash access. This forms a complete escalation chain: find files → read contents → modify code → execute commands. Consider whether it truly needs all four capabilities, or if it can be split into narrower roles.",
+      "file": ".claude/agents/gan-generator.md",
+      "evidence": "Discovery: Grep, Glob + Read + Write: Write, Edit + Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude/agents/harness-optimizer.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude/agents/harness-optimizer.md",
+      "description": "This agent has Bash tool access, allowing arbitrary command running. Consider if it truly needs shell access, or if Read/Write/Edit would suffice.",
+      "file": ".claude/agents/harness-optimizer.md"
+    },
+    {
+      "id": "agents-escalation-chain-.claude/agents/harness-optimizer.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has full escalation chain: .claude/agents/harness-optimizer.md",
+      "description": "This agent has discovery tools (Glob/Grep), Read, Write/Edit, AND Bash access. This forms a complete escalation chain: find files → read contents → modify code → execute commands. Consider whether it truly needs all four capabilities, or if it can be split into narrower roles.",
+      "file": ".claude/agents/harness-optimizer.md",
+      "evidence": "Discovery: Grep, Glob + Read + Write: Edit + Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude/agents/loop-operator.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude/agents/loop-operator.md",
+      "description": "This agent has Bash tool access, allowing arbitrary command running. Consider if it truly needs shell access, or if Read/Write/Edit would suffice.",
+      "file": ".claude/agents/loop-operator.md"
+    },
+    {
+      "id": "agents-escalation-chain-.claude/agents/loop-operator.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has full escalation chain: .claude/agents/loop-operator.md",
+      "description": "This agent has discovery tools (Glob/Grep), Read, Write/Edit, AND Bash access. This forms a complete escalation chain: find files → read contents → modify code → execute commands. Consider whether it truly needs all four capabilities, or if it can be split into narrower roles.",
+      "file": ".claude/agents/loop-operator.md",
+      "evidence": "Discovery: Grep, Glob + Read + Write: Edit + Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude/agents/opensource-forker.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude/agents/opensource-forker.md",
+      "description": "This agent has Bash tool access, allowing arbitrary command running. Consider if it truly needs shell access, or if Read/Write/Edit would suffice.",
+      "file": ".claude/agents/opensource-forker.md"
+    },
+    {
+      "id": "agents-escalation-chain-.claude/agents/opensource-forker.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has full escalation chain: .claude/agents/opensource-forker.md",
+      "description": "This agent has discovery tools (Glob/Grep), Read, Write/Edit, AND Bash access. This forms a complete escalation chain: find files → read contents → modify code → execute commands. Consider whether it truly needs all four capabilities, or if it can be split into narrower roles.",
+      "file": ".claude/agents/opensource-forker.md",
+      "evidence": "Discovery: Grep, Glob + Read + Write: Write, Edit + Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude/agents/opensource-packager.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude/agents/opensource-packager.md",
+      "description": "This agent has Bash tool access, allowing arbitrary command running. Consider if it truly needs shell access, or if Read/Write/Edit would suffice.",
+      "file": ".claude/agents/opensource-packager.md"
+    },
+    {
+      "id": "agents-escalation-chain-.claude/agents/opensource-packager.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has full escalation chain: .claude/agents/opensource-packager.md",
+      "description": "This agent has discovery tools (Glob/Grep), Read, Write/Edit, AND Bash access. This forms a complete escalation chain: find files → read contents → modify code → execute commands. Consider whether it truly needs all four capabilities, or if it can be split into narrower roles.",
+      "file": ".claude/agents/opensource-packager.md",
+      "evidence": "Discovery: Grep, Glob + Read + Write: Write, Edit + Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude/agents/opensource-sanitizer.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude/agents/opensource-sanitizer.md",
+      "description": "This agent has Bash tool access, allowing arbitrary command running. Consider if it truly needs shell access, or if Read/Write/Edit would suffice.",
+      "file": ".claude/agents/opensource-sanitizer.md"
+    },
+    {
+      "id": "agents-encoded-payload-1847",
+      "severity": "high",
+      "category": "injection",
+      "title": "Encoded payload or decode instruction detected",
+      "description": "Found \"backward pass works\n\" — Reversed text instruction — evasion technique to hide commands from pattern matching. Encoding is used to evade pattern-based detection of malicious instructions.",
+      "file": ".claude/agents/pytorch-build-resolver.md",
+      "line": 41,
+      "evidence": "backward pass works\n"
+    },
+    {
+      "id": "agents-encoded-payload-3372",
+      "severity": "high",
+      "category": "injection",
+      "title": "Encoded payload or decode instruction detected",
+      "description": "Found \"backward through the graph a second time\" — Reversed text instruction — evasion technique to hide commands from pattern matching. Encoding is used to evade pattern-based detection of malicious instructions.",
+      "file": ".claude/agents/pytorch-build-resolver.md",
+      "line": 57,
+      "evidence": "backward through the graph a second time"
+    },
+    {
+      "id": "agents-web-write-.claude/agents/seo-specialist.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has web access + write access: .claude/agents/seo-specialist.md",
+      "description": "This agent can fetch content from the web AND write/edit files. An attacker could host prompt injection payloads on a web page that the config processes, then use the write access to inject malicious code into the codebase. Consider separating web research workflows from code-writing workflows.",
+      "file": ".claude/agents/seo-specialist.md",
+      "evidence": "Web: WebSearch, WebFetch + Write: Bash"
+    },
+    {
+      "id": "agents-bash-access-.claude/agents/type-design-analyzer.md",
+      "severity": "high",
+      "category": "agents",
+      "title": "Agent has Bash access: .claude/agents/type-design-analyzer.md",
+      "description": "This agent has Bash tool access, allowing arbitrary command running. Consider if it truly needs shell access, or if Read/Write/Edit would suffice.",
+      "file": ".claude/agents/type-design-analyzer.md"
+    },
+    {
+      "id": "hooks-logging-disabled-718",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: &>/dev/null",
+      "description": "Redirects all output to /dev/null — hides both stdout and stderr. Disabling logging or clearing audit trails in hooks is a defense evasion technique that makes it harder to detect and investigate compromises.",
+      "file": "scripts/claude-hooks/rtk-rewrite.sh",
+      "line": 16,
+      "evidence": "&>/dev/null"
+    },
+    {
+      "id": "hooks-logging-disabled-898",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: &>/dev/null",
+      "description": "Redirects all output to /dev/null — hides both stdout and stderr. Disabling logging or clearing audit trails in hooks is a defense evasion technique that makes it harder to detect and investigate compromises.",
+      "file": "scripts/claude-hooks/rtk-rewrite.sh",
+      "line": 21,
+      "evidence": "&>/dev/null"
+    },
+    {
+      "id": "hooks-global-install-1555",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook installs packages: cargo install",
+      "description": "Installs Rust package globally via cargo. Hooks that install packages can introduce supply chain risks and modify the system's behavior for all future commands.",
+      "file": "scripts/claude-hooks/rtk-rewrite.sh",
+      "line": 34,
+      "evidence": "cargo install"
+    },
+    {
+      "id": "hooks-logging-disabled-206",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: > /dev/null 2>&1",
+      "description": "Redirects all output to /dev/null — hides both stdout and stderr. Disabling logging or clearing audit trails in hooks is a defense evasion technique that makes it harder to detect and investigate compromises.",
+      "file": "scripts/claude-hooks/require-tests-for-pr.sh",
+      "line": 8,
+      "evidence": "> /dev/null 2>&1"
+    },
+    {
+      "id": "hooks-logging-disabled-330",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: &>/dev/null",
+      "description": "Redirects all output to /dev/null — hides both stdout and stderr. Disabling logging or clearing audit trails in hooks is a defense evasion technique that makes it harder to detect and investigate compromises.",
+      "file": "scripts/claude-hooks/require-tests-for-pr.sh",
+      "line": 15,
+      "evidence": "&>/dev/null"
+    },
+    {
+      "id": "hooks-logging-disabled-385",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: &>/dev/null",
+      "description": "Redirects all output to /dev/null — hides both stdout and stderr. Disabling logging or clearing audit trails in hooks is a defense evasion technique that makes it harder to detect and investigate compromises.",
+      "file": "scripts/claude-hooks/require-tests-for-pr.sh",
+      "line": 16,
+      "evidence": "&>/dev/null"
+    },
+    {
+      "id": "hooks-global-install-1277",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook installs packages: npm install -g",
+      "description": "Installs npm package globally — modifies system-wide PATH binaries. Hooks that install packages can introduce supply chain risks and modify the system's behavior for all future commands.",
+      "file": "scripts/claude-hooks/route-to-agent-browser.sh",
+      "line": 15,
+      "evidence": "npm install -g"
+    },
+    {
+      "id": "hooks-logging-disabled-905",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: > /dev/null 2>&1",
+      "description": "Redirects all output to /dev/null — hides both stdout and stderr. Disabling logging or clearing audit trails in hooks is a defense evasion technique that makes it harder to detect and investigate compromises.",
+      "file": "scripts/claude-hooks/kb-viewer-sync.sh",
+      "line": 23,
+      "evidence": "> /dev/null 2>&1"
+    },
+    {
+      "id": "hooks-logging-disabled-508",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: &>/dev/null",
+      "description": "Redirects all output to /dev/null — hides both stdout and stderr. Disabling logging or clearing audit trails in hooks is a defense evasion technique that makes it harder to detect and investigate compromises.",
+      "file": "scripts/claude-hooks/run-tests-after-edit.sh",
+      "line": 18,
+      "evidence": "&>/dev/null"
+    },
+    {
+      "id": "hooks-bg-process-1247",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook spawns background process: &",
+      "description": "Background process via & — may run indefinitely after hook completes. Background processes in hooks can be used for persistent backdoors or data exfiltration that outlives the session.",
+      "file": "scripts/claude-hooks/notify-complete.sh",
+      "line": 36,
+      "evidence": "&"
+    },
+    {
+      "id": "hooks-logging-disabled-251",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: > /dev/null 2>&1",
+      "description": "Redirects all output to /dev/null — hides both stdout and stderr. Disabling logging or clearing audit trails in hooks is a defense evasion technique that makes it harder to detect and investigate compromises.",
+      "file": "scripts/claude-hooks/calm-on-failure.sh",
+      "line": 7,
+      "evidence": "> /dev/null 2>&1"
+    },
+    {
+      "id": "hooks-file-delete-260",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook deletes files: rm -rf",
+      "description": "Recursive file deletion (rm -rf) — can destroy entire directories. A hook that deletes files could destroy source code, logs, or evidence of compromise.",
+      "file": "scripts/claude-hooks/cleanup-worktree.sh",
+      "line": 7,
+      "evidence": "rm -rf"
+    },
+    {
+      "id": "hooks-file-delete-260",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook deletes files: rm -rf",
+      "description": "Force file deletion (rm -f) — deletes without confirmation. A hook that deletes files could destroy source code, logs, or evidence of compromise.",
+      "file": "scripts/claude-hooks/cleanup-worktree.sh",
+      "line": 7,
+      "evidence": "rm -rf"
+    },
+    {
+      "id": "hooks-file-delete-448",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook deletes files: rm -f",
+      "description": "Force file deletion (rm -f) — deletes without confirmation. A hook that deletes files could destroy source code, logs, or evidence of compromise.",
+      "file": "scripts/claude-hooks/confidence-gate.sh",
+      "line": 13,
+      "evidence": "rm -f"
+    },
+    {
+      "id": "hooks-logging-disabled-230",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: > /dev/null 2>&1",
+      "description": "Redirects all output to /dev/null — hides both stdout and stderr. Disabling logging or clearing audit trails in hooks is a defense evasion technique that makes it harder to detect and investigate compromises.",
+      "file": "scripts/claude-hooks/confidence-gate.sh",
+      "line": 7,
+      "evidence": "> /dev/null 2>&1"
+    },
+    {
+      "id": "hooks-logging-disabled-164",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: > /dev/null 2>&1",
+      "description": "Redirects all output to /dev/null — hides both stdout and stderr. Disabling logging or clearing audit trails in hooks is a defense evasion technique that makes it harder to detect and investigate compromises.",
+      "file": "scripts/claude-hooks/auto-commit.sh",
+      "line": 6,
+      "evidence": "> /dev/null 2>&1"
+    },
+    {
+      "id": "hooks-bg-process-974",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook spawns background process: &",
+      "description": "Background process via & — may run indefinitely after hook completes. Background processes in hooks can be used for persistent backdoors or data exfiltration that outlives the session.",
+      "file": "scripts/claude-hooks/notify-stop.sh",
+      "line": 25,
+      "evidence": "&"
+    },
+    {
+      "id": "hooks-logging-disabled-205",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: > /dev/null 2>&1",
+      "description": "Redirects all output to /dev/null — hides both stdout and stderr. Disabling logging or clearing audit trails in hooks is a defense evasion technique that makes it harder to detect and investigate compromises.",
+      "file": "scripts/claude-hooks/notify-stop.sh",
+      "line": 6,
+      "evidence": "> /dev/null 2>&1"
+    }
+  ],
   "score": {
     "grade": "C",
     "numericScore": 60,
@@ -12,371 +408,243 @@
       "agents": 0
     }
   },
-  "findings": [
-    {
-      "id": "agents-bash-access-.claude/agents/a11y-architect.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has Bash access: .claude/agents/a11y-architect.md",
-      "file": ".claude/agents/a11y-architect.md",
-      "fingerprint": "agents-bash-access-.claude/agents/a11y-architect.md::.claude/agents/a11y-architect.md::"
-    },
-    {
-      "id": "agents-escalation-chain-.claude/agents/a11y-architect.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has full escalation chain: .claude/agents/a11y-architect.md",
-      "file": ".claude/agents/a11y-architect.md",
-      "evidence": "Discovery: Grep, Glob + Read + Write: Write, Edit + Bash",
-      "fingerprint": "agents-escalation-chain-.claude/agents/a11y-architect.md::.claude/agents/a11y-architect.md::Discovery: Grep, Glob + Read + Write: Write, Edit + Bash"
-    },
-    {
-      "id": "agents-bash-access-.claude/agents/chief-of-staff.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has Bash access: .claude/agents/chief-of-staff.md",
-      "file": ".claude/agents/chief-of-staff.md",
-      "fingerprint": "agents-bash-access-.claude/agents/chief-of-staff.md::.claude/agents/chief-of-staff.md::"
-    },
-    {
-      "id": "agents-escalation-chain-.claude/agents/chief-of-staff.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has full escalation chain: .claude/agents/chief-of-staff.md",
-      "file": ".claude/agents/chief-of-staff.md",
-      "evidence": "Discovery: Grep, Glob + Read + Write: Edit, Write + Bash",
-      "fingerprint": "agents-escalation-chain-.claude/agents/chief-of-staff.md::.claude/agents/chief-of-staff.md::Discovery: Grep, Glob + Read + Write: Edit, Write + Bash"
-    },
-    {
-      "id": "agents-bash-access-.claude/agents/code-explorer.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has Bash access: .claude/agents/code-explorer.md",
-      "file": ".claude/agents/code-explorer.md",
-      "fingerprint": "agents-bash-access-.claude/agents/code-explorer.md::.claude/agents/code-explorer.md::"
-    },
-    {
-      "id": "agents-bash-access-.claude/agents/code-simplifier.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has Bash access: .claude/agents/code-simplifier.md",
-      "file": ".claude/agents/code-simplifier.md",
-      "fingerprint": "agents-bash-access-.claude/agents/code-simplifier.md::.claude/agents/code-simplifier.md::"
-    },
-    {
-      "id": "agents-escalation-chain-.claude/agents/code-simplifier.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has full escalation chain: .claude/agents/code-simplifier.md",
-      "file": ".claude/agents/code-simplifier.md",
-      "evidence": "Discovery: Grep, Glob + Read + Write: Write, Edit + Bash",
-      "fingerprint": "agents-escalation-chain-.claude/agents/code-simplifier.md::.claude/agents/code-simplifier.md::Discovery: Grep, Glob + Read + Write: Write, Edit + Bash"
-    },
-    {
-      "id": "agents-bash-access-.claude/agents/comment-analyzer.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has Bash access: .claude/agents/comment-analyzer.md",
-      "file": ".claude/agents/comment-analyzer.md",
-      "fingerprint": "agents-bash-access-.claude/agents/comment-analyzer.md::.claude/agents/comment-analyzer.md::"
-    },
-    {
-      "id": "agents-bash-access-.claude/agents/gan-evaluator.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has Bash access: .claude/agents/gan-evaluator.md",
-      "file": ".claude/agents/gan-evaluator.md",
-      "fingerprint": "agents-bash-access-.claude/agents/gan-evaluator.md::.claude/agents/gan-evaluator.md::"
-    },
-    {
-      "id": "agents-escalation-chain-.claude/agents/gan-evaluator.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has full escalation chain: .claude/agents/gan-evaluator.md",
-      "file": ".claude/agents/gan-evaluator.md",
-      "evidence": "Discovery: Grep, Glob + Read + Write: Write + Bash",
-      "fingerprint": "agents-escalation-chain-.claude/agents/gan-evaluator.md::.claude/agents/gan-evaluator.md::Discovery: Grep, Glob + Read + Write: Write + Bash"
-    },
-    {
-      "id": "agents-bash-access-.claude/agents/gan-generator.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has Bash access: .claude/agents/gan-generator.md",
-      "file": ".claude/agents/gan-generator.md",
-      "fingerprint": "agents-bash-access-.claude/agents/gan-generator.md::.claude/agents/gan-generator.md::"
-    },
-    {
-      "id": "agents-escalation-chain-.claude/agents/gan-generator.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has full escalation chain: .claude/agents/gan-generator.md",
-      "file": ".claude/agents/gan-generator.md",
-      "evidence": "Discovery: Grep, Glob + Read + Write: Write, Edit + Bash",
-      "fingerprint": "agents-escalation-chain-.claude/agents/gan-generator.md::.claude/agents/gan-generator.md::Discovery: Grep, Glob + Read + Write: Write, Edit + Bash"
-    },
-    {
-      "id": "agents-bash-access-.claude/agents/harness-optimizer.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has Bash access: .claude/agents/harness-optimizer.md",
-      "file": ".claude/agents/harness-optimizer.md",
-      "fingerprint": "agents-bash-access-.claude/agents/harness-optimizer.md::.claude/agents/harness-optimizer.md::"
-    },
-    {
-      "id": "agents-escalation-chain-.claude/agents/harness-optimizer.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has full escalation chain: .claude/agents/harness-optimizer.md",
-      "file": ".claude/agents/harness-optimizer.md",
-      "evidence": "Discovery: Grep, Glob + Read + Write: Edit + Bash",
-      "fingerprint": "agents-escalation-chain-.claude/agents/harness-optimizer.md::.claude/agents/harness-optimizer.md::Discovery: Grep, Glob + Read + Write: Edit + Bash"
-    },
-    {
-      "id": "agents-bash-access-.claude/agents/loop-operator.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has Bash access: .claude/agents/loop-operator.md",
-      "file": ".claude/agents/loop-operator.md",
-      "fingerprint": "agents-bash-access-.claude/agents/loop-operator.md::.claude/agents/loop-operator.md::"
-    },
-    {
-      "id": "agents-escalation-chain-.claude/agents/loop-operator.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has full escalation chain: .claude/agents/loop-operator.md",
-      "file": ".claude/agents/loop-operator.md",
-      "evidence": "Discovery: Grep, Glob + Read + Write: Edit + Bash",
-      "fingerprint": "agents-escalation-chain-.claude/agents/loop-operator.md::.claude/agents/loop-operator.md::Discovery: Grep, Glob + Read + Write: Edit + Bash"
-    },
-    {
-      "id": "agents-bash-access-.claude/agents/opensource-forker.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has Bash access: .claude/agents/opensource-forker.md",
-      "file": ".claude/agents/opensource-forker.md",
-      "fingerprint": "agents-bash-access-.claude/agents/opensource-forker.md::.claude/agents/opensource-forker.md::"
-    },
-    {
-      "id": "agents-escalation-chain-.claude/agents/opensource-forker.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has full escalation chain: .claude/agents/opensource-forker.md",
-      "file": ".claude/agents/opensource-forker.md",
-      "evidence": "Discovery: Grep, Glob + Read + Write: Write, Edit + Bash",
-      "fingerprint": "agents-escalation-chain-.claude/agents/opensource-forker.md::.claude/agents/opensource-forker.md::Discovery: Grep, Glob + Read + Write: Write, Edit + Bash"
-    },
-    {
-      "id": "agents-bash-access-.claude/agents/opensource-packager.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has Bash access: .claude/agents/opensource-packager.md",
-      "file": ".claude/agents/opensource-packager.md",
-      "fingerprint": "agents-bash-access-.claude/agents/opensource-packager.md::.claude/agents/opensource-packager.md::"
-    },
-    {
-      "id": "agents-escalation-chain-.claude/agents/opensource-packager.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has full escalation chain: .claude/agents/opensource-packager.md",
-      "file": ".claude/agents/opensource-packager.md",
-      "evidence": "Discovery: Grep, Glob + Read + Write: Write, Edit + Bash",
-      "fingerprint": "agents-escalation-chain-.claude/agents/opensource-packager.md::.claude/agents/opensource-packager.md::Discovery: Grep, Glob + Read + Write: Write, Edit + Bash"
-    },
-    {
-      "id": "agents-bash-access-.claude/agents/opensource-sanitizer.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has Bash access: .claude/agents/opensource-sanitizer.md",
-      "file": ".claude/agents/opensource-sanitizer.md",
-      "fingerprint": "agents-bash-access-.claude/agents/opensource-sanitizer.md::.claude/agents/opensource-sanitizer.md::"
-    },
-    {
-      "id": "agents-encoded-payload-1847",
-      "severity": "high",
-      "category": "injection",
-      "title": "Encoded payload or decode instruction detected",
-      "file": ".claude/agents/pytorch-build-resolver.md",
-      "evidence": "backward pass works\n",
-      "fingerprint": "agents-encoded-payload-1847::.claude/agents/pytorch-build-resolver.md::backward pass works\n"
-    },
-    {
-      "id": "agents-encoded-payload-3372",
-      "severity": "high",
-      "category": "injection",
-      "title": "Encoded payload or decode instruction detected",
-      "file": ".claude/agents/pytorch-build-resolver.md",
-      "evidence": "backward through the graph a second time",
-      "fingerprint": "agents-encoded-payload-3372::.claude/agents/pytorch-build-resolver.md::backward through the graph a second time"
-    },
-    {
-      "id": "agents-web-write-.claude/agents/seo-specialist.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has web access + write access: .claude/agents/seo-specialist.md",
-      "file": ".claude/agents/seo-specialist.md",
-      "evidence": "Web: WebSearch, WebFetch + Write: Bash",
-      "fingerprint": "agents-web-write-.claude/agents/seo-specialist.md::.claude/agents/seo-specialist.md::Web: WebSearch, WebFetch + Write: Bash"
-    },
-    {
-      "id": "agents-bash-access-.claude/agents/type-design-analyzer.md",
-      "severity": "high",
-      "category": "agents",
-      "title": "Agent has Bash access: .claude/agents/type-design-analyzer.md",
-      "file": ".claude/agents/type-design-analyzer.md",
-      "fingerprint": "agents-bash-access-.claude/agents/type-design-analyzer.md::.claude/agents/type-design-analyzer.md::"
-    },
-    {
-      "id": "hooks-logging-disabled-718",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook disables logging: &>/dev/null",
-      "file": "scripts/claude-hooks/rtk-rewrite.sh",
-      "evidence": "&>/dev/null",
-      "fingerprint": "hooks-logging-disabled-718::scripts/claude-hooks/rtk-rewrite.sh::&>/dev/null"
-    },
-    {
-      "id": "hooks-logging-disabled-898",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook disables logging: &>/dev/null",
-      "file": "scripts/claude-hooks/rtk-rewrite.sh",
-      "evidence": "&>/dev/null",
-      "fingerprint": "hooks-logging-disabled-898::scripts/claude-hooks/rtk-rewrite.sh::&>/dev/null"
-    },
-    {
-      "id": "hooks-global-install-1555",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook installs packages: cargo install",
-      "file": "scripts/claude-hooks/rtk-rewrite.sh",
-      "evidence": "cargo install",
-      "fingerprint": "hooks-global-install-1555::scripts/claude-hooks/rtk-rewrite.sh::cargo install"
-    },
-    {
-      "id": "hooks-logging-disabled-206",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook disables logging: > /dev/null 2>&1",
-      "file": "scripts/claude-hooks/require-tests-for-pr.sh",
-      "evidence": "> /dev/null 2>&1",
-      "fingerprint": "hooks-logging-disabled-206::scripts/claude-hooks/require-tests-for-pr.sh::> /dev/null 2>&1"
-    },
-    {
-      "id": "hooks-logging-disabled-330",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook disables logging: &>/dev/null",
-      "file": "scripts/claude-hooks/require-tests-for-pr.sh",
-      "evidence": "&>/dev/null",
-      "fingerprint": "hooks-logging-disabled-330::scripts/claude-hooks/require-tests-for-pr.sh::&>/dev/null"
-    },
-    {
-      "id": "hooks-global-install-1277",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook installs packages: npm install -g",
-      "file": "scripts/claude-hooks/route-to-agent-browser.sh",
-      "evidence": "npm install -g",
-      "fingerprint": "hooks-global-install-1277::scripts/claude-hooks/route-to-agent-browser.sh::npm install -g"
-    },
-    {
-      "id": "hooks-logging-disabled-905",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook disables logging: > /dev/null 2>&1",
-      "file": "scripts/claude-hooks/kb-viewer-sync.sh",
-      "evidence": "> /dev/null 2>&1",
-      "fingerprint": "hooks-logging-disabled-905::scripts/claude-hooks/kb-viewer-sync.sh::> /dev/null 2>&1"
-    },
-    {
-      "id": "hooks-logging-disabled-508",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook disables logging: &>/dev/null",
-      "file": "scripts/claude-hooks/run-tests-after-edit.sh",
-      "evidence": "&>/dev/null",
-      "fingerprint": "hooks-logging-disabled-508::scripts/claude-hooks/run-tests-after-edit.sh::&>/dev/null"
-    },
-    {
-      "id": "hooks-bg-process-1247",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook spawns background process: &",
-      "file": "scripts/claude-hooks/notify-complete.sh",
-      "evidence": "&",
-      "fingerprint": "hooks-bg-process-1247::scripts/claude-hooks/notify-complete.sh::&"
-    },
-    {
-      "id": "hooks-logging-disabled-251",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook disables logging: > /dev/null 2>&1",
-      "file": "scripts/claude-hooks/calm-on-failure.sh",
-      "evidence": "> /dev/null 2>&1",
-      "fingerprint": "hooks-logging-disabled-251::scripts/claude-hooks/calm-on-failure.sh::> /dev/null 2>&1"
-    },
-    {
-      "id": "hooks-file-delete-260",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook deletes files: rm -rf",
-      "file": "scripts/claude-hooks/cleanup-worktree.sh",
-      "evidence": "rm -rf",
-      "fingerprint": "hooks-file-delete-260::scripts/claude-hooks/cleanup-worktree.sh::rm -rf"
-    },
-    {
-      "id": "hooks-file-delete-260",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook deletes files: rm -rf",
-      "file": "scripts/claude-hooks/cleanup-worktree.sh",
-      "evidence": "rm -rf",
-      "fingerprint": "hooks-file-delete-260::scripts/claude-hooks/cleanup-worktree.sh::rm -rf"
-    },
-    {
-      "id": "hooks-file-delete-448",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook deletes files: rm -f",
-      "file": "scripts/claude-hooks/confidence-gate.sh",
-      "evidence": "rm -f",
-      "fingerprint": "hooks-file-delete-448::scripts/claude-hooks/confidence-gate.sh::rm -f"
-    },
-    {
-      "id": "hooks-logging-disabled-230",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook disables logging: > /dev/null 2>&1",
-      "file": "scripts/claude-hooks/confidence-gate.sh",
-      "evidence": "> /dev/null 2>&1",
-      "fingerprint": "hooks-logging-disabled-230::scripts/claude-hooks/confidence-gate.sh::> /dev/null 2>&1"
-    },
-    {
-      "id": "hooks-logging-disabled-164",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook disables logging: > /dev/null 2>&1",
-      "file": "scripts/claude-hooks/auto-commit.sh",
-      "evidence": "> /dev/null 2>&1",
-      "fingerprint": "hooks-logging-disabled-164::scripts/claude-hooks/auto-commit.sh::> /dev/null 2>&1"
-    },
-    {
-      "id": "hooks-bg-process-974",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook spawns background process: &",
-      "file": "scripts/claude-hooks/notify-stop.sh",
-      "evidence": "&",
-      "fingerprint": "hooks-bg-process-974::scripts/claude-hooks/notify-stop.sh::&"
-    },
-    {
-      "id": "hooks-logging-disabled-205",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook disables logging: > /dev/null 2>&1",
-      "file": "scripts/claude-hooks/notify-stop.sh",
-      "evidence": "> /dev/null 2>&1",
-      "fingerprint": "hooks-logging-disabled-205::scripts/claude-hooks/notify-stop.sh::> /dev/null 2>&1"
-    }
-  ]
+  "summary": {
+    "totalFindings": 43,
+    "critical": 0,
+    "high": 43,
+    "medium": 0,
+    "low": 0,
+    "info": 0,
+    "filesScanned": 161,
+    "autoFixable": 0
+  },
+  "skillHealth": {
+    "totalSkills": 22,
+    "instrumentedSkills": 0,
+    "versionedSkills": 0,
+    "rollbackReadySkills": 0,
+    "observedSkills": 0,
+    "skills": [
+      {
+        "skillName": "schema",
+        "file": "skills/schema.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "aside",
+        "file": ".claude/commands/aside.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "checkpoint",
+        "file": ".claude/commands/checkpoint.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "delegate",
+        "file": ".claude/commands/delegate.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "deploy-check",
+        "file": ".claude/commands/deploy-check.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "deploy",
+        "file": ".claude/commands/deploy.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "docs",
+        "file": ".claude/commands/docs.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "e2e",
+        "file": ".claude/commands/e2e.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "evening",
+        "file": ".claude/commands/evening.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "fix-bug",
+        "file": ".claude/commands/fix-bug.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "go",
+        "file": ".claude/commands/go.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "health-check",
+        "file": ".claude/commands/health-check.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "learn",
+        "file": ".claude/commands/learn.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "log-bug",
+        "file": ".claude/commands/log-bug.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "mcp-audit",
+        "file": ".claude/commands/mcp-audit.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "morning",
+        "file": ".claude/commands/morning.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "new-feature",
+        "file": ".claude/commands/new-feature.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "recover",
+        "file": ".claude/commands/recover.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "refactor",
+        "file": ".claude/commands/refactor.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "script",
+        "file": ".claude/commands/script.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "summary",
+        "file": ".claude/commands/summary.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      },
+      {
+        "skillName": "ultraplan",
+        "file": ".claude/commands/ultraplan.md",
+        "hasObservationHooks": false,
+        "hasFeedbackHooks": false,
+        "hasRollbackMetadata": false,
+        "status": "unobserved",
+        "observedRuns": 0,
+        "historyFiles": []
+      }
+    ]
+  }
 }
