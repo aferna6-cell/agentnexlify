@@ -245,6 +245,17 @@ else
     echo -e "${GREEN}OK${NC}"
 fi
 
+# Check 10: Project invariants (widget sync, schema fields, em-dash, future-annotations)
+echo -n "Check 10: project invariants... "
+if python3 scripts/check_project_invariants.py > /tmp/invariant_out 2>&1; then
+    echo -e "${GREEN}OK${NC}"
+else
+    echo -e "${RED}BLOCKED${NC}"
+    cat /tmp/invariant_out | sed 's/^/  /'
+    echo "  Fix invariant violations above before committing."
+    ERRORS=$((ERRORS + 1))
+fi
+
 # Check 11: Billing constant guard
 echo -n "Check 11: Billing constant guard... "
 BILLING_FILE="backend/routers/billing.py"

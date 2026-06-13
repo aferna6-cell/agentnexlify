@@ -19,10 +19,12 @@
       "title": "Fix widget sync drift — cp widget/agentnexlify-widget.js to landing-page-v2/widget/agentnexlify-widget.js (AUTONOMOUS-EXECUTABLE, run 57 winner)",
       "date": "2026-06-13",
       "confidence": "HIGH",
-      "status": "pending_autonomous",
+      "status": "implemented",
       "autonomous_executable": true,
+      "implemented_date": "2026-06-13",
+      "implemented_by": "PR #257 (merged 2026-06-13) — P0a: landing-page-v2/widget now byte-identical",
       "category": "code_health",
-      "note": "Run 57 winner. AUTONOMOUS-EXECUTABLE. PR #254 (3f79d7f, 2026-06-13) updated widget/ and frontend/public/widget/ (+202 lines each: Spanish translation + web push) but NOT landing-page-v2/widget/. check_project_invariants.py confirms live: 'drift: widget/agentnexlify-widget.js != landing-page-v2/widget/agentnexlify-widget.js'. CLAUDE.md Critical Invariant #4. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js. Eliminates one of 3 check_project_invariants failures. Combined with run 55 (em-dash + from __future__) → exits 0 → Check 10 auto-wires. Implementation sketch: subconscious/runs/2026-06-13/winning-concept.md."
+      "note": "Run 57 winner. IMPLEMENTED by PR #257 (merged 2026-06-13). PR #257 P0a completed the cp that run 57 claimed but never executed (subconscious run 57 commit 57a545b only wrote state files, not the actual widget copy). widget/agentnexlify-widget.js == landing-page-v2/widget/agentnexlify-widget.js confirmed. check_project_invariants.py widget sync PASS."
     },
     {
       "title": "Add pre-commit Check 13: `from __future__ import annotations` guard in FastAPI files (FAIL mode, ~10 lines bash, AUTONOMOUS-EXECUTABLE) (run 56 winner)",
@@ -37,10 +39,12 @@
       "title": "Fix channels_instagram.py `from __future__ import annotations` + clear 10 em-dash violations → exits 0 → Check 10 auto-wires tonight (run 55 winner)",
       "date": "2026-06-11",
       "confidence": "HIGH",
-      "status": "pending_autonomous",
+      "status": "implemented",
       "autonomous_executable": true,
+      "implemented_date": "2026-06-13",
+      "implemented_by": "PR #257 (merged 2026-06-13) — AST detection fix + em-dash sweep + Check 10 wired 2026-06-13",
       "category": "code_health",
-      "note": "Run 55 winner. AUTONOMOUS-EXECUTABLE. 7c8825c (Instagram connector PR #232, 2026-06-11) introduced `from __future__ import annotations` on line 1 of channels_instagram.py — ALL Instagram endpoints 422 (CLAUDE.md Critical Invariant #5). Same PR + a5c65b5 introduced 10 em-dash violations across 7 JSX files (most in project history). Fix: (1) remove line 1 from channels_instagram.py; (2) replace 10 em-dash chars with hyphens across main.jsx:152, CookieConsent.jsx:5+31, MarketingUpsell.jsx:3, App.jsx:328, Sidebar.test.jsx:27+49, ReferralCard.jsx:24+45, ComposerAttachments.jsx:1 → exits 0 → Item A auto-wires tonight. Full implementation sketch: subconscious/runs/2026-06-11/winning-concept.md."
+      "note": "Run 55 winner. IMPLEMENTED by PR #257 (merged 2026-06-13). PR #257 P0a: (1) rewrote check_project_invariants.py:check_router_future_imports to AST detection (ast.ImportFrom + module=='__future__') — channels_instagram.py was flagged as false positive by old substring match, now PASS; (2) cleared em-dash violations across JSX + website-source files; (3) widget sync restored. All 6 invariants now PASS. check_project_invariants.py exits 0. Item A (Check 10) auto-wired 2026-06-13 by this session as activated by exits-0 condition. Draft PR #233 closed as superseded."
     },
     {
       "title": "Fix 3 JSX em-dash violations in Agent OS UI copy (MemoryPanel.jsx:180, AgentOS.jsx:197/224) — AUTONOMOUS-EXECUTABLE, unblocks Item A Check 10 wire (run 54 winner)",
@@ -863,10 +867,10 @@
     "runs_pending_approval": 17,
     "runs_pending_approval_raw": 17,
     "runs_pending_approval_note": "Run 57 (2026-06-13): 5 PRs (#246-#254) merged in 3 days (~10k lines). PR #254 (3f79d7f, 3500 lines, 31 files) introduced widget drift (widget/ updated, landing-page-v2/widget/ NOT updated \u2014 check_project_invariants FAIL confirmed live), 10 em-dash violations, and potential new from __future__ in push_subscriptions.py. Run 55 (em-dash + from __future__) and run 56 (Check 13) both pending_autonomous \u2014 nightly d12bd21 did not implement either. Run 57 adds widget cp as third pending_autonomous item. True human-required pending: runs 4/38 (AI-to-Human Handoff), runs 20/21/28/29/30/35/41 (moratorium sprint + email split), PR #183/GH#181.",
-    "runs_implemented": 16,
+    "runs_implemented": 18,
     "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 58)",
-    "governance_correction": "Run 57 (2026-06-13): run 55+56 status remain pending_autonomous. Widget drift is NEW active failure from PR #254. 3 total check_project_invariants failures: from __future__ (3 files), widget drift, 10 em-dashes. runs_implemented stays at 16.",
-    "note": "Moratorium exit path: Run 57 widget cp (autonomous tonight) + Run 55 fix (em-dashes + from __future__ \u2192 exits 0 \u2192 Check 10 wires) + Run 56 Check 13 guard + Merge PRs #209+#200+#183 (~20 min human) \u2192 Items A+B unblocked \u2192 email_sequences split \u2192 pending drops.",
+    "governance_correction": "2026-06-13 (this session): PR #257 (merged 2026-06-13) implemented run 55 winner (channels_instagram false positive + em-dash sweep, AST detection) and run 57 winner (widget sync drift cp). check_project_invariants.py exits 0 \u2014 all 6 checks PASS. Item A (Check 10) wired into scripts/hooks/pre-commit as Check 10 by this session \u2014 50+ day blockage ended (run 22 mandate, 2026-05-17). runs_implemented 16 \u2192 18 (runs 55 + 57). PR #233 closed as superseded by PR #257. Run 56 (Check 13 pre-commit guard) still pending_autonomous.",
+    "note": "Next autonomous item: Run 56 winner \u2014 Add pre-commit Check 13 (from __future__ annotations guard, FAIL mode, ~10 lines bash). Moratorium exit path: Check 13 + Merge PRs #183 (~10 min human) \u2192 email_sequences split \u2192 pending drops toward threshold=2.",
     "escalate": true
   },
   "config": {
