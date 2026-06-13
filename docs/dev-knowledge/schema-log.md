@@ -1139,3 +1139,24 @@ Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID
 - **Applied:** NO — file written only; apply via Supabase MCP. Requires
   Railway env vars VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT
   (manual step pending) before push actually fires.
+
+## 2026-06-13 — migration 146: conversation_email_notify (file written; apply via Supabase MCP)
+- Per-tenant "email me the full transcript when a widget conversation wraps".
+  `tenants.conversation_email_notify_enabled boolean not null default false`,
+  `tenants.conversation_notify_email text` (alert destination; falls back to
+  `owner_email` when null), `conversations.notified_at timestamptz` +
+  partial index `idx_conversations_unnotified` on `(client_id) WHERE
+  notified_at IS NULL`.
+- **Tenant column note:** `conversations` uses `client_id` (legacy convention);
+  the new `notified_at` column sits alongside it. Tenant settings live on
+  `tenants` (same place as `sms_notifications_enabled`/`notification_phone`).
+- Backend: `backend/services/conversation_notify.py` (idle-sweep job
+  `notify_idle_conversations`, exactly-once via `notified_at` claim), wired into
+  the 5-min scheduler batch in `backend/main.py`. Settings read/write added to
+  `backend/routers/auth.py` (`update_settings` allowlist + `get_tenant` select).
+- Frontend: `ConversationEmailNotificationsCard` in
+  `frontend/src/pages/settings/MessagingSettingsCards.jsx`, rendered via
+  `SettingsPageContent.jsx`, form fields in `SettingsPage.jsx`.
+- **Applied:** NO — apply via Supabase MCP. Additive + nullable/defaulted, safe
+  ahead of deploy. (Note: supersedes the audit suggestion to renumber PR #212's
+  migrations to 146 — use 147/148/149 there now.)

@@ -53,6 +53,52 @@ export function SmsNotificationsCard({
   );
 }
 
+export function ConversationEmailNotificationsCard({
+  form,
+  setForm,
+  setSaved,
+  handleChange,
+  handleSave,
+  saving,
+  saved,
+}) {
+  return (
+    <div className="settings-card">
+      <h3>Conversation Email Alerts</h3>
+      <p className="settings-card-desc">
+        Email the full transcript whenever a website chat wraps up.
+      </p>
+      <div className="settings-field">
+        <label>Send alerts to</label>
+        <input
+          type="email"
+          value={form.conversation_notify_email || ""}
+          onChange={handleChange("conversation_notify_email")}
+          placeholder="front-desk@yourbusiness.com"
+        />
+      </div>
+      <CheckboxSettingRow
+        id="conversation-email-toggle"
+        checked={!!form.conversation_email_notify_enabled}
+        onChange={(e) => {
+          setForm((f) => ({
+            ...f,
+            conversation_email_notify_enabled: e.target.checked,
+          }));
+          setSaved(false);
+        }}
+        label="Email me each conversation when it ends"
+      />
+      <SaveButton
+        saving={saving}
+        saved={saved}
+        onSave={handleSave}
+        style={{ marginTop: "0.75rem" }}
+      />
+    </div>
+  );
+}
+
 export function BrowserNotificationsCard() {
   const { user, token } = useAuth();
   const [vapidKey, setVapidKey] = useState(null);

@@ -787,10 +787,29 @@ async def update_settings(
         "os_auto_send_enabled",
         "os_auto_send_rules",
         "voice_ai_enabled",
+        "conversation_email_notify_enabled",
+        "conversation_notify_email",
     }
     updates = {k: v for k, v in body.items() if k in allowed and v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No valid fields to update")
+
+    # conversation_notify_email is used as a send_email recipient — reject
+    # anything that isn't a plausible single address. Empty string is allowed
+    # (clears the override; the notify job then falls back to owner_email).
+    if updates.get("conversation_notify_email"):
+        addr = updates["conversation_notify_email"]
+        if (
+            not isinstance(addr, str)
+            or len(addr) > 254
+            or addr.count("@") != 1
+            or any(c in addr for c in " \t\r\n,;")
+            or "." not in addr.split("@")[1]
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail="conversation_notify_email must be a single valid email address",
+            )
 
     # os_auto_send_rules is a JSONB dict of agent_name -> bool; reject any
     # other shape before it reaches the auto-send gate.
@@ -830,7 +849,7 @@ async def get_tenant(tenant_id: str, claims: dict = Depends(_get_current_tenant)
     result = (
         db.table("tenants")
         .select(
-            "id, business_name, business_type, city, owner_email, owner_name, plan, plan_status, notification_phone, sms_notifications_enabled, google_review_link, review_request_config, website_url, business_slug, business_page_enabled, textback_enabled, textback_message, textback_quiet_start, textback_quiet_end, client_login_enabled, daily_briefing_enabled, noshow_recovery_enabled, os_auto_send_enabled, os_auto_send_rules, voice_ai_enabled"
+            "id, business_name, business_type, city, owner_email, owner_name, plan, plan_status, notification_phone, sms_notifications_enabled, google_review_link, review_request_config, website_url, business_slug, business_page_enabled, textback_enabled, textback_message, textback_quiet_start, textback_quiet_end, client_login_enabled, daily_briefing_enabled, noshow_recovery_enabled, os_auto_send_enabled, os_auto_send_rules, voice_ai_enabled, conversation_email_notify_enabled, conversation_notify_email"
         )
         .eq("id", tenant_id)
         .limit(1)

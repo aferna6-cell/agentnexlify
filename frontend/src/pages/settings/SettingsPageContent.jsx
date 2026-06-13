@@ -17,6 +17,7 @@ import {
   VoiceAICard,
   NoShowRecoveryCard,
   SmsNotificationsCard,
+  ConversationEmailNotificationsCard,
 } from "./MessagingSettingsCards";
 import PhoneProvisioningCard from "./PhoneProvisioningCard";
 import { ConversationTagsCard, CustomFieldsCard } from "./TagsAndFieldsCards";
@@ -62,6 +63,11 @@ export default function SettingsPageContent(props) {
         onNavigate={props.onNavigate}
       />
       <SmsNotificationsCard
+        handleChange={props.handleChange}
+        {...formProps}
+        {...saveProps}
+      />
+      <ConversationEmailNotificationsCard
         handleChange={props.handleChange}
         {...formProps}
         {...saveProps}
