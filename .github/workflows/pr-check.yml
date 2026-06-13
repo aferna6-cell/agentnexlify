@@ -84,8 +84,11 @@ jobs:
         run: |
           ERRORS=0
 
-          # __future__ annotations in routers
-          if grep -r "from __future__ import annotations" backend/routers/ 2>/dev/null; then
+          # __future__ annotations in routers. Anchor to an actual import
+          # statement (optional leading whitespace) so docstrings/comments that
+          # merely DOCUMENT the rule ("no `from __future__ import annotations`")
+          # are not false-positives. Mirrors scripts/check_project_invariants.py.
+          if grep -rnE "^[[:space:]]*from __future__ import annotations" backend/routers/ 2>/dev/null; then
             echo "::error::from __future__ import annotations found in router files. This breaks FastAPI request parsing."
             ERRORS=$((ERRORS + 1))
           fi
