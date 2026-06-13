@@ -1198,3 +1198,26 @@ the feature may store data differently / under another name):
 schema-sync heuristic trusts this file's text rather than the DB. Follow-up:
 either flip the remaining verified-applied `Pending` markers, or upgrade the
 schema-sync check to introspect the live DB.
+
+---
+
+### 147 — Qualifier Settings (per-tenant AI qualifier controls, GH #216)
+
+Adds two owner-facing columns to `tenants` for the AI lead qualifier
+(`backend/services/lead_qualification.py`), both additive + idempotent
+(`ADD COLUMN IF NOT EXISTS`) with behavior-preserving defaults:
+
+- `qualifier_enabled BOOLEAN NOT NULL DEFAULT true` — kill switch.
+- `qualifier_min_intent INTEGER NOT NULL DEFAULT 0` — only spend AI-qualifier
+  budget when the cheap rule-based `leads.lead_score` (0-10) clears this gate.
+  CHECK `qualifier_min_intent BETWEEN 0 AND 10`.
+
+Ported from PR #212 (migration 134 on `gap-3-research-worker-87IXF`),
+renumbered 147. Pairs with the per-vertical rubric service
+(`backend/services/qualification_rubrics.py`) and the owner-controls router
+(`backend/routers/qualifier_config.py`, `/api/v1/qualifier/*`) + the
+`AgentQualifierSettings` dashboard component.
+
+**Applied:** 2026-06-13 via `mcp__supabase__apply_migration` (project
+pxserpybmajixqrmzaly). Verified: both columns present with defaults
+`true` / `0`.

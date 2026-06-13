@@ -157,7 +157,7 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
     # service itself gates on plan, so we unconditionally enqueue here
     # and let the service decide whether to spend the API call.
     if lead_id and is_new:
-        background_tasks.add_task(qualify_lead_background, lead_id)
+        background_tasks.add_task(qualify_lead_background, lead_id, tenant["id"])
 
     if lead_id and is_new:
         background_tasks.add_task(
@@ -279,7 +279,7 @@ async def submit_offline_contact(
 
             # AI qualification for new leads on eligible plans.
             if offline_is_new:
-                background_tasks.add_task(qualify_lead_background, lead_id)
+                background_tasks.add_task(qualify_lead_background, lead_id, tenant_id)
 
         return {"success": True, "message": "Thank you! We'll get back to you soon."}
 

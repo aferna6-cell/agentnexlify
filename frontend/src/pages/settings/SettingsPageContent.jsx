@@ -25,6 +25,7 @@ import {
   AiKnowledgeSourcesCard,
   AiResponseFeedbackCard,
 } from "./KnowledgeFeedbackCards";
+import AgentQualifierSettings from "../../components/AgentQualifierSettings";
 
 export default function SettingsPageContent(props) {
   const saveProps = {
@@ -135,6 +136,10 @@ export default function SettingsPageContent(props) {
       <AiKnowledgeSourcesCard
         knowledgeStats={props.knowledgeStats}
         onNavigate={props.onNavigate}
+      />
+      <AgentQualifierSettings
+        tenantId={props.tenantId}
+        token={props.token}
       />
       <AiResponseFeedbackCard
         feedback={props.feedback}

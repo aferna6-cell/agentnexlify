@@ -74,6 +74,7 @@ from backend.routers import (
     resend_webhooks,
     revenue,
     reviews,
+    qualifier_config,
     scoring_config,
     sequences,
     smart_lists,
@@ -875,6 +876,7 @@ app.include_router(channels_instagram.router)
 app.include_router(embed_instructions.router)
 app.include_router(pipeline_automations.router)
 app.include_router(scoring_config.router)
+app.include_router(qualifier_config.router)
 app.include_router(waitlist.router)
 app.include_router(wizard_analytics.router)
 app.include_router(content_repurpose.router)
