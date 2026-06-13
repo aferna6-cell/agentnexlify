@@ -342,6 +342,13 @@ async def widget_chat(
                 "conversation_id": conversation_id,
             },
         )
+        # Email the owner that a new conversation came in (opt-in; background
+        # so it never delays the visitor reply). Lightweight: first message +
+        # inbox link, not a transcript.
+        if tenant.get("conversation_email_notify_enabled"):
+            from backend.services.conversation_notify import notify_new_conversation
+
+            background_tasks.add_task(notify_new_conversation, tenant, req.message)
 
     # Get DB handle for conversation operations
     db = get_service_supabase()

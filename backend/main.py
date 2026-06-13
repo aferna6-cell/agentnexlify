@@ -333,7 +333,6 @@ async def _automation_loop():
     from backend.services.twilio_webhook_sync import sync_twilio_number_webhooks
     from backend.services.demo_reset_job import reset_demo_tenants
     from backend.services.activation_nudges import send_activation_nudges
-    from backend.services.conversation_notify import notify_idle_conversations
 
     tick = 0
     while True:
@@ -357,9 +356,6 @@ async def _automation_loop():
                     [
                         _safe_run(
                             "send_pending_review_requests", send_pending_review_requests
-                        ),
-                        _safe_run(
-                            "notify_idle_conversations", notify_idle_conversations
                         ),
                         _safe_run("send_rebook_suggestions", send_rebook_suggestions),
                         _safe_run("send_onboarding_emails", send_onboarding_emails),

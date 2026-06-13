@@ -1160,3 +1160,14 @@ Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID
 - **Applied:** NO — apply via Supabase MCP. Additive + nullable/defaulted, safe
   ahead of deploy. (Note: supersedes the audit suggestion to renumber PR #212's
   migrations to 146 — use 147/148/149 there now.)
+
+## 2026-06-13 — conversation email alerts: behavior change (on-NEW, not transcript-on-wrap)
+- Per tenant request, the alert now fires the moment a NEW conversation comes in
+  (inline from widget_chat `is_new`, background task) with a lightweight heads-up
+  (first message + inbox link), NOT the full transcript on idle.
+- `notify_idle_conversations` scheduled job + transcript builder removed;
+  `conversation_notify.py` now exposes `notify_new_conversation`.
+- The `tenants.conversation_email_notify_enabled` + `conversation_notify_email`
+  columns (migration 146) are still used. `conversations.notified_at` +
+  `idx_conversations_unnotified` are now VESTIGIAL (no reader) — harmless; drop in
+  a future cleanup migration if desired.
