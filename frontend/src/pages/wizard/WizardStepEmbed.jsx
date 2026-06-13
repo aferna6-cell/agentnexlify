@@ -1,6 +1,6 @@
 // frontend/src/pages/wizard/WizardStepEmbed.jsx
 //
-// Final wizard step. The Agent OS is already live — this step is the
+// Final wizard step. The Agent OS is already live - this step is the
 // OPTIONAL website widget install. Because most small-business owners can't
 // edit their own site, the escape hatch ("email this to my web person") is
 // as prominent as the snippet itself.
@@ -76,11 +76,11 @@ export default function WizardStepEmbed({ wizardData, token, tenantId }) {
 
   return (
     <div style={{ textAlign: "center" }}>
-      {/* Success banner — the product is live regardless of the widget */}
+      {/* Success banner - the product is live regardless of the widget */}
       <div style={{ background: "rgba(134,239,172,0.1)", border: "1px solid rgba(134,239,172,0.3)", borderRadius: 14, padding: "28px 20px", marginBottom: 24 }}>
         <h2 style={{ fontSize: "1.4rem", fontWeight: 700, color: "#86efac", marginBottom: 6 }}>Your AI staff is on the clock</h2>
         <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.9rem", margin: 0 }}>
-          Ask them to send invoices, chase leads, and book appointments — starting now.
+          Ask them to send invoices, chase leads, and book appointments - starting now.
         </p>
       </div>
 
@@ -142,7 +142,7 @@ export default function WizardStepEmbed({ wizardData, token, tenantId }) {
           )}
           {sendState === "error" && (
             <p style={{ color: "#f87171", fontSize: "0.8rem", margin: "8px 0 0" }}>
-              Couldn't send — check the address and try again.
+              Couldn't send - check the address and try again.
             </p>
           )}
         </div>
@@ -179,7 +179,7 @@ export default function WizardStepEmbed({ wizardData, token, tenantId }) {
       </div>
 
       <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.85rem", margin: 0 }}>
-        Your 8 AI department heads are ready — ask them anything about running {wizardData.business_name || "your business"}.
+        Your 8 AI department heads are ready - ask them anything about running {wizardData.business_name || "your business"}.
       </p>
     </div>
   );

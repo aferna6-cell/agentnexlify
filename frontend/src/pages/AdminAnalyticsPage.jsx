@@ -321,7 +321,7 @@ export default function AdminAnalyticsPage() {
         </div>
       )}
 
-      {/* MRR & Churn (rubric 4.4 — key business metrics) */}
+      {/* MRR & Churn (rubric 4.4 - key business metrics) */}
       {mrrMetrics && (
         <div style={{ ...cardStyle, marginBottom: 24 }}>
           <h3 style={{ margin: "0 0 16px", fontSize: "1rem", color: "var(--text-primary)" }}>
@@ -335,13 +335,13 @@ export default function AdminAnalyticsPage() {
                 label: "Churn (30d)",
                 value:
                   mrrMetrics.churn_rate_30d_pct == null
-                    ? "—"
+                    ? " - "
                     : `${mrrMetrics.churn_rate_30d_pct}%`,
                 sub: `${mrrMetrics.cancellations_30d ?? 0} cancellations`,
               },
               {
                 label: "Dunning paused",
-                value: mrrMetrics.dunning_paused_count ?? "—",
+                value: mrrMetrics.dunning_paused_count ?? " - ",
                 sub: "payment failed, plan paused",
               },
             ].map((s) => (
@@ -381,7 +381,7 @@ export default function AdminAnalyticsPage() {
             </table>
           ) : (
             <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-              No paying tenants yet — MRR by plan will appear with the first paid subscription.
+              No paying tenants yet - MRR by plan will appear with the first paid subscription.
             </div>
           )}
         </div>

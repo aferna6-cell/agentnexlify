@@ -1,5 +1,5 @@
 /**
- * Auth API functions — login, demo login, etc.
+ * Auth API functions - login, demo login, etc.
  * Uses raw fetch (not the request() helper) because these endpoints
  * return tokens before auth is established.
  */

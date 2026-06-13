@@ -192,7 +192,7 @@ export default function MemoryPanel({ token, onClose }) {
                   </div>
                   <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: 4 }}>
                     seen {n.mention_count}× · last{" "}
-                    {n.last_seen_at ? new Date(n.last_seen_at).toLocaleDateString() : "—"}
+                    {n.last_seen_at ? new Date(n.last_seen_at).toLocaleDateString() : " - "}
                   </div>
                 </div>
               ))}

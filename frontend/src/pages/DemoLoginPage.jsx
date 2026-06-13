@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { demoLogin } from "../utils/api/auth";
 
 /**
- * /demo route — public, no auth guard.
+ * /demo route - public, no auth guard.
  * On mount: calls demo-login endpoint, stores session via AuthContext.login()
  * (same path as a normal login), then redirects to /dashboard.
  *
@@ -29,7 +29,7 @@ export default function DemoLoginPage() {
         if (cancelled) return;
         // Store tenant_id first (mirrors LoginPage behaviour)
         localStorage.setItem("anx_tenant_id", data.tenant_id);
-        // login() writes to localStorage and sets context token — same path
+        // login() writes to localStorage and sets context token - same path
         // as the normal email/password login.
         login(data.token);
         navigate("/dashboard", { replace: true });

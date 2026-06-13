@@ -1,7 +1,7 @@
 /* Weekly value recap + proactive suggestions strip (gaps G2 + G7).
  *
- * Shows the owner what their AI staff was worth this week — leads,
- * appointments, invoice dollars — plus anything the staff noticed
+ * Shows the owner what their AI staff was worth this week - leads,
+ * appointments, invoice dollars - plus anything the staff noticed
  * (cold leads, overdue invoices). Suggestions click into the composer.
  * Fails silent: a fetch error renders nothing rather than noise.
  */

@@ -2,8 +2,8 @@
  * Web Push registration + subscription for pending-approval notifications.
  *
  * Degrades gracefully: fetchVapidPublicKey() returns null when the backend
- * has no VAPID keys configured (endpoint 404s) — callers hide the UI.
- * No localStorage — the Push API itself owns subscription state.
+ * has no VAPID keys configured (endpoint 404s) - callers hide the UI.
+ * No localStorage - the Push API itself owns subscription state.
  */
 
 import { request, ApiError } from "./api/_client";

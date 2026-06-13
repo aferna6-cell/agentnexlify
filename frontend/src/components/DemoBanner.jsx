@@ -1,10 +1,10 @@
 import { useAuth } from "../context/AuthContext";
 
 /**
- * DemoBanner — rendered in the authenticated shell (App.jsx) when the
+ * DemoBanner - rendered in the authenticated shell (App.jsx) when the
  * current user is in a demo session (user.role === "demo").
  *
- * The role value comes from the JWT parsed by AuthContext — no extra API
+ * The role value comes from the JWT parsed by AuthContext - no extra API
  * call needed. Demo JWTs carry role="demo" per the backend contract.
  */
 export default function DemoBanner() {

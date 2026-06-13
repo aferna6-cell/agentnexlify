@@ -1,5 +1,5 @@
 /**
- * DemoTour — first-visit guided coach-mark tour for live-demo sessions.
+ * DemoTour - first-visit guided coach-mark tour for live-demo sessions.
  *
  * Shows a 3-step spotlight walking the visitor to the wow moment: the pending
  * draft waiting for approval. Visible only when:
@@ -11,11 +11,11 @@
  * the tour runs again.
  *
  * Targets are located by data-tour attributes added to the OS page:
- *   - data-tour="thread-rail"        — the inbox thread list
- *   - data-tour="deliverable-panel"  — the deliverable / draft area
- *   - data-tour="approve-button"     — the Approve button region
+ *   - data-tour="thread-rail" - the inbox thread list
+ *   - data-tour="deliverable-panel" - the deliverable / draft area
+ *   - data-tour="approve-button" - the Approve button region
  *
- * If a target element isn't mounted the card still shows centered — never
+ * If a target element isn't mounted the card still shows centered - never
  * crashes, never blocks the UI.
  */
 import { useState, useEffect, useCallback } from "react";
@@ -27,7 +27,7 @@ const STEPS = [
   {
     target: "thread-rail",
     heading: "Your Agent OS inbox",
-    body: "Everything your AI staff handles lands here — missed calls, leads, follow-ups. Each thread is a task your agents are working on.",
+    body: "Everything your AI staff handles lands here - missed calls, leads, follow-ups. Each thread is a task your agents are working on.",
   },
   {
     target: "deliverable-panel",
@@ -37,7 +37,7 @@ const STEPS = [
   {
     target: "approve-button",
     heading: "Nothing sends without your OK",
-    body: "Tap Approve to see it go out. In the demo, sends are simulated — no real messages leave.",
+    body: "Tap Approve to see it go out. In the demo, sends are simulated - no real messages leave.",
   },
 ];
 
@@ -110,7 +110,7 @@ export default function DemoTour() {
     try {
       if (sessionStorage.getItem(STORAGE_KEY)) return;
     } catch {
-      // sessionStorage unavailable — show the tour anyway
+      // sessionStorage unavailable - show the tour anyway
     }
     setVisible(true);
   }, [user]);
@@ -149,7 +149,7 @@ export default function DemoTour() {
     try {
       sessionStorage.setItem(STORAGE_KEY, "1");
     } catch {
-      // sessionStorage unavailable — tour will show again on next mount
+      // sessionStorage unavailable - tour will show again on next mount
     }
   }, []);
 

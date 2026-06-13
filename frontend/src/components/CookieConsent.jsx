@@ -2,7 +2,7 @@
  * Cookie consent banner (launch rubric 1.4).
  *
  * Shown once per browser until a choice is stored. The product itself uses
- * only functional storage (auth token, consent choice) — the banner exists
+ * only functional storage (auth token, consent choice) - the banner exists
  * for the marketing site analytics surface and regulatory clarity, and the
  * Decline path simply records the refusal. Links to the privacy policy.
  */
@@ -28,7 +28,7 @@ export default function CookieConsent() {
     try {
       window.localStorage.setItem(CONSENT_KEY, value);
     } catch {
-      // Storage unavailable (private mode) — hide for this visit only.
+      // Storage unavailable (private mode) - hide for this visit only.
     }
     setChoice(value);
   };

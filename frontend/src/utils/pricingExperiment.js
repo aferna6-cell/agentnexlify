@@ -1,6 +1,6 @@
 /* Pricing page A/B experiment client (launch rubric 9.3).
  *
- * Anonymous: visitor id is a first-party cookie UUID — no PII.
+ * Anonymous: visitor id is a first-party cookie UUID - no PII.
  * Fault-tolerant: any API failure falls back to the control variant and
  * silently drops events; the marketing page must never break on analytics.
  */

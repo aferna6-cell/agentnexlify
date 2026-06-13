@@ -1,8 +1,8 @@
 /**
- * FirstRunStarters — shown in the empty chat area when a tenant has zero
+ * FirstRunStarters - shown in the empty chat area when a tenant has zero
  * threads (their very first visit to Agent OS). Renders a short welcome line
  * and 3-4 vertical-tailored starter prompts. Clicking one populates the
- * composer textarea and focuses it — it does NOT auto-send.
+ * composer textarea and focuses it - it does NOT auto-send.
  *
  * Props:
  *   businessType   {string}  from useAuth().user.businessType (may be empty)
