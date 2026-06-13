@@ -1171,3 +1171,30 @@ Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID
   columns (migration 146) are still used. `conversations.notified_at` +
   `idx_conversations_unnotified` are now VESTIGIAL (no reader) — harmless; drop in
   a future cleanup migration if desired.
+
+---
+
+## Verification audit — 2026-06-13 (live prod introspection, project pxserpybmajixqrmzaly)
+
+The daily Schema Sync workflow escalated "CRITICAL: pending migrations — blocks
+production" off this file's `Applied: Pending` text. Live introspection proved
+that is a **stale-log false alarm, not a prod schema gap**. Confirmed applied:
+
+- 065 client_accounts; 087 automation_rules; 070 automations/pipeline; 086 A/B
+  test tables (×3); 088 campaign_analytics_aggregates.
+- 078 business_type CHECK (28 industries); 090 plan CHECK (includes `autopilot`)
+  — the two "CRITICAL" ones; markers corrected above.
+- Applied under RENAMED objects: 066 → `waitlist_entries`, 067/084 → `scoring_configs`
+  (+ `leads.lead_score`); 069 → `leads.email_bounced`; 095 → conversation memory
+  column; 098 → `tenants.daily_briefing_enabled`.
+
+No live match (need feature-level confirmation before any apply — do NOT blind-apply,
+the feature may store data differently / under another name):
+- 077 widget knowledge base — no `*knowledge_base*` table (KB likely file/pgvector-backed).
+- 079 `wizard_dropoff_events` — no table by that name.
+- 085 `password_reset_tokens` — no table, though password reset ships (auth_password_reset.py); confirm token storage.
+
+114 public tables total. Bottom line: most "Pending" entries are stale; the
+schema-sync heuristic trusts this file's text rather than the DB. Follow-up:
+either flip the remaining verified-applied `Pending` markers, or upgrade the
+schema-sync check to introspect the live DB.
