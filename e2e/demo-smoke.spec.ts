@@ -52,6 +52,10 @@ test.describe("live-demo sandbox smoke", () => {
     // And its conversion CTA must point at attributed signup.
     const cta = page.getByRole("link", { name: /start your free account/i });
     await expect(cta).toBeVisible();
-    await expect(cta).toHaveAttribute("href", "/signup?from=demo");
+    // DemoBanner appends &vertical=<businessType> when the demo tenant has one
+    // (DemoBanner.jsx:18, covered by DemoBanner.test.jsx:34). The live demo is a
+    // plumbing tenant, so the href is /signup?from=demo&vertical=plumbing. Match
+    // the from=demo attribution prefix to stay valid for bare and vertical forms.
+    await expect(cta).toHaveAttribute("href", /^\/signup\?from=demo/);
   });
 });
