@@ -80,3 +80,6 @@ pytest-of-*/
 
 # Obsidian local vault config (when repo opened as Obsidian vault)
 .obsidian/
+
+# stray git worktree checkouts (never commit as gitlinks)
+.worktrees/

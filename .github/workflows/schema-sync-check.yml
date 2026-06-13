@@ -21,6 +21,14 @@ on:
     - cron: "0 7 * * *"   # 7 AM UTC daily
   workflow_dispatch: {}
 
+# The audit step opens a GH issue when critical migrations are pending.
+# Without issues:write the default GITHUB_TOKEN gets 403 ("Resource not
+# accessible by integration") and the whole run goes red even though the
+# check ran correctly.
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   check:
     name: Pending Migrations Audit
