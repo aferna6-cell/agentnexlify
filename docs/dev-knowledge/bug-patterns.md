@@ -17902,3 +17902,31 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** .github/workflows/e2e.yml,backend/config.py,backend/main.py,backend/requirements.txt,backend/routers/admin_health.py,backend/routers/os_inbound.py,backend/routers/push_subscriptions.py,backend/services/activation_nudges.py,backend/services/os_approval_notify.py,backend/services/os_push_notify.py,backend/services/os_sms_approval.py,backend/tests/test_os_sms_approval.py,docs/dev-knowledge/schema-log.md,e2e/journeys/approval-inbox.spec.js,e2e/journeys/demo-funnel.spec.js,e2e/journeys/demo-vertical.spec.js,e2e/playwright.config.js,frontend/public/sw.js,frontend/public/widget/agentnexlify-widget.js,frontend/src/components/App.jsx,frontend/src/pages/AdminHealthPage.jsx,frontend/src/pages/settings/MessagingSettingsCards.jsx,frontend/src/pages/settings/SettingsPageContent.jsx,frontend/src/utils/pushNotifications.js,migrations/145_push_subscriptions.sql,ops/schema/expected-columns.json,package.json,tests/test_activation_nudges.py,tests/test_admin_health.py,tests/test_push_subscriptions.py,widget/agentnexlify-widget.js
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### subconscious: run 57 (2026-06-13) — Fix widget sync drift (cp widget to landing-page-v2)
+
+Winner: AUTONOMOUS-EXECUTABLE. PR #254 (3f79d7f) updated widget/ and
+frontend/public/widget/ (+202 lines: Spanish translation + web push) but NOT
+landing-page-v2/widget/. check_project_invariants.py confirms live:
+'drift: widget/agentnexlify-widget.js != landing-page-v2/widget/agentnexlify-widget.js'
+CLAUDE.md Critical Invariant #4 violation.
+
+Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js
+
+- Eliminates 1 of 3 check_project_invariants failures
+- Combined with run 55 (em-dash + from __future__) → exits 0 → Check 10 auto-wires
+- Single cp command — 10-20x lower complexity than prior widget proposals (runs 7/15/50)
+- Same execution class as em-dash fixes autonomously implemented by nightly 8db33df
+
+Artifacts: ideas.md (5 ideas), debate-log.md (3 rounds), winning-concept.md,
+improvement-backlog.md, run-summary.json. governance.json: run 57 active_direction
+added (pending_autonomous), total_runs 56→57. memory.jsonl: run 57 appended.
+
+https://claude.ai/code/session_016QzX7ngVLw4RDGXUoM9A9F
+**Date:** 2026-06-13
+**Commit:** 57a545b
+**Author:** Claude
+**Files Changed:** subconscious/runs/2026-06-13/debate/debate-log.md,subconscious/runs/2026-06-13/ideas/ideas.md,subconscious/runs/2026-06-13/improvement-backlog.md,subconscious/runs/2026-06-13/run-summary.json,subconscious/runs/2026-06-13/winning-concept.md,subconscious/state/governance.json,subconscious/state/memory.jsonl
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
