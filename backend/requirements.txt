@@ -1,4 +1,10 @@
-fastapi>=0.115.6,<1
+# Cap below 0.136: fastapi 0.136.x is incompatible with our pinned
+# starlette>=0.49.1,<0.50.0 — its include_router() silently registers ZERO
+# routes against starlette 0.49.x (CI proof 2026-06-14: app dropped to 15 routes;
+# fresh FastAPI().include_router added 0 from a 7-route router). This keeps the
+# fastapi/starlette pair that ships to prod. Re-raise only when starlette is
+# bumped to a 0.136-compatible release in lockstep.
+fastapi>=0.115.6,<0.136
 starlette>=0.49.1,<0.50.0
 uvicorn[standard]==0.34.0
 anthropic>=0.95.0,<1

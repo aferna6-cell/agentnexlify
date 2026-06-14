@@ -28,6 +28,14 @@ class Settings(BaseSettings):
     widget_prompt_message_chars: int = 420
     supabase_url: str = ""
     supabase_key: str = ""
+    # Integration-secret encryption at rest (onboarding-v2, migration 148).
+    # INTEGRATIONS_ENC_KEY is the current Fernet key (version 1). Generate with
+    # `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
+    # Never commit; set in Railway. integrations_enc_keys holds older versions for
+    # rotation as "version:key,version:key" (e.g. "2:<base64key>"). Version 1 falls
+    # back to integrations_enc_key when not listed there.
+    integrations_enc_key: str = ""
+    integrations_enc_keys: str = ""
     supabase_service_key: str = ""
 
     twilio_account_sid: str = ""
