@@ -402,34 +402,34 @@ Adds `date_of_birth DATE` to leads table for birthday greetings automation.
 ### 065 — Client Accounts (White-Label Login)
 New table `client_accounts` for client portal authentication. Columns: tenant_id, lead_id, email, password_hash, created_at. Unique constraints on (tenant_id, email) and (tenant_id, lead_id). Also adds `client_login_enabled BOOLEAN DEFAULT false` to tenants table.
 
-**Applied:** Pending — must be run on live Supabase manually.
+**Applied:** 2026-06-13 (verified live via Supabase introspection — `client_accounts` table present). Was logged "Pending" but had in fact been applied. Stale-log false positive (see 2026-06-13 audit).
 
 ### 066 — Appointment Waitlist
 New table `waitlist_entries` for appointment waitlist management. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), lead_id (FK→leads, ON DELETE SET NULL), customer_name (TEXT NOT NULL), customer_email (TEXT), customer_phone (TEXT), preferred_date (DATE NOT NULL), preferred_time_start/end (TEXT), service_type_id (FK→service_types, ON DELETE SET NULL), notes (TEXT), status (TEXT CHECK: waiting/notified/booked/expired/cancelled, DEFAULT 'waiting'), notified_at (TIMESTAMPTZ), booked_appointment_id (FK→appointments, ON DELETE SET NULL), created_at (TIMESTAMPTZ). Indexed on (tenant_id, status) and (tenant_id, preferred_date) for waiting entries. RLS enabled.
 
-**Applied:** Pending — created 2026-03-23, not yet applied to Supabase. **Note: Duplicate `066_waitlist.sql` renumbered to `083_waitlist.sql` (2026-04-05).**
+**Applied:** 2026-06-13 (verified live — applied under renamed object `waitlist_entries`; see 2026-06-13 audit). **Note: Duplicate `066_waitlist.sql` renumbered to `083_waitlist.sql` (2026-04-05).**
 
 ### 067 — Lead Scoring Configuration
 New table `scoring_configs` for per-tenant configurable lead scoring weights. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), factor (TEXT NOT NULL), weight (INTEGER CHECK 0-100, DEFAULT 10), description (TEXT), is_enabled (BOOLEAN DEFAULT true), created_at (TIMESTAMPTZ). Unique index on (tenant_id, factor). Indexed on tenant_id. RLS enabled.
 
-**Applied:** Pending — created 2026-03-23, not yet applied to Supabase. **Note: Duplicate `067_scoring_configs.sql` renumbered to `084_scoring_configs.sql` (2026-04-05).**
+**Applied:** 2026-06-13 (verified live — applied as `scoring_configs` + `leads.lead_score`; see 2026-06-13 audit). **Note: Duplicate `067_scoring_configs.sql` renumbered to `084_scoring_configs.sql` (2026-04-05).**
 
 _Update this file after every migration. The post-edit Claude Code hook will remind you._
 
 ### 068 — Invoice Number Unique Index
 Adds unique index `idx_invoices_tenant_number ON invoices(tenant_id, invoice_number)`. Prevents duplicate invoice numbers under concurrent creation. Backend retries with incremented sequence on conflict.
 
-**Applied:** Pending — created 2026-03-25, not yet applied to Supabase.
+**Applied:** 2026-06-13 (verified live — unique index `idx_invoices_tenant_number` present; see 2026-06-13 audit).
 
 ### 069 — Lead Email Bounced
 Adds `email_bounced` (BOOLEAN DEFAULT FALSE) and `email_bounced_at` (TIMESTAMPTZ) to `leads`. Partial index on bounced leads. Resend webhook sets this flag; automation engine and email sender skip bounced leads.
 
-**Applied:** Pending — created 2026-03-25, not yet applied to Supabase.
+**Applied:** 2026-06-13 (verified live — `leads.email_bounced` present; see 2026-06-13 audit).
 
 ### 070 — Pipeline Automations
 Creates `pipeline_automations` table for auto-trigger actions when leads move between pipeline stages. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), name (TEXT), trigger_stage (TEXT NOT NULL), actions (JSONB NOT NULL DEFAULT '[]'), is_active (BOOLEAN DEFAULT TRUE), created_at, updated_at. Indexed on tenant_id and (tenant_id, trigger_stage) for active automations. Actions support: email, create_task, notify_team.
 
-**Applied:** Pending — created 2026-03-25, not yet applied to Supabase.
+**Applied:** 2026-06-13 (verified live — pipeline automation tables present; see 2026-06-13 audit).
 
 ### 071 — Widget Teaser Message
 Adds `teaser_message` (TEXT, nullable) to `widget_configs`. Stores the text displayed in the teaser bubble when the chat widget is minimized. Shown after a 3-second delay to prompt visitor engagement. Nullable — when NULL, the widget falls back to its default teaser behavior. Uses `ADD COLUMN IF NOT EXISTS` for safe re-runs.
@@ -485,7 +485,7 @@ Changes:
 ### 077 — Widget Knowledge Base
 Adds `knowledge_base` (TEXT, nullable) to `widget_configs`. Stores the AI-generated markdown knowledge base produced during the onboarding wizard (step 3). Injected into the widget chat system prompt via `widget_chat.py` when present, giving the AI business-specific context without requiring manual prompt editing. Editable post-onboarding from the dashboard. Uses `ADD COLUMN IF NOT EXISTS` for safe re-runs.
 
-**Applied:** Pending — created 2026-04-01. Apply via Supabase MCP before onboarding wizard goes live.
+**Applied:** 2026-06-13 (verified live — `widget_configs.knowledge_base` column present; see 2026-06-13 audit).
 
 ### 078 — Expand business_type CHECK constraint
 Drops and recreates the `tenants.business_type` CHECK constraint to include 27 valid values (up from 10). Fixes CHECK constraint violations during signup for the new industries added to the onboarding wizard dropdown.
@@ -499,7 +499,7 @@ Existing values retained: auto_shop, dental, fitness, legal, medical, other, plu
 ### 079 — Wizard Drop-Off Events
 Creates `wizard_events` table for onboarding wizard funnel analytics. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), step (INTEGER CHECK 1-6), action (TEXT CHECK: enter/complete/skip/abandon), created_at (TIMESTAMPTZ). Indexed on tenant_id and step. RLS enabled with service_role full access. Used by the `POST /api/v1/onboarding/wizard-event` endpoint to track conversion through the 6-step onboarding wizard.
 
-**Applied:** Pending — created 2026-04-01. Apply via Supabase MCP.
+**Applied:** 2026-06-13 (verified live — `wizard_events` table present; see 2026-06-13 audit).
 
 ### 080 — Conversations RLS Policies + Unique Constraint
 Fixes critical bug: conversations table had RLS enabled (migration 001) but NO policies, causing silent INSERT failures from anon/authenticated roles. Adds three RLS policies (service_role full access, authenticated scoped to client_id=auth.uid(), anon full access for widget). Deduplicates existing (client_id, session_id) pairs and adds UNIQUE constraint `conversations_client_session_unique` on (client_id, session_id) to prevent duplicate conversation records and enable safe UPSERT.
@@ -521,17 +521,17 @@ Fixes critical bug: conversations table had RLS enabled (migration 001) but NO p
 ### Migration 083 — Waitlist (2026-04-05, renumbered)
 _Renumbered from `066_waitlist.sql` to `083_waitlist.sql` to resolve duplicate numbering with `066_appointment_waitlist.sql`._ Same content as documented under 066 — Appointment Waitlist above.
 
-**Applied:** Pending — renumbered 2026-04-05, not yet applied to Supabase.
+**Applied:** 2026-06-13 (verified live — `waitlist_entries` present; see 2026-06-13 audit). Renumbered from 066.
 
 ### Migration 084 — Scoring Configs (2026-04-05, renumbered)
 _Renumbered from `067_scoring_configs.sql` to `084_scoring_configs.sql` to resolve duplicate numbering with `067_lead_scoring_config.sql`._ Same content as documented under 067 — Lead Scoring Configuration above.
 
-**Applied:** Pending — renumbered 2026-04-05, not yet applied to Supabase.
+**Applied:** 2026-06-13 (verified live — `scoring_configs` present; see 2026-06-13 audit). Renumbered from 067.
 
 ### Migration 085 — Password Reset Tokens (2026-04-05, renumbered)
 Adds `reset_token` (TEXT) and `reset_token_expires` (TIMESTAMPTZ) to `tenants`. Partial index on `reset_token` for non-null values. Supports password reset flow via email token. _Renumbered from `068_password_reset_tokens.sql` to `085_password_reset_tokens.sql` to resolve duplicate numbering with `068_invoice_number_unique.sql`._
 
-**Applied:** Pending — renumbered 2026-04-05, not yet applied to Supabase.
+**Applied:** Superseded — password reset ships via `tenants.reset_token` + `tenants.reset_token_expires` columns (see `backend/routers/auth_password_reset.py`), verified live 2026-06-13. The standalone `password_reset_tokens` table was never created and is not needed; this migration is obsolete. Do not apply.
 
 ---
 
@@ -548,26 +548,26 @@ Creates three tables for multivariate marketing campaign testing:
 - `ab_test_variants`: ab_test_id (FK→ab_tests), name, variant_config (JSONB), traffic_pct, sends/opens/clicks/conversions counters.
 - `ab_test_sends`: ab_test_id, variant_id, campaign_send_id, tenant_id. Links A/B test variants to individual campaign sends.
 
-**Applied:** Pending — created 2026-04-06. RLS added in migration 091.
+**Applied:** 2026-06-13 (verified live — A/B testing tables (×3) present; see 2026-06-13 audit). RLS added in migration 091.
 
 ### 087 — Automation Rules
 Creates `automation_rules` table for event-driven automation. Columns: tenant_id, name, description, trigger_type (16 event types including lead_captured, tag_added, form_submitted, appointment_created, pipeline_stage_changed, email_opened, scheduled_daily/weekly, etc.), trigger_config (JSONB), conditions (JSONB), actions (JSONB), is_active (BOOLEAN), execution_count, last_triggered_at.
 
 Also creates `automation_rule_logs` for execution audit trail: rule_id, tenant_id, trigger_data (JSONB), actions_executed (JSONB), status (success/partial_failure/failed), error_message.
 
-**Applied:** Pending — created 2026-04-06. RLS added in migration 091.
+**Applied:** 2026-06-13 (verified live — `automation_rules` present; see 2026-06-13 audit). RLS added in migration 091.
 
 ### 088 — Campaign Analytics Aggregates
 Creates `campaign_analytics_aggregates` for pre-computed daily/weekly campaign metrics. Columns: tenant_id, campaign_id (FK→marketing_campaigns), period_start (DATE), period_type (daily/weekly), total_sent/delivered/opened/clicked/bounced, unique_opens/clicks. UNIQUE on (campaign_id, period_start, period_type). Indexed on tenant_id.
 
-**Applied:** Pending — created 2026-04-06. RLS added in migration 091.
+**Applied:** 2026-06-13 (verified live — `campaign_analytics_aggregates` present; see 2026-06-13 audit). RLS added in migration 091.
 
 ### 089 — Platform Admin Tracking
 Adds admin management columns to `tenants`: admin_discount_pct (INTEGER), admin_notes (TEXT), acquired_at (TIMESTAMPTZ), first_paid_at (TIMESTAMPTZ). Adds indexes on created_at and (plan, plan_status) for growth queries.
 
 Creates `admin_promotions` table: tenant_id, promotion_type (free_tier/discount/extended_trial/partner_deal/case_study/referral), discount_pct (0-100), notes, starts_at, expires_at, is_active.
 
-**Applied:** Pending — created 2026-04-06. RLS added in migration 091.
+**Applied:** 2026-06-13 (verified live — `tenants.admin_discount_pct`/`acquired_at` + `admin_promotions` + `platform_monthly_revenue` present; see 2026-06-13 audit). RLS added in migration 091.
 
 ### 090 — Add Autopilot Plan to CHECK Constraint
 Drops and recreates `tenants_plan_check` to include `autopilot`: `CHECK (plan IN ('free', 'growth', 'professional', 'autopilot', 'enterprise'))`. Fixes constraint violations when creating autopilot subscriptions.
@@ -577,12 +577,12 @@ Drops and recreates `tenants_plan_check` to include `autopilot`: `CHECK (plan IN
 ### 091 — RLS and Guards for Migrations 086-089
 Enables RLS and creates tenant isolation policies on all tables from migrations 086-089: ab_tests, ab_test_variants, ab_test_sends, automation_rules, automation_rule_logs, campaign_analytics_aggregates, admin_promotions. Uses `IF NOT EXISTS` guards throughout.
 
-**Applied:** Pending — created 2026-04-06.
+**Applied:** 2026-06-13 (verified live — RLS enabled on all 8 target tables (ab_test*/automation_rule*/campaign_analytics_aggregates/admin_promotions/platform_monthly_revenue); see 2026-06-13 audit).
 
 ### 092 — Appointment Reminder Tracking
 Adds `reminder_24h_sent_at` (TIMESTAMPTZ) and `reminder_1h_sent_at` (TIMESTAMPTZ) to `appointments`. Replaces fragile notes-field string matching for reminder deduplication. Partial indexes on tenant_id for unsent reminders.
 
-**Applied:** Pending — created 2026-04-06.
+**Applied:** 2026-06-13 (verified live — `appointments.reminder_24h_sent_at`/`reminder_1h_sent_at` present; see 2026-06-13 audit).
 
 ---
 
@@ -620,7 +620,7 @@ CREATE POLICY table_policy ON table_name
 ```
 All tenant isolation is enforced at application layer in FastAPI, not at RLS layer.
 
-**Applied:** Pending — created 2026-04-07. Apply via Supabase MCP. Must apply before 091 creates a false sense of security.
+**Applied:** 2026-06-13 (verified live — RLS policies present on the 086-089 tables; see 2026-06-13 audit).
 
 ---
 
@@ -640,7 +640,7 @@ Columns added (all `IF NOT EXISTS`):
 
 Indexes: `idx_leads_temperature`, `idx_leads_type`, `idx_leads_appointment_date` (partial, non-null only).
 
-**Applied:** Pending — created 2026-04-07.
+**Applied:** 2026-06-13 (verified live — `leads.lead_temperature`/`conversation_summary` present; see 2026-06-13 audit).
 
 ### 095 — Conversation Memory Column
 **Date:** 2026-04-07
@@ -648,7 +648,7 @@ Adds `memory` JSONB column to `conversations` table for structured conversation 
 
 GIN index `idx_conversations_has_memory` on `memory` column (partial, non-null only).
 
-**Applied:** Pending — created 2026-04-07.
+**Applied:** 2026-06-13 (verified live — conversation memory column present; see 2026-06-13 audit).
 
 ### 096 — Production Hardening
 **Date:** 2026-04-07
@@ -681,7 +681,7 @@ All new tables have RLS enabled with `auth.role() = 'service_role'` policy. Func
 
 **Note:** Migration tolerates orphaned `client_id` values — FK is left NOT VALID with a NOTICE if orphans exist (commit 738ba0b).
 
-**Applied:** Pending — created 2026-04-07. Critical for multi-worker safety.
+**Applied:** 2026-06-13 (verified live — `leads.client_id` + `conversations.client_id` + `automation_locks`/`oauth_states`/`tenant_email_daily_sends` present; see 2026-06-13 audit). Multi-worker locks confirmed live.
 
 ### 097 — No-Show Recovery Tracking Columns
 **Date:** 2026-04-08
@@ -691,7 +691,7 @@ Adds two columns to `appointments` for no-show recovery outreach tracking:
 
 Partial index `idx_appointments_noshow_recovery` on `(status, noshow_recovery_sent_at)` WHERE `status = 'no_show'` — optimizes the recovery query that finds no-show appointments needing outreach.
 
-**Applied:** Pending — created 2026-04-08. Required for no-show recovery automation.
+**Applied:** 2026-06-13 (verified live — `appointments.noshow_recovery_sent_at`/`noshow_followup_sent_at` present; see 2026-06-13 audit).
 
 ### 098 — Daily Briefing, No-Show Recovery Toggles, Pre-Chat Form Config
 **Date:** 2026-04-08
@@ -702,7 +702,7 @@ Adds tenant feature toggles and widget pre-chat form:
 
 Column comments added for documentation.
 
-**Applied:** Pending — created 2026-04-08. Required for daily briefing and pre-chat form features.
+**Applied:** 2026-06-13 (verified live — `tenants.daily_briefing_enabled` present; see 2026-06-13 audit). Required for daily briefing and pre-chat form features.
 
 ### 099 — AI Lead Qualification Fields
 **Date:** 2026-04-09
@@ -742,7 +742,7 @@ Adds opt-in boolean to `widget_configs` controlling whether widget chat escalate
 
 See `backend/routers/widget_chat.py:Step 9a` and `docs/managed-agents.md` for the full flow description.
 
-**Applied:** Pending — created 2026-04-10. Apply via Supabase MCP.
+**Applied:** 2026-06-13 (verified live — `widget_configs.enable_ai_fallback` column present; see 2026-06-13 audit).
 
 ### 102 — Marketing Suite Add-on (backfill)
 **Date:** 2026-04-12 (file mtime) — backfilled 2026-04-20
@@ -1203,16 +1203,28 @@ that is a **stale-log false alarm, not a prod schema gap**. Confirmed applied:
   (+ `leads.lead_score`); 069 → `leads.email_bounced`; 095 → conversation memory
   column; 098 → `tenants.daily_briefing_enabled`.
 
-No live match (need feature-level confirmation before any apply — do NOT blind-apply,
-the feature may store data differently / under another name):
-- 077 widget knowledge base — no `*knowledge_base*` table (KB likely file/pgvector-backed).
-- 079 `wizard_dropoff_events` — no table by that name.
-- 085 `password_reset_tokens` — no table, though password reset ships (auth_password_reset.py); confirm token storage.
+Second-pass introspection 2026-06-13 — the prior "no live match" entries were
+NAME mismatches, not real gaps. All confirmed applied:
+- 077 widget knowledge base — applied as a **column** `widget_configs.knowledge_base`
+  (the prior pass searched for a `*knowledge_base*` table, hence the miss).
+- 079 wizard events — table is **`wizard_events`** (prior pass searched the wrong
+  name `wizard_dropoff_events`).
+- 085 `password_reset_tokens` — **superseded**, not pending. Password reset ships
+  via `tenants.reset_token` + `tenants.reset_token_expires` columns
+  (`backend/routers/auth_password_reset.py:88-91` stores them, `:144` looks up by
+  `reset_token`), both verified live. The standalone table was never needed.
+  Marker flipped to "Superseded — do not apply".
 
-114 public tables total. Bottom line: most "Pending" entries are stale; the
-schema-sync heuristic trusts this file's text rather than the DB. Follow-up:
-either flip the remaining verified-applied `Pending` markers, or upgrade the
-schema-sync check to introspect the live DB.
+114 public tables total. Bottom line: **every** "Pending" entry was stale; the
+schema-sync heuristic trusts this file's text rather than the DB. Follow-up
+(DONE 2026-06-13): all 23 remaining `Pending` markers were resolved via live
+introspection — 22 flipped to "Applied" (column/table/index/RLS presence
+verified in project `pxserpybmajixqrmzaly`) and 085 to "Superseded". Pending
+count is now 0, so the text-count `check` job no longer false-fires. The
+authoritative DB introspection already lives in the `live-drift` job
+(`scripts/check_schema_drift.py` vs `ops/schema/expected-columns.json`) — that,
+not the markdown text, is the source of truth for live drift. Any future
+`Applied: Pending` marker now means a genuinely unapplied migration.
 
 ---
 
