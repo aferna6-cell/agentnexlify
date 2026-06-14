@@ -1248,3 +1248,30 @@ renumbered 147. Pairs with the per-vertical rubric service
 **Applied:** 2026-06-13 via `mcp__supabase__apply_migration` (project
 pxserpybmajixqrmzaly). Verified: both columns present with defaults
 `true` / `0`.
+
+---
+
+### 148 — Encrypt integrations secrets at rest (onboarding-v2, GH #129/#131)
+
+Adds two BYTEA columns to `integrations` for encrypted third-party secrets
+(Stripe/Twilio/Resend API keys), both additive + idempotent:
+
+- `access_token_enc BYTEA` — Fernet token for the API key.
+- `refresh_token_enc BYTEA` — Fernet token for the refresh token (NULL for
+  API-key providers).
+
+`CREATE EXTENSION IF NOT EXISTS pgcrypto` is included (already present live).
+Encryption is app-side via `cryptography.fernet` in
+`backend/services/integration_key_vault.py` (spec onboarding-v2 §9 sanctions
+app-side over in-DB pgcrypto so the vault is unit-testable to 100% coverage).
+Key: `INTEGRATIONS_ENC_KEY` Railway env var; rotation versions via
+`INTEGRATIONS_ENC_KEYS`. Never committed, never logged.
+
+**Plaintext deprecation:** the existing `access_token` / `refresh_token` TEXT
+columns are retained until a separate sunset migration runs AFTER
+`scripts/backfill_integration_encryption.py` is verified (user-rules Rule 8:
+no half-migrations). The existing service-role RLS policy is untouched.
+
+**Applied:** 2026-06-14 via `mcp__supabase__apply_migration` (project
+pxserpybmajixqrmzaly). Verified: both `access_token_enc` / `refresh_token_enc`
+present as `bytea`.
