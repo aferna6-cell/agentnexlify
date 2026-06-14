@@ -4,6 +4,8 @@
 **Voice:** seasoned SMB-automation founder, watched 50 of these plays since 2019
 **Assumes:** rubric score 114/262, 5 testers, widget-first claim, $249/$499/$899 pricing, solo engineer + non-engineer partners, GHL as #1 competitor
 
+> Status note (2026-04-21): this remains useful as a failure-chain stress test, but some assumptions below are now stale. A refund path, incident playbook, partner runbook, continuity doc, and per-tenant AI usage cap now exist; see `planning/launch-readiness-rubric.md` for the current score and blocker list.
+
 ---
 
 > "OK. You want to launch a widget-first AI automation platform at SMB pricing, competing against a $97/mo gorilla, solo engineering, no refund flow, no dunning, no IR playbook, no load test, and no kill switch on Claude spend. Let me walk you through exactly how this dies."

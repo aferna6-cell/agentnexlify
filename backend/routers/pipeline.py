@@ -6,130 +6,27 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.dependencies import verify_tenant
+from backend.dependencies import _get_current_tenant, verify_tenant
 from backend.models.database import get_service_supabase
-from backend.routers.auth import _get_current_tenant
 from backend.services.activity import log_activity
+from backend.services.pipeline_analytics import (
+    annotate_days_in_stage,
+    compute_pipeline_metrics,
+)
+from backend.services.pipeline_presets import (
+    DEFAULT_STAGES,
+    _INDUSTRY_STAGES,
+    _TYPE_ALIASES,
+    seed_default_stages as _seed_default_stages,
+)
 from backend.services.webhook_dispatcher import fire_event_background
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/pipeline", tags=["pipeline"])
 
-# ---------------------------------------------------------------------------
-# Default stages seeded when a tenant has none
-# ---------------------------------------------------------------------------
-
-DEFAULT_STAGES = [
-    {"name": "New Lead", "sort_order": 0, "color": "#3b82f6", "is_won": False, "is_lost": False},
-    {"name": "Contacted", "sort_order": 1, "color": "#8b5cf6", "is_won": False, "is_lost": False},
-    {"name": "Qualified", "sort_order": 2, "color": "#f59e0b", "is_won": False, "is_lost": False},
-    {"name": "Proposal Sent", "sort_order": 3, "color": "#ec4899", "is_won": False, "is_lost": False},
-    {"name": "Won", "sort_order": 4, "color": "#10b981", "is_won": True, "is_lost": False},
-    {"name": "Lost", "sort_order": 5, "color": "#ef4444", "is_won": False, "is_lost": True},
-]
-
-# Business-type-specific pipeline presets
-_INDUSTRY_STAGES: dict[str, list[dict]] = {
-    "realestate": [
-        {"name": "New Lead", "sort_order": 0, "color": "#3b82f6", "is_won": False, "is_lost": False},
-        {"name": "Contacted", "sort_order": 1, "color": "#8b5cf6", "is_won": False, "is_lost": False},
-        {"name": "Showing Scheduled", "sort_order": 2, "color": "#f59e0b", "is_won": False, "is_lost": False},
-        {"name": "Offer Submitted", "sort_order": 3, "color": "#ec4899", "is_won": False, "is_lost": False},
-        {"name": "Under Contract", "sort_order": 4, "color": "#14b8a6", "is_won": False, "is_lost": False},
-        {"name": "Closed", "sort_order": 5, "color": "#10b981", "is_won": True, "is_lost": False},
-        {"name": "Lost", "sort_order": 6, "color": "#ef4444", "is_won": False, "is_lost": True},
-    ],
-    "contractor": [
-        {"name": "New Lead", "sort_order": 0, "color": "#3b82f6", "is_won": False, "is_lost": False},
-        {"name": "Estimate Sent", "sort_order": 1, "color": "#8b5cf6", "is_won": False, "is_lost": False},
-        {"name": "Approved", "sort_order": 2, "color": "#f59e0b", "is_won": False, "is_lost": False},
-        {"name": "In Progress", "sort_order": 3, "color": "#14b8a6", "is_won": False, "is_lost": False},
-        {"name": "Completed", "sort_order": 4, "color": "#10b981", "is_won": True, "is_lost": False},
-        {"name": "Lost", "sort_order": 5, "color": "#ef4444", "is_won": False, "is_lost": True},
-    ],
-    "dental": [
-        {"name": "New Patient", "sort_order": 0, "color": "#3b82f6", "is_won": False, "is_lost": False},
-        {"name": "Consulted", "sort_order": 1, "color": "#8b5cf6", "is_won": False, "is_lost": False},
-        {"name": "Treatment Planned", "sort_order": 2, "color": "#f59e0b", "is_won": False, "is_lost": False},
-        {"name": "In Treatment", "sort_order": 3, "color": "#14b8a6", "is_won": False, "is_lost": False},
-        {"name": "Completed", "sort_order": 4, "color": "#10b981", "is_won": True, "is_lost": False},
-        {"name": "Inactive", "sort_order": 5, "color": "#ef4444", "is_won": False, "is_lost": True},
-    ],
-    "legal": [
-        {"name": "Inquiry", "sort_order": 0, "color": "#3b82f6", "is_won": False, "is_lost": False},
-        {"name": "Consultation", "sort_order": 1, "color": "#8b5cf6", "is_won": False, "is_lost": False},
-        {"name": "Retained", "sort_order": 2, "color": "#f59e0b", "is_won": False, "is_lost": False},
-        {"name": "Active Case", "sort_order": 3, "color": "#14b8a6", "is_won": False, "is_lost": False},
-        {"name": "Resolved", "sort_order": 4, "color": "#10b981", "is_won": True, "is_lost": False},
-        {"name": "Declined", "sort_order": 5, "color": "#ef4444", "is_won": False, "is_lost": True},
-    ],
-    "restaurant": [
-        {"name": "Inquiry", "sort_order": 0, "color": "#3b82f6", "is_won": False, "is_lost": False},
-        {"name": "Reservation", "sort_order": 1, "color": "#8b5cf6", "is_won": False, "is_lost": False},
-        {"name": "Catering Quoted", "sort_order": 2, "color": "#f59e0b", "is_won": False, "is_lost": False},
-        {"name": "Booked", "sort_order": 3, "color": "#10b981", "is_won": True, "is_lost": False},
-        {"name": "Cancelled", "sort_order": 4, "color": "#ef4444", "is_won": False, "is_lost": True},
-    ],
-    "salon": [
-        {"name": "New Client", "sort_order": 0, "color": "#3b82f6", "is_won": False, "is_lost": False},
-        {"name": "Consulted", "sort_order": 1, "color": "#8b5cf6", "is_won": False, "is_lost": False},
-        {"name": "Booked", "sort_order": 2, "color": "#f59e0b", "is_won": False, "is_lost": False},
-        {"name": "Regular Client", "sort_order": 3, "color": "#10b981", "is_won": True, "is_lost": False},
-        {"name": "Inactive", "sort_order": 4, "color": "#ef4444", "is_won": False, "is_lost": True},
-    ],
-    "fitness": [
-        {"name": "Trial", "sort_order": 0, "color": "#3b82f6", "is_won": False, "is_lost": False},
-        {"name": "Consulted", "sort_order": 1, "color": "#8b5cf6", "is_won": False, "is_lost": False},
-        {"name": "Member", "sort_order": 2, "color": "#10b981", "is_won": True, "is_lost": False},
-        {"name": "At Risk", "sort_order": 3, "color": "#f59e0b", "is_won": False, "is_lost": False},
-        {"name": "Churned", "sort_order": 4, "color": "#ef4444", "is_won": False, "is_lost": True},
-    ],
-}
-
-# Map frontend dropdown values to preset keys (some use different naming)
-_TYPE_ALIASES: dict[str, str] = {
-    "real_estate": "realestate",
-    "home_services": "contractor",
-    "construction": "contractor",
-    "hvac": "contractor",
-    "plumbing": "contractor",
-    "electrical": "contractor",
-    "roofing": "contractor",
-    "pest_control": "contractor",
-    "painting": "contractor",
-    "flooring": "contractor",
-    "general_contractor": "contractor",
-    "beauty": "salon",
-    "medical": "dental",
-    "health_wellness": "dental",
-    "cleaning": "contractor",
-    "landscaping": "contractor",
-}
-
-
-def _seed_default_stages(tenant_id: str, db) -> list[dict]:
-    """Insert default pipeline stages for a tenant, using industry-specific presets when available."""
-    # Try to get business_type for industry-specific stages
-    stages = DEFAULT_STAGES
-    try:
-        tenant = db.table("tenants").select("business_type").eq("id", tenant_id).limit(1).execute()
-        if tenant.data:
-            btype = (tenant.data[0].get("business_type") or "").lower()
-            # Check direct match, then aliases
-            resolved = _TYPE_ALIASES.get(btype, btype)
-            if resolved in _INDUSTRY_STAGES:
-                stages = _INDUSTRY_STAGES[resolved]
-    except Exception:
-        logger.warning("Failed to look up business_type for pipeline preset, using defaults", exc_info=True)
-
-    rows = [{"tenant_id": tenant_id, **s} for s in stages]
-    try:
-        result = db.table("pipeline_stages").insert(rows).execute()
-        return result.data or []
-    except Exception:
-        logger.exception("Failed to seed default pipeline stages for tenant %s", tenant_id)
-        return []
+# Re-exports so existing test imports keep working (Rule 10: never change tests).
+__all__ = ["router", "DEFAULT_STAGES", "_INDUSTRY_STAGES", "_TYPE_ALIASES"]
 
 
 # ---------------------------------------------------------------------------
@@ -267,7 +164,6 @@ async def delete_stage(
 
     db = get_service_supabase()
 
-    # Fetch stage name so we can check leads by status value
     try:
         stage_result = (
             db.table("pipeline_stages")
@@ -286,7 +182,6 @@ async def delete_stage(
 
     stage_name = stage_result.data[0]["name"]
 
-    # Check whether any leads are in this stage (matched by status == stage name, case-insensitive)
     try:
         leads_check = (
             db.table("leads")
@@ -306,7 +201,6 @@ async def delete_stage(
             detail=f"Cannot delete stage '{stage_name}' — {lead_count} lead(s) are in this stage. Move them first.",
         )
 
-    # Safe to delete
     try:
         db.table("pipeline_stages").delete().eq("id", stage_id).eq("tenant_id", tenant_id).execute()
     except Exception:
@@ -331,7 +225,6 @@ async def get_pipeline_board(
 
     db = get_service_supabase()
 
-    # Fetch stages
     try:
         stages_result = (
             db.table("pipeline_stages")
@@ -348,7 +241,6 @@ async def get_pipeline_board(
     if not stages:
         stages = _seed_default_stages(tenant_id, db)
 
-    # Fetch leads with deal columns. Uses client_id per schema rules.
     try:
         leads_result = (
             db.table("leads")
@@ -364,27 +256,8 @@ async def get_pipeline_board(
         raise HTTPException(status_code=500, detail="Failed to load leads for pipeline board")
 
     leads = leads_result.data or []
+    annotate_days_in_stage(leads)
 
-    # Calculate days_in_stage for each lead
-    now = datetime.now(timezone.utc)
-    for lead in leads:
-        changed_at = lead.get("stage_changed_at") or lead.get("created_at")
-        if changed_at:
-            try:
-                if isinstance(changed_at, str):
-                    dt = datetime.fromisoformat(changed_at.replace("Z", "+00:00"))
-                else:
-                    dt = changed_at
-                if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=timezone.utc)
-                lead["days_in_stage"] = (now - dt).days
-            except Exception:
-                logger.warning("Failed to compute days_in_stage for lead %s", lead.get("id"))
-                lead["days_in_stage"] = 0
-        else:
-            lead["days_in_stage"] = 0
-
-    # Group leads by status (case-insensitive match against stage names)
     stage_names_lower = {s["name"].lower(): s["name"] for s in stages}
     leads_by_stage: dict[str, list] = {s["name"]: [] for s in stages}
     unmatched: list = []
@@ -397,7 +270,6 @@ async def get_pipeline_board(
         else:
             unmatched.append(lead)
 
-    # Leads with unrecognized statuses go into a catch-all bucket
     if unmatched:
         leads_by_stage["_unmatched"] = unmatched
 
@@ -421,7 +293,6 @@ async def get_pipeline_analytics(
 
     db = get_service_supabase()
 
-    # Fetch stages so we know which are won/lost
     try:
         stages_result = (
             db.table("pipeline_stages")
@@ -429,15 +300,11 @@ async def get_pipeline_analytics(
             .eq("tenant_id", tenant_id)
             .execute()
         )
+        stages = stages_result.data or []
     except Exception:
         logger.warning("Pipeline analytics: failed to load stages for tenant %s", tenant_id, exc_info=True)
-        stages_result = type("R", (), {"data": []})()
+        stages = []
 
-    stages = stages_result.data or []
-    won_stage_names = {s["name"].lower() for s in stages if s.get("is_won")}
-    lost_stage_names = {s["name"].lower() for s in stages if s.get("is_lost")}
-
-    # Fetch all leads with deal columns
     try:
         leads_result = (
             db.table("leads")
@@ -445,91 +312,12 @@ async def get_pipeline_analytics(
             .eq("client_id", tenant_id)
             .execute()
         )
+        leads = leads_result.data or []
     except Exception:
         logger.warning("Pipeline analytics: failed to load leads for tenant %s", tenant_id, exc_info=True)
-        leads_result = type("R", (), {"data": []})()
+        leads = []
 
-    leads = leads_result.data or []
-
-    now = datetime.now(timezone.utc)
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-
-    total_pipeline_value = 0.0
-    total_won_value = 0.0
-    won_count = 0
-    days_to_close_list: list[float] = []
-    leads_by_stage: dict[str, int] = {}
-    deals_this_month = 0
-    won_this_month = 0
-    total_closed = 0  # won + lost (used for conversion rate denominator)
-
-    for lead in leads:
-        status_lower = (lead.get("status") or "").lower()
-        deal_value = float(lead.get("deal_value") or 0)
-        is_won = status_lower in won_stage_names
-        is_lost = status_lower in lost_stage_names
-
-        # Pipeline value = all active deals (not lost)
-        if not is_lost:
-            total_pipeline_value += deal_value
-
-        if is_won:
-            total_won_value += deal_value
-            won_count += 1
-            total_closed += 1
-
-            # Compute days-to-close using created_at as the start
-            created_at = lead.get("created_at")
-            changed_at = lead.get("stage_changed_at")
-            if created_at and changed_at:
-                try:
-                    created_dt = datetime.fromisoformat(str(created_at).replace("Z", "+00:00"))
-                    changed_dt = datetime.fromisoformat(str(changed_at).replace("Z", "+00:00"))
-                    if created_dt.tzinfo is None:
-                        created_dt = created_dt.replace(tzinfo=timezone.utc)
-                    if changed_dt.tzinfo is None:
-                        changed_dt = changed_dt.replace(tzinfo=timezone.utc)
-                    days = (changed_dt - created_dt).days
-                    if days >= 0:
-                        days_to_close_list.append(float(days))
-                except Exception:
-                    logger.warning("Pipeline analytics: failed to parse dates for lead %s", lead.get("id"))
-
-        if is_lost:
-            total_closed += 1
-
-        # Counts by stage name (use original status value for the key)
-        original_status = lead.get("status") or "unknown"
-        leads_by_stage[original_status] = leads_by_stage.get(original_status, 0) + 1
-
-        # Deals this month (any lead created or stage-changed this month)
-        changed_at = lead.get("stage_changed_at") or lead.get("created_at")
-        if changed_at:
-            try:
-                dt = datetime.fromisoformat(str(changed_at).replace("Z", "+00:00"))
-                if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=timezone.utc)
-                if dt >= month_start:
-                    deals_this_month += 1
-                    if is_won:
-                        won_this_month += 1
-            except Exception:
-                logger.warning("pipeline analytics: failed to parse dates for lead %s", lead.get("id"), exc_info=True)
-
-    conversion_rate = round(won_count / total_closed * 100, 1) if total_closed > 0 else 0.0
-    avg_deal_value = round(total_won_value / won_count, 2) if won_count > 0 else 0.0
-    avg_days_to_close = round(sum(days_to_close_list) / len(days_to_close_list), 1) if days_to_close_list else 0.0
-
-    return {
-        "total_pipeline_value": round(total_pipeline_value, 2),
-        "total_won_value": round(total_won_value, 2),
-        "conversion_rate": conversion_rate,
-        "avg_deal_value": avg_deal_value,
-        "avg_days_to_close": avg_days_to_close,
-        "leads_by_stage": leads_by_stage,
-        "deals_this_month": deals_this_month,
-        "won_this_month": won_this_month,
-    }
+    return compute_pipeline_metrics(leads, stages)
 
 
 # ---------------------------------------------------------------------------
@@ -548,7 +336,6 @@ async def move_lead(
 
     db = get_service_supabase()
 
-    # Verify the lead belongs to this tenant
     try:
         lead_result = (
             db.table("leads")
@@ -570,10 +357,8 @@ async def move_lead(
     new_status = req.status
 
     if old_status == new_status and req.deal_value is None:
-        # No actual change — return the lead as-is
         return lead
 
-    # Build update payload
     updates: dict = {
         "status": new_status,
         "stage_changed_at": datetime.now(timezone.utc).isoformat(),
@@ -598,7 +383,6 @@ async def move_lead(
 
     updated_lead = update_result.data[0]
 
-    # Log the stage change activity (fire-and-forget — never raises)
     lead_display = lead.get("name") or lead.get("email") or lead_id
     log_activity(
         tenant_id=tenant_id,

@@ -13,6 +13,7 @@ import {
   fetchAutomations,
 } from "../../utils/api/automations";
 import { fetchCrmDashboardWidgets } from "../../utils/api/crm";
+import AutomationActivityCard from "./AutomationActivityCard";
 import OverviewCards from "./OverviewCards";
 import LeadPipeline from "./LeadPipeline";
 import ActivityFeed from "./ActivityFeed";
@@ -109,7 +110,10 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
     if (!user?.tenantId || !token) return;
     fetchAnalyticsHealth(user.tenantId, token)
       .then((data) => setLastActivity(data.last_message_at || null))
-      .catch((err) => { console.warn("Analytics health fetch failed:", err?.message); setLastActivity(null); });
+      .catch((err) => {
+        console.warn("Analytics health fetch failed:", err?.message);
+        setLastActivity(null);
+      });
   }, [user?.tenantId, token]);
 
   const handleStepComplete = useCallback(() => {
@@ -271,7 +275,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
               >
                 {item}
               </span>
-              ))}
+            ))}
           </div>
           <div
             style={{
@@ -309,7 +313,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
           let dotColor = "#666";
           let label = "No Activity Yet";
           let detail =
-            "Your widget is ready — share your website link to start capturing leads";
+            "Your widget is ready - share your website link to start capturing leads";
 
           if (lastActivity) {
             const diffMs = Date.now() - new Date(lastActivity).getTime();
@@ -387,7 +391,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
           }}
         >
           <span>
-            <strong>Complete your setup</strong> — finish the onboarding wizard
+            <strong>Complete your setup</strong> - finish the onboarding wizard
             to activate your AI assistant (
             {onboardingStatus.completion_percentage || 0}% done)
           </span>
@@ -406,6 +410,12 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
           onboardingStatus={onboardingStatus}
         />
       )}
+
+      <AutomationActivityCard
+        tenantId={user.tenantId}
+        token={token}
+        onNavigate={onNavigate}
+      />
 
       <OverviewCards
         conversationsUsed={dashData?.conversations_used_this_month ?? 0}

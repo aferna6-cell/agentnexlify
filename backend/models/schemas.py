@@ -89,6 +89,7 @@ class RegisterRequest(BaseModel):
     city: str = ""
     phone: str | None = None
     website_url: str | None = None
+    ref_code: str | None = Field(None, max_length=200, description="Referral code from ?ref= URL param")
 
     @field_validator("email")
     @classmethod
@@ -177,8 +178,7 @@ class MeResponse(BaseModel):
     city: str | None = None
     owner_name: str | None = None
     business_type: str | None = None
-    marketing_addon_active: bool = False
-    marketing_addon_grandfathered: bool = False
+    referral_code: str | None = None
 
 
 class WidgetConfigDetail(BaseModel):
@@ -334,6 +334,7 @@ class CreateCheckoutRequest(BaseModel):
     tenant_id: str
     plan: str  # growth|professional|enterprise
     promo_code: str | None = None
+    source: str | None = None  # "wizard" or null
 
 
 class CheckoutResponse(BaseModel):

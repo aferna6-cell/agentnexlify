@@ -65,7 +65,7 @@ export default function RecoveryStatsWidget({ tenantId, token }) {
           marginBottom: "10px",
         }}
       >
-        Automation ROI — Last 30 Days
+        Automation ROI - Last 30 Days
       </h3>
       <div
         style={{

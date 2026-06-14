@@ -1,9 +1,11 @@
 ---
 name: kb-ingest
 description: Manually add a source to the knowledge base by fetching a URL or reading a local file, converting to markdown, categorizing, and registering in kb_sources. Use when user says 'kb-ingest', 'ingest url', 'ingest article', 'add source', 'save article to kb', or asks about kb ingest.
-version: 1.0.0
+version: 1.1.0
 origin: claude
 user-invocable: true
+agent: true
+model: sonnet
 triggers:
 - kb-ingest
 - ingest url

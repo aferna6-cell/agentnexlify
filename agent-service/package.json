@@ -1,17 +1,21 @@
 {
   "name": "agentnexlify-agent-service",
   "version": "1.0.0",
-  "description": "Thin HTTP layer wrapping @anthropic-ai/claude-agent-sdk. Exposes POST /agents/:name/run so the FastAPI backend can call production agents defined in .claude/agents/.",
+  "description": "HTTP layer for the FastAPI backend. Wraps @anthropic-ai/claude-agent-sdk (POST /agents/:name/run) and hosts the vendored Agent OS engine (src/agent-os) as the orchestration core.",
   "type": "module",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
     "start": "node --experimental-strip-types src/server.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test \"src/**/*.test.ts\"",
+    "vendor:agent-os": "bash scripts/vendor-agent-os.sh"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.110"
+    "@anthropic-ai/claude-agent-sdk": "^0.2.110",
+    "@anthropic-ai/sdk": "^0.100.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

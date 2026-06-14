@@ -21,6 +21,14 @@ on:
     - cron: "0 7 * * *"   # 7 AM UTC daily
   workflow_dispatch: {}
 
+# The audit step opens a GH issue when critical migrations are pending.
+# Without issues:write the default GITHUB_TOKEN gets 403 ("Resource not
+# accessible by integration") and the whole run goes red even though the
+# check ran correctly.
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   check:
     name: Pending Migrations Audit
@@ -151,3 +159,25 @@ jobs:
               body,
               labels
             });
+
+  live-drift:
+    # Diffs LIVE Supabase columns (hot_table_columns() RPC, migration 136)
+    # against ops/schema/expected-columns.json. Born from the 2026-06-10
+    # incident: migrations/001 listed columns the live DB never had and prod
+    # signups 500'd. Skips cleanly when secrets are absent (forks).
+    name: Live Column Drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Diff live schema vs manifest
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          rc=0
+          python3 scripts/check_schema_drift.py || rc=$?
+          if [ "$rc" = "2" ]; then
+            echo "::warning::Live drift check skipped (no Supabase secrets in this context)"
+            exit 0
+          fi
+          exit $rc

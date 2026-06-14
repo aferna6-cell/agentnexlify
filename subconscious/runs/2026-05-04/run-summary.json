@@ -1,0 +1,41 @@
+{
+  "date": "2026-05-04",
+  "run": 13,
+  "mode": "moratorium",
+  "evidence_summary": "Repo idle since 2026-05-02 (no commits 48h). Moratorium still active (4 pending). AdminAnalyticsPage.jsx:117-122 confirmed 6 .catch(() => null) on live check. Pre-commit has no Check 10. Email sequences N+1 opened (GH #112: 1001 queries per 1000 enrollments, GH #113: ~120-line duplication). California AI companion/chatbot laws (SB 243 + Perkins Coie) added to KB — potential widget disclosure requirement. Em-dash blocker (run 8) still active: 9 violations in JSX. One-line fix available.",
+  "ideas_count": 5,
+  "top_3_debated": [
+    "JS Silent Catch Guard — Check 10 + AdminAnalyticsPage",
+    "Fix email_sequences N+1 (Issue #112)",
+    "Scope em-dash check to unblock run 8"
+  ],
+  "winner": "JS Silent Catch Guard — Check 10 + AdminAnalyticsPage.jsx fix (moratorium mandate, 11th recommendation)",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "rejected": [
+    "Wire golden eval harness to CI (moratorium gate — parking lot promotes run 14)",
+    "Extract _process_pending_sends() (moratorium + no urgency)"
+  ],
+  "weakened": [
+    "Fix email_sequences N+1 — valid, wrong timing (day 4, moratorium), parking lot",
+    "Scope em-dash check — correct fix, framed as bonus step + run 8 prerequisite"
+  ],
+  "moratorium_active": true,
+  "moratorium_pending_after": 4,
+  "moratorium_lift_condition": "Implement JS Silent Catch Guard (Check 10) → pending 4→3 → moratorium lifts",
+  "new_parking_lot_additions": [
+    "Fix email_sequences N+1 (Issue #112, ROI 2.3)",
+    "Extract _process_pending_sends() (Issue #113, ROI 1.8)",
+    "California AI Companion/Chatbot Disclosure Review (ROI 1.6)"
+  ],
+  "next_run_candidates": [
+    "Wire golden eval harness to CI (ROI 2.5, Issue #110) — FIRST POST-MORATORIUM WINNER if moratorium lifts",
+    "Fix email_sequences N+1 (ROI 2.3, Issue #112) — if email adoption grows",
+    "Scope em-dash + wire check_project_invariants.py (run 8) — if em-dash bonus step applied"
+  ],
+  "key_new_findings": [
+    "Email sequences shipped 2026-05-01 with N+1 queries (GH #112 — 1001 queries per 1000 enrollments)",
+    "California SB 243 + companion chatbot law (Perkins Coie) now in KB — widget may need disclosure audit",
+    "Repo idle 48h — no sprint activity pressure, implementation window open"
+  ]
+}

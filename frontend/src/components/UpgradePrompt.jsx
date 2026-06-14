@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 
-const PLAN_ORDER = ["free", "growth", "professional", "autopilot", "enterprise"];
+const PLAN_ORDER = ["free", "growth", "autopilot", "professional", "enterprise"];
 
 const PLAN_DISPLAY = {
   free: { name: "Free", price: "$0" },
-  growth: { name: "Growth", price: "$249/mo" },
-  professional: { name: "Professional", price: "$499/mo" },
+  growth: { name: "Growth", price: "$99/mo" },
+  professional: { name: "Professional", price: "$150/mo" },
   autopilot: { name: "Autopilot", price: "$299/mo" },
-  enterprise: { name: "Enterprise", price: "$899/mo" },
+  enterprise: { name: "Enterprise", price: "$250/mo" },
 };
 
 const overlayStyle = {
@@ -44,15 +44,15 @@ const bannerStyle = {
 };
 
 /**
- * UpgradePrompt — reusable modal that appears when a user tries to access
+ * UpgradePrompt - reusable modal that appears when a user tries to access
  * a feature above their current plan.
  *
  * Props:
- *   feature       {string}   — human-readable feature name, e.g. "Local SEO"
- *   requiredPlan  {string}   — plan key required, e.g. "professional"
- *   onClose       {fn}       — called when the user dismisses without upgrading
- *   onNavigate    {fn}       — called with "billing" when Upgrade Now is clicked
- *   variant       {string}   — "modal" (default) | "banner"
+ *   feature       {string}   - human-readable feature name, e.g. "Local SEO"
+ *   requiredPlan  {string}   - plan key required, e.g. "professional"
+ *   onClose       {fn}       - called when the user dismisses without upgrading
+ *   onNavigate    {fn}       - called with "billing" when Upgrade Now is clicked
+ *   variant       {string}   - "modal" (default) | "banner"
  */
 export default function UpgradePrompt({ feature, requiredPlan, onClose, onNavigate, variant = "modal" }) {
   const plan = PLAN_DISPLAY[requiredPlan] || { name: requiredPlan, price: "" };
@@ -181,8 +181,5 @@ export function planBelowRequired(currentPlan, requiredPlan) {
   const current = PLAN_ORDER.indexOf(currentPlan ?? "free");
   const required = PLAN_ORDER.indexOf(requiredPlan);
   if (required === -1) return false;
-  // For autopilot (index 3): treat it as below professional (index 2) when
-  // required is professional, since autopilot costs less and lacks pro features.
-  // Both autopilot and professional are at different positions; just compare indices.
   return current < required;
 }

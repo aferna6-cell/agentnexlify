@@ -1331,3 +1331,44 @@ class TestHealthEndpointLists8Agents:
             "data_analyst",
         ):
             assert expected in body, f"health payload missing {expected}: {body}"
+
+
+class TestPublicHealthEndpoint:
+    """Regression test: the deploy-safe managed-agents health probe must not 404."""
+
+    PATH = "/api/v1/managed-agents/health"
+
+    def test_public_health_probe_is_tenant_safe(self, client):
+        from backend.config import settings
+
+        with (
+            patch.object(settings, "managed_agents_environment_id", "env_abc"),
+            patch.object(settings, "lead_qualifier_agent_id", "agent_lq"),
+            patch.object(settings, "document_drafter_agent_id", "agent_dd"),
+            patch.object(settings, "codebase_reviewer_agent_id", "agent_cr"),
+            patch.object(settings, "support_agent_id", "agent_sa"),
+            patch.object(settings, "structured_extractor_agent_id", "agent_se"),
+            patch.object(settings, "deep_researcher_agent_id", "agent_dr"),
+            patch.object(settings, "field_monitor_agent_id", "agent_fm"),
+            patch.object(settings, "data_analyst_agent_id", "agent_da"),
+        ):
+            resp = client.get(self.PATH)
+
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["status"] == "ok"
+        assert body["service"] == "managed-agents"
+        assert body["managed_agents_status"] == "configured"
+        assert body["any_configured"] is True
+        for expected in (
+            "environment",
+            "lead_qualifier",
+            "document_drafter",
+            "codebase_reviewer",
+            "support_agent",
+            "structured_extractor",
+            "deep_researcher",
+            "field_monitor",
+            "data_analyst",
+        ):
+            assert expected in body, f"health payload missing {expected}: {body}"

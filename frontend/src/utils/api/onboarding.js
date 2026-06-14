@@ -25,10 +25,42 @@ export function generateKb(tenantId, token, data) {
 }
 
 /**
- * Complete onboarding — persists all wizard data to the backend.
+ * Complete onboarding - persists all wizard data to the backend.
  */
 export function completeOnboarding(tenantId, token, data) {
   return apiFetch(`/api/v1/onboarding/${tenantId}/complete`, { token, body: data });
+}
+
+/**
+ * Build the /complete payload from wizardData. Shared by the plan step,
+ * the customize step (which now runs after plan), and the express path.
+ */
+export function buildWizardPayload(wizardData) {
+  return {
+    business_name: wizardData.business_name,
+    business_type: wizardData.business_type || "other",
+    city: wizardData.city || "",
+    phone: wizardData.phone || null,
+    website_url: wizardData.website_url || null,
+    hours: wizardData.hours || null,
+    services: wizardData.services?.length ? wizardData.services : null,
+    widget_bot_name: wizardData.widget_bot_name || null,
+    widget_primary_color: wizardData.widget_primary_color || null,
+    widget_greeting_message: wizardData.widget_greeting_message || null,
+    widget_position: wizardData.widget_position || null,
+    faqs: wizardData.faqs?.length ? wizardData.faqs : null,
+  };
+}
+
+/**
+ * Email the widget embed snippet + install steps to whoever manages the
+ * tenant's website (the wizard's "I can't edit my site" escape hatch).
+ */
+export function emailEmbedInstructions(tenantId, token, recipientEmail, note) {
+  return apiFetch(`/api/v1/onboarding/${tenantId}/email-embed`, {
+    token,
+    body: { recipient_email: recipientEmail, note: note || null },
+  });
 }
 
 /**
@@ -44,7 +76,7 @@ export function checkoutForWizard(token, plan) {
 
 /**
  * Log a wizard step event for drop-off tracking.
- * Fire-and-forget — never blocks the user's onboarding.
+ * Fire-and-forget - never blocks the user's onboarding.
  */
 export function trackWizardEvent(tenantId, token, step, action) {
   apiFetch(`/api/v1/wizard/${tenantId}/event`, {

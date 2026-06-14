@@ -1,5 +1,6 @@
 ---
 name: email-sequence
+effort: medium
 description: Design multi-email campaigns (onboarding, nurture, re-engagement, upsell). Load when editing backend/routers/marketing_campaigns.py, backend/routers/sequences.py, or authoring tenant email flows via Resend integration.
 origin: coreyhaines31/marketingskills (adapted)
 version: 1.0.0

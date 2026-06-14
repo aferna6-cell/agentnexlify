@@ -69,6 +69,8 @@ Create manifest at `.claude/agent-comms/compound/{task-slug}/manifest.md` with s
 For full prompt templates, agent rules, and completion criteria — see:
 `references/full-pipeline.md`
 
+**Opus 4.7 fan-out note:** Brainstormer and Planner phases often spawn sub-investigations (schema, prior art, edge cases). On 4.7, parallel spawning must be explicit. Use phrasings like "spawn subagents in the same turn to investigate X, Y, Z" or "dispatch schema-guardian + code-explorer + security-reviewer concurrently." Sequential phrasings like "investigate X, Y, Z" under-delegate. See `.claude/rules/parallel-approaches.md` and `.claude/rules/opus-4-7-prompting.md §4`.
+
 Core constraints every agent must honor:
 - `client_id` not `tenant_id` on leads/conversations tables
 - No `from __future__ import annotations` in backend/routers/

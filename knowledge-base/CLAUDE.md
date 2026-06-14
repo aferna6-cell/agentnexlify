@@ -81,6 +81,10 @@ Trigger: `/kb-health` or weekly cron
 3. Write report to `wiki/lint-report.md` with specific fixes
 4. Log to `log.md`: `## [YYYY-MM-DD HH:MM] lint | <N> issues found`
 
+Deterministic commands:
+- `npm run kb:health` — read-only report for stale articles, pending sources, category coverage, missing source attribution, orphan pages, and broken wikilinks.
+- `npm run kb:lint` — template and `INDEX.md` coverage validation.
+
 ## Page conventions
 
 Every wiki page uses the Karpathy template (see `.claude/skills/wiki/references/template.md`):

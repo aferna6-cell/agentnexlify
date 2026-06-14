@@ -138,25 +138,25 @@ function temperatureBadge(temp) {
 
 const QUALIFICATION_LABELS = {
   hot_call_now: {
-    label: "Hot — Call Now",
+    label: "Hot - Call Now",
     color: "#ff4444",
     bg: "rgba(255,68,68,0.15)",
     border: "rgba(255,68,68,0.3)",
   },
   warm_nurture_sequence: {
-    label: "Warm — Nurture",
+    label: "Warm - Nurture",
     color: "#f5a623",
     bg: "rgba(245,166,35,0.15)",
     border: "rgba(245,166,35,0.3)",
   },
   cold_drop: {
-    label: "Cold — Drop",
+    label: "Cold - Drop",
     color: "#00bfff",
     bg: "rgba(0,191,255,0.15)",
     border: "rgba(0,191,255,0.3)",
   },
   disqualify_spam: {
-    label: "Spam — Disqualify",
+    label: "Spam - Disqualify",
     color: "#666",
     bg: "rgba(102,102,102,0.15)",
     border: "rgba(102,102,102,0.3)",
@@ -1402,7 +1402,7 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
             </div>
           </div>
 
-          {/* Insurance (shown for all leads — useful for dental/medical) */}
+          {/* Insurance (shown for all leads - useful for dental/medical) */}
           {form.insurance_carrier ||
           form.insurance_member_id ||
           form.insurance_group ||

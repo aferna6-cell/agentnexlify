@@ -1,0 +1,47 @@
+{
+  "run": 15,
+  "date": "2026-05-08",
+  "mode": "moratorium_retriggered",
+  "moratorium_status": {
+    "triggered": true,
+    "trigger_reason": "pending_approvals=4 > threshold=3 AND oldest_pending=22_days > max_pending_age_days=14",
+    "previous_state": "false (stale — governance.json not updated after run 14 added 4th pending item)"
+  },
+  "evidence_summary": "Repo quiet 3 days (May 6-8), zero implementation velocity. pending_approvals corrected to 4 (runs 4, 7, 8, 14). Oldest=run 4 at 22 days. KB score 66/100 stuck 3 days, broken [[claude-cowork]] wikilink flagged 3 nights. agent-config-security.yml windows-latest flagged 3 nights. Architecture audit (May 2): 10 god classes CRITICAL (auth.py 1506, email_sequences.py 1255). Run 14 winner (golden eval CI) still unimplemented day 3. Skill evals PASS (98 skills, 0 failures).",
+  "ideas_count": 5,
+  "ideas": [
+    "Widget 3-Copy Sync Guard (run 7 re-escalation, S-effort, 14 days)",
+    "AI-to-Human Handoff v1 (run 4 re-escalation, M-effort, 22 days — oldest)",
+    "Wire check_project_invariants.py (run 8 re-escalation, S-effort, 13 days)",
+    "Wire lead qualifier golden eval to CI (run 14 re-escalation, S-effort, 3 days)",
+    "Fix broken KB wikilink [[claude-cowork]] (new, S-effort, 3 nights flagged)"
+  ],
+  "debate": {
+    "idea_1_widget_sync": "SURVIVES — S-effort, production risk, CLAUDE.md correction",
+    "idea_2_ai_handoff": "WEAKENED — valid escalation but M-effort deadlock risk, demoted to urgent parking lot",
+    "idea_3_invariants": "SURVIVES — bonus step alongside winner, not standalone winner"
+  },
+  "winner": "Widget 3-Copy Sync Guard (run 7)",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "bonus_steps": [
+    "Wire check_project_invariants.py — run 8 bonus (5 min, drops pending 4→3)",
+    "Wire lead qualifier golden eval to CI — run 14 bonus (20 min, drops pending 3→2)"
+  ],
+  "pending_after_winner_only": 4,
+  "pending_after_all_bonuses": 1,
+  "rejected": [
+    "AI-to-Human Handoff v1 as winner (M-effort deadlock risk)",
+    "KB wikilink fix as winner (too low leverage for moratorium slot)",
+    "CI runner fix as winner (trivial cosmetic)"
+  ],
+  "governance_corrections": [
+    "moratorium_active corrected to true (was stale false)",
+    "pending_approvals corrected to 4 (was 3 in implementation_lag_warning)"
+  ],
+  "next_run_questions": [
+    "Were any of 3 S-effort items (runs 7, 8, 14) implemented?",
+    "Has run 4 (AI-to-Human Handoff) been scheduled for a sprint?",
+    "Is GH #112 (email_sequences N+1) being worked?"
+  ]
+}

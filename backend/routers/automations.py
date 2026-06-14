@@ -8,13 +8,16 @@ import base64
 import hashlib
 import hmac
 import logging
+from datetime import datetime
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from backend.config import settings
 from backend.models.database import get_service_supabase
-from backend.routers.auth import _get_current_tenant, require_role
+from backend.dependencies import _get_current_tenant, require_role
+from backend.services.activity import get_activity_events, get_activity_totals
 
 
 class AutomationConfigUpdate(BaseModel):
@@ -122,6 +125,46 @@ def _get_automation(tenant_id: str, automation_type: str) -> dict | None:
         .execute()
     )
     return result.data[0] if result.data else None
+
+
+# ------------------------------------------------------------------
+# Activity Feed
+# ------------------------------------------------------------------
+
+@router.get("/automations/{tenant_id}/activity")
+async def get_automation_activity(
+    tenant_id: str,
+    limit: int = Query(default=5, ge=1, le=100),
+    type: Optional[str] = Query(default=None),
+    since: Optional[str] = Query(default=None),
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Return recent automation activity events for a tenant.
+
+    Query params:
+        limit: max events returned (default 5, max 100)
+        type: filter by activity_type (e.g. 'missed_call_textback')
+        since: ISO8601 datetime — only return events after this time
+    """
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Tenant mismatch")
+
+    since_dt: Optional[datetime] = None
+    if since:
+        try:
+            since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid 'since' datetime format. Use ISO8601.")
+
+    events = get_activity_events(
+        tenant_id=tenant_id,
+        since=since_dt,
+        type_filter=type,
+        limit=limit,
+    )
+    totals = get_activity_totals(tenant_id=tenant_id, since=since_dt)
+
+    return {"events": events, "totals": totals}
 
 
 # ------------------------------------------------------------------

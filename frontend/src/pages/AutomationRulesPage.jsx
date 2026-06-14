@@ -452,7 +452,7 @@ function RuleModal({ rule, tenantId, token, onClose, onSaved }) {
                 padding: "8px 0",
               }}
             >
-              No conditions — rule will trigger for all matching events
+              No conditions - rule will trigger for all matching events
             </div>
           )}
         </div>
@@ -842,7 +842,7 @@ export default function AutomationRulesPage() {
                           fontSize: "0.85rem",
                         }}
                       >
-                        — {rule.description}
+                        - {rule.description}
                       </span>
                     )}
                   </div>

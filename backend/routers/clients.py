@@ -17,7 +17,7 @@ from backend.models.schemas import (
     NoteResponse,
     StageChangeRequest,
 )
-from backend.routers.auth import _get_current_tenant
+from backend.dependencies import _get_current_tenant
 from backend.services.activity import log_activity
 
 logger = logging.getLogger(__name__)

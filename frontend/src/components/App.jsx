@@ -8,10 +8,13 @@ import {
 } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchTrialStatus } from "../utils/api/dashboard";
+import { fetchOsPendingDeliverables } from "../utils/api/os";
+import DemoBanner from "./DemoBanner";
 import LoginPage from "./LoginPage";
-import MarketingAddonUpsell, {
-  MARKETING_ADDON_GATED_KEYS,
-} from "./MarketingAddonUpsell";
+import MarketingUpsell, {
+  MARKETING_GATED_KEYS,
+  MARKETING_PLANS,
+} from "./MarketingUpsell";
 import NotificationBell from "./NotificationBell";
 import Sidebar from "./Sidebar";
 import SkeletonLoader from "./SkeletonLoader";
@@ -58,43 +61,29 @@ class PageErrorBoundary extends Component {
   }
 }
 
-// Lazy-load all dashboard pages — each becomes its own chunk
+// Lazy-load all dashboard pages - each becomes its own chunk
 const Dashboard = lazy(() => import("../pages/Dashboard"));
 const LeadsPage = lazy(() => import("../pages/LeadsPage"));
 const ClientList = lazy(() => import("../pages/Dashboard/ClientList"));
 const ClientProfile = lazy(() => import("../pages/Dashboard/ClientProfile"));
 const Calendar = lazy(() => import("../pages/Calendar"));
 const Availability = lazy(() => import("../pages/Availability"));
-const AutomationsPage = lazy(() => import("../pages/Automations"));
 const ConversationsPage = lazy(() => import("../pages/ConversationsPage"));
 const WidgetPage = lazy(() => import("../pages/WidgetPage"));
 const FaqManagerPage = lazy(() => import("../pages/FaqManagerPage"));
 const BillingPage = lazy(() => import("../pages/BillingPage"));
 const SettingsPage = lazy(() => import("../pages/SettingsPage"));
+const SettingsInboundChannels = lazy(
+  () => import("../pages/SettingsInboundChannels"),
+);
 const IntegrationsPage = lazy(() => import("../pages/IntegrationsPage"));
 const AnalyticsPage = lazy(() => import("../pages/AnalyticsPage"));
-const AgentControlCenterPage = lazy(
-  () => import("../pages/AgentControlCenterPage"),
-);
+const AgentOS = lazy(() => import("../pages/AgentOS"));
 const TeamPage = lazy(() => import("../pages/TeamPage"));
 const BusinessPageSettings = lazy(
   () => import("../pages/BusinessPageSettings"),
 );
-const ReviewsPage = lazy(() => import("../pages/ReviewsPage"));
-const ContentStudioPage = lazy(() => import("../pages/ContentStudioPage"));
-const ContentRepurposePage = lazy(
-  () => import("../pages/ContentRepurposePage"),
-);
-const MenuPage = lazy(() => import("../pages/MenuPage"));
-const OrdersPage = lazy(() => import("../pages/OrdersPage"));
-const JobsPage = lazy(() => import("../pages/JobsPage"));
-const ActionItemsPage = lazy(() => import("../pages/ActionItemsPage"));
-const SnippetsPage = lazy(() => import("../pages/SnippetsPage"));
-const ChatFlowBuilderPage = lazy(() => import("../pages/ChatFlowBuilderPage"));
 const MCPSetupPage = lazy(() => import("../pages/MCPSetupPage"));
-const BidsPage = lazy(() => import("../pages/BidsPage"));
-const ClientPortalPage = lazy(() => import("../pages/ClientPortalPage"));
-const CallsPage = lazy(() => import("../pages/CallsPage"));
 const LocalSEOPage = lazy(() => import("../pages/LocalSEOPage"));
 const SocialMediaPage = lazy(() => import("../pages/SocialMediaPage"));
 const MarketingCampaignsPage = lazy(
@@ -103,77 +92,47 @@ const MarketingCampaignsPage = lazy(
 const MarketingDashboardPage = lazy(
   () => import("../pages/MarketingDashboardPage"),
 );
-const ABTestsPage = lazy(() => import("../pages/ABTestsPage"));
 const AutomationRulesPage = lazy(() => import("../pages/AutomationRulesPage"));
 const TriggerLogsPage = lazy(() => import("../pages/TriggerLogsPage"));
-const EmailSequencesPage = lazy(() => import("../pages/EmailSequencesPage"));
 const InvoicesPage = lazy(() => import("../pages/InvoicesPage"));
 const DocumentsPage = lazy(() => import("../pages/DocumentsPage"));
 const PipelinePage = lazy(() => import("../pages/PipelinePage"));
-const PipelineAutomationsPage = lazy(
-  () => import("../pages/PipelineAutomationsPage"),
-);
-const SmartListsPage = lazy(() => import("../pages/SmartListsPage"));
-const FormBuilderPage = lazy(() => import("../pages/FormBuilderPage"));
-const CSATPage = lazy(() => import("../pages/CSATPage"));
-const WaitlistPage = lazy(() => import("../pages/WaitlistPage"));
-const ScoringConfigPage = lazy(() => import("../pages/ScoringConfigPage"));
-const TeamActivityPage = lazy(() => import("../pages/TeamActivityPage"));
 const SupportPage = lazy(() => import("../pages/SupportPage"));
 const AdminAnalyticsPage = lazy(() => import("../pages/AdminAnalyticsPage"));
+const AdminHealthPage = lazy(() => import("../pages/AdminHealthPage"));
 const AdminPromotionsPage = lazy(() => import("../pages/AdminPromotionsPage"));
 
 const pages = {
   dashboard: Dashboard,
   analytics: AnalyticsPage,
-  control_center: AgentControlCenterPage,
+  agent_os: AgentOS,
   leads: LeadsPage,
   clients: ClientList,
   client_profile: ClientProfile,
   calendar: Calendar,
   availability: Availability,
   conversations: ConversationsPage,
-  automations: AutomationsPage,
   widget: WidgetPage,
   faq: FaqManagerPage,
   team: TeamPage,
   billing: BillingPage,
   integrations: IntegrationsPage,
   settings: SettingsPage,
+  inbound_channels: SettingsInboundChannels,
   business_page: BusinessPageSettings,
-  reviews: ReviewsPage,
-  content_studio: ContentStudioPage,
-  content_repurpose: ContentRepurposePage,
-  menu: MenuPage,
-  orders: OrdersPage,
-  jobs: JobsPage,
-  action_items: ActionItemsPage,
-  snippets: SnippetsPage,
-  chat_flows: ChatFlowBuilderPage,
   mcp_setup: MCPSetupPage,
-  bids: BidsPage,
-  client_portal: ClientPortalPage,
-  calls: CallsPage,
   local_seo: LocalSEOPage,
   social_media: SocialMediaPage,
   campaigns: MarketingCampaignsPage,
   marketing_dashboard: MarketingDashboardPage,
-  ab_tests: ABTestsPage,
   automation_rules: AutomationRulesPage,
   trigger_logs: TriggerLogsPage,
-  email_sequences: EmailSequencesPage,
   invoices: InvoicesPage,
   documents: DocumentsPage,
   pipeline: PipelinePage,
-  pipeline_automations: PipelineAutomationsPage,
-  smart_lists: SmartListsPage,
-  form_builder: FormBuilderPage,
-  csat: CSATPage,
-  waitlist: WaitlistPage,
-  scoring_config: ScoringConfigPage,
-  team_activity: TeamActivityPage,
   support: SupportPage,
   admin_analytics: AdminAnalyticsPage,
+  admin_health: AdminHealthPage,
   admin_promotions: AdminPromotionsPage,
 };
 
@@ -181,55 +140,36 @@ const pages = {
 // URL ↔ page-key routing (supports direct navigation and browser back/forward)
 // --------------------------------------------------------------------------
 const PAGE_TO_PATH = {
-  dashboard: "/dashboard",
+  dashboard: "/dashboard/overview",
   analytics: "/dashboard/analytics",
-  control_center: "/dashboard/agent-control",
+  agent_os: "/dashboard/agent-os",
   leads: "/dashboard/leads",
   clients: "/dashboard/clients",
   client_profile: "/dashboard/client-profile",
   pipeline: "/dashboard/pipeline",
-  pipeline_automations: "/dashboard/pipeline-automations",
   calendar: "/dashboard/calendar",
   availability: "/dashboard/availability",
   conversations: "/dashboard/conversations",
-  automations: "/dashboard/automations",
   widget: "/dashboard/widget",
   faq: "/dashboard/faq",
   team: "/dashboard/team",
   billing: "/dashboard/billing",
   integrations: "/dashboard/integrations",
   settings: "/dashboard/settings",
+  inbound_channels: "/dashboard/inbound-channels",
   business_page: "/dashboard/business-page",
-  reviews: "/dashboard/reviews",
-  content_studio: "/dashboard/content-studio",
-  menu: "/dashboard/menu",
-  orders: "/dashboard/orders",
-  jobs: "/dashboard/jobs",
-  action_items: "/dashboard/action-items",
-  snippets: "/dashboard/snippets",
-  chat_flows: "/dashboard/chat-flows",
   mcp_setup: "/dashboard/mcp-setup",
-  bids: "/dashboard/bids",
-  client_portal: "/dashboard/client-portal",
-  calls: "/dashboard/calls",
   local_seo: "/dashboard/local-seo",
   social_media: "/dashboard/social-media",
   campaigns: "/dashboard/campaigns",
   marketing_dashboard: "/dashboard/marketing",
-  ab_tests: "/dashboard/ab-tests",
   automation_rules: "/dashboard/automation-rules",
   trigger_logs: "/dashboard/trigger-logs",
-  email_sequences: "/dashboard/sequences",
   invoices: "/dashboard/invoices",
   documents: "/dashboard/documents",
-  smart_lists: "/dashboard/smart-lists",
-  form_builder: "/dashboard/forms",
-  csat: "/dashboard/csat",
-  waitlist: "/dashboard/waitlist",
-  scoring_config: "/dashboard/scoring",
-  team_activity: "/dashboard/team-activity",
   support: "/dashboard/support",
   admin_analytics: "/admin/analytics",
+  admin_health: "/admin/health",
   admin_promotions: "/admin/promotions",
 };
 
@@ -239,7 +179,10 @@ const PATH_TO_PAGE = Object.fromEntries(
 
 function pageFromPath(pathname) {
   if (PATH_TO_PAGE[pathname]) return PATH_TO_PAGE[pathname];
-  if (pathname.startsWith("/dashboard")) return "dashboard";
+  // Front door: bare /dashboard (old bookmarks, post-login) and unknown
+  // /dashboard/* paths land on the Agent OS conversation. The classic
+  // dashboard lives at its own exact path, /dashboard/overview.
+  if (pathname.startsWith("/dashboard")) return "agent_os";
   if (pathname.startsWith("/admin/")) {
     // Map /admin/analytics -> admin_analytics, /admin/promotions -> admin_promotions
     const slug = pathname.replace("/admin/", "").replace(/-/g, "_");
@@ -301,13 +244,16 @@ function TrialBanner({ trialData, onNavigate }) {
 
 export default function App() {
   const { user, token } = useAuth();
+  // Front door: a logged-in user lands on the Agent OS conversation.
+  // Every classic page stays deep-linkable via its exact /dashboard/* path.
   const [currentPage, setCurrentPage] = useState(
-    () => pageFromPath(window.location.pathname) || "dashboard",
+    () => pageFromPath(window.location.pathname) || "agent_os",
   );
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activePlan, setActivePlan] = useState(null);
   const [trialData, setTrialData] = useState(null);
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
 
   useEffect(() => {
     if (!user?.tenantId || !token) return;
@@ -325,10 +271,33 @@ export default function App() {
     }
   }, [activePlan]);
 
+  // Poll pending Agent OS approvals every 30s so the sidebar badge stays
+  // current from any page. Cheap GET - count + lightweight summary only.
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    const refresh = () => {
+      fetchOsPendingDeliverables(token)
+        .then((res) => {
+          if (cancelled) return;
+          setPendingApprovalCount(res?.count ?? 0);
+        })
+        .catch(() => {
+          // Silent - badge just stays at last known value
+        });
+    };
+    refresh();
+    const id = setInterval(refresh, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [token]);
+
   // Sync page state with browser back/forward buttons
   useEffect(() => {
     const onPop = () => {
-      const page = pageFromPath(window.location.pathname) || "dashboard";
+      const page = pageFromPath(window.location.pathname) || "agent_os";
       setCurrentPage(page);
       setPageData(null);
     };
@@ -357,11 +326,12 @@ export default function App() {
 
   const PageComponent = pages[currentPage] || Dashboard;
 
-  // Marketing Suite add-on gate — block 7 pages when tenant lacks the add-on.
-  // Backend enforces via addon_gate dependency; this is the UI half (answer #5 = C).
-  const marketingAddonGated =
-    MARKETING_ADDON_GATED_KEYS.has(currentPage) &&
-    !user.marketing_addon_active;
+  // Marketing plan gate - add-on retired 2026-06-10; marketing pages are
+  // included with Growth (autopilot) and above. Backend enforces via
+  // plan_gate dependency; this is the UI half.
+  const marketingGated =
+    MARKETING_GATED_KEYS.has(currentPage) &&
+    !MARKETING_PLANS.has(activePlan || user.plan);
 
   return (
     <div className="app">
@@ -369,6 +339,7 @@ export default function App() {
         currentPage={currentPage}
         onNavigate={handleNavigate}
         plan={activePlan}
+        pendingApprovalCount={pendingApprovalCount}
       />
       <div
         style={{
@@ -378,6 +349,7 @@ export default function App() {
           minWidth: 0,
         }}
       >
+        <DemoBanner />
         <TrialBanner trialData={trialData} onNavigate={handleNavigate} />
         <div
           style={{
@@ -393,8 +365,8 @@ export default function App() {
         <main className="content">
           {loading ? (
             <SkeletonLoader />
-          ) : marketingAddonGated ? (
-            <MarketingAddonUpsell pageKey={currentPage} />
+          ) : marketingGated ? (
+            <MarketingUpsell pageKey={currentPage} onNavigate={handleNavigate} />
           ) : (
             <PageErrorBoundary pageKey={currentPage}>
               <Suspense fallback={<SkeletonLoader />}>

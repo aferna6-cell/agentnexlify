@@ -16,7 +16,7 @@ from fastapi.responses import RedirectResponse
 
 from backend.config import settings
 from backend.models.database import get_service_supabase
-from backend.routers.auth import _get_current_tenant, require_role
+from backend.dependencies import _get_current_tenant, require_role
 
 logger = logging.getLogger(__name__)
 
@@ -168,6 +168,7 @@ async def gbp_connection_status(
     """Check if GBP is connected for this tenant."""
     _verify_tenant(claims, tenant_id)
 
+    platform_configured = bool(getattr(settings, "google_client_id", None))
     db = get_service_supabase()
     try:
         result = (
@@ -180,9 +181,9 @@ async def gbp_connection_status(
         )
     except Exception:
         logger.warning("GBP status check failed for %s", tenant_id, exc_info=True)
-        return {"connected": False}
+        return {"connected": False, "platform_configured": platform_configured}
 
-    return {"connected": bool(result.data)}
+    return {"connected": bool(result.data), "platform_configured": platform_configured}
 
 
 @router.delete("/{tenant_id}/disconnect")

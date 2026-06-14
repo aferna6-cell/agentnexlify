@@ -1,11 +1,15 @@
 """Shared Anthropic runtime helpers for timing and structured logging."""
 
 import asyncio
+import json
 import logging
+import os
 import time
 import uuid
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from functools import partial
+from pathlib import Path
 from typing import Any
 
 import anthropic
@@ -13,6 +17,33 @@ import anthropic
 from backend.config import settings
 
 logger = logging.getLogger(__name__)
+
+_TRACE_DIR_ENV = "LLM_TRACE_DIR"
+_TRACE_ENABLED_ENV = "LLM_TRACE_ENABLED"
+_DEFAULT_TRACE_DIR = "logs/llm_traces"
+
+
+def _trace_enabled() -> bool:
+    flag = os.environ.get(_TRACE_ENABLED_ENV, "1").strip().lower()
+    return flag not in ("0", "false", "no", "off", "")
+
+
+def _trace_path() -> Path:
+    base = os.environ.get(_TRACE_DIR_ENV) or _DEFAULT_TRACE_DIR
+    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return Path(base) / f"{day}.jsonl"
+
+
+def _write_trace(record: dict[str, Any]) -> None:
+    if not _trace_enabled():
+        return
+    try:
+        path = _trace_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record, default=str, ensure_ascii=False) + "\n")
+    except Exception as exc:
+        logger.debug("llm.trace.write_failed error=%s", exc)
 
 
 @dataclass
@@ -153,6 +184,21 @@ def _log_finish(
         result.stop_reason,
         _safe_metadata(metadata),
     )
+    _write_trace({
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "event": "finish",
+        "id": call_id,
+        "op": operation,
+        "model": model,
+        "duration_ms": duration_ms,
+        "input_tokens": result.input_tokens,
+        "output_tokens": result.output_tokens,
+        "cache_creation_input_tokens": result.cache_creation_input_tokens,
+        "cache_read_input_tokens": result.cache_read_input_tokens,
+        "stop_reason": result.stop_reason,
+        "response_chars": len(result.text),
+        "metadata": _safe_metadata(metadata),
+    })
 
 
 def _log_error(
@@ -181,6 +227,21 @@ def _log_error(
         _safe_metadata(metadata),
         exc_info=True,
     )
+    _write_trace({
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "event": "error",
+        "id": call_id,
+        "op": operation,
+        "model": model,
+        "duration_ms": duration_ms,
+        "error_type": type(exc).__name__,
+        "error": str(exc)[:300],
+        "message_count": len(messages),
+        "role_counts": _message_role_counts(messages),
+        "system_chars": len(system or ""),
+        "message_chars": sum(len(msg.get("content") or "") for msg in messages),
+        "metadata": _safe_metadata(metadata),
+    })
 
 
 def _should_retry(exc: Exception) -> bool:
@@ -284,8 +345,14 @@ async def call_claude_messages(
     system: str | None = None,
     timeout: float = 30.0,
     metadata: dict[str, Any] | None = None,
+    max_retries: int = 0,
+    retry_delay_seconds: float = 0.75,
 ) -> ClaudeCallResult:
-    """Async wrapper for Claude messages.create that avoids blocking the event loop."""
+    """Async wrapper for Claude messages.create that avoids blocking the event loop.
+
+    Retries (and their backoff sleeps) run inside the executor thread, so the
+    event loop stays free even when max_retries > 0.
+    """
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(
         None,
@@ -300,5 +367,7 @@ async def call_claude_messages(
             system=system,
             timeout=timeout,
             metadata=metadata,
+            max_retries=max_retries,
+            retry_delay_seconds=retry_delay_seconds,
         ),
     )

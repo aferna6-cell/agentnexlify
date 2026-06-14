@@ -13,8 +13,24 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { runAgent } from './runner.ts';
+import { runOrchestration } from './agent-os-runtime/orchestrate.ts';
+import { isTokenAuthorized } from './auth.ts';
+import type { SharedContext } from './agent-os/types/agent.ts';
 
 const PORT = parseInt(process.env.PORT ?? '3100', 10);
+
+// Optional shared secret. When AGENT_SERVICE_TOKEN is set, every request to a
+// compute route must carry a matching X-Agent-Token header. This is
+// defense-in-depth on top of Railway private networking: even with a public
+// domain, the engine is not an open endpoint anyone can drive to burn credits.
+// Unset = open mode (local dev / parity with the prior behavior). /health is
+// never guarded so Railway's healthcheck keeps working.
+const AGENT_SERVICE_TOKEN = process.env.AGENT_SERVICE_TOKEN ?? '';
+
+/** True when the request is authorized (token unset, or header matches). */
+function isAuthorized(req: IncomingMessage): boolean {
+  return isTokenAuthorized(req.headers['x-agent-token'], AGENT_SERVICE_TOKEN);
+}
 
 async function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -50,6 +66,51 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   try {
     if (req.method === 'GET' && req.url === '/health') {
       json(res, 200, { status: 'ok' });
+      return;
+    }
+
+    // All compute routes below require the shared secret when one is configured.
+    if (!isAuthorized(req)) {
+      json(res, 401, { error: 'unauthorized' });
+      return;
+    }
+
+    // Agent OS orchestration. FastAPI (the data plane) authenticates the tenant,
+    // assembles its SharedContext from Supabase, and POSTs it here; agent-service
+    // runs the engine and returns the result + a record for FastAPI to persist.
+    // agent-service never touches a database.
+    if (req.method === 'POST' && req.url === '/orchestrate') {
+      const raw = await readBody(req);
+      let body: { accountId?: unknown; ask?: unknown; context?: unknown; forceAgentId?: unknown };
+      try {
+        body = JSON.parse(raw) as typeof body;
+      } catch {
+        json(res, 400, { error: 'invalid JSON body' });
+        return;
+      }
+      if (typeof body.accountId !== 'string' || !body.accountId.trim()) {
+        json(res, 400, { error: 'accountId must be a non-empty string' });
+        return;
+      }
+      if (typeof body.ask !== 'string' || !body.ask.trim()) {
+        json(res, 400, { error: 'ask must be a non-empty string' });
+        return;
+      }
+      if (typeof body.context !== 'object' || body.context === null) {
+        json(res, 400, { error: 'context must be the tenant SharedContext object' });
+        return;
+      }
+      if (body.forceAgentId !== undefined && typeof body.forceAgentId !== 'string') {
+        json(res, 400, { error: 'forceAgentId must be a string when provided' });
+        return;
+      }
+      const out = await runOrchestration({
+        accountId: body.accountId,
+        ask: body.ask,
+        context: body.context as SharedContext,
+        forceAgentId: body.forceAgentId,
+      });
+      json(res, 200, out);
       return;
     }
 

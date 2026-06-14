@@ -1,5 +1,6 @@
 ---
 name: vercel-react-best-practices
+effort: high
 description: React performance + bundle best practices from Vercel Engineering. Load when writing, reviewing, or refactoring components in frontend/src/, data fetching in frontend/src/utils/api/, or diagnosing slow re-renders or large bundles. Project uses Vite (not Next.js) — ignore Next-specific rules.
 origin: https://github.com/vercel-labs/agent-skills
 version: 1.0.0

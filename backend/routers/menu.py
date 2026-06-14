@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from backend.models.database import get_service_supabase
 from backend.services.llm_runtime import call_claude_messages
-from backend.routers.auth import _get_current_tenant, require_role
+from backend.dependencies import _get_current_tenant, require_role
 
 logger = logging.getLogger(__name__)
 

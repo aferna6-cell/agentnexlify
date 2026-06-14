@@ -10,15 +10,15 @@ from pydantic import BaseModel, Field
 
 from backend.dependencies import verify_tenant
 from backend.models.database import get_service_supabase
-from backend.routers.auth import _get_current_tenant
-from backend.services.addon_gate import require_marketing_addon
+from backend.dependencies import _get_current_tenant
+from backend.services.plan_gate import require_marketing_access
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/api/v1/ab-tests",
     tags=["ab-tests"],
-    dependencies=[Depends(require_marketing_addon)],
+    dependencies=[Depends(require_marketing_access)],
 )
 
 VALID_TEST_TYPES = {"subject_line", "send_time", "body_content", "campaign_variant"}

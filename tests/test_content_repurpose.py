@@ -89,7 +89,7 @@ async def test_repurpose_returns_all_formats():
         "social_posts": {"facebook": "FB post", "instagram": "IG post", "google_business": "GB post"},
     }
 
-    with patch("backend.services.content_repurposer.call_claude_messages_sync") as mock_call:
+    with patch("backend.services.content_repurposer.call_claude_messages", new_callable=AsyncMock) as mock_call:
         mock_call.return_value = MagicMock(text=json.dumps(fake_response))
 
         result = await repurpose(
@@ -110,7 +110,7 @@ async def test_repurpose_respects_format_filter():
         "social_posts": {"facebook": "FB post"},
     }
 
-    with patch("backend.services.content_repurposer.call_claude_messages_sync") as mock_call:
+    with patch("backend.services.content_repurposer.call_claude_messages", new_callable=AsyncMock) as mock_call:
         mock_call.return_value = MagicMock(text=json.dumps(fake_response))
 
         result = await repurpose(

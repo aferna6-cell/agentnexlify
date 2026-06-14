@@ -1,6 +1,14 @@
 # Plugin Routing — When to use which plugin
 
-36 plugins installed at project scope (2026-04-12). Use these by intent, not habit. Many overlap with existing MCPs/skills — prefer the built-in skill first, fall back to plugin only when it adds capability.
+37 plugins installed at project scope (2026-04-12, + `context-mode` 2026-04-24). Use these by intent, not habit. Many overlap with existing MCPs/skills — prefer the built-in skill first, fall back to plugin only when it adds capability.
+
+## Token Optimization — NEW (2026-04-24)
+
+| Intent | Plugin | Notes |
+|--------|--------|-------|
+| Context compression via SQLite FTS5 | `context-mode@context-mode` | 4 PreToolUse hooks; ELv2 license; verify with `/context-mode:ctx-doctor` after restart |
+
+Pairs with RTK (Bash hook) + Token Savior (MCP). See `.claude/rules/workflow-orchestration.md#token-optimization-3-layers`.
 
 ## Stack-relevant (use often)
 
@@ -94,3 +102,25 @@ claude plugin enable <name>
 `~/.claude/plugins/installed_plugins.json` — scope is `project` (tied to /home/aidan/agentnexlify).
 
 Browse catalog: `claude plugin marketplace list` → `claude plugin list`.
+
+## Evaluated 2026-05-01 — 50-MCP listicle triage
+
+Khairallah "50 Claude integrations" listicle triaged. ~80% redundant with existing stack. Locked decisions below. Full triage: `knowledge-base/raw/ai-llm/mcp-50-list-triage-2026-05-01.md`. Re-evaluate only if list materially changes.
+
+### Rejected (do not install — better alternative exists)
+- **Task Master AI** — `prd-to-issues` skill + `issue-to-pr-loop` cover this
+- **Postgres MCP (read-only)** — Supabase MCP covers Postgres
+- **Markdownify MCP** — `pdftotext` rule + `agent-browser` cover PDF/web
+- **Codebase Memory MCP** — duplicates `memory/` system + KB pgvector
+- **Mixpanel MCP** — Amplitude already wired
+- **BigQuery / Snowflake / MongoDB / Airtable** — no matching workload
+- **Discord / Telegram / Teams / Intercom / Zendesk / Salesforce** — no platform fit
+- **Docker / AWS / Cloudflare / GitLab MCP** — Railway + Vercel + GitHub stack covers
+- **Stealth Browser MCP** — Browserbase + Playwright cover automation
+- **Excel MCP** — `xlsx` skill covers Excel
+- **Dropbox / Box MCP** — Drive + OneDrive cover storage
+
+### Net-new install candidates
+- **Twilio MCP** — relevant (Twilio is core to widget appointment booking + SMS). Install procedure documented in KB triage article. Pending: verify package name + credentials.
+- **MCPHub** — deferred. Current `ToolSearch` deferred-tool pattern sufficient until total MCP count >25.
+- **FastMCP** — template scaffolded at `mcp-servers/example-fastmcp/`. Extend when tenant-specific MCP need arises (e.g. `tenant_health`, `widget_diff`, `migration_next` tools).

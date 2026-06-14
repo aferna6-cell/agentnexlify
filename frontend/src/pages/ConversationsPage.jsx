@@ -64,7 +64,7 @@ function _inlineMd(s) {
   s = s.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
   // Italic *text* (not inside bold markers)
   s = s.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, "<em>$1</em>");
-  // Links [text](url) — only allow https?:// to prevent XSS
+  // Links [text](url) - only allow https?:// to prevent XSS
   s = s.replace(
     /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
     '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',

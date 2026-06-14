@@ -86,6 +86,21 @@ class TestRegistry:
             assert pack.ai_persona.identity_addendum
             assert pack.ai_persona.escalation_triggers
 
+    def test_home_services_pack_reads_as_contractors(self):
+        pack = load_pack("home_services")
+        assert pack.label == "Contractors / Home Services"
+        assert len(pack.kb_seed_articles) >= 7
+
+    def test_contractor_vertical_pack_has_partner_demo_assets(self):
+        from backend.services.industry_packs.home_services import CONTRACTOR_VERTICAL_PACK
+
+        assert CONTRACTOR_VERTICAL_PACK["buyer_positioning"]["headline"]
+        assert "estimate" in CONTRACTOR_VERTICAL_PACK["widget_greeting"]
+        assert len(CONTRACTOR_VERTICAL_PACK["onboarding_90_second_fields"]) >= 8
+        assert "Photos or video link" in CONTRACTOR_VERTICAL_PACK["lead_fields"]
+        assert len(CONTRACTOR_VERTICAL_PACK["automation_presets"]) >= 4
+        assert len(CONTRACTOR_VERTICAL_PACK["demo_conversation_transcript"]) >= 6
+
 
 class TestTriggerEventMapping:
     def test_all_mapped_targets_are_allowed(self):

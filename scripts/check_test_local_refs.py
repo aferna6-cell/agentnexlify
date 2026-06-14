@@ -6,7 +6,6 @@ tests that still import or patch deleted modules after a dead-code sweep.
 
 import ast
 import re
-import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -23,7 +22,8 @@ def _iter_python_test_files(root: Path) -> list[Path]:
             files.extend(sorted(base.rglob("test_*.py")))
             files.extend(
                 sorted(
-                    path for path in base.rglob("*.py")
+                    path
+                    for path in base.rglob("*.py")
                     if path.name.endswith("_test.py")
                 )
             )
@@ -37,8 +37,10 @@ def _iter_python_test_files(root: Path) -> list[Path]:
 
 
 def _is_local_reference(dotted: str) -> bool:
-    return dotted == LOCAL_PREFIXES[0] or dotted == LOCAL_PREFIXES[1] or dotted.startswith(
-        ("backend.", "scripts.")
+    return (
+        dotted == LOCAL_PREFIXES[0]
+        or dotted == LOCAL_PREFIXES[1]
+        or dotted.startswith(("backend.", "scripts."))
     )
 
 
@@ -50,10 +52,63 @@ def _module_file(root: Path, dotted: str) -> Path | None:
     package_init = path / "__init__.py"
     if package_init.is_file():
         return package_init
+    if path.is_dir():
+        return path
     return None
 
 
-def _longest_existing_module(root: Path, dotted: str) -> tuple[str | None, Path | None, int]:
+def _is_package_path(path: Path) -> bool:
+    return path.is_dir() or path.name == "__init__.py"
+
+
+def iter_assigned_names(node: ast.AST):
+    """Yield names bound by an assignment node or assignment target."""
+    if isinstance(node, ast.Assign):
+        for target in node.targets:
+            yield from iter_assigned_names(target)
+    elif isinstance(node, ast.Name):
+        yield node.id
+    elif isinstance(node, (ast.Tuple, ast.List)):
+        for elt in node.elts:
+            yield from iter_assigned_names(elt)
+    elif isinstance(node, ast.Starred):
+        yield from iter_assigned_names(node.value)
+
+
+def _module_exports_name(module_path: Path, name: str) -> bool:
+    if module_path.is_dir():
+        return False
+
+    try:
+        tree = ast.parse(
+            module_path.read_text(encoding="utf-8"), filename=str(module_path)
+        )
+    except SyntaxError:
+        return False
+
+    for node in tree.body:
+        if (
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+            and node.name == name
+        ):
+            return True
+        if isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                exported = alias.asname or alias.name
+                if exported == name:
+                    return True
+        if isinstance(node, ast.Assign):
+            if any(target == name for target in iter_assigned_names(node)):
+                return True
+        if isinstance(node, ast.AnnAssign):
+            if name in iter_assigned_names(node.target):
+                return True
+    return False
+
+
+def _longest_existing_module(
+    root: Path, dotted: str
+) -> tuple[str | None, Path | None, int]:
     parts = dotted.split(".")
     for end in range(len(parts), 0, -1):
         candidate = ".".join(parts[:end])
@@ -91,7 +146,7 @@ def _collect_references(path: Path, root: Path) -> list[tuple[str, int, str]]:
             # If this is importing from a package, also validate any obvious
             # submodule imports (`from backend.services import foo`).
             module_file = _module_file(root, node.module)
-            if module_file and module_file.name == "__init__.py":
+            if module_file and _is_package_path(module_file):
                 for alias in node.names:
                     if alias.name == "*":
                         continue
@@ -108,7 +163,9 @@ def _collect_references(path: Path, root: Path) -> list[tuple[str, int, str]]:
                 and isinstance(node.args[0].value, str)
             ):
                 for match in PATCH_REFERENCE_RE.finditer(node.args[0].value):
-                    refs.append((match.group(0), node.lineno, f"patch target via {call_name}"))
+                    refs.append(
+                        (match.group(0), node.lineno, f"patch target via {call_name}")
+                    )
             self.generic_visit(node)
 
     Visitor().visit(tree)
@@ -127,7 +184,11 @@ def _validate_reference(root: Path, dotted: str, context: str) -> str | None:
         return None
 
     parts = dotted.split(".")
-    if module_path.name == "__init__.py" and prefix_len < len(parts):
+    if _is_package_path(module_path) and prefix_len < len(parts):
+        attribute_name = parts[prefix_len]
+        if _module_exports_name(module_path, attribute_name):
+            return None
+
         missing_submodule = ".".join(parts[: prefix_len + 1])
         if _module_file(root, missing_submodule) is None:
             return (

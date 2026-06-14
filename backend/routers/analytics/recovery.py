@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from backend.dependencies import verify_tenant
 from backend.models.database import get_service_supabase
 from backend.services.tenant_scope import tenant_table
-from backend.routers.auth import _get_current_tenant
+from backend.dependencies import _get_current_tenant
 from backend.routers.analytics._common import (
     _QUERY_LIMIT,
     logger,
@@ -44,9 +44,13 @@ async def get_recovery_stats(
             .execute()
         )
         noshow_total = len(ns.data or [])
-        noshow_recovered = sum(1 for a in (ns.data or []) if a.get("noshow_recovery_sent_at"))
+        noshow_recovered = sum(
+            1 for a in (ns.data or []) if a.get("noshow_recovery_sent_at")
+        )
     except Exception:
-        logger.warning("recovery-stats: noshow query failed for %s", tenant_id, exc_info=True)
+        logger.warning(
+            "recovery-stats: noshow query failed for %s", tenant_id, exc_info=True
+        )
 
     # Review requests sent
     reviews_requested = 0
@@ -54,13 +58,15 @@ async def get_recovery_stats(
         rv = (
             tenant_table(db, "appointments", tenant_id)
             .select("id", count="exact")
-            .not_.is_("review_request_sent_at", "null")
+            .filter("review_request_sent_at", "not.is", "null")
             .gte("review_request_sent_at", since)
             .execute()
         )
         reviews_requested = rv.count or 0
     except Exception:
-        logger.warning("recovery-stats: review query failed for %s", tenant_id, exc_info=True)
+        logger.warning(
+            "recovery-stats: review query failed for %s", tenant_id, exc_info=True
+        )
 
     # Daily briefings sent
     briefings_sent = 0

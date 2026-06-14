@@ -159,7 +159,8 @@ def test_high_risk_routes_do_not_bypass_tenant_scope_helpers():
     high_risk_files = [
         repo_root / "backend" / "routers" / "conversation_inbox.py",
         repo_root / "backend" / "routers" / "leads.py",
-        repo_root / "backend" / "routers" / "widget_helpers.py",
+        repo_root / "backend" / "routers" / "widget_chat_helpers.py",
+        repo_root / "backend" / "routers" / "widget_lead_helpers.py",
         # analytics was split into a package in 1f69417; scan each submodule
         repo_root / "backend" / "routers" / "analytics" / "dashboard.py",
         repo_root / "backend" / "routers" / "analytics" / "operations.py",

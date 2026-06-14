@@ -6,10 +6,10 @@ workspace. It prints concise PASS/FAIL lines and exits nonzero when any
 invariant is violated.
 """
 
+import ast
 import os
 import re
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -32,6 +32,7 @@ TEXT_EXTENSIONS = {
     ".jsx",
     ".mjs",
     ".cjs",
+    ".css",
     ".ts",
     ".tsx",
     ".py",
@@ -76,6 +77,13 @@ WIDGET_MIRRORS = (
     ROOT / "frontend" / "public" / "widget",
     ROOT / "landing-page-v2" / "widget",
 )
+WEBSITE_ROOTS = (
+    ROOT / "frontend" / "index.html",
+    ROOT / "frontend" / "src",
+    ROOT / "frontend" / "public" / "widget",
+    ROOT / "landing-page-v2",
+    ROOT / "widget" / "agentnexlify-widget.js",
+)
 
 RETIRED_PLAN_WORDS = ("foundation", "operations")
 LEAD_FIELD_WORDS = ("lead_stage", "service_interest")
@@ -100,7 +108,9 @@ def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
-def check(label: str, ok: bool, failures: list[str], details: list[str] | None = None) -> None:
+def check(
+    label: str, ok: bool, failures: list[str], details: list[str] | None = None
+) -> None:
     if ok:
         print(f"PASS {label}")
         return
@@ -114,6 +124,29 @@ def check(label: str, ok: bool, failures: list[str], details: list[str] | None =
 def iter_code_files() -> list[Path]:
     files: list[Path] = []
     for root in CODE_ROOTS:
+        if not root.exists():
+            continue
+        for dirpath, dirnames, filenames in os.walk(root):
+            current = Path(dirpath)
+            dirnames[:] = [
+                name
+                for name in dirnames
+                if name not in SKIP_DIR_NAMES and not name.startswith(".")
+            ]
+            for name in filenames:
+                path = current / name
+                if path.suffix.lower() in TEXT_EXTENSIONS:
+                    files.append(path)
+    return files
+
+
+def iter_website_files() -> list[Path]:
+    files: list[Path] = []
+    for root in WEBSITE_ROOTS:
+        if root.is_file():
+            if root.suffix.lower() in TEXT_EXTENSIONS:
+                files.append(root)
+            continue
         if not root.exists():
             continue
         for dirpath, dirnames, filenames in os.walk(root):
@@ -174,7 +207,23 @@ def check_router_future_imports(failures: list[str]) -> None:
         except OSError as exc:
             matches.append(f"{rel(path)}: unreadable ({exc})")
             continue
-        if "from __future__ import annotations" in text:
+        # Parse to AST so we only flag a real `from __future__ import ...`
+        # statement, not docstring/comment text that mentions the rule.
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            # Unparseable file: fall back to detecting the import only at the
+            # start of a (stripped) line, never mid-sentence in a docstring.
+            if any(
+                line.strip().startswith("from __future__ import")
+                for line in text.splitlines()
+            ):
+                matches.append(f"{rel(path)}")
+            continue
+        if any(
+            isinstance(node, ast.ImportFrom) and node.module == "__future__"
+            for node in ast.walk(tree)
+        ):
             matches.append(f"{rel(path)}")
     check(
         "FastAPI router files avoid future annotations",
@@ -204,12 +253,33 @@ def check_widget_assets(failures: list[str]) -> None:
                 issues.append(f"{rel(mirror)} unreadable ({exc})")
                 continue
             if mirror_bytes != canonical_bytes:
-                issues.append(
-                    f"drift: {rel(canonical)} != {rel(mirror)}"
-                )
+                issues.append(f"drift: {rel(canonical)} != {rel(mirror)}")
 
     check(
         "widget assets are byte-identical across mirrors",
+        not issues,
+        failures,
+        issues[:10],
+    )
+
+
+def check_website_copy_avoids_em_dashes(failures: list[str]) -> None:
+    issues: list[str] = []
+    em_dash = "\u2014"
+
+    for path in iter_website_files():
+        try:
+            lines = read_text(path).splitlines()
+        except OSError as exc:
+            issues.append(f"{rel(path)}: unreadable ({exc})")
+            continue
+
+        for lineno, line in enumerate(lines, start=1):
+            if em_dash in line:
+                issues.append(f"{rel(path)}:{lineno}: contains em dash")
+
+    check(
+        "website source avoids em dashes",
         not issues,
         failures,
         issues[:10],
@@ -243,6 +313,9 @@ def check_live_schema_fields(failures: list[str]) -> None:
         for lineno, line in enumerate(lines, start=1):
             if "leads.tenant_id" in line:
                 issues.append(f"{rel(path)}:{lineno}: leads.tenant_id")
+                continue
+            if "conversations.tenant_id" in line:
+                issues.append(f"{rel(path)}:{lineno}: conversations.tenant_id")
                 continue
 
             lowered = line.lower()
@@ -279,7 +352,9 @@ def check_retired_plan_names(failures: list[str]) -> None:
         for index, line in enumerate(lines):
             if not plan_context_re.search(line):
                 continue
-            window = " ".join(lines[max(0, index - 1) : min(len(lines), index + 2)]).lower()
+            window = " ".join(
+                lines[max(0, index - 1) : min(len(lines), index + 2)]
+            ).lower()
             if not any(marker in window for marker in PLAN_CONTEXT_MARKERS):
                 continue
             issues.append(f"{rel(path)}:{index + 1}: {line.strip()}")
@@ -325,6 +400,7 @@ def main() -> int:
     check_live_schema_fields(failures)
     check_retired_plan_names(failures)
     check_widget_assets(failures)
+    check_website_copy_avoids_em_dashes(failures)
     check_anthropic_sdk_usage(failures)
 
     if failures:

@@ -85,7 +85,7 @@
 5. **Email:** [their email]
 6. **Password:** [let them choose]
 
-> "That's it. You're in. No credit card, no setup fee. You get a 14-day free trial with everything unlocked."
+> "That's it. You're in. No credit card, no setup fee. You get a 7-day free trial with everything unlocked."
 
 **After signup, you'll land on the Dashboard.**
 
@@ -215,7 +215,7 @@ Add 3 quick FAQs:
 
 ### If they need to think:
 
-> "Totally understand. Your free trial runs for 14 days — everything is unlocked right now. Play with it. Send the widget link to a friend and have them test it. See how it handles real questions about your business.
+> "Totally understand. Your free trial runs for 7 days — everything is unlocked right now. Play with it. Send the widget link to a friend and have them test it. See how it handles real questions about your business.
 >
 > I'll follow up in a few days to see how it's going."
 
@@ -223,7 +223,7 @@ Add 3 quick FAQs:
 
 > "Quick pricing breakdown:
 >
-> - **Free** — $0/month. AI chat widget, lead capture, unlimited conversations during your 14-day trial. Great for testing.
+> - **Free** — $0/month. AI chat widget, lead capture, unlimited conversations during your 7-day trial. Great for testing.
 > - **Growth** — $199/month. Everything in Free plus: custom branding, email sequences, appointment booking, SMS notifications, white-label widget.
 > - **Professional** — $399/month. Everything in Growth plus: Google Calendar sync, team members, advanced analytics, custom CSS, business page SEO.
 > - **Enterprise** — $799/month. Everything in Professional plus: priority support, API access, custom integrations.

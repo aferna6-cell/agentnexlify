@@ -1,0 +1,62 @@
+{
+  "run": 19,
+  "date": "2026-05-16",
+  "mode": "moratorium_meta_fix",
+  "duration_estimate_min": 25,
+  "evidence_sources_checked": [
+    "git_log_3d",
+    "git_log_7d_fixes",
+    "ops/routines/logs/nightly-commit-review-2026-05-16.md",
+    "docs/dev-knowledge/bug-patterns.md",
+    "docs/dev-knowledge/customer-gaps.md",
+    "subconscious/runs/2026-05-15-pm/winning-concept.md",
+    "subconscious/runs/2026-05-15-pm/improvement-backlog.md",
+    ".claude/skills/nightly-commit-review/SKILL.md",
+    "scripts/check-widget-sync.sh (MISSING)",
+    ".github/workflows/lead-qualifier-eval.yml (MISSING)",
+    "scripts/hooks/pre-commit (no Check 10)"
+  ],
+  "key_findings": [
+    "GH issue #169 created 2026-05-16 by nightly review via improvised behavior — moratorium escalation mechanism WORKS but not formally encoded",
+    "nightly-commit-review SKILL.md has no Moratorium Escalation Protocol section — run 18 partially implemented",
+    "Zero production commits day 11 (all commits: subconscious artifacts + nightly ops logs)",
+    "Moratorium: 5 pending items (runs 4, 7, 8, 14, 18/19), oldest 30 days",
+    "All 3 S-effort items (runs 7, 8, 14) still unimplemented — scripts/check-widget-sync.sh MISSING, eval CI MISSING, invariants not in pre-commit"
+  ],
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "winner": {
+    "title": "Formally encode Moratorium Escalation Protocol in nightly-commit-review SKILL.md",
+    "category": "workflow",
+    "confidence": "HIGH",
+    "effort_min": 10,
+    "debate_verdict": "SURVIVES",
+    "completes_run": 18
+  },
+  "debate_results": {
+    "Idea 1 - SKILL.md formalization": "SURVIVES → WINNER",
+    "Idea 2 - ai-ready GH issues for issue-to-pr-loop": "WEAKENED → Parking Lot",
+    "Idea 3 - Widget Sync Guard sixth escalation": "KILLED as winner (no new evidence, stronger alternatives)"
+  },
+  "moratorium_state": {
+    "active": true,
+    "pending_count": 5,
+    "pending_runs": [19, 18, 14, 8, 7, 4],
+    "oldest_days": 30,
+    "days_since_last_implementation": 11,
+    "gh_issue_169_created": true
+  },
+  "next_run_triggers": [
+    "Is SKILL.md updated with Moratorium Escalation Protocol? (run 19 implemented?)",
+    "Did 2026-05-17 nightly review comment on GH #169?",
+    "Any S-effort items (runs 7, 8, 14) implemented?",
+    "Is issue-to-pr-loop confirmed running? (check git log for auto-nightly/issue-to-pr tags)"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-05-16/ideas/candidate-ideas.md",
+    "subconscious/runs/2026-05-16/debate/debate-log.md",
+    "subconscious/runs/2026-05-16/winning-concept.md",
+    "subconscious/runs/2026-05-16/improvement-backlog.md",
+    "subconscious/runs/2026-05-16/run-summary.json"
+  ]
+}

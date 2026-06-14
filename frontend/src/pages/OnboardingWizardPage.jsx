@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+﻿import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { trackWizardEvent } from "../utils/api/onboarding";
+import WizardExpressSetup from "./wizard/WizardExpressSetup";
 import WizardStepBusiness from "./wizard/WizardStepBusiness";
+import WizardStepAutoKB from "./wizard/WizardStepAutoKB";
 import WizardStepServices from "./wizard/WizardStepServices";
 import WizardStepKnowledgeBase from "./wizard/WizardStepKnowledgeBase";
 import WizardStepCustomize from "./wizard/WizardStepCustomize";
@@ -11,10 +13,10 @@ import WizardStepEmbed from "./wizard/WizardStepEmbed";
 
 // AuthContext user fields:
 //   tenantId, email, plan, businessName, businessType, role, isTeamMember, name, userId
-// Note: widgetApiKey and city are NOT on the JWT — steps that need them fetch from the API.
+// Note: widgetApiKey and city are NOT on the JWT â€” steps that need them fetch from the API.
 
 const STORAGE_KEY = "anx_wizard";
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
 
 function loadState() {
   try {
@@ -37,40 +39,45 @@ export default function OnboardingWizardPage() {
   const { user, token } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect to signup if not authenticated
+  // Redirect to signup only when there is no token at all. With a token
+  // present, user is null for a tick while AuthContext parses it - bouncing
+  // on that tick sent logged-in users cold-loading /setup to /signup.
   useEffect(() => {
-    if (user === null) navigate("/signup", { replace: true });
-  }, [user, navigate]);
+    if (user === null && !token) navigate("/signup", { replace: true });
+  }, [user, token, navigate]);
 
   // Check URL params for Stripe return (e.g. ?step=6)
   const urlParams = new URLSearchParams(window.location.search);
   const urlStep = parseInt(urlParams.get("step") || "0", 10);
 
   const saved = loadState();
+  // Step 0 = express setup chooser. Fresh visitors land there; an explicit
+  // ?step= (Stripe return) or saved wizard progress goes straight to the step.
   const [step, setStep] = useState(() =>
-    urlStep >= 1 && urlStep <= TOTAL_STEPS ? urlStep : saved?.step || 1
+    urlStep >= 1 && urlStep <= TOTAL_STEPS ? urlStep : saved?.step ?? 0,
   );
-  const [wizardData, setWizardData] = useState(() =>
-    saved?.data || {
-      // Business info — seeded from JWT claims where available
-      business_name: user?.businessName || "",
-      business_type: user?.businessType || "",
-      // city is not in the JWT; steps that need it will populate via API or user input
-      city: "",
-      phone: "",
-      website_url: "",
-      hours: null,
-      // Services step
-      services: [],
-      faqs: [],
-      // Knowledge base step
-      knowledge_base: null,
-      // Widget customization step
-      widget_bot_name: "",
-      widget_primary_color: "#00BFFF",
-      widget_greeting_message: "",
-      widget_position: "bottom-right",
-    }
+  const [wizardData, setWizardData] = useState(
+    () =>
+      saved?.data || {
+        // Business info â€” seeded from JWT claims where available
+        business_name: user?.businessName || "",
+        business_type: user?.businessType || "",
+        // city is not in the JWT; steps that need it will populate via API or user input
+        city: "",
+        phone: "",
+        website_url: "",
+        hours: null,
+        // Services step
+        services: [],
+        faqs: [],
+        // Knowledge base step
+        knowledge_base: null,
+        // Widget customization step
+        widget_bot_name: "",
+        widget_primary_color: "#00BFFF",
+        widget_greeting_message: "",
+        widget_position: "bottom-right",
+      },
   );
 
   // Persist to sessionStorage on every change so the user can refresh without losing progress
@@ -78,7 +85,7 @@ export default function OnboardingWizardPage() {
     saveState(step, wizardData);
   }, [step, wizardData]);
 
-  // Track wizard step entries for drop-off analytics
+  // Track step entries for drop-off analytics (0 = express chooser, 1-7 wizard)
   const prevStep = useRef(step);
   useEffect(() => {
     if (!user?.tenantId || !token) return;
@@ -105,34 +112,38 @@ export default function OnboardingWizardPage() {
   // Steps 4 and 6 that need the API key will fetch it themselves via the API.
   const apiKey = null;
 
+  // Order (2026-06-11): teach the AI staff (1-4), pick a plan (5), then the
+  // OPTIONAL website-widget steps (6-7). Agent OS is the product; the widget
+  // is one channel, so its steps come last and can be skipped.
   const stepComponents = [
-    null, // index 0 unused — wizard is 1-indexed
-    <WizardStepBusiness
-      key="1"
-      wizardData={wizardData}
-      onNext={goNext}
-    />,
-    <WizardStepServices
-      key="2"
-      wizardData={wizardData}
-      onNext={goNext}
-      onBack={goBack}
-    />,
-    <WizardStepKnowledgeBase
-      key="3"
-      wizardData={wizardData}
-      onNext={goNext}
-      onBack={goBack}
+    <WizardExpressSetup
+      key="0"
+      user={user}
       token={token}
-      tenantId={user.tenantId}
+      onCustomize={() => setStep(1)}
     />,
-    <WizardStepCustomize
-      key="4"
+    <WizardStepBusiness key="1" wizardData={wizardData} onNext={goNext} />,
+    <WizardStepAutoKB
+      key="2"
       wizardData={wizardData}
       onNext={goNext}
       onBack={goBack}
       token={token}
       tenantId={user?.tenantId}
+    />,
+    <WizardStepServices
+      key="3"
+      wizardData={wizardData}
+      onNext={goNext}
+      onBack={goBack}
+    />,
+    <WizardStepKnowledgeBase
+      key="4"
+      wizardData={wizardData}
+      onNext={goNext}
+      onBack={goBack}
+      token={token}
+      tenantId={user.tenantId}
     />,
     <WizardStepPlan
       key="5"
@@ -142,8 +153,16 @@ export default function OnboardingWizardPage() {
       token={token}
       tenantId={user.tenantId}
     />,
-    <WizardStepEmbed
+    <WizardStepCustomize
       key="6"
+      wizardData={wizardData}
+      onNext={goNext}
+      onBack={goBack}
+      token={token}
+      tenantId={user?.tenantId}
+    />,
+    <WizardStepEmbed
+      key="7"
       wizardData={wizardData}
       token={token}
       tenantId={user?.tenantId}
@@ -194,13 +213,17 @@ export default function OnboardingWizardPage() {
         <span style={{ fontSize: "1.1rem", fontWeight: 700, color: "#6366f1" }}>
           AgentNexLiFy
         </span>
-        <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.85rem" }}>
-          Step {step} of {TOTAL_STEPS}
-        </span>
+        {step >= 1 && (
+          <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.85rem" }}>
+            Step {step} of {TOTAL_STEPS} · ~3 minutes
+          </span>
+        )}
       </div>
 
       {/* Step content */}
-      <div style={{ maxWidth: 640, margin: "0 auto", padding: "40px 24px 80px" }}>
+      <div
+        style={{ maxWidth: 640, margin: "0 auto", padding: "40px 24px 80px" }}
+      >
         {stepComponents[step]}
       </div>
     </div>

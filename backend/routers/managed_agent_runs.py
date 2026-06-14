@@ -36,7 +36,7 @@ from pydantic import BaseModel, Field
 from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
-from backend.routers.auth import _get_current_tenant
+from backend.dependencies import _get_current_tenant
 from backend.services.document_drafting import (
     DocumentDraftingError,
     draft_document,
@@ -93,6 +93,45 @@ def _managed_agents_unavailable(exc: ManagedAgentNotConfigured) -> HTTPException
             "missing_config": exc.env_var,
         },
     )
+
+
+def _managed_agents_health_payload() -> dict[str, Any]:
+    any_configured = is_any_configured()
+    return {
+        "status": "configured" if any_configured else "planned",
+        "message": (
+            "Managed Agent workflows are configured."
+            if any_configured
+            else "Managed Agent workflows are planned for a future update."
+        ),
+        "any_configured": any_configured,
+        "environment": bool(settings.managed_agents_environment_id),
+        "lead_qualifier": bool(settings.lead_qualifier_agent_id),
+        "document_drafter": bool(settings.document_drafter_agent_id),
+        "codebase_reviewer": bool(settings.codebase_reviewer_agent_id),
+        "support_agent": bool(settings.support_agent_id),
+        "structured_extractor": bool(settings.structured_extractor_agent_id),
+        "deep_researcher": bool(settings.deep_researcher_agent_id),
+        "field_monitor": bool(settings.field_monitor_agent_id),
+        "data_analyst": bool(settings.data_analyst_agent_id),
+    }
+
+
+@router.get("/health")
+async def managed_agents_public_health():
+    """Tenant-safe health probe for deploy and uptime verification.
+
+    This endpoint intentionally avoids tenant auth and external API calls so
+    operators can verify the managed-agents surface without a dashboard JWT.
+    """
+    payload = _managed_agents_health_payload()
+    managed_agents_status = payload.pop("status")
+    return {
+        "status": "ok",
+        "service": "managed-agents",
+        "managed_agents_status": managed_agents_status,
+        **payload,
+    }
 
 
 def _qualify_lead_blocking(
@@ -248,25 +287,7 @@ async def managed_agents_health(
     to call from dashboards.
     """
     _verify_tenant(claims, tenant_id)
-    any_configured = is_any_configured()
-    return {
-        "status": "configured" if any_configured else "planned",
-        "message": (
-            "Managed Agent workflows are configured."
-            if any_configured
-            else "Managed Agent workflows are planned for a future update."
-        ),
-        "any_configured": any_configured,
-        "environment": bool(settings.managed_agents_environment_id),
-        "lead_qualifier": bool(settings.lead_qualifier_agent_id),
-        "document_drafter": bool(settings.document_drafter_agent_id),
-        "codebase_reviewer": bool(settings.codebase_reviewer_agent_id),
-        "support_agent": bool(settings.support_agent_id),
-        "structured_extractor": bool(settings.structured_extractor_agent_id),
-        "deep_researcher": bool(settings.deep_researcher_agent_id),
-        "field_monitor": bool(settings.field_monitor_agent_id),
-        "data_analyst": bool(settings.data_analyst_agent_id),
-    }
+    return _managed_agents_health_payload()
 
 
 # ---------------------------------------------------------------------------

@@ -10,7 +10,7 @@ from backend.dependencies import verify_tenant
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.services.tenant_scope import tenant_table
-from backend.routers.auth import _get_current_tenant
+from backend.dependencies import _get_current_tenant
 from backend.routers.analytics._common import (
     _cache,
     _CACHE_TTL,

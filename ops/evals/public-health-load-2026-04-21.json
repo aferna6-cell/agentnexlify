@@ -1,0 +1,16 @@
+{
+  "url": "https://agentnexlify-production.up.railway.app/api/health",
+  "total_requests": 100,
+  "concurrency": 10,
+  "success_count": 100,
+  "failure_count": 0,
+  "success_rate": 100.0,
+  "avg_latency_ms": 161.0,
+  "p50_latency_ms": 138.4,
+  "p95_latency_ms": 291.2,
+  "max_latency_ms": 507.0,
+  "min_latency_ms": 60.0,
+  "status_counts": {
+    "200": 100
+  }
+}

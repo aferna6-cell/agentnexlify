@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AgentNexLiFy | Run smarter marketing, capture more customers, and book more appointments automatically.</title>
-<meta name="description" content="Run smarter marketing, capture more customers, and book more appointments automatically.">
+<title>AgentNexLiFy | your hardest working employee that doesn't stop</title>
+<meta name="description" content="AgentNexLiFy is your hardest working employee that doesn't stop. It answers, follows up, and continues to push the business forward around the clock.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="apple-touch-icon" href="/favicon.svg">
 <link rel="canonical" href="https://agentnexlify.com/">
-<meta property="og:title" content="Run smarter marketing, capture more customers, and book more appointments automatically.">
-<meta property="og:description" content="Run smarter marketing, capture more customers, and book more appointments automatically.">
+<meta property="og:title" content="your hardest working employee that doesn't stop.">
+<meta property="og:description" content="AgentNexLiFy is your hardest working employee that doesn't stop. It answers, follows up, and continues to push the business forward around the clock.">
 <meta property="og:image" content="https://agentnexlify.com/og-image.png?v=20260417">
 <meta property="og:url" content="https://agentnexlify.com/">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Run smarter marketing, capture more customers, and book more appointments automatically.">
-<meta name="twitter:description" content="Run smarter marketing, capture more customers, and book more appointments automatically.">
+<meta name="twitter:title" content="your hardest working employee that doesn't stop.">
+<meta name="twitter:description" content="AgentNexLiFy is your hardest working employee that doesn't stop. It answers, follows up, and continues to push the business forward around the clock.">
 <meta name="twitter:image" content="https://agentnexlify.com/og-image.png?v=20260417">
 <meta name="google-site-verification" content="87NEEvBU6dL3QuI_1iZK9wgq4Jtws60z1M3bKu-mS6s" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -842,6 +842,177 @@ button { font-family: inherit; cursor: pointer; border: none; }
 }
 
 /* ============================================
+   ROI CALCULATOR
+   ============================================ */
+.roi-calc { background: var(--bg-primary); }
+.roi-calc-inner {
+  max-width: 760px;
+  margin: 0 auto;
+}
+.roi-calc-header { text-align: center; margin-bottom: 48px; }
+.roi-calc-header .section-subtitle { margin: 0 auto; }
+.roi-calc-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 48px 48px 40px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+}
+.roi-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin-bottom: 36px;
+}
+.roi-input-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.roi-label {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.roi-label-value {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent);
+}
+.roi-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--border);
+  outline: none;
+  cursor: pointer;
+  background-image: linear-gradient(var(--accent), var(--accent));
+  background-repeat: no-repeat;
+}
+.roi-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(29, 78, 216, 0.25);
+  border: 2px solid #ffffff;
+  transition: box-shadow 0.2s;
+}
+.roi-slider::-webkit-slider-thumb:hover {
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.35);
+}
+.roi-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(29, 78, 216, 0.25);
+  border: 2px solid #ffffff;
+}
+.roi-number-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -moz-appearance: textfield;
+}
+.roi-number-input::-webkit-outer-spin-button,
+.roi-number-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.roi-number-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow-strong);
+}
+.roi-result-block {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px 36px;
+  text-align: center;
+  margin-bottom: 28px;
+}
+.roi-result-label {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.roi-result-amount {
+  font-family: var(--font-heading);
+  font-size: clamp(48px, 8vw, 72px);
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1.05;
+  letter-spacing: -2px;
+  margin-bottom: 6px;
+}
+.roi-result-period {
+  font-size: 16px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.roi-comparison {
+  font-size: 15px;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+.roi-comparison strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.roi-cta-wrap {
+  display: flex;
+  justify-content: center;
+}
+.roi-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 32px;
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 16px;
+  border-radius: 12px;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgba(29, 78, 216, 0.2);
+}
+.roi-cta:hover {
+  background: var(--accent-dim);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(29, 78, 216, 0.3);
+}
+@media (max-width: 768px) {
+  .roi-calc-card { padding: 32px 24px 28px; }
+  .roi-result-block { padding: 24px 20px; }
+}
+@media (max-width: 480px) {
+  .roi-calc-card { padding: 24px 16px 20px; }
+  .roi-comparison { font-size: 14px; }
+}
+
+/* ============================================
    RESOURCES
    ============================================ */
 .testimonials-header { text-align: center; margin-bottom: 36px; }
@@ -1107,7 +1278,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   "name": "AgentNexLiFy",
   "applicationCategory": "BusinessApplication",
   "operatingSystem": "Web",
-  "description": "AI-powered customer service chatbot for local businesses",
+  "description": "Your 24/7 AI employee that answers customers, captures leads, books appointments, and follows up automatically.",
   "url": "https://agentnexlify.com",
   "offers": [
     {
@@ -1119,7 +1290,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
     },
     {
       "@type": "Offer",
-      "name": "Foundation",
+      "name": "Growth",
       "price": "99",
       "priceCurrency": "USD",
       "priceSpecification": {
@@ -1128,33 +1299,33 @@ button { font-family: inherit; cursor: pointer; border: none; }
         "priceCurrency": "USD",
         "billingDuration": "P1M"
       },
-      "description": "Lead capture, review requests, missed call texts, and appointment reminders"
+      "description": "AI chat widget, lead capture, appointment booking, automation, and a 7-day free trial"
     },
     {
       "@type": "Offer",
-      "name": "Growth",
-      "price": "249",
+      "name": "Professional",
+      "price": "150",
       "priceCurrency": "USD",
       "priceSpecification": {
         "@type": "UnitPriceSpecification",
-        "price": "249",
+        "price": "150",
         "priceCurrency": "USD",
         "billingDuration": "P1M"
       },
-      "description": "Follow-up sequences, FAQ bot, quote automation, and CRM"
+      "description": "Follow-up sequences, full SEO suite, social media marketing, campaigns, and advanced analytics"
     },
     {
       "@type": "Offer",
-      "name": "Operations",
-      "price": "499",
+      "name": "Enterprise",
+      "price": "250",
       "priceCurrency": "USD",
       "priceSpecification": {
         "@type": "UnitPriceSpecification",
-        "price": "499",
+        "price": "250",
         "priceCurrency": "USD",
         "billingDuration": "P1M"
       },
-      "description": "AI booking, invoice follow-up, task automation, and lead scoring"
+      "description": "Unlimited automation, team accounts, webhooks, AI visibility tracking, and white-label branding"
     }
   ]
 }
@@ -1170,7 +1341,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
       "name": "What's included in each plan?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Every plan builds on the one below it. Foundation ($99) covers lead capture, review requests, missed call texts, and appointment reminders. Growth ($249) adds follow-up sequences, FAQ bot, quote automation, and CRM. Operations ($499) adds AI booking, invoice follow-up, task automation, and lead scoring. Enterprise ($999) is the full package with AI sales assistant, marketing engine, dashboard, and re-engagement campaigns."
+        "text": "Every plan builds on the one below it. Free gets you the chat widget, customer capture, and FAQ knowledge base. Growth ($99/mo) includes a 7-day free trial, booking, SMS, automation, basic SEO audit, and the AI content writer. Professional ($150/mo) adds the full SEO suite, social media marketing, email/SMS campaigns, and advanced analytics. Enterprise ($250/mo) adds AI visibility tracking, team accounts, webhooks, and white-label branding. No setup fees. Cancel anytime."
       }
     },
     {
@@ -1247,6 +1418,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
       <li><a href="#features">Features</a></li>
       <li><a href="#how-it-works">How It Works</a></li>
       <li><a href="#pricing">Pricing</a></li>
+      <li><a href="#roi-calculator">ROI Calculator</a></li>
       <li><a href="#about-us">About</a></li>
       <li><a href="free-chatbot.html">Free AI Widget</a></li>
       <li><button class="nav-search" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button></li>
@@ -1256,8 +1428,8 @@ button { font-family: inherit; cursor: pointer; border: none; }
     </a>
     <div class="nav-right">
       <button class="nav-lang" aria-label="Language"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span>EN</span></button>
-      <a href="https://calendly.com/aidanfernandes31/15-minute-agent-nexliffy-demo" class="nav-login"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Login</span></a>
-      <a href="https://calendly.com/aidanfernandes31/15-minute-agent-nexliffy-demo" class="nav-cta">Book a Strategy Call</a>
+      <a href="/" class="nav-login"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Login</span></a>
+      <a href="/signup" class="nav-cta">Start Free Trial</a>
     </div>
   </div>
 </nav>
@@ -1270,9 +1442,10 @@ button { font-family: inherit; cursor: pointer; border: none; }
       <span class="hero-badge-dot" aria-hidden="true"></span>
       Built to give business owners their time back
     </div>
-    <h1 class="reveal">Run smarter marketing, capture more customers, and book more appointments <span class="accent">automatically.</span></h1>
+    <h1 class="reveal">your hardest working employee that doesn't stop. It answers, follows up, and continues to push the business forward <span class="accent">around the clock.</span></h1>
+    <p class="hero-sub reveal">AgentNexLiFy is not a CRM. It is your 24/7 AI front desk that talks to customers, captures leads, books appointments, and follows up automatically - so you can focus on running your business.</p>
     <div class="hero-buttons reveal">
-      <a href="https://calendly.com/aidanfernandes31/15-minute-agent-nexliffy-demo" class="btn-primary">Book a Strategy Call &rarr;</a>
+      <a href="/signup" class="btn-primary">Start Free Trial &rarr;</a>
       <a href="#how-it-works" class="btn-secondary">See How It Works &darr;</a>
     </div>
     <div class="trust-bar reveal">
@@ -1328,7 +1501,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
       <div class="feature-card reveal">
         <div class="feature-icon" aria-hidden="true">&#11088;</div>
         <h3>Reviews & Reputation</h3>
-        <p>Automatic review requests after every job. More 5-star reviews on autopilot.</p>
+        <p>Automatic review requests after every job. More 5-star reviews without extra manual work.</p>
       </div>
       <div class="feature-card reveal">
         <div class="feature-icon" aria-hidden="true">&#128197;</div>
@@ -1337,7 +1510,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
       </div>
       <div class="feature-card reveal">
         <div class="feature-icon" aria-hidden="true">&#128202;</div>
-        <h3>CRM & Pipeline</h3>
+        <h3>Customer Management & Pipeline</h3>
         <p>Auto-tag leads, move deal stages, trigger alerts. Your pipeline manages itself.</p>
       </div>
       <div class="feature-card reveal">
@@ -1354,23 +1527,23 @@ button { font-family: inherit; cursor: pointer; border: none; }
   <div class="container">
     <div class="how-header">
       <div class="section-label reveal">How It Works</div>
-      <h2 class="section-title reveal">Simple setup. We do the heavy lifting.</h2>
+      <h2 class="section-title reveal">Easy setup in 3 simple steps.</h2>
     </div>
     <div class="how-steps">
       <div class="how-step reveal">
         <div class="how-step-num" aria-hidden="true">01</div>
-        <h3>We Audit Your Workflow</h3>
-        <p>Reach out and tell us about your business. We map out where you're losing time and which tasks to automate first.</p>
+        <h3>Tell Us About Your Business</h3>
+        <p>Answer a few quick questions about your services, hours, and what you want customers to know.</p>
       </div>
       <div class="how-step reveal">
         <div class="how-step-num" aria-hidden="true">02</div>
-        <h3>We Build & Deploy</h3>
-        <p>Our team builds your custom AI automations and integrates them with your existing tools (Gmail, Calendly, CRM, etc).</p>
+        <h3>Add the Widget</h3>
+        <p>Place the chat widget on your site. We can help with the install, and you do not need to learn new software.</p>
       </div>
       <div class="how-step reveal">
         <div class="how-step-num" aria-hidden="true">03</div>
-        <h3>You Get Your Time Back</h3>
-        <p>Your automations run 24/7. We monitor, optimize, and add new ones as your business grows.</p>
+        <h3>Start Helping Customers</h3>
+        <p>Your assistant starts answering, collecting leads, and following up around the clock. You can review everything anytime.</p>
       </div>
     </div>
   </div>
@@ -1436,7 +1609,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
           <span class="pricing-dollar">$0</span>
           <span class="pricing-period">/month</span>
         </div>
-        <div class="pricing-setup">No setup fee</div>
+        <div class="pricing-setup">No setup fee · No credit card</div>
         <div class="pricing-divider"></div>
         <ul class="pricing-features">
           <li>
@@ -1456,143 +1629,192 @@ button { font-family: inherit; cursor: pointer; border: none; }
             <div class="feat-desc">Copy-paste one line of code onto your website. Works with any site builder or platform.</div>
           </li>
         </ul>
-        <div class="pricing-best">Best for: Anyone who wants to try AI lead capture risk-free</div>
+        <div class="pricing-best">Best for: Trying AI lead capture risk-free</div>
         <a href="free-chatbot.html" class="pricing-cta">Get Started &#8594;</a>
       </div>
 
-      <!-- Foundation -->
+      <!-- Growth -->
       <div class="pricing-card reveal">
-        <div class="pricing-plan-name">Foundation</div>
-        <div class="pricing-tagline">Automate the basics. Capture every lead.</div>
+        <div class="pricing-plan-name">Growth</div>
+        <div class="pricing-tagline">Your AI front desk.</div>
         <div class="pricing-amount">
           <span class="pricing-dollar">$99</span>
           <span class="pricing-period">/month</span>
         </div>
-        <div class="pricing-setup">$149 one-time setup fee</div>
+        <div class="pricing-setup">7-day free trial included</div>
         <div class="pricing-divider"></div>
         <ul class="pricing-features">
           <li>
-            <strong>AI Lead Capture Chatbot</strong>
-            <div class="feat-desc">Website chatbot that captures name, email, and phone. Qualifies leads and sends info to your CRM or email.</div>
+            <strong>AI Chat Widget</strong>
+            <div class="feat-desc">Website chatbot that answers visitors, captures contact details, and sends new leads to your dashboard.</div>
           </li>
           <li>
-            <strong>Automated Review Requests</strong>
-            <div class="feat-desc">After every job, automatically send a text/email with your Google review link. Reminder sent if not completed.</div>
+            <strong>Auto Follow-Up Email & SMS</strong>
+            <div class="feat-desc">Keep new leads engaged with simple follow-up messages after they reach out.</div>
           </li>
           <li>
-            <strong>Missed Call Text-Back</strong>
-            <div class="feat-desc">Missed a call? Leads instantly get "Sorry we missed you" via SMS, automatically.</div>
+            <strong>Appointment Booking</strong>
+            <div class="feat-desc">Help customers request appointments while keeping their details organized.</div>
           </li>
           <li>
-            <strong>Appointment Reminders</strong>
-            <div class="feat-desc">SMS reminders 24 hours and 2 hours before every appointment. Reduces no-shows dramatically.</div>
+            <strong>Basic SEO & Content Tools</strong>
+            <div class="feat-desc">Includes a basic SEO audit, recommendations, AI content writer, and hosted business page.</div>
           </li>
         </ul>
-        <div class="pricing-best">Best for: Contractors, med spas, law firms, home services</div>
-        <a href="/signup" class="pricing-cta">Get Started &rarr;</a>
-      </div>
-
-      <!-- Growth -->
-      <div class="pricing-card popular reveal">
-        <div class="pricing-plan-name">Growth</div>
-        <div class="pricing-tagline">Never lose a lead again.</div>
-        <div class="pricing-amount">
-          <span class="pricing-dollar">$249</span>
-          <span class="pricing-period">/month</span>
-        </div>
-        <div class="pricing-setup">$399 one-time setup fee</div>
-        <div class="pricing-divider"></div>
-        <div class="pricing-includes">Everything in Foundation, plus:</div>
-        <ul class="pricing-features">
-          <li>
-            <strong>Lead Follow-Up Drip System</strong>
-            <div class="feat-desc">New lead comes in, automatic email + text sequence fires. 5-7 AI-personalized touchpoints over 14 days.</div>
-          </li>
-          <li>
-            <strong>AI FAQ & Customer Support Bot</strong>
-            <div class="feat-desc">Trained on your business FAQs. Handles 60-70% of common questions via chat and SMS.</div>
-          </li>
-          <li>
-            <strong>Quote & Estimate Automation</strong>
-            <div class="feat-desc">Customer fills out a form, AI generates a formatted estimate draft, sends it automatically.</div>
-          </li>
-          <li>
-            <strong>CRM Setup + Pipeline Automation</strong>
-            <div class="feat-desc">Auto-tag leads, move pipeline stages based on actions, trigger notifications when deals progress.</div>
-          </li>
-        </ul>
-        <div class="pricing-best">Best for: Growing businesses ready to systematize sales</div>
+        <div class="pricing-best">Best for: Businesses ready to capture and follow up with more leads</div>
         <a href="/signup?plan=growth" class="pricing-cta">Get Started &rarr;</a>
       </div>
 
-      <!-- Operations -->
-      <div class="pricing-card reveal">
-        <div class="pricing-plan-name">Operations</div>
-        <div class="pricing-tagline">Cut your admin work in half.</div>
+      <!-- Professional -->
+      <div class="pricing-card popular reveal">
+        <div class="pricing-plan-name">Professional</div>
+        <div class="pricing-tagline">Automate your follow-ups.</div>
         <div class="pricing-amount">
-          <span class="pricing-dollar">$499</span>
+          <span class="pricing-dollar">$150</span>
           <span class="pricing-period">/month</span>
         </div>
-        <div class="pricing-setup">$599 one-time setup fee</div>
+        <div class="pricing-setup">No setup fee. Cancel anytime</div>
         <div class="pricing-divider"></div>
         <div class="pricing-includes">Everything in Growth, plus:</div>
         <ul class="pricing-features">
           <li>
-            <strong>AI Appointment Booking Agent</strong>
-            <div class="feat-desc">Conversational booking via chat or SMS. Syncs with Google Calendar. Handles reschedules automatically.</div>
+            <strong>Lead Nurturing Sequences</strong>
+            <div class="feat-desc">Send better follow-ups through email and SMS so good leads do not slip away.</div>
           </li>
           <li>
-            <strong>Invoice & Payment Follow-Up</strong>
-            <div class="feat-desc">Automatic invoice reminders with escalation sequences and late fee reminder logic.</div>
+            <strong>Full SEO Audit Suite</strong>
+            <div class="feat-desc">Track keywords, find content opportunities, and improve your local search presence.</div>
           </li>
           <li>
-            <strong>Internal Task Automation</strong>
-            <div class="feat-desc">Sale closes, auto-create tasks, notify your team, send onboarding emails. Operations on autopilot.</div>
+            <strong>Social Media & Campaigns</strong>
+            <div class="feat-desc">Create social posts, marketing content, and email/SMS campaigns from one dashboard.</div>
           </li>
           <li>
-            <strong>AI Lead Scoring</strong>
-            <div class="feat-desc">Scores every lead based on behavior and engagement. Alerts you when a lead is hot.</div>
+            <strong>Advanced Analytics</strong>
+            <div class="feat-desc">See what is working across leads, campaigns, SEO, and customer conversations.</div>
           </li>
         </ul>
-        <div class="pricing-best">Best for: Businesses ready to eliminate admin busywork</div>
+        <div class="pricing-best">Best for: Growing businesses ready to automate follow-up and marketing</div>
         <a href="/signup?plan=professional" class="pricing-cta">Get Started &rarr;</a>
       </div>
 
       <!-- Enterprise -->
       <div class="pricing-card reveal">
         <div class="pricing-plan-name">Enterprise</div>
-        <div class="pricing-tagline">Your autonomous growth system.</div>
+        <div class="pricing-tagline">Your full AI employee.</div>
         <div class="pricing-amount">
-          <span class="pricing-dollar">$999</span>
+          <span class="pricing-dollar">$250</span>
           <span class="pricing-period">/month</span>
         </div>
-        <div class="pricing-setup">Custom setup fee</div>
+        <div class="pricing-setup">No setup fee. Cancel anytime</div>
         <div class="pricing-divider"></div>
-        <div class="pricing-includes">Everything in Operations, plus:</div>
+        <div class="pricing-includes">Everything in Professional, plus:</div>
         <ul class="pricing-features">
           <li>
-            <strong>AI Sales Assistant</strong>
-            <div class="feat-desc">Handles inbound inquiries via text and email. Books calls, follows up, escalates only when needed.</div>
+            <strong>Unlimited Automation Sequences</strong>
+            <div class="feat-desc">Run as many automation workflows as your business needs.</div>
           </li>
           <li>
-            <strong>Full Marketing Automation Engine</strong>
-            <div class="feat-desc">Ad lead intake, SMS + email nurturing, retargeting, review requests, and upsell campaigns. Everything connected.</div>
+            <strong>Team Accounts & Roles</strong>
+            <div class="feat-desc">Give your team access while keeping roles and permissions organized.</div>
           </li>
           <li>
-            <strong>AI Ops Dashboard</strong>
-            <div class="feat-desc">Real-time view of leads, conversion rates, revenue, and pipeline. Weekly automated reports.</div>
+            <strong>Webhooks & White-Label Branding</strong>
+            <div class="feat-desc">Connect deeper workflows and customize the customer-facing experience.</div>
           </li>
           <li>
-            <strong>Re-Engagement Campaign Engine</strong>
-            <div class="feat-desc">Identifies past customers, AI writes personalized offers, sends campaigns, and books appointments.</div>
+            <strong>Dedicated Support</strong>
+            <div class="feat-desc">Includes priority onboarding, full analytics, and a dedicated account manager.</div>
           </li>
         </ul>
-        <div class="pricing-best">Best for: Businesses ready for full AI-powered growth</div>
-        <a href="/signup?plan=enterprise" class="pricing-cta">Get Started &#8594;</a>
+        <div class="pricing-best">Best for: Teams that want the full AI employee system</div>
+        <a href="/signup?plan=enterprise" class="pricing-cta">Get Started &rarr;</a>
       </div>
 
     </div>
-    <p class="pricing-footer-note reveal">All plans include done-for-you setup, onboarding, and ongoing optimization. No technical skills required. Cancel anytime.</p>
+    <p class="pricing-footer-note reveal">All paid plans include done-for-you setup, onboarding, and ongoing optimization. No technical skills required. Cancel anytime.</p>
+  </div>
+</section>
+
+<!-- ============ ROI CALCULATOR ============ -->
+<section class="section roi-calc" id="roi-calculator">
+  <div class="container roi-calc-inner">
+    <div class="roi-calc-header">
+      <div class="section-label reveal">Revenue Calculator</div>
+      <h2 class="section-title reveal">What do missed calls cost you?</h2>
+      <p class="section-subtitle reveal">Move the sliders to see how much revenue is walking out the door every month.</p>
+    </div>
+    <div class="roi-calc-card reveal">
+      <div class="roi-inputs">
+
+        <div class="roi-input-row">
+          <label class="roi-label" for="roi-missed-calls">
+            Missed calls per week
+            <span class="roi-label-value" id="roi-missed-calls-val">10 calls</span>
+          </label>
+          <input
+            type="range"
+            id="roi-missed-calls"
+            class="roi-slider"
+            min="1"
+            max="50"
+            value="10"
+            step="1"
+            aria-label="Missed calls per week"
+          >
+        </div>
+
+        <div class="roi-input-row">
+          <label class="roi-label" for="roi-job-value">
+            Average job value ($)
+            <span class="roi-label-value" id="roi-job-value-val">$300</span>
+          </label>
+          <input
+            type="number"
+            id="roi-job-value"
+            class="roi-number-input"
+            min="1"
+            max="100000"
+            value="300"
+            aria-label="Average job value in dollars"
+          >
+        </div>
+
+        <div class="roi-input-row">
+          <label class="roi-label" for="roi-close-rate">
+            Close rate (%)
+            <span class="roi-label-value" id="roi-close-rate-val">30%</span>
+          </label>
+          <input
+            type="range"
+            id="roi-close-rate"
+            class="roi-slider"
+            min="10"
+            max="80"
+            value="30"
+            step="5"
+            aria-label="Close rate percent"
+          >
+        </div>
+
+      </div>
+
+      <div class="roi-result-block">
+        <div class="roi-result-label">Estimated monthly revenue lost</div>
+        <div class="roi-result-amount" id="roi-result-amount">$3,897</div>
+        <div class="roi-result-period">per month from missed opportunities</div>
+      </div>
+
+      <p class="roi-comparison" id="roi-comparison">
+        AgentNexLiFy Starter is <strong>$99/mo</strong> &mdash; it answers every call so none of that slips away.
+      </p>
+
+      <div class="roi-cta-wrap">
+        <a href="https://app.agentnexlify.com/demo" class="roi-cta">
+          See it catch a call &mdash; try the live demo &rarr;
+        </a>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -1649,7 +1871,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
           <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
         <div class="faq-answer" id="faq-a1" role="region">
-          <div class="faq-answer-inner">Every plan builds on the one below it. Foundation ($99) covers lead capture, review requests, missed call texts, and appointment reminders. Growth ($249) adds follow-up sequences, FAQ bot, quote automation, and CRM. Operations ($499) adds AI booking, invoice follow-up, task automation, and lead scoring. Enterprise ($999) is the full package with AI sales assistant, marketing engine, dashboard, and re-engagement campaigns.</div>
+          <div class="faq-answer-inner">Every plan builds on the one below it. Free gets you the chat widget, customer capture, and FAQ knowledge base. Growth ($99/mo) includes a 7-day free trial, booking, SMS, automation, basic SEO audit, and the AI content writer. Professional ($150/mo) adds the full SEO suite, social media marketing, email/SMS campaigns, and advanced analytics. Enterprise ($250/mo) adds AI visibility tracking, team accounts, webhooks, and white-label branding. No setup fees. Cancel anytime.</div>
         </div>
       </div>
 
@@ -1733,7 +1955,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
     <h2 class="section-title reveal">Ready to get back to doing what you love?</h2>
     <p class="section-subtitle reveal">Reach out and tell us about your business. We'll walk you through exactly how we can help.</p>
     <div class="hero-buttons reveal" style="margin-bottom: 0;">
-      <a href="https://calendly.com/aidanfernandes31/15-minute-agent-nexliffy-demo" class="btn-primary">Book a Strategy Call &rarr;</a>
+      <a href="/signup" class="btn-primary">Start Free Trial &rarr;</a>
       <a href="#pricing" class="btn-secondary">See Pricing &darr;</a>
     </div>
     <p class="cta-note reveal">No commitment. No pressure. Just a conversation.</p>
@@ -1747,7 +1969,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
       <div class="footer-brand">
         <img src="logo.png" alt="Agent NexLiFy Logo" class="footer-brand-logo">
         <p>AI-powered operations for businesses.</p>
-        <a href="https://calendly.com/aidanfernandes31/15-minute-agent-nexliffy-demo" class="btn-primary" style="margin-top: 16px; font-size: 14px; padding: 12px 24px;">Book a Strategy Call &rarr;</a>
+        <a href="/signup" class="btn-primary" style="margin-top: 16px; font-size: 14px; padding: 12px 24px;">Start Free Trial &rarr;</a>
       </div>
       <div class="footer-col">
         <h4>Product</h4>
@@ -1836,6 +2058,63 @@ button { font-family: inherit; cursor: pointer; border: none; }
     });
   });
 
+  // ROI Calculator
+  (function() {
+    var missedCallsInput = document.getElementById("roi-missed-calls");
+    var jobValueInput = document.getElementById("roi-job-value");
+    var closeRateInput = document.getElementById("roi-close-rate");
+    var missedCallsVal = document.getElementById("roi-missed-calls-val");
+    var jobValueVal = document.getElementById("roi-job-value-val");
+    var closeRateVal = document.getElementById("roi-close-rate-val");
+    var resultAmount = document.getElementById("roi-result-amount");
+    var comparison = document.getElementById("roi-comparison");
+
+    if (!missedCallsInput || !jobValueInput || !closeRateInput) return;
+
+    function updateSliderFill(slider) {
+      var min = parseFloat(slider.min) || 0;
+      var max = parseFloat(slider.max) || 100;
+      var val = parseFloat(slider.value) || 0;
+      var pct = ((val - min) / (max - min)) * 100;
+      slider.style.backgroundSize = pct + "% 100%";
+    }
+
+    function calcAndRender() {
+      var missed = Math.max(1, parseInt(missedCallsInput.value, 10) || 1);
+      var jobVal = Math.max(1, parseFloat(jobValueInput.value) || 1);
+      var rate = Math.min(100, Math.max(0, parseInt(closeRateInput.value, 10) || 0));
+
+      missedCallsVal.textContent = missed + (missed === 1 ? " call" : " calls");
+      jobValueVal.textContent = "$" + jobVal.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      closeRateVal.textContent = rate + "%";
+
+      updateSliderFill(missedCallsInput);
+      updateSliderFill(closeRateInput);
+
+      // Formula: missed/wk * 4.33 * job_value * (close_rate / 100)
+      var monthly = missed * 4.33 * jobVal * (rate / 100);
+      var formatted = "$" + Math.round(monthly).toLocaleString("en-US");
+      resultAmount.textContent = formatted;
+
+      // Update comparison line based on magnitude
+      var comparisonText;
+      if (monthly < 200) {
+        comparisonText = 'AgentNexLiFy Starter is <strong>$99/mo</strong> &mdash; recover that loss in less than a month.';
+      } else {
+        var multiplier = (monthly / 99).toFixed(0);
+        comparisonText = 'AgentNexLiFy Starter is <strong>$99/mo</strong> &mdash; that\'s a <strong>' + multiplier + 'x return</strong> if it catches even one job.';
+      }
+      comparison.innerHTML = comparisonText;
+    }
+
+    missedCallsInput.addEventListener("input", calcAndRender);
+    jobValueInput.addEventListener("input", calcAndRender);
+    closeRateInput.addEventListener("input", calcAndRender);
+
+    // Initialize fills and display
+    calcAndRender();
+  }());
+
   var reveals = document.querySelectorAll(".reveal");
   if ("IntersectionObserver" in window) {
     var observer = new IntersectionObserver(function(entries) {
@@ -1852,5 +2131,9 @@ button { font-family: inherit; cursor: pointer; border: none; }
   }
 })();
 </script>
+
+<!-- AgentNexLiFy Live Widget Demo -->
+<!-- TODO: Replace YOUR_DEMO_API_KEY with your actual demo tenant API key -->
+<script async src="widget/agentnexlify-widget.js" data-api-key="YOUR_DEMO_API_KEY" data-api-base="https://app.agentnexlify.com"></script>
 </body>
 </html>

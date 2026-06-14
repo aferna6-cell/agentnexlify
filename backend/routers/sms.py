@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from backend.dependencies import verify_tenant
 from backend.models.database import get_service_supabase
-from backend.routers.auth import _get_current_tenant
+from backend.dependencies import _get_current_tenant
 from backend.services.activity import log_activity
 from backend.services.sms_rate_limiter import check_sms_rate_limit, increment_sms_count
 from backend.services.twilio_service import send_sms
@@ -58,7 +58,7 @@ async def send_sms_endpoint(
     if not lead_result.data:
         raise HTTPException(status_code=404, detail="Lead not found")
 
-    success = await send_sms(to=req.phone, body=req.message)
+    success = await send_sms(to=req.phone, body=req.message, tenant_id=tenant_id)
 
     if success:
         increment_sms_count(tenant_id)
@@ -201,7 +201,7 @@ async def initiate_sms_conversation(
         # Don't abort — still attempt to send the SMS
 
     # Send the SMS via Twilio from the tenant's provisioned number
-    success = await send_sms(to=req.phone, body=req.message, from_number=from_number)
+    success = await send_sms(to=req.phone, body=req.message, from_number=from_number, tenant_id=tenant_id)
 
     if not success:
         logger.error(

@@ -39,7 +39,7 @@ Cost: 2-5 extra minutes. Value: one canonical source of truth; future sessions d
 
 Real incidents that motivated it:
 - `.claude/settings.json:131-139` blocked `WebFetch` + `WebSearch` routing to `agent-browser` CLI that wasn't installed. Every session that needed web research was forced to either install agent-browser blindly or give up. Hook author assumed the CLI was always present.
-- `plans/lead-parser-replacement_plan.md:48` said "local pytest blocked: pyiceberg→C++ build tools." But `pyiceberg` was never in `backend/requirements.txt`. Future sessions saw the plan, believed pytest was blocked, and deferred verification. The ghost blocker wasted verification cycles.
+- `plans/lead-parser-replacement_plan.md` (pre-2026-04-16) said "local pytest blocked: pyiceberg→C++ build tools." But `pyiceberg` was never in `backend/requirements.txt`. Future sessions saw the plan, believed pytest was blocked, and deferred verification. The ghost blocker wasted verification cycles. Real cause: system Python 3.14 missing `google-auth` + `.venv` missing `pytest`. Plan corrected 2026-04-16 — see plan §Phase 3 "Local pytest status (2026-04-16 SOLVED)".
 - Audit file claimed a rename was "S effort, 1 line" — ignoring 15+ call sites + an existing ADR that said keep the name. Following audit without reading ADR would have created a half-migration.
 
 Each would have cost <5 min to fix at source. Each cost >30 min of compounded wrong-direction work downstream.

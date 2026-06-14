@@ -1,4 +1,3 @@
-
 import logging
 import os
 
@@ -29,11 +28,20 @@ class Settings(BaseSettings):
     widget_prompt_message_chars: int = 420
     supabase_url: str = ""
     supabase_key: str = ""
+    # Integration-secret encryption at rest (onboarding-v2, migration 148).
+    # INTEGRATIONS_ENC_KEY is the current Fernet key (version 1). Generate with
+    # `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
+    # Never commit; set in Railway. integrations_enc_keys holds older versions for
+    # rotation as "version:key,version:key" (e.g. "2:<base64key>"). Version 1 falls
+    # back to integrations_enc_key when not listed there.
+    integrations_enc_key: str = ""
+    integrations_enc_keys: str = ""
     supabase_service_key: str = ""
 
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
     twilio_phone_number: str = ""
+    twilio_webhook_sync_enabled: bool = True
 
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
@@ -41,13 +49,26 @@ class Settings(BaseSettings):
     stripe_price_professional_monthly: str = ""
     stripe_price_autopilot_monthly: str = ""
     stripe_price_enterprise_monthly: str = ""
-    stripe_price_marketing_addon_monthly: str = ""
     frontend_url: str = "http://localhost:5173"
     api_url: str = "https://agentnexlify-production.up.railway.app"
     cors_allowed_origins: str = ""
 
     resend_api_key: str = ""
     sentry_dsn: str = ""
+
+    # Web Push (VAPID) — pending-approval browser notifications. All three
+    # optional: push silently no-ops when unset (pending manual Railway env
+    # step). vapid_subject is a mailto: or https: URI per RFC 8292.
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = ""
+
+    # Inbound email webhooks (Agent OS connectors — Phase 4).
+    # Postmark: HMAC-SHA256 over raw body using this secret, sent as
+    # X-Postmark-Webhook-Hmac. Mailgun: HMAC-SHA256 over timestamp+token
+    # using the signing key configured in the Mailgun control panel.
+    postmark_webhook_secret: str = ""
+    mailgun_signing_key: str = ""
 
     widget_allowed_origins: str = "*"
     # Production MUST set API_SECRET_KEY env var. The dev fallback is deterministic
@@ -70,10 +91,32 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
     google_redirect_uri: str = ""
 
+    # Microsoft 365 / Azure AD OAuth — calendar + mail send scopes.
+    # `m365_tenant_id` is the Azure AD tenant ("common" for multi-tenant +
+    # personal accounts, "organizations" for work/school only, or a specific
+    # tenant GUID for single-tenant). Defaults to "common" so any M365 user
+    # can connect.
+    m365_client_id: str = ""
+    m365_client_secret: str = ""
+    m365_redirect_uri: str = ""
+    m365_tenant_id: str = "common"
+
+    # HubSpot OAuth — CRM write-back for contact upserts via Group B actions.
+    # Scopes are space-separated: `crm.objects.contacts.read
+    # crm.objects.contacts.write oauth`. The redirect URI must match the
+    # value registered in the HubSpot app config exactly.
+    hubspot_client_id: str = ""
+    hubspot_client_secret: str = ""
+    hubspot_redirect_uri: str = ""
+
     cloudflare_account_id: str = ""
     cloudflare_api_token: str = ""
     voyage_api_key: str = ""
     openrouter_api_key: str = ""
+
+    # Agent OS image generation
+    image_gen_provider: str = ""  # "openai" supported
+    image_gen_api_key: str = ""
 
     facebook_app_id: str = ""
     facebook_app_secret: str = ""
@@ -115,12 +158,16 @@ def is_production() -> bool:
         os.environ.get("RAILWAY_ENVIRONMENT"),
         os.environ.get("VERCEL_ENV"),
     )
-    return any((value or "").strip().lower() in {"prod", "production"} for value in candidates)
+    return any(
+        (value or "").strip().lower() in {"prod", "production"} for value in candidates
+    )
 
 
 def _is_weak_secret(value: str | None) -> bool:
     value = (value or "").strip()
-    return not value or value == _DEV_FALLBACK_SECRET or len(value) < _WEAK_SECRET_MIN_LEN
+    return (
+        not value or value == _DEV_FALLBACK_SECRET or len(value) < _WEAK_SECRET_MIN_LEN
+    )
 
 
 def _production_secret_failures(

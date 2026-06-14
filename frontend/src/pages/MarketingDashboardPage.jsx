@@ -88,12 +88,18 @@ export default function MarketingDashboardPage() {
     try {
       const [dashRes, trendsRes] = await Promise.all([
         apiFetch(`/marketing/${user.tenantId}/dashboard`, token).catch(
-          () => null,
+          (err) => {
+            console.warn("MarketingDashboard: dashboard fetch failed:", err);
+            return null;
+          },
         ),
         apiFetch(
           `/marketing/${user.tenantId}/trends?period=${period}`,
           token,
-        ).catch(() => null),
+        ).catch((err) => {
+          console.warn("MarketingDashboard: trends fetch failed:", err);
+          return null;
+        }),
       ]);
 
       if (dashRes) {
@@ -111,7 +117,7 @@ export default function MarketingDashboardPage() {
           );
         }
         if (dashRes.email_vs_sms_breakdown) {
-          // Backend returns a plain dict {email: N, sms: N} — convert to array for Recharts
+          // Backend returns a plain dict {email: N, sms: N} - convert to array for Recharts
           const raw = dashRes.email_vs_sms_breakdown;
           setBreakdown(
             Array.isArray(raw)

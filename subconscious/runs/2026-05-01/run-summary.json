@@ -1,0 +1,44 @@
+{
+  "run": 12,
+  "date": "2026-05-01",
+  "moratorium_active": true,
+  "moratorium_pending_count": 4,
+  "winner": "JS Silent Catch Guard — Fix AdminAnalyticsPage.jsx:117-122 + Add Check 10 to pre-commit",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "ideas_count": 5,
+  "ideas": [
+    "JS Silent Catch Guard (run 3, Check 10 correction)",
+    "Scope em-dash + Wire check_project_invariants.py (run 8 unblocking)",
+    "Wire golden eval harness to CI (Issue #110, parking lot)",
+    "Onboarding V2 characterization tests",
+    "Widget 3-copy sync guard (run 7)"
+  ],
+  "debate_outcomes": {
+    "JS Silent Catch Guard": "SURVIVES → winner",
+    "Scope em-dash + Wire invariants.py": "WEAKENED → parking lot",
+    "Wire golden eval harness": "KILLED — moratorium forbids parking lot"
+  },
+  "key_findings": [
+    "Pre-commit has 9 existing checks (Check 9 = 'dropped conversations.messages'). JS silent catch is Check 10, not Check 9 as cited in runs 9-11.",
+    "Nightly review 2026-05-01 incorrectly reported em-dash blocker as stale. Direct check_project_invariants.py run shows 9 violations: WizardStepAutoKB.jsx:2/140/172/254 + AutomationActivityCard.jsx:156/172/188/251/389 (5 new from slice-3 UI commit 90ba1c5).",
+    "Em-dash check fires as false positive on JSX UI render characters (|| '—' for empty hours in tables). Fix: scope check to exclude .jsx/.tsx files. This is prerequisite for run 8 implementation.",
+    "AdminAnalyticsPage.jsx:117-122 has 6 .catch(() => null) confirmed live. Issue #109 opened by nightly review.",
+    "Issue #110 opened for golden eval harness CI wiring. Parking lot ROI 2.5, first post-moratorium winner.",
+    "Onboarding V2 sprint starting (21 issues). Guard needed before first JSX commit."
+  ],
+  "governance_corrections": [],
+  "moratorium_note": "Implementation of run 3 drops pending 4 → 3 → moratorium lifts. Run 13 candidate: wire golden eval harness (Issue #110, ROI 2.5).",
+  "evidence_sources_checked": [
+    "git log --since 3 days",
+    "check_project_invariants.py direct execution",
+    "scripts/hooks/pre-commit inspection (9 existing checks)",
+    "AdminAnalyticsPage.jsx grep",
+    "docs/dev-knowledge/bug-patterns.md (2320 lines)",
+    "docs/dev-knowledge/customer-gaps.md",
+    "knowledge-base/INDEX.md (102 articles)",
+    "ops/routines/logs/nightly-commit-review-2026-05-01.md",
+    "docs/daily-logs/current-tasks.md",
+    "subconscious/runs/2026-04-30-pm/winning-concept.md"
+  ]
+}

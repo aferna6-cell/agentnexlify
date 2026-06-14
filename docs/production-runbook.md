@@ -2,6 +2,13 @@
 
 Use this when shipping backend, frontend, or migration changes to production.
 
+Related docs:
+
+- `docs/ops/partner-runbook.md`
+- `docs/ops/refund-runbook.md`
+- `docs/ops/service-continuity-plan.md`
+- `docs/incident-response-playbook.md`
+
 ## Required Gates
 
 1. Confirm the branch is clean and up to date with `main`.

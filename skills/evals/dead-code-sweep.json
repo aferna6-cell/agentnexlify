@@ -1,0 +1,13 @@
+{
+  "name": "dead-code-sweep",
+  "positive": [
+    "Run /dead-code-sweep on backend services.",
+    "Find unused code and orphan imports.",
+    "Remove dead files after the refactor."
+  ],
+  "negative": [
+    "Design a new lead capture form.",
+    "Measure MTOptions enrichment cost.",
+    "Explain the webhook retry policy."
+  ]
+}

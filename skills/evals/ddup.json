@@ -1,0 +1,13 @@
+{
+  "name": "ddup",
+  "positive": [
+    "Run ddup on duplicate widget docs and skills.",
+    "Find duplicated workflows and dedupe them.",
+    "Dedupe overlapping skill triggers before cleanup."
+  ],
+  "negative": [
+    "Add a new FAQ seed article.",
+    "Run the payment webhook tests.",
+    "Write onboarding copy for contractors."
+  ]
+}

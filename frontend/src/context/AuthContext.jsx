@@ -61,12 +61,10 @@ export function AuthProvider({ children }) {
       isTeamMember: payload.is_team_member || false,
       name: payload.name || "",
       userId: payload.user_id || null,
-      marketing_addon_active: false,
-      marketing_addon_grandfathered: false,
     });
 
-    // Fetch live add-on status from /me — JWT claims don't carry addon flags
-    // and plan/addon data must come from live API (frontend-patterns.md).
+    // Refresh plan from /me - JWT claims go stale after plan changes and
+    // plan data must come from live API (frontend-patterns.md).
     fetch(`${import.meta.env.VITE_API_URL || ""}/api/v1/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -78,17 +76,14 @@ export function AuthProvider({ children }) {
             ? {
                 ...prev,
                 plan: me.plan || prev.plan,
-                marketing_addon_active: Boolean(me.marketing_addon_active),
-                marketing_addon_grandfathered: Boolean(
-                  me.marketing_addon_grandfathered
-                ),
+                referralCode: me.referral_code || null,
               }
-            : prev
+            : prev,
         );
       })
-      .catch(() => {});
+      .catch((err) => console.warn("AuthContext: /me refresh failed:", err));
 
-    // Proactive expiry check — logs out before next API call can 401
+    // Proactive expiry check - logs out before next API call can 401
     const intervalId = setInterval(() => {
       const p = parseJwt(token);
       if (!p || (p.exp && p.exp * 1000 < Date.now())) {

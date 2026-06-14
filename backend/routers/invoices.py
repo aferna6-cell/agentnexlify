@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from backend.dependencies import verify_tenant
 from backend.models.database import get_service_supabase
-from backend.routers.auth import _get_current_tenant, require_role
+from backend.dependencies import _get_current_tenant, require_role
 from backend.services.email_sender import send_email
 from backend.services.stripe_service import ensure_stripe_configured
 from backend.services.tenant_scope import tenant_table
@@ -956,7 +956,7 @@ async def send_invoice(
                     f"from {biz_name} is ready. Please contact us to complete payment."
                 )
             try:
-                ok = await send_sms(to=recipient_phone, body=sms_body)
+                ok = await send_sms(to=recipient_phone, body=sms_body, tenant_id=tenant_id)
                 if ok:
                     sms_sent = True
                 else:
@@ -1140,25 +1140,48 @@ async def bulk_send_invoices(
         logger.warning("Failed to fetch tenant business name for invoice send (tenant %s)", tenant_id, exc_info=True)
     biz_name = business.get("business_name") or "Your Service Provider"
 
+    # Batch-fetch all requested invoices in one query (was one query per invoice)
+    inv_result = (
+        tenant_table(db, "invoices", tenant_id)
+        .select("*")
+        .in_("id", req.invoice_ids)
+        .eq("tenant_id", tenant_id)
+        .execute()
+    )
+    invoices_by_id = {row["id"]: row for row in (inv_result.data or [])}
+
+    # Batch-fetch all linked leads in one query (was one query per invoice)
+    lead_ids = {inv.get("lead_id") for inv in invoices_by_id.values() if inv.get("lead_id")}
+    leads_by_id = {}
+    if lead_ids:
+        try:
+            lead_result = (
+                tenant_table(db, "leads", tenant_id)
+                .select("id, name, email, phone")
+                .in_("id", list(lead_ids))
+                .eq("client_id", tenant_id)
+                .execute()
+            )
+            leads_by_id = {row["id"]: row for row in (lead_result.data or [])}
+        except Exception:
+            logger.warning("Bulk send: failed to fetch leads for tenant %s", tenant_id, exc_info=True)
+
+    sent_invoice_ids = []
     for invoice_id in req.invoice_ids:
         try:
-            inv = tenant_table(db, "invoices", tenant_id).select("*").eq("id", invoice_id).eq("tenant_id", tenant_id).limit(1).execute()
-            if not inv.data:
+            invoice = invoices_by_id.get(invoice_id)
+            if not invoice:
                 failed += 1
                 errors.append(f"{invoice_id}: not found")
                 continue
 
-            invoice = inv.data[0]
             if invoice["status"] in ("paid", "cancelled"):
                 failed += 1
                 errors.append(f"{invoice.get('invoice_number', invoice_id)}: already {invoice['status']}")
                 continue
 
             lead_id = invoice.get("lead_id")
-            lead = None
-            if lead_id:
-                lead_row = tenant_table(db, "leads", tenant_id).select("name, email, phone").eq("id", lead_id).eq("client_id", tenant_id).limit(1).execute()
-                lead = lead_row.data[0] if lead_row.data else None
+            lead = leads_by_id.get(lead_id) if lead_id else None
 
             if not lead or (not lead.get("email") and not lead.get("phone")):
                 failed += 1
@@ -1191,21 +1214,30 @@ async def bulk_send_invoices(
                     msg = f"Hi {lead.get('name', 'there')}! Invoice {inv_num} for ${total:,.2f} from {biz_name}."
                     if payment_link:
                         msg += f" Pay here: {payment_link}"
-                    await send_sms(to=lead["phone"], body=msg)
+                    await send_sms(to=lead["phone"], body=msg, tenant_id=tenant_id)
                 except Exception:
                     logger.warning("Failed to SMS invoice %s", invoice_id, exc_info=True)
 
-            tenant_table(db, "invoices", tenant_id).update({
-                "status": "sent",
-                "sent_at": datetime.now(timezone.utc).isoformat(),
-                "sent_via": req.channel,
-            }).eq("id", invoice_id).execute()
-
+            sent_invoice_ids.append(invoice_id)
             sent += 1
 
         except Exception:
             failed += 1
             errors.append(f"{invoice_id}: unexpected error")
             logger.exception("Bulk send failed for invoice %s", invoice_id)
+
+    # Single status update for everything that went out (was one update per invoice)
+    if sent_invoice_ids:
+        try:
+            tenant_table(db, "invoices", tenant_id).update({
+                "status": "sent",
+                "sent_at": datetime.now(timezone.utc).isoformat(),
+                "sent_via": req.channel,
+            }).in_("id", sent_invoice_ids).execute()
+        except Exception:
+            logger.exception(
+                "Bulk send: messages dispatched but failed to mark %d invoices sent for tenant %s",
+                len(sent_invoice_ids), tenant_id,
+            )
 
     return {"sent": sent, "failed": failed, "errors": errors[:10]}

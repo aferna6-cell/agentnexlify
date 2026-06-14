@@ -67,13 +67,20 @@ def _probe(check: dict[str, Any], timeout: float) -> ProbeResult:
 
     expected_json = check.get("expected_json")
     if expected_json:
-        content_type = headers.get("content-type", "")
-        if "json" not in content_type.lower():
-            return ProbeResult(name, False, f"{url} returned non-JSON content-type {content_type!r}")
+        # Judge by the body, not the content-type header: Railway's edge
+        # serves an empty content-type to some networks (observed from
+        # GitHub-hosted runners) while the JSON body is correct. A valid,
+        # matching body is UP; the header is diagnostic detail only.
         try:
             payload = json.loads(body.decode("utf-8"))
         except Exception as exc:
-            return ProbeResult(name, False, f"{url} returned invalid JSON: {exc}")
+            content_type = headers.get("content-type", "")
+            return ProbeResult(
+                name,
+                False,
+                f"{url} returned unparseable JSON (content-type {content_type!r}, "
+                f"first bytes {body[:80]!r}): {exc}",
+            )
         if not _expected_json_matches(payload, expected_json):
             return ProbeResult(name, False, f"{url} JSON did not include {expected_json!r}")
 

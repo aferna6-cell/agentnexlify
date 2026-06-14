@@ -3,12 +3,10 @@ import { useAuth } from "../context/AuthContext";
 
 const planLabels = {
   free: "Free",
-  growth: "Growth",
-  professional: "Professional",
-  autopilot: "Autopilot",
+  growth: "Starter",
+  autopilot: "Growth",
+  professional: "Pro",
   enterprise: "Enterprise",
-  foundation: "Growth",
-  operations: "Professional",
 };
 
 const planColors = {
@@ -17,12 +15,22 @@ const planColors = {
   professional: { color: "var(--purple)", bg: "rgba(139, 92, 246, 0.15)" },
   autopilot: { color: "var(--accent)", bg: "var(--accent-dim)" },
   enterprise: { color: "var(--yellow)", bg: "var(--yellow-dim)" },
-  foundation: { color: "var(--accent)", bg: "var(--accent-dim)" },
-  operations: { color: "var(--purple)", bg: "rgba(139, 92, 246, 0.15)" },
 };
 
 const Icon = ({ d, ...props }) => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d={d} /></svg>
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d={d} />
+  </svg>
 );
 
 const roleColors = {
@@ -33,79 +41,386 @@ const roleColors = {
 };
 
 const allNavItems = [
-  { key: "dashboard", icon: <Icon d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z" />, label: "Dashboard" },
-  { key: "analytics", icon: <Icon d="M18 20V10M12 20V4M6 20v-6" />, label: "Analytics" },
-  { key: "control_center", icon: <Icon d="M12 2l3 7h7l-5.5 4.1 2.1 6.9-6.6-4.8-6.6 4.8 2.1-6.9L2 9h7z" />, label: "Agent Control" },
-  { key: "clients", icon: <Icon d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />, label: "Clients" },
-  { key: "pipeline", icon: <Icon d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18" />, label: "Pipeline", roles: ["owner", "admin", "member"] },
-  { key: "pipeline_automations", icon: <Icon d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />, label: "Stage Automations", roles: ["owner", "admin"] },
-  { key: "calendar", icon: <Icon d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM16 2v4M8 2v4M3 10h18" />, label: "Calendar" },
-  { key: "conversations", icon: <Icon d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />, label: "Conversations" },
-  { key: "action_items", icon: <Icon d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 14l2 2 4-4" />, label: "Action Items" },
-  { key: "automations", icon: <Icon d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />, label: "Automations" },
-  { key: "snippets", icon: <Icon d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2zM8 9h8M8 13h5" />, label: "Snippets" },
-  { key: "widget", icon: <Icon d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM7 15h0M2 10h20" />, label: "Widget" },
+  {
+    key: "dashboard",
+    icon: <Icon d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z" />,
+    label: "Dashboard",
+  },
+  {
+    key: "analytics",
+    icon: <Icon d="M18 20V10M12 20V4M6 20v-6" />,
+    label: "Analytics",
+  },
+  {
+    key: "control_center",
+    icon: (
+      <Icon d="M12 2l3 7h7l-5.5 4.1 2.1 6.9-6.6-4.8-6.6 4.8 2.1-6.9L2 9h7z" />
+    ),
+    label: "Agent Control",
+    hidden: true,
+  },
+  {
+    key: "agent_os",
+    icon: (
+      <Icon d="M4 4h16v16H4zM9 9h6v6H9zM9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3" />
+    ),
+    label: "Agent OS",
+  },
+  {
+    key: "clients",
+    icon: (
+      <Icon d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+    ),
+    label: "Clients",
+  },
+  {
+    key: "pipeline",
+    icon: (
+      <Icon d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18" />
+    ),
+    label: "Pipeline",
+    roles: ["owner", "admin", "member"],
+  },
+  {
+    key: "pipeline_automations",
+    icon: <Icon d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />,
+    label: "Stage Automations",
+    roles: ["owner", "admin"],
+    hidden: true,
+  },
+  {
+    key: "calendar",
+    icon: (
+      <Icon d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM16 2v4M8 2v4M3 10h18" />
+    ),
+    label: "Calendar",
+    hidden: true,
+  },
+  {
+    key: "conversations",
+    icon: (
+      <Icon d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    ),
+    label: "Conversations",
+  },
+  {
+    key: "action_items",
+    icon: (
+      <Icon d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 14l2 2 4-4" />
+    ),
+    label: "Action Items",
+    hidden: true,
+  },
+  {
+    key: "automations",
+    icon: <Icon d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />,
+    label: "Automations",
+    hidden: true,
+  },
+  {
+    key: "snippets",
+    icon: (
+      <Icon d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2zM8 9h8M8 13h5" />
+    ),
+    label: "Snippets",
+    hidden: true,
+  },
+  {
+    key: "widget",
+    icon: (
+      <Icon d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM7 15h0M2 10h20" />
+    ),
+    label: "Widget",
+  },
   // Hidden: AI answering service not yet connected to real voice provider
-  { key: "calls", icon: <Icon d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />, label: "Calls", hidden: true },
-  { key: "chat_flows", icon: <Icon d="M22 12h-4l-3 9L9 3l-3 9H2" />, label: "Chat Flows", roles: ["owner", "admin"] },
-  { key: "faq", icon: <Icon d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />, label: "FAQ Manager" },
-  { key: "reviews", icon: <Icon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />, label: "Reviews" },
-  { key: "csat", icon: <Icon d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />, label: "CSAT", roles: ["owner", "admin"] },
-  // Hidden: local SEO scoring not yet connected to real data sources
-  { key: "local_seo", icon: <Icon d="M11 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM21 21l-4.35-4.35" />, label: "Local SEO", roles: ["owner", "admin"], hidden: true },
-  { key: "menu", icon: <Icon d="M3 5h18M3 12h18M3 19h12" />, label: "Menu", roles: ["owner", "admin"], businessTypes: ["restaurant"] },
-  { key: "orders", icon: <Icon d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" />, label: "Orders", businessTypes: ["restaurant"] },
-  { key: "jobs", icon: <Icon d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />, label: "Job Board", roles: ["owner", "admin"] },
-  { key: "bids", icon: <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" />, label: "Bids", roles: ["owner", "admin"] },
-  { key: "invoices", icon: <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M12 18v-6M9 15h6" />, label: "Invoices", roles: ["owner", "admin", "member"] },
-  { key: "documents", icon: <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 15l2 2 4-4" />, label: "Documents", roles: ["owner", "admin"] },
-  { key: "smart_lists", icon: <Icon d="M3 6h18M3 12h12M3 18h18M19 12l2 2-2 2" />, label: "Smart Lists", roles: ["owner", "admin", "member"] },
-  { key: "form_builder", icon: <Icon d="M9 11H3v10h6V11zM21 3h-6v18h6V3zM15 7H9v4h6V7z" />, label: "Forms", roles: ["owner", "admin"] },
-  { key: "waitlist", icon: <Icon d="M12 2v4M12 18v4M8 8h8M6 12h12M8 16h8" />, label: "Waitlist" },
-  { key: "scoring_config", icon: <Icon d="M22 12h-4l-3 9L9 3l-3 9H2" />, label: "Lead Scoring", roles: ["owner", "admin"] },
-  { key: "client_portal", icon: <Icon d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4" />, label: "Client Portal" },
-  { key: "content_studio", icon: <Icon d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />, label: "Content Studio" },
-  // Hidden: social media publishing not yet connected to real platforms
-  { key: "social_media", icon: <Icon d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />, label: "Social Media", hidden: true },
-  { key: "campaigns", icon: <Icon d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zM22 6l-10 7L2 6" />, label: "Campaigns" },
-  { key: "email_sequences", icon: <Icon d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zM22 6l-10 7L2 6M8 14h8M8 18h5" />, label: "Email Sequences" },
-  { key: "team", icon: <Icon d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM20 8v6M23 11h-6" />, label: "Team", roles: ["owner", "admin"] },
-  { key: "team_activity", icon: <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" />, label: "Team Activity", roles: ["owner", "admin"] },
-  { key: "billing", icon: <Icon d="M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM1 10h22" />, label: "Billing", roles: ["owner"] },
-  { key: "business_page", icon: <Icon d="M3 3h18v18H3zM3 9h18M9 21V9" />, label: "Business Page", roles: ["owner", "admin"] },
-  { key: "integrations", icon: <Icon d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />, label: "Integrations" },
-  { key: "mcp_setup", icon: <Icon d="M13 10V3L4 14h7v7l9-11h-7z" />, label: "MCP Setup", roles: ["owner", "admin"] },
-  { key: "settings", icon: <Icon d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />, label: "Settings", roles: ["owner", "admin"] },
-  { key: "support", icon: <Icon d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 16v-4M12 8h.01" />, label: "Support" },
-  { key: "admin_analytics", icon: <Icon d="M18 20V10M12 20V4M6 20v-6" />, label: "Platform Analytics" },
-  { key: "admin_promotions", icon: <Icon d="M12 2l3 7h7l-5.5 4.1 2.1 6.9-6.6-4.8-6.6 4.8 2.1-6.9L2 9h7z" />, label: "Free & Discounts" },
+  {
+    key: "calls",
+    icon: (
+      <Icon d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+    ),
+    label: "Calls",
+    hidden: true,
+  },
+  {
+    key: "chat_flows",
+    icon: <Icon d="M22 12h-4l-3 9L9 3l-3 9H2" />,
+    label: "Chat Flows",
+    roles: ["owner", "admin"],
+    hidden: true,
+  },
+  {
+    key: "faq",
+    icon: (
+      <Icon d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />
+    ),
+    label: "FAQ Manager",
+  },
+  {
+    key: "reviews",
+    icon: (
+      <Icon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+    ),
+    label: "Reviews",
+    hidden: true,
+  },
+  {
+    key: "csat",
+    icon: (
+      <Icon d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+    ),
+    label: "CSAT",
+    roles: ["owner", "admin"],
+    hidden: true,
+  },
+  {
+    key: "local_seo",
+    icon: <Icon d="M11 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM21 21l-4.35-4.35" />,
+    label: "Local SEO",
+    roles: ["owner", "admin"],
+    hidden: true,
+  },
+  {
+    key: "menu",
+    icon: <Icon d="M3 5h18M3 12h18M3 19h12" />,
+    label: "Menu",
+    roles: ["owner", "admin"],
+    businessTypes: ["restaurant"],
+    hidden: true,
+  },
+  {
+    key: "orders",
+    icon: (
+      <Icon d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" />
+    ),
+    label: "Orders",
+    businessTypes: ["restaurant"],
+    hidden: true,
+  },
+  {
+    key: "jobs",
+    icon: (
+      <Icon d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+    ),
+    label: "Job Board",
+    roles: ["owner", "admin"],
+    hidden: true,
+  },
+  {
+    key: "bids",
+    icon: (
+      <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" />
+    ),
+    label: "Bids",
+    roles: ["owner", "admin"],
+    hidden: true,
+  },
+  {
+    key: "invoices",
+    icon: (
+      <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M12 18v-6M9 15h6" />
+    ),
+    label: "Invoices",
+    roles: ["owner", "admin", "member"],
+    hidden: true,
+  },
+  {
+    key: "documents",
+    icon: (
+      <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 15l2 2 4-4" />
+    ),
+    label: "Documents",
+    roles: ["owner", "admin"],
+    hidden: true,
+  },
+  {
+    key: "smart_lists",
+    icon: <Icon d="M3 6h18M3 12h12M3 18h18M19 12l2 2-2 2" />,
+    label: "Smart Lists",
+    roles: ["owner", "admin", "member"],
+    hidden: true,
+  },
+  {
+    key: "form_builder",
+    icon: <Icon d="M9 11H3v10h6V11zM21 3h-6v18h6V3zM15 7H9v4h6V7z" />,
+    label: "Forms",
+    roles: ["owner", "admin"],
+    hidden: true,
+  },
+  {
+    key: "waitlist",
+    icon: <Icon d="M12 2v4M12 18v4M8 8h8M6 12h12M8 16h8" />,
+    label: "Waitlist",
+    hidden: true,
+  },
+  {
+    key: "scoring_config",
+    icon: <Icon d="M22 12h-4l-3 9L9 3l-3 9H2" />,
+    label: "Lead Scoring",
+    roles: ["owner", "admin"],
+    hidden: true,
+  },
+  {
+    key: "client_portal",
+    icon: <Icon d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4" />,
+    label: "Client Portal",
+    hidden: true,
+  },
+  {
+    key: "marketing_dashboard",
+    icon: <Icon d="M18 20V10M12 20V4M6 20v-6" />,
+    label: "Marketing Dashboard",
+    hidden: true,
+  },
+  {
+    key: "social_media",
+    icon: (
+      <Icon d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+    ),
+    label: "Social Media",
+    hidden: true,
+  },
+  {
+    key: "campaigns",
+    icon: (
+      <Icon d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zM22 6l-10 7L2 6" />
+    ),
+    label: "Campaigns",
+    hidden: true,
+  },
+  {
+    key: "ab_tests",
+    icon: <Icon d="M3 3h8v8H3zM13 13h8v8h-8zM13 3h8v8h-8zM3 13h8v8H3z" />,
+    label: "A/B Tests",
+    hidden: true,
+  },
+  {
+    key: "automation_rules",
+    icon: <Icon d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />,
+    label: "Automation Rules",
+    hidden: true,
+  },
+  {
+    key: "trigger_logs",
+    icon: (
+      <Icon d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M8 11h8M8 15h6" />
+    ),
+    label: "Trigger Logs",
+    hidden: true,
+  },
+  {
+    key: "email_sequences",
+    icon: (
+      <Icon d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zM22 6l-10 7L2 6M8 14h8M8 18h5" />
+    ),
+    label: "Email Sequences",
+    hidden: true,
+  },
+  {
+    key: "team",
+    icon: (
+      <Icon d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM20 8v6M23 11h-6" />
+    ),
+    label: "Team",
+    roles: ["owner", "admin"],
+  },
+  {
+    key: "team_activity",
+    icon: (
+      <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" />
+    ),
+    label: "Team Activity",
+    roles: ["owner", "admin"],
+    hidden: true,
+  },
+  {
+    key: "billing",
+    icon: (
+      <Icon d="M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM1 10h22" />
+    ),
+    label: "Billing",
+    roles: ["owner"],
+  },
+  {
+    key: "business_page",
+    icon: <Icon d="M3 3h18v18H3zM3 9h18M9 21V9" />,
+    label: "Business Page",
+    roles: ["owner", "admin"],
+  },
+  {
+    key: "integrations",
+    icon: (
+      <Icon d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+    ),
+    label: "Integrations",
+  },
+  {
+    key: "mcp_setup",
+    icon: <Icon d="M13 10V3L4 14h7v7l9-11h-7z" />,
+    label: "MCP Setup",
+    roles: ["owner", "admin"],
+  },
+  {
+    key: "settings",
+    icon: (
+      <Icon d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+    ),
+    label: "Settings",
+    roles: ["owner", "admin"],
+  },
+  {
+    key: "inbound_channels",
+    icon: (
+      <Icon d="M4 4h16v12H5.17L4 17.17V4zm0-2a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H4z" />
+    ),
+    label: "Inbound Channels",
+    roles: ["owner", "admin"],
+  },
+  {
+    key: "support",
+    icon: (
+      <Icon d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 16v-4M12 8h.01" />
+    ),
+    label: "Support",
+  },
+  // Platform-admin pages (admin_analytics, admin_promotions) are deliberately
+  // NOT in the sidebar - every tenant saw the ADMIN section even though the
+  // data behind it is admin-secret-gated. Reach them by direct URL:
+  // /admin/analytics and /admin/promotions (routes still wired in App.jsx).
 ];
 
 const NAV_GROUPS = [
-  { key: "overview",       label: "OVERVIEW",          items: ["dashboard", "analytics", "control_center"] },
-  { key: "crm",            label: "CRM",               items: ["clients", "pipeline", "smart_lists", "client_portal"] },
-  { key: "communications", label: "COMMUNICATIONS",    items: ["conversations", "calls", "chat_flows", "widget", "snippets", "faq"] },
-  { key: "marketing",      label: "MARKETING",         items: ["marketing_dashboard", "campaigns", "ab_tests", "automation_rules", "trigger_logs", "email_sequences", "form_builder"] },
-  { key: "operations",     label: "OPERATIONS",        items: ["calendar", "automations", "action_items", "invoices", "documents", "bids", "jobs", "menu", "orders"] },
-  { key: "reviews_seo",    label: "REVIEWS & SEO",     items: ["reviews", "csat", "local_seo"] },
-  { key: "settings",       label: "SETTINGS",          items: ["team", "billing", "business_page", "integrations", "mcp_setup", "settings", "support"] },
-  { key: "admin",          label: "ADMIN",             items: ["admin_analytics", "admin_promotions"] },
+  {
+    key: "overview",
+    label: "OVERVIEW",
+    items: ["agent_os", "dashboard", "analytics"],
+  },
+  {
+    key: "crm",
+    label: "CRM",
+    items: ["clients", "pipeline"],
+  },
+  {
+    key: "communications",
+    label: "COMMUNICATIONS",
+    items: ["conversations", "widget", "faq"],
+  },
+  {
+    key: "settings",
+    label: "SETTINGS",
+    items: [
+      "team",
+      "billing",
+      "business_page",
+      "integrations",
+      "mcp_setup",
+      "settings",
+      "inbound_channels",
+      "support",
+    ],
+  },
 ];
 
-const DEFAULT_EXPANDED = ["overview", "crm"];
-
-// Gated by Marketing Suite add-on ($49.99/mo). If tenant lacks
-// `marketing_addon_active`, these items are hidden from the sidebar entirely.
-// Backend also enforces via addon_gate dependency (defense in depth).
-const MARKETING_ADDON_KEYS = new Set([
-  "local_seo",
-  "social_media",
-  "campaigns",
-  "marketing_dashboard",
-  "ab_tests",
-  "automation_rules",
-  "trigger_logs",
-]);
+const DEFAULT_EXPANDED = ["overview", "crm", "communications"];
 
 const ChevronIcon = ({ expanded }) => (
   <svg
@@ -128,20 +443,47 @@ const ChevronIcon = ({ expanded }) => (
 );
 
 const SunIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <circle cx="12" cy="12" r="5" />
     <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
   </svg>
 );
 
 const MoonIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
   </svg>
 );
 
 const HamburgerIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <line x1="3" y1="6" x2="21" y2="6" />
     <line x1="3" y1="12" x2="21" y2="12" />
     <line x1="3" y1="18" x2="21" y2="18" />
@@ -149,13 +491,27 @@ const HamburgerIcon = () => (
 );
 
 const CloseIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <line x1="18" y1="6" x2="6" y2="18" />
     <line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
 
-export default function Sidebar({ currentPage, onNavigate, plan }) {
+export default function Sidebar({
+  currentPage,
+  onNavigate,
+  plan,
+  pendingApprovalCount = 0,
+}) {
   const { user, logout } = useAuth();
   const activePlan = plan || user?.plan || "free";
   const userRole = user?.role || "owner";
@@ -167,7 +523,7 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
     setExpandedGroups((prev) =>
       prev.includes(groupKey)
         ? prev.filter((k) => k !== groupKey)
-        : [...prev, groupKey]
+        : [...prev, groupKey],
     );
   }, []);
 
@@ -183,7 +539,10 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
   useEffect(() => {
     if (!mobileOpen) return;
     const handleClickOutside = (e) => {
-      if (!e.target.closest(".sidebar") && !e.target.closest(".sidebar-hamburger")) {
+      if (
+        !e.target.closest(".sidebar") &&
+        !e.target.closest(".sidebar-hamburger")
+      ) {
         setMobileOpen(false);
       }
     };
@@ -204,18 +563,16 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
   };
 
   const businessType = (user?.businessType || "").toLowerCase();
-  const marketingAddonActive = Boolean(user?.marketing_addon_active);
   const navItems = allNavItems.filter(
     (item) =>
       !item.hidden &&
       (!item.roles || item.roles.includes(userRole)) &&
-      (!item.businessTypes || item.businessTypes.includes(businessType)) &&
-      (marketingAddonActive || !MARKETING_ADDON_KEYS.has(item.key))
+      (!item.businessTypes || item.businessTypes.includes(businessType)),
   );
 
   return (
     <>
-      {/* Hamburger button — only visible on mobile */}
+      {/* Hamburger button - only visible on mobile */}
       <button
         className="sidebar-hamburger"
         onClick={() => setMobileOpen((prev) => !prev)}
@@ -224,8 +581,13 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
         {mobileOpen ? <CloseIcon /> : <HamburgerIcon />}
       </button>
 
-      {/* Backdrop overlay — only on mobile when open */}
-      {mobileOpen && <div className="sidebar-backdrop" onClick={() => setMobileOpen(false)} />}
+      {/* Backdrop overlay - only on mobile when open */}
+      {mobileOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
 
       <div className={`sidebar${mobileOpen ? " sidebar-mobile-open" : ""}`}>
         <div className="sidebar-logo">
@@ -247,38 +609,97 @@ export default function Sidebar({ currentPage, onNavigate, plan }) {
                   <span className="sidebar-group-label">{group.label}</span>
                   <ChevronIcon expanded={isExpanded} />
                 </div>
-                {isExpanded && groupItems.map((item) => (
-                  <div
-                    key={item.key}
-                    className={`nav-item${currentPage === item.key ? " active" : ""}`}
-                    onClick={() => handleNavClick(item.key)}
-                  >
-                    <span className="nav-item-icon">{item.icon}</span>
-                    <span className="nav-item-label">{item.label}</span>
-                  </div>
-                ))}
+                {isExpanded &&
+                  groupItems.map((item) => {
+                    const badge =
+                      item.key === "agent_os" && pendingApprovalCount > 0
+                        ? pendingApprovalCount
+                        : 0;
+                    return (
+                      <div
+                        key={item.key}
+                        className={`nav-item${currentPage === item.key ? " active" : ""}`}
+                        onClick={() => handleNavClick(item.key)}
+                      >
+                        <span className="nav-item-icon">{item.icon}</span>
+                        <span className="nav-item-label">{item.label}</span>
+                        {badge > 0 && (
+                          <span
+                            className="nav-item-badge"
+                            title={`${badge} pending approval${badge === 1 ? "" : "s"}`}
+                            style={{
+                              marginLeft: "auto",
+                              minWidth: 20,
+                              height: 20,
+                              padding: "0 6px",
+                              borderRadius: 10,
+                              background: "var(--accent)",
+                              color: "var(--bg)",
+                              fontSize: 11,
+                              fontWeight: 600,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            {badge > 99 ? "99+" : badge}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             );
           })}
         </nav>
         <div className="sidebar-footer">
-          <button className="theme-toggle" onClick={toggleTheme} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
-            <span className="nav-item-icon">{theme === "dark" ? <SunIcon /> : <MoonIcon />}</span>
-            <span className="nav-item-label">{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+          <button
+            className="theme-toggle"
+            onClick={toggleTheme}
+            title={
+              theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+            }
+          >
+            <span className="nav-item-icon">
+              {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+            </span>
+            <span className="nav-item-label">
+              {theme === "dark" ? "Light mode" : "Dark mode"}
+            </span>
           </button>
           {user && (
             <div className="sidebar-user">
-              <div className="sidebar-user-name">{user.name || user.businessName || user.email}</div>
+              <div className="sidebar-user-name">
+                {user.name || user.businessName || user.email}
+              </div>
               <div className="sidebar-user-badges">
                 <div
                   className="sidebar-plan-badge"
-                  style={planColors[activePlan] ? { color: planColors[activePlan].color, background: planColors[activePlan].bg } : undefined}
-                >{planLabels[activePlan] || activePlan}</div>
+                  style={
+                    planColors[activePlan]
+                      ? {
+                          color: planColors[activePlan].color,
+                          background: planColors[activePlan].bg,
+                        }
+                      : undefined
+                  }
+                >
+                  {planLabels[activePlan] || activePlan}
+                </div>
                 {user.isTeamMember && (
                   <div
                     className="sidebar-role-badge"
-                    style={roleColors[userRole] ? { color: roleColors[userRole].color, background: roleColors[userRole].bg } : undefined}
-                  >{userRole}</div>
+                    style={
+                      roleColors[userRole]
+                        ? {
+                            color: roleColors[userRole].color,
+                            background: roleColors[userRole].bg,
+                          }
+                        : undefined
+                    }
+                  >
+                    {userRole}
+                  </div>
                 )}
               </div>
             </div>

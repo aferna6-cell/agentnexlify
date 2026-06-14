@@ -73,8 +73,14 @@ function ScoreGauge({ score, label = "Score", size = 70 }) {
   else if (safeScore >= 40) strokeColor = "#f59e0b";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <svg height={radius * 2} width={radius * 2} style={{ transform: "rotate(-90deg)" }}>
+    <div
+      style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+    >
+      <svg
+        height={radius * 2}
+        width={radius * 2}
+        style={{ transform: "rotate(-90deg)" }}
+      >
         <circle
           stroke="var(--border)"
           fill="transparent"
@@ -111,7 +117,9 @@ function ScoreGauge({ score, label = "Score", size = 70 }) {
       >
         {safeScore}
       </div>
-      <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: 4 }}>
+      <div
+        style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: 4 }}
+      >
         {label}
       </div>
     </div>
@@ -259,10 +267,19 @@ function SeoAuditTab({ tenantId, token }) {
       const result = await runSeoAudit(tenantId, token);
       setAudit(result);
       // Reload history
-      const historyData = await fetchSeoAuditHistory(tenantId, token).catch(() => null);
+      const historyData = await fetchSeoAuditHistory(tenantId, token).catch(
+        (err) => {
+          console.warn("LocalSEO: fetchSeoAuditHistory failed:", err);
+          return null;
+        },
+      );
       if (historyData) setHistory(historyData.audits || historyData || []);
     } catch (err) {
-      setError(err.body?.detail || err.message || "Audit failed. Make sure your website URL is configured.");
+      setError(
+        err.body?.detail ||
+          err.message ||
+          "Audit failed. Make sure your website URL is configured.",
+      );
     } finally {
       setRunning(false);
     }
@@ -272,17 +289,36 @@ function SeoAuditTab({ tenantId, token }) {
 
   if (!audit) {
     return (
-      <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--text-muted)" }}>
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--text-muted)", marginBottom: 12 }}>
+      <div
+        style={{
+          textAlign: "center",
+          padding: "60px 20px",
+          color: "var(--text-muted)",
+        }}
+      >
+        <svg
+          width="48"
+          height="48"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ color: "var(--text-muted)", marginBottom: 12 }}
+        >
           <circle cx="11" cy="11" r="8" />
           <path d="M21 21l-4.35-4.35" />
           <path d="M8 11h6" />
           <path d="M11 8v6" />
         </svg>
-        <h3 style={{ color: "var(--text-primary)", margin: "0 0 8px" }}>No SEO audit yet</h3>
+        <h3 style={{ color: "var(--text-primary)", margin: "0 0 8px" }}>
+          No SEO audit yet
+        </h3>
         <p style={{ maxWidth: 480, margin: "0 auto 20px", lineHeight: 1.6 }}>
-          Run a comprehensive SEO audit to check your website's technical health, content quality,
-          on-page optimization, and link structure. Get actionable recommendations to improve your search rankings.
+          Run a comprehensive SEO audit to check your website's technical
+          health, content quality, on-page optimization, and link structure. Get
+          actionable recommendations to improve your search rankings.
         </p>
         <ErrorBanner error={error} onDismiss={() => setError(null)} />
         <button
@@ -300,26 +336,48 @@ function SeoAuditTab({ tenantId, token }) {
   const overallScore = audit.overall_score ?? audit.score ?? 0;
   const categories = audit.categories || {};
   const recommendations = audit.recommendations || [];
-  const categoryKeys = Object.keys(categories).length > 0
-    ? Object.keys(categories)
-    : ["technical", "content", "on_page", "link_analysis"];
+  const categoryKeys =
+    Object.keys(categories).length > 0
+      ? Object.keys(categories)
+      : ["technical", "content", "on_page", "link_analysis"];
 
   return (
     <div>
       <ErrorBanner error={error} onDismiss={() => setError(null)} />
 
       {/* Score + Summary Row */}
-      <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 16, marginBottom: 24 }}>
-        <Card style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "260px 1fr",
+          gap: 16,
+          marginBottom: 24,
+        }}
+      >
+        <Card
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <ScoreGauge score={overallScore} label="Overall SEO Score" />
-          <div style={{ marginTop: 12, fontSize: "0.85rem", color: "var(--text-secondary)", textAlign: "center" }}>
+          <div
+            style={{
+              marginTop: 12,
+              fontSize: "0.85rem",
+              color: "var(--text-secondary)",
+              textAlign: "center",
+            }}
+          >
             {overallScore >= 80
               ? "Excellent! Your site is well optimized for search engines."
               : overallScore >= 60
-              ? "Good foundation. Some improvements can boost your rankings."
-              : overallScore >= 40
-              ? "Needs work. Several issues are holding back your SEO."
-              : "Critical attention needed. Major SEO issues detected."}
+                ? "Good foundation. Some improvements can boost your rankings."
+                : overallScore >= 40
+                  ? "Needs work. Several issues are holding back your SEO."
+                  : "Critical attention needed. Major SEO issues detected."}
           </div>
           <button
             className="btn-primary"
@@ -334,14 +392,22 @@ function SeoAuditTab({ tenantId, token }) {
         {/* Category Scores */}
         <Card>
           <SectionHeader>Category Breakdown</SectionHeader>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+          >
             {categoryKeys.map((key) => {
               const cat = categories[key] || {};
               const catScore = cat.score ?? 0;
               const issues = cat.issues || [];
-              const critical = issues.filter((i) => i.severity === "critical" || i.severity === "error").length;
-              const warnings = issues.filter((i) => i.severity === "warning").length;
-              const passed = issues.filter((i) => i.severity === "pass" || i.severity === "good").length;
+              const critical = issues.filter(
+                (i) => i.severity === "critical" || i.severity === "error",
+              ).length;
+              const warnings = issues.filter(
+                (i) => i.severity === "warning",
+              ).length;
+              const passed = issues.filter(
+                (i) => i.severity === "pass" || i.severity === "good",
+              ).length;
 
               let barColor = "#ef4444";
               if (catScore >= 70) barColor = "#22c55e";
@@ -357,17 +423,49 @@ function SeoAuditTab({ tenantId, token }) {
                     padding: "14px 16px",
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: "1.1rem" }}>{CATEGORY_ICONS[key] || "\u2022"}</span>
-                      <span style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--text-primary)" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: 8,
+                    }}
+                  >
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    >
+                      <span style={{ fontSize: "1.1rem" }}>
+                        {CATEGORY_ICONS[key] || "\u2022"}
+                      </span>
+                      <span
+                        style={{
+                          fontWeight: 600,
+                          fontSize: "0.85rem",
+                          color: "var(--text-primary)",
+                        }}
+                      >
                         {CATEGORY_LABELS[key] || key.replace(/_/g, " ")}
                       </span>
                     </div>
-                    <span style={{ fontWeight: 700, fontSize: "1rem", color: barColor }}>{catScore}</span>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        fontSize: "1rem",
+                        color: barColor,
+                      }}
+                    >
+                      {catScore}
+                    </span>
                   </div>
                   {/* Progress bar */}
-                  <div style={{ height: 6, background: "var(--border)", borderRadius: 3, marginBottom: 8 }}>
+                  <div
+                    style={{
+                      height: 6,
+                      background: "var(--border)",
+                      borderRadius: 3,
+                      marginBottom: 8,
+                    }}
+                  >
                     <div
                       style={{
                         height: "100%",
@@ -379,18 +477,26 @@ function SeoAuditTab({ tenantId, token }) {
                     />
                   </div>
                   {/* Issue counts */}
-                  <div style={{ display: "flex", gap: 12, fontSize: "0.75rem" }}>
+                  <div
+                    style={{ display: "flex", gap: 12, fontSize: "0.75rem" }}
+                  >
                     {critical > 0 && (
-                      <span style={{ color: "#ef4444" }}>{critical} critical</span>
+                      <span style={{ color: "#ef4444" }}>
+                        {critical} critical
+                      </span>
                     )}
                     {warnings > 0 && (
-                      <span style={{ color: "#f59e0b" }}>{warnings} warning{warnings !== 1 ? "s" : ""}</span>
+                      <span style={{ color: "#f59e0b" }}>
+                        {warnings} warning{warnings !== 1 ? "s" : ""}
+                      </span>
                     )}
                     {passed > 0 && (
                       <span style={{ color: "#22c55e" }}>{passed} passed</span>
                     )}
                     {critical === 0 && warnings === 0 && passed === 0 && (
-                      <span style={{ color: "var(--text-muted)" }}>No data</span>
+                      <span style={{ color: "var(--text-muted)" }}>
+                        No data
+                      </span>
                     )}
                   </div>
                 </div>
@@ -401,7 +507,9 @@ function SeoAuditTab({ tenantId, token }) {
       </div>
 
       {/* Detailed Issues */}
-      {categoryKeys.some((key) => (categories[key]?.issues || []).length > 0) && (
+      {categoryKeys.some(
+        (key) => (categories[key]?.issues || []).length > 0,
+      ) && (
         <Card style={{ marginBottom: 24 }}>
           <SectionHeader>Detailed Issues</SectionHeader>
           {categoryKeys.map((key) => {
@@ -410,18 +518,27 @@ function SeoAuditTab({ tenantId, token }) {
             if (issues.length === 0) return null;
             return (
               <div key={key} style={{ marginBottom: 16 }}>
-                <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--text-primary)", marginBottom: 8 }}>
+                <div
+                  style={{
+                    fontWeight: 600,
+                    fontSize: "0.85rem",
+                    color: "var(--text-primary)",
+                    marginBottom: 8,
+                  }}
+                >
                   {CATEGORY_LABELS[key] || key.replace(/_/g, " ")}
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                >
                   {issues.map((issue, idx) => {
                     const severity = issue.severity || "warning";
                     const color =
                       severity === "critical" || severity === "error"
                         ? "#ef4444"
                         : severity === "warning"
-                        ? "#f59e0b"
-                        : "#22c55e";
+                          ? "#f59e0b"
+                          : "#22c55e";
                     return (
                       <div
                         key={idx}
@@ -434,22 +551,49 @@ function SeoAuditTab({ tenantId, token }) {
                             severity === "pass" || severity === "good"
                               ? "rgba(34,197,94,0.05)"
                               : severity === "warning"
-                              ? "rgba(245,158,11,0.05)"
-                              : "rgba(239,68,68,0.05)",
+                                ? "rgba(245,158,11,0.05)"
+                                : "rgba(239,68,68,0.05)",
                           border: `1px solid ${color}22`,
                           borderRadius: 8,
                           borderLeft: `3px solid ${color}`,
                         }}
                       >
-                        <span style={{ color, fontSize: "0.8rem", fontWeight: 700, flexShrink: 0, marginTop: 1 }}>
-                          {severity === "pass" || severity === "good" ? "\u2713" : severity === "warning" ? "!" : "\u2717"}
+                        <span
+                          style={{
+                            color,
+                            fontSize: "0.8rem",
+                            fontWeight: 700,
+                            flexShrink: 0,
+                            marginTop: 1,
+                          }}
+                        >
+                          {severity === "pass" || severity === "good"
+                            ? "\u2713"
+                            : severity === "warning"
+                              ? "!"
+                              : "\u2717"}
                         </span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 500, fontSize: "0.85rem", color: "var(--text-primary)" }}>
-                            {issue.title || issue.message || issue.description || "Issue"}
+                          <div
+                            style={{
+                              fontWeight: 500,
+                              fontSize: "0.85rem",
+                              color: "var(--text-primary)",
+                            }}
+                          >
+                            {issue.title ||
+                              issue.message ||
+                              issue.description ||
+                              "Issue"}
                           </div>
                           {issue.detail && (
-                            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: 2 }}>
+                            <div
+                              style={{
+                                fontSize: "0.8rem",
+                                color: "var(--text-muted)",
+                                marginTop: 2,
+                              }}
+                            >
                               {issue.detail}
                             </div>
                           )}
@@ -468,7 +612,14 @@ function SeoAuditTab({ tenantId, token }) {
       <Card style={{ marginBottom: 24 }}>
         <SectionHeader>Actionable Recommendations</SectionHeader>
         {recommendations.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+          <div
+            style={{
+              textAlign: "center",
+              padding: "20px",
+              color: "var(--text-muted)",
+              fontSize: "0.85rem",
+            }}
+          >
             No specific recommendations at this time. Your site looks good!
           </div>
         ) : (
@@ -479,8 +630,8 @@ function SeoAuditTab({ tenantId, token }) {
                 priority === "critical" || priority === "high"
                   ? "#ef4444"
                   : priority === "medium"
-                  ? "#f59e0b"
-                  : "#3b82f6";
+                    ? "#f59e0b"
+                    : "#3b82f6";
               return (
                 <div
                   key={idx}
@@ -492,17 +643,43 @@ function SeoAuditTab({ tenantId, token }) {
                     padding: "14px 16px",
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-                    <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--text-primary)" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      marginBottom: 4,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        fontSize: "0.9rem",
+                        color: "var(--text-primary)",
+                      }}
+                    >
                       {rec.title || rec.name || `Recommendation ${idx + 1}`}
                     </div>
                     <PriorityBadge priority={priority} />
                   </div>
-                  <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                  <div
+                    style={{
+                      fontSize: "0.85rem",
+                      color: "var(--text-secondary)",
+                      lineHeight: 1.5,
+                    }}
+                  >
                     {rec.description || rec.text || rec}
                   </div>
                   {rec.action && (
-                    <div style={{ marginTop: 6, fontSize: "0.8rem", color: "var(--accent)", fontWeight: 500 }}>
+                    <div
+                      style={{
+                        marginTop: 6,
+                        fontSize: "0.8rem",
+                        color: "var(--accent)",
+                        fontWeight: 500,
+                      }}
+                    >
                       Action: {rec.action}
                     </div>
                   )}
@@ -545,7 +722,9 @@ function SeoAuditTab({ tenantId, token }) {
                     borderRadius: 8,
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 10 }}
+                  >
                     <div
                       style={{
                         width: 8,
@@ -555,9 +734,24 @@ function SeoAuditTab({ tenantId, token }) {
                         flexShrink: 0,
                       }}
                     />
-                    <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{dateStr}</span>
+                    <span
+                      style={{
+                        fontSize: "0.85rem",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      {dateStr}
+                    </span>
                   </div>
-                  <span style={{ fontWeight: 700, fontSize: "0.9rem", color: scoreColor }}>{entryScore}/100</span>
+                  <span
+                    style={{
+                      fontWeight: 700,
+                      fontSize: "0.9rem",
+                      color: scoreColor,
+                    }}
+                  >
+                    {entryScore}/100
+                  </span>
                 </div>
               );
             })}
@@ -603,7 +797,11 @@ function GeoScoreTab({ tenantId, token }) {
       const result = await runGeoScore(tenantId, token);
       setGeoData(result);
     } catch (err) {
-      setError(err.body?.detail || err.message || "GEO score check failed. Make sure your business is set up.");
+      setError(
+        err.body?.detail ||
+          err.message ||
+          "GEO score check failed. Make sure your business is set up.",
+      );
     } finally {
       setRunning(false);
     }
@@ -613,18 +811,37 @@ function GeoScoreTab({ tenantId, token }) {
 
   if (!geoData) {
     return (
-      <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--text-muted)" }}>
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--text-muted)", marginBottom: 12 }}>
+      <div
+        style={{
+          textAlign: "center",
+          padding: "60px 20px",
+          color: "var(--text-muted)",
+        }}
+      >
+        <svg
+          width="48"
+          height="48"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ color: "var(--text-muted)", marginBottom: 12 }}
+        >
           <path d="M12 2a10 10 0 1 0 10 10" />
           <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
           <path d="M2 12h10" />
           <path d="M16 6l5-3v8l-5 3V6z" />
         </svg>
-        <h3 style={{ color: "var(--text-primary)", margin: "0 0 8px" }}>Check Your AI Visibility</h3>
+        <h3 style={{ color: "var(--text-primary)", margin: "0 0 8px" }}>
+          Check Your AI Visibility
+        </h3>
         <p style={{ maxWidth: 520, margin: "0 auto 20px", lineHeight: 1.6 }}>
-          GEO (Generative Engine Optimization) measures how visible your business is to AI assistants
-          like ChatGPT, Claude, Perplexity, and Gemini. Find out if AI recommends your business when
-          potential customers ask for services you provide.
+          GEO (Generative Engine Optimization) measures how visible your
+          business is to AI assistants like ChatGPT, Claude, Perplexity, and
+          Gemini. Find out if AI recommends your business when potential
+          customers ask for services you provide.
         </p>
         <ErrorBanner error={error} onDismiss={() => setError(null)} />
         <button
@@ -649,15 +866,36 @@ function GeoScoreTab({ tenantId, token }) {
       <ErrorBanner error={error} onDismiss={() => setError(null)} />
 
       {/* Score + Platforms Row */}
-      <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 16, marginBottom: 24 }}>
-        <Card style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "260px 1fr",
+          gap: 16,
+          marginBottom: 24,
+        }}
+      >
+        <Card
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <ScoreGauge score={overallGeo} label="GEO Score" />
-          <div style={{ marginTop: 12, fontSize: "0.85rem", color: "var(--text-secondary)", textAlign: "center" }}>
+          <div
+            style={{
+              marginTop: 12,
+              fontSize: "0.85rem",
+              color: "var(--text-secondary)",
+              textAlign: "center",
+            }}
+          >
             {overallGeo >= 70
               ? "Strong AI visibility! AI assistants are likely recommending your business."
               : overallGeo >= 40
-              ? "Moderate visibility. There are opportunities to increase AI recommendations."
-              : "Low AI visibility. AI assistants may not be aware of your business yet."}
+                ? "Moderate visibility. There are opportunities to increase AI recommendations."
+                : "Low AI visibility. AI assistants may not be aware of your business yet."}
           </div>
           <button
             className="btn-primary"
@@ -672,10 +910,13 @@ function GeoScoreTab({ tenantId, token }) {
         {/* Platform Cards */}
         <Card>
           <SectionHeader>Platform Breakdown</SectionHeader>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+          >
             {Object.entries(PLATFORM_CONFIG).map(([key, config]) => {
               const platformData = platforms[key] || {};
-              const platformScore = platformData.score ?? platformData.visibility ?? null;
+              const platformScore =
+                platformData.score ?? platformData.visibility ?? null;
 
               let barColor = "var(--border)";
               if (platformScore !== null) {
@@ -714,15 +955,34 @@ function GeoScoreTab({ tenantId, token }) {
                   >
                     {config.label.charAt(0)}
                   </div>
-                  <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--text-primary)" }}>
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      fontSize: "0.85rem",
+                      color: "var(--text-primary)",
+                    }}
+                  >
                     {config.label}
                   </div>
                   {platformScore !== null ? (
                     <>
-                      <div style={{ fontWeight: 700, fontSize: "1.5rem", color: barColor }}>
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          fontSize: "1.5rem",
+                          color: barColor,
+                        }}
+                      >
                         {platformScore}
                       </div>
-                      <div style={{ width: "100%", height: 4, background: "var(--border)", borderRadius: 2 }}>
+                      <div
+                        style={{
+                          width: "100%",
+                          height: 4,
+                          background: "var(--border)",
+                          borderRadius: 2,
+                        }}
+                      >
                         <div
                           style={{
                             height: "100%",
@@ -735,10 +995,20 @@ function GeoScoreTab({ tenantId, token }) {
                       </div>
                     </>
                   ) : (
-                    <div style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>Not scored</div>
+                    <div
+                      style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}
+                    >
+                      Not scored
+                    </div>
                   )}
                   {platformData.status && (
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textAlign: "center" }}>
+                    <div
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "var(--text-muted)",
+                        textAlign: "center",
+                      }}
+                    >
                       {platformData.status}
                     </div>
                   )}
@@ -756,7 +1026,12 @@ function GeoScoreTab({ tenantId, token }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {factors.map((factor, idx) => {
               const status = factor.status || "neutral";
-              const color = status === "good" || status === "positive" ? "#22c55e" : status === "bad" || status === "negative" ? "#ef4444" : "#f59e0b";
+              const color =
+                status === "good" || status === "positive"
+                  ? "#22c55e"
+                  : status === "bad" || status === "negative"
+                    ? "#ef4444"
+                    : "#f59e0b";
               return (
                 <div
                   key={idx}
@@ -771,15 +1046,38 @@ function GeoScoreTab({ tenantId, token }) {
                     borderLeft: `3px solid ${color}`,
                   }}
                 >
-                  <span style={{ color, fontWeight: 700, fontSize: "0.9rem", flexShrink: 0 }}>
-                    {status === "good" || status === "positive" ? "\u2713" : status === "bad" || status === "negative" ? "\u2717" : "\u25CF"}
+                  <span
+                    style={{
+                      color,
+                      fontWeight: 700,
+                      fontSize: "0.9rem",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {status === "good" || status === "positive"
+                      ? "\u2713"
+                      : status === "bad" || status === "negative"
+                        ? "\u2717"
+                        : "\u25CF"}
                   </span>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--text-primary)" }}>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        fontSize: "0.85rem",
+                        color: "var(--text-primary)",
+                      }}
+                    >
                       {factor.name || factor.factor || `Factor ${idx + 1}`}
                     </div>
                     {factor.description && (
-                      <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: 2 }}>
+                      <div
+                        style={{
+                          fontSize: "0.8rem",
+                          color: "var(--text-muted)",
+                          marginTop: 2,
+                        }}
+                      >
                         {factor.description}
                       </div>
                     )}
@@ -827,10 +1125,23 @@ function GeoScoreTab({ tenantId, token }) {
                   {idx + 1}
                 </span>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--text-primary)" }}>
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      fontSize: "0.85rem",
+                      color: "var(--text-primary)",
+                    }}
+                  >
                     {tip.title || tip.name || `Tip ${idx + 1}`}
                   </div>
-                  <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: 2, lineHeight: 1.5 }}>
+                  <div
+                    style={{
+                      fontSize: "0.8rem",
+                      color: "var(--text-secondary)",
+                      marginTop: 2,
+                      lineHeight: 1.5,
+                    }}
+                  >
                     {tip.description || tip.text || tip}
                   </div>
                 </div>
@@ -840,11 +1151,26 @@ function GeoScoreTab({ tenantId, token }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {[
-              { title: "Claim your Google Business Profile", desc: "A verified GBP is the foundation for AI recommendations. Keep it updated with hours, photos, and services." },
-              { title: "Build authoritative content", desc: "Publish helpful, original content on your website. AI systems prioritize businesses with detailed, trustworthy information." },
-              { title: "Encourage customer reviews", desc: "High-quality reviews on Google, Yelp, and industry sites signal trust to AI models that curate recommendations." },
-              { title: "Use structured data markup", desc: "Add Schema.org markup (LocalBusiness, FAQ, Review) so AI systems can reliably parse your business information." },
-              { title: "Get mentioned on authoritative sites", desc: "Citations on directories, industry publications, and local news help AI models discover and trust your business." },
+              {
+                title: "Claim your Google Business Profile",
+                desc: "A verified GBP is the foundation for AI recommendations. Keep it updated with hours, photos, and services.",
+              },
+              {
+                title: "Build authoritative content",
+                desc: "Publish helpful, original content on your website. AI systems prioritize businesses with detailed, trustworthy information.",
+              },
+              {
+                title: "Encourage customer reviews",
+                desc: "High-quality reviews on Google, Yelp, and industry sites signal trust to AI models that curate recommendations.",
+              },
+              {
+                title: "Use structured data markup",
+                desc: "Add Schema.org markup (LocalBusiness, FAQ, Review) so AI systems can reliably parse your business information.",
+              },
+              {
+                title: "Get mentioned on authoritative sites",
+                desc: "Citations on directories, industry publications, and local news help AI models discover and trust your business.",
+              },
             ].map((tip, idx) => (
               <div
                 key={idx}
@@ -876,10 +1202,23 @@ function GeoScoreTab({ tenantId, token }) {
                   {idx + 1}
                 </span>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--text-primary)" }}>
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      fontSize: "0.85rem",
+                      color: "var(--text-primary)",
+                    }}
+                  >
                     {tip.title}
                   </div>
-                  <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: 2, lineHeight: 1.5 }}>
+                  <div
+                    style={{
+                      fontSize: "0.8rem",
+                      color: "var(--text-secondary)",
+                      marginTop: 2,
+                      lineHeight: 1.5,
+                    }}
+                  >
                     {tip.desc}
                   </div>
                 </div>
@@ -964,8 +1303,16 @@ function KeywordsTab({ tenantId, token }) {
       {/* Add Keywords Form */}
       <Card style={{ marginBottom: 24 }}>
         <SectionHeader>Track Keywords</SectionHeader>
-        <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 12, marginTop: 0 }}>
-          Add keywords you want to track. Separate multiple keywords with commas.
+        <p
+          style={{
+            fontSize: "0.85rem",
+            color: "var(--text-secondary)",
+            marginBottom: 12,
+            marginTop: 0,
+          }}
+        >
+          Add keywords you want to track. Separate multiple keywords with
+          commas.
         </p>
         <div style={{ display: "flex", gap: 8 }}>
           <input
@@ -991,7 +1338,10 @@ function KeywordsTab({ tenantId, token }) {
             className="btn-primary"
             onClick={handleTrack}
             disabled={tracking || !newKeywords.trim()}
-            style={{ opacity: tracking || !newKeywords.trim() ? 0.6 : 1, whiteSpace: "nowrap" }}
+            style={{
+              opacity: tracking || !newKeywords.trim() ? 0.6 : 1,
+              whiteSpace: "nowrap",
+            }}
           >
             {tracking ? "Adding..." : "Add Keywords"}
           </button>
@@ -1000,7 +1350,14 @@ function KeywordsTab({ tenantId, token }) {
 
       {/* Keywords Table */}
       <Card>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 12,
+          }}
+        >
           <SectionHeader>Keyword Rankings</SectionHeader>
           <button
             className="btn-primary"
@@ -1020,14 +1377,46 @@ function KeywordsTab({ tenantId, token }) {
           </button>
         </div>
         {allKeywords.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--text-muted)" }}>
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--text-muted)", marginBottom: 8 }}>
+          <div
+            style={{
+              textAlign: "center",
+              padding: "40px 20px",
+              color: "var(--text-muted)",
+            }}
+          >
+            <svg
+              width="40"
+              height="40"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ color: "var(--text-muted)", marginBottom: 8 }}
+            >
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
             </svg>
-            <h3 style={{ color: "var(--text-primary)", margin: "0 0 8px", fontSize: "1rem" }}>No keywords tracked yet</h3>
-            <p style={{ maxWidth: 420, margin: "0 auto", lineHeight: 1.6, fontSize: "0.85rem" }}>
-              Add keywords above to start tracking your search rankings.
-              You can also run an SEO Audit to get AI-suggested keywords for your business.
+            <h3
+              style={{
+                color: "var(--text-primary)",
+                margin: "0 0 8px",
+                fontSize: "1rem",
+              }}
+            >
+              No keywords tracked yet
+            </h3>
+            <p
+              style={{
+                maxWidth: 420,
+                margin: "0 auto",
+                lineHeight: 1.6,
+                fontSize: "0.85rem",
+              }}
+            >
+              Add keywords above to start tracking your search rankings. You can
+              also run an SEO Audit to get AI-suggested keywords for your
+              business.
             </p>
           </div>
         ) : (
@@ -1035,7 +1424,13 @@ function KeywordsTab({ tenantId, token }) {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  {["Keyword", "Difficulty", "Search Volume", "Est. Position", "Recommendation"].map((header) => (
+                  {[
+                    "Keyword",
+                    "Difficulty",
+                    "Search Volume",
+                    "Est. Position",
+                    "Recommendation",
+                  ].map((header) => (
                     <th
                       key={header}
                       style={{
@@ -1065,10 +1460,22 @@ function KeywordsTab({ tenantId, token }) {
                         borderBottom: "1px solid var(--border)",
                         transition: "background 0.15s",
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.background =
+                          "rgba(255,255,255,0.02)")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.background = "transparent")
+                      }
                     >
-                      <td style={{ padding: "12px", fontSize: "0.9rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                      <td
+                        style={{
+                          padding: "12px",
+                          fontSize: "0.9rem",
+                          fontWeight: 600,
+                          color: "var(--text-primary)",
+                        }}
+                      >
                         {kw.keyword}
                         {kw.source === "suggested" && (
                           <span
@@ -1102,13 +1509,38 @@ function KeywordsTab({ tenantId, token }) {
                           {diffLevel} ({kw.difficulty ?? "N/A"})
                         </span>
                       </td>
-                      <td style={{ padding: "12px", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                        {kw.search_volume != null ? kw.search_volume.toLocaleString() : "N/A"}
+                      <td
+                        style={{
+                          padding: "12px",
+                          fontSize: "0.85rem",
+                          color: "var(--text-secondary)",
+                        }}
+                      >
+                        {kw.search_volume != null
+                          ? kw.search_volume.toLocaleString()
+                          : "N/A"}
                       </td>
-                      <td style={{ padding: "12px", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                        {kw.position != null ? `#${kw.position}` : kw.estimated_position != null ? `~#${kw.estimated_position}` : "--"}
+                      <td
+                        style={{
+                          padding: "12px",
+                          fontSize: "0.85rem",
+                          color: "var(--text-secondary)",
+                        }}
+                      >
+                        {kw.position != null
+                          ? `#${kw.position}`
+                          : kw.estimated_position != null
+                            ? `~#${kw.estimated_position}`
+                            : "--"}
                       </td>
-                      <td style={{ padding: "12px", fontSize: "0.8rem", color: "var(--text-muted)", maxWidth: 200 }}>
+                      <td
+                        style={{
+                          padding: "12px",
+                          fontSize: "0.8rem",
+                          color: "var(--text-muted)",
+                          maxWidth: 200,
+                        }}
+                      >
                         {kw.recommendation || kw.tip || "--"}
                       </td>
                     </tr>
@@ -1167,15 +1599,33 @@ function ProfileTab({ tenantId, token }) {
 
   if (!profile) {
     return (
-      <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--text-muted)" }}>
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--text-muted)", marginBottom: 12 }}>
+      <div
+        style={{
+          textAlign: "center",
+          padding: "60px 20px",
+          color: "var(--text-muted)",
+        }}
+      >
+        <svg
+          width="48"
+          height="48"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ color: "var(--text-muted)", marginBottom: 12 }}
+        >
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
           <circle cx="12" cy="7" r="4" />
         </svg>
-        <h3 style={{ color: "var(--text-primary)", margin: "0 0 8px" }}>No profile analysis yet</h3>
+        <h3 style={{ color: "var(--text-primary)", margin: "0 0 8px" }}>
+          No profile analysis yet
+        </h3>
         <p style={{ maxWidth: 480, margin: "0 auto 20px", lineHeight: 1.6 }}>
-          Analyze your business profile to check completeness and get suggestions
-          for improving your local search presence.
+          Analyze your business profile to check completeness and get
+          suggestions for improving your local search presence.
         </p>
         <ErrorBanner error={error} onDismiss={() => setError(null)} />
         <button
@@ -1198,22 +1648,47 @@ function ProfileTab({ tenantId, token }) {
     <div>
       <ErrorBanner error={error} onDismiss={() => setError(null)} />
 
-      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16, marginBottom: 24 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "280px 1fr",
+          gap: 16,
+          marginBottom: 24,
+        }}
+      >
         {/* Score Card */}
-        <Card style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <Card
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <ScoreGauge score={score} label="Completeness Score" />
-          <div style={{ marginTop: 12, fontSize: "0.85rem", color: "var(--text-secondary)", textAlign: "center" }}>
+          <div
+            style={{
+              marginTop: 12,
+              fontSize: "0.85rem",
+              color: "var(--text-secondary)",
+              textAlign: "center",
+            }}
+          >
             {score >= 80
               ? "Great! Your profile is well optimized."
               : score >= 50
-              ? "Good start. A few improvements can boost your ranking."
-              : "Your profile needs attention to rank well locally."}
+                ? "Good start. A few improvements can boost your ranking."
+                : "Your profile needs attention to rank well locally."}
           </div>
           <button
             className="btn-primary"
             onClick={handleAnalyze}
             disabled={analyzing}
-            style={{ marginTop: 16, opacity: analyzing ? 0.6 : 1, width: "100%" }}
+            style={{
+              marginTop: 16,
+              opacity: analyzing ? 0.6 : 1,
+              width: "100%",
+            }}
           >
             {analyzing ? "Analyzing..." : "Re-analyze Profile"}
           </button>
@@ -1223,7 +1698,14 @@ function ProfileTab({ tenantId, token }) {
         <Card>
           <SectionHeader>Missing or Incomplete Fields</SectionHeader>
           {missingFields.length === 0 ? (
-            <div style={{ color: "#22c55e", fontSize: "0.9rem", padding: "20px 0", textAlign: "center" }}>
+            <div
+              style={{
+                color: "#22c55e",
+                fontSize: "0.9rem",
+                padding: "20px 0",
+                textAlign: "center",
+              }}
+            >
               All fields are complete -- nice work!
             </div>
           ) : (
@@ -1241,13 +1723,35 @@ function ProfileTab({ tenantId, token }) {
                     borderRadius: 8,
                   }}
                 >
-                  <span style={{ color: "#ef4444", fontSize: "0.8rem", fontWeight: 700, flexShrink: 0, marginTop: 1 }}>!</span>
+                  <span
+                    style={{
+                      color: "#ef4444",
+                      fontSize: "0.8rem",
+                      fontWeight: 700,
+                      flexShrink: 0,
+                      marginTop: 1,
+                    }}
+                  >
+                    !
+                  </span>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--text-primary)" }}>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        fontSize: "0.85rem",
+                        color: "var(--text-primary)",
+                      }}
+                    >
                       {field.name || field.field || field}
                     </div>
                     {(field.suggestion || field.fix) && (
-                      <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: 2 }}>
+                      <div
+                        style={{
+                          fontSize: "0.8rem",
+                          color: "var(--text-muted)",
+                          marginTop: 2,
+                        }}
+                      >
                         {field.suggestion || field.fix}
                       </div>
                     )}
@@ -1269,8 +1773,8 @@ function ProfileTab({ tenantId, token }) {
                 rec.priority === "high"
                   ? "#ef4444"
                   : rec.priority === "medium"
-                  ? "#f59e0b"
-                  : "#3b82f6";
+                    ? "#f59e0b"
+                    : "#3b82f6";
               return (
                 <div
                   key={idx}
@@ -1282,17 +1786,43 @@ function ProfileTab({ tenantId, token }) {
                     padding: "14px 16px",
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-                    <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--text-primary)" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      marginBottom: 4,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        fontSize: "0.9rem",
+                        color: "var(--text-primary)",
+                      }}
+                    >
                       {rec.title || rec.name || `Recommendation ${idx + 1}`}
                     </div>
                     {rec.priority && <PriorityBadge priority={rec.priority} />}
                   </div>
-                  <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                  <div
+                    style={{
+                      fontSize: "0.85rem",
+                      color: "var(--text-secondary)",
+                      lineHeight: 1.5,
+                    }}
+                  >
                     {rec.description || rec.text || rec}
                   </div>
                   {rec.action && (
-                    <div style={{ marginTop: 6, fontSize: "0.8rem", color: "var(--accent)", fontWeight: 500 }}>
+                    <div
+                      style={{
+                        marginTop: 6,
+                        fontSize: "0.8rem",
+                        color: "var(--accent)",
+                        fontWeight: 500,
+                      }}
+                    >
                       Action: {rec.action}
                     </div>
                   )}
@@ -1346,11 +1876,25 @@ function CompetitorTab({ tenantId, token }) {
   return (
     <div>
       <h3 style={{ margin: "0 0 8px", fontSize: 16 }}>Competitor Analysis</h3>
-      <p style={{ color: "var(--text-secondary)", fontSize: 13, marginBottom: 20 }}>
-        Enter competitor business names to get an AI-powered comparison of your online presence.
+      <p
+        style={{
+          color: "var(--text-secondary)",
+          fontSize: 13,
+          marginBottom: 20,
+        }}
+      >
+        Enter competitor business names to get an AI-powered comparison of your
+        online presence.
       </p>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          marginBottom: 16,
+        }}
+      >
         {competitors.map((c, i) => (
           <input
             key={i}
@@ -1363,18 +1907,43 @@ function CompetitorTab({ tenantId, token }) {
           />
         ))}
         {competitors.length < 5 && (
-          <button onClick={addSlot} style={{ alignSelf: "flex-start", background: "none", border: "none", color: "var(--accent)", fontSize: 13, cursor: "pointer" }}>
+          <button
+            onClick={addSlot}
+            style={{
+              alignSelf: "flex-start",
+              background: "none",
+              border: "none",
+              color: "var(--accent)",
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
             + Add competitor
           </button>
         )}
       </div>
 
-      <button className="btn-primary" onClick={handleAnalyze} disabled={loading || !competitors.some((c) => c.trim())} style={{ marginBottom: 24 }}>
+      <button
+        className="btn-primary"
+        onClick={handleAnalyze}
+        disabled={loading || !competitors.some((c) => c.trim())}
+        style={{ marginBottom: 24 }}
+      >
         {loading ? "Analyzing..." : "Analyze Competitors"}
       </button>
 
       {error && (
-        <div style={{ padding: 12, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, color: "#fca5a5", fontSize: 13, marginBottom: 16 }}>
+        <div
+          style={{
+            padding: 12,
+            background: "rgba(239,68,68,0.1)",
+            border: "1px solid rgba(239,68,68,0.2)",
+            borderRadius: 8,
+            color: "#fca5a5",
+            fontSize: 13,
+            marginBottom: 16,
+          }}
+        >
           {error}
         </div>
       )}
@@ -1382,43 +1951,160 @@ function CompetitorTab({ tenantId, token }) {
       {result && (
         <div>
           {/* Score comparison */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 24 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: 12,
+              marginBottom: 24,
+            }}
+          >
             {result.your_business && (
-              <div style={{ padding: 16, background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 10 }}>
-                <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 4 }}>Your Business</div>
-                <div style={{ fontSize: 28, fontWeight: 700, color: "var(--accent)" }}>{result.your_business.estimated_score}</div>
-                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>{result.your_business.name}</div>
+              <div
+                style={{
+                  padding: 16,
+                  background: "rgba(99,102,241,0.08)",
+                  border: "1px solid rgba(99,102,241,0.2)",
+                  borderRadius: 10,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "var(--text-secondary)",
+                    marginBottom: 4,
+                  }}
+                >
+                  Your Business
+                </div>
+                <div
+                  style={{
+                    fontSize: 28,
+                    fontWeight: 700,
+                    color: "var(--accent)",
+                  }}
+                >
+                  {result.your_business.estimated_score}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                  {result.your_business.name}
+                </div>
               </div>
             )}
             {(result.competitors || []).map((comp, i) => (
-              <div key={i} style={{ padding: 16, background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                  <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Competitor</span>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: threatColors[comp.threat_level] || "#888", textTransform: "uppercase" }}>
+              <div
+                key={i}
+                style={{
+                  padding: 16,
+                  background: "var(--bg-secondary)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 10,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 4,
+                  }}
+                >
+                  <span
+                    style={{ fontSize: 13, color: "var(--text-secondary)" }}
+                  >
+                    Competitor
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: threatColors[comp.threat_level] || "#888",
+                      textTransform: "uppercase",
+                    }}
+                  >
                     {comp.threat_level}
                   </span>
                 </div>
-                <div style={{ fontSize: 28, fontWeight: 700, color: "var(--text-primary)" }}>{comp.estimated_score}</div>
-                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>{comp.name}</div>
+                <div
+                  style={{
+                    fontSize: 28,
+                    fontWeight: 700,
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  {comp.estimated_score}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                  {comp.name}
+                </div>
               </div>
             ))}
           </div>
 
           {/* Gaps & Advantages */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 16,
+              marginBottom: 24,
+            }}
+          >
             {result.gaps?.length > 0 && (
-              <div style={{ padding: 16, background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 10 }}>
-                <h4 style={{ margin: "0 0 10px", fontSize: 14, color: "#fca5a5" }}>Gaps to Close</h4>
-                <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6 }}>
-                  {result.gaps.map((g, i) => <li key={i}>{g}</li>)}
+              <div
+                style={{
+                  padding: 16,
+                  background: "rgba(239,68,68,0.05)",
+                  border: "1px solid rgba(239,68,68,0.15)",
+                  borderRadius: 10,
+                }}
+              >
+                <h4
+                  style={{ margin: "0 0 10px", fontSize: 14, color: "#fca5a5" }}
+                >
+                  Gaps to Close
+                </h4>
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: 16,
+                    fontSize: 13,
+                    color: "var(--text-secondary)",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {result.gaps.map((g, i) => (
+                    <li key={i}>{g}</li>
+                  ))}
                 </ul>
               </div>
             )}
             {result.advantages?.length > 0 && (
-              <div style={{ padding: 16, background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.15)", borderRadius: 10 }}>
-                <h4 style={{ margin: "0 0 10px", fontSize: 14, color: "#86efac" }}>Your Advantages</h4>
-                <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6 }}>
-                  {result.advantages.map((a, i) => <li key={i}>{a}</li>)}
+              <div
+                style={{
+                  padding: 16,
+                  background: "rgba(34,197,94,0.05)",
+                  border: "1px solid rgba(34,197,94,0.15)",
+                  borderRadius: 10,
+                }}
+              >
+                <h4
+                  style={{ margin: "0 0 10px", fontSize: 14, color: "#86efac" }}
+                >
+                  Your Advantages
+                </h4>
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: 16,
+                    fontSize: 13,
+                    color: "var(--text-secondary)",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {result.advantages.map((a, i) => (
+                    <li key={i}>{a}</li>
+                  ))}
                 </ul>
               </div>
             )}
@@ -1426,10 +2112,29 @@ function CompetitorTab({ tenantId, token }) {
 
           {/* Recommendations */}
           {result.recommendations?.length > 0 && (
-            <div style={{ padding: 16, background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: 10 }}>
-              <h4 style={{ margin: "0 0 10px", fontSize: 14 }}>Recommended Actions</h4>
-              <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.8 }}>
-                {result.recommendations.map((r, i) => <li key={i}>{r}</li>)}
+            <div
+              style={{
+                padding: 16,
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border)",
+                borderRadius: 10,
+              }}
+            >
+              <h4 style={{ margin: "0 0 10px", fontSize: 14 }}>
+                Recommended Actions
+              </h4>
+              <ol
+                style={{
+                  margin: 0,
+                  paddingLeft: 20,
+                  fontSize: 13,
+                  color: "var(--text-secondary)",
+                  lineHeight: 1.8,
+                }}
+              >
+                {result.recommendations.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
               </ol>
             </div>
           )}
@@ -1447,13 +2152,17 @@ export default function LocalSEOPage({ onNavigate }) {
   const { user, token } = useAuth();
   const [activeTab, setActiveTab] = useState("audit");
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
-  // Fetch live plan from API — never trust JWT for plan gating
+  // Fetch live plan from API - never trust JWT for plan gating
   const [livePlan, setLivePlan] = useState(null);
   useEffect(() => {
     if (!user?.tenantId || !token) return;
     fetchDashboard(user.tenantId, token)
-      .then((data) => { if (data?.plan) setLivePlan(data.plan); })
-      .catch((err) => console.warn("LocalSEO: failed to fetch plan:", err.message));
+      .then((data) => {
+        if (data?.plan) setLivePlan(data.plan);
+      })
+      .catch((err) =>
+        console.warn("LocalSEO: failed to fetch plan:", err.message),
+      );
   }, [user?.tenantId, token]);
   // Use live plan if loaded, fall back to JWT plan only until API responds
   const effectivePlan = livePlan ?? user?.plan;
@@ -1464,7 +2173,13 @@ export default function LocalSEOPage({ onNavigate }) {
         <div className="page-header">
           <h1>SEO & Marketing Hub</h1>
         </div>
-        <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--text-muted)" }}>
+        <div
+          style={{
+            textAlign: "center",
+            padding: "60px 20px",
+            color: "var(--text-muted)",
+          }}
+        >
           <p>Please log in to access SEO tools.</p>
         </div>
       </div>
@@ -1486,11 +2201,14 @@ export default function LocalSEOPage({ onNavigate }) {
       <div className="page-header">
         <div>
           <h1>SEO & Marketing Hub</h1>
-          <p>Audit your site, track AI visibility, and optimize for search engines</p>
+          <p>
+            Audit your site, track AI visibility, and optimize for search
+            engines
+          </p>
         </div>
       </div>
 
-      {/* Plan gate banner for free/growth users — uses live API plan, not JWT */}
+      {/* Plan gate banner for free/growth users - uses live API plan, not JWT */}
       {planBelowRequired(effectivePlan, "professional") && (
         <UpgradePrompt
           feature="Local SEO & Marketing Hub"
@@ -1515,11 +2233,21 @@ export default function LocalSEOPage({ onNavigate }) {
       </div>
 
       {/* Tab Content */}
-      {activeTab === "audit" && <SeoAuditTab tenantId={user.tenantId} token={token} />}
-      {activeTab === "geo" && <GeoScoreTab tenantId={user.tenantId} token={token} />}
-      {activeTab === "keywords" && <KeywordsTab tenantId={user.tenantId} token={token} />}
-      {activeTab === "competitors" && <CompetitorTab tenantId={user.tenantId} token={token} />}
-      {activeTab === "profile" && <ProfileTab tenantId={user.tenantId} token={token} />}
+      {activeTab === "audit" && (
+        <SeoAuditTab tenantId={user.tenantId} token={token} />
+      )}
+      {activeTab === "geo" && (
+        <GeoScoreTab tenantId={user.tenantId} token={token} />
+      )}
+      {activeTab === "keywords" && (
+        <KeywordsTab tenantId={user.tenantId} token={token} />
+      )}
+      {activeTab === "competitors" && (
+        <CompetitorTab tenantId={user.tenantId} token={token} />
+      )}
+      {activeTab === "profile" && (
+        <ProfileTab tenantId={user.tenantId} token={token} />
+      )}
     </div>
   );
 }

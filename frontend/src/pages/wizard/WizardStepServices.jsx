@@ -25,7 +25,7 @@ const SUGGESTION_ALIASES = {
 };
 
 const SUGGESTIONS = {
-  home_services: ["Emergency Repair", "Free Estimate", "Installation", "Maintenance", "Inspection"],
+  home_services: ["Repair", "Free Estimate", "Installation", "Maintenance", "Inspection"],
   hvac: ["AC Repair", "Furnace Installation", "Duct Cleaning", "Thermostat Installation", "System Tune-up"],
   auto_shop: ["Oil Change", "Tire Rotation", "Brake Service", "Engine Diagnostics", "Transmission Repair"],
   salon: ["Haircut", "Color & Highlights", "Blowout", "Keratin Treatment", "Extensions"],
@@ -87,12 +87,12 @@ export default function WizardStepServices({ wizardData, onNext, onBack }) {
     <div>
       <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 8 }}>Services & FAQs</h2>
       <p style={{ color: "rgba(255,255,255,0.5)", marginBottom: 32, fontSize: "0.9rem" }}>
-        Tell your AI assistant what you offer and how to answer common questions.
+        Tell your AI desk what jobs you take and how to answer common estimate questions.
       </p>
 
       {/* Services */}
       <div style={{ marginBottom: 32 }}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>What services do you offer?</div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>What services or job types do you offer?</div>
 
         {/* Chips */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
@@ -110,7 +110,7 @@ export default function WizardStepServices({ wizardData, onNext, onBack }) {
             value={serviceInput}
             onChange={e => setServiceInput(e.target.value)}
             onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addService(serviceInput))}
-            placeholder="Type a service and press Enter"
+            placeholder="Type a service or job type and press Enter"
             style={inputStyle}
           />
           <button onClick={() => addService(serviceInput)} style={{ ...btnSmall, flexShrink: 0 }}>Add</button>
@@ -133,7 +133,7 @@ export default function WizardStepServices({ wizardData, onNext, onBack }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <span style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.4)" }}>Q&A #{i + 1}</span>
               {faqs.length > 1 && (
-                <button onClick={() => removeFaq(i)} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: "0.85rem" }}>Remove</button>
+                <button onClick={() => removeFaq(i)} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: "0.85rem", padding: "8px", minHeight: 36 }}>Remove</button>
               )}
             </div>
             <input
@@ -168,7 +168,7 @@ export default function WizardStepServices({ wizardData, onNext, onBack }) {
 
 const inputStyle = { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "10px 14px", color: "#e2e8f0", fontSize: "0.9rem", width: "100%", boxSizing: "border-box" };
 const chipStyle = { display: "flex", alignItems: "center", gap: 6, background: "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.4)", borderRadius: 20, padding: "4px 12px", fontSize: "0.85rem", color: "#a5b4fc" };
-const chipXStyle = { background: "none", border: "none", cursor: "pointer", color: "#a5b4fc", fontSize: "1rem", lineHeight: 1, padding: 0 };
+const chipXStyle = { background: "none", border: "none", cursor: "pointer", color: "#a5b4fc", fontSize: "1rem", lineHeight: 1, padding: "4px", minWidth: 32, minHeight: 32 };
 const btnStyle = { padding: "14px", background: "#6366f1", color: "#fff", border: "none", borderRadius: 10, fontSize: "1rem", fontWeight: 600, cursor: "pointer" };
-const btnSmall = { padding: "8px 16px", background: "rgba(99,102,241,0.2)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 8, fontSize: "0.85rem", cursor: "pointer" };
-const suggStyle = { marginRight: 6, marginBottom: 4, padding: "4px 10px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, fontSize: "0.8rem", color: "rgba(255,255,255,0.6)", cursor: "pointer" };
+const btnSmall = { padding: "8px 16px", background: "rgba(99,102,241,0.2)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 8, fontSize: "0.85rem", cursor: "pointer", minHeight: 44 };
+const suggStyle = { marginRight: 6, marginBottom: 4, padding: "6px 12px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, fontSize: "0.8rem", color: "rgba(255,255,255,0.6)", cursor: "pointer", minHeight: 36 };

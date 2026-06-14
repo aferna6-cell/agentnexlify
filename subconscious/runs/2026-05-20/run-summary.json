@@ -1,0 +1,55 @@
+{
+  "run": 26,
+  "date": "2026-05-20",
+  "mode": "moratorium_sprint_lighter",
+  "evidence": {
+    "commits_last_3d": 3,
+    "production_commits_last_3d": 0,
+    "days_no_production_commits": 15,
+    "autonomous_implementations_this_cycle": 2,
+    "items_done_autonomously": [
+      "Item C — Moratorium Escalation Protocol (2ce31b2, 2026-05-20)",
+      "moratorium-sprint SKILL.md (7985fbb, 2026-05-19)"
+    ],
+    "items_still_missing": [
+      "scripts/check-widget-sync.sh (Item B)",
+      ".github/workflows/lead-qualifier-eval.yml (Item D)",
+      "check_project_invariants.py in pre-commit (Item A)"
+    ],
+    "pending_approvals": 10,
+    "oldest_pending": "AI-to-Human Handoff v1 (run 4, 2026-04-16, 34 days)",
+    "moratorium_active": true
+  },
+  "ideas_generated": 5,
+  "top_3_debated": [
+    "Invoke /moratorium-sprint — 3 items after Item C done",
+    "Authorize nightly review for Items A+B",
+    "pre-commit-guard-add skill"
+  ],
+  "debate_verdicts": {
+    "Invoke /moratorium-sprint": "SURVIVES → WINNER",
+    "Authorize nightly for Items A+B": "KILLED — parallel execution conflict",
+    "pre-commit-guard-add skill": "WEAKENED → Parking Lot"
+  },
+  "winner": {
+    "title": "Invoke /moratorium-sprint — execute 3 remaining S-effort items (A+B+D)",
+    "category": "workflow",
+    "confidence": "HIGH",
+    "effort": "~40 min",
+    "impact": "pending 9→6 when PR merges, moratorium exit path begins"
+  },
+  "governance_corrections": [
+    "Run 19 status: pending_approval → implemented (2ce31b2, Moratorium Escalation Protocol)",
+    "runs_implemented: 6→7"
+  ],
+  "new_rejected_paths": [
+    "Authorize nightly review to autonomously execute Items A+B — parallel execution conflict"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-05-20/ideas/candidate-ideas.md",
+    "subconscious/runs/2026-05-20/debate/debate-log.md",
+    "subconscious/runs/2026-05-20/winning-concept.md",
+    "subconscious/runs/2026-05-20/improvement-backlog.md",
+    "subconscious/runs/2026-05-20/run-summary.json"
+  ]
+}

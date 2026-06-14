@@ -1,0 +1,13 @@
+{
+  "name": "agentnexlify-schema-guard",
+  "positive": [
+    "Use schema guard before changing the leads query.",
+    "Verify columns before editing a Supabase route.",
+    "Check the schema for tenant_id versus client_id."
+  ],
+  "negative": [
+    "Polish the hero copy on the pricing page.",
+    "Run frontend visual checks for the dashboard layout.",
+    "Create a contractor demo transcript."
+  ]
+}

@@ -146,7 +146,7 @@ export default function MCPSetupPage() {
         </div>
       )}
 
-      {/* Section 1: Status Card — API Key */}
+      {/* Section 1: Status Card - API Key */}
       <div
         style={{
           background: "var(--bg-secondary)",

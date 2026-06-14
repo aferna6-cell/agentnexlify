@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchDashboard, billingCheckout, billingPortal, fetchTrialStatus, changePlan, cancelSubscription } from "../utils/api/dashboard";
 import SkeletonLoader from "../components/SkeletonLoader";
+import ReferralCard from "../components/billing/ReferralCard";
 import { notify } from "../utils/notify";
 
 const PLANS = [
   { key: "free",         name: "Free",         price: "$0",   period: "/mo" },
-  { key: "growth",       name: "Growth",       price: "$249", period: "/mo" },
-  { key: "autopilot",   name: "Autopilot",    price: "$299", period: "/mo" },
-  { key: "professional", name: "Professional", price: "$499", period: "/mo", popular: true },
-  { key: "enterprise",  name: "Enterprise",   price: "$899", period: "/mo" },
+  { key: "growth",       name: "Growth",       price: "$99", period: "/mo", trial: "7-day free trial" },
+  { key: "professional", name: "Professional", price: "$150", period: "/mo", popular: true },
+  { key: "enterprise",  name: "Enterprise",   price: "$250", period: "/mo" },
 ];
 
 // Data-driven feature comparison matrix
@@ -20,7 +20,7 @@ const FEATURE_MATRIX = [
     free: true, growth: true, professional: true, autopilot: true, enterprise: true,
   },
   {
-    feature: "Leads & CRM",
+    feature: "Leads & Customer Management",
     free: "50 leads", growth: "Unlimited", professional: "Unlimited", autopilot: "Unlimited", enterprise: "Unlimited",
   },
   {
@@ -109,6 +109,19 @@ export default function BillingPage() {
   }, [user?.tenantId, token]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Show success toast when returning from Stripe Checkout
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout_success") === "1") {
+      notify.success("Payment successful! Your plan is being activated.");
+      // Clean the URL so refresh doesn't re-trigger
+      params.delete("checkout_success");
+      params.delete("session_id");
+      const newUrl = `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}${window.location.hash}`;
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, []);
 
   const handleUpgrade = async (planKey) => {
     setUpgrading(planKey);
@@ -278,6 +291,21 @@ export default function BillingPage() {
               </button>
             </div>
           )}
+          {currentPlan !== "free" && (
+            <div
+              style={{
+                marginTop: 12,
+                fontSize: "0.8rem",
+                lineHeight: 1.5,
+                color: "var(--text-muted)",
+              }}
+            >
+              Need help with a billing mistake or accidental renewal? Email{" "}
+              <a href="mailto:help@agentnexlify.com">help@agentnexlify.com</a>{" "}
+              within 5 business days. Duplicate charges and service-activation
+              billing errors are eligible for manual review.
+            </div>
+          )}
           {confirmCancel && currentPlan !== "free" && (
             <div style={{
               marginTop: 12,
@@ -412,6 +440,18 @@ export default function BillingPage() {
                     }}>
                       {plan.price}<span style={{ fontSize: "0.7rem" }}>{plan.period}</span>
                     </div>
+                    {plan.trial && (
+                      <div style={{
+                        fontSize: "0.65rem",
+                        fontWeight: 700,
+                        color: "var(--green)",
+                        marginTop: 4,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.04em",
+                      }}>
+                        {plan.trial}
+                      </div>
+                    )}
                     {isCurrent && (
                       <div style={{
                         fontSize: "0.65rem",
@@ -513,91 +553,7 @@ export default function BillingPage() {
         </table>
       </div>
 
-      <MarketingAddonSection token={token} user={user} onReload={load} />
-    </div>
-  );
-}
-
-function MarketingAddonSection({ token, user, onReload }) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const apiUrl = import.meta.env.VITE_API_URL || "";
-  const active = Boolean(user?.marketing_addon_active);
-  const grandfathered = Boolean(user?.marketing_addon_grandfathered);
-
-  const handleSubscribe = async () => {
-    setError("");
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `${apiUrl}/api/v1/billing/marketing-addon/checkout`,
-        { method: "POST", headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.detail || `HTTP ${res.status}`);
-      }
-      const data = await res.json();
-      if (data.checkout_url) window.location.href = data.checkout_url;
-    } catch (exc) {
-      setError(exc.message);
-      setLoading(false);
-    }
-  };
-
-  const handleCancel = async () => {
-    if (!window.confirm("Cancel the Marketing Suite add-on at period end?")) return;
-    setError("");
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `${apiUrl}/api/v1/billing/marketing-addon/cancel`,
-        { method: "POST", headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.detail || `HTTP ${res.status}`);
-      }
-      if (onReload) onReload();
-    } catch (exc) {
-      setError(exc.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div style={{ marginTop: 32, padding: 24, background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: 12 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)", letterSpacing: 1.2 }}>
-            MARKETING SUITE ADD-ON
-          </div>
-          <div style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", margin: "4px 0" }}>
-            $49.99/month
-          </div>
-          <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-            SEO Audit Hub, Social Media, Campaigns, Marketing Dashboard, A/B Testing, Automation Rules, Trigger Logs.
-          </div>
-          {grandfathered && active && (
-            <div style={{ marginTop: 8, fontSize: 12, color: "var(--yellow)" }}>
-              You have grandfathered access. Subscribe to lock in continued access.
-            </div>
-          )}
-        </div>
-        <div>
-          {active && !grandfathered ? (
-            <button className="btn-secondary" disabled={loading} onClick={handleCancel} style={{ padding: "10px 24px" }}>
-              {loading ? "Working…" : "Cancel Add-on"}
-            </button>
-          ) : (
-            <button className="btn-primary" disabled={loading} onClick={handleSubscribe} style={{ padding: "10px 24px" }}>
-              {loading ? "Loading…" : active ? "Subscribe ($49.99/mo)" : "Add to Plan ($49.99/mo)"}
-            </button>
-          )}
-        </div>
-      </div>
-      {error && <div style={{ marginTop: 12, color: "var(--red)", fontSize: 13 }}>{error}</div>}
+      <ReferralCard />
     </div>
   );
 }

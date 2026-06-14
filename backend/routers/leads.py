@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from backend.models.database import get_service_supabase as _get_service_supabase
 from backend.models.schemas import LeadScoreResponse, LeadUpdateRequest, ScoreAllResponse
 from backend.services.llm_runtime import call_claude_messages
-from backend.routers.auth import _get_current_tenant
+from backend.dependencies import _get_current_tenant
 from backend.services.activity import log_activity
 from backend.services.email_sender import send_email
 from backend.limiter import limiter
@@ -372,7 +372,7 @@ async def send_lead_sms(
         raise HTTPException(status_code=400, detail="Lead has no phone number")
 
     from backend.services.twilio_service import send_sms
-    success = await send_sms(to=lead["phone"], body=req.message)
+    success = await send_sms(to=lead["phone"], body=req.message, tenant_id=tenant_id)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to send SMS")
 
@@ -705,7 +705,8 @@ async def import_leads_csv(
         except Exception as e:
             logger.warning("Import batch dedup query failed: %s", e)
 
-    # Process rows with dedup lookup from cache
+    # Process rows with dedup lookup from cache; collect new leads for batch insert
+    new_rows: list[tuple[int, dict]] = []
     for i, lead_data in parsed_rows:
         email = (lead_data.get("email") or "").lower()
         if email and email in existing_by_email:
@@ -719,22 +720,39 @@ async def import_leads_csv(
             updated += 1
             continue
 
-        # Insert new lead
         lead_data.setdefault("status", "new")
+        new_rows.append((i, lead_data))
+
+    # Insert all new leads in one query (was one insert per row). Fall back to
+    # per-row inserts on batch failure so row-level errors stay reportable.
+    if new_rows:
+        inserted_rows = []
         try:
-            result = tenant_insert(db, "leads", tenant_id, lead_data).execute()
-            if result.data:
-                created += 1
-                fire_event_background(tenant_id, "lead.created", {
-                    "lead_id": result.data[0]["id"],
-                    "name": lead_data.get("name"),
-                    "email": lead_data.get("email"),
-                    "source": "csv_import",
-                })
-            else:
-                errors.append({"row": i, "error": "Insert returned no data"})
-        except Exception as e:
-            errors.append({"row": i, "error": str(e)[:100]})
+            result = tenant_insert(db, "leads", tenant_id, [ld for _, ld in new_rows]).execute()
+            inserted_rows = list(result.data or [])
+            if not inserted_rows:
+                raise ValueError("Batch insert returned no data")
+        except Exception:
+            logger.warning("Import batch insert failed; falling back to per-row inserts", exc_info=True)
+            inserted_rows = []
+            for i, lead_data in new_rows:
+                try:
+                    result = tenant_insert(db, "leads", tenant_id, lead_data).execute()
+                    if result.data:
+                        inserted_rows.extend(result.data)
+                    else:
+                        errors.append({"row": i, "error": "Insert returned no data"})
+                except Exception as e:
+                    errors.append({"row": i, "error": str(e)[:100]})
+
+        created += len(inserted_rows)
+        for row in inserted_rows:
+            fire_event_background(tenant_id, "lead.created", {
+                "lead_id": row["id"],
+                "name": row.get("name"),
+                "email": row.get("email"),
+                "source": "csv_import",
+            })
 
     return {
         "created": created,

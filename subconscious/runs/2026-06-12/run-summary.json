@@ -1,0 +1,31 @@
+{
+  "run": 56,
+  "date": "2026-06-12",
+  "mode": "moratorium_systemic_guard",
+  "evidence_summary": "Run 55 winner (fix channels_instagram.py from __future__ + 10 em-dashes) NOT implemented by nightly d12bd21. from __future__ infection SPREAD: 1 file (run 55 target) → 4 files (+auth_password_reset.py, auth_billing.py, auth_google.py from PR #238 auth.py split). check_project_invariants exits 1 with 2 failures. 5 PRs merged in 3 days (PRs #237-#241, high velocity). Check 10 still not in pre-commit. AMOUNT_TO_PLAN still missing 15000/25000. email_sequences.py 1255L. kb-autopopulate broken 35+ days.",
+  "ideas_count": 5,
+  "winner": "Add pre-commit Check 13: from __future__ import annotations guard in FastAPI files (FAIL mode, ~10 lines bash, AUTONOMOUS-EXECUTABLE)",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "rejected": [],
+  "weakened": [
+    "Fix 4 files + 10 em-dashes as run 56 winner (mechanism uncertain for Python edits via nightly; run 55 pending_autonomous covers this)",
+    "Cross-tenant isolation tests for os_graph_memory.py (parking lot ROI 2.1)"
+  ],
+  "moratorium_active": true,
+  "moratorium_day": "42+",
+  "pending_before": 16,
+  "pending_after": 16,
+  "governance_corrections": [
+    "run 55 status: remains pending_autonomous (not implemented by nightly d12bd21)",
+    "run 55 target expanded: 4 files now have from __future__ violation (was 1)"
+  ],
+  "key_finding": "100% recurrence on router splits: PR #238 auth.py split introduced 3 new from __future__ violations within 1 day of run 55 targeting channels_instagram.py. Check 13 is the systemic fix; run 55 is the symptomatic fix. Proper order: guard first, then clear current violations.",
+  "questions_for_next_run": [
+    "Was Check 13 added by nightly to scripts/hooks/pre-commit?",
+    "Was run 55 winner (4 from __future__ fixes + 10 em-dashes) implemented?",
+    "Did Check 10 auto-wire after invariants exited 0?",
+    "Any new from __future__ violations from recent splits?"
+  ]
+}

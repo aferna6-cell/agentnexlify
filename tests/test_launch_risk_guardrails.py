@@ -271,11 +271,11 @@ async def test_admin_refund_audit_insert_failure_returns_existing_refund_audit(
 
 
 @pytest.mark.asyncio
-@patch("backend.routers.auth.log_activity")
-@patch("backend.routers.auth.stripe.Subscription.modify")
-@patch("backend.routers.auth.stripe.Subscription.list")
-@patch("backend.routers.auth.ensure_stripe_configured")
-@patch("backend.routers.auth.get_service_supabase")
+@patch("backend.routers.auth_billing.log_activity")
+@patch("backend.routers.auth_billing.stripe.Subscription.modify")
+@patch("backend.routers.auth_billing.stripe.Subscription.list")
+@patch("backend.routers.auth_billing.ensure_stripe_configured")
+@patch("backend.routers.auth_billing.get_service_supabase")
 async def test_billing_cancel_requires_and_persists_reason(
     mock_db_factory,
     _mock_ensure,
@@ -283,7 +283,7 @@ async def test_billing_cancel_requires_and_persists_reason(
     mock_subscription_modify,
     mock_log_activity,
 ):
-    from backend.routers.auth import billing_cancel
+    from backend.routers.auth_billing import billing_cancel
 
     tenant_select = Chain(data=[{
         "stripe_customer_id": "cus_123",

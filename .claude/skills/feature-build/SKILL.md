@@ -38,7 +38,7 @@ effort: high
 ## Frontend (React/Vite)
 1. Create page in frontend/src/pages/
 2. Match dark theme from existing dashboard pages
-3. Fetch from API on mount — never trust JWT for display
+3. Fetch from API on mount for display data — like this: `useEffect(() => { fetch('/api/v1/dashboard').then(r => r.json()).then(setData) }, [])`. JWT claims stale after plan change.
 4. Include loading states and helpful empty states
 5. Add sidebar navigation link
 6. Use frontend/src/utils/api.js for API calls
@@ -58,8 +58,8 @@ effort: high
 - **Pydantic response model mismatch → 500.** If the function returns extra keys and `response_model` is set, FastAPI raises. Always validate the response shape matches the model.
 - **Boolean feature flags need `bool | None = None` in update models.** Use `bool | None = None` (not `bool`) so a frontend `false` value passes the `if v is not None` filter and reaches the DB. With `bool = False` as default, you can't distinguish "user didn't send this field" from "user set it to False."
 - **New boolean DB column → update TWO Pydantic models.** When a migration adds a boolean column, add it to BOTH the response model (so frontend loads it correctly) AND the update request model (so frontend can save it). Missing either = silent failure. Example: `enable_ai_fallback` existed in DB from migration 101 but was missing from `WidgetConfigDetail` + `WidgetConfigUpdateRequest` for months — the dashboard toggle was a no-op. See schema-guard skill.
-- **Dark theme only.** New frontend pages must match the existing dashboard dark theme. See `design.md`.
-- **Display data from stale JWT.** Never render plan/email from `user` — fetch live from `/api/v1/dashboard`. JWT claims don't refresh on plan change.
+- **Dark theme only.** New frontend pages match the dashboard dark theme — like this: `className="bg-gray-900 text-gray-100"` root, `bg-gray-800` cards, `border-gray-700` dividers. See `design.md`.
+- **Display data from stale JWT.** Fetch live — like this: `const { data } = useSWR('/api/v1/dashboard', fetcher); const plan = data?.plan;` instead of reading `user.plan` from the JWT. JWT claims don't refresh on plan change.
 - **Migration file created but never applied.** See `migration-workflow` skill — file existing ≠ column existing in prod. Use Supabase MCP or Management API after creating.
 - **Widget must stay in sync.** `widget/` and `frontend/public/widget/` must be byte-identical. Pre-push hook enforces, but still easy to miss.
 - **Adding a new table ≠ adding to CLAUDE.md.** Update the schema table in CLAUDE.md or future sessions won't know about the new table.

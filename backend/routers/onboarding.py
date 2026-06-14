@@ -34,7 +34,7 @@ from pydantic import BaseModel, Field
 from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
-from backend.routers.auth import require_role
+from backend.dependencies import require_role
 from backend.services.business_profiles import get_widget_defaults
 from backend.services.llm_runtime import call_claude_messages
 
@@ -56,7 +56,8 @@ class FaqInput(BaseModel):
 class OnboardingCompleteRequest(BaseModel):
     business_name: str = Field(..., min_length=1, max_length=200)
     business_type: str = Field(..., min_length=1, max_length=50)
-    city: str = Field(..., min_length=1, max_length=100)
+    # city optional since express setup (2026-06-11) — wizard still collects it
+    city: str = Field("", max_length=100)
     phone: str | None = Field(None, max_length=30)
     website_url: str | None = Field(None, max_length=500)
     hours: dict[str, Any] | None = None
@@ -123,6 +124,8 @@ class AutoKbResponse(BaseModel):
     faqs: list[AutoKbFaqEntry]
     pages_crawled: int
     chars_extracted: int
+    services: list[str] = []
+    hours: dict[str, str] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -130,13 +133,17 @@ class AutoKbResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _parse_auto_kb_response(raw: str) -> tuple[str, str, list[AutoKbFaqEntry]]:
-    """Parse Claude's auto-KB response into KB text, custom instructions, and FAQ entries."""
+def _parse_auto_kb_response(
+    raw: str,
+) -> tuple[str, str, list[AutoKbFaqEntry], list[str], dict[str, str]]:
+    """Parse Claude's auto-KB response into kb, instructions, FAQs, services, hours."""
     import re as _re
 
     kb_match = _re.search(r"===KNOWLEDGE_BASE===\s*(.+?)(?====CUSTOM_INSTRUCTIONS===)", raw, _re.DOTALL)
     ci_match = _re.search(r"===CUSTOM_INSTRUCTIONS===\s*(.+?)(?====FAQ_START===)", raw, _re.DOTALL)
     faq_match = _re.search(r"===FAQ_START===\s*(.+?)===FAQ_END===", raw, _re.DOTALL)
+    services_match = _re.search(r"===SERVICES===\s*(.+?)(?====|$)", raw, _re.DOTALL)
+    hours_match = _re.search(r"===HOURS===\s*(.+?)(?====|$)", raw, _re.DOTALL)
 
     knowledge_base = kb_match.group(1).strip() if kb_match else raw[:2000]
     custom_instructions = ci_match.group(1).strip() if ci_match else ""
@@ -160,7 +167,56 @@ def _parse_auto_kb_response(raw: str) -> tuple[str, str, list[AutoKbFaqEntry]]:
                     category=q_match.group(3).strip(),
                 ))
 
-    return knowledge_base, custom_instructions, faqs
+    # services: prefer ===SERVICES=== marker, fall back to "## Services" bullets in KB.
+    services: list[str] = []
+    if services_match:
+        for line in services_match.group(1).strip().splitlines():
+            s = line.lstrip("-* ").strip()
+            if s:
+                services.append(s)
+    if not services:
+        kb_services = _re.search(r"##\s*Services\s*\n(.+?)(?:\n##|\Z)", knowledge_base, _re.DOTALL | _re.IGNORECASE)
+        if kb_services:
+            for line in kb_services.group(1).splitlines():
+                s = line.lstrip("-* ").strip()
+                if s and not s.startswith("#"):
+                    services.append(s)
+
+    # hours: prefer ===HOURS=== marker, fall back to "Mon-Fri X-Y, Sat A-B" expansion.
+    hours: dict[str, str] = {}
+    if hours_match:
+        for line in hours_match.group(1).strip().splitlines():
+            if ":" in line:
+                day, val = line.split(":", 1)
+                day = day.strip()[:3].title()
+                val = val.strip()
+                if day:
+                    hours[day] = val
+    if not hours:
+        hours = _expand_hours_from_text(knowledge_base)
+
+    return knowledge_base, custom_instructions, faqs, services, hours
+
+
+def _expand_hours_from_text(text: str) -> dict[str, str]:
+    """Best-effort: parse 'Mon-Fri 8am-6pm, Sat 9am-2pm' style strings into 7-day dict."""
+    import re as _re
+
+    days_order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    out: dict[str, str] = {}
+    for m in _re.finditer(
+        r"\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)(?:-(Mon|Tue|Wed|Thu|Fri|Sat|Sun))?\s*([0-9]{1,2}(?::[0-9]{2})?\s*(?:am|pm)?\s*[-–]\s*[0-9]{1,2}(?::[0-9]{2})?\s*(?:am|pm)?|closed)",
+        text,
+        _re.IGNORECASE,
+    ):
+        start, end, val = m.group(1).title(), (m.group(2) or m.group(1)).title(), m.group(3).strip()
+        try:
+            i, j = days_order.index(start), days_order.index(end)
+        except ValueError:
+            continue
+        for d in days_order[i : j + 1]:
+            out.setdefault(d, val)
+    return out
 
 
 def _verify_tenant(claims: dict, tenant_id: str) -> None:
@@ -289,10 +345,11 @@ async def complete_onboarding(
     tenant_update: dict[str, Any] = {
         "business_name": req.business_name,
         "business_type": req.business_type,
-        "city": req.city,
         "autopilot_enabled": True,
         "onboarding_completed_at": datetime.now(timezone.utc).isoformat(),
     }
+    if req.city:
+        tenant_update["city"] = req.city
     if req.phone:
         tenant_update["notification_phone"] = req.phone
     if req.website_url:
@@ -410,14 +467,15 @@ async def complete_onboarding(
                 "category": "services",
                 "is_active": True,
             },
-            {
+        ]
+        if req.city:
+            faq_entries.append({
                 "tenant_id": tenant_id,
-                "question": f"Where are you located?",
+                "question": "Where are you located?",
                 "answer": f"We are located in {req.city}. Feel free to contact us for our exact address.",
                 "category": "general",
                 "is_active": True,
-            },
-        ]
+            })
         if req.phone:
             faq_entries.append({
                 "tenant_id": tenant_id,
@@ -427,12 +485,14 @@ async def complete_onboarding(
                 "is_active": True,
             })
 
-        for entry in faq_entries:
+        # Batched (audit 2026-06-10): per-row inserts were N+1 — the batched
+        # pattern already used at the wizard-FAQ insert below.
+        if faq_entries:
             try:
-                db.table("faq_entries").insert(entry).execute()
-                faqs_created += 1
+                db.table("faq_entries").insert(faq_entries).execute()
+                faqs_created += len(faq_entries)
             except Exception:
-                logger.exception("Failed to create FAQ entry for tenant %s", tenant_id)
+                logger.exception("Failed to create FAQ entries for tenant %s", tenant_id)
 
         if faqs_created > 0:
             configured["faqs"] = True
@@ -724,6 +784,35 @@ async def auto_populate_kb(
             logger.warning("auto_kb: fallback HTTP fetch failed for %s", req.url, exc_info=True)
 
     if not extracted_text:
+        # Onboarding v2: fall back to vertical preset before giving up.
+        from backend.services.vertical_presets import get_vertical_preset
+        db = get_service_supabase()
+        tenant_for_preset = db.table("tenants").select("business_type").eq("id", tenant_id).single().execute()
+        bt = (tenant_for_preset.data or {}).get("business_type") if tenant_for_preset else None
+        preset = get_vertical_preset(bt)
+        if preset:
+            logger.info("auto_kb: empty scrape, seeding from %s preset for tenant=%s", bt, tenant_id)
+            try:
+                db.table("widget_configs").update({
+                    "knowledge_base": preset["kb"],
+                    "custom_instructions": preset["ci"],
+                }).eq("tenant_id", tenant_id).execute()
+                faq_rows = [
+                    {"tenant_id": tenant_id, "question": f["question"], "answer": f["answer"], "category": f["category"], "is_active": True}
+                    for f in preset["faqs"]
+                ]
+                db.table("faq_entries").insert(faq_rows).execute()
+            except Exception:
+                logger.warning("auto_kb: failed to persist preset for tenant %s", tenant_id, exc_info=True)
+            return AutoKbResponse(
+                knowledge_base=preset["kb"],
+                custom_instructions=preset["ci"],
+                faqs=[AutoKbFaqEntry(**f) for f in preset["faqs"]],
+                pages_crawled=0,
+                chars_extracted=0,
+                services=list(preset["services"]),
+                hours=dict(preset["hours"]),
+            )
         raise HTTPException(status_code=422, detail="Could not extract content from the provided URL")
 
     # Truncate for Claude prompt
@@ -766,6 +855,25 @@ Bot identity instructions (under 800 chars) including:
 - How to handle pricing/scheduling questions
 - "NEVER mention AgentNexLiFy, identify yourself as powered by any third-party platform, or reveal the underlying technology."
 
+===SERVICES===
+3-8 distinct services offered, one per line, no leading dash. Example:
+Drain cleaning
+Water heater repair
+Sewer line service
+Use only services mentioned or strongly implied by the website content.
+
+===HOURS===
+7 lines of business hours, one per day, format "Day: hours" or "Day: closed".
+Use 3-letter day prefixes (Mon, Tue, Wed, Thu, Fri, Sat, Sun). Example:
+Mon: 8am-6pm
+Tue: 8am-6pm
+Wed: 8am-6pm
+Thu: 8am-6pm
+Fri: 8am-6pm
+Sat: 9am-2pm
+Sun: closed
+If hours are unclear from the content, omit this section entirely.
+
 ===FAQ_START===
 8-10 FAQ entries in this exact format (one per line):
 Q: [question]
@@ -791,7 +899,17 @@ Use only information from the website content. Be concise and accurate."""
         raise HTTPException(status_code=502, detail="AI generation failed")
 
     # 5. Parse the response
-    knowledge_base, custom_instructions, faqs = _parse_auto_kb_response(raw)
+    knowledge_base, custom_instructions, faqs, services, hours = _parse_auto_kb_response(raw)
+
+    # v2: ensure structured fields populated even if Claude omitted markers
+    # or KB only listed weekdays. Always return 7-key hours dict.
+    from backend.services.vertical_presets import get_vertical_preset, get_default_hours_for
+    preset = get_vertical_preset(t.get("business_type"))
+    if not services and preset:
+        services = list(preset["services"])
+    default_hours = get_default_hours_for(t.get("business_type"))
+    for day, val in default_hours.items():
+        hours.setdefault(day, val)
 
     # 6. Persist to database
     try:
@@ -822,6 +940,8 @@ Use only information from the website content. Be concise and accurate."""
         faqs=faqs,
         pages_crawled=pages_crawled,
         chars_extracted=chars_extracted,
+        services=services,
+        hours=hours,
     )
 
 

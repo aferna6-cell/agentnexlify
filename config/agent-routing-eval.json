@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "policy_doc": "docs/AGENT_ROUTING.md",
+  "required_labels": [
+    "ai-routine",
+    "ai-docs",
+    "ai-tests",
+    "ai-risky"
+  ],
+  "sensitive_surface_terms": [
+    "auth",
+    "billing",
+    "pricing",
+    "stripe",
+    "supabase rls",
+    "migration",
+    "secret",
+    "legal",
+    "customer communication",
+    "production deploy",
+    "runtime ai policy"
+  ],
+  "routes": {
+    "premium-codex-claude": {
+      "model_target": "Codex plus Claude Sonnet/Opus review",
+      "use_when": "High-risk, ambiguous, architecture-heavy, customer-facing runtime AI, or sensitive production work.",
+      "forbidden_when": "Never use as an excuse to skip human review."
+    },
+    "low-cost-routine": {
+      "model_target": "Candidate low-cost coding worker after eval, for example Kimi Code or another routed agent.",
+      "use_when": "Low-risk scoped implementation, parser cleanup, small refactors, or boilerplate.",
+      "forbidden_when": "Task touches auth, billing, Stripe, RLS, migrations, secrets, production deploy logic, or runtime AI policy."
+    },
+    "low-cost-docs": {
+      "model_target": "Candidate low-cost docs worker after eval.",
+      "use_when": "README, docs, playbooks, demo scripts, and skill wording.",
+      "forbidden_when": "Docs change carries legal, pricing, customer promise, or security implications."
+    },
+    "low-cost-tests": {
+      "model_target": "Candidate low-cost test worker after eval.",
+      "use_when": "Focused tests around stable behavior and test-only cleanup.",
+      "forbidden_when": "Test requires product-code changes outside the explicit acceptance criteria."
+    },
+    "batch-candidate": {
+      "model_target": "Candidate batch processor after eval, with generated output reviewed before application.",
+      "use_when": "Many similar docs, client starter variants, issue triage drafts, or content transformations.",
+      "forbidden_when": "Any sensitive surface or unreviewed write path is involved."
+    }
+  },
+  "tasks": [
+    {
+      "id": "docs_local_release_note",
+      "title": "Improve local release docs",
+      "prompt": "Update the local release checklist with one troubleshooting note for a missing Python dependency. Do not change product code.",
+      "expected_route": "low-cost-docs",
+      "labels": ["ai-docs", "ai-routine"],
+      "risk_level": "low",
+      "surfaces": ["docs/LOCAL_RELEASE_CHECKLIST.md"],
+      "verification": ["npm run eval:agent-routing"],
+      "success_criteria": [
+        "Docs stay ASCII.",
+        "No product code changes.",
+        "The added note is actionable from Windows PowerShell."
+      ],
+      "disallowed_modes": ["--yolo", "agent-swarm", "unreviewed-write"]
+    },
+    {
+      "id": "local_seo_parser_test",
+      "title": "Add parser regression tests",
+      "prompt": "Add one focused regression test for local SEO JSON fence parsing. Match the existing pytest style.",
+      "expected_route": "low-cost-tests",
+      "labels": ["ai-tests", "ai-routine"],
+      "risk_level": "low",
+      "surfaces": ["tests/test_local_seo_parsers.py"],
+      "verification": ["python scripts/run_python.py -m pytest tests/test_local_seo_parsers.py -q"],
+      "success_criteria": [
+        "Only test files change.",
+        "The focused pytest command passes.",
+        "The test documents a stable parser behavior."
+      ],
+      "disallowed_modes": ["--yolo", "agent-swarm", "unreviewed-write"]
+    },
+    {
+      "id": "widget_copy_polish",
+      "title": "Polish non-sensitive widget copy",
+      "prompt": "Make a small non-sensitive copy improvement in the widget preview text and keep mirrored widget assets synchronized.",
+      "expected_route": "low-cost-routine",
+      "labels": ["ai-routine"],
+      "risk_level": "low",
+      "surfaces": ["widget/", "frontend/public/widget/", "landing-page-v2/widget/"],
+      "verification": ["npm run sync-widget:check", "npm run check:project"],
+      "success_criteria": [
+        "Widget mirrors remain byte-identical.",
+        "No API behavior changes.",
+        "Project invariants pass."
+      ],
+      "disallowed_modes": ["--yolo", "agent-swarm", "unreviewed-write"]
+    },
+    {
+      "id": "client_starter_variants",
+      "title": "Generate client starter variants",
+      "prompt": "Draft five client starter kit variants for common website builders as generated output for human review.",
+      "expected_route": "batch-candidate",
+      "labels": ["ai-docs", "ai-routine"],
+      "risk_level": "medium",
+      "surfaces": ["docs/client-starter-kit.md", "output/agent-routing-eval/"],
+      "verification": ["npm run eval:agent-routing"],
+      "success_criteria": [
+        "Output is generated for review before application.",
+        "No customer-specific promises are added.",
+        "No production code changes."
+      ],
+      "disallowed_modes": ["--yolo", "unreviewed-write"]
+    },
+    {
+      "id": "stripe_webhook_change",
+      "title": "Change Stripe webhook behavior",
+      "prompt": "Modify billing webhook behavior for subscription upgrades and update pricing copy.",
+      "expected_route": "premium-codex-claude",
+      "labels": ["ai-risky"],
+      "risk_level": "high",
+      "surfaces": ["backend/routers/billing.py", "backend/services/", "stripe", "pricing"],
+      "verification": ["npm run stripe-pricing:check", "npm run test:backend"],
+      "success_criteria": [
+        "Human plan is reviewed before implementation.",
+        "Stripe and pricing checks pass.",
+        "Human review approves before merge."
+      ],
+      "disallowed_modes": ["--yolo", "agent-swarm", "unreviewed-write", "low-cost-worker"]
+    },
+    {
+      "id": "supabase_rls_migration",
+      "title": "Add Supabase RLS migration",
+      "prompt": "Add a migration changing tenant isolation policy for leads.",
+      "expected_route": "premium-codex-claude",
+      "labels": ["ai-risky"],
+      "risk_level": "high",
+      "surfaces": ["migrations/", "supabase rls", "backend/"],
+      "verification": ["npm run test:backend", "manual migration review"],
+      "success_criteria": [
+        "Migration plan is reviewed before implementation.",
+        "RLS and tenant isolation are explicitly checked.",
+        "Human review approves before merge."
+      ],
+      "disallowed_modes": ["--yolo", "agent-swarm", "unreviewed-write", "low-cost-worker"]
+    }
+  ]
+}

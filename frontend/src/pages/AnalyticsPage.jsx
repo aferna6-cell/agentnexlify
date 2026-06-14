@@ -147,7 +147,7 @@ function BusiestHoursHeatMap({ peakHours, chartTheme }) {
   }
 
   // Build a 7x24 grid from peak_hours data
-  // peak_hours is [{hour, count}] — distribute across days proportionally for visualization
+  // peak_hours is [{hour, count}] - distribute across days proportionally for visualization
   // If we have day_of_week data, use it; otherwise spread hourly totals evenly across days
   const grid = Array.from({ length: 7 }, () => Array(24).fill(0));
 
@@ -431,7 +431,7 @@ export default function AnalyticsPage() {
       setShareSnapshot(data);
       setShareOpen(true);
     } catch (err) {
-      // Surface error visually — show a transient message
+      // Surface error visually - show a transient message
       setError(`Failed to generate snapshot: ${err.message}`);
       setTimeout(() => setError(null), 4000);
     } finally {
@@ -609,7 +609,7 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Response Time — stat cards + trend chart */}
+      {/* Response Time - stat cards + trend chart */}
       <div className="analytics-charts-row" style={{ gridTemplateColumns: "1fr" }}>
         <div className="analytics-chart-card">
           <h3>Response Time Trend</h3>

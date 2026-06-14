@@ -8,51 +8,46 @@ import anthropic
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from backend.dependencies import get_business_context, verify_tenant
+from backend.dependencies import _get_current_tenant, get_business_context, verify_tenant
 from backend.models.database import get_service_supabase
+from backend.services.plan_gate import require_marketing_access
 from backend.services.llm_runtime import call_claude_messages
-from backend.routers.auth import _get_current_tenant
-from backend.services.addon_gate import require_marketing_addon
+from backend.services.social_media_ai import (
+    PLATFORM_LIMITS,
+    VALID_PLATFORMS,
+    VALID_STATUSES,
+    build_campaign_system_prompt,
+    build_post_system_prompt,
+    parse_generated_campaign_posts,
+    parse_post_response,
+    validate_platform as _validate_platform,
+    validate_status as _validate_status,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/api/v1/social",
     tags=["social-media"],
-    dependencies=[Depends(require_marketing_addon)],
+    dependencies=[Depends(require_marketing_access)],
 )
 
-VALID_PLATFORMS = {"facebook", "instagram", "twitter", "linkedin", "google_business"}
-VALID_STATUSES = {"draft", "scheduled", "published", "failed"}
+# Re-export for tests that import from the router module (Rule 10: never change tests).
+_parse_generated_campaign_posts = parse_generated_campaign_posts
 
-# Platform-specific constraints for AI generation
-PLATFORM_LIMITS = {
-    "facebook": {
-        "max_chars": 2000,
-        "hashtag_style": "Minimal or no hashtags. 0-3 at most.",
-        "tone": "Casual and conversational. Short paragraphs. Emojis sparingly.",
-    },
-    "instagram": {
-        "max_chars": 2200,
-        "hashtag_style": "Include 15-25 relevant hashtags on a separate line at the end.",
-        "tone": "Visual, emotive, punchy. Use emojis naturally.",
-    },
-    "twitter": {
-        "max_chars": 280,
-        "hashtag_style": "1-3 hashtags woven into the text naturally.",
-        "tone": "Concise, witty, direct. Every word counts.",
-    },
-    "linkedin": {
-        "max_chars": 3000,
-        "hashtag_style": "3-5 professional hashtags at the end.",
-        "tone": "Professional, thought-leadership, value-driven. Use line breaks for readability.",
-    },
-    "google_business": {
-        "max_chars": 1500,
-        "hashtag_style": "No hashtags.",
-        "tone": "Local SEO optimized. Mention location/service area. Clear call to action.",
-    },
-}
+__all__ = [
+    "router",
+    "VALID_PLATFORMS",
+    "VALID_STATUSES",
+    "PLATFORM_LIMITS",
+    "_parse_generated_campaign_posts",
+    "AIGenerateRequest",
+    "AICampaignRequest",
+    "SocialPostCreate",
+    "SocialPostUpdate",
+    "generate_post_content",
+    "generate_campaign_content",
+]
 
 
 # --- Pydantic Models ---
@@ -87,75 +82,6 @@ class AICampaignRequest(BaseModel):
     posts_per_week: int = Field(7, ge=1, le=21)
 
 
-# --- Helpers ---
-
-def _parse_generated_campaign_posts(raw: str, default_platforms: list[str]) -> list[dict]:
-    """Parse AI campaign output separated by ===POST=== markers."""
-    posts = []
-    sections = raw.split("===POST===")
-    for section in sections:
-        section = section.strip()
-        if not section:
-            continue
-
-        post = {"day": 1, "platform": default_platforms[0], "content": "", "hashtags": []}
-        lines = section.split("\n")
-        content_lines = []
-        in_content = False
-
-        for line in lines:
-            stripped = line.strip()
-            if stripped.upper().startswith("DAY:"):
-                try:
-                    post["day"] = int(stripped.split(":", 1)[1].strip())
-                except (ValueError, IndexError):
-                    pass
-                in_content = False
-            elif stripped.upper().startswith("PLATFORM:"):
-                plat = stripped.split(":", 1)[1].strip().lower().replace(" ", "_")
-                if plat in VALID_PLATFORMS:
-                    post["platform"] = plat
-                in_content = False
-            elif stripped.upper().startswith("CONTENT:"):
-                content_start = stripped.split(":", 1)[1].strip()
-                if content_start:
-                    content_lines.append(content_start)
-                in_content = True
-            elif stripped.upper().startswith("HASHTAGS:"):
-                hashtag_text = stripped.split(":", 1)[1].strip()
-                if hashtag_text.lower() != "none":
-                    post["hashtags"] = [
-                        h.strip() if h.strip().startswith("#") else f"#{h.strip()}"
-                        for h in hashtag_text.split(",")
-                        if h.strip()
-                    ]
-                in_content = False
-            elif in_content:
-                content_lines.append(line)
-
-        post["content"] = "\n".join(content_lines).strip()
-        if post["content"]:
-            posts.append(post)
-
-    return posts
-
-
-def _validate_platform(platform: str) -> None:
-    if platform not in VALID_PLATFORMS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid platform: {platform}. Must be one of: {', '.join(sorted(VALID_PLATFORMS))}",
-        )
-
-
-def _validate_status(status: str) -> None:
-    if status not in VALID_STATUSES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid status: {status}. Must be one of: {', '.join(sorted(VALID_STATUSES))}",
-        )
-
-
 # --- Post CRUD Endpoints ---
 
 @router.post("/{tenant_id}/posts")
@@ -168,9 +94,7 @@ async def create_post(
     verify_tenant(claims, tenant_id)
     _validate_platform(req.platform)
 
-    status = "draft"
-    if req.scheduled_for:
-        status = "scheduled"
+    status = "scheduled" if req.scheduled_for else "draft"
 
     payload = {
         "tenant_id": tenant_id,
@@ -236,7 +160,6 @@ async def list_posts(
         result = query.execute()
         items = result.data or []
 
-        # Total count
         count_query = (
             db.table("social_posts")
             .select("id", count="exact")
@@ -337,20 +260,13 @@ async def generate_post_content(
     db = get_service_supabase()
     business_name, business_type = get_business_context(db, tenant_id)
 
-    platform_info = PLATFORM_LIMITS[req.platform]
-    biz_context = f" for {business_name}" + (f", a {business_type}" if business_type else "")
-
-    tone_instruction = ""
-    if req.tone:
-        tone_instruction = f"\nTone: {req.tone}."
-    else:
-        tone_instruction = f"\nTone: {platform_info['tone']}"
-
-    hashtag_instruction = ""
-    if req.include_hashtags:
-        hashtag_instruction = f"\nHashtags: {platform_info['hashtag_style']}"
-    else:
-        hashtag_instruction = "\nDo NOT include any hashtags."
+    system_prompt = build_post_system_prompt(
+        business_name=business_name,
+        business_type=business_type,
+        platform=req.platform,
+        tone=req.tone,
+        include_hashtags=req.include_hashtags,
+    )
 
     try:
         resp = await call_claude_messages(
@@ -359,20 +275,17 @@ async def generate_post_content(
             max_tokens=1000,
             temperature=0.7,
             timeout=30.0,
-            system=(
-                f"You are a social media marketing expert creating content{biz_context}. "
-                f"Generate a {req.platform} post about the given topic. "
-                f"Keep it under {platform_info['max_chars']} characters."
-                f"{tone_instruction}"
-                f"{hashtag_instruction}\n\n"
-                "Return ONLY the post content. If hashtags are included, put them on a separate "
-                "line at the end prefixed with 'HASHTAGS:' on its own line, then the hashtags."
-            ),
+            system=system_prompt,
             messages=[{
                 "role": "user",
                 "content": f"Create a {req.platform} post about: {req.topic}",
             }],
-            metadata={"tenant_id": tenant_id, "platform": req.platform, "tone": req.tone, "include_hashtags": req.include_hashtags},
+            metadata={
+                "tenant_id": tenant_id,
+                "platform": req.platform,
+                "tone": req.tone,
+                "include_hashtags": req.include_hashtags,
+            },
         )
         raw = resp.text.strip()
     except anthropic.RateLimitError:
@@ -387,22 +300,7 @@ async def generate_post_content(
         logger.exception("Social media AI generation failed for tenant %s", tenant_id)
         raise HTTPException(status_code=500, detail="AI content generation failed")
 
-    # Parse hashtags from response
-    content = raw
-    hashtags = []
-    if "HASHTAGS:" in raw:
-        parts = raw.split("HASHTAGS:", 1)
-        content = parts[0].strip()
-        hashtag_text = parts[1].strip()
-        hashtags = [h.strip().lstrip("#") for h in hashtag_text.replace(",", " ").split() if h.strip()]
-        hashtags = [f"#{h}" for h in hashtags if h]
-
-    return {
-        "content": content,
-        "hashtags": hashtags,
-        "character_count": len(content),
-        "platform": req.platform,
-    }
+    return parse_post_response(raw, req.platform)
 
 
 @router.post("/{tenant_id}/generate-campaign")
@@ -419,11 +317,12 @@ async def generate_campaign_content(
 
     db = get_service_supabase()
     business_name, business_type = get_business_context(db, tenant_id)
-    biz_context = f" for {business_name}" + (f", a {business_type}" if business_type else "")
 
-    platforms_desc = "\n".join(
-        f"- {p}: max {PLATFORM_LIMITS[p]['max_chars']} chars, {PLATFORM_LIMITS[p]['tone']} {PLATFORM_LIMITS[p]['hashtag_style']}"
-        for p in req.platforms
+    system_prompt = build_campaign_system_prompt(
+        business_name=business_name,
+        business_type=business_type,
+        platforms=req.platforms,
+        posts_per_week=req.posts_per_week,
     )
 
     try:
@@ -433,25 +332,16 @@ async def generate_campaign_content(
             max_tokens=4000,
             temperature=0.7,
             timeout=60.0,
-            system=(
-                f"You are a social media content strategist{biz_context}. "
-                f"Create a week-long content calendar with {req.posts_per_week} posts about the given topic. "
-                "Distribute posts across the specified platforms.\n\n"
-                f"Platforms and guidelines:\n{platforms_desc}\n\n"
-                "For each post, output in this exact format:\n"
-                "===POST===\n"
-                "DAY: [1-7]\n"
-                "PLATFORM: [platform_name]\n"
-                "CONTENT: [the post content]\n"
-                "HASHTAGS: [comma-separated hashtags or 'none']\n\n"
-                "Generate exactly the requested number of posts. Vary the days and platforms. "
-                "Each post should have a unique angle on the topic."
-            ),
+            system=system_prompt,
             messages=[{
                 "role": "user",
                 "content": f"Topic: {req.topic}\nPlatforms: {', '.join(req.platforms)}\nPosts: {req.posts_per_week}",
             }],
-            metadata={"tenant_id": tenant_id, "platform_count": len(req.platforms), "posts_per_week": req.posts_per_week},
+            metadata={
+                "tenant_id": tenant_id,
+                "platform_count": len(req.platforms),
+                "posts_per_week": req.posts_per_week,
+            },
         )
         raw = resp.text.strip()
     except anthropic.RateLimitError:
@@ -466,8 +356,7 @@ async def generate_campaign_content(
         logger.exception("Campaign AI generation failed for tenant %s", tenant_id)
         raise HTTPException(status_code=500, detail="AI campaign generation failed")
 
-    # Parse the response into individual posts
-    posts = _parse_generated_campaign_posts(raw, req.platforms)
+    posts = parse_generated_campaign_posts(raw, req.platforms)
 
     return {
         "posts": posts,
@@ -496,7 +385,6 @@ async def get_calendar(
     try:
         db = get_service_supabase()
 
-        # Get scheduled/published posts in the date range
         scheduled = (
             db.table("social_posts")
             .select("*")
@@ -507,7 +395,6 @@ async def get_calendar(
             .execute()
         )
 
-        # Also get posts published in this range
         published = (
             db.table("social_posts")
             .select("*")
@@ -519,7 +406,6 @@ async def get_calendar(
             .execute()
         )
 
-        # Also get draft posts created in this range (for planning view)
         drafts = (
             db.table("social_posts")
             .select("*")
@@ -532,14 +418,12 @@ async def get_calendar(
             .execute()
         )
 
-        # Merge and deduplicate
-        all_posts = {}
+        all_posts: dict = {}
         for post in (scheduled.data or []) + (published.data or []) + (drafts.data or []):
             all_posts[post["id"]] = post
         all_posts_list = list(all_posts.values())
 
-        # Group by date
-        calendar = {}
+        calendar: dict[str, list] = {}
         for post in all_posts_list:
             date_key = None
             if post.get("scheduled_for"):
@@ -550,9 +434,7 @@ async def get_calendar(
                 date_key = post["created_at"][:10]
 
             if date_key:
-                if date_key not in calendar:
-                    calendar[date_key] = []
-                calendar[date_key].append(post)
+                calendar.setdefault(date_key, []).append(post)
 
         return {
             "month": month,
@@ -578,7 +460,6 @@ async def get_analytics(
     try:
         db = get_service_supabase()
 
-        # Total posts by platform
         all_posts = (
             db.table("social_posts")
             .select("id, platform, status, created_at")
@@ -587,15 +468,14 @@ async def get_analytics(
         )
         posts = all_posts.data or []
 
-        by_platform = {}
-        by_status = {}
+        by_platform: dict = {}
+        by_status: dict = {}
         for post in posts:
             plat = post["platform"]
             stat = post["status"]
             by_platform[plat] = by_platform.get(plat, 0) + 1
             by_status[stat] = by_status.get(stat, 0) + 1
 
-        # Posting frequency (posts in last 30 days)
         thirty_days_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
         recent = (
             db.table("social_posts")

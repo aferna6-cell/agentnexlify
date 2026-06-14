@@ -1,0 +1,15 @@
+{
+  "url": "https://agentnexlify-production.up.railway.app/api/health",
+  "requests": 150,
+  "concurrency": 25,
+  "failures": 0,
+  "error_rate": 0.0,
+  "p50_ms": 554.6,
+  "p95_ms": 1393.2,
+  "max_ms": 9361.9,
+  "gate": {
+    "p95_ms": 2000.0,
+    "error_rate": 0.01
+  },
+  "result": "PASS"
+}

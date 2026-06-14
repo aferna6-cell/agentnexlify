@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.models.database import get_service_supabase
-from backend.routers.auth import _get_current_tenant, require_role
+from backend.dependencies import _get_current_tenant, require_role
 from backend.services.activity import log_activity
 from backend.services.tenant_scope import tenant_delete, tenant_insert, tenant_select, tenant_update
 

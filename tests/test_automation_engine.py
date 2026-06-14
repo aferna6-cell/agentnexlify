@@ -662,6 +662,11 @@ class _RecurringInvoiceQuery:
     def not_(self):
         return self
 
+    def filter(self, *args, **kwargs):
+        # PostgREST .filter("col", "not.is", "null") — the chain the real
+        # client uses since the broken .not_.is_() syntax was replaced.
+        return self
+
     def select(self, *args, **kwargs):
         if self.kind is None:
             self.kind = "count_select" if kwargs.get("count") == "exact" else "select"

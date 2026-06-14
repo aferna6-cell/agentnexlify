@@ -1,0 +1,247 @@
+{
+  "version": 1,
+  "schema": {
+    "input": {
+      "lead": "dict passed to lead_qualification._build_prompt — name, email, phone, areas_of_interest, timeline, budget",
+      "tenant": "dict passed to lead_qualification._build_prompt — business_name, business_type"
+    },
+    "expected": {
+      "recommendation": "exact match against hot_call_now | warm_nurture_sequence | cold_drop | disqualify_spam",
+      "intent_score_range": "[min, max] inclusive bounds",
+      "fit_score_range": "[min, max] inclusive bounds",
+      "notes": "human rationale for label — not graded"
+    }
+  },
+  "examples": [
+    {
+      "id": "hot-001-roof-leak-emergency",
+      "input": {
+        "lead": {
+          "name": "Maria Gonzalez",
+          "email": "maria.g@example.com",
+          "phone": "+15551234567",
+          "areas_of_interest": "Roof leaking in master bedroom after last night's storm. Water dripping onto floor.",
+          "timeline": "today if possible",
+          "budget": "whatever it costs to stop the leak"
+        },
+        "tenant": {
+          "business_name": "Apex Roofing",
+          "business_type": "roofing contractor"
+        }
+      },
+      "expected": {
+        "recommendation": "hot_call_now",
+        "intent_score_range": [8, 10],
+        "fit_score_range": [8, 10],
+        "notes": "Active emergency, clear scope, budget unconstrained, timeline today. Textbook hot lead."
+      }
+    },
+    {
+      "id": "hot-002-haircut-tomorrow-budget-set",
+      "input": {
+        "lead": {
+          "name": "Kevin Park",
+          "email": "kpark.dev@example.com",
+          "phone": "+15555550112",
+          "areas_of_interest": "Need a men's haircut + beard trim before a wedding",
+          "timeline": "tomorrow morning",
+          "budget": "$60-80"
+        },
+        "tenant": {
+          "business_name": "The Sharp Edge Barbershop",
+          "business_type": "barbershop"
+        }
+      },
+      "expected": {
+        "recommendation": "hot_call_now",
+        "intent_score_range": [8, 10],
+        "fit_score_range": [8, 10],
+        "notes": "Clear service, hard deadline, budget aligned with vertical."
+      }
+    },
+    {
+      "id": "warm-001-kitchen-remodel-Q3",
+      "input": {
+        "lead": {
+          "name": "Daniel Cohen",
+          "email": "dcohen@example.com",
+          "phone": "+15557894561",
+          "areas_of_interest": "Researching kitchen remodel — quartz counters, new cabinets, maybe move island",
+          "timeline": "starting in Q3 (3-4 months out)",
+          "budget": "$40k-$60k"
+        },
+        "tenant": {
+          "business_name": "Heritage Home Renovations",
+          "business_type": "general contractor"
+        }
+      },
+      "expected": {
+        "recommendation": "warm_nurture_sequence",
+        "intent_score_range": [5, 8],
+        "fit_score_range": [7, 10],
+        "notes": "Strong fit + budget, but timeline is months out. Nurture, don't burn the call."
+      }
+    },
+    {
+      "id": "warm-002-orthodontics-comparing",
+      "input": {
+        "lead": {
+          "name": "Priya Patel",
+          "email": "ppatel@example.com",
+          "phone": "+15553334444",
+          "areas_of_interest": "Looking into Invisalign for my teen — getting quotes from a few practices",
+          "timeline": "next 2-3 months",
+          "budget": "trying to stay under $5k"
+        },
+        "tenant": {
+          "business_name": "Smile Bright Orthodontics",
+          "business_type": "orthodontist"
+        }
+      },
+      "expected": {
+        "recommendation": "warm_nurture_sequence",
+        "intent_score_range": [5, 8],
+        "fit_score_range": [6, 9],
+        "notes": "Comparison-shopping, timeline OK, budget tight but workable. Email sequence."
+      }
+    },
+    {
+      "id": "warm-003-painting-no-timeline",
+      "input": {
+        "lead": {
+          "name": "Tom Reilly",
+          "email": "treilly@example.com",
+          "phone": "+15552223333",
+          "areas_of_interest": "interior painting, 3 bedrooms",
+          "timeline": "",
+          "budget": ""
+        },
+        "tenant": {
+          "business_name": "Coastal Painters",
+          "business_type": "painting contractor"
+        }
+      },
+      "expected": {
+        "recommendation": "warm_nurture_sequence",
+        "intent_score_range": [4, 7],
+        "fit_score_range": [6, 9],
+        "notes": "Service fits, contact provided, but no urgency/budget signal. Nurture with educational content + timeline ask."
+      }
+    },
+    {
+      "id": "cold-001-just-curious-about-pricing",
+      "input": {
+        "lead": {
+          "name": "Anonymous",
+          "email": "anon123@protonmail.com",
+          "phone": "",
+          "areas_of_interest": "Wondering how much you charge in general",
+          "timeline": "",
+          "budget": ""
+        },
+        "tenant": {
+          "business_name": "Apex Roofing",
+          "business_type": "roofing contractor"
+        }
+      },
+      "expected": {
+        "recommendation": "cold_drop",
+        "intent_score_range": [1, 4],
+        "fit_score_range": [1, 5],
+        "notes": "No phone, anonymous email, no scope, no budget, no timeline. Tire-kicker."
+      }
+    },
+    {
+      "id": "cold-002-out-of-area-vague",
+      "input": {
+        "lead": {
+          "name": "Sam K.",
+          "email": "sam.k.intl@example.co.uk",
+          "phone": "+442012345678",
+          "areas_of_interest": "Do you do work in London UK?",
+          "timeline": "",
+          "budget": ""
+        },
+        "tenant": {
+          "business_name": "Heritage Home Renovations",
+          "business_type": "general contractor (Boston, MA)"
+        }
+      },
+      "expected": {
+        "recommendation": "cold_drop",
+        "intent_score_range": [1, 4],
+        "fit_score_range": [1, 3],
+        "notes": "Wrong geography. Polite drop, no spend on follow-up."
+      }
+    },
+    {
+      "id": "spam-001-seo-pitch",
+      "input": {
+        "lead": {
+          "name": "Sergei",
+          "email": "seopro@bestrank.ru",
+          "phone": "+79001234567",
+          "areas_of_interest": "I can rank your site #1 on Google in 30 days, guaranteed. Reply for details on our enterprise SEO package.",
+          "timeline": "",
+          "budget": ""
+        },
+        "tenant": {
+          "business_name": "Apex Roofing",
+          "business_type": "roofing contractor"
+        }
+      },
+      "expected": {
+        "recommendation": "disqualify_spam",
+        "intent_score_range": [1, 2],
+        "fit_score_range": [1, 2],
+        "notes": "Clear B2B sales pitch via inbound lead form. Spam."
+      }
+    },
+    {
+      "id": "spam-002-crypto-investment",
+      "input": {
+        "lead": {
+          "name": "Crypto King",
+          "email": "btc.profits.now@example.cn",
+          "phone": "0000000000",
+          "areas_of_interest": "Hello dear, I have $50M USDT looking for investment partner. Reply with bank details to receive 30% commission.",
+          "timeline": "URGENT",
+          "budget": "$50M"
+        },
+        "tenant": {
+          "business_name": "Smile Bright Orthodontics",
+          "business_type": "orthodontist"
+        }
+      },
+      "expected": {
+        "recommendation": "disqualify_spam",
+        "intent_score_range": [1, 2],
+        "fit_score_range": [1, 2],
+        "notes": "Advance-fee scam template. Spam."
+      }
+    },
+    {
+      "id": "hot-003-power-wash-driveway-this-week",
+      "input": {
+        "lead": {
+          "name": "Linda Mercer",
+          "email": "lmercer@example.com",
+          "phone": "+15558881212",
+          "areas_of_interest": "Driveway + back patio power washing. Hosting a graduation party Saturday.",
+          "timeline": "by Friday this week",
+          "budget": "up to $400"
+        },
+        "tenant": {
+          "business_name": "Crystal Clear Power Washing",
+          "business_type": "power washing service"
+        }
+      },
+      "expected": {
+        "recommendation": "hot_call_now",
+        "intent_score_range": [8, 10],
+        "fit_score_range": [8, 10],
+        "notes": "Hard deadline, budget set, scope clear, perfect vertical match."
+      }
+    }
+  ]
+}

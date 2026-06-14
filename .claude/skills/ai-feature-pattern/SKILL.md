@@ -16,17 +16,18 @@ effort: medium
 - Examples: AI job writer, conversation categorizer, content repurposer, review response drafting
 
 ## When NOT to Use
-- Simple CRUD features with no AI calls
-- Features using non-Anthropic LLMs (OpenAI, etc.)
-- One-off scripts or local AI experiments outside the production service
-- Tasks that only involve prompt engineering without API integration
+Use this skill only when the feature matches these shapes:
+- Production feature calling Anthropic Claude API (like this: `client.messages.create(model="claude-sonnet-4-6", ...)` inside `backend/routers/` or `backend/services/`)
+- Integration code, not prompt-only experiments (like this: route handler calls extractor → parses JSON → persists to Supabase)
+- Anthropic SDK only (like this: `import anthropic`; other providers use their own skill)
+- CRUD-only features skip this skill and follow `feature-build` instead
 
 ## Standard Pattern
 
 ### 1. Prompt Engineering
 - Include business context (tenant name, type, city) when available
 - Be explicit about output format: "Return ONLY valid JSON with these fields..."
-- Include "Output ONLY the JSON object, no markdown fences" to reduce parsing issues
+- Instruct output shape positively: "Output ONLY the JSON object, no markdown fences" (like this: `prompt = "Return a JSON object with keys {name, email}. Output ONLY the JSON object, no markdown fences."`)
 - Set `temperature=0` for deterministic tasks (categorization, extraction)
 - Use default temperature for creative tasks (writing, drafting)
 
@@ -124,7 +125,7 @@ Key rules:
 - **Opus 4.7 prefill ban.** Prefilling assistant messages on 4.7 returns 400. Use structured outputs / system prompt instead.
 - **Streaming responses + thinking mode.** Set `thinking.display: "omitted"` or the extended-thinking tokens get interleaved with user-visible text.
 - **max_tokens too small silently truncates mid-JSON.** A 512-token cap on a "return a JSON object" prompt will produce unparseable output in ~5% of calls. Right-size for the expected output, not the input.
-- **`temperature=0` is not deterministic.** Claude still varies slightly. Don't write regression tests that assert exact text output — assert on shape/fields.
+- **`temperature=0` is not deterministic.** Claude still varies slightly. Assert on shape/fields in regression tests (like this: `assert "email" in result and isinstance(result["email"], str)`), not exact strings.
 - **Background task + error swallowing.** `background_tasks.add_task` runs after response is returned — exceptions don't reach the client. Must log with `logger.exception(...)` or errors disappear.
 - **Leaking the API key in logs.** Never log `response.request` objects or full headers — the Anthropic SDK sometimes includes the Bearer token. Log only `response.id` and `stop_reason`.
 - **Per-message AI calls without rate limit = cost explosion.** Categorizer on every chat message runs up $50-$100/day on a busy tenant. Gate on message count (every 5th) or conversation milestone.

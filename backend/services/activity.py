@@ -1,12 +1,40 @@
 """Activity logging service — fire-and-forget, never raises."""
 
-
 import logging
+import re
+from datetime import datetime
+from decimal import Decimal
 from typing import Any
 
 from backend.models.database import get_service_supabase
+from backend.services import attribution_service
 
 logger = logging.getLogger(__name__)
+
+
+def _mask_phone(phone: str) -> str:
+    """Mask phone to last-4 visible: +1234****7890.
+
+    Examples:
+        +12345557890  ->  +1234****7890
+        12345557890   ->  1234****7890
+        5557890       ->  ***7890  (short number fallback)
+    """
+    stripped = phone.strip()
+    prefix = "+" if stripped.startswith("+") else ""
+    digits = re.sub(r"\D", "", stripped)  # pure digits only
+
+    if len(digits) >= 8:
+        # Show first max(len-8, 4) digits + **** + last 4 (min 9 digits to avoid overlap)
+        visible_start = digits[:-8] if len(digits) > 8 else ""
+        if len(digits) >= 9 and len(visible_start) < 4:
+            visible_start = digits[:4]
+        masked = prefix + visible_start + "****" + digits[-4:]
+        return masked
+    # Short number fallback — mask all but last 4
+    if len(digits) > 4:
+        return prefix + "***" + digits[-4:]
+    return prefix + digits
 
 
 def log_activity(
@@ -35,3 +63,112 @@ def log_activity(
             tenant_id,
             exc_info=True,
         )
+
+
+def get_activity_events(
+    tenant_id: str,
+    since: datetime | None = None,
+    type_filter: str | None = None,
+    limit: int = 5,
+) -> list[dict]:
+    """Return recent activity_log rows for a tenant, phone numbers masked.
+
+    Args:
+        tenant_id: Tenant UUID string.
+        since: Only return events after this UTC datetime. Defaults to no filter.
+        type_filter: Match ``activity_type`` column exactly when provided.
+        limit: Maximum rows returned. Defaults to 5.
+
+    Returns:
+        List of dicts with keys: id, tenant_id, activity_type, description,
+        metadata (phone masked), lead_id, created_at.
+    """
+    try:
+        db = get_service_supabase()
+        query = (
+            db.table("activity_log")
+            .select(
+                "id, tenant_id, activity_type, description, metadata, lead_id, created_at"
+            )
+            .eq("tenant_id", tenant_id)
+        )
+        if since is not None:
+            query = query.gte("created_at", since.isoformat())
+        if type_filter is not None:
+            query = query.eq("activity_type", type_filter)
+        result = query.order("created_at", desc=True).limit(limit).execute()
+        rows = result.data or []
+
+        # Mask phone numbers in metadata
+        for row in rows:
+            meta = row.get("metadata") or {}
+            for key in ("caller", "from_phone", "phone"):
+                if key in meta and isinstance(meta[key], str) and meta[key]:
+                    meta[key] = _mask_phone(meta[key])
+            row["metadata"] = meta
+
+        return rows
+    except Exception:
+        logger.warning(
+            "Failed to get activity events tenant=%s", tenant_id, exc_info=True
+        )
+        return []
+
+
+def get_activity_totals(
+    tenant_id: str,
+    since: datetime | None = None,
+) -> dict:
+    """Return aggregate totals for a tenant's activity_log.
+
+    Args:
+        tenant_id: Tenant UUID string.
+        since: Only count events after this UTC datetime. Affects
+            ``events_count`` only — ``dollars_this_month`` always covers
+            calendar month UTC, ``hours_this_week`` always covers ISO
+            week UTC (Mon-Sun) regardless of ``since``.
+
+    Returns:
+        Dict with keys:
+            - ``events_count`` (int)
+            - ``dollars_this_month`` (str, Decimal serialized)
+            - ``hours_this_week`` (str, Decimal serialized)
+    """
+    try:
+        db = get_service_supabase()
+        query = (
+            db.table("activity_log")
+            .select("id", count="exact")
+            .eq("tenant_id", tenant_id)
+        )
+        if since is not None:
+            query = query.gte("created_at", since.isoformat())
+        result = query.execute()
+        count = result.count if result.count is not None else len(result.data or [])
+    except Exception:
+        logger.warning(
+            "Failed to get activity totals tenant=%s", tenant_id, exc_info=True
+        )
+        count = 0
+
+    try:
+        dollars = attribution_service.compute_dollars_this_month(tenant_id)
+    except Exception:
+        logger.warning(
+            "compute_dollars_this_month failed tenant=%s", tenant_id, exc_info=True
+        )
+        dollars = Decimal("0")
+
+    try:
+        hours = attribution_service.compute_hours_this_week(tenant_id)
+    except Exception:
+        logger.warning(
+            "compute_hours_this_week failed tenant=%s", tenant_id, exc_info=True
+        )
+        hours = Decimal("0")
+
+    return {
+        "events_count": count,
+        "dollars_this_month": str(dollars),
+        "hours_this_week": str(hours),
+    }

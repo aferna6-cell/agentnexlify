@@ -1,0 +1,11 @@
+# Minutes saved per activity_log event type.
+# Used by attribution_service.compute_hours_this_week() to convert event counts → hours.
+# Unknown activity_type → falls back to `default_minutes`.
+
+default_minutes: 5
+
+minutes_per_event_type:
+  missed_call_textback: 8
+  appointment_booked: 15
+  lead_captured: 5
+  no_show_recovered: 10

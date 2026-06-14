@@ -69,6 +69,11 @@ async def process_noshow_recovery() -> int:
                 appt["updated_at"].replace("Z", "+00:00")
             )
         except Exception:
+            logger.warning(
+                "noshow_recovery: unparseable updated_at on appointment %s — skipping",
+                appt_id,
+                exc_info=True,
+            )
             continue
 
         # Wait the initial delay before sending
@@ -80,14 +85,20 @@ async def process_noshow_recovery() -> int:
             try:
                 t = (
                     db.table("tenants")
-                    .select("business_name, plan, google_review_link, owner_email, noshow_recovery_enabled")
+                    .select(
+                        "business_name, plan, google_review_link, owner_email, noshow_recovery_enabled"
+                    )
                     .eq("id", tenant_id)
                     .limit(1)
                     .execute()
                 )
                 tenant_cache[tenant_id] = t.data[0] if t.data else None
             except Exception:
-                logger.warning("noshow_recovery: failed to load tenant %s", tenant_id, exc_info=True)
+                logger.warning(
+                    "noshow_recovery: failed to load tenant %s",
+                    tenant_id,
+                    exc_info=True,
+                )
                 tenant_cache[tenant_id] = None
 
         tenant = tenant_cache.get(tenant_id)
@@ -106,7 +117,9 @@ async def process_noshow_recovery() -> int:
         safe_biz = html.escape(business_name)
         safe_name = html.escape(customer_name)
 
-        # CAN-SPAM: check unsubscribe status
+        # CAN-SPAM: check unsubscribe status. Default-deny on failure —
+        # compliance requires that we not contact a customer we cannot
+        # prove is still subscribed.
         lead_id = appt.get("lead_id")
         if lead_id:
             try:
@@ -120,7 +133,12 @@ async def process_noshow_recovery() -> int:
                 if lr.data and lr.data[0].get("unsubscribed"):
                     continue
             except Exception:
-                logger.debug("noshow_recovery: unsubscribe check failed for lead %s", lead_id, exc_info=True)
+                logger.warning(
+                    "noshow_recovery: unsubscribe check failed for lead %s — skipping (default-deny)",
+                    lead_id,
+                    exc_info=True,
+                )
+                continue
 
         # Build rebooking URL
         base_url = settings.api_url.rstrip("/")
@@ -128,9 +146,12 @@ async def process_noshow_recovery() -> int:
         rebook_url = f"{base_url}/api/v1/book/reschedule/{appt_id}?token=noshow"
         try:
             from backend.services.booking import build_reschedule_url
+
             rebook_url = build_reschedule_url(appt_id)
         except Exception:
-            logger.debug("noshow_recovery: could not build signed reschedule URL", exc_info=True)
+            logger.debug(
+                "noshow_recovery: could not build signed reschedule URL", exc_info=True
+            )
 
         messages_sent = 0
 
@@ -148,7 +169,11 @@ async def process_noshow_recovery() -> int:
                         increment_sms_count(tenant_id)
                         messages_sent += 1
             except Exception:
-                logger.warning("noshow_recovery: SMS failed for appointment %s", appt_id, exc_info=True)
+                logger.warning(
+                    "noshow_recovery: SMS failed for appointment %s",
+                    appt_id,
+                    exc_info=True,
+                )
 
         # Send email
         if appt.get("customer_email"):
@@ -164,7 +189,7 @@ async def process_noshow_recovery() -> int:
                 f'<a href="{html.escape(rebook_url, quote=True)}" '
                 f'style="background:#4f46e5;color:#fff;padding:12px 24px;'
                 f'border-radius:6px;text-decoration:none;font-weight:600;">'
-                f'Reschedule Now</a></p>'
+                f"Reschedule Now</a></p>"
                 f"<p>We look forward to seeing you soon!</p>"
                 f"<p>Best,<br>The {safe_biz} Team</p>"
             )
@@ -179,34 +204,52 @@ async def process_noshow_recovery() -> int:
                 if result.get("success"):
                     messages_sent += 1
             except Exception:
-                logger.warning("noshow_recovery: email failed for appointment %s", appt_id, exc_info=True)
+                logger.warning(
+                    "noshow_recovery: email failed for appointment %s",
+                    appt_id,
+                    exc_info=True,
+                )
 
         if messages_sent > 0:
             sent += messages_sent
-            # Mark appointment so we don't send again
+            # Mark appointment so we don't send again. If this fails the next
+            # tick will re-send (query still matches) → duplicate SMS/email +
+            # customer spam. Log at error so alerting catches it.
             try:
-                db.table("appointments").update({
-                    "noshow_recovery_sent_at": now.isoformat(),
-                }).eq("id", appt_id).execute()
+                db.table("appointments").update(
+                    {
+                        "noshow_recovery_sent_at": now.isoformat(),
+                    }
+                ).eq("id", appt_id).execute()
             except Exception:
-                logger.warning("noshow_recovery: failed to mark appointment %s", appt_id, exc_info=True)
+                logger.error(
+                    "noshow_recovery: failed to mark appointment %s — next tick will re-send (duplicate-send risk)",
+                    appt_id,
+                    exc_info=True,
+                )
 
             # Log activity
             try:
-                db.table("activity_log").insert({
-                    "tenant_id": tenant_id,
-                    "action": "noshow_recovery_sent",
-                    "description": f"No-show recovery sent to {customer_name} for appointment {appt_id}",
-                    "metadata": {"appointment_id": appt_id, "lead_id": lead_id},
-                }).execute()
+                db.table("activity_log").insert(
+                    {
+                        "tenant_id": tenant_id,
+                        "action": "noshow_recovery_sent",
+                        "description": f"No-show recovery sent to {customer_name} for appointment {appt_id}",
+                        "metadata": {"appointment_id": appt_id, "lead_id": lead_id},
+                    }
+                ).execute()
             except Exception:
                 logger.debug("noshow_recovery: activity log failed", exc_info=True)
 
-            fire_event_background(tenant_id, "appointment.noshow_recovery", {
-                "appointment_id": appt_id,
-                "customer_name": customer_name,
-                "messages_sent": messages_sent,
-            })
+            fire_event_background(
+                tenant_id,
+                "appointment.noshow_recovery",
+                {
+                    "appointment_id": appt_id,
+                    "customer_name": customer_name,
+                    "messages_sent": messages_sent,
+                },
+            )
 
     # --- Follow-up for no-shows that haven't rebooked ---
     sent += await _send_noshow_followups(db, now, tenant_cache)
@@ -231,7 +274,7 @@ async def _send_noshow_followups(
                 "lead_id, noshow_recovery_sent_at"
             )
             .eq("status", "no_show")
-            .not_.is_("noshow_recovery_sent_at", "null")
+            .filter("noshow_recovery_sent_at", "not.is", "null")
             .is_("noshow_followup_sent_at", "null")
             .lte("noshow_recovery_sent_at", cutoff)
             .limit(BATCH_LIMIT)
@@ -251,7 +294,9 @@ async def _send_noshow_followups(
             try:
                 t = (
                     db.table("tenants")
-                    .select("business_name, plan, google_review_link, owner_email, noshow_recovery_enabled")
+                    .select(
+                        "business_name, plan, google_review_link, owner_email, noshow_recovery_enabled"
+                    )
                     .eq("id", tenant_id)
                     .limit(1)
                     .execute()
@@ -259,7 +304,9 @@ async def _send_noshow_followups(
                 tenant_cache[tenant_id] = t.data[0] if t.data else None
             except Exception:
                 logger.warning(
-                    "noshow_followup: failed to load tenant %s", tenant_id, exc_info=True,
+                    "noshow_followup: failed to load tenant %s",
+                    tenant_id,
+                    exc_info=True,
                 )
                 tenant_cache[tenant_id] = None
 
@@ -291,12 +338,18 @@ async def _send_noshow_followups(
                 )
                 if rebooked.data:
                     # Already rebooked — mark followup as done, skip sending
-                    db.table("appointments").update({
-                        "noshow_followup_sent_at": now.isoformat(),
-                    }).eq("id", appt_id).execute()
+                    db.table("appointments").update(
+                        {
+                            "noshow_followup_sent_at": now.isoformat(),
+                        }
+                    ).eq("id", appt_id).execute()
                     continue
         except Exception:
-            logger.debug("noshow_followup: rebook check failed", exc_info=True)
+            logger.warning(
+                "noshow_followup: rebook check failed for appointment %s",
+                appt_id,
+                exc_info=True,
+            )
 
         messages_sent = 0
 
@@ -314,7 +367,11 @@ async def _send_noshow_followups(
                         increment_sms_count(tenant_id)
                         messages_sent += 1
             except Exception:
-                logger.debug("noshow_followup: SMS failed", exc_info=True)
+                logger.warning(
+                    "noshow_followup: SMS failed for appointment %s",
+                    appt_id,
+                    exc_info=True,
+                )
 
         # Follow-up email
         if appt.get("customer_email"):
@@ -340,15 +397,28 @@ async def _send_noshow_followups(
                 )
                 messages_sent += 1
             except Exception:
-                logger.debug("noshow_followup: email failed", exc_info=True)
+                logger.warning(
+                    "noshow_followup: email failed for appointment %s",
+                    appt_id,
+                    exc_info=True,
+                )
 
         if messages_sent > 0:
             sent += messages_sent
+            # Mark appointment so we don't re-send follow-up. Failure here
+            # means next tick will match the same row → duplicate follow-up.
+            # Log at error so alerting catches it.
             try:
-                db.table("appointments").update({
-                    "noshow_followup_sent_at": now.isoformat(),
-                }).eq("id", appt_id).execute()
+                db.table("appointments").update(
+                    {
+                        "noshow_followup_sent_at": now.isoformat(),
+                    }
+                ).eq("id", appt_id).execute()
             except Exception:
-                logger.debug("noshow_followup: mark failed", exc_info=True)
+                logger.error(
+                    "noshow_followup: failed to mark appointment %s — next tick will re-send (duplicate-send risk)",
+                    appt_id,
+                    exc_info=True,
+                )
 
     return sent

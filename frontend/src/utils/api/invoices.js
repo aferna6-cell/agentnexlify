@@ -1,5 +1,5 @@
 /**
- * Invoice API functions — invoicing, payments, item templates.
+ * Invoice API functions - invoicing, payments, item templates.
  */
 import { request } from "./_client";
 

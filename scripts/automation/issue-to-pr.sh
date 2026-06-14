@@ -64,21 +64,10 @@ echo "[$TS] picked #$N: $TITLE" >&2
 gh issue edit "$N" --add-label "wip-auto" >/dev/null
 
 # --- classify ---
-CLASSIFY_PROMPT=$(cat <<EOF
-You are a triage agent. Decide if this GitHub issue is ready for an AI subagent to implement end-to-end.
-
-Issue #$N: $TITLE
-
-$BODY
-
-Return STRICT JSON, no prose:
-{"ready": true|false, "reason": "...", "clarifying_questions": ["..."]}
-
-Ready = goal concrete, files identifiable, success criteria inferable, no architecture decisions needed, no new secrets required.
-EOF
-)
-
-classification="$(echo "$CLASSIFY_PROMPT" | run_claude -p --model claude-haiku-4-5-20251001 --output-format text 2>/dev/null || echo '{"ready":false,"reason":"classifier failed","clarifying_questions":["rerun manually"]}')"
+# Direct Anthropic API call (not claude-code CLI) to avoid project-context
+# pollution + 126k cache_creation tokens ($0.17/call via CLI vs $0.0002 direct)
+classification="$(echo "$pick" | /usr/bin/python3 "$REPO_ROOT/scripts/automation/classify_issue.py" 2>/dev/null)"
+[ -z "$classification" ] && classification='{"ready":false,"reason":"classifier failed","clarifying_questions":["rerun manually"]}'
 
 ready="$(echo "$classification" | jq -r .ready 2>/dev/null || echo false)"
 

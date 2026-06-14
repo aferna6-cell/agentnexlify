@@ -1,5 +1,6 @@
 ---
 name: ubiquitous-language
+effort: medium
 description: Extract a DDD-style domain glossary from conversation, code, or specs. Surface AgentNexLiFy term mismatches (client_id vs tenant_id, status vs lead_stage). Output to docs/glossary.md. Load when user says "glossary", "ubiquitous language", "domain terms", "what does X mean here".
 origin: https://github.com/mattpocock/skills/tree/main/ubiquitous-language
 version: 1.0.0
@@ -73,8 +74,8 @@ Force same words for same things across code, docs, conversations, and tenant-fa
 - `areas_of_interest` — JSON array of tagged interests. Never `service_interest`.
 
 ## Plan Names (current)
-- free, growth ($249), professional ($499), autopilot ($299), enterprise ($899)
-- LEGACY: growth $199, professional $399, enterprise $799 (billed on old contracts)
+- free, growth ($99 Starter), autopilot ($150 Growth), professional ($250 Pro), enterprise ($899)
+- LEGACY: growth $199/$249, professional $399/$499, enterprise $799/$899 (billed on old contracts)
 - RETIRED: foundation, operations (NEVER use)
 
 ## Audit Findings (this session)

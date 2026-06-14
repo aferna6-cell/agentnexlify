@@ -1,0 +1,26 @@
+# Friday reading source list — one URL per line, # for comments.
+# Curated for AgentNexLiFy: AI/agent engineering signal, ruthless filter.
+# Add/remove sources as the field shifts. Re-eval quarterly.
+
+# Anthropic — primary signal, model + agent guidance
+https://www.anthropic.com/news
+https://www.anthropic.com/engineering
+https://docs.claude.com/en/docs/claude-code/overview
+
+# Independent engineers worth reading
+https://simonwillison.net/
+https://karpathy.bearblog.dev/
+https://eugeneyan.com/writing/
+
+# Agent + LLM-eng publications
+https://www.latent.space/
+https://newsletter.pragmaticengineer.com/
+https://blog.langchain.dev/
+
+# Postmortem / production-experience sources
+https://blog.cloudflare.com/tag/ai/
+https://vercel.com/blog
+https://www.notion.so/blog
+
+# Protocol + infra
+https://modelcontextprotocol.io/

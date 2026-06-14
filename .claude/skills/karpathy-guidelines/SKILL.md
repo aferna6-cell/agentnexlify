@@ -1,5 +1,6 @@
 ---
 name: karpathy-guidelines
+effort: high
 description: "Load when writing, reviewing, or refactoring code in backend/ or frontend/ to keep changes surgical, surface assumptions, avoid overcomplication. Bias: caution over speed on non-trivial work."
 version: 1.0.0
 origin: forrestchang/andrej-karpathy-skills
@@ -14,6 +15,18 @@ user-invocable: false
 Behavioral guidelines to reduce common LLM coding mistakes, derived from [Andrej Karpathy's observations](https://x.com/karpathy/status/2015883857489522876) on LLM coding pitfalls.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+## Why — Karpathy verbatim (failure modes this skill prevents)
+
+> **Blind assumptions:** "The models make wrong assumptions on your behalf and just run along with them without checking. They don't manage their confusion, don't seek clarifications, don't surface inconsistencies, don't present tradeoffs, don't push back when they should."
+
+> **Overcomplication:** "They really like to overcomplicate code and APIs, bloat abstractions, don't clean up dead code... implement a bloated construction over 1000 lines when 100 would do."
+
+> **Unwarranted changes:** "They still sometimes change/remove comments and code they don't sufficiently understand as side effects, even if orthogonal to the task."
+
+> **Loops are the lever:** "LLMs are exceptionally good at looping until they meet specific goals... Don't tell it what to do, give it success criteria and watch it go."
+
+If a diff smells like one of the first three, stop and re-apply the matching principle below. The fourth is the positive frame for principle #4 (Goal-Driven Execution).
 
 ## When to Use
 
@@ -31,14 +44,14 @@ Behavioral guidelines to reduce common LLM coding mistakes, derived from [Andrej
 
 ## 1. Think Before Coding
 
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
+**State assumptions. Surface confusion. Name tradeoffs.**
 
 Before implementing:
 
 - State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them — don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
+- When multiple interpretations exist, present them, like this: "This could mean A (reset user session) or B (reset DB row) — which?"
+- When a simpler approach exists, propose it. Push back when warranted.
+- When something is unclear, stop. Name what's confusing. Ask.
 
 **Pairs with:** `.claude/rules/no-assumptions.md` (existing rule — confidence <80% → ask).
 
@@ -46,10 +59,10 @@ Before implementing:
 
 **Minimum code that solves the problem. Nothing speculative.**
 
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
+- Ship exactly what was asked — no extra features.
+- Inline single-use code instead of abstracting it.
+- Add "flexibility" or "configurability" only when requested, like this: wait for a second caller before extracting a helper.
+- Handle only errors that can actually happen on the call path.
 - If you write 200 lines and it could be 50, rewrite it.
 
 Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
@@ -62,15 +75,15 @@ Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, sim
 
 When editing existing code:
 
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
+- Leave adjacent code, comments, and formatting as-is.
+- Refactor only code the task requires — leave working code intact.
 - Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it — don't delete it.
+- When you notice unrelated dead code, mention it in the report, like this: "Noticed: `helpers.py:42` unused since #812 — leaving for follow-up."
 
 When your changes create orphans:
 
 - Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
+- Leave pre-existing dead code for a dedicated cleanup pass.
 
 **The test:** Every changed line should trace directly to the user's request.
 
@@ -122,9 +135,9 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ## Gotchas
 
 - **"Simple" vs "simplistic".** Three similar lines is better than a premature abstraction, but don't copy-paste the same 50-line block five times to avoid a helper function. Use judgment — the line is around 3-4 repeats of non-trivial logic.
-- **Surgical changes conflict with formatters.** If a file has trailing whitespace or missing newlines on lines you didn't touch, leave them alone. The auto-formatter will catch them later. Don't let Prettier/Black drag you into a 500-line whitespace diff.
-- **Goal-driven execution needs a real goal.** "Make it work" is not a goal. "Tests in X file pass" is. If the user hasn't given you a success criterion, ASK for one before writing code.
-- **Push-back has a limit.** You can disagree with a user's approach once, with evidence. If they re-state the direction, implement what they asked. Don't re-litigate twice.
+- **Surgical changes conflict with formatters.** If a file has trailing whitespace or missing newlines on lines you didn't touch, leave them alone. The auto-formatter will catch them later. Keep formatter edits out of logic PRs — a 500-line whitespace diff hides the real change.
+- **Goal-driven execution needs a real goal.** "Make it work" is not a goal. "Tests in X file pass" is. When the user hasn't given you a success criterion, ASK for one before writing code.
+- **Push-back has a limit.** You can disagree with a user's approach once, with evidence. If they re-state the direction, implement what they asked — one round of push-back, then execute.
 - **Adjacent dead code temptation.** Seeing unused imports while editing a file is not permission to clean them. Note them in the response, let the user decide.
-- **Overlap with project rules.** This skill's principle #1 overlaps with `.claude/rules/no-assumptions.md`. They reinforce each other — don't treat them as redundant.
-- **Don't cargo-cult the checklist.** For a 5-line bug fix the full checklist is overhead. Use the principles, skip the ritual.
+- **Overlap with project rules.** This skill's principle #1 overlaps with `.claude/rules/no-assumptions.md`. Treat them as reinforcing — follow both.
+- **Skip the checklist on small fixes.** For a 5-line bug fix, use the principles and skip the ritual.
