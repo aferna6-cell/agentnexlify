@@ -84,8 +84,24 @@ def _check_static_contracts() -> list[str]:
 
             router_paths = [getattr(r, "path", "?") for r in _mar.router.routes]
             print(f"managed_agent_runs.router has {len(router_paths)} routes: {router_paths}")
+            print(f"total app.routes registered: {len(routes)}")
+            sample = sorted(p for (_m, p) in routes)[:6]
+            print(f"sample app paths: {sample}")
+            # Isolation repro: does include_router attach this router to a fresh app?
+            from fastapi import FastAPI as _F
+
+            _probe = _F()
+            _probe.include_router(_mar.router)
+            _probe_managed = [
+                getattr(r, "path", "?")
+                for r in _probe.routes
+                if "managed-agents" in getattr(r, "path", "")
+            ]
+            print(
+                f"fresh FastAPI().include_router -> {len(_probe_managed)} managed-agents routes"
+            )
         except Exception:
-            print("managed_agent_runs import raised:")
+            print("managed_agent_runs diagnostic raised:")
             traceback.print_exc()
 
     schema_log = (REPO_ROOT / "docs" / "dev-knowledge" / "schema-log.md").read_text(
