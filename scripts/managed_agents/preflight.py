@@ -75,6 +75,18 @@ def _check_static_contracts() -> list[str]:
         print("Registered managed-agents routes:")
         for line in managed or ["  (none)"]:
             print(f"  {line}")
+        # Pinpoint where registration broke: does the router itself have routes,
+        # or did include_router never attach them?
+        try:
+            import traceback
+
+            from backend.routers import managed_agent_runs as _mar
+
+            router_paths = [getattr(r, "path", "?") for r in _mar.router.routes]
+            print(f"managed_agent_runs.router has {len(router_paths)} routes: {router_paths}")
+        except Exception:
+            print("managed_agent_runs import raised:")
+            traceback.print_exc()
 
     schema_log = (REPO_ROOT / "docs" / "dev-knowledge" / "schema-log.md").read_text(
         encoding="utf-8"
