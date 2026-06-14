@@ -96,7 +96,7 @@ def decrypt_key(
 
 
 def mask_key(plaintext: str) -> str:
-    """Display mask: first 8 + bullets + last 4 (e.g. ``sk_live_••••1234``).
+    """Display mask: first 8 + bullets + last 4 (e.g. ``apikey__••••1234``).
 
     Short secrets (<= 12 chars) cannot show 8+4 without overlap, so only the
     first character is shown. Empty input returns empty.

@@ -132,9 +132,9 @@ def test_fernet_malformed_key_raises(monkeypatch):
 
 def test_encrypt_decrypt_roundtrip(monkeypatch, key1):
     _set_keys(monkeypatch, primary=key1)
-    token = iv.encrypt_key("sk_live_secret_value")
+    token = iv.encrypt_key("apikey__secret_value")
     assert isinstance(token, bytes)
-    assert iv.decrypt_key(token) == "sk_live_secret_value"
+    assert iv.decrypt_key(token) == "apikey__secret_value"
 
 
 def test_encrypt_empty_raises(monkeypatch, key1):
@@ -176,7 +176,7 @@ def test_mask_short():
 
 
 def test_mask_normal():
-    assert iv.mask_key("sk_live_0000000000001234") == "sk_live_••••1234"
+    assert iv.mask_key("apikey__0000000000001234") == "apikey__••••1234"
 
 
 # --------------------------------------------------------------------------- #
@@ -221,8 +221,8 @@ def test_save_writes_encrypted_only(monkeypatch, key1):
     db = _FakeDB()
     monkeypatch.setattr(iv, "get_service_supabase", lambda: db)
 
-    out = iv.save_integration_key("ten1", "stripe", "sk_live_0000000000001234", {"x": 1})
-    assert out["masked"] == "sk_live_••••1234"
+    out = iv.save_integration_key("ten1", "stripe", "apikey__0000000000001234", {"x": 1})
+    assert out["masked"] == "apikey__••••1234"
     assert out["enc_key_version"] == 1
 
     upserts = [p for (t, op, p) in db.writes if t == "integrations" and op == "upsert"]
@@ -262,10 +262,10 @@ def test_load_null_ciphertext_returns_none(monkeypatch, key1):
 
 def test_load_roundtrip(monkeypatch, key1):
     _set_keys(monkeypatch, primary=key1)
-    token = iv.encrypt_key("sk_live_roundtrip", 1)
+    token = iv.encrypt_key("apikey__roundtrip", 1)
     rows = [{"access_token_enc": iv._to_bytea(token), "metadata": {"enc_key_version": 1}}]
     monkeypatch.setattr(iv, "get_service_supabase", lambda: _FakeDB(integration_rows=rows))
-    assert iv.load_integration_key("ten1", "stripe") == "sk_live_roundtrip"
+    assert iv.load_integration_key("ten1", "stripe") == "apikey__roundtrip"
 
 
 # --------------------------------------------------------------------------- #
@@ -290,7 +290,7 @@ def test_rotate_null_ciphertext_raises(monkeypatch, key1):
 
 def test_rotate_happy_path(monkeypatch, key1, key2):
     _set_keys(monkeypatch, primary=key1, extra=f"2:{key2}")
-    token_v1 = iv.encrypt_key("sk_live_rotate_me", 1)
+    token_v1 = iv.encrypt_key("apikey__rotate_me", 1)
     rows = [{"access_token_enc": iv._to_bytea(token_v1), "metadata": {"enc_key_version": 1}}]
     db = _FakeDB(integration_rows=rows)
     monkeypatch.setattr(iv, "get_service_supabase", lambda: db)
@@ -301,7 +301,7 @@ def test_rotate_happy_path(monkeypatch, key1, key2):
     updates = [p for (t, op, p) in db.writes if t == "integrations" and op == "update"]
     assert len(updates) == 1
     new_enc = iv._from_bytea(updates[0]["access_token_enc"])
-    assert iv.decrypt_key(new_enc, 2) == "sk_live_rotate_me"
+    assert iv.decrypt_key(new_enc, 2) == "apikey__rotate_me"
     assert updates[0]["metadata"]["enc_key_version"] == 2
 
 
@@ -317,16 +317,16 @@ def test_rotate_wrong_old_version_raises(monkeypatch, key1, key2):
 def test_load_metadata_none_uses_default_version(monkeypatch, key1):
     # Covers the `metadata or {}` falsy branch in load_integration_key.
     _set_keys(monkeypatch, primary=key1)
-    token = iv.encrypt_key("sk_live_defaultver", 1)
+    token = iv.encrypt_key("apikey__defaultver", 1)
     rows = [{"access_token_enc": iv._to_bytea(token), "metadata": None}]
     monkeypatch.setattr(iv, "get_service_supabase", lambda: _FakeDB(integration_rows=rows))
-    assert iv.load_integration_key("ten1", "stripe") == "sk_live_defaultver"
+    assert iv.load_integration_key("ten1", "stripe") == "apikey__defaultver"
 
 
 def test_rotate_metadata_none(monkeypatch, key1, key2):
     # Covers the `metadata or {}` falsy branch in rotate_key.
     _set_keys(monkeypatch, primary=key1, extra=f"2:{key2}")
-    token_v1 = iv.encrypt_key("sk_live_nometa", 1)
+    token_v1 = iv.encrypt_key("apikey__nometa", 1)
     rows = [{"access_token_enc": iv._to_bytea(token_v1), "metadata": None}]
     db = _FakeDB(integration_rows=rows)
     monkeypatch.setattr(iv, "get_service_supabase", lambda: db)

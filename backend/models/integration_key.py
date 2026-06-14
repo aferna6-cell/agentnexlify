@@ -19,5 +19,5 @@ class MaskedKeyResponse(BaseModel):
     """Safe-to-display result after save/mask. Never carries the plaintext key."""
 
     provider: str
-    masked: str = Field(..., description="e.g. sk_live_••••1234")
+    masked: str = Field(..., description="e.g. apikey__••••1234")
     enc_key_version: int = 1
