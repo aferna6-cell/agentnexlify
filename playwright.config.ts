@@ -18,10 +18,16 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer: {
-    command: "npm run preview --prefix frontend",
-    url: "http://localhost:4173",
-    reuseExistingServer: !process.env.CI,
-    timeout: 30000,
-  },
+  // Prod-targeting smoke jobs (widget-smoke, demo-smoke) set
+  // PW_SKIP_WEBSERVER=1 — they hit live URLs and never install/build the
+  // frontend, so booting the Vite preview there fails with "vite: not
+  // found" (this broke every scheduled smoke run until 2026-06-12).
+  webServer: process.env.PW_SKIP_WEBSERVER
+    ? undefined
+    : {
+        command: "npm run preview --prefix frontend",
+        url: "http://localhost:4173",
+        reuseExistingServer: !process.env.CI,
+        timeout: 30000,
+      },
 });

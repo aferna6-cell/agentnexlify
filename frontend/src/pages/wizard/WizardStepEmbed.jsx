@@ -1,12 +1,40 @@
 // frontend/src/pages/wizard/WizardStepEmbed.jsx
+//
+// Final wizard step. The Agent OS is already live - this step is the
+// OPTIONAL website widget install. Because most small-business owners can't
+// edit their own site, the escape hatch ("email this to my web person") is
+// as prominent as the snippet itself.
 import { useState, useEffect } from "react";
+import { emailEmbedInstructions } from "../../utils/api/onboarding";
 
 const CDN_URL = "https://agentnexlify.com/widget/agentnexlify-widget.js";
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
+const PLATFORM_GUIDES = [
+  {
+    name: "WordPress",
+    steps: "Appearance → Theme File Editor → footer.php, paste before </body>. Or install the \"Insert Headers and Footers\" plugin and paste it there.",
+  },
+  {
+    name: "Wix",
+    steps: "Settings → Custom Code → Add Custom Code → paste the snippet, load on All Pages in Body - end.",
+  },
+  {
+    name: "Squarespace",
+    steps: "Settings → Advanced → Code Injection → paste into the Footer box.",
+  },
+  {
+    name: "GoDaddy",
+    steps: "Edit Site → add an HTML section → paste the snippet.",
+  },
+];
+
 export default function WizardStepEmbed({ wizardData, token, tenantId }) {
   const [copied, setCopied] = useState(false);
   const [apiKey, setApiKey] = useState(null);
+  const [helperEmail, setHelperEmail] = useState("");
+  const [sendState, setSendState] = useState("idle"); // idle | sending | sent | error
+  const [openGuide, setOpenGuide] = useState(null);
 
   useEffect(() => {
     if (!token || !tenantId) return;
@@ -34,64 +62,125 @@ export default function WizardStepEmbed({ wizardData, token, tenantId }) {
     });
   }
 
+  async function handleSendToHelper(e) {
+    e.preventDefault();
+    if (!helperEmail.trim()) return;
+    setSendState("sending");
+    try {
+      await emailEmbedInstructions(tenantId, token, helperEmail.trim());
+      setSendState("sent");
+    } catch {
+      setSendState("error");
+    }
+  }
+
   return (
     <div style={{ textAlign: "center" }}>
-      {/* Success banner */}
-      <div style={{ background: "rgba(134,239,172,0.1)", border: "1px solid rgba(134,239,172,0.3)", borderRadius: 14, padding: "28px 20px", marginBottom: 32 }}>
-        <div style={{ fontSize: "2.5rem", marginBottom: 8 }}>🎉</div>
-        <h2 style={{ fontSize: "1.4rem", fontWeight: 700, color: "#86efac", marginBottom: 6 }}>Your AI assistant is live!</h2>
+      {/* Success banner - the product is live regardless of the widget */}
+      <div style={{ background: "rgba(134,239,172,0.1)", border: "1px solid rgba(134,239,172,0.3)", borderRadius: 14, padding: "28px 20px", marginBottom: 24 }}>
+        <h2 style={{ fontSize: "1.4rem", fontWeight: 700, color: "#86efac", marginBottom: 6 }}>Your AI staff is on the clock</h2>
         <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.9rem", margin: 0 }}>
-          Paste this code on your website to activate the chat widget.
+          Ask them to send invoices, chase leads, and book appointments - starting now.
         </p>
       </div>
 
-      {/* Embed snippet */}
-      <div style={{ textAlign: "left", marginBottom: 32 }}>
+      {/* Primary CTA: Agent OS */}
+      <a href="/dashboard/agent-os" style={{ display: "block", padding: "16px", background: "#6366f1", color: "#fff", borderRadius: 10, fontSize: "1.05rem", fontWeight: 700, textDecoration: "none", marginBottom: 28 }}>
+        Meet your AI staff →
+      </a>
+
+      {/* Optional widget install */}
+      <div style={{ textAlign: "left", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: 20, marginBottom: 16 }}>
+        <div style={{ fontWeight: 700, marginBottom: 4 }}>
+          Optional: add your AI front desk to your website
+        </div>
+        <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.85rem", marginTop: 0, marginBottom: 16 }}>
+          One line of code puts the chat widget on your site so it captures leads 24/7.
+          You can also do this later from the dashboard.
+        </p>
+
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <span style={{ fontWeight: 600 }}>Your embed code</span>
+          <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>Your embed code</span>
           <button onClick={handleCopy} disabled={!apiKey} style={{ ...copyBtnStyle, opacity: apiKey ? 1 : 0.5 }}>
             {copied ? "✓ Copied!" : "Copy Code"}
           </button>
         </div>
         <pre style={{
           background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10,
-          padding: 20, fontSize: "0.85rem", color: "#86efac", overflowX: "auto", margin: 0, whiteSpace: "pre",
+          padding: 16, fontSize: "0.8rem", color: "#86efac", overflowX: "auto", margin: "0 0 16px", whiteSpace: "pre",
         }}>
           {snippet}
         </pre>
-      </div>
 
-      {/* Installation steps */}
-      <div style={{ textAlign: "left", background: "rgba(255,255,255,0.04)", borderRadius: 12, padding: 20, marginBottom: 32 }}>
-        <div style={{ fontWeight: 600, marginBottom: 14 }}>How to install</div>
-        {[
-          "Open your website's HTML file or CMS template",
-          "Paste the code above just before the closing </body> tag",
-          "Save and refresh your page - the chat widget will appear",
-        ].map((step, i) => (
-          <div key={i} style={{ display: "flex", gap: 14, marginBottom: i < 2 ? 12 : 0, alignItems: "flex-start" }}>
-            <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#6366f1", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, flexShrink: 0 }}>{i + 1}</div>
-            <span style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.9rem", paddingTop: 3 }}>{step}</span>
+        {/* Escape hatch: most owners don't edit their own site */}
+        <div style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.25)", borderRadius: 10, padding: 14, marginBottom: 16 }}>
+          <div style={{ fontWeight: 600, fontSize: "0.88rem", marginBottom: 8 }}>
+            Someone else manages your website?
+          </div>
+          {sendState === "sent" ? (
+            <p style={{ color: "#86efac", fontSize: "0.85rem", margin: 0 }}>
+              Sent! They'll get the code and step-by-step instructions.
+            </p>
+          ) : (
+            <form onSubmit={handleSendToHelper} style={{ display: "flex", gap: 8 }}>
+              <input
+                type="email"
+                value={helperEmail}
+                onChange={(e) => setHelperEmail(e.target.value)}
+                placeholder="your web person's email"
+                required
+                style={{ flex: 1, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, padding: "9px 12px", color: "#e2e8f0", fontSize: "0.85rem", minWidth: 0 }}
+              />
+              <button
+                type="submit"
+                disabled={sendState === "sending"}
+                style={{ ...copyBtnStyle, whiteSpace: "nowrap" }}
+              >
+                {sendState === "sending" ? "Sending..." : "Email instructions"}
+              </button>
+            </form>
+          )}
+          {sendState === "error" && (
+            <p style={{ color: "#f87171", fontSize: "0.8rem", margin: "8px 0 0" }}>
+              Couldn't send - check the address and try again.
+            </p>
+          )}
+        </div>
+
+        {/* Platform-specific guides */}
+        <div style={{ fontWeight: 600, fontSize: "0.88rem", marginBottom: 8 }}>Where do I paste it?</div>
+        {PLATFORM_GUIDES.map((g) => (
+          <div key={g.name} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            <button
+              onClick={() => setOpenGuide(openGuide === g.name ? null : g.name)}
+              style={{ width: "100%", textAlign: "left", background: "none", border: "none", color: "rgba(255,255,255,0.75)", padding: "10px 2px", fontSize: "0.85rem", cursor: "pointer", display: "flex", justifyContent: "space-between" }}
+            >
+              <span>{g.name}</span>
+              <span style={{ color: "rgba(255,255,255,0.35)" }}>{openGuide === g.name ? "−" : "+"}</span>
+            </button>
+            {openGuide === g.name && (
+              <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.82rem", margin: "0 2px 12px", lineHeight: 1.5 }}>
+                {g.steps}
+              </p>
+            )}
           </div>
         ))}
-      </div>
 
-      {/* CTA buttons */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <a href="/dashboard" style={{ display: "block", padding: "14px", background: "#6366f1", color: "#fff", borderRadius: 10, fontSize: "1rem", fontWeight: 600, textDecoration: "none" }}>
-          Go to Dashboard →
-        </a>
         {apiKey && (
           <a
             href={`/widget-preview.html?api_key=${encodeURIComponent(apiKey)}`}
             target="_blank"
             rel="noreferrer"
-            style={{ display: "block", padding: "12px", background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.8)", borderRadius: 10, fontSize: "0.9rem", fontWeight: 500, textDecoration: "none" }}
+            style={{ display: "block", marginTop: 16, padding: "11px", textAlign: "center", background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.8)", borderRadius: 10, fontSize: "0.88rem", fontWeight: 500, textDecoration: "none" }}
           >
             Test your widget ↗
           </a>
         )}
       </div>
+
+      <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.85rem", margin: 0 }}>
+        Your 8 AI department heads are ready - ask them anything about running {wizardData.business_name || "your business"}.
+      </p>
     </div>
   );
 }

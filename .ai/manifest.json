@@ -2,12 +2,14 @@
   "schema_version": 2,
   "project": "AgentNexLiFy",
   "description": "AI-powered business automation platform for small businesses. Includes customer-facing AI, automations, an embeddable widget, MCP access, and a multi-agent development system.",
-  "updated_at": "2026-04-20",
+  "updated_at": "2026-04-28",
   "documentation": {
     "primary": "CLAUDE.md",
     "codex_adapter": "AGENTS.md",
     "ai_architecture_audit": "docs/AI_ARCHITECTURE_AUDIT.md",
     "agent_system_plan": "docs/AGENT_SYSTEM_PLAN.md",
+    "agent_routing_policy": "docs/AGENT_ROUTING.md",
+    "agent_routing_eval": "config/agent-routing-eval.json",
     "agent_system_guardrail": "scripts/check_agent_system.py",
     "everything_claude_code_lock": ".claude/everything-claude-code.lock.json",
     "architecture": "docs/dev-knowledge/architecture-decisions.md",
@@ -85,7 +87,15 @@
     "codex": "Primary implementation/execution engine for code exploration, edits, debugging, refactors, and tests.",
     "anthropic": "Canonical repo brain, prompt/system-design authority, and production customer-facing runtime AI authority.",
     "minimax": "Lightweight triage, summarization, and cheap helper/subagent orchestration where throughput matters more than exactness.",
-    "approved_claude_models": ["claude-sonnet-4-6", "claude-opus-4-7", "claude-haiku-4-5-20251001"],
+    "candidate_low_cost_workers": "Kimi Code or other low-cost coding workers may be evaluated for ai-routine, ai-docs, ai-tests, and batch-candidate work, but are not autopilot defaults until the repo eval harness passes.",
+    "routing_policy": "docs/AGENT_ROUTING.md",
+    "routing_eval_command": "npm run eval:agent-routing",
+    "risky_label_rule": "Issues labeled ai-risky require premium human-reviewed routing and must not be dispatched autonomously.",
+    "approved_claude_models": [
+      "claude-sonnet-4-6",
+      "claude-opus-4-7",
+      "claude-haiku-4-5-20251001"
+    ],
     "advisor_uncertainty_rule": "When Sonnet or Haiku confidence drops below 80%, evidence conflicts, or the path is high-stakes, request an Opus 4.7 advisor brief before execution instead of guessing."
   },
   "agents": {
@@ -121,11 +131,7 @@
       "build-error-resolver",
       "pr-test-analyzer"
     ],
-    "experimental": [
-      "gan-planner",
-      "gan-generator",
-      "gan-evaluator"
-    ],
+    "experimental": ["gan-planner", "gan-generator", "gan-evaluator"],
     "files": [
       ".claude/agents/a11y-architect.md",
       ".claude/agents/architect.md",
@@ -199,7 +205,6 @@
       "location": ".claude/skills/",
       "skills": [
         "ai-feature-pattern",
-        "buddy",
         "build-loop",
         "challenge-assumptions",
         "coding-standards",
@@ -256,25 +261,15 @@
     },
     "repo": {
       "location": "skills/",
-      "skills": [
-        "llm-council"
-      ]
+      "skills": ["llm-council"]
     },
     "generated": {
       "location": "skills/generated/",
-      "skills": [
-        "caveman",
-        "diagram-it",
-        "nano-this",
-        "ver-it",
-        "vis-it"
-      ]
+      "skills": ["caveman", "diagram-it", "nano-this", "ver-it", "vis-it"]
     },
     "notes": {
       "default_orchestration": "coordinator",
-      "experimental": [
-        "build-loop"
-      ]
+      "experimental": ["build-loop"]
     }
   },
   "workflows": {

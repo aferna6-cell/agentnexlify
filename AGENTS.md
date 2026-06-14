@@ -7,13 +7,17 @@ Prefer these root commands before hunting through package files or ad-hoc script
 
 - `npm run check` - default quick verification alias.
 - `npm run check:quick` - agent-system guardrail, product invariants, and widget sync check.
+- `npm run check:instruction-budget` - fail if always-on Claude prompt injections or CLAUDE.md grow past budget.
 - `npm run check:full` - quick checks plus frontend build and test suite.
 - `npm run build` - production frontend build.
 - `npm run test` - backend pytest plus frontend Vitest.
 - `npm run smoke` - public smoke test.
+- `npm run kb:health` - deterministic knowledge-base health report for stale articles, pending sources, coverage, attribution, orphan pages, and broken wikilinks.
+- `npm run kb:lint` - validate wiki article template and index coverage.
 - `npm run sync-widget` - copy canonical widget assets to deploy mirrors.
 - `npm run sync-widget:check` - fail if widget mirrors drift.
 - `npm run check:agent` - agent-system guardrail only.
+- `npm run agent-config:scan` - pinned baseline-gated AgentShield scan for Claude/Codex agents, hooks, MCP config, and project instruction files.
 
 Use narrower commands when a change is clearly isolated, but finish with the smallest command that covers the touched surface.
 
@@ -93,8 +97,12 @@ For non-trivial coding work:
 - Frontend build: `npm run build`
 - Tests: `npm run test`
 - Public smoke: `npm run smoke`
+- KB health: `npm run kb:health`
+- KB lint: `npm run kb:lint`
 - Widget sync: `npm run sync-widget`
 - Agent system check: `npm run agent-system:check`
+- Instruction budget check: `npm run check:instruction-budget`
+- Agent config security scan: `npm run agent-config:scan`
 - Pinned Claude Code: `npm run claude:2.1.98 -- --version`
 
 ## Note

@@ -1,0 +1,38 @@
+name: Agent Config Security
+
+# Re-enabled 2026-06-13: the 2026-05-26 GHA infra failure (sub-5s pre-checkout
+# startup failures) has cleared - sibling workflows now run with real durations.
+# Watches the agent/MCP/hook config surface; scripts/check_agent_system.py
+# asserts these exact paths are present here.
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".claude/**"
+      - ".codex/**"
+      - ".mcp.json"
+      - "scripts/claude-hooks/**"
+  pull_request:
+    paths:
+      - ".claude/**"
+      - ".codex/**"
+      - ".mcp.json"
+      - "scripts/claude-hooks/**"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: AgentShield scan
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run pinned AgentShield scan
+        run: npm run agent-config:scan

@@ -73,6 +73,13 @@ async def fire_event(
         logger.warning("Unknown webhook event: %s", event)
         return
 
+    # Live-demo sandbox: never POST demo data to visitor-configured URLs.
+    from backend.services.demo_guard import is_demo_tenant
+
+    if is_demo_tenant(tenant_id):
+        logger.info("demo tenant %s: webhook event %s suppressed (demo no-op)", tenant_id, event)
+        return
+
     if not _check_daily_limit(tenant_id):
         logger.warning("Webhook daily limit reached for tenant %s", tenant_id)
         return

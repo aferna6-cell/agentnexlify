@@ -1,0 +1,42 @@
+{
+  "run": 30,
+  "date": "2026-05-22-pm",
+  "ideas_count": 5,
+  "debated": [
+    "Billing Constants Contract Tests",
+    "Test Patch Path Standard",
+    "AI-to-Human Handoff GH Issue"
+  ],
+  "winner": "Billing Constants Contract Tests",
+  "winner_category": "code_health",
+  "winner_confidence": "HIGH",
+  "winner_effort": "S (~20 min)",
+  "evidence_summary": "c72b535 fixed live billing bug: AMOUNT_TO_PLAN had wrong $150/$250 mappings + missing enterprise. First production code commits after 17-day silence (billing fix, local_seo split, OS plan merge). God-class refactor plan created with 54 targets. Test suite required 908-line repointing after local_seo split. Run 29 winner (write AI-to-Human Handoff GH issue) NOT implemented — mechanism 3x recommended without action. Moratorium day 17, 5 pending, oldest 36 days.",
+  "debate_verdicts": {
+    "Billing Constants Contract Tests": "SURVIVES → WINNER",
+    "Test Patch Path Standard": "WEAKENED → parking lot (deferred impact, moratorium context)",
+    "AI-to-Human Handoff GH Issue": "WEAKENED → parking lot (3rd rec, spec exists, no new info)"
+  },
+  "parking_lot_additions": [
+    "Test Patch Path Standard (promote when first god-class split PR opens)",
+    "email_sequences.py god-class split (M-effort, post-moratorium)",
+    "models/schemas.py domain split (prerequisite, post-moratorium)"
+  ],
+  "key_governance_notes": [
+    "AI-to-Human GH Issue mechanism: 3 consecutive recommendations without implementation. Do not propose as winner again until moratorium exits. Spec is written. Act directly.",
+    "Production code moving again after 17-day silence — highest probability implementation window since moratorium started."
+  ],
+  "moratorium_status": {
+    "active": true,
+    "day": 17,
+    "pending_after_run": 6,
+    "oldest_pending_days": 36,
+    "exit_path": "invoke /moratorium-sprint (Items A+B+D, ~40 min) → pending 6→2 → exit"
+  },
+  "questions_for_next_run": [
+    "Was test_billing_constants.py created?",
+    "Has /moratorium-sprint been invoked?",
+    "God-class refactor momentum — next target?",
+    "When is billing.py grill-me planned?"
+  ]
+}

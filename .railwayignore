@@ -1,0 +1,9 @@
+.git
+**/node_modules
+frontend
+knowledge-base
+_archive
+landing-page-v2
+backend
+migrations
+docs

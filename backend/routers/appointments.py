@@ -33,10 +33,50 @@ from backend.services.booking import (
 
 from backend.dependencies import _get_current_tenant
 from backend.services.webhook_dispatcher import fire_event_background
+from backend.services.review_requester import create_review_request_draft
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/appointments", tags=["appointments"])
+
+
+async def _draft_review_request(
+    tenant_id: str, appointment_id: str, appointment: dict
+) -> None:
+    """Background coroutine: fetch tenant context, then file review-request draft.
+
+    Fault-tolerant — errors are logged but never propagate.
+    """
+    try:
+        db = get_service_supabase()
+        tenant_row = (
+            db.table("tenants")
+            .select("business_name, google_review_link")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        tenant = tenant_row.data[0] if tenant_row.data else {}
+        business_name = tenant.get("business_name") or ""
+        google_review_link = tenant.get("google_review_link") or None
+
+        await create_review_request_draft(
+            db,
+            tenant_id=tenant_id,
+            appointment_id=appointment_id,
+            lead_id=appointment.get("lead_id"),
+            customer_name=appointment.get("customer_name") or "",
+            customer_phone=appointment.get("customer_phone") or "",
+            business_name=business_name,
+            google_review_link=google_review_link,
+        )
+    except Exception:
+        logger.warning(
+            "_draft_review_request: unexpected error tenant=%s appointment=%s",
+            tenant_id,
+            appointment_id,
+            exc_info=True,
+        )
 
 
 def _verify_tenant(claims: dict, tenant_id: str) -> None:
@@ -313,6 +353,13 @@ async def patch_appointment(
                 {"appointment_id": appointment_id},
             ),
             name="trigger_appointment_completed",
+        )
+
+    # File review-request draft whenever appointment is marked completed
+    if data.get("status") == "completed":
+        safe_create_task(
+            _draft_review_request(tenant_id, appointment_id, updated),
+            name="review_request_draft",
         )
 
     return updated

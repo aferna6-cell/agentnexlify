@@ -16,6 +16,14 @@ from backend.services.retry import with_retry
 
 logger = logging.getLogger(__name__)
 
+
+def mask_email(address: str) -> str:
+    """PII minimization: log j***@domain.com, never the full address."""
+    if not address or "@" not in address:
+        return "***"
+    local, _, domain = address.partition("@")
+    return f"{local[:1]}***@{domain}"
+
 # In-memory daily send tracking per tenant (reset at midnight UTC)
 _daily_sends: dict[str, int] = {}
 _last_reset_date: str = ""
@@ -208,8 +216,14 @@ async def send_email(
     execution_id: str = "",
 ) -> dict[str, Any]:
     """Send an email via Resend. Returns result dict with 'success' and 'detail'."""
+    from backend.services.demo_guard import is_demo_tenant
+
+    if is_demo_tenant(tenant_id):
+        logger.info("demo tenant %s: email to %s suppressed (demo no-op)", tenant_id, mask_email(to))
+        return {"success": True, "detail": "demo_noop", "demo": True}
+
     if not settings.resend_api_key:
-        logger.warning("Resend API key not configured, skipping email to %s", to)
+        logger.warning("Resend API key not configured, skipping email to %s", mask_email(to))
         return {"success": False, "detail": "resend_api_key not configured"}
 
     if not _reserve_send_quota(tenant_id):
@@ -252,8 +266,90 @@ async def send_email(
             backoff_base=1.0,
             label=f"resend.send:{to}",
         )
-        logger.info("Email sent to %s for tenant %s", to, tenant_id)
+        logger.info("Email sent to %s for tenant %s", mask_email(to), tenant_id)
         return {"success": True, "detail": "sent", "resend_id": result.get("id", "")}
     except Exception as e:
-        logger.exception("Failed to send email to %s", to)
+        logger.exception("Failed to send email to %s", mask_email(to))
+        return {"success": False, "detail": str(e)}
+
+
+async def send_email_reply(
+    to: str,
+    subject: str,
+    body_text: str,
+    tenant_id: str,
+    in_reply_to: str = "",
+    references: str = "",
+) -> dict[str, Any]:
+    """Send a conversational email reply via Resend with proper threading.
+
+    Distinct from ``send_email`` because OS-orchestrator replies on
+    email-sourced threads should NOT carry the marketing-email rate limit,
+    tracking pixel, branded HTML wrapper, or unsubscribe footer. The
+    recipient is the customer who emailed us — this is a direct reply.
+
+    ``in_reply_to`` and ``references`` (RFC 5322) thread the reply onto the
+    inbound message so the customer's mail client groups it correctly.
+    Empty values are tolerated — the reply still sends, just without
+    threading headers.
+    """
+    from backend.services.demo_guard import is_demo_tenant
+
+    if is_demo_tenant(tenant_id):
+        logger.info("demo tenant %s: email reply to %s suppressed (demo no-op)", tenant_id, mask_email(to))
+        return {"success": True, "detail": "demo_noop", "demo": True}
+
+    if not settings.resend_api_key:
+        logger.warning("Resend API key not configured, skipping reply to %s", mask_email(to))
+        return {"success": False, "detail": "resend_api_key not configured"}
+
+    resend.api_key = settings.resend_api_key
+
+    body_text = body_text or ""
+    body_html = (
+        "<div style=\"font-family:Arial,sans-serif;font-size:14px;line-height:1.5;"
+        "white-space:pre-wrap;\">"
+        f"{html.escape(body_text)}"
+        "</div>"
+    )
+
+    send_params: dict[str, Any] = {
+        "from": FROM_ADDRESS,
+        "to": [to],
+        "subject": subject,
+        "html": body_html,
+        "text": body_text,
+    }
+
+    threading_headers: dict[str, str] = {}
+    if in_reply_to:
+        threading_headers["In-Reply-To"] = (
+            in_reply_to if in_reply_to.startswith("<") else f"<{in_reply_to}>"
+        )
+    if references:
+        threading_headers["References"] = references
+    elif in_reply_to:
+        threading_headers["References"] = threading_headers["In-Reply-To"]
+    if threading_headers:
+        send_params["headers"] = threading_headers
+
+    try:
+        import asyncio
+
+        result = await with_retry(
+            lambda: asyncio.get_event_loop().run_in_executor(
+                None, lambda: resend.Emails.send(send_params)
+            ),
+            max_retries=2,
+            backoff_base=1.0,
+            label=f"resend.reply:{to}",
+        )
+        logger.info("Email reply sent to %s for tenant %s", mask_email(to), tenant_id)
+        return {
+            "success": True,
+            "detail": "sent",
+            "resend_id": (result or {}).get("id", ""),
+        }
+    except Exception as e:
+        logger.exception("Failed to send email reply to %s", to)
         return {"success": False, "detail": str(e)}

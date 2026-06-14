@@ -119,8 +119,13 @@ def guard_checkout_for_fraud(session: dict) -> str | None:
       - Card country != billing country (simple CC mismatch heuristic)
     """
     payment_status = session.get("payment_status")
-    if payment_status != "paid":
+    # "no_payment_required" is a legitimate Stripe status (100%-off coupon,
+    # free trial, $0 amount due) and carries no payment_intent. Only treat
+    # genuinely unpaid sessions as risky. (GH #93)
+    if payment_status not in ("paid", "no_payment_required"):
         return f"payment_status={payment_status}"
+    if payment_status == "no_payment_required":
+        return None
 
     payment_intent_id = session.get("payment_intent")
     if not payment_intent_id:
@@ -132,19 +137,26 @@ def guard_checkout_for_fraud(session: dict) -> str | None:
         logger.warning("Could not retrieve payment intent %s for fraud check", payment_intent_id, exc_info=True)
         return None  # Be permissive if Stripe lookup fails
 
-    radar = pi.get("charges", {}).get("data", [{}])[0].get("outcome", {})
+    # Safely pull the first charge. charges.data may be an empty list (no
+    # IndexError) and charges itself may be absent/None on newer Stripe API
+    # versions that expose latest_charge instead. (GH #94)
+    charges = (pi.get("charges") or {}).get("data") or []
+    charge = charges[0] if charges else {}
+
+    radar = charge.get("outcome") or {}
     radar_outcome = radar.get("type") or radar.get("network_status")
     if radar_outcome == "blocked":
         return "radar_blocked"
 
     # CC mismatch heuristic: card country vs billing address country
     card_country = (
-        pi.get("charges", {}).get("data", [{}])[0]
-        .get("payment_method_details", {})
+        (charge.get("payment_method_details") or {})
         .get("card", {})
         .get("country")
     )
-    billing_country = pi.get("charges", {}).get("data", [{}])[0].get("billing_details", {}).get("address", {}).get("country")
+    billing_country = (
+        (charge.get("billing_details") or {}).get("address", {}).get("country")
+    )
     if card_country and billing_country and card_country.upper() != billing_country.upper():
         logger.info(
             "CC mismatch detected: card_country=%s billing_country=%s pi=%s",

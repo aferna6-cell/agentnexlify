@@ -112,7 +112,7 @@ def control_center_client(mock_settings):
     patches = [
         patch("backend.models.database.get_supabase", return_value=db),
         patch("backend.routers.analytics.get_service_supabase", return_value=db),
-        patch("backend.routers.analytics.control_center.get_service_supabase", return_value=db),
+        patch("backend.services.control_center_service._get_service_supabase", return_value=db),
         patch("backend.routers.analytics.insights.get_service_supabase", return_value=db),
         patch("backend.routers.analytics.dashboard.get_service_supabase", return_value=db),
         patch("backend.routers.analytics.operations.get_service_supabase", return_value=db),

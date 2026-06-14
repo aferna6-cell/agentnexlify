@@ -1,6 +1,7 @@
 import React, { useEffect, lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
+import CookieConsent from "./components/CookieConsent";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import App from "./components/App";
@@ -18,6 +19,7 @@ const MedicalOfficeChatbot = lazy(() => import("./pages/MedicalOfficeChatbot"));
 const RestaurantChatbot = lazy(() => import("./pages/RestaurantChatbot"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const HelpPage = lazy(() => import("./pages/HelpPage"));
 const Contact = lazy(() => import("./pages/Contact"));
 const IntercomAlternative = lazy(() => import("./pages/IntercomAlternative"));
 const LiveChatAlternative = lazy(() => import("./pages/LiveChatAlternative"));
@@ -32,9 +34,9 @@ const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const AuthCallbackPage = lazy(() => import("./pages/AuthCallbackPage"));
 // OnboardingWizardPage kept for direct access; /onboarding route uses OnboardingRedirect below
 const OnboardingWizardPage = lazy(() => import("./pages/OnboardingWizardPage"));
+const DemoLoginPage = lazy(() => import("./pages/DemoLoginPage"));
 
 
-const CALENDLY_URL = "https://calendly.com/aidanfernandes31/15-minute-agent-nexliffy-demo";
 
 /* Minimal loading spinner for lazy-loaded public pages */
 function PageLoader() {
@@ -117,6 +119,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/help" element={<HelpPage />} />
             <Route path="/contact" element={<Contact />} />
             {/* Vertical chatbot pages (canonical URLs) */}
             <Route path="/dental-chatbot" element={<DentalChatbot />} />
@@ -132,7 +135,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/pricing" element={<HomeSection anchor="pricing" />} />
             <Route path="/features" element={<HomeSection anchor="features" />} />
             <Route path="/about" element={<HomeSection anchor="about-us" />} />
-            <Route path="/demo" element={<RedirectExternal url={CALENDLY_URL} />} />
+            {/* /demo - live sandbox: calls demo-login, stores session, redirects to dashboard */}
+            <Route path="/demo" element={<AuthProvider><DemoLoginPage /></AuthProvider>} />
             {/* Alias routes for /industries/:vertical and /compare/:competitor */}
             <Route path="/industries/:vertical" element={<IndustryRoute />} />
             <Route path="/compare/:competitor" element={<CompareRoute />} />
@@ -144,13 +148,18 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/client/:token" element={<ClientPortalPublicPage />} />
             {/* Public business pages - no auth, standalone */}
             <Route path="/biz/:slug" element={<BusinessPage />} />
-            {/* /setup - onboarding wizard for new tenants */}
-            <Route path="/setup" element={<AuthProvider><OnboardingWizardPage /></AuthProvider>} />
+            {/* /setup - onboarding wizard for new tenants. Routed through
+                OnboardingRoute (same as /onboarding): mounting the wizard
+                bare lost the AuthProvider race on cold load - user is null
+                for a tick while the token parses, and the wizard's own
+                redirect bounced logged-in users to /signup. */}
+            <Route path="/setup" element={<AuthProvider><OnboardingRoute /></AuthProvider>} />
             {/* /onboarding - onboarding wizard for authenticated users, signup otherwise */}
             <Route path="/onboarding" element={<AuthProvider><OnboardingRoute /></AuthProvider>} />
             {/* Everything else falls to auth-gated dashboard */}
             <Route path="*" element={<AuthProvider><App /></AuthProvider>} />
             </Routes>
+            <CookieConsent />
           </Suspense>
         </BrowserRouter>
       </ErrorBoundary>
@@ -158,8 +167,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   </React.StrictMode>
 );
 
-/* Redirect to external URL (Calendly) */
-function RedirectExternal({ url }) {
-  useEffect(() => { window.location.href = url; }, [url]);
-  return null;
-}

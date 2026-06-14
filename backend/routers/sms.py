@@ -58,7 +58,7 @@ async def send_sms_endpoint(
     if not lead_result.data:
         raise HTTPException(status_code=404, detail="Lead not found")
 
-    success = await send_sms(to=req.phone, body=req.message)
+    success = await send_sms(to=req.phone, body=req.message, tenant_id=tenant_id)
 
     if success:
         increment_sms_count(tenant_id)
@@ -201,7 +201,7 @@ async def initiate_sms_conversation(
         # Don't abort — still attempt to send the SMS
 
     # Send the SMS via Twilio from the tenant's provisioned number
-    success = await send_sms(to=req.phone, body=req.message, from_number=from_number)
+    success = await send_sms(to=req.phone, body=req.message, from_number=from_number, tenant_id=tenant_id)
 
     if not success:
         logger.error(

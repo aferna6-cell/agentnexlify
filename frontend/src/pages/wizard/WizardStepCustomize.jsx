@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { fetchDashboard } from "../../utils/api/dashboard";
 import { getPresetWidgetDefaults } from "../../utils/businessPresets";
+import { completeOnboarding, buildWizardPayload } from "../../utils/api/onboarding";
 
 const POSITIONS = [
   { value: "bottom-right", label: "Bottom Right" },
@@ -17,6 +18,7 @@ export default function WizardStepCustomize({ wizardData, onNext, onBack, token,
     widget_position: wizardData.widget_position || presetDefaults.widget_position,
   });
   const [apiKey, setApiKey] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!token || !tenantId) return;
@@ -36,15 +38,35 @@ export default function WizardStepCustomize({ wizardData, onNext, onBack, token,
     return e => setForm(f => ({ ...f, [field]: e.target.value }));
   }
 
+  // This step runs AFTER the plan step (which already persisted wizard data),
+  // so widget settings must be saved here or they'd be lost.
+  async function handleContinue() {
+    setSaving(true);
+    try {
+      await completeOnboarding(
+        tenantId,
+        token,
+        buildWizardPayload({ ...wizardData, ...form }),
+      );
+    } catch (err) {
+      // Non-fatal: defaults were already applied at the plan step.
+      console.warn("WizardStepCustomize: failed to persist widget settings", err);
+    } finally {
+      setSaving(false);
+      onNext(form);
+    }
+  }
+
   const previewSrc = apiKey
     ? `/widget-preview.html?api_key=${encodeURIComponent(apiKey)}`
     : null;
 
   return (
     <div>
-      <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 8 }}>Customize your widget</h2>
+      <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 8 }}>Optional: customize your website chat</h2>
       <p style={{ color: "rgba(255,255,255,0.5)", marginBottom: 32, fontSize: "0.9rem" }}>
-        Match it to your brand. The live preview updates as you save.
+        Your AI staff is already working in the Agent OS. This styles the
+        optional chat widget for your website - match it to your brand, or skip it.
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 32 }}>
@@ -103,9 +125,16 @@ export default function WizardStepCustomize({ wizardData, onNext, onBack, token,
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 12 }}>
-        <button onClick={onBack} style={{ ...btnStyle, background: "rgba(255,255,255,0.08)", flex: 1 }}>&#8592; Back</button>
-        <button onClick={() => onNext(form)} style={{ ...btnStyle, flex: 2 }}>Continue &#8594;</button>
+      <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+        <button onClick={onBack} disabled={saving} style={{ ...btnStyle, background: "rgba(255,255,255,0.08)", flex: 1 }}>&#8592; Back</button>
+        <button onClick={handleContinue} disabled={saving} style={{ ...btnStyle, flex: 2, opacity: saving ? 0.7 : 1 }}>
+          {saving ? "Saving..." : "Continue →"}
+        </button>
+      </div>
+      <div style={{ textAlign: "center" }}>
+        <a href="/dashboard/agent-os" style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.85rem", textDecoration: "none" }}>
+          Skip - go to Agent OS
+        </a>
       </div>
     </div>
   );

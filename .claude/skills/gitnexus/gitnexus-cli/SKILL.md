@@ -1,5 +1,6 @@
 ---
 name: gitnexus-cli
+effort: low
 description: Run GitNexus CLI commands for analyzing, indexing, checking status, cleaning the index, generating a wiki, or listing indexed repos. Use when user says 'gitnexus analyze', 'gitnexus index', 'gitnexus status', 'gitnexus clean', 'gitnexus wiki', 'gitnexus list', or asks about gitnexus cli.
 version: 1.0.0
 origin: claude

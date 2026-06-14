@@ -6,6 +6,7 @@ workspace. It prints concise PASS/FAIL lines and exits nonzero when any
 invariant is violated.
 """
 
+import ast
 import os
 import re
 from pathlib import Path
@@ -206,7 +207,23 @@ def check_router_future_imports(failures: list[str]) -> None:
         except OSError as exc:
             matches.append(f"{rel(path)}: unreadable ({exc})")
             continue
-        if "from __future__ import annotations" in text:
+        # Parse to AST so we only flag a real `from __future__ import ...`
+        # statement, not docstring/comment text that mentions the rule.
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            # Unparseable file: fall back to detecting the import only at the
+            # start of a (stripped) line, never mid-sentence in a docstring.
+            if any(
+                line.strip().startswith("from __future__ import")
+                for line in text.splitlines()
+            ):
+                matches.append(f"{rel(path)}")
+            continue
+        if any(
+            isinstance(node, ast.ImportFrom) and node.module == "__future__"
+            for node in ast.walk(tree)
+        ):
             matches.append(f"{rel(path)}")
     check(
         "FastAPI router files avoid future annotations",

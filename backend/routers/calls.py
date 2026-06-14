@@ -5,9 +5,7 @@ transcription pipeline, AI summary generation, and action item extraction,
 plus dashboard endpoints for listing, viewing, and aggregating call data.
 """
 
-import json
 import logging
-import re
 from datetime import datetime, timezone
 from time import perf_counter
 from typing import Any
@@ -29,11 +27,66 @@ from backend.services.llm_runtime import (
 from backend.services.twilio_service import send_sms
 from backend.services.webhook_dispatcher import fire_event_background
 from backend.routers.automations import verify_twilio_request
+from backend.services.voice_twiml import (
+    _build_twiml_error,
+    _build_twiml_gather,
+    _build_twiml_goodbye,
+    _build_twiml_greeting,
+    _xml_escape,
+)
+from backend.services.voice_call_summary import (
+    _finalize_ai_call,
+    _generate_call_summary,
+)
 
 logger = logging.getLogger(__name__)
 
 # Max AI conversation rounds before ending the call
 _MAX_VOICE_ROUNDS = 3
+
+# Live AI answering is the Professional-tier feature ("AI answering service").
+# Lower tiers get voicemail mode (recording -> transcription -> recovery draft).
+_AI_VOICE_PLANS = {"professional", "enterprise"}
+
+
+def _ai_voice_mode(tenant: dict) -> bool:
+    """True when this tenant's calls get the live AI loop instead of voicemail."""
+    return bool(tenant.get("voice_ai_enabled")) and (
+        (tenant.get("plan") or "free") in _AI_VOICE_PLANS
+    )
+
+
+def _find_or_create_lead(db, tenant_id: str, caller: str, note: str) -> str | None:
+    """Find lead by caller phone or create one. None on failure (never raises)."""
+    try:
+        existing = (
+            db.table("leads")
+            .select("id")
+            .eq("client_id", tenant_id)
+            .eq("phone", caller)
+            .limit(1)
+            .execute()
+        )
+        if existing.data:
+            return existing.data[0]["id"]
+        created = (
+            db.table("leads")
+            .insert(
+                {
+                    "client_id": tenant_id,
+                    "phone": caller,
+                    "status": "new",
+                    "areas_of_interest": note,
+                }
+            )
+            .execute()
+        )
+        return created.data[0]["id"] if created.data else None
+    except Exception:
+        logger.exception(
+            "Failed to find/create lead for caller tenant=%s", tenant_id
+        )
+        return None
 
 router = APIRouter(prefix="/api/v1/calls", tags=["calls"])
 
@@ -89,7 +142,10 @@ def _find_tenant_by_phone(phone: str) -> dict | None:
     try:
         result = (
             db.table("tenants")
-            .select("id, business_name, owner_email, notification_phone, sms_notifications_enabled")
+            .select(
+                "id, business_name, business_type, owner_email, notification_phone, "
+                "sms_notifications_enabled, plan, voice_ai_enabled"
+            )
             .limit(50)
             .execute()
         )
@@ -109,291 +165,55 @@ def _find_tenant_by_phone(phone: str) -> dict | None:
     return None
 
 
-def _build_twiml_greeting(
-    business_name: str,
-    recording_callback_url: str,
-    transcription_callback_url: str | None = None,
-) -> str:
-    """Build a TwiML response that greets the caller and records their message.
-
-    If transcription_callback_url is provided, the <Record> verb will include
-    transcribe="true" and transcriptionUrl so Twilio sends the transcribed text
-    back to our transcription-complete endpoint automatically.
-    """
-    # XML-escape the business name to prevent injection
-    safe_name = (
-        business_name
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-        .replace("'", "&apos;")
-    )
-    transcription_attrs = ""
-    if transcription_callback_url:
-        transcription_attrs = (
-            ' transcribe="true"'
-            f' transcriptionUrl="{transcription_callback_url}"'
-        )
-    return (
-        '<?xml version="1.0" encoding="UTF-8"?>'
-        "<Response>"
-        "<Say voice=\"alice\">"
-        f"Thanks for calling {safe_name}! "
-        "We're not available right now, but your call is important to us. "
-        "Please leave a message after the beep and we'll get back to you as soon as possible."
-        "</Say>"
-        "<Record"
-        ' maxLength="120"'
-        ' playBeep="true"'
-        f' recordingStatusCallback="{recording_callback_url}"'
-        ' recordingStatusCallbackMethod="POST"'
-        f"{transcription_attrs}"
-        " />"
-        "<Say voice=\"alice\">We didn't receive a recording. Goodbye!</Say>"
-        "</Response>"
-    )
-
-
-def _build_twiml_error() -> str:
-    """Build a TwiML response for when we can't identify the tenant."""
-    return (
-        '<?xml version="1.0" encoding="UTF-8"?>'
-        "<Response>"
-        '<Say voice="alice">'
-        "We're sorry, we're unable to take your call right now. Please try again later."
-        "</Say>"
-        "</Response>"
-    )
-
-
-def _build_twiml_gather(say_text: str, respond_url: str, round_num: int) -> str:
-    """Build TwiML that speaks text and then gathers speech input.
-
-    Uses <Gather> with speech input and a configurable action URL.
-    After the gather timeout, falls back to a goodbye message.
-    """
-    safe_text = (
-        say_text
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-        .replace("'", "&apos;")
-    )
-    return (
-        '<?xml version="1.0" encoding="UTF-8"?>'
-        "<Response>"
-        f'<Gather input="speech" timeout="5" speechTimeout="auto"'
-        f' action="{respond_url}?round={round_num}" method="POST">'
-        f'<Say voice="alice">{safe_text}</Say>'
-        "</Gather>"
-        '<Say voice="alice">'
-        "I didn't hear anything. Thank you for calling! Goodbye."
-        "</Say>"
-        "</Response>"
-    )
-
-
-def _build_twiml_goodbye(say_text: str) -> str:
-    """Build TwiML that speaks a goodbye message and hangs up."""
-    safe_text = (
-        say_text
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-        .replace("'", "&apos;")
-    )
-    return (
-        '<?xml version="1.0" encoding="UTF-8"?>'
-        "<Response>"
-        f'<Say voice="alice">{safe_text}</Say>'
-        "</Response>"
-    )
-
-
-def _xml_escape(text: str) -> str:
-    """Escape text for safe inclusion in XML."""
-    return (
-        text
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-        .replace("'", "&apos;")
-    )
-
-
-# ---------------------------------------------------------------------------
-# AI call summary & action item extraction (Features 2 & 3)
-# ---------------------------------------------------------------------------
-
-
-async def _generate_call_summary(call_id: str, tenant_id: str, lead_id: str | None, transcript_text: str) -> None:
-    """Generate an AI summary of a call transcript and store it.
-
-    Calls Claude to produce:
-    - A one-paragraph summary
-    - Action items (list)
-    - Caller sentiment (positive/neutral/negative)
-    - Suggested follow-up
-
-    Then updates the call record and inserts action items into action_items table.
-    This runs as a background task so it does not block the webhook response.
-    """
-    if not transcript_text or not transcript_text.strip():
-        logger.warning("Skipping summary generation for call %s: empty transcript", call_id)
-        return
-
-    prompt = (
-        "Analyze this phone call transcript and provide:\n"
-        "1. A one-paragraph summary\n"
-        "2. Action items (list)\n"
-        "3. Caller sentiment (positive/neutral/negative)\n"
-        "4. Suggested follow-up\n\n"
-        "Respond in this exact JSON format:\n"
-        "{\n"
-        '  "summary": "...",\n'
-        '  "action_items": ["item 1", "item 2"],\n'
-        '  "sentiment": "positive|neutral|negative",\n'
-        '  "follow_up": "..."\n'
-        "}\n\n"
-        f"Transcript:\n{transcript_text}"
-    )
-
-    try:
-        llm_result = await call_claude_messages(
-            operation="calls.generate_summary",
-            model=resolve_string_setting("voice_chat_model", "claude-sonnet-4-6"),
-            max_tokens=max(600, resolve_int_setting("voice_chat_max_tokens", 160) * 3),
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.0,
-            timeout=30.0,
-            metadata={
-                "tenant_id": tenant_id,
-                "call_id": call_id,
-                "transcript_chars": len(transcript_text),
-            },
-        )
-        raw_text = llm_result.text.strip()
-    except Exception:
-        logger.exception("Claude API call failed for call summary, call %s", call_id)
-        return
-
-    # Parse the JSON response from Claude
-    summary = ""
-    action_items: list[str] = []
-    sentiment = "neutral"
-    follow_up = ""
-
-    try:
-        # Extract JSON from the response (Claude may wrap it in markdown code blocks)
-        json_match = re.search(r"\{[\s\S]*\}", raw_text)
-        if json_match:
-            parsed = json.loads(json_match.group())
-            summary = parsed.get("summary", "")
-            action_items = parsed.get("action_items", [])
-            raw_sentiment = parsed.get("sentiment", "neutral").lower().strip()
-            if raw_sentiment in ("positive", "neutral", "negative"):
-                sentiment = raw_sentiment
-            else:
-                sentiment = "neutral"
-            follow_up = parsed.get("follow_up", "")
-        else:
-            logger.warning("No JSON found in Claude response for call %s, using raw text", call_id)
-            summary = raw_text[:500]
-    except (json.JSONDecodeError, AttributeError) as exc:
-        logger.warning("Failed to parse Claude summary JSON for call %s: %s", call_id, exc)
-        summary = raw_text[:500]
-
-    # Build action_taken from follow-up and action items
-    action_taken_parts: list[str] = []
-    if follow_up:
-        action_taken_parts.append(f"Follow-up: {follow_up}")
-    if action_items:
-        action_taken_parts.append("Action items: " + "; ".join(action_items))
-    action_taken = " | ".join(action_taken_parts) if action_taken_parts else None
-
-    # Update the call record with summary, sentiment, and action_taken
-    db = get_service_supabase()
-    try:
-        update_data: dict[str, Any] = {
-            "summary": summary,
-            "sentiment": sentiment,
-        }
-        if action_taken:
-            update_data["action_taken"] = action_taken
-
-        db.table("calls").update(update_data).eq("id", call_id).eq("tenant_id", tenant_id).execute()
-        logger.info(
-            "Updated call %s with AI summary (sentiment=%s, %d action items)",
-            call_id, sentiment, len(action_items),
-        )
-    except Exception:
-        logger.exception("Failed to update call %s with AI summary", call_id)
-
-    # Feature 3: Insert action items into action_items table
-    if action_items:
-        await _insert_call_action_items(
-            tenant_id=tenant_id,
-            lead_id=lead_id,
-            call_id=call_id,
-            items=action_items,
-        )
-
-
-async def _insert_call_action_items(
-    tenant_id: str,
-    lead_id: str | None,
-    call_id: str,
-    items: list[str],
-) -> None:
-    """Insert action items extracted from a call into the action_items table.
-
-    Phone call action items are always high priority since they represent
-    direct customer communication.
-    """
-    if not items:
-        return
-
-    db = get_service_supabase()
-    inserted = 0
-    for item_text in items:
-        if not item_text or not item_text.strip():
-            continue
-        row: dict[str, Any] = {
-            "tenant_id": tenant_id,
-            "description": item_text.strip()[:500],
-            "priority": "high",
-            "status": "pending",
-        }
-        if lead_id:
-            row["lead_id"] = lead_id
-        try:
-            db.table("action_items").insert(row).execute()
-            inserted += 1
-        except Exception:
-            logger.exception(
-                "Failed to insert action item for call %s: %s",
-                call_id, item_text[:80],
-            )
-    if inserted:
-        logger.info("Inserted %d action items from call %s for tenant %s", inserted, call_id, tenant_id)
-
-    # Log activity for the action items creation
-    log_activity(
-        tenant_id=tenant_id,
-        activity_type="call_action_items",
-        description=f"AI extracted {inserted} action item(s) from phone call",
-        lead_id=lead_id,
-        metadata={"call_id": call_id, "action_item_count": inserted},
-    )
-
-
 # ---------------------------------------------------------------------------
 # Twilio voice webhooks
 # ---------------------------------------------------------------------------
+
+
+@router.post("/voice/call-status")
+@limiter.limit("60/minute")
+async def handle_call_status(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    _sig: None = Depends(verify_twilio_request),
+):
+    """Twilio call status callback — the reliable end-of-call hook.
+
+    Configure the Twilio number's statusCallback to this URL. When a live-AI
+    call ends (including mid-conversation hangups, which never reach the
+    max-rounds goodbye), this finalizes the call record and triggers the
+    summary + missed-call recovery draft.
+    """
+    body = await request.body()
+    try:
+        params = {k: v[0] for k, v in parse_qs(body.decode()).items()}
+    except Exception:
+        return Response(content="OK", media_type="text/plain")
+
+    call_status = params.get("CallStatus", "")
+    call_sid = params.get("CallSid", "")
+    called = params.get("To", "")
+    try:
+        duration = int(params.get("CallDuration", "0"))
+    except (ValueError, TypeError):
+        duration = 0
+
+    if call_status != "completed" or not call_sid:
+        return Response(content="OK", media_type="text/plain")
+
+    tenant = _find_tenant_by_phone(called)
+    if not tenant:
+        return Response(content="OK", media_type="text/plain")
+
+    try:
+        db = get_service_supabase()
+    except Exception:
+        logger.exception("call-status: supabase unavailable for %s", call_sid)
+        return Response(content="OK", media_type="text/plain")
+    background_tasks.add_task(
+        _finalize_ai_call, db, tenant["id"], call_sid, duration
+    )
+    return Response(content="OK", media_type="text/plain")
 
 
 @router.post("/voice/incoming")
@@ -428,9 +248,42 @@ async def handle_incoming_call(request: Request, _sig: None = Depends(verify_twi
         return Response(content=_build_twiml_error(), media_type="application/xml")
 
     business_name = tenant.get("business_name") or "our business"
-
-    # Build the respond URL for the Gather action
     base_url = str(request.base_url).rstrip("/")
+
+    # Voice mode switch (G3): live AI answering is opt-in AND plan-gated;
+    # everyone else gets voicemail mode, which feeds the missed-call
+    # recovery pipeline (record -> transcribe -> summarize -> OS draft).
+    if not _ai_voice_mode(tenant):
+        recording_callback_url = f"{base_url}/api/v1/calls/voice/recording-complete"
+        return Response(
+            content=_build_twiml_greeting(business_name, recording_callback_url),
+            media_type="application/xml",
+        )
+
+    # AI mode: open the call record + lead up front so a mid-call hangup
+    # still leaves a trail (finalized by /voice/call-status). A DB outage
+    # must never block answering the phone — degrade to no trail.
+    db = None
+    try:
+        db = get_service_supabase()
+        lead_id = _find_or_create_lead(
+            db, tenant["id"], caller, "Inbound phone call (AI answered)"
+        )
+        db.table("calls").insert(
+            {
+                "tenant_id": tenant["id"],
+                "caller_phone": caller,
+                "called_number": called,
+                "direction": "inbound",
+                "status": "in-progress",
+                "twilio_call_sid": call_sid,
+                "summary": "AI conversation in progress.",
+                **({"lead_id": lead_id} if lead_id else {}),
+            }
+        ).execute()
+    except Exception:
+        logger.exception("Failed to open call record for %s", call_sid)
+
     respond_url = f"{base_url}/api/v1/calls/voice/respond"
 
     greeting = (
@@ -454,7 +307,6 @@ async def handle_incoming_call(request: Request, _sig: None = Depends(verify_twi
     # Save the greeting as the first assistant message
     try:
         session_id = f"call_{call_sid}"
-        db = get_service_supabase()
         db.table("chat_messages").insert({
             "tenant_id": tenant["id"],
             "session_id": session_id,
@@ -621,13 +473,31 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
     except Exception:
         logger.warning("Failed to load FAQ for voice AI, tenant %s", tenant_id)
 
+    # Vertical operating guidance (same pack the Agent OS staff uses — e.g.
+    # financial_services carries the no-personalized-advice compliance entry)
+    guidance_text = ""
+    try:
+        from backend.services.os_kb_feed import vertical_guidance
+
+        entries = vertical_guidance(tenant.get("business_type"))[:3]
+        if entries:
+            guidance_text = "Operating guidance:\n" + "\n".join(
+                f"- {e['answer'][:300]}" for e in entries
+            )
+    except Exception:
+        logger.warning("Failed to load vertical guidance for voice AI", exc_info=True)
+
     system_prompt = (
         f"You are a helpful phone assistant for {business_name}. {business_info}"
         "You are speaking with a caller on the phone. Keep your responses concise "
         "and conversational -- ideally 1-3 sentences since this will be spoken aloud. "
         "Be warm and helpful. If you don't know the answer, offer to have someone "
-        "call them back. Never say you are an AI unless directly asked."
+        "call them back. Never say you are an AI unless directly asked. "
+        "If the caller wants an appointment or a quote, collect their name and "
+        "the best time to reach them, and say someone will confirm shortly."
     )
+    if guidance_text:
+        system_prompt += f"\n\n{guidance_text}"
     if faq_text:
         system_prompt += f"\n\n{faq_text}"
 
@@ -683,6 +553,11 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
             f"Thank you for calling {_xml_escape(business_name)}! "
             "Have a great day. Goodbye!"
         )
+        # Belt-and-braces finalize; /voice/call-status covers hangups too.
+        try:
+            await _finalize_ai_call(db, tenant_id, call_sid, duration_seconds=0)
+        except Exception:
+            logger.exception("Inline finalize failed for call %s", call_sid)
         return Response(
             content=_build_twiml_goodbye(goodbye_text),
             media_type="application/xml",

@@ -1,0 +1,29 @@
+{
+  "run": 33,
+  "date": "2026-05-25-pm",
+  "mode": "post_moratorium_skill_creation",
+  "evidence_summary": "Skill discovery 2026-05-25 proposed god-class-splitter (3+ occurrences this week), post-split-test-repair, billing-constant-guard. PR #180 (2174732) landed 2026-05-23: 5 god-class files split, 31 files, 5038+/2064-, all invariant checks PASS, 135 new tests. Two follow-up commits required (5f2cd2b 21 stale patch repairs, 4afb3cf 1 import fix). GH #181 still open: AMOUNT_TO_PLAN missing 15000+25000, CI trap active. Items A/B/D still MISSING (moratorium day 20+). Agent OS Rehaul partner brief committed today (7/8 Group A phases done).",
+  "ideas_count": 5,
+  "ideas": [
+    "Create god-class-splitter skill",
+    "Fix GH #181 AMOUNT_TO_PLAN billing gap",
+    "Create billing-constant-guard skill",
+    "Create post-split-test-repair skill",
+    "Update improve-architecture SKILL.md execution handoff"
+  ],
+  "debate_verdicts": {
+    "god-class-splitter skill": "SURVIVES → WINNER",
+    "Fix GH #181": "SURVIVES → runner-up with run 34 escalation signal",
+    "billing-constant-guard skill": "WEAKENED → parking lot"
+  },
+  "winner": "Create god-class-splitter skill (.claude/skills/god-class-splitter/SKILL.md)",
+  "winner_category": "workflow",
+  "confidence": "HIGH",
+  "effort": "medium (~20 min, or autonomous via nightly review)",
+  "moratorium_active": true,
+  "moratorium_day": "20+",
+  "pending_before": 8,
+  "pending_after": 9,
+  "key_finding": "Skill discovery 2026-05-25 provides external validation for god-class-splitter gap. Every split this week required predictable follow-up commits — the missing checklist item is the root cause. 54 files remain in god-class-refactor_plan.md. Nightly review precedent (7985fbb, 2ce31b2) makes autonomous implementation likely.",
+  "run_34_signal": "GH #181 4-consecutive-run governance mandate fires if still unimplemented by run 34. Winner must switch if threshold reached."
+}

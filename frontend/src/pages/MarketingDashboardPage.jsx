@@ -88,12 +88,18 @@ export default function MarketingDashboardPage() {
     try {
       const [dashRes, trendsRes] = await Promise.all([
         apiFetch(`/marketing/${user.tenantId}/dashboard`, token).catch(
-          () => null,
+          (err) => {
+            console.warn("MarketingDashboard: dashboard fetch failed:", err);
+            return null;
+          },
         ),
         apiFetch(
           `/marketing/${user.tenantId}/trends?period=${period}`,
           token,
-        ).catch(() => null),
+        ).catch((err) => {
+          console.warn("MarketingDashboard: trends fetch failed:", err);
+          return null;
+        }),
       ]);
 
       if (dashRes) {

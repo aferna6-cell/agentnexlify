@@ -665,7 +665,7 @@ async def send_campaign(
             if not check_sms_rate_limit(tenant_id, plan):
                 skipped += 1
                 continue
-            sms_ok = await send_sms(to=lead["phone"], body=req.body_html)
+            sms_ok = await send_sms(to=lead["phone"], body=req.body_html, tenant_id=tenant_id)
             if sms_ok:
                 sent += 1
                 increment_sms_count(tenant_id)

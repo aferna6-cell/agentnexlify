@@ -1,0 +1,50 @@
+---
+title: "Claude Code v2.1.118 + v2.1.119 Release Notes — Settings Persistence, GitLab/Bitbucket PR Support, MCP OAuth Fixes"
+category: ai-llm
+tags: ["claude-code", "v2-1-118", "v2-1-119", "release-notes", "settings-persistence", "mcp-oauth", "gitlab", "bitbucket", "vim-mode", "auto-mode"]
+sources: ["raw/ai-llm/2026-04-25-releases-anthropics-claude-code.md"]
+created: 2026-04-25
+updated: 2026-04-25
+summary: "Claude Code v2.1.118 (Apr 23) and v2.1.119 (Apr 23) ship config persistence, vim visual mode, custom themes, GitLab/Bitbucket/GitHub-Enterprise PR ingestion, MCP OAuth concurrency fixes, and Glob/Grep recovery when Bash is denied — releases that materially affect AgentNexLiFy's pinned-version policy, hook architecture, and the issue-to-PR loop."
+---
+
+# Claude Code v2.1.118 + v2.1.119 Release Notes — Settings Persistence, GitLab/Bitbucket PR Support, MCP OAuth Fixes
+
+The v2.1.118 (April 22 build, April 23 release) and v2.1.119 (April 23 release) Claude Code drops are operationally significant for AgentNexLiFy because they touch three load-bearing systems: settings persistence and override precedence, the issue-to-PR loop's `--from-pr` ingestion, and the MCP OAuth flow that anchors Supabase, Playwright, and Vercel MCP integrations. Both releases also fix a long-standing Glob/Grep regression where the tools would disappear on native Mac/Linux builds when Bash was denied via permissions — a permission shape AgentNexLiFy's `.claude/settings.json` deny list is structured around (see [[claude-code-april-23-postmortem-2026]] for the broader April quality story). The pinned-version policy in `.claude/rules/claude-version-pin.md` (currently v2.1.98) needs review against these fixes because several of them remediate genuine issues in the chain between 2.1.98 and 2.1.119.
+
+The v2.1.119 settings-persistence change is the headline. Configurations from `/config` (theme, editor mode, verbose) now persist to `~/.claude/settings.json` and participate in project/local/policy override precedence — closing the gap where session-level settings were ephemeral. This matters for AgentNexLiFy because the project's `.claude/settings.json` deny list and hook configuration interact with this precedence chain; the new behavior gives the project file more predictable wins over user-scope drift. The same release adds `prUrlTemplate` to point the footer PR badge at custom code-review URLs and a `CLAUDE_CODE_HIDE_CWD` env variable for redacting working directory in startup logos — useful for screen-shared demos but not load-bearing.
+
+`--from-pr` now accepts GitLab merge-request, Bitbucket pull-request, and GitHub Enterprise PR URLs in addition to github.com. AgentNexLiFy's [[issue-to-pr-loop]] equivalent currently targets github.com via `gh` CLI and so isn't directly affected, but the broader implication is that Claude Code is positioning to handle multi-Forge environments. If the project ever migrates auxiliary repos to GitLab (the `gitnexus` index is local; the OS dependencies are spread across hosts), the `--from-pr` ingestion is now Forge-portable.
+
+Several v2.1.119 fixes address subagent and hook-system fragility that the AgentNexLiFy session has hit. The `Agent` tool with `isolation: "worktree"` no longer reuses stale worktrees from prior sessions — directly relevant to the worktree-orchestrator pattern in `.claude/skills/worktree-orchestrator/SKILL.md`. Async `PostToolUse` hooks that emit no response payload no longer write empty entries to the session transcript, which clears noise from the project's heavy hook layer. PowerShell tool commands can now be auto-approved in permission mode, matching Bash behavior — irrelevant to Linux-WSL operation but signals continued cross-platform parity work.
+
+The MCP fixes in v2.1.118 are the most safety-relevant. macOS keychain race conditions could cause concurrent MCP token refreshes to overwrite freshly-refreshed OAuth tokens, producing unexpected `/login` prompts. Credential save crashes on Linux/Windows could corrupt `~/.claude/.credentials.json`. OAuth refresh proceeded without its cross-process lock under contention. Each of these is a quiet failure mode that would manifest as "MCP connection broken" with no obvious cause. AgentNexLiFy's MCP surface (Supabase, Playwright, Vercel, Linear, Stripe, etc., listed in `.claude/rules/plugins.md`) is broad enough that any of these would have surfaced at some point. The fix list also includes `${ENV_VAR}` placeholders in MCP server `headers` not being substituted before requests — a configuration footgun that would silently fail authentication.
+
+v2.1.118's vim visual mode (`v` and `V`) and the merged `/cost` + `/stats` → `/usage` are quality-of-life. The named custom themes feature (create, switch, hand-edit JSON in `~/.claude/themes/`, plugins ship themes via `themes/`) is interesting because plugins now have a theme distribution surface — relevant if AgentNexLiFy ever ships its own plugin (the Everything Claude Code source lock at `.claude/everything-claude-code.lock.json` already pins to a plugin-aware architecture). Hooks gaining `type: "mcp_tool"` to invoke MCP tools directly is the more architecturally meaningful change: pre-edit hooks can now consult Supabase MCP for schema-discipline checks (see [[claude-code-best-practices]]) without round-tripping through a Bash shell.
+
+Two fixes in v2.1.118 address auto-mode behavior. The plan-acceptance dialog no longer offers "auto mode" instead of "bypass permissions" when running with `--dangerously-skip-permissions`, and `"$defaults"` can now be included in `autoMode.allow`/`soft_deny`/`environment` to extend rather than replace the built-in list. Both touch the auto-mode classifier documented in [[claude-code-auto-mode]]. For AgentNexLiFy's headless cron jobs (kb-autopopulate, nightly-commit-review) that run with reduced permission prompts, the `"$defaults"` extension is the cleaner config pattern going forward.
+
+The Glob/Grep + denied-Bash fix matters for AgentNexLiFy's security posture. The `.claude/settings.json` deny list blocks raw network commands (`nc`, `socat`, `telnet`) and credential reads, but does not deny Bash entirely. If a user-scope deny ever escalated to deny Bash entirely, pre-2.1.119 builds would silently lose Glob and Grep on native Mac/Linux, breaking nearly every code-search workflow. The fix means the deny-Bash escape hatch (for high-security clients running AgentNexLiFy code reviews under devcontainer isolation per [[claude-code-security]] equivalent) now degrades gracefully.
+
+Telemetry additions are minor but cumulative. OpenTelemetry `tool_result` and `tool_decision` events now include `tool_use_id`; `tool_result` also includes `tool_input_size_bytes`. Status-line stdin JSON now includes `effort.level` and `thinking.enabled`. These give the audit story more surface for any future enterprise tenancy of AgentNexLiFy that needs to demonstrate "what did the AI do" provenance.
+
+## Key Concepts
+
+- **Settings persistence (v2.1.119)** — `/config` settings now write to `~/.claude/settings.json` and participate in project/local/policy override precedence; closes a gap where session settings were ephemeral.
+- **`--from-pr` multi-Forge support** — Now accepts GitLab MR, Bitbucket PR, and GitHub Enterprise PR URLs alongside github.com; relevant to issue-to-PR loop portability.
+- **MCP OAuth concurrency fixes** — v2.1.118 closes macOS keychain race, Linux/Windows credential corruption, missing cross-process lock under refresh contention.
+- **Hooks `type: "mcp_tool"`** — v2.1.118; hooks can now invoke MCP tools directly without round-tripping through Bash.
+- **`"$defaults"` in auto-mode rules** — v2.1.118; extends rather than replaces the built-in auto-mode allow/soft_deny/environment lists.
+- **Glob/Grep + denied-Bash recovery** — v2.1.119 fix; tools no longer disappear on native Mac/Linux when Bash is denied via permissions.
+
+## Related Articles
+
+- [[claude-code-best-practices]] — Anthropic's official Claude Code playbook; CLAUDE.md hygiene, plan mode, verification criteria.
+- [[claude-code-auto-mode]] — Auto-mode classifier architecture; affected by v2.1.118 `"$defaults"` extension and plan-mode/bypass-permissions disambiguation.
+- [[claude-code-april-23-postmortem-2026]] — Three-bug postmortem covering the same April quality window; reverted defaults landed in v2.1.116.
+- [[anthropic-claude-release-notes-feb-apr-2026]] — Consumer-platform release cadence covering the same period (Cowork GA, Opus 4.7 launch).
+- [[effective-harnesses-long-running-agents]] — Worktree orchestrator pattern; v2.1.119 fixes stale-worktree reuse that would have affected this harness.
+
+## Relevance to AgentNexLiFy
+
+The pinned-version policy in `.claude/rules/claude-version-pin.md` should be re-evaluated against v2.1.119. The 2.1.98 pin exists because of community-reported `cache_creation_input_tokens` inflation in v2.1.100+, but the eight releases since 2.1.100 have remediated genuine MCP OAuth, hook, subagent, and worktree fragility that AgentNexLiFy's harness depends on. Specifically, the macOS keychain race in MCP OAuth refresh (v2.1.118 fix), the stale-worktree reuse in `Agent isolation: "worktree"` (v2.1.119), and the `${ENV_VAR}` substitution in MCP server headers (v2.1.119) are all bug classes that show up as "the harness misbehaved overnight" in cron logs. The action item is to run the proxy-test methodology referenced in `claude-version-pin.md` against v2.1.119 to confirm whether the cache_creation inflation has been remediated; if it has, unpin to v2.1.119 to capture the eight releases of accumulated bug fixes. The hooks `type: "mcp_tool"` change is the most architecturally interesting feature — the `scripts/claude-hooks/` layer can now consult Supabase MCP directly for schema-discipline checks (validating that `client_id` is used and `tenant_id` is forbidden, per [[claude-code-best-practices]] discipline), eliminating a class of post-edit pattern-scan hooks that currently round-trip through Bash and lose context.

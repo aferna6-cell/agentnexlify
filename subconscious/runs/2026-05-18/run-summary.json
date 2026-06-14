@@ -1,0 +1,37 @@
+{
+  "date": "2026-05-18",
+  "run": 23,
+  "mode": "moratorium_sprint_consolidation",
+  "evidence_summary": "Zero production commits day 13 (since 72f8204 May 5). Run 22 NOT implemented (check_project_invariants still not in pre-commit — grep confirms). Pending=8 pre-run. check_project_invariants.py PASSES all 6 checks (verified live this session). All 4 S-effort items remain unimplemented: pre-commit guard missing, widget sync script missing, CI eval workflow missing, SKILL.md moratorium section missing. Human present in active session. Run 20 governance mandate fires unconditionally: max_pending_approvals 3→2.",
+  "ideas_count": 5,
+  "ideas": [
+    "Consolidate 4 S-effort items into single sprint PR",
+    "check_project_invariants pre-commit re-escalation",
+    "/sprint slash command",
+    "Auto-approve micro-guard policy",
+    "Investigate autopilot-issue-loop + ai-ready tags"
+  ],
+  "winner": "Consolidate All 4 S-effort Items into Single Sprint PR — one branch, one draft PR, one approval drops pending 9→5",
+  "winner_category": "workflow / code_health",
+  "confidence": "HIGH",
+  "rejected": [],
+  "weakened": [
+    "Auto-approve micro-guard policy (two-phase dependency, premature)",
+    "Autopilot investigation (conditional branching)"
+  ],
+  "parking_lot_additions": [
+    "Investigate autopilot-issue-loop status",
+    "/sprint slash command",
+    "Auto-approve micro-guard policy"
+  ],
+  "governance_mandate_applied": "max_pending_approvals 3→2 (run 20 obligation, 2 runs overdue)",
+  "moratorium_active": true,
+  "moratorium_pending_after": 9,
+  "moratorium_exit_condition": "pending <= 2 (new threshold after mandate applied)",
+  "key_finding": "Approval friction (4 separate decisions) is the bottleneck. Sprint PR converts 4 decisions to 1. First run where sprint is the primary winner, not a bonus footnote. All 4 items have pre-written sketches and zero blockers. Human present.",
+  "next_run_candidates": [
+    "Confirm sprint PR created/merged — what is pending count?",
+    "Investigate autopilot-issue-loop running status",
+    "AI-to-Human Handoff GH issue (run 21 winner, pre-written sketch)"
+  ]
+}

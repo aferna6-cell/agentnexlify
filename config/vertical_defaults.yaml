@@ -1,0 +1,17 @@
+# Average ticket size per vertical (USD).
+# Used by attribution_service.get_avg_ticket() when tenants.avg_ticket_override is null.
+# Lookup key matches tenants.business_type column (see migration 078).
+# Unknown vertical → falls back to `default`.
+
+default: 200
+
+plumbing: 325
+hvac: 450
+electrical: 350
+cleaning: 175
+landscaping: 250
+dental: 400
+salon: 100
+roofing: 800
+pest_control: 200
+auto_shop: 300

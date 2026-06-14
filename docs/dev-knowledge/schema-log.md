@@ -2,6 +2,35 @@
 
 Every database schema change. Claude Code checks this when working with database queries.
 
+---
+
+## widget_health service (2026-06-13) — NO NEW MIGRATION
+
+Ported from PR #212 / GH #215. `backend/services/widget_health.py` probes existing tables:
+- `widget_configs.tenant_id` + `widget_configs.allowed_domains` — existed since migration 001
+- `integrations.tenant_id` + `integrations.provider` — migration 109
+- `activity_log.tenant_id` — migration 004
+- `leads.client_id` (NOT tenant_id) + `conversations.client_id` (NOT tenant_id) — invariant
+- `appointments.tenant_id`
+
+New endpoint `PUT /api/v1/widget/config/{tenant_id}/allowed-domains` writes back to `widget_configs.allowed_domains` (TEXT[] column, migration 001).
+
+Applied: N/A — no migration needed.
+
+---
+
+## 131_os_engine_telemetry.sql (2026-06-06)
+
+**What:** Two `client_id`-scoped tables for the Agent OS engine's run record (the parts `os_agent_runs` doesn't capture):
+- `os_routing_decision` — one row per routing decision (classifier, decision, chosen_agent, confidence, alternates JSONB, accepted/changed_to). Powers `/admin/routing`.
+- `os_model_call_log` — one row per model call (purpose, model, input/output tokens, cost_usd, ok, error). Powers `/admin/costs`. Offline/failed calls logged at cost 0.
+
+Both: `run_id` nullable UUID (no FK; references `os_agent_runs.id` when a run fired), RLS deny-public, index on `(client_id, created_at DESC)`.
+
+**Backend wiring:** `backend/services/agent_os_bridge.py::_persist_telemetry` (best-effort, never breaks the turn) writes both from the orchestration RunRecordBundle. `tenant_scope._TENANT_COLUMN_OVERRIDES` maps both to `client_id`. Mappers `map_routing_decision_row` + `map_model_call_row` unit-tested in `backend/tests/test_agent_os_bridge.py`.
+
+**Applied:** NO — pending deploy. Apply via `mcp__supabase__apply_migration` when the Agent OS engine path goes live.
+
 ## Migration History
 
 ### 001 — Initial Schema
@@ -373,34 +402,34 @@ Adds `date_of_birth DATE` to leads table for birthday greetings automation.
 ### 065 — Client Accounts (White-Label Login)
 New table `client_accounts` for client portal authentication. Columns: tenant_id, lead_id, email, password_hash, created_at. Unique constraints on (tenant_id, email) and (tenant_id, lead_id). Also adds `client_login_enabled BOOLEAN DEFAULT false` to tenants table.
 
-**Applied:** Pending — must be run on live Supabase manually.
+**Applied:** 2026-06-13 (verified live via Supabase introspection — `client_accounts` table present). Was logged "Pending" but had in fact been applied. Stale-log false positive (see 2026-06-13 audit).
 
 ### 066 — Appointment Waitlist
 New table `waitlist_entries` for appointment waitlist management. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), lead_id (FK→leads, ON DELETE SET NULL), customer_name (TEXT NOT NULL), customer_email (TEXT), customer_phone (TEXT), preferred_date (DATE NOT NULL), preferred_time_start/end (TEXT), service_type_id (FK→service_types, ON DELETE SET NULL), notes (TEXT), status (TEXT CHECK: waiting/notified/booked/expired/cancelled, DEFAULT 'waiting'), notified_at (TIMESTAMPTZ), booked_appointment_id (FK→appointments, ON DELETE SET NULL), created_at (TIMESTAMPTZ). Indexed on (tenant_id, status) and (tenant_id, preferred_date) for waiting entries. RLS enabled.
 
-**Applied:** Pending — created 2026-03-23, not yet applied to Supabase. **Note: Duplicate `066_waitlist.sql` renumbered to `083_waitlist.sql` (2026-04-05).**
+**Applied:** 2026-06-13 (verified live — applied under renamed object `waitlist_entries`; see 2026-06-13 audit). **Note: Duplicate `066_waitlist.sql` renumbered to `083_waitlist.sql` (2026-04-05).**
 
 ### 067 — Lead Scoring Configuration
 New table `scoring_configs` for per-tenant configurable lead scoring weights. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), factor (TEXT NOT NULL), weight (INTEGER CHECK 0-100, DEFAULT 10), description (TEXT), is_enabled (BOOLEAN DEFAULT true), created_at (TIMESTAMPTZ). Unique index on (tenant_id, factor). Indexed on tenant_id. RLS enabled.
 
-**Applied:** Pending — created 2026-03-23, not yet applied to Supabase. **Note: Duplicate `067_scoring_configs.sql` renumbered to `084_scoring_configs.sql` (2026-04-05).**
+**Applied:** 2026-06-13 (verified live — applied as `scoring_configs` + `leads.lead_score`; see 2026-06-13 audit). **Note: Duplicate `067_scoring_configs.sql` renumbered to `084_scoring_configs.sql` (2026-04-05).**
 
 _Update this file after every migration. The post-edit Claude Code hook will remind you._
 
 ### 068 — Invoice Number Unique Index
 Adds unique index `idx_invoices_tenant_number ON invoices(tenant_id, invoice_number)`. Prevents duplicate invoice numbers under concurrent creation. Backend retries with incremented sequence on conflict.
 
-**Applied:** Pending — created 2026-03-25, not yet applied to Supabase.
+**Applied:** 2026-06-13 (verified live — unique index `idx_invoices_tenant_number` present; see 2026-06-13 audit).
 
 ### 069 — Lead Email Bounced
 Adds `email_bounced` (BOOLEAN DEFAULT FALSE) and `email_bounced_at` (TIMESTAMPTZ) to `leads`. Partial index on bounced leads. Resend webhook sets this flag; automation engine and email sender skip bounced leads.
 
-**Applied:** Pending — created 2026-03-25, not yet applied to Supabase.
+**Applied:** 2026-06-13 (verified live — `leads.email_bounced` present; see 2026-06-13 audit).
 
 ### 070 — Pipeline Automations
 Creates `pipeline_automations` table for auto-trigger actions when leads move between pipeline stages. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), name (TEXT), trigger_stage (TEXT NOT NULL), actions (JSONB NOT NULL DEFAULT '[]'), is_active (BOOLEAN DEFAULT TRUE), created_at, updated_at. Indexed on tenant_id and (tenant_id, trigger_stage) for active automations. Actions support: email, create_task, notify_team.
 
-**Applied:** Pending — created 2026-03-25, not yet applied to Supabase.
+**Applied:** 2026-06-13 (verified live — pipeline automation tables present; see 2026-06-13 audit).
 
 ### 071 — Widget Teaser Message
 Adds `teaser_message` (TEXT, nullable) to `widget_configs`. Stores the text displayed in the teaser bubble when the chat widget is minimized. Shown after a 3-second delay to prompt visitor engagement. Nullable — when NULL, the widget falls back to its default teaser behavior. Uses `ADD COLUMN IF NOT EXISTS` for safe re-runs.
@@ -456,7 +485,7 @@ Changes:
 ### 077 — Widget Knowledge Base
 Adds `knowledge_base` (TEXT, nullable) to `widget_configs`. Stores the AI-generated markdown knowledge base produced during the onboarding wizard (step 3). Injected into the widget chat system prompt via `widget_chat.py` when present, giving the AI business-specific context without requiring manual prompt editing. Editable post-onboarding from the dashboard. Uses `ADD COLUMN IF NOT EXISTS` for safe re-runs.
 
-**Applied:** Pending — created 2026-04-01. Apply via Supabase MCP before onboarding wizard goes live.
+**Applied:** 2026-06-13 (verified live — `widget_configs.knowledge_base` column present; see 2026-06-13 audit).
 
 ### 078 — Expand business_type CHECK constraint
 Drops and recreates the `tenants.business_type` CHECK constraint to include 27 valid values (up from 10). Fixes CHECK constraint violations during signup for the new industries added to the onboarding wizard dropdown.
@@ -465,12 +494,12 @@ New values added: accounting, bakery, bar_nightclub, cafe, catering, chiropracti
 
 Existing values retained: auto_shop, dental, fitness, legal, medical, other, plumbing, realestate, restaurant, salon
 
-**Applied:** Pending — created 2026-04-01. Apply via Supabase MCP. **Critical: must be applied before any new signups, otherwise new industry types will fail at DB insert.**
+**Applied:** 2026-06-13 (verified live via Supabase introspection — `tenants.business_type` CHECK lists all 28 industry types). Was logged "Pending" but had in fact been applied; signups across these industries work in production. The schema-sync "CRITICAL pending" alert was a stale-log false positive.
 
 ### 079 — Wizard Drop-Off Events
 Creates `wizard_events` table for onboarding wizard funnel analytics. Columns: tenant_id (FK→tenants, ON DELETE CASCADE), step (INTEGER CHECK 1-6), action (TEXT CHECK: enter/complete/skip/abandon), created_at (TIMESTAMPTZ). Indexed on tenant_id and step. RLS enabled with service_role full access. Used by the `POST /api/v1/onboarding/wizard-event` endpoint to track conversion through the 6-step onboarding wizard.
 
-**Applied:** Pending — created 2026-04-01. Apply via Supabase MCP.
+**Applied:** 2026-06-13 (verified live — `wizard_events` table present; see 2026-06-13 audit).
 
 ### 080 — Conversations RLS Policies + Unique Constraint
 Fixes critical bug: conversations table had RLS enabled (migration 001) but NO policies, causing silent INSERT failures from anon/authenticated roles. Adds three RLS policies (service_role full access, authenticated scoped to client_id=auth.uid(), anon full access for widget). Deduplicates existing (client_id, session_id) pairs and adds UNIQUE constraint `conversations_client_session_unique` on (client_id, session_id) to prevent duplicate conversation records and enable safe UPSERT.
@@ -492,17 +521,17 @@ Fixes critical bug: conversations table had RLS enabled (migration 001) but NO p
 ### Migration 083 — Waitlist (2026-04-05, renumbered)
 _Renumbered from `066_waitlist.sql` to `083_waitlist.sql` to resolve duplicate numbering with `066_appointment_waitlist.sql`._ Same content as documented under 066 — Appointment Waitlist above.
 
-**Applied:** Pending — renumbered 2026-04-05, not yet applied to Supabase.
+**Applied:** 2026-06-13 (verified live — `waitlist_entries` present; see 2026-06-13 audit). Renumbered from 066.
 
 ### Migration 084 — Scoring Configs (2026-04-05, renumbered)
 _Renumbered from `067_scoring_configs.sql` to `084_scoring_configs.sql` to resolve duplicate numbering with `067_lead_scoring_config.sql`._ Same content as documented under 067 — Lead Scoring Configuration above.
 
-**Applied:** Pending — renumbered 2026-04-05, not yet applied to Supabase.
+**Applied:** 2026-06-13 (verified live — `scoring_configs` present; see 2026-06-13 audit). Renumbered from 067.
 
 ### Migration 085 — Password Reset Tokens (2026-04-05, renumbered)
 Adds `reset_token` (TEXT) and `reset_token_expires` (TIMESTAMPTZ) to `tenants`. Partial index on `reset_token` for non-null values. Supports password reset flow via email token. _Renumbered from `068_password_reset_tokens.sql` to `085_password_reset_tokens.sql` to resolve duplicate numbering with `068_invoice_number_unique.sql`._
 
-**Applied:** Pending — renumbered 2026-04-05, not yet applied to Supabase.
+**Applied:** Superseded — password reset ships via `tenants.reset_token` + `tenants.reset_token_expires` columns (see `backend/routers/auth_password_reset.py`), verified live 2026-06-13. The standalone `password_reset_tokens` table was never created and is not needed; this migration is obsolete. Do not apply.
 
 ---
 
@@ -519,41 +548,41 @@ Creates three tables for multivariate marketing campaign testing:
 - `ab_test_variants`: ab_test_id (FK→ab_tests), name, variant_config (JSONB), traffic_pct, sends/opens/clicks/conversions counters.
 - `ab_test_sends`: ab_test_id, variant_id, campaign_send_id, tenant_id. Links A/B test variants to individual campaign sends.
 
-**Applied:** Pending — created 2026-04-06. RLS added in migration 091.
+**Applied:** 2026-06-13 (verified live — A/B testing tables (×3) present; see 2026-06-13 audit). RLS added in migration 091.
 
 ### 087 — Automation Rules
 Creates `automation_rules` table for event-driven automation. Columns: tenant_id, name, description, trigger_type (16 event types including lead_captured, tag_added, form_submitted, appointment_created, pipeline_stage_changed, email_opened, scheduled_daily/weekly, etc.), trigger_config (JSONB), conditions (JSONB), actions (JSONB), is_active (BOOLEAN), execution_count, last_triggered_at.
 
 Also creates `automation_rule_logs` for execution audit trail: rule_id, tenant_id, trigger_data (JSONB), actions_executed (JSONB), status (success/partial_failure/failed), error_message.
 
-**Applied:** Pending — created 2026-04-06. RLS added in migration 091.
+**Applied:** 2026-06-13 (verified live — `automation_rules` present; see 2026-06-13 audit). RLS added in migration 091.
 
 ### 088 — Campaign Analytics Aggregates
 Creates `campaign_analytics_aggregates` for pre-computed daily/weekly campaign metrics. Columns: tenant_id, campaign_id (FK→marketing_campaigns), period_start (DATE), period_type (daily/weekly), total_sent/delivered/opened/clicked/bounced, unique_opens/clicks. UNIQUE on (campaign_id, period_start, period_type). Indexed on tenant_id.
 
-**Applied:** Pending — created 2026-04-06. RLS added in migration 091.
+**Applied:** 2026-06-13 (verified live — `campaign_analytics_aggregates` present; see 2026-06-13 audit). RLS added in migration 091.
 
 ### 089 — Platform Admin Tracking
 Adds admin management columns to `tenants`: admin_discount_pct (INTEGER), admin_notes (TEXT), acquired_at (TIMESTAMPTZ), first_paid_at (TIMESTAMPTZ). Adds indexes on created_at and (plan, plan_status) for growth queries.
 
 Creates `admin_promotions` table: tenant_id, promotion_type (free_tier/discount/extended_trial/partner_deal/case_study/referral), discount_pct (0-100), notes, starts_at, expires_at, is_active.
 
-**Applied:** Pending — created 2026-04-06. RLS added in migration 091.
+**Applied:** 2026-06-13 (verified live — `tenants.admin_discount_pct`/`acquired_at` + `admin_promotions` + `platform_monthly_revenue` present; see 2026-06-13 audit). RLS added in migration 091.
 
 ### 090 — Add Autopilot Plan to CHECK Constraint
 Drops and recreates `tenants_plan_check` to include `autopilot`: `CHECK (plan IN ('free', 'growth', 'professional', 'autopilot', 'enterprise'))`. Fixes constraint violations when creating autopilot subscriptions.
 
-**Applied:** Pending — created 2026-04-06. **Critical: autopilot subscriptions fail until this is applied.**
+**Applied:** 2026-06-13 (verified live via Supabase introspection — `tenants_plan_check` includes `autopilot`). Was logged "Pending" but had in fact been applied; autopilot subscriptions work in production. The schema-sync "CRITICAL pending" alert was a stale-log false positive.
 
 ### 091 — RLS and Guards for Migrations 086-089
 Enables RLS and creates tenant isolation policies on all tables from migrations 086-089: ab_tests, ab_test_variants, ab_test_sends, automation_rules, automation_rule_logs, campaign_analytics_aggregates, admin_promotions. Uses `IF NOT EXISTS` guards throughout.
 
-**Applied:** Pending — created 2026-04-06.
+**Applied:** 2026-06-13 (verified live — RLS enabled on all 8 target tables (ab_test*/automation_rule*/campaign_analytics_aggregates/admin_promotions/platform_monthly_revenue); see 2026-06-13 audit).
 
 ### 092 — Appointment Reminder Tracking
 Adds `reminder_24h_sent_at` (TIMESTAMPTZ) and `reminder_1h_sent_at` (TIMESTAMPTZ) to `appointments`. Replaces fragile notes-field string matching for reminder deduplication. Partial indexes on tenant_id for unsent reminders.
 
-**Applied:** Pending — created 2026-04-06.
+**Applied:** 2026-06-13 (verified live — `appointments.reminder_24h_sent_at`/`reminder_1h_sent_at` present; see 2026-06-13 audit).
 
 ---
 
@@ -591,7 +620,7 @@ CREATE POLICY table_policy ON table_name
 ```
 All tenant isolation is enforced at application layer in FastAPI, not at RLS layer.
 
-**Applied:** Pending — created 2026-04-07. Apply via Supabase MCP. Must apply before 091 creates a false sense of security.
+**Applied:** 2026-06-13 (verified live — RLS policies present on the 086-089 tables; see 2026-06-13 audit).
 
 ---
 
@@ -611,7 +640,7 @@ Columns added (all `IF NOT EXISTS`):
 
 Indexes: `idx_leads_temperature`, `idx_leads_type`, `idx_leads_appointment_date` (partial, non-null only).
 
-**Applied:** Pending — created 2026-04-07.
+**Applied:** 2026-06-13 (verified live — `leads.lead_temperature`/`conversation_summary` present; see 2026-06-13 audit).
 
 ### 095 — Conversation Memory Column
 **Date:** 2026-04-07
@@ -619,7 +648,7 @@ Adds `memory` JSONB column to `conversations` table for structured conversation 
 
 GIN index `idx_conversations_has_memory` on `memory` column (partial, non-null only).
 
-**Applied:** Pending — created 2026-04-07.
+**Applied:** 2026-06-13 (verified live — conversation memory column present; see 2026-06-13 audit).
 
 ### 096 — Production Hardening
 **Date:** 2026-04-07
@@ -652,7 +681,7 @@ All new tables have RLS enabled with `auth.role() = 'service_role'` policy. Func
 
 **Note:** Migration tolerates orphaned `client_id` values — FK is left NOT VALID with a NOTICE if orphans exist (commit 738ba0b).
 
-**Applied:** Pending — created 2026-04-07. Critical for multi-worker safety.
+**Applied:** 2026-06-13 (verified live — `leads.client_id` + `conversations.client_id` + `automation_locks`/`oauth_states`/`tenant_email_daily_sends` present; see 2026-06-13 audit). Multi-worker locks confirmed live.
 
 ### 097 — No-Show Recovery Tracking Columns
 **Date:** 2026-04-08
@@ -662,7 +691,7 @@ Adds two columns to `appointments` for no-show recovery outreach tracking:
 
 Partial index `idx_appointments_noshow_recovery` on `(status, noshow_recovery_sent_at)` WHERE `status = 'no_show'` — optimizes the recovery query that finds no-show appointments needing outreach.
 
-**Applied:** Pending — created 2026-04-08. Required for no-show recovery automation.
+**Applied:** 2026-06-13 (verified live — `appointments.noshow_recovery_sent_at`/`noshow_followup_sent_at` present; see 2026-06-13 audit).
 
 ### 098 — Daily Briefing, No-Show Recovery Toggles, Pre-Chat Form Config
 **Date:** 2026-04-08
@@ -673,7 +702,7 @@ Adds tenant feature toggles and widget pre-chat form:
 
 Column comments added for documentation.
 
-**Applied:** Pending — created 2026-04-08. Required for daily briefing and pre-chat form features.
+**Applied:** 2026-06-13 (verified live — `tenants.daily_briefing_enabled` present; see 2026-06-13 audit). Required for daily briefing and pre-chat form features.
 
 ### 099 — AI Lead Qualification Fields
 **Date:** 2026-04-09
@@ -713,7 +742,7 @@ Adds opt-in boolean to `widget_configs` controlling whether widget chat escalate
 
 See `backend/routers/widget_chat.py:Step 9a` and `docs/managed-agents.md` for the full flow description.
 
-**Applied:** Pending — created 2026-04-10. Apply via Supabase MCP.
+**Applied:** 2026-06-13 (verified live — `widget_configs.enable_ai_fallback` column present; see 2026-06-13 audit).
 
 ### 102 — Marketing Suite Add-on (backfill)
 **Date:** 2026-04-12 (file mtime) — backfilled 2026-04-20
@@ -838,6 +867,27 @@ Single-table migration for Zapier app authentication (spec: `specs/zapier-crm-ex
 **Conventions:** `client_id` not `tenant_id`.
 **Applied:** 2026-04-20 via `mcp__supabase__apply_migration`. Verified.
 
+### 111 — Missed-Call Text-Back (Phase 1)
+**Date:** 2026-04-22
+**Commit:** 6020a43
+Ships the first ops automation table backing the missed-call-text-back workflow (2026-04-21 pivot memory: `project_automation_vs_crm_pivot.md`).
+
+**Table:**
+- `missed_call_texts` — one row per inbound missed call → outbound SMS pairing. Captures `call_sid`, `sms_sid`, `from_phone`, `to_phone`, `template_id`, `status` enum (`sent`/`failed`/`skipped`), plus `converted_to_lead_id` FK for Phase-2 attribution. Tenant FK cascades.
+
+**Column add:**
+- `tenants.avg_ticket_override` — `decimal(10,2)` nullable. Phase-2 attribution (dollars recovered per tenant). Landed early; cheap + allows backfill independent of attribution UI.
+
+**Backfill:**
+- Insert `missed_call_textback` automation row for every existing tenant (`is_enabled=true`, default hold config `{mode: hold, hold_seconds: 60, template_id: default}`). `ON CONFLICT DO NOTHING` keeps re-runs safe.
+
+**RLS:** `missed_call_texts` RLS enabled with `tenant_id = auth.uid()` policy. Note — this migration uses `tenant_id` column name (diverges from project `client_id` convention on newer tables). Rationale: matches existing `tenants.id = auth.uid()` session pattern used by `automations`/`leads`. Flagged here so future schema-guardian passes don't misread as drift.
+
+**Index:** `(tenant_id, created_at DESC)` for activity-feed queries.
+
+**Applied:** 2026-04-22 via migration file commit. Prod apply **unverified** — needs `mcp__supabase__apply_migration` confirmation (tracked in current-tasks.md Priority 0).
+
+
 ### 112 — Onboarding v2 widget_configs columns
 **Date:** 2026-04-25
 ALTER widget_configs adding 3 columns for v2 wizard cohort tracking + readiness badge (spec: `specs/onboarding-v2_spec.md` §6.1.1).
@@ -872,3 +922,356 @@ Adds `signup_attempts` table for velocity-based fraud detection on registration 
 **RLS:** service_role only.
 **Conventions:** `tenant_id` (not `client_id`) on FK.
 **Applied:** NOT YET — pending `mcp__supabase__apply_migration` after review.
+
+
+### 111 — Missed Call Texts (Phase 1)
+**Date:** 2026-04-22
+Adds `missed_call_texts` table for missed-call-textback automation, `tenants.avg_ticket_override` for Phase 2 attribution, and seeds the `missed_call_textback` automation row for every existing tenant.
+
+**Table:**
+- `missed_call_texts` — `tenant_id` FK to `tenants(ON DELETE CASCADE)`, `call_sid`, `sms_sid`, `from_phone`, `to_phone`, `template_id`, `status` CHECK (`sent`/`failed`/`skipped`), `created_at`, `converted_to_lead_id` FK to `leads`.
+
+**Column add:**
+- `tenants.avg_ticket_override decimal(10,2)` — manual override for revenue attribution.
+
+**Indexes:**
+- `idx_missed_call_texts_tenant_created` on `(tenant_id, created_at DESC)`.
+
+**Backfill:** seeds one `automations` row per tenant: `type='missed_call_textback'`, `is_enabled=true`, default config `{mode:"hold", hold_seconds:60, template_id:"default"}`. `ON CONFLICT DO NOTHING`.
+
+**RLS:** enabled. Policy `missed_call_texts_tenant_isolation` — `tenant_id = auth.uid()`.
+**Conventions:** `tenant_id` (NOT `client_id` — leads/conversations are the outliers; new tables use `tenant_id`).
+**Applied:** YES — 2026-04-22 (per `-- Applied:` marker in migration file).
+
+
+### 114 — Idempotency Keys
+**Date:** 2026-04-23
+Adds `idempotency_keys` table to dedup webhook redeliveries from Stripe and Twilio.
+
+**Table:**
+- `idempotency_keys` — `key TEXT PRIMARY KEY` (format `'provider:event_id'`, e.g. `'stripe:evt_abc123'` or `'twilio:<MessageSid>'`), `provider TEXT NOT NULL`, `created_at TIMESTAMPTZ DEFAULT now()`, `response_status INT`, `response_body JSONB` (cached payload for replay).
+
+**Indexes:**
+- `idempotency_keys_created_at_idx` on `(created_at)` — supports TTL cleanup queries.
+
+**TTL:** 7 days, manual cron — no auto-delete trigger. Recommended cleanup query in migration comment: `DELETE FROM idempotency_keys WHERE created_at < now() - INTERVAL '7 days';`.
+
+**RLS:** NOT enabled in this migration — see 116 for the security followup.
+**Conventions:** no tenant column (cross-tenant dedup store; access gated to service role via 116).
+**Applied:** YES — confirmed 2026-04-27.
+
+
+### 115 — Contextual Reindex Marker
+**Date:** 2026-04-24
+Adds `contextual_reindexed_at` marker to `kb_articles` so `scripts/reindex_contextual.py` can skip already-processed chunks.
+
+**Column add:**
+- `kb_articles.contextual_reindexed_at TIMESTAMPTZ` — set when chunk has been re-embedded with Anthropic contextual retrieval prefix. NULL = not yet reindexed.
+
+**Affected tables:** `kb_articles` (from migration 081 — system-wide wiki, `vector(512)`).
+
+**RLS:** unchanged.
+**Conventions:** column add only; no tenant-column impact.
+**Applied:** YES — confirmed 2026-04-27.
+
+
+### 116 — Idempotency Keys RLS (security followup to 114)
+**Date:** 2026-04-25
+Closes the public-readability gap on `idempotency_keys`. `response_body` JSONB caches webhook payloads (Stripe customer email, subscription IDs, Twilio phone numbers). Without RLS, anon/authenticated callers using project public keys could enumerate cached webhook responses across all tenants.
+
+**Changes:**
+- `ALTER TABLE idempotency_keys ENABLE ROW LEVEL SECURITY;`
+- `CREATE POLICY "idempotency_keys_deny_public" ON idempotency_keys FOR ALL TO public USING (false) WITH CHECK (false);`
+
+**Effect:** anon + authenticated roles get nothing. Service role bypasses RLS automatically — backend webhook handlers continue to work.
+**Conventions:** deny-all-public is the right pattern for cross-tenant infra tables that backend-only code touches.
+**Applied:** YES — confirmed 2026-04-27. RLS active on `idempotency_keys`.
+
+
+### 117 — Zapier API Keys
+**Date:** 2026-04-27
+**Commit:** feature/58-zapier-auth
+Adds `zapier_api_keys` table backing Issue #58 — Zapier API key auth + tier gating + rate limit. Originally numbered 112 on the feature branch; renumbered to 117 to avoid collision with `112_widget_configs_onboarding_v2.sql` after rebase.
+
+**Table:**
+- `zapier_api_keys` — `id`, `client_id` FK, `name`, `key_prefix` (8 chars, indexed for lookup), `key_hash` (bcrypt cost 12), `last_used_at`, `revoked_at`, `rate_limit_rpm` (default 100), `created_at`.
+
+**RLS:** service_role only (backend CRUD endpoints handle tenant scoping).
+**Conventions:** `client_id` (matches leads/conversations convention).
+**Applied:** YES — confirmed via PR #91 squash-merge.
+
+
+### 118-123 — Agent OS P0 Foundation
+**Date:** 2026-05-21
+**Branch:** claude/agent-os-grill-resume-cHznV
+Six tables backing the Agent OS overhaul P0 (chat-first orchestrator). Spec: `specs/agent-os-overhaul_spec.md`. Plan: `plans/agent-os-p0_plan.md`. Every new table carries the `os_` prefix and is `client_id`-scoped (matches leads/conversations).
+
+**Tables:**
+- `118 os_threads` — task-conversation threads. `id`, `client_id`, `title`, `created_by`, `status` (active|archived), timestamps. Index `(client_id, status)`.
+- `119 os_messages` — thread messages. `id`, `client_id`, `thread_id` FK→os_threads ON DELETE CASCADE, `role` (user|assistant|agent|system), `content`, `agent_run_id`, `created_at`. Index `(thread_id, created_at)`.
+- `120 os_agent_runs` — worker-agent invocations (async). `id`, `client_id`, `thread_id` FK CASCADE, `agent_name`, `status` (queued|running|succeeded|failed), `thought_process` JSONB, `deliverable` JSONB (approval-gated draft, no separate table in P0), `deliverable_status` (pending_approval|approved|rejected), `error_detail`, `bug_reported_at`, timestamps, `completed_at`. Index `(client_id, status)`.
+- `121 os_memory_entries` — semantic memory. `id`, `client_id`, `kind` (fact|preference|decision|conversation_summary), `content`, `embedding vector(512)` (voyage-3-lite), `source`, `created_by`, `is_pinned`, timestamps. HNSW cosine index on `embedding`. Also creates `match_os_memory(p_client_id, p_query_embedding, p_match_count)` SQL function for client-scoped ANN search. Karpathy graph layer (os_memory_nodes/edges) deferred past P0.
+- `122 os_backlog_requests` — no-fit backlog. `id`, `client_id`, `thread_id` FK→os_threads ON DELETE SET NULL, `summary`, `detail`, `reason`, `status` (open|accepted|declined|deferred), `decided_by`, `decision_note`, `created_at`, `decided_at`. Index `(client_id, status)`.
+- `123 os_tenant_usage` — per-tenant usage metering. `id`, `client_id`, `cycle_start` DATE, `agent_runs`, `messages`, `input_tokens`, `output_tokens`, timestamps. UNIQUE `(client_id, cycle_start)`. Index `(client_id, cycle_start DESC)`.
+
+**Extension:** 121 runs `CREATE EXTENSION IF NOT EXISTS vector`.
+**RLS:** deny-public on all 6 tables (`FOR ALL TO public USING (false) WITH CHECK (false)` — matches migration 116 pattern). Backend uses the service-role client (bypasses RLS); app-layer tenant scoping via `tenant_scope.py`.
+**Conventions:** `client_id` on every table (registered in `_TENANT_COLUMN_OVERRIDES` in `backend/services/tenant_scope.py`).
+**Applied:** YES — confirmed 2026-05-21 via Supabase MCP `list_tables` (all 6 tables present, RLS enabled, project `pxserpybmajixqrmzaly`).
+
+
+### 128 — Per-Tenant Agent OS Auto-Send Toggle
+**Date:** 2026-05-27
+**Branch:** claude/friendly-bardeen-H6ErW
+Adds `tenants.os_auto_send_enabled BOOLEAN NOT NULL DEFAULT FALSE`. When FALSE (default), every Agent OS worker deliverable lands as `pending_approval` and waits for owner review. When TRUE, worker deliverables are marked `approved` directly at worker-success time — skipping the owner review gate. Action-handler firing is decided separately by `os_agent_runs.action_type` (migration 126); this flag only controls the approval gate.
+
+**Risk:** stale prompt + wired action handler + `auto_send=TRUE` → customer-facing action fires with zero human review. Default OFF; owner-gated toggle on the Settings page.
+
+**Backend wiring:** `backend/services/os_workers/__init__.py::_tenant_auto_send_enabled()` reads the flag; `run_worker` branches between `approved` and `pending_approval`. Settings endpoint `PUT /api/v1/auth/settings/{tenant_id}` accepts `os_auto_send_enabled`; `GET /api/v1/auth/tenant/{tenant_id}` returns it. Frontend toggle in `MessagingSettingsCards::AgentOSAutoSendCard`.
+
+**Applied:** YES — 2026-05-27 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`).
+
+### 129 — chat_messages.os_message_id (Group C Mirror Tag)
+**Date:** 2026-05-27
+**Branch:** claude/friendly-bardeen-H6ErW
+Adds `chat_messages.os_message_id UUID NULL`. Widget OS reply mirror tags each `chat_messages` row with the originating `os_messages.id` so replay is detectable. Partial unique index `chat_messages_os_message_id_uniq ON (tenant_id, os_message_id) WHERE os_message_id IS NOT NULL` enforces dedup only on mirrored rows; legacy pre-mirror rows stay unconstrained.
+
+**Backend wiring:** `backend/services/os_outbound_mirror.py::_mirror_widget` pre-checks `chat_messages` by `(tenant_id, os_message_id)` before insert. Idempotent across the 4 Uvicorn workers in prod.
+
+**Applied:** YES — 2026-05-27 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`).
+
+### 130 — os_outbound_log (Group C Phase 3, Cross-Process Replay Protection)
+**Date:** 2026-05-27
+**Branch:** claude/friendly-bardeen-H6ErW
+Adds dedup anchor for non-widget channels. Schema: `id UUID PK`, `client_id UUID NOT NULL`, `os_message_id UUID NOT NULL REFERENCES os_messages ON DELETE CASCADE`, `channel TEXT` (`sms | email | facebook`), `provider TEXT` (`twilio_byo | twilio_platform | resend | messenger`), `provider_message_id TEXT DEFAULT ''`, `status TEXT DEFAULT 'sent'`, `sent_at TIMESTAMPTZ DEFAULT now()`. Unique index `os_outbound_log_dedup_uniq ON (client_id, os_message_id, channel)` is the replay-protection lookup; `os_outbound_log_client_sent_idx ON (client_id, sent_at DESC)` for operational queries. RLS enabled + `os_outbound_log_deny_public` policy (service-role only). Tenant column is `client_id` (override registered in `tenant_scope._TENANT_COLUMN_OVERRIDES`).
+
+**Why:** widget mirror is idempotent via `chat_messages.os_message_id` (migration 129) but SMS / email / Facebook had no cross-process guard. With 4 Uvicorn workers, a runner re-fire on the same `os_messages` row would re-send the same SMS / email / FB DM. `os_outbound_log` is the dedup anchor: pre-check by `(client_id, os_message_id, channel)` before sending, post-insert after a successful send. Channel-scoped key supports future fan-out (simultaneous SMS + email mirror of one OS reply).
+
+**Failure semantics:** best-effort. Pre-check DB error falls through to send (rare duplicate beats blocking the customer's reply); post-insert DB error keeps `mirrored` status (customer already got the reply).
+
+**Backend wiring:** `backend/services/os_outbound_mirror.py::_outbound_log_already_sent` + `_outbound_log_record` helpers; `_mirror_sms`, `_mirror_email`, `_mirror_facebook` each gained pre-check + post-insert calls; dispatcher threads `db` through. Tests: `tests/test_agent_os.py::TestOutboundMirrorIdempotency` (9 cases — replay skip per channel, channel-scope correctness, success records row, pre-check DB failure falls through, post-insert DB failure preserves mirrored).
+
+**Applied:** YES — 2026-05-27 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`). Verified live: 8 columns match schema, 3 indexes present (`os_outbound_log_pkey`, `os_outbound_log_dedup_uniq`, `os_outbound_log_client_sent_idx`), RLS enabled, `os_outbound_log_deny_public` policy in place.
+
+## Migration 133 — os_graph_memory (2026-06-09)
+
+**Tables:** `os_graph_nodes` (one node per `(client_id, entity_type, normalized_name)` — name, summary, capped JSONB `facts` with provenance, `mention_count`, voyage-3-lite 512d `embedding`, HNSW index) + `os_graph_edges` (typed relations, `observed_count` weight, FK cascade to nodes, unique per `(client_id, from_node, to_node, relation)`). Both RLS deny-public.
+
+**Why:** ADR `planning/decisions/2026-05-25-agent-os-graph-memory.md` deferred the graph layer with revisit triggers; trigger #4 (owner-requested navigable memory view) fired 2026-06-09. Extraction cost stays inside the ADR's concern: ONE Haiku call per owner turn after the reply persists (`backend/services/os_graph_memory.py::accumulate_from_turn`), never per memory write. New facts write through to `os_memory_entries` so semantic recall stays consistent. Retrieval feeds `SharedContext.kb` as `KbEntry {topic, answer}` — zero engine changes.
+
+**Backend wiring:** `os_graph_memory.py` (extract/upsert/retrieve), `os_thread_runner.py` (kb enrichment pre-engine + background accumulation post-persist), `routers/os_graph.py` (GET /api/v1/os/graph, owner-only DELETE /graph/nodes/{id}). Frontend: `components/os/MemoryPanel.jsx` in the Agent OS page. Tests: `tests/test_os_graph_memory.py` (11 cases).
+
+**Applied:** YES — 2026-06-09 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`). Verified live: both tables present with RLS enabled + table comments in place.
+
+## Migration 134 — pricing_ab_events (2026-06-10)
+
+**Table:** `pricing_ab_events` — anonymous marketing-site A/B events. `id UUID PK`, `visitor_id TEXT` (first-party cookie UUID, 8-64 chars, NO PII), `variant TEXT` (`control | variant_b`), `event TEXT` (`view | cta_click`), `plan TEXT` (canonical plan names, nullable), `created_at TIMESTAMPTZ`. Indexes on `(variant, event)` + `created_at`. RLS enabled, service-role-only policy. No tenant FK by design — visitors are pre-signup.
+
+**Why:** launch rubric 9.3 "Pricing page A/B test wired". Experiment `pricing_page_cta_2026_06`: deterministic 50/50 variant by sha256(experiment:visitor_id) — assignment is server-derived and never trusted from the client.
+
+**Backend wiring:** `backend/routers/pricing_experiment.py` (GET variant + POST event, both rate-limited 30/min, event insert fault-tolerant), registered in `main.py`. Frontend: `frontend/src/utils/pricingExperiment.js` (cookie visitor id + variant hook + event tracker), wired to Free-plan CTA in `Home.jsx`. Tests: `backend/tests/test_pricing_experiment.py` (11 cases).
+
+**Applied:** YES — 2026-06-10 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`).
+
+## Migration 135 — referral columns + backfill (2026-06-10)
+
+**Columns added to `tenants`:** `referral_code TEXT UNIQUE`, `referred_by UUID REFERENCES tenants(id)`, `referral_discount_pct INTEGER DEFAULT 0`. Backfilled `referral_code` for all 7 existing tenants (md5-derived 8-char codes).
+
+**Why:** URGENT prod fix — repo migration 001 lists these columns but the live schema never had them; the referral wiring shipped in PR #227 made `/register` insert a nonexistent column (signup 500). See bug-patterns.md entry "Migration files ≠ live schema".
+
+**Applied:** YES — 2026-06-10 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`). Verified live: 7/7 tenants have codes.
+
+## Migration 136 — hot_table_columns() RPC (2026-06-10)
+
+**Function:** `public.hot_table_columns()` — returns (table_name, column_name) for the 7 hot tables; SECURITY DEFINER, service-role-only EXECUTE. Powers `scripts/check_schema_drift.py` + the `live-drift` CI job (PostgREST doesn't expose information_schema).
+
+**Applied:** YES — 2026-06-10 via Supabase MCP (project `pxserpybmajixqrmzaly`). Verified live: 203 rows / 7 tables.
+
+## Migration 137 — drop marketing_addon_* columns (2026-06-10)
+
+**Dropped from `tenants`:** `marketing_addon_active`, `marketing_addon_grandfathered`, `marketing_addon_started_at`, `marketing_addon_stripe_sub_id` — unread since the add-on retirement (PR #228). Applied ONLY AFTER Railway rolled out #228 (the prior deploy still SELECTed marketing_addon_active in /me). Drift manifest updated to match.
+
+**Applied:** YES — 2026-06-10 via Supabase MCP (project `pxserpybmajixqrmzaly`), post-rollout health verified.
+
+## Migration 138 — os_uploads + os-uploads storage bucket (2026-06-11)
+
+**Table:** `os_uploads` — Agent OS file/image uploads + AI-generated images. `id UUID PK`, `client_id UUID NOT NULL REFERENCES tenants(id)` (tenant col is **client_id**, registered in `tenant_scope.py` overrides), `kind TEXT CHECK ('upload'|'generated')`, `filename TEXT`, `content_type TEXT`, `size_bytes BIGINT`, `storage_path TEXT`, `public_url TEXT`, `vision_summary TEXT` (Haiku description of uploaded images), `prompt TEXT` (for generated), `created_at TIMESTAMPTZ`. 3 indexes (client_id, created_at, kind). RLS enabled, service-role-only.
+
+**Storage bucket:** `os-uploads` — public, 10MB file limit, MIME allowlist (png/jpeg/webp/gif/pdf). Created via SQL insert into `storage.buckets`.
+
+**Why:** Agent OS composer attachments + image generation (rate-limited: uploads 20/hr + 50/day per tenant; image gen 10/hr + 20/day). Backend: `backend/routers/os_files.py`, `backend/services/image_gen.py`. Also added `os_uploads` to GDPR purge list in `backend/services/account_deletion.py`.
+
+**Applied:** YES — 2026-06-11 via Supabase MCP `apply_migration` (project `pxserpybmajixqrmzaly`); bucket verified live.
+
+## Migration 139 — reconcile migration-001 stale DDL (2026-06-11)
+
+**Guarded no-op on prod**: ADD COLUMN IF NOT EXISTS for `leads.client_id/status/areas_of_interest` + `conversations.client_id`; DROP IF EXISTS the 001-era names (`tenant_id`, `service_interest`, `lead_stage`) that never existed live. Purpose: fresh-DB replays of migrations/ now converge on the live shape (audit 2026-06-10 addendum CRITICAL — same failure class as the referral-columns incident).
+
+**Applied:** YES — 2026-06-11 via Supabase MCP (verified no-op).
+
+## Migration 140 — drift guard expanded to full schema (2026-06-11)
+
+**Function:** `hot_table_columns()` now returns every public BASE TABLE's columns (was 7 hard-coded hot tables). Coverage scoped by `ops/schema/expected-columns.json` (regenerated: 113 tables) so the function never needs another migration. Still SECURITY DEFINER, service-role-only.
+
+**Applied:** YES — 2026-06-11 via Supabase MCP.
+
+## Migration 141 — tenants.os_auto_send_rules (2026-06-11)
+
+**Column:** `os_auto_send_rules JSONB NOT NULL DEFAULT '{}'` — per-agent auto-send overrides (gap G6), e.g. `{"booking": true}`. Gate logic in `agent_os_bridge.resolve_deliverable_status`: per-agent rule beats global `os_auto_send_enabled`; NEVER_AUTO_SEND_AGENTS (invoicing, payments, complaints) cannot be overridden. Updated via PUT /api/v1/auth/settings/{tenant_id} with shape validation.
+
+**Applied:** YES — 2026-06-11 via Supabase MCP. Manifest updated.
+
+## Migration 142 — financial_services business_type (2026-06-11)
+
+**Constraint:** `tenants_business_type_check` rebuilt with `financial_services` added to the 27-value allowlist (gap G8 — MTOptions vertical depth). Same migration moved MTOptions from `other` to `financial_services`. Powers the financial_services guidance pack (os_kb_feed), tailored Agent OS starters, FAQ seeds, and the express-setup dropdown entry.
+
+**Applied:** YES — 2026-06-11 via Supabase MCP; MTOptions row verified moved.
+
+## Migration 143 — tenants.voice_ai_enabled (2026-06-11)
+
+**Column:** `voice_ai_enabled BOOLEAN NOT NULL DEFAULT false` — voice mode switch for inbound Twilio calls (gap G3). false (default) = voicemail mode: greeting + Record → transcription → AI summary → lead → Agent OS callback-text draft through the approval flow. true = live AI answering (Gather speech loop with vertical guidance), plan-gated to professional/enterprise in `backend/routers/calls.py`. Settings via PUT /api/v1/auth/settings + VoiceAICard UI.
+
+**Applied:** YES — 2026-06-11 via Supabase MCP. Manifest updated.
+
+## 2026-06-12 — migration 144: tenants.is_demo
+- `tenants.is_demo BOOLEAN NOT NULL DEFAULT false` + partial index `idx_tenants_is_demo`.
+- Marks the public live-demo sandbox tenant: demo tenants get outbound
+  no-ops (email/SMS via demo_guard), restricted "demo" JWT role, nightly
+  data reset. Applied live via Supabase MCP 2026-06-12.
+
+## 2026-06-12 — migration 145: push_subscriptions (APPLIED 2026-06-12 via Supabase MCP)
+- New table for Web Push subscriptions (pending-approval browser
+  notifications — free alternative to the SMS leg): `id uuid pk`,
+  `tenant_id uuid not null`, `endpoint text not null unique`,
+  `keys jsonb not null`, `created_at timestamptz default now()` +
+  `idx_push_subscriptions_tenant_id`. RLS enabled, service-role-only access.
+- **Tenant column decision:** uses `tenant_id` (appointments-style). This is
+  a new OS-adjacent table defined fresh — the `client_id` convention applies
+  only to the legacy leads/conversations tables.
+- Backend: `backend/routers/push_subscriptions.py` (subscribe/unsubscribe +
+  public vapid-public-key), `backend/services/os_push_notify.py` (send,
+  pywebpush import-guarded, no-ops without VAPID env keys).
+- **Applied:** NO — file written only; apply via Supabase MCP. Requires
+  Railway env vars VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT
+  (manual step pending) before push actually fires.
+
+## 2026-06-13 — migration 146: conversation_email_notify (file written; apply via Supabase MCP)
+- Per-tenant "email me the full transcript when a widget conversation wraps".
+  `tenants.conversation_email_notify_enabled boolean not null default false`,
+  `tenants.conversation_notify_email text` (alert destination; falls back to
+  `owner_email` when null), `conversations.notified_at timestamptz` +
+  partial index `idx_conversations_unnotified` on `(client_id) WHERE
+  notified_at IS NULL`.
+- **Tenant column note:** `conversations` uses `client_id` (legacy convention);
+  the new `notified_at` column sits alongside it. Tenant settings live on
+  `tenants` (same place as `sms_notifications_enabled`/`notification_phone`).
+- Backend: `backend/services/conversation_notify.py` (idle-sweep job
+  `notify_idle_conversations`, exactly-once via `notified_at` claim), wired into
+  the 5-min scheduler batch in `backend/main.py`. Settings read/write added to
+  `backend/routers/auth.py` (`update_settings` allowlist + `get_tenant` select).
+- Frontend: `ConversationEmailNotificationsCard` in
+  `frontend/src/pages/settings/MessagingSettingsCards.jsx`, rendered via
+  `SettingsPageContent.jsx`, form fields in `SettingsPage.jsx`.
+- **Applied:** NO — apply via Supabase MCP. Additive + nullable/defaulted, safe
+  ahead of deploy. (Note: supersedes the audit suggestion to renumber PR #212's
+  migrations to 146 — use 147/148/149 there now.)
+
+## 2026-06-13 — conversation email alerts: behavior change (on-NEW, not transcript-on-wrap)
+- Per tenant request, the alert now fires the moment a NEW conversation comes in
+  (inline from widget_chat `is_new`, background task) with a lightweight heads-up
+  (first message + inbox link), NOT the full transcript on idle.
+- `notify_idle_conversations` scheduled job + transcript builder removed;
+  `conversation_notify.py` now exposes `notify_new_conversation`.
+- The `tenants.conversation_email_notify_enabled` + `conversation_notify_email`
+  columns (migration 146) are still used. `conversations.notified_at` +
+  `idx_conversations_unnotified` are now VESTIGIAL (no reader) — harmless; drop in
+  a future cleanup migration if desired.
+
+---
+
+## Verification audit — 2026-06-13 (live prod introspection, project pxserpybmajixqrmzaly)
+
+The daily Schema Sync workflow escalated "CRITICAL: pending migrations — blocks
+production" off this file's `Applied: Pending` text. Live introspection proved
+that is a **stale-log false alarm, not a prod schema gap**. Confirmed applied:
+
+- 065 client_accounts; 087 automation_rules; 070 automations/pipeline; 086 A/B
+  test tables (×3); 088 campaign_analytics_aggregates.
+- 078 business_type CHECK (28 industries); 090 plan CHECK (includes `autopilot`)
+  — the two "CRITICAL" ones; markers corrected above.
+- Applied under RENAMED objects: 066 → `waitlist_entries`, 067/084 → `scoring_configs`
+  (+ `leads.lead_score`); 069 → `leads.email_bounced`; 095 → conversation memory
+  column; 098 → `tenants.daily_briefing_enabled`.
+
+Second-pass introspection 2026-06-13 — the prior "no live match" entries were
+NAME mismatches, not real gaps. All confirmed applied:
+- 077 widget knowledge base — applied as a **column** `widget_configs.knowledge_base`
+  (the prior pass searched for a `*knowledge_base*` table, hence the miss).
+- 079 wizard events — table is **`wizard_events`** (prior pass searched the wrong
+  name `wizard_dropoff_events`).
+- 085 `password_reset_tokens` — **superseded**, not pending. Password reset ships
+  via `tenants.reset_token` + `tenants.reset_token_expires` columns
+  (`backend/routers/auth_password_reset.py:88-91` stores them, `:144` looks up by
+  `reset_token`), both verified live. The standalone table was never needed.
+  Marker flipped to "Superseded — do not apply".
+
+114 public tables total. Bottom line: **every** "Pending" entry was stale; the
+schema-sync heuristic trusts this file's text rather than the DB. Follow-up
+(DONE 2026-06-13): all 23 remaining `Pending` markers were resolved via live
+introspection — 22 flipped to "Applied" (column/table/index/RLS presence
+verified in project `pxserpybmajixqrmzaly`) and 085 to "Superseded". Pending
+count is now 0, so the text-count `check` job no longer false-fires. The
+authoritative DB introspection already lives in the `live-drift` job
+(`scripts/check_schema_drift.py` vs `ops/schema/expected-columns.json`) — that,
+not the markdown text, is the source of truth for live drift. Any future
+`Applied: Pending` marker now means a genuinely unapplied migration.
+
+---
+
+### 147 — Qualifier Settings (per-tenant AI qualifier controls, GH #216)
+
+Adds two owner-facing columns to `tenants` for the AI lead qualifier
+(`backend/services/lead_qualification.py`), both additive + idempotent
+(`ADD COLUMN IF NOT EXISTS`) with behavior-preserving defaults:
+
+- `qualifier_enabled BOOLEAN NOT NULL DEFAULT true` — kill switch.
+- `qualifier_min_intent INTEGER NOT NULL DEFAULT 0` — only spend AI-qualifier
+  budget when the cheap rule-based `leads.lead_score` (0-10) clears this gate.
+  CHECK `qualifier_min_intent BETWEEN 0 AND 10`.
+
+Ported from PR #212 (migration 134 on `gap-3-research-worker-87IXF`),
+renumbered 147. Pairs with the per-vertical rubric service
+(`backend/services/qualification_rubrics.py`) and the owner-controls router
+(`backend/routers/qualifier_config.py`, `/api/v1/qualifier/*`) + the
+`AgentQualifierSettings` dashboard component.
+
+**Applied:** 2026-06-13 via `mcp__supabase__apply_migration` (project
+pxserpybmajixqrmzaly). Verified: both columns present with defaults
+`true` / `0`.
+
+---
+
+### 148 — Encrypt integrations secrets at rest (onboarding-v2, GH #129/#131)
+
+Adds two BYTEA columns to `integrations` for encrypted third-party secrets
+(Stripe/Twilio/Resend API keys), both additive + idempotent:
+
+- `access_token_enc BYTEA` — Fernet token for the API key.
+- `refresh_token_enc BYTEA` — Fernet token for the refresh token (NULL for
+  API-key providers).
+
+`CREATE EXTENSION IF NOT EXISTS pgcrypto` is included (already present live).
+Encryption is app-side via `cryptography.fernet` in
+`backend/services/integration_key_vault.py` (spec onboarding-v2 §9 sanctions
+app-side over in-DB pgcrypto so the vault is unit-testable to 100% coverage).
+Key: `INTEGRATIONS_ENC_KEY` Railway env var; rotation versions via
+`INTEGRATIONS_ENC_KEYS`. Never committed, never logged.
+
+**Plaintext deprecation:** the existing `access_token` / `refresh_token` TEXT
+columns are retained until a separate sunset migration runs AFTER
+`scripts/backfill_integration_encryption.py` is verified (user-rules Rule 8:
+no half-migrations). The existing service-role RLS policy is untouched.
+
+**Applied:** 2026-06-14 via `mcp__supabase__apply_migration` (project
+pxserpybmajixqrmzaly). Verified: both `access_token_enc` / `refresh_token_enc`
+present as `bytea`.

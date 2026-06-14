@@ -1,5 +1,6 @@
 ---
 name: verify
+effort: high
 description: "Use when asked to run /verify, verify Agent Nexlify changes, run checks, or prepare a quality gate without committing or pushing."
 version: 1.0.0
 origin: claude
@@ -21,15 +22,27 @@ triggers: ["/verify", "verify", "verify changes", "run checks", "quality gate", 
 - Do not use during the middle of an edit unless the user asks for an incremental check.
 - Do not run the full suite first when a small targeted check is enough to find the likely failure.
 
+## Read First
+- Inspect `git status --short` and `git diff --stat`.
+- Read the relevant package scripts, test helpers, or docs for touched surfaces before inventing commands.
+- Check recent failures or logs only when they are directly relevant to the changed files.
+
 ## Workflow
-1. Inspect the changed files with `git status --short` and `git diff --stat`.
-2. Run the fastest relevant gate first, normally `npm run check:quick` when available.
-3. Run targeted tests for touched surfaces:
+1. Run the fastest relevant gate first, normally `npm run check:quick` when available.
+2. Run targeted tests for touched surfaces:
    - Backend Python: the narrowest matching `pytest` file or test node.
    - Frontend: the matching build, lint, or Vitest command used by the repo.
    - Scripts/docs: syntax, frontmatter, markdown, or command help checks as appropriate.
-4. Escalate to `npm run check:full` before final handoff when changes cross surfaces or user asks for complete verification.
-5. Review the outgoing diff after checks. Report pass/fail, commands run, unresolved risks, and skipped checks.
+3. Escalate to `npm run check:full` before final handoff when changes cross surfaces or user asks for complete verification.
+4. Review the outgoing diff after checks.
+
+## Output Format
+Report:
+- Overall result: pass, fail, or partial
+- Commands run
+- First actionable failure, if any
+- Checks skipped and why
+- Residual risks before handoff
 
 ## Constraints
 - Never commit, push, tag, deploy, or alter git remotes.

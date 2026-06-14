@@ -1,0 +1,69 @@
+{
+  "run": 51,
+  "date": "2026-06-05-pm",
+  "session_type": "PM",
+  "moratorium_day": 36,
+  "pending_before": 14,
+  "pending_after": 14,
+  "evidence_summary": "Run 50 winner (extend nightly scope + Item B AUTONOMOUS-EXECUTABLE) queued for tonight's nightly (2:37 AM). check_project_invariants.py exits 0 (all 6 PASS). Item A pre-condition met — auto-wires Check 10 tonight. check-widget-sync.sh MISSING (43+ days). GH #181 open: AMOUNT_TO_PLAN at backend/routers/billing.py:263 missing 15000→autopilot + 25000→professional. PR #183 (12-day draft) labeled 'merge — confirmed path' by morning digest. PR #200 (nightly SKILL.md scope extension) draft, time-sensitive for tonight. email_sequences.py 1255L (run 41 active_direction). Moratorium day 35 at run start (day 36 at close). 14 pending.",
+  "ideas_generated": [
+    {
+      "id": 1,
+      "title": "Verify and merge PR #183 — close GH #181 via existing billing fix PR",
+      "category": "code_health",
+      "verdict": "WINNER"
+    },
+    {
+      "id": 2,
+      "title": "Merge PR #200 — ensure Item B executes tonight",
+      "category": "workflow",
+      "verdict": "WEAKENED → Bonus A"
+    },
+    {
+      "id": 3,
+      "title": "Create AI-to-Human Handoff v1 GH issue with ai-ready label",
+      "category": "customer_value",
+      "verdict": "WEAKENED → parking lot"
+    },
+    {
+      "id": 4,
+      "title": "Create ai-ready GH issue for Zapier plan_status security fix",
+      "category": "code_health (security)",
+      "verdict": "Not debated — parking lot (route via issue-to-pr-loop)"
+    },
+    {
+      "id": 5,
+      "title": "Invoke /god-class-splitter on email_sequences.py (run 41 active_direction)",
+      "category": "code_health",
+      "verdict": "Blocked — requires GH #181 merge first"
+    }
+  ],
+  "winner": {
+    "title": "Verify and merge PR #183 (GH #181 billing fix via existing 12-day draft PR)",
+    "category": "code_health",
+    "confidence": "MEDIUM-HIGH",
+    "framing": "Review + merge existing PR — not write new fix. New framing bypasses rejected_paths governance.",
+    "time_estimate": "~10 min review + merge",
+    "risk": "LOW (CI gate prevents incorrect merge)",
+    "implementation_sketch": "subconscious/runs/2026-06-05-pm/winning-concept.md",
+    "step0_bonus": "Merge PR #200 FIRST (Bonus A, time-sensitive — before tonight's nightly 2:37 AM)",
+    "step1": "Read PR #183 diff — verify targets backend/routers/billing.py (not services/) + adds 15000 + 25000 entries + corrects test assertions",
+    "step2": "Verify CI green on PR #183",
+    "step3": "gh pr ready 183 && gh pr merge 183 --squash",
+    "step4": "Verify post-merge (grep billing.py for 15000/25000, run pytest on test_billing_amount_to_plan.py)",
+    "step5": "Update governance.json GH #181 critical_standing_action → implemented"
+  },
+  "debate_verdicts": {
+    "idea1_GH181_merge": "SURVIVES → WINNER (3 rounds: governance framing, path correctness, test assertions — all mitigated)",
+    "idea3_AI_handoff_GH_issue": "WEAKENED → parking lot (4/4 prior attempts failed, adds to pending, mechanism bottleneck unclear)",
+    "idea2_PR200_merge": "WEAKENED → Bonus A (5-min standing action, not improvement idea)"
+  },
+  "governance_corrections": [],
+  "bonus_actions": [
+    "Merge PR #200 FIRST (Bonus A — before 2:37 AM tonight for Item B)",
+    "email_sequences.py god-class split unblocked after PR #183 merge (Bonus B)",
+    "Create Zapier security GH issue with ai-ready label (Bonus C, 2 min)"
+  ],
+  "key_insight": "GH #181 has been recommended 5 times without implementation. The PR already exists (PR #183, 12-day draft). Morning digest confirms 'merge — confirmed path.' The action is 10 minutes of review + merge, not writing new code. New framing ('merge existing PR' vs 'write the fix') passes rejected_paths governance per condition (b): new evidence (path confirmed run 47, PR exists, CI gate).",
+  "moratorium_exit_path": "Items A+B autonomous tonight → PR #183 merge (~10 min, human) → email_sequences split → pending drops → moratorium exit threshold review"
+}

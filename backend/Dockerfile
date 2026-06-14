@@ -11,6 +11,11 @@ COPY backend/ backend/
 COPY widget/ widget/
 COPY VERSION VERSION
 
+# Run as non-root (semgrep dockerfile.security.missing-user; ports >1024 so no root needed)
+RUN useradd --create-home --uid 10001 appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
 # Expose port
 EXPOSE 8000
 

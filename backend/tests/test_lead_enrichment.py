@@ -31,7 +31,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from backend.routers import widget_helpers
+from backend.routers import widget_lead_helpers as widget_helpers
 
 
 # ---------------------------------------------------------------------------
@@ -98,7 +98,7 @@ class TestHelperExists:
     def test_helper_is_importable(self):
         """If this fails, Phase 2 implementation hasn't shipped yet."""
         assert hasattr(widget_helpers, "_enrich_lead_from_message"), (
-            "Phase 2 incomplete: backend/routers/widget_helpers.py is "
+            "Phase 2 incomplete: backend/routers/widget_lead_helpers.py is "
             "missing the `_enrich_lead_from_message` background helper."
         )
 

@@ -20,7 +20,7 @@ from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.models.schemas import OnlineStatusRequest, WidgetConfigResponse
 from backend.services.email_sender import _make_unsub_sig
-from backend.routers.widget_helpers import (
+from backend.routers.widget_chat_helpers import (
     _check_origin,
     _get_tenant,
     _get_widget_config,
@@ -226,6 +226,46 @@ async def toggle_online_status(
             tenant_id, e, exc_info=True,
         )
         raise HTTPException(status_code=500, detail="Failed to update online status")
+
+
+class AllowedDomainsRequest(BaseModel):
+    allowed_domains: list[str] = Field(default_factory=list)
+
+
+@router.put("/config/{tenant_id}/allowed-domains")
+async def update_allowed_domains(
+    tenant_id: str,
+    body: AllowedDomainsRequest,
+    claims: dict = Depends(_get_jwt_claims),
+):
+    """Replace the allowed-domains list for a tenant's widget config."""
+    if claims.get("tenant_id") != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    # Normalise: strip whitespace, lowercase, drop blanks
+    domains = [d.strip().lower() for d in body.allowed_domains if d.strip()]
+    try:
+        db = get_service_supabase()
+        result = (
+            db.table("widget_configs")
+            .update({"allowed_domains": domains})
+            .eq("tenant_id", tenant_id)
+            .execute()
+        )
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Widget config not found")
+        logger.info(
+            "update_allowed_domains: tenant=%s count=%d",
+            tenant_id, len(domains),
+        )
+        return {"allowed_domains": domains}
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception(
+            "update_allowed_domains FAILED: tenant=%s",
+            tenant_id,
+        )
+        raise HTTPException(status_code=500, detail="Failed to update allowed domains")
 
 
 @router.post("/upload")

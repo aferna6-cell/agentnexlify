@@ -1,5 +1,6 @@
 ---
 name: gitnexus-impact-analysis
+effort: high
 description: Analyze the blast radius of code changes to understand what will break if you modify a function, class, or file. Use when user says 'is it safe to change', 'what will break', 'blast radius', 'what depends on this', 'who uses this code', 'impact analysis', or asks about gitnexus impact analysis.
 version: 1.0.0
 origin: claude

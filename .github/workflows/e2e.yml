@@ -1,0 +1,118 @@
+# E2E suites (Playwright). Two jobs:
+#   - hermetic: built frontend + fully stubbed APIs; runs on PRs touching
+#     the frontend or e2e specs. No secrets needed.
+#   - widget-smoke: daily run against PRODUCTION; the spec self-skips
+#     unless TEST_WIDGET_API_KEY is configured as a repo secret
+#     (Settings -> Secrets -> Actions). Until then it reports "skipped".
+name: e2e
+
+on:
+  pull_request:
+    paths:
+      - "frontend/**"
+      - "e2e/**"
+      - "playwright.config.ts"
+      - ".github/workflows/e2e.yml"
+  schedule:
+    - cron: "17 9 * * *" # daily widget smoke against prod
+  workflow_dispatch:
+
+jobs:
+  hermetic:
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --prefix frontend
+      - run: npm run build --prefix frontend
+      - run: npm i -D @playwright/test && npx playwright install --with-deps chromium
+      - name: Run hermetic e2e specs
+        run: >
+          npx playwright test
+          e2e/onboarding-wizard.spec.ts
+          e2e/agent-os-front-door.spec.ts
+          e2e/partner-feedback-fixes.spec.ts
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
+
+  widget-smoke:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm i -D @playwright/test && npx playwright install --with-deps chromium
+      - name: Run widget smoke against production
+        env:
+          TEST_BACKEND_URL: https://agentnexlify-production.up.railway.app
+          TEST_PUBLIC_URL: https://www.agentnexlify.com
+          TEST_WIDGET_API_KEY: ${{ secrets.TEST_WIDGET_API_KEY }}
+          # Prod smoke never builds the frontend; without this flag the
+          # Playwright webServer tries to boot Vite and dies ("vite: not
+          # found") — which silently failed every scheduled run pre-2026-06-12.
+          PW_SKIP_WEBSERVER: "1"
+        # Spec self-skips every test when TEST_WIDGET_API_KEY is empty,
+        # so this stays green-but-skipped until the secret is added.
+        run: npx playwright test e2e/widget-smoke.spec.js
+      - name: Run live-demo smoke against production
+        # Always runs (even if widget smoke failed) — no secrets needed,
+        # demo-login is public. A failure here means the demo front door
+        # is broken or the nightly seed didn't run.
+        if: always()
+        env:
+          TEST_BACKEND_URL: https://agentnexlify-production.up.railway.app
+          TEST_APP_URL: https://app.agentnexlify.com
+          PW_SKIP_WEBSERVER: "1"
+        run: npx playwright test e2e/demo-smoke.spec.ts
+
+  # ---------------------------------------------------------------------------
+  # Critical-journey suite — runs daily against production demo sandbox.
+  # advisory (continue-on-error: true) while the suite stabilises.
+  # No secrets needed — demo-login is a public endpoint.
+  # ---------------------------------------------------------------------------
+  critical-journeys:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Advisory: failures are reported but do not block merges or other jobs.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install root deps (Playwright)
+        run: npm ci
+      - name: Install Chromium browser
+        run: npx playwright install chromium
+      - name: Run critical journeys against production
+        env:
+          # Target the live demo sandbox — safe fixture; resets nightly.
+          E2E_BASE_URL: https://app.agentnexlify.com
+          # Skip the Vite webServer — these tests hit live URLs.
+          PW_SKIP_WEBSERVER: "1"
+        run: npm run e2e -- --reporter=list,junit
+      - name: Upload Playwright artifacts on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: journey-traces-${{ github.run_id }}
+          path: |
+            test-results-journeys/
+            playwright-report-journeys/
+          retention-days: 14

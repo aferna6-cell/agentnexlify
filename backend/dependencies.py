@@ -32,6 +32,18 @@ def verify_tenant(claims: dict, tenant_id: str) -> None:
         raise HTTPException(status_code=403, detail="Not authorized")
 
 
+async def block_demo_role(claims: dict = Depends(_get_current_tenant)) -> dict:
+    """Router-level guard for money/destructive surfaces (billing, phone
+    provisioning, account deletion): the public live-demo "demo" role gets
+    403 here while keeping full sandbox access everywhere else."""
+    if claims.get("role") == "demo":
+        raise HTTPException(
+            status_code=403,
+            detail="Not available in demo mode — sign up to use this feature",
+        )
+    return claims
+
+
 def get_business_context(db, tenant_id: str) -> tuple[str, str]:
     """Fetch business name and type from the tenants table for AI context.
 

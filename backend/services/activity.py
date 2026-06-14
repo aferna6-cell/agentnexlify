@@ -1,12 +1,13 @@
 """Activity logging service — fire-and-forget, never raises."""
 
-
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime
+from decimal import Decimal
 from typing import Any
 
 from backend.models.database import get_service_supabase
+from backend.services import attribution_service
 
 logger = logging.getLogger(__name__)
 
@@ -24,20 +25,8 @@ def _mask_phone(phone: str) -> str:
     digits = re.sub(r"\D", "", stripped)  # pure digits only
 
     if len(digits) >= 8:
-        # Show first (len - 8) digits, mask 4, show last 4
-        # e.g. 12345557890 (11 digits): show 3 + **** + 4 = "123****7890"
-        # But spec wants +1234****7890 from +12345557890:
-        # digits = 12345557890 (11 digits), show first 7-4=... no.
-        # Spec: +12345557890 -> +1234****7890: prefix=+, show 4 digits, ****, last 4.
-        # Rule: show (len(digits) - 8) prefix digits + **** + last 4
-        # 11 digits: show 11-8=3 -> +123****7890 — but spec says +1234****7890 (4 shown).
-        # Recount: +12345557890 has digits=12345557890 (11). Spec output: +1234****7890
-        # That's 4 visible + **** + 4 = 12 total digits shown. But input is 11.
-        # Actually spec says "last 4 visible" for the masked middle, keep start up to len-8+1.
-        # Simplest: always show first 4 digits of the number, then ****, then last 4.
-        # Only apply when total digits >= 9 (otherwise overlap).
+        # Show first max(len-8, 4) digits + **** + last 4 (min 9 digits to avoid overlap)
         visible_start = digits[:-8] if len(digits) > 8 else ""
-        # Ensure at least 4 visible start chars when number is long enough
         if len(digits) >= 9 and len(visible_start) < 4:
             visible_start = digits[:4]
         masked = prefix + visible_start + "****" + digits[-4:]
@@ -98,7 +87,9 @@ def get_activity_events(
         db = get_service_supabase()
         query = (
             db.table("activity_log")
-            .select("id, tenant_id, activity_type, description, metadata, lead_id, created_at")
+            .select(
+                "id, tenant_id, activity_type, description, metadata, lead_id, created_at"
+            )
             .eq("tenant_id", tenant_id)
         )
         if since is not None:
@@ -130,15 +121,18 @@ def get_activity_totals(
 ) -> dict:
     """Return aggregate totals for a tenant's activity_log.
 
-    Phase 1: returns ``events_count`` only.
-    Phase 2 will add dollar/hours attribution via attribution_service.
-
     Args:
         tenant_id: Tenant UUID string.
-        since: Only count events after this UTC datetime.
+        since: Only count events after this UTC datetime. Affects
+            ``events_count`` only — ``dollars_this_month`` always covers
+            calendar month UTC, ``hours_this_week`` always covers ISO
+            week UTC (Mon-Sun) regardless of ``since``.
 
     Returns:
-        Dict with key ``events_count`` (int).
+        Dict with keys:
+            - ``events_count`` (int)
+            - ``dollars_this_month`` (str, Decimal serialized)
+            - ``hours_this_week`` (str, Decimal serialized)
     """
     try:
         db = get_service_supabase()
@@ -151,9 +145,30 @@ def get_activity_totals(
             query = query.gte("created_at", since.isoformat())
         result = query.execute()
         count = result.count if result.count is not None else len(result.data or [])
-        return {"events_count": count}
     except Exception:
         logger.warning(
             "Failed to get activity totals tenant=%s", tenant_id, exc_info=True
         )
-        return {"events_count": 0}
+        count = 0
+
+    try:
+        dollars = attribution_service.compute_dollars_this_month(tenant_id)
+    except Exception:
+        logger.warning(
+            "compute_dollars_this_month failed tenant=%s", tenant_id, exc_info=True
+        )
+        dollars = Decimal("0")
+
+    try:
+        hours = attribution_service.compute_hours_this_week(tenant_id)
+    except Exception:
+        logger.warning(
+            "compute_hours_this_week failed tenant=%s", tenant_id, exc_info=True
+        )
+        hours = Decimal("0")
+
+    return {
+        "events_count": count,
+        "dollars_this_month": str(dollars),
+        "hours_this_week": str(hours),
+    }

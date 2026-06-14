@@ -26,6 +26,10 @@ from backend.routers import (
     analytics,
     appointments,
     auth,
+    auth_billing,
+    auth_google,
+    auth_demo,
+    auth_password_reset,
     automations,
     bids,
     billing,
@@ -33,18 +37,22 @@ from backend.routers import (
     business_page,
     calls,
     channels_facebook,
+    channels_instagram,
+    embed_instructions,
     chat_flows,
     client_portal,
     clients,
     content,
     content_repurpose,
     conversation_inbox,
+    conversations,
     crawl,
     csat,
     custom_fields,
     documents,
     email_sequences,
     email_templates,
+    faq,
     forms,
     gbp,
     integrations,
@@ -62,9 +70,11 @@ from backend.routers import (
     phone,
     pipeline,
     pipeline_automations,
+    pricing_experiment,
     resend_webhooks,
     revenue,
     reviews,
+    qualifier_config,
     scoring_config,
     sequences,
     smart_lists,
@@ -86,7 +96,25 @@ from backend.routers import (
     ab_tests,
     automation_rules,
     admin_analytics,
+    admin_funnel,
+    admin_health,
     admin_promotions,
+    zapier,
+    os_threads,
+    os_orchestrate,
+    os_agent_runs,
+    account_deletion,
+    os_deliverables,
+    os_graph,
+    os_memory,
+    os_backlog,
+    os_insights,
+    os_usage,
+    os_inbound,
+    os_sync as os_sync_router,
+    os_files,
+    push_subscriptions,
+    widget_health,
 )
 
 # --- JSON logging ---
@@ -151,7 +179,9 @@ def _build_sha() -> str:
 
 
 def _split_origins(raw_value: str) -> list[str]:
-    origins = [origin.strip() for origin in (raw_value or "").split(",") if origin.strip()]
+    origins = [
+        origin.strip() for origin in (raw_value or "").split(",") if origin.strip()
+    ]
     return origins or ["*"]
 
 
@@ -230,14 +260,18 @@ def _try_acquire_automation_lock(lock_name: str, ttl_seconds: int = 90) -> bool:
     try:
         from backend.models.database import get_service_supabase
 
-        result = get_service_supabase().rpc(
-            "try_acquire_automation_lock",
-            {
-                "p_name": lock_name,
-                "p_owner": _LOCK_OWNER,
-                "p_ttl_seconds": ttl_seconds,
-            },
-        ).execute()
+        result = (
+            get_service_supabase()
+            .rpc(
+                "try_acquire_automation_lock",
+                {
+                    "p_name": lock_name,
+                    "p_owner": _LOCK_OWNER,
+                    "p_ttl_seconds": ttl_seconds,
+                },
+            )
+            .execute()
+        )
         return _coerce_rpc_bool(result.data)
     except Exception:
         if is_production():
@@ -296,6 +330,11 @@ async def _automation_loop():
         send_aftercare_instructions,
         schedule_automation_check,
     )
+    from backend.services.os_sync import run_due_syncs as _os_sync_tick
+    from backend.services.os_opportunities import run_opportunity_scan as _run_opportunity_scan
+    from backend.services.twilio_webhook_sync import sync_twilio_number_webhooks
+    from backend.services.demo_reset_job import reset_demo_tenants
+    from backend.services.activation_nudges import send_activation_nudges
 
     tick = 0
     while True:
@@ -326,7 +365,8 @@ async def _automation_loop():
                         _safe_run("send_csat_surveys", send_csat_surveys),
                         _safe_run("check_new_reviews", check_new_reviews),
                         _safe_run(
-                            "send_invoice_payment_reminders", send_invoice_payment_reminders
+                            "send_invoice_payment_reminders",
+                            send_invoice_payment_reminders,
                         ),
                         _safe_run(
                             "send_aftercare_instructions", send_aftercare_instructions
@@ -335,21 +375,35 @@ async def _automation_loop():
                         _safe_run(
                             "process_scheduled_campaigns", _process_scheduled_campaigns
                         ),
-                        _safe_run("recover_stalled_campaigns", _recover_stalled_campaigns),
                         _safe_run(
-                            "run_sequence_processor", email_sequences.run_sequence_processor
+                            "recover_stalled_campaigns", _recover_stalled_campaigns
                         ),
-                        _safe_run("schedule_automation_check", schedule_automation_check),
+                        _safe_run(
+                            "run_sequence_processor",
+                            email_sequences.run_sequence_processor,
+                        ),
+                        _safe_run(
+                            "schedule_automation_check", schedule_automation_check
+                        ),
                         _safe_run("process_noshow_recovery", process_noshow_recovery),
                     ]
                 )
+
+            # Every 15 min: Agent OS data sync (leads + future sources)
+            if tick % 15 == 0:
+                core_tasks.append(_safe_run("os_sync_tick", _os_sync_tick))
 
             # Every 30 min: heavy/infrequent tasks
             if tick % 30 == 0:
                 core_tasks.extend(
                     [
                         _safe_run("send_monthly_reports", send_monthly_reports),
-                        _safe_run("process_recurring_invoices", process_recurring_invoices),
+                        _safe_run(
+                            "sync_twilio_webhooks", sync_twilio_number_webhooks
+                        ),
+                        _safe_run(
+                            "process_recurring_invoices", process_recurring_invoices
+                        ),
                         _safe_run(
                             "send_weekly_intelligence_briefs",
                             send_weekly_intelligence_briefs,
@@ -357,6 +411,9 @@ async def _automation_loop():
                         _safe_run("send_weekly_digest", send_weekly_digest),
                         _safe_run("send_birthday_greetings", send_birthday_greetings),
                         _safe_run("send_daily_briefings", send_daily_briefings),
+                        _safe_run("run_opportunity_scan", _run_opportunity_scan),
+                        _safe_run("reset_demo_tenants", reset_demo_tenants),
+                        _safe_run("send_activation_nudges", send_activation_nudges),
                     ]
                 )
 
@@ -632,9 +689,7 @@ def _apply_security_headers(headers: MutableHeaders, path: str) -> None:
         headers["X-Frame-Options"] = "ALLOWALL"
     else:
         headers["X-Frame-Options"] = "DENY"
-        headers["Strict-Transport-Security"] = (
-            "max-age=31536000; includeSubDomains"
-        )
+        headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
 
 # --- Rate limiting ---
@@ -666,9 +721,13 @@ async def _validation_exception_handler(request: Request, exc: RequestValidation
     # Do not log raw widget bodies; they can contain PII and contact details.
     if request.url.path.startswith("/api/v1/widget"):
         logger.error("Widget validation failed; request body redacted")
+    # Pydantic v2 puts the raw exception object in ctx for value_error items
+    # (e.g. a field_validator raising ValueError) — not JSON serializable,
+    # which turned every such 422 into a 500. Strip ctx.
+    errors = [{k: v for k, v in err.items() if k != "ctx"} for err in exc.errors()]
     return JSONResponse(
         status_code=422,
-        content={"detail": exc.errors()},
+        content={"detail": errors},
         headers=_CORS_HEADERS,
     )
 
@@ -746,6 +805,12 @@ app.add_middleware(RequestContextMiddleware)
 app.include_router(analytics.router)
 app.include_router(appointments.router)
 app.include_router(auth.router)
+app.include_router(auth_billing.router)
+app.include_router(auth_google.router)
+app.include_router(auth_password_reset.router)
+app.include_router(auth_demo.router)
+app.include_router(conversations.router)
+app.include_router(faq.router)
 app.include_router(automations.router)
 app.include_router(billing.router)
 app.include_router(clients.router)
@@ -798,6 +863,8 @@ app.include_router(marketing_analytics.router)
 app.include_router(ab_tests.router)
 app.include_router(automation_rules.router)
 app.include_router(admin_analytics.router)
+app.include_router(admin_funnel.router)
+app.include_router(admin_health.router)
 app.include_router(admin_promotions.router)
 app.include_router(invoices.router)
 app.include_router(documents.router)
@@ -806,11 +873,31 @@ app.include_router(revenue.router)
 app.include_router(smart_lists.router)
 app.include_router(forms.router)
 app.include_router(channels_facebook.router)
+app.include_router(channels_instagram.router)
+app.include_router(embed_instructions.router)
 app.include_router(pipeline_automations.router)
 app.include_router(scoring_config.router)
+app.include_router(qualifier_config.router)
 app.include_router(waitlist.router)
 app.include_router(wizard_analytics.router)
 app.include_router(content_repurpose.router)
+app.include_router(zapier.router)
+app.include_router(os_threads.router)
+app.include_router(os_orchestrate.router)
+app.include_router(os_agent_runs.router)
+app.include_router(account_deletion.router)
+app.include_router(os_deliverables.router)
+app.include_router(os_graph.router)
+app.include_router(os_memory.router)
+app.include_router(os_backlog.router)
+app.include_router(os_insights.router)
+app.include_router(os_usage.router)
+app.include_router(os_files.router)
+app.include_router(os_inbound.router)
+app.include_router(os_sync_router.router)
+app.include_router(push_subscriptions.router)
+app.include_router(pricing_experiment.router)
+app.include_router(widget_health.router)
 
 
 # --- Static files (widget) ---

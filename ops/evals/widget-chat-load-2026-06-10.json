@@ -1,0 +1,20 @@
+{
+  "mode": "auth_path_burst",
+  "url": "https://agentnexlify-production.up.railway.app/api/v1/widget/chat",
+  "requests": 100,
+  "concurrency": 10,
+  "wall_seconds": 2.02,
+  "requests_per_second": 49.52,
+  "ok_count": 100,
+  "statuses": {
+    "404": 30,
+    "429": 70
+  },
+  "latency_ms": {
+    "p50": 180.5,
+    "p95": 289.7,
+    "p99": 343.9,
+    "mean": 194.2,
+    "max": 407.8
+  }
+}

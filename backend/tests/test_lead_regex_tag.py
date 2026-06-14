@@ -22,7 +22,7 @@ Contract pinned by this test:
 import asyncio
 from unittest.mock import MagicMock, patch
 
-from backend.routers import widget_helpers
+from backend.routers import widget_lead_helpers as widget_helpers
 
 
 def test_regex_captured_lead_tagged_enrichment_source_regex():

@@ -38,14 +38,14 @@ def test_client(mock_settings):
         patch("backend.routers.widget_config.get_service_supabase", return_value=db_mock),
         patch("backend.routers.widget_lead.get_service_supabase", return_value=db_mock),
         patch("backend.routers.widget_booking.get_service_supabase", return_value=db_mock),
-        patch("backend.routers.widget_helpers.get_service_supabase", return_value=db_mock),
+        patch("backend.routers.widget_chat_helpers.get_service_supabase", return_value=db_mock),
         patch("backend.routers.sequences.get_service_supabase", return_value=db_mock),
     ]
     for p in patches:
         p.start()
 
     # Clear widget cache to avoid state leaking between tests
-    from backend.routers.widget_helpers import _cache
+    from backend.routers.widget_chat_helpers import _cache
     _cache.clear()
 
     from backend.main import app

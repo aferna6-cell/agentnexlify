@@ -1,12 +1,13 @@
 """Focused parser tests for local SEO AI JSON helpers."""
 
 import os
+
 os.environ["TESTING"] = "1"
 
 import json
 import pytest
 
-from backend.routers.local_seo import (
+from backend.services.local_seo_scoring import (
     _strip_json_fences,
     _parse_json_array_response,
     _parse_json_object_response,
@@ -14,7 +15,7 @@ from backend.routers.local_seo import (
 
 
 def test_strip_json_fences_handles_plain_json_block():
-    raw = "```json\n{\"a\": 1}\n```"
+    raw = '```json\n{"a": 1}\n```'
     assert _strip_json_fences(raw) == '{"a": 1}'
 
 
@@ -30,7 +31,7 @@ def test_parse_json_object_response_accepts_object():
 
 
 def test_parse_json_object_response_accepts_fenced_object():
-    raw = "```json\n{\"overall_score\": 91}\n```"
+    raw = '```json\n{"overall_score": 91}\n```'
     parsed = _parse_json_object_response(raw)
     assert parsed["overall_score"] == 91
 
@@ -46,7 +47,7 @@ def test_parse_json_array_response_accepts_array():
 
 
 def test_parse_json_array_response_accepts_fenced_array():
-    parsed = _parse_json_array_response("```json\n[\"kw1\", \"kw2\"]\n```")
+    parsed = _parse_json_array_response('```json\n["kw1", "kw2"]\n```')
     assert parsed == ["kw1", "kw2"]
 
 

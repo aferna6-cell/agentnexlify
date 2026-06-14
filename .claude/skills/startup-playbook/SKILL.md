@@ -1,5 +1,6 @@
 ---
 name: startup-playbook
+effort: medium
 description: Compressed AgentNexLiFy-specific version of startup-skill plugin patterns. Triggers competitive audit, positioning refresh, or messaging update when the user mentions competitors, pricing changes, category drift, or new entrant threats. Use when a full competitive+positioning refresh is overdue (>90 days) or when a named competitor (GHL, Podium, Birdeye, Drillbit) makes a material move.
 version: 1.0.0
 ---

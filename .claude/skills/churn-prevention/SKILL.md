@@ -1,5 +1,6 @@
 ---
 name: churn-prevention
+effort: medium
 description: Retention patterns for SaaS cancel/downgrade/pause flows. Load when editing frontend/src/pages/BillingPage.jsx cancel UX, backend/services/stripe_service.py subscription ops, or designing win-back logic for free/growth/professional/autopilot/enterprise tiers.
 origin: coreyhaines31/marketingskills (adapted)
 version: 1.0.0

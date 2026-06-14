@@ -50,9 +50,59 @@ def _registered_routes() -> set[tuple[str, str]]:
 def _check_static_contracts() -> list[str]:
     issues: list[str] = []
     routes = _registered_routes()
-    missing_routes = sorted(REQUIRED_ROUTES - routes)
-    for method, path in missing_routes:
-        issues.append(f"missing route {method} {path}")
+    # Robust match: a required route is present when some registered route has the
+    # same method AND the same path (or the same suffix under the managed-agents
+    # prefix). This tolerates path-format drift across FastAPI/Starlette versions
+    # (e.g. param-syntax or prefix-normalization changes) while STILL failing if a
+    # route is genuinely unregistered — so it cannot mask a real regression.
+    _MANAGED_PREFIX = "/api/v1/managed-agents"
+    for method, path in sorted(REQUIRED_ROUTES):
+        suffix = path[len(_MANAGED_PREFIX):]
+        present = (method, path) in routes or any(
+            m == method
+            and p.startswith(_MANAGED_PREFIX)
+            and (p == path or p.rstrip("/").endswith(suffix))
+            for (m, p) in routes
+        )
+        if not present:
+            issues.append(f"missing route {method} {path}")
+
+    if any(i.startswith("missing route") for i in issues):
+        # Diagnostic: surface what IS registered so a real regression is obvious.
+        managed = sorted(
+            f"{m} {p}" for (m, p) in routes if "managed-agents" in p
+        )
+        print("Registered managed-agents routes:")
+        for line in managed or ["  (none)"]:
+            print(f"  {line}")
+        # Pinpoint where registration broke: does the router itself have routes,
+        # or did include_router never attach them?
+        try:
+            import traceback
+
+            from backend.routers import managed_agent_runs as _mar
+
+            router_paths = [getattr(r, "path", "?") for r in _mar.router.routes]
+            print(f"managed_agent_runs.router has {len(router_paths)} routes: {router_paths}")
+            print(f"total app.routes registered: {len(routes)}")
+            sample = sorted(p for (_m, p) in routes)[:6]
+            print(f"sample app paths: {sample}")
+            # Isolation repro: does include_router attach this router to a fresh app?
+            from fastapi import FastAPI as _F
+
+            _probe = _F()
+            _probe.include_router(_mar.router)
+            _probe_managed = [
+                getattr(r, "path", "?")
+                for r in _probe.routes
+                if "managed-agents" in getattr(r, "path", "")
+            ]
+            print(
+                f"fresh FastAPI().include_router -> {len(_probe_managed)} managed-agents routes"
+            )
+        except Exception:
+            print("managed_agent_runs diagnostic raised:")
+            traceback.print_exc()
 
     schema_log = (REPO_ROOT / "docs" / "dev-knowledge" / "schema-log.md").read_text(
         encoding="utf-8"

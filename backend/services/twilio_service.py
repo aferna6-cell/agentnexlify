@@ -23,8 +23,23 @@ logger = logging.getLogger(__name__)
 BOOKING_KEYWORDS = re.compile(r"\b(appointment|book|schedule)\b", re.IGNORECASE)
 
 
-async def send_sms(to: str, body: str, from_number: str | None = None) -> bool:
-    """Send an SMS via the Twilio REST API."""
+async def send_sms(
+    to: str, body: str, from_number: str | None = None, tenant_id: str | None = None
+) -> bool:
+    """Send an SMS via the Twilio REST API.
+
+    Pass ``tenant_id`` whenever it is in scope: live-demo sandbox tenants
+    get a success-shaped no-op so demo visitors can never fire real SMS.
+    (Staged adoption — call sites without tenant context keep the old
+    signature and are covered by fake 555 numbers + nightly reset.)
+    """
+    if tenant_id:
+        from backend.services.demo_guard import is_demo_tenant
+
+        if is_demo_tenant(tenant_id):
+            logger.info("demo tenant %s: SMS to %s suppressed (demo no-op)", tenant_id, to)
+            return True
+
     if not settings.twilio_account_sid or not settings.twilio_auth_token:
         logger.warning("Twilio not configured — cannot send SMS to %s", to)
         return False

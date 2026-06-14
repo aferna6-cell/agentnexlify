@@ -30,6 +30,15 @@ DESCRIPTION_CUE_RE = re.compile(
     r"\b(use|when|before|after|while|whenever|trigger|any time|pre-deploy|preflight)\b",
     re.IGNORECASE,
 )
+REQUIRED_CANONICAL_HEADINGS = {
+    "When to Use": re.compile(r"(?im)^##\s+When to Use\b"),
+    "When NOT to Use": re.compile(r"(?im)^##\s+When NOT to Use\b"),
+    "Read First": re.compile(r"(?im)^##\s+Read First\b"),
+    "Workflow": re.compile(r"(?im)^##\s+Workflow\b"),
+    "Output Format": re.compile(r"(?im)^##\s+Output Format\b"),
+    "Constraints": re.compile(r"(?im)^##\s+Constraints\b"),
+    "Examples": re.compile(r"(?im)^##\s+Examples\b"),
+}
 LOCAL_PATH_RE = re.compile(
     r"(?<![A-Za-z0-9_/.-])(?:\.?/)?(?:scripts|references|resources|assets)/[A-Za-z0-9_./-]+"
 )
@@ -203,6 +212,16 @@ def main() -> int:
             warnings.append(
                 f"{rel_path}: description may be too generic; add an explicit use/when cue or more concrete wording"
             )
+
+        is_canonical = root == ROOT / "skills" / "canonical"
+        if is_canonical:
+            if "triggers" not in frontmatter:
+                hard_errors.append(f"{rel_path}: canonical skill must define triggers")
+            if isinstance(description, str) and not description.strip().lower().startswith("use when"):
+                hard_errors.append(f"{rel_path}: canonical description must start with 'Use when'")
+            for heading, pattern in REQUIRED_CANONICAL_HEADINGS.items():
+                if not pattern.search(body):
+                    hard_errors.append(f"{rel_path}: canonical skill missing '## {heading}' section")
 
         disable_flag = frontmatter_flag(frontmatter, "disable-model-invocation", "disable_model_invocation")
         if isinstance(name, str) and isinstance(description, str) and SIDE_EFFECT_RE.search(

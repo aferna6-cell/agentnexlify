@@ -2,6 +2,13 @@
 
 Raw files awaiting compilation. Run `/kb-compile` to process.
 
+## Ingested 2026-04-25T22:10:52Z — cron autopop
+
+- ~~[ai-llm] Anthropic — Writing Tools for Agents~~ → compiled `wiki/ai-llm/anthropic-writing-tools-for-agents.md` (2026-04-25 cron)
+- ~~[ai-llm] Anthropic — Multi-Agent Research System~~ → compiled `wiki/ai-llm/anthropic-multi-agent-research-system.md` (2026-04-25 cron)
+- ~~[competitors] Intercom — Kaizen for the AI Era (Fin Flywheel)~~ → compiled `wiki/competitors/intercom-fin-flywheel-kaizen.md` (2026-04-25 cron)
+- ~~[competitors] Birdeye — AI in Multi-Location Marketing~~ → compiled `wiki/competitors/birdeye-multi-location-marketing-2026.md` (2026-04-25 cron)
+
 ## Ingested 2026-04-12T22:25:10Z — filtered (off-topic removed)
 
 _All compiled._
@@ -167,9 +174,115 @@ _All compiled 2026-04-18 cron run._
 
 - ~~[competitors] GoHighLevel Pricing Plans 2026~~ → compiled `wiki/competitors/ghl-pricing-teardown-2026.md` (2026-04-21 cron)
 - ~~[competitors] Pricing Update – Effective April 2026 | HighLevel Changelog~~ → compiled `wiki/competitors/ghl-carrier-pricing-april-2026.md` (2026-04-21 cron)
-- [ ] **ai-llm**: Anthropic Just Launched Managed Agents. Let's Talk About How We're Going to Pay for This — `raw/ai-llm/www-finout-io-blog-anthropic-just-launched-managed-agents-lets-talk-ab.md` — <https://www.finout.io/blog/anthropic-just-launched-managed-agents.-lets-talk-about-how-were-going-to-pay-for-this>
-- [ ] **ai-llm**: Anthropic, OpenAI, Google, and Microsoft agree that the harness is the product. They disagree on the price. - The New Stack — `raw/ai-llm/thenewstack-io-ai-agent-harness-pricing-split.md` — <https://thenewstack.io/ai-agent-harness-pricing-split/>
-- [ ] **small-biz-saas**: B2B SaaS Benchmarks: A Complete Guide 2026 — `raw/small-biz-saas/churnfree-com-blog-b2b-saas-churn-rate-benchmarks.md` — <https://churnfree.com/blog/b2b-saas-churn-rate-benchmarks/>
-- [ ] **small-biz-saas**: Saas Churn Rate: Key Metrics & Benchmarks 2026 | VantaInsights — `raw/small-biz-saas/vantainsights-com-insights-saas-churn-rate.md` — <https://vantainsights.com/insights/saas-churn-rate>
+- ~~[ai-llm] Anthropic Just Launched Managed Agents. Let's Talk About How We're Going to Pay for This~~ → compiled `wiki/ai-llm/anthropic-managed-agents-pricing-finout-2026.md` (2026-04-29 cron)
+- ~~[ai-llm] Anthropic, OpenAI, Google, and Microsoft agree that the harness is the product. They disagree on the price. - The New Stack~~ → SKIPPED 2026-04-29 cron (raw is empty/JS-rendered, no extractable content)
+- ~~[small-biz-saas] B2B SaaS Benchmarks: A Complete Guide 2026~~ → compiled `wiki/small-biz-saas/churnfree-b2b-saas-churn-benchmarks-2026.md` (2026-04-29 cron)
+- ~~[small-biz-saas] Saas Churn Rate: Key Metrics & Benchmarks 2026 | VantaInsights~~ → compiled `wiki/small-biz-saas/vantainsights-saas-churn-federal-baseline-2026.md` (2026-04-29 cron)
 - [ ] **verticals**: AI Receptionist Software for Plumbers 2026 | 24/7 Answering Service — `raw/verticals/agentzap-ai-industries-plumbing.md` — <https://agentzap.ai/industries/plumbing>
 - [ ] **verticals**: Top 5 AI Receptionist Solutions for Plumbing Businesses in 2026 — `raw/verticals/www-myaifrontdesk-com-blogs-top-5-ai-receptionist-solutions-for-plumbi.md` — <https://www.myaifrontdesk.com/blogs/top-5-ai-receptionist-solutions-for-plumbing-businesses-in-2026>
+
+
+## 2026-04-23T22:03:04.934701+00:00 auto-populate
+
+- ~~[competitors] GoHighLevel AI Employee Guide 2026~~ → compiled `wiki/competitors/ghl-ai-employee-suite-marketing-playbook.md` (2026-04-23 cron)
+- ~~[competitors] GoHighLevel 2026: Mastering AI Employees and Custom API V2~~ → compiled `wiki/competitors/ghl-api-v2-developer-platform.md` (2026-04-23 cron)
+- ~~[ai-llm] Claude Prompt Caching in 2026: 5-Minute TTL~~ → compiled `wiki/ai-llm/claude-prompt-caching-5min-ttl-2026.md` (2026-04-23 cron)
+- ~~[ai-llm] Claude API Pricing: Complete Breakdown 2026~~ → compiled `wiki/ai-llm/claude-api-pricing-breakdown-2026.md` (2026-04-23 cron)
+
+<!-- retry pass 2026-04-23T22:03:55.856817+00:00 -->
+
+
+<!-- startpage pass 2026-04-23T22:06:07.436839+00:00 -->
+
+- [ ] **small-biz-saas**: Pricing for SaaS: Models, Benchmarks & Strategy (2026) — `raw/small-biz-saas/prospeo-io-s-pricing-for-saas.md` — <https://prospeo.io/s/pricing-for-saas>
+- [ ] **small-biz-saas**: Pricing Information for SaaS Platforms 2026 | InfluenceFlow — `raw/small-biz-saas/influenceflow-io-resources-pricing-information-for-saas-platforms-comp.md` — <https://influenceflow.io/resources/pricing-information-for-saas-platforms-complete-2026-guide>
+- [ ] **verticals**: 5 Best Medical AI Receptionists in 2026: Ranked for Healthcare Operations | Greetmate.ai — `raw/verticals/greetmate-ai-blog-best-medical-ai-receptionist-2026.md` — <https://www.greetmate.ai/blog/best-medical-ai-receptionist-2026>
+- [ ] **verticals**: AI Receptionist for Dental Offices [2026 Guide] — `raw/verticals/getaira-io-blog-ai-receptionist-for-dental-offices.md` — <https://www.getaira.io/blog/ai-receptionist-for-dental-offices>
+- [ ] **technical**: Supabase vs Firebase: 8 Tests, 1 Winner [2026] — `raw/technical/tech-insider-org-supabase-vs-firebase-2026.md` — <https://tech-insider.org/supabase-vs-firebase-2026>
+- [ ] **technical**: Supabase Vector | The Postgres Vector database and AI Toolkit — `raw/technical/supabase-com-modules-vector.md` — <https://supabase.com/modules/vector>
+- [ ] **regulations**: California Companion Chatbot Law Now in Effect | Perkins Coie — `raw/regulations/perkinscoie-com-insights-update-california-companion-chatbot-law-now-e.md` — <https://perkinscoie.com/insights/update/california-companion-chatbot-law-now-effect>
+- [ ] **regulations**: First-in-the-Nation AI Chatbot Safeguards Signed into Law | California State Senator Steve Padilla — `raw/regulations/sd18-senate-ca-gov-news-first-nation-ai-chatbot-safeguards-signed-law.md` — <https://sd18.senate.ca.gov/news/first-nation-ai-chatbot-safeguards-signed-law>
+- [ ] **growth**: Actionable SEO Tips for Small Businesses in 2026: Winning in the Age of AI, Social & Search – Advertising Week — `raw/growth/advertisingweek-com-actionable-seo-tips-for-small-businesses-in-2026-w.md` — <https://advertisingweek.com/actionable-seo-tips-for-small-businesses-in-2026-winning-in-the-age-of-ai-social-search>
+- [ ] **growth**: AI Search, Google SGE & SEO in 2026 for Small Businesses — `raw/growth/knapsackcreative-com-blog-seo-ai-search-google-sge-for-small-business.md` — <https://knapsackcreative.com/blog/seo/ai-search-google-sge-for-small-business>
+
+## 2026-04-24T10:06:38Z auto-populate
+
+- [competitors] What Is a GoHighLevel AI Employee (2026 Ultimate Guide) — `raw/competitors/what-is-a-gohighlevel-ai-employee-2026-ultimate-guide.md` — https://getautomized.com/what-is-a-gohighlevel-ai-employee
+- ~~[competitors] HighLevel Unlimited AI Pricing 2026 — $97/mo Breakdown~~ → compiled `wiki/competitors/ghl-unlimited-ai-97-mo-breakdown-2026.md` (2026-04-24 cron)
+- ~~[ai-llm] Claude Opus 4.7 Pricing — The Real Cost Story~~ → compiled `wiki/ai-llm/claude-opus-4-7-tokenizer-cost-reality-2026.md` (2026-04-24 cron)
+- [verticals] Top 5 Best AI Phone Answering Systems for Home Services 2026 — `raw/verticals/top-5-best-ai-phone-answering-systems-for-home-services-2026.md` — https://www.gosameday.com/post/top-best-ai-phone-answering-systems-for-home-services
+- [verticals] Best AI Medical Receptionist in 2026 — `raw/verticals/best-ai-medical-receptionist-in-2026.md` — https://www.deepcura.com/resources/best-ai-medical-receptionist
+- [technical] Practical Guide to Safely Implementing Webhook Receiver APIs in FastAPI — `raw/technical/practical-guide-to-safely-implementing-webhook-receiver-apis-in-fastapi.md` — https://blog.greeden.me/en/2026/04/07/a-practical-guide-to-safely-implementing-webhook-receiver-apis-in-fastapi-from-signature-verification-and-retry-handling-to-idempotency-and-asynchronous-processing/
+- ~~[technical] Stripe Webhook Security Guide — Signature Verification~~ → compiled `wiki/technical/stripe-webhook-signature-verification-security.md` (2026-04-24 cron)
+- [regulations] Proposed State AI Law Update — April 20, 2026 — `raw/regulations/proposed-state-ai-law-update-april-20-2026.md` — https://www.troutmanprivacy.com/2026/04/proposed-state-ai-law-update-april-20-2026/
+- [regulations] Best AI Chatbots for Healthcare in 2026 — `raw/regulations/best-ai-chatbots-for-healthcare-in-2026.md` — https://hyperleap.ai/comparison/best-ai-chatbots-healthcare-2026
+- [growth] Generative Engine Optimization (GEO) — 2026 Guide — `raw/growth/generative-engine-optimization-geo-2026-guide.md` — https://www.coseom.com/generative-engine-optimization-guide
+- ~~[growth] How to Track AI Citations Across ChatGPT, Perplexity, Google~~ → compiled `wiki/growth/ai-citation-tracking-chatgpt-perplexity-google-2026.md` (2026-04-24 cron)
+
+- ~~[ai-llm] Claude is a space to think~~ → compiled `wiki/ai-llm/claude-ad-free-incentive-design-2026.md` (2026-04-24 cron)
+
+- ~~[ai-llm] An update on recent Claude Code quality reports~~ → compiled `wiki/ai-llm/claude-code-april-23-postmortem-2026.md` (2026-04-24 cron)
+
+- ~~[competitors] Introducing the Sales Agent Blueprint~~ → compiled `wiki/competitors/intercom-sales-agent-blueprint-2026.md` (2026-04-24 cron)
+
+- [competitors] Best AI Marketing Platforms for Multi-Location Brands in 2026 — https://birdeye.com/blog/best-ai-marketing-platforms-for-multi-location-brands-in-2026/ (raw: knowledge-base/raw/competitors/best-ai-marketing-platforms-for-multi-location-brands-in-2026-2026-04-24.md)
+
+- [growth] Is AI Content Bad for SEO? No, and It Never Will Be (7 Reasons) — https://ahrefs.com/blog/ai-content-is-not-bad-for-seo/ (raw: knowledge-base/raw/growth/ai-content-is-not-bad-for-seo-2026-04-24.md)
+
+- ~~[growth] How many keywords can you rank for with one page? (Ahrefs' study of 3M searches)~~ → compiled `wiki/growth/ahrefs-also-rank-for-study.md` (2026-05-02 cron)
+
+- [technical] Agent responsibly - Vercel — https://vercel.com/blog/agent-responsibly (raw: knowledge-base/raw/technical/agent-responsibly-2026-04-24.md)
+
+- ~~[technical] Agentic Infrastructure - Vercel~~ → compiled `wiki/technical/vercel-agentic-infrastructure-2026.md` (2026-04-24 cron)
+
+## Auto-populate run 2026-04-25 10:03 UTC
+- ~~[competitors] GoHighLevel AI Changelog: Every AI Feature Release (2024-2026)~~ → compiled `wiki/competitors/ghl-ai-changelog-2024-2026.md` (2026-04-25 cron)
+- ~~[competitors] Mastering AI Employees and Custom API V2 for High-Performance Funnels – Ninja Coding Pro~~ → compiled `wiki/competitors/ghl-ai-employee-api-v2-funnels-2026.md` (2026-04-25 cron)
+- ~~[ai-llm] Claude by Anthropic - Release Notes - April 2026 Latest Updates~~ → compiled `wiki/ai-llm/anthropic-claude-release-notes-feb-apr-2026.md` (2026-04-25 cron)
+- ~~[ai-llm] Releases · anthropics/claude-code~~ → compiled `wiki/ai-llm/claude-code-v2-1-118-119-release-notes.md` (2026-04-25 cron)
+
+## Auto-discover 2026-04-26T22:03:39Z
+
+- ~~[competitors] Manus AI Comes to GoHighLevel: Full Breakdown of the 2026 GHL Integrations~~ → compiled `wiki/competitors/ghl-manus-ai-monday-google-forms-integrations-2026.md` (2026-04-26 cron)
+- ~~[competitors] GoHighLevel Pricing 2026: True Monthly Cost (With Add-Ons)~~ → compiled `wiki/competitors/ghl-pricing-2026-true-monthly-cost-with-addons.md` (2026-04-26 cron)
+
+## Auto-discover 2026-04-26T22:06:34Z
+
+- ~~[ai-llm] An update on our election safeguards \ Anthropic~~ → compiled `wiki/ai-llm/anthropic-election-safeguards-2026.md` (2026-04-26 cron)
+- ~~[ai-llm] Anthropic and NEC partner to build AI-native engineering at scale in Japan \ Anthropic~~ → compiled `wiki/ai-llm/anthropic-nec-japan-partnership-2026.md` (2026-04-26 cron)
+
+## Auto-discover 2026-04-27T22:15:12Z
+
+- ~~[competitors] GoHighLevel Pricing Breakdown 2026: Is It Worth It?~~ → compiled `wiki/competitors/ghl-pricing-systemshift-2026.md` (2026-04-27 cron)
+- ~~[competitors] GoHighLevel Voice AI Review 2026: AI Employee That Handles Calls~~ → compiled `wiki/competitors/ghl-voice-ai-review-2026.md` (2026-04-28 cron)
+- ~~[ai-llm] Anthropic Launches Managed Agents and Claude Cowork GA: April 9, 2026~~ → compiled `wiki/ai-llm/anthropic-managed-agents-cowork-ga-april-2026.md` (2026-04-27 cron)
+- ~~[ai-llm] Claude Prompt Caching API Cost Optimization Guide (2026)~~ → compiled `wiki/ai-llm/claude-prompt-caching-cost-optimization-kissapi.md` (2026-04-28 cron)
+- ~~[verticals] AI Receptionist for General Contractors: Handle More Jobs Without More Staff~~ → compiled `wiki/verticals/ai-receptionist-general-contractors-2026.md` (2026-04-28 cron)
+- [verticals] The Best AI Chatbot for Spas and Salons in 2026 — https://www.bosar.agency/blog/best-chatbot-salons-spas/ (raw: knowledge-base/raw/verticals/bosar-best-chatbot-salons-spas-2026.md)
+- [technical] Postgres Semantic Search: pgvector Guide (Supabase) — https://techsynth.tech/blog/semantic-search-postgres-pgvector-supabase/ (raw: knowledge-base/raw/technical/techsynth-pgvector-supabase-semantic-search.md)
+- ~~[technical] Embedding Model Pricing: OpenAI, Cohere, Voyage Cost Comparison~~ → compiled `wiki/technical/embedding-model-pricing-comparison-2026.md` (2026-04-27 cron)
+- ~~[regulations] TCPA Compliance for SMS 2026 (Signalmash)~~ → compiled `wiki/regulations/tcpa-sms-compliance-2026.md` (2026-04-28 cron)
+- ~~[regulations] 2026 AI Laws Update: Key Regulations and Practical Guidance (Gunderson Dettmer)~~ → compiled `wiki/regulations/gunder-2026-ai-laws-update.md` (2026-04-27 cron)
+
+## Ingested 2026-04-30T22:19:03Z — cron autopop
+
+- ~~[competitors] GoHighLevel New Features 2026 (Stripe Tax, Smart Lists, Voice AI)~~ → compiled `wiki/competitors/gohighlevel-updates-2026.md` (2026-04-30 cron)
+- ~~[ai-llm] MCP 2026 Roadmap (Tasks, DPoP, Workload Identity)~~ → compiled `wiki/ai-llm/mcp-2026-roadmap.md` (2026-04-30 cron)
+- ~~[growth] 23 Live Chat Statistics 2026 (Tidio market share, ROI)~~ → compiled `wiki/growth/tidio-live-chat-statistics-2026.md` (2026-04-30 cron)
+- ~~[small-biz-saas] SaaS Retention: The AI Churn Wave (ChartMogul)~~ → compiled `wiki/small-biz-saas/chartmogul-saas-retention-ai-churn-wave.md` (2026-04-30 cron)
+- ~~[small-biz-saas] Average SaaS Churn Rate + 10 Strategies (Userpilot)~~ → compiled `wiki/small-biz-saas/userpilot-churn-strategies-2026.md` (2026-05-01 cron)
+- ~~[technical] FastAPI Production Best Practices 2026 (FastLaunchAPI)~~ → compiled `wiki/technical/fastlaunchapi-fastapi-best-practices-production-2026.md` (2026-05-01 cron)
+- ~~[technical] Production-Ready FastAPI Architecture Patterns (OneUptime)~~ → compiled `wiki/technical/oneuptime-fastapi-production-ready-2026.md` (2026-05-01 cron)
+- ~~[verticals] Top 5 AI Receptionist Solutions for Plumbing 2026~~ → compiled `wiki/verticals/myaifrontdesk-ai-receptionist-plumbing-2026.md` (2026-05-01 cron)
+- ~~[verticals] 6 Best AI Answering Services for Contractors 2026 (LeadTruffle)~~ → compiled `wiki/verticals/leadtruffle-ai-answering-contractors-2026.md` (2026-05-02 cron)
+- ~~[regulations] California Companion Chatbot Law Now in Effect (Perkins Coie)~~ → compiled `wiki/regulations/perkinscoie-ca-companion-chatbot-law-now-effect.md` (2026-05-02 cron)
+- ~~[regulations] California's SB 243 Companion AI Mandate (Jones Walker)~~ → compiled `wiki/regulations/joneswalker-sb-243-companion-ai-mandate.md` (2026-05-02 cron)
+
+## [2026-05-05 18:08] auto-populate batch (6 new, 4 rejected)
+- ~~[competitors] raw/competitors/best-reputation-management-platforms-for-multi-location-brands-in-2026.md~~ → compiled `wiki/competitors/birdeye-multi-location-reputation-platforms-2026.md` (2026-05-05 cron)
+- ~~[ai-llm] raw/ai-llm/economic-index-march-2026-report.md~~ → compiled `wiki/ai-llm/anthropic-economic-index-learning-curves-march-2026.md` (2026-05-05 cron)
+- ~~[ai-llm] raw/ai-llm/finance-agents.md~~ → compiled `wiki/ai-llm/anthropic-finance-agents-may-2026.md` (2026-05-05 cron)
+- ~~[technical] raw/technical/supabase-incident-on-february-12-2026.md~~ → compiled `wiki/technical/supabase-us-east-2-bpa-incident-feb-2026.md` (2026-05-05 cron)
+- [technical] raw/technical/supabase-security-2025-retro.md — https://supabase.com/blog/supabase-security-2025-retro
+- [regulations] raw/regulations/ftc-ban-kochava-subsidiary-selling-sensitive-location-data-settle-charges-they-s.md — https://www.ftc.gov/news-events/news/press-releases/2026/05/ftc-ban-kochava-subsidiary-selling-sensitive-location-data-settle-charges-they-sold-location-data
+- REJECTED birdeye/wp-json (REST endpoint, not article); ahrefs/wp-json (same); ahrefs/de (German index page); ftc horseracing budget (off-topic). URLs remain in known-urls.json to prevent retry.

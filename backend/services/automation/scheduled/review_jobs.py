@@ -206,7 +206,7 @@ async def _send_review_followups(
                 "id, tenant_id, customer_name, customer_email, customer_phone, lead_id, review_request_sent_at"
             )
             .eq("status", "completed")
-            .not_.is_("review_request_sent_at", "null")
+            .filter("review_request_sent_at", "not.is", "null")
             .lte("review_request_sent_at", followup_cutoff.isoformat())
             .limit(BATCH_LIMIT)
             .execute()

@@ -1,100 +1,135 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated: 2026-04-21 20:19 EDT (automated evening routine)
+Updated: 2026-05-01 09:31 EDT (automated morning startup)
 
-## Tomorrow's Top 3 Priorities
+## Today's Top 3 Priorities
 
-1. **ROTATE compromised admin API key in Railway** — DAY 19 of exposure. Key committed `9c87335`, scrubbed `d4463d7`. Still live in Railway. **CRITICAL — HUMAN ACTION REQUIRED.** Agent: **devops** / Human.
-2. **QA today's fixes before prod rollout** — `8d026e6` widget null-state 4-way guard (KB/CI/business_type/FAQs) + FAQ probe cache; `3b0ce34` managed agents health probe endpoint + test coverage. Agents: **qa-tester** + **widget-specialist**.
-3. **QA migrations 108/109/110** (carried) — photo-quote (`tenant_pricing_rules`, `quote_requests`, `tenant_quote_usage`), drive-kb (`tenant_integrations`, `integration_sync_log`, `kb_section_hashes`), zapier (`tenant_api_keys`). Agents: **schema-guardian** + **qa-tester**.
+1. **ROTATE compromised admin API key in Railway** — DAY 29 of exposure. Still live. **CRITICAL — HUMAN ACTION REQUIRED.** Agent: **devops** / Human.
+2. **Fix Zapier plan_status bypass (GH issue #107)** — `_get_api_key_client` does not enforce `tenants.plan_status`; cancelled tenants still authenticate. Filed by nightly review on `8050912`. Agents: **backend-dev** + **schema-guardian** + **qa-tester**.
+3. **QA Zapier API key auth + rate-limiting (PR #91 merged `eed7794`)** — verify migration 117 applied prod, end-to-end auth + per-key limiter. Agents: **schema-guardian** + **qa-tester** + **backend-dev**.
 
 ## Completed (Recent)
 
-### 2026-04-21
-- [x] Scaffold `appointment_booker` managed agent (`e2ac565`)
-- [x] Add managed agents health probe (`3b0ce34`)
-- [x] Widen widget null-state guard → KB/CI/business_type/FAQs (`8d026e6`)
-- [x] Expose marketing suite in dashboard sidebar (`56d7412`)
-- [x] Seed + KB for power-washing prospect demo (`cece29f`)
-- [x] Advance contractor wedge + launch-readiness evidence (`1d95fe6`)
-- [x] Auto-log bug pattern skeletons for `8d026e6` + `3b0ce34`
-- [x] KB ingest + compile: powerwash vertical intel, GHL April 2026 updates, AI harness pricing, Anthropic postmortem, state-of-AI-search 2026
+### 2026-05-01 (this morning)
+- [x] Health check: all green (dangerous_router=CLEAR, bare_except=0, silent_frontend_catch=0, widget_sync=OK, gitignore_env=YES)
+- [x] Hardcoded API key scan: clean
+- [x] Auto-log skeleton bug-pattern entries for `8050912` (Zapier plan_status bypass — issue #107 + LOW reasoning-trace cleanup)
+- [x] Schema-log audit: migrations 100-117 documented; no new migrations in last 48h
+- [x] Daily log written for 2026-05-01
+
+### 2026-04-30 (no morning routine ran — gap day)
+- [x] `8050912` fix(nightly-review): `_mask_phone` cleanup + filed issue #107
+- [x] `f4b8166` feat(attribution): extend `get_activity_totals` with dollars/hours — slice 2
+- [x] `f54dc7e` feat(attribution): dollar/hours attribution service — slice 1
+- [x] `2baf7b2` merge: slice 3 UI — totals headline + activity feed UI
+- [x] `37c151c` plans(onboarding-v2): implementation plan + 21 issue drafts
+- [x] `8b91ec7` skills(agent-filter): Kimi K2.6 / GPT-5.5 cross-provider routing skip list
+- [x] Subconscious runs 10/11/12 — JS Silent Catch Guard governance work
+- [x] `0f2f075` ops-automation Phase 1 marked DONE (verified shipped 2026-04-22)
+
+### 2026-04-29
+- [x] Health check + hardcoded API key scan: clean
+- [x] Auto-log skeleton entries for `ee4bc16` + `fb57995`
+- [x] Merge `feature/58-zapier-auth` → main (`eed7794`); 98 upstream commits merged (`c02083c`)
+- [x] Verify `scheduled_jobs` not dead code (`4540b39`); verify AMOUNT_TO_PLAN billing (`23f15cc`)
 
 ## Active Tasks
 
 ### Priority 0 — Security (Immediate Action Required)
 
-- [ ] **ROTATE compromised API key in Railway** — Key still live. DAY 18 of exposure. Agent: **devops** / Human.
-- [ ] **Reattach HEAD to main + push 2026-04-17 work** — Verify `git branch --show-current == main` and `git status` clean. (Carried)
+- [ ] **ROTATE compromised API key in Railway** — Key still live. **DAY 29 of exposure.** Agent: **devops** / Human.
+- [ ] **Fix Zapier plan_status bypass (GH issue #107)** — backend-dev. Add `plan_status` check inside `_get_api_key_client`; regression test for cancelled tenant + valid key. (New 2026-05-01)
+- [ ] **QA Zapier API key auth + per-key rate-limiting (merged `eed7794`)** — Agents: **schema-guardian** + **qa-tester** + **backend-dev**.
+- [ ] **QA missed-call-text-back automation + migration 111 (`6020a43`)** — Agents: **qa-tester** + **widget-specialist**.
+- [ ] **QA fraud guardrails — disposable email + signup velocity (`164d21b`)** — Agent: **qa-tester** + **backend-dev**.
+- [ ] **QA onboarding wizard route + Stripe link (`c7c74f1`, `62f8722`)** — Agent: **qa-tester** + **frontend-dev**.
 
 ### Priority 0 — Schema (Pre-Launch)
 
-- [ ] **Verify migration 102 applied in prod** — `marketing_addon_*` columns on `tenants`. Log entry says "status unknown — backfill only". Agent: **schema-guardian**.
+- [ ] **Verify migration 117 (`zapier_api_keys`) applied in prod** — rename collision resolved 2026-04-28. Agent: **schema-guardian**.
+- [ ] **Verify migration 116 (`idempotency_keys_rls`) applied in prod** — closes RLS gap from 114. Agent: **schema-guardian**.
+- [ ] **Verify migrations 113/114/115 applied in prod** — fraud guardrails, idempotency_keys, contextual_reindex_marker. Agent: **schema-guardian**.
+- [ ] **Verify migration 102 applied in prod** — `marketing_addon_*` columns on `tenants`. Agent: **schema-guardian**.
 - [ ] **Verify migrations 103/104/105 applied in prod** — Flags + enrichment source. Agent: **schema-guardian**.
 
 ### Priority 1 — Critical / QA
 
-- [ ] **QA migrations 108/109/110 production paths** — photo-quote, drive-kb, zapier api keys. Agent: **schema-guardian** + **qa-tester**. (New 2026-04-21)
-- [ ] **QA widget null-state 4-way guard (`8d026e6`)** — Exercise FAQ probe cache (`_CHAT_CACHE_TTL`); verify fallback triggers only when KB + CI + FAQs all empty and business_type = 'other'. Agent: **widget-specialist**. (New 2026-04-21 evening)
-- [ ] **QA managed agents health probe (`3b0ce34`)** — Endpoint live; test coverage green; verify 503 surfaces on provider outage. Agent: **qa-tester**. (New 2026-04-21 evening)
-- [ ] **QA appointment_booker scaffold (`e2ac565`)** — Registry wiring + fixtures; verify advisor-executor pattern hooks. Agent: **qa-tester**. (New 2026-04-21 evening)
-- [ ] **QA migrations 106 + 107 production paths** — AI usage budget reservation, refund idempotency, dunning event log, cancellation event history. Agent: **schema-guardian** + **qa-tester**. (Carried)
-- [ ] **QA invariants expansion (fac6124)** — conversations.tenant_id guard added to `check_project_invariants.py`. Exercise CI path; confirm auto-hook fails a synthetic bad commit. Agent: **qa-tester**. (New 2026-04-21)
-- [ ] **QA branding_helpers.py extraction (5f7117f)** — Reverse-dep fix. Ensure widget chat helpers still resolve branding correctly. Agent: **widget-specialist**. (Carried)
-- [ ] **QA widget_chat_helpers shim removal (d2ab107)** — Middle-hop shim dropped (Rule 8 no half-migrations). Verify all old import paths resolve via new layout. Agent: **backend-dev**. (Carried)
-- [ ] **QA widget_helpers god-class split (6cf4646)** — 1,673-LOC split into 3 modules. Cross-origin embed + booking + lead capture need prod smoke. Agent: **widget-specialist**. (Carried)
-- [ ] **QA conftest TESTING + JWT secret env fix (9812fee, 0d94833)** — Verify full backend pytest green in CI. Agent: **qa-tester**. (Carried)
-- [ ] **QA business-type personalization (ad88397)** — Industry-aware widget + dashboard behavior. Agent: **qa-tester**. (Carried)
-- [ ] **QA launch risk guardrails (99f8442)** — AI cost caps, refund audit, dunning events. Agent: **qa-tester**. (Carried)
-- [ ] **QA service-layer extraction** — `ff293f4` branding/faq/conversations. Agent: **qa-tester**. (Carried)
-- [ ] **QA scheduled_jobs.py split** — 5 modules: appointment/billing/email/lead/review. Cron paths re-verified. Agent: **qa-tester**. (Carried)
-- [ ] **QA Stripe marketing addon readiness guard** — `0278eb0` + `0482f7d`. Agent: **qa-tester**. (Carried)
-- [ ] **Act on launch-readiness rubric 114/262 NO-GO findings** — Dispute threshold 0.50%. Remaining fix-list needs execution. (Carried)
-- [ ] **QA tenant_scope adoption + CORS fix** — 60+ routers, CORS `["*"]`. Cross-tenant leak = critical. Agent: **qa-tester**. (Carried)
-- [ ] **QA industry packs** — 14 modules landed `881e026`. Agent: **qa-tester**. (Carried)
-- [ ] **QA marketing infrastructure** — A/B tests, automation rules. Zero QA. Agent: **qa-tester**. (Carried)
-- [ ] **QA Managed Agents integration** — Lead qualifier + document drafter + field monitor + researcher. Agent: **qa-tester**. (Carried)
-- [ ] **QA issue-to-pr loop + autopilot loop** — Shipped `777af3a` + `5ddbbce`. Agent: **qa-tester**. (Carried)
-- [ ] **Extend pre-commit hook** — Flag `except Exception: pass` and `except Exception: continue`. Agent: **devops**. (Carried)
-- [ ] **Ingest competitor briefs to KB** — 5 research briefs in `research-briefs/`. Manual. (Carried)
-- [ ] **Exercise migration duplicate-number pre-commit guard (2a08588)**. Agent: **devops**. (Carried)
+- [ ] **QA dollar/hours attribution slices 1+2 (`f54dc7e`, `f4b8166`)** — verify `get_activity_totals` extension; agents: **qa-tester** + **backend-dev**. (New 2026-05-01)
+- [ ] **QA slice 3 UI — totals headline + activity feed (`2baf7b2`)** — agents: **qa-tester** + **frontend-dev**. (New 2026-05-01)
+- [ ] **Review onboarding-v2 implementation plan + 21 issue drafts (`37c151c`)** — feed to `prd-to-issues` skill, schedule into sprint. Agent: **planner**. (New 2026-05-01)
+- [ ] **QA agent-filter Kimi K2.6 / GPT-5.5 routing (`8b91ec7`)** — verify cross-provider skip list. Agent: **qa-tester**. (New 2026-05-01)
+- [ ] **Land JS Silent Catch Guard pre-commit hook (subconscious runs 10-12)** — three runs of governance/doctrine work; needs concrete implementation PR. Agent: **devops** + **frontend-dev**. (New 2026-05-01)
+- [ ] **QA steal-list 1-6 idempotency + rate-limit (`b0b1fb4`)** — base of `fb57995` fix. Agent: **qa-tester** + **backend-dev**.
+- [ ] **QA `local_seo` refactor (`80f9815`, `a002e18`)** — verify no regression in vertical-tier SEO content. Agent: **qa-tester** + **frontend-dev**.
+- [ ] **Verify agent-system guardrails (`d60331e`, `c289c2f`, `2bb6982`)** — `scripts/check_agent_system.py` clean, autopilot rollout cleanup. Agent: **devops**.
+- [ ] **QA migrations 108/109/110 production paths** — photo-quote, drive-kb, zapier api keys. Agent: **schema-guardian** + **qa-tester**.
+- [ ] **QA widget null-state 4-way guard (`8d026e6`)** — Agent: **widget-specialist**.
+- [ ] **QA managed agents health probe (`3b0ce34`)** — Agent: **qa-tester**.
+- [ ] **QA appointment_booker scaffold (`e2ac565`)** — Agent: **qa-tester**.
+- [ ] **QA migrations 106 + 107 production paths** — Agent: **schema-guardian** + **qa-tester**.
+- [ ] **QA invariants expansion (fac6124)** — Agent: **qa-tester**.
+- [ ] **QA branding_helpers.py extraction (5f7117f)** — Agent: **widget-specialist**.
+- [ ] **QA widget_chat_helpers shim removal (d2ab107)** — Agent: **backend-dev**.
+- [ ] **QA widget_helpers god-class split (6cf4646)** — Agent: **widget-specialist**.
+- [ ] **QA conftest TESTING + JWT secret env fix (9812fee, 0d94833)** — Agent: **qa-tester**.
+- [ ] **QA business-type personalization (ad88397)** — Agent: **qa-tester**.
+- [ ] **QA launch risk guardrails (99f8442)** — Agent: **qa-tester**.
+- [ ] **QA service-layer extraction** — `ff293f4`. Agent: **qa-tester**.
+- [ ] **QA scheduled_jobs.py split** — 5 modules. Agent: **qa-tester**.
+- [ ] **QA Stripe marketing addon readiness guard** — `0278eb0` + `0482f7d`. Agent: **qa-tester**.
+- [ ] **Act on launch-readiness rubric 114/262 NO-GO findings**.
+- [ ] **QA tenant_scope adoption + CORS fix** — Agent: **qa-tester**.
+- [ ] **QA industry packs** — `881e026`. Agent: **qa-tester**.
+- [ ] **QA marketing infrastructure** — Agent: **qa-tester**.
+- [ ] **QA Managed Agents integration** — Agent: **qa-tester**.
+- [ ] **QA issue-to-pr loop + autopilot loop** — `777af3a` + `5ddbbce`. Agent: **qa-tester**.
+- [ ] **Extend pre-commit hook** — Flag `except Exception: pass` and `except Exception: continue`. Agent: **devops**.
+- [ ] **Ingest competitor briefs to KB** — 5 briefs + `ghl-voice-ai-review-2026.md`. Manual `/kb-ingest` + `/kb-compile`.
+- [ ] **Exercise migration duplicate-number pre-commit guard (2a08588)** — verified once via 117 collision; revisit. Agent: **devops**.
 
 ### Priority 2 — Code Quality & Verification
 
-- [ ] **Reconcile silent_frontend_catch_count glob drift** — morning=0, evening=9 on same script. Fix `scripts/daily/health-check.sh` glob resolution. (Carried)
-- [ ] **Fix 3 non-admin silent `.catch(() => null)` patterns** — `MarketingDashboardPage.jsx:96`, `LocalSEOPage.jsx:262`, `AuthContext.jsx:89`. Agent: **frontend-dev**. (Carried)
-- [ ] **Implement JS silent catch pre-commit guard** — Subconscious `365d6ea` recommendation. Agent: **devops**. (Carried)
-- [ ] **Validate 47 rewritten skills** — `b83577f` + `0f1d23a` Anthropic canonical. Spot-check critical skills. (Carried)
-- [ ] **E2E test onboarding wizard** — 6-step wizard shipped 2026-04-01. (Carried)
-- [ ] **Verify expired JWT token handling (6d10cf5)** — 401 interceptor + proactive expiry check. (Carried)
-- [ ] **Production verification of March 25 features** — Revenue analytics, pipeline automations, webhook deliveries, password reset: **27+ days unverified.** (Carried)
-- [ ] **Audit `.get() or ""` operator precedence pattern** — 3 fixed, likely more. (Carried)
-- [ ] **QA GitHub autopilot loop** — `5ddbbce`. Agent: **qa-tester**. (Carried)
-- [ ] **Remove remaining 5 MTOptions references** — Post-cleanup audit ee35999 noted residual. (Carried)
-- [ ] **Remove MTOptions-growth from daily smoke tests** — Done `ce36df7` but verify no remaining references. (Carried)
+- [ ] **Implement reasoning-trace comment scanner pre-commit hook (LOW finding from `8050912`)** — flag `reasoning:`, `step N:`, `let me`, `I need to` patterns inside production source. Agent: **devops**. (New 2026-05-01)
+- [ ] **Reconcile silent_frontend_catch_count glob drift**.
+- [ ] **Fix 3 non-admin silent `.catch(() => null)` patterns** — Agent: **frontend-dev**.
+- [ ] **Implement JS silent catch pre-commit guard** — Agent: **devops**. (See subconscious runs 10-12)
+- [ ] **Validate 47 rewritten skills** — `b83577f` + `0f1d23a`.
+- [ ] **E2E test onboarding wizard** — Agent: **qa-tester** + **frontend-dev**.
+- [ ] **Verify expired JWT token handling (6d10cf5)**.
+- [ ] **Production verification of March 25 features** — **37+ days unverified.**
+- [ ] **Audit `.get() or ""` operator precedence pattern**.
+- [ ] **QA GitHub autopilot loop** — `5ddbbce`. Agent: **qa-tester**.
+- [ ] **Remove remaining 5 MTOptions references**.
+- [ ] **Remove MTOptions-growth from daily smoke tests**.
 
 ### Priority 3 — Knowledge & Documentation
 
-- [ ] **Enrich bug pattern for `fac6124`** — Invariants guard conversations.tenant_id. Auto-logged skeleton 2026-04-21. (New 2026-04-21)
-- [ ] **Enrich auto-logged bug patterns (#30-41)** — 12 skeleton entries. Carried since 2026-03-24.
-- [ ] **Enrich bug patterns (#58-69)** — 12 skeleton entries from Apr 7-8.
-- [ ] **Enrich bug patterns (#72-78)** — 7 skeleton entries from Apr 9 evening.
-- [ ] **Enrich bug pattern for `9d48907`** — Landing page Vercel routes fix (Apr 14).
-- [ ] **Enrich bug patterns for `0278eb0` + `9febf89`** — Stripe + analytics. (Carried)
-- [ ] **Enrich bug pattern for `c0aef59`** — widget_helpers patch target fix (Apr 19). (Carried)
-- [ ] **Enrich bug pattern for `080098b`** — skills Phase 2+3 (Apr 19). (Carried)
-- [ ] **Act on vertical-specialize research findings (`e3963c5`)** — Review deep-dive + open questions. (Carried)
-- [ ] **Act on earlier research findings** — CAC/churn, plateau, unit economics. Pricing/positioning decisions pending. (Carried)
-- [ ] **Review 4 new research briefs (2026-04-18/19/20)** — TCPA/CAN-SPAM, smb-self-serve, telemetry, white-label-reseller, widget-first, SMB verticals WTP, historical document automation waves. (Carried)
-- [ ] **Compile / ingest 2026-04-18 competitor landscape snapshot (`fd6a09e`)** — `/kb-compile`. (Carried)
+- [ ] **Enrich bug pattern for `8050912` Zapier plan_status bypass** — Skeleton auto-logged 2026-05-01 (issue #107). Run `/log-bug` for full root-cause + remediation detail once fix lands. (New 2026-05-01)
+- [ ] **Enrich bug pattern for `8050912` reasoning-trace LOW** — auto-logged 2026-05-01. (New 2026-05-01)
+- [ ] **Enrich bug pattern for `ee4bc16`** — slowapi callable signature fix. Auto-logged 2026-04-29.
+- [ ] **Enrich bug pattern for `fb57995`** — idempotency race + RLS + XFF.
+- [ ] **Compile `knowledge-base/wiki/competitors/ghl-voice-ai-review-2026.md`** — `/kb-compile`.
+- [ ] **Enrich bug patterns from origin/main 2026-04-23 CI batch** — `4d9b25f`, `bcaba73`, `dbdcb23`, `212e04d`.
+- [ ] **Enrich bug pattern for `fac6124`**.
+- [ ] **Enrich auto-logged bug patterns (#30-41)** — 12 skeletons. (Carried since 2026-03-24)
+- [ ] **Enrich bug patterns (#58-69)** — 12 skeletons from Apr 7-8.
+- [ ] **Enrich bug patterns (#72-78)** — 7 skeletons from Apr 9 evening.
+- [ ] **Enrich bug pattern for `9d48907`**.
+- [ ] **Enrich bug patterns for `0278eb0` + `9febf89`**.
+- [ ] **Enrich bug pattern for `c0aef59`**.
+- [ ] **Enrich bug pattern for `080098b`**.
+- [ ] **Act on vertical-specialize research findings (`e3963c5`)**.
+- [ ] **Act on earlier research findings** — CAC/churn, plateau, unit economics.
+- [ ] **Review 4 new research briefs (2026-04-18/19/20)**.
+- [ ] **Compile / ingest 2026-04-18 competitor landscape snapshot (`fd6a09e`)**.
 
 ### Priority 4 — Carried Forward
 
-- [ ] **Two-way email sync** — pending 5+ weeks.
+- [ ] **Two-way email sync** — pending 6+ weeks.
 - [ ] **Fix 16 test isolation failures** — partially addressed.
-- [ ] **Automated routine reliability** — Apr 17 morning log showed `git pull` failed on detached HEAD. Verify auto-reattach.
+- [ ] **Automated routine reliability** — Apr 17 morning log showed `git pull` failed on detached HEAD; no morning log on 2026-04-30 either. Verify auto-reattach + cron firing.
 - [ ] **Create migration-gate hook** — Block new feature commits when pending migration count > 15.
-- [ ] **Split bug-patterns.md** — now >2,160 lines. Hot file, split by month/category.
-- [ ] **Codify widget 3-way sync check as skill** — widget/ + frontend/public/widget/ + landing-page-v2/widget/ touched twice today. Bundle CI gate. (New 2026-04-21 evening)
-- [ ] **Monitor `managed_agents_registry.py` for god-class trajectory** — 3 edits today. Split if next extension pushes past 600 LOC. (New 2026-04-21 evening)
-- [ ] **Tighten `auto-commit.sh` debounce** — 3 auto-commit churn commits today. Reduce commit-log noise. (New 2026-04-21 evening)
+- [ ] **Split bug-patterns.md** — now ~2,340 lines, 200 ### entries. Hot file. (Updated 2026-05-01)
+- [ ] **Codify widget 3-way sync check as skill**.
+- [ ] **Monitor `managed_agents_registry.py` for god-class trajectory**.
+- [ ] **Tighten `auto-commit.sh` debounce**.

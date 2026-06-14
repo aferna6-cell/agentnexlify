@@ -6,7 +6,6 @@ tests that still import or patch deleted modules after a dead-code sweep.
 
 import ast
 import re
-import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -23,7 +22,8 @@ def _iter_python_test_files(root: Path) -> list[Path]:
             files.extend(sorted(base.rglob("test_*.py")))
             files.extend(
                 sorted(
-                    path for path in base.rglob("*.py")
+                    path
+                    for path in base.rglob("*.py")
                     if path.name.endswith("_test.py")
                 )
             )
@@ -37,8 +37,10 @@ def _iter_python_test_files(root: Path) -> list[Path]:
 
 
 def _is_local_reference(dotted: str) -> bool:
-    return dotted == LOCAL_PREFIXES[0] or dotted == LOCAL_PREFIXES[1] or dotted.startswith(
-        ("backend.", "scripts.")
+    return (
+        dotted == LOCAL_PREFIXES[0]
+        or dotted == LOCAL_PREFIXES[1]
+        or dotted.startswith(("backend.", "scripts."))
     )
 
 
@@ -59,12 +61,28 @@ def _is_package_path(path: Path) -> bool:
     return path.is_dir() or path.name == "__init__.py"
 
 
+def iter_assigned_names(node: ast.AST):
+    """Yield names bound by an assignment node or assignment target."""
+    if isinstance(node, ast.Assign):
+        for target in node.targets:
+            yield from iter_assigned_names(target)
+    elif isinstance(node, ast.Name):
+        yield node.id
+    elif isinstance(node, (ast.Tuple, ast.List)):
+        for elt in node.elts:
+            yield from iter_assigned_names(elt)
+    elif isinstance(node, ast.Starred):
+        yield from iter_assigned_names(node.value)
+
+
 def _module_exports_name(module_path: Path, name: str) -> bool:
     if module_path.is_dir():
         return False
 
     try:
-        tree = ast.parse(module_path.read_text(encoding="utf-8"), filename=str(module_path))
+        tree = ast.parse(
+            module_path.read_text(encoding="utf-8"), filename=str(module_path)
+        )
     except SyntaxError:
         return False
 
@@ -88,7 +106,9 @@ def _module_exports_name(module_path: Path, name: str) -> bool:
     return False
 
 
-def _longest_existing_module(root: Path, dotted: str) -> tuple[str | None, Path | None, int]:
+def _longest_existing_module(
+    root: Path, dotted: str
+) -> tuple[str | None, Path | None, int]:
     parts = dotted.split(".")
     for end in range(len(parts), 0, -1):
         candidate = ".".join(parts[:end])
@@ -143,7 +163,9 @@ def _collect_references(path: Path, root: Path) -> list[tuple[str, int, str]]:
                 and isinstance(node.args[0].value, str)
             ):
                 for match in PATCH_REFERENCE_RE.finditer(node.args[0].value):
-                    refs.append((match.group(0), node.lineno, f"patch target via {call_name}"))
+                    refs.append(
+                        (match.group(0), node.lineno, f"patch target via {call_name}")
+                    )
             self.generic_visit(node)
 
     Visitor().visit(tree)

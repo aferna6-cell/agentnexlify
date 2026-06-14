@@ -15,14 +15,12 @@ from backend.config import settings
 from backend.models.database import get_service_supabase
 from backend.services.idempotency import check_and_record, record_response
 from backend.routers.billing import (
-    _handle_addon_checkout_completed,
-    _handle_addon_subscription_deleted,
-    _handle_addon_subscription_updated,
     _handle_checkout_completed,
     _handle_payment_failed,
+    _handle_payment_succeeded,
     _handle_subscription_deleted,
     _handle_subscription_updated,
-    _is_marketing_addon_subscription,
+    _is_legacy_marketing_addon,
 )
 from backend.services.webhook_dispatcher import fire_event_background
 
@@ -41,12 +39,20 @@ async def stripe_webhook(request: Request):
         event = stripe.Webhook.construct_event(
             payload, sig_header, settings.stripe_webhook_secret
         )
+    except stripe.SignatureVerificationError:
+        # Bad signature is a client error (or a spoof attempt): 400, no retry.
+        logger.warning("Stripe webhook signature verification failed")
+        raise HTTPException(status_code=400, detail="Invalid signature")
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid payload")
-    except (stripe.SignatureVerificationError, Exception) as exc:
-        if "SignatureVerification" in type(exc).__name__:
-            raise HTTPException(status_code=400, detail="Invalid signature")
-        raise
+    except Exception:
+        # An unexpected error constructing the event (misconfigured secret,
+        # SDK fault) is a server problem: 500 so Stripe retries, and it is
+        # logged distinctly from bad-signature attempts. (GH #99: the old
+        # `except (SignatureVerificationError, Exception)` union collapsed to
+        # Exception and bare-re-raised everything else as an opaque 500.)
+        logger.exception("Stripe webhook event construction failed")
+        raise HTTPException(status_code=500, detail="Webhook verification failed")
 
     event_type = event["type"]
     data = event["data"]["object"]
@@ -68,22 +74,24 @@ async def stripe_webhook(request: Request):
             metadata = data.get("metadata") or {}
             if metadata.get("invoice_id") and metadata.get("tenant_id"):
                 _handle_invoice_payment(db, data)
-            elif _is_marketing_addon_subscription(data):
-                _handle_addon_checkout_completed(db, data)
+            elif _is_legacy_marketing_addon(data):
+                logger.info("Ignoring legacy marketing add-on checkout event (add-on retired 2026-06-10)")
             else:
                 _handle_checkout_completed(db, data)
         elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
-            if _is_marketing_addon_subscription(data):
-                _handle_addon_subscription_updated(db, data)
+            if _is_legacy_marketing_addon(data):
+                logger.info("Ignoring legacy marketing add-on subscription event (add-on retired 2026-06-10)")
             else:
                 _handle_subscription_updated(db, data)
         elif event_type == "customer.subscription.deleted":
-            if _is_marketing_addon_subscription(data):
-                _handle_addon_subscription_deleted(db, data)
+            if _is_legacy_marketing_addon(data):
+                logger.info("Ignoring legacy marketing add-on subscription event (add-on retired 2026-06-10)")
             else:
                 _handle_subscription_deleted(db, data)
         elif event_type == "invoice.payment_failed":
             await _handle_payment_failed(db, data)
+        elif event_type == "invoice.payment_succeeded":
+            await _handle_payment_succeeded(db, data)
         else:
             logger.debug("Unhandled Stripe event: %s", event_type)
     except Exception:

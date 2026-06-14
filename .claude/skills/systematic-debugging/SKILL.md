@@ -1,5 +1,6 @@
 ---
 name: systematic-debugging
+effort: high
 description: 4-phase debugging methodology — reproduce, narrow, diagnose, verify. Forbids random "just try changing stuff" edits. Load when user says "debug systematically", "this is broken", error message pasted, stack trace shared, or when fix-bug needs depth.
 origin: https://github.com/obra/superpowers/tree/main/skills/systematic-debugging
 version: 1.0.0

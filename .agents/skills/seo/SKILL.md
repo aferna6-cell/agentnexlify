@@ -18,10 +18,10 @@ Search ranking factors (approximate influence):
 | Factor | Influence | This Skill |
 |--------|-----------|------------|
 | Content quality & relevance | ~40% | Partial (structure) |
-| Backlinks & authority | ~25% | ✗ |
-| Technical SEO | ~15% | ✓ |
+| Backlinks & authority | ~25% | Ã¢Å“â€” |
+| Technical SEO | ~15% | Ã¢Å“â€œ |
 | Page experience (Core Web Vitals) | ~10% | See [Core Web Vitals](../core-web-vitals/SKILL.md) |
-| On-page SEO | ~10% | ✓ |
+| On-page SEO | ~10% | Ã¢Å“â€œ |
 
 ---
 
@@ -41,7 +41,7 @@ Disallow: /api/
 Disallow: /private/
 
 # Don't block resources needed for rendering
-# ❌ Disallow: /static/
+# Ã¢ÂÅ’ Disallow: /static/
 
 Sitemap: https://example.com/sitemap.xml
 ```
@@ -104,11 +104,11 @@ Sitemap: https://example.com/sitemap.xml
 ### URL structure
 
 ```
-✅ Good URLs:
+Ã¢Å“â€¦ Good URLs:
 https://example.com/products/blue-widget
 https://example.com/blog/how-to-use-widgets
 
-❌ Poor URLs:
+Ã¢ÂÅ’ Poor URLs:
 https://example.com/p?id=12345
 https://example.com/products/item/category/subcategory/blue-widget-2024-sale-discount
 ```
@@ -145,11 +145,11 @@ X-Frame-Options: DENY
 ### Title tags
 
 ```html
-<!-- ❌ Missing or generic -->
+<!-- Ã¢ÂÅ’ Missing or generic -->
 <title>Page</title>
 <title>Home</title>
 
-<!-- ✅ Descriptive with primary keyword -->
+<!-- Ã¢Å“â€¦ Descriptive with primary keyword -->
 <title>Blue Widgets for Sale | Premium Quality | Example Store</title>
 ```
 
@@ -163,10 +163,10 @@ X-Frame-Options: DENY
 ### Meta descriptions
 
 ```html
-<!-- ❌ Missing or duplicate -->
+<!-- Ã¢ÂÅ’ Missing or duplicate -->
 <meta name="description" content="">
 
-<!-- ✅ Compelling and unique -->
+<!-- Ã¢Å“â€¦ Compelling and unique -->
 <meta name="description" content="Shop premium blue widgets with free shipping. 30-day returns. Rated 4.9/5 by 10,000+ customers. Order today and save 20%.">
 ```
 
@@ -180,12 +180,12 @@ X-Frame-Options: DENY
 ### Heading structure
 
 ```html
-<!-- ❌ Poor structure -->
+<!-- Ã¢ÂÅ’ Poor structure -->
 <h2>Welcome to Our Store</h2>
 <h4>Products</h4>
 <h1>Contact Us</h1>
 
-<!-- ✅ Proper hierarchy -->
+<!-- Ã¢Å“â€¦ Proper hierarchy -->
 <h1>Blue Widgets - Premium Quality</h1>
   <h2>Product Features</h2>
     <h3>Durability</h3>
@@ -203,10 +203,10 @@ X-Frame-Options: DENY
 ### Image SEO
 
 ```html
-<!-- ❌ Poor image SEO -->
+<!-- Ã¢ÂÅ’ Poor image SEO -->
 <img src="IMG_12345.jpg">
 
-<!-- ✅ Optimized image -->
+<!-- Ã¢Å“â€¦ Optimized image -->
 <img src="blue-widget-product-photo.webp"
      alt="Blue widget with chrome finish, side view showing control panel"
      width="800"
@@ -224,11 +224,11 @@ X-Frame-Options: DENY
 ### Internal linking
 
 ```html
-<!-- ❌ Non-descriptive -->
+<!-- Ã¢ÂÅ’ Non-descriptive -->
 <a href="/products">Click here</a>
 <a href="/widgets">Read more</a>
 
-<!-- ✅ Descriptive anchor text -->
+<!-- Ã¢Å“â€¦ Descriptive anchor text -->
 <a href="/products/blue-widgets">Browse our blue widget collection</a>
 <a href="/guides/widget-maintenance">Learn how to maintain your widgets</a>
 ```
@@ -399,23 +399,23 @@ Test structured data at:
 ### Responsive design
 
 ```html
-<!-- ❌ Not mobile-friendly -->
+<!-- Ã¢ÂÅ’ Not mobile-friendly -->
 <meta name="viewport" content="width=1024">
 
-<!-- ✅ Responsive viewport -->
+<!-- Ã¢Å“â€¦ Responsive viewport -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 ```
 
 ### Tap targets
 
 ```css
-/* ❌ Too small for mobile */
+/* Ã¢ÂÅ’ Too small for mobile */
 .small-link {
   padding: 4px;
   font-size: 12px;
 }
 
-/* ✅ Adequate tap target */
+/* Ã¢Å“â€¦ Adequate tap target */
 .mobile-friendly-link {
   padding: 12px;
   font-size: 16px;
@@ -427,12 +427,12 @@ Test structured data at:
 ### Font sizes
 
 ```css
-/* ❌ Too small on mobile */
+/* Ã¢ÂÅ’ Too small on mobile */
 body {
   font-size: 10px;
 }
 
-/* ✅ Readable without zooming */
+/* Ã¢Å“â€¦ Readable without zooming */
 body {
   font-size: 16px;
   line-height: 1.5;
@@ -441,73 +441,7 @@ body {
 
 ---
 
-## International SEO
 
-### Hreflang tags
+## International SEO, Audit Tools, And References
 
-```html
-<!-- For multi-language sites -->
-<link rel="alternate" hreflang="en" href="https://example.com/page">
-<link rel="alternate" hreflang="es" href="https://example.com/es/page">
-<link rel="alternate" hreflang="fr" href="https://example.com/fr/page">
-<link rel="alternate" hreflang="x-default" href="https://example.com/page">
-```
-
-### Language declaration
-
-```html
-<html lang="en">
-<!-- or -->
-<html lang="es-MX">
-```
-
----
-
-## SEO audit checklist
-
-### Critical
-- [ ] HTTPS enabled
-- [ ] robots.txt allows crawling
-- [ ] No `noindex` on important pages
-- [ ] Title tags present and unique
-- [ ] Single `<h1>` per page
-
-### High priority
-- [ ] Meta descriptions present
-- [ ] Sitemap submitted
-- [ ] Canonical URLs set
-- [ ] Mobile-responsive
-- [ ] Core Web Vitals passing
-
-### Medium priority
-- [ ] Structured data implemented
-- [ ] Internal linking strategy
-- [ ] Image alt text
-- [ ] Descriptive URLs
-- [ ] Breadcrumb navigation
-
-### Ongoing
-- [ ] Fix crawl errors in Search Console
-- [ ] Update sitemap when content changes
-- [ ] Monitor ranking changes
-- [ ] Check for broken links
-- [ ] Review Search Console insights
-
----
-
-## Tools
-
-| Tool | Use |
-|------|-----|
-| Google Search Console | Monitor indexing, fix issues |
-| Google PageSpeed Insights | Performance + Core Web Vitals |
-| Rich Results Test | Validate structured data |
-| Lighthouse | Full SEO audit |
-| Screaming Frog | Crawl analysis |
-
-## References
-
-- [Google Search Central](https://developers.google.com/search)
-- [Schema.org](https://schema.org/)
-- [Core Web Vitals](../core-web-vitals/SKILL.md)
-- [Web Quality Audit](../web-quality-audit/SKILL.md)
+International SEO details, the audit checklist, tool list, and external references live in [SEO audit tools and references](references/audit-tools-and-references.md). Read that reference when preparing a formal SEO audit or selecting validation tools.

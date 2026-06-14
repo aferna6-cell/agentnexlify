@@ -12,6 +12,11 @@ Tail with: `grep "^## \[" log.md | tail -20`
 
 ---
 
+## [2026-04-25 22:10] discover | cron autopop | found=4 ingested=4 deduped=0 skipped=5 (no source)
+- ai-llm: anthropic-writing-tools-for-agents, anthropic-multi-agent-research-system
+- competitors: intercom-kaizen-ai-era, birdeye-ai-multi-location-marketing
+- skipped (no usable source): small_biz_saas, verticals, technical, regulations, growth — search MCPs returned 401 (exa/tavily/firecrawl), agent-browser not installed, sources.yaml has no blog URLs for these categories
+
 ## [2026-04-18 12:00] compile | competitor-landscape-2026-04-18 | 1 source → 5 wiki articles
 
 Source: `raw/competitors/competitor-landscape-2026-04-18.md` (direct scrape of GHL, Drillbit, Phonely, Birdeye, Podium pricing pages on 2026-04-18 via agent-browser).
@@ -278,3 +283,84 @@ URLs kept in known-urls.json to prevent retry.
 ## [2026-04-21T22:05:13+00:00] discover (retry) | cats=3 fetched=0 written=0 deduped=0 rejected=0 errors=0
 
 ## [2026-04-21 18:12] discover+compile | cron 18:00 | commits=5 raw=10 wiki=4
+
+## [2026-04-23 18:03] discover | categories=7 fetched=4 new_files=4 deduped=4 errors=0 known_added=5
+
+## [2026-04-23 18:05] discover-retry | new_files=0 added_known=0
+
+## [2026-04-23 18:06] discover-startpage | new_files=10
+
+## [2026-04-23 18:15] discover+compile | cron 18:00 | commits=1 raw=14 wiki=4
+
+## [2026-04-24 10:06] discover | cron 06:00 | categories=6 urls_fetched=14 new_raw_files=11 deduped=0 errors=3
+
+## [2026-04-24 06:10] compile | cron 06:00 headless | pending=16 compiled=4 wiki=4 index_touched=1 embeddings_skipped=4 errors=0
+
+## [2026-04-24 06:16] discover+compile | cron 06:00 | commits=2 raw=11 wiki=4
+
+## [2026-04-24 18:13] discover+compile | cron 18:00 | commits=2 raw=8 wiki=4
+
+## [2026-04-25 10:35] compile | GoHighLevel AI Changelog 2024-2026 | competitors → wiki/competitors/ghl-ai-changelog-2024-2026.md (embedded)
+## [2026-04-25 10:35] compile | GHL API V2 + AI Employee Funnel Stack | competitors → wiki/competitors/ghl-ai-employee-api-v2-funnels-2026.md (embedded)
+## [2026-04-25 10:35] compile | Claude Release Notes Feb-Apr 2026 | ai-llm → wiki/ai-llm/anthropic-claude-release-notes-feb-apr-2026.md (embedded)
+## [2026-04-25 10:35] compile | Claude Code v2.1.118 + v2.1.119 | ai-llm → wiki/ai-llm/claude-code-v2-1-118-119-release-notes.md (embedded after 429 retry)
+
+## [2026-04-25 06:15] discover+compile | cron 06:00 | commits=3 raw=4 wiki=4
+
+## [2026-04-25 18:20] discover+compile | cron 18:00 | commits=2 raw=4 wiki=4
+## [2026-04-26T22:03:39Z] discover | cats=1 fetched=2 new_raw=2 dedup=5 errors=1
+## [2026-04-26T22:06:34Z] discover-pass2 | cats=1 fetched=2 new_raw=2 dedup=7 errors=0
+
+## [2026-04-26 22:10] compile (cron) | 4 articles compiled, 4 embedding skipped (Supabase MCP unauthorized)
+- ghl-manus-ai-monday-google-forms-integrations-2026 (competitors)
+- ghl-pricing-2026-true-monthly-cost-with-addons (competitors)
+- anthropic-election-safeguards-2026 (ai-llm)
+- anthropic-nec-japan-partnership-2026 (ai-llm)
+- INDEX.md updated: 83 → 87 articles
+- embedding_errors=4 (Supabase MCP returned Unauthorized; markdown compile completed)
+
+## [2026-04-26 18:15] discover+compile | cron 18:00 | commits=1 raw=4 wiki=0
+
+## [2026-04-27 22:17] discover | found 16 candidates | ingested 10 | skipped 2 categories (small-biz-saas, growth — DDG anomaly captcha)
+
+## [2026-04-27 18:25] discover+compile | cron 18:00 | commits=2 raw=10 wiki=4
+
+## [2026-04-28 23:30] compile (cron) | 4 articles compiled, 4 embedding skipped (Supabase MCP unauthorized)
+- ghl-voice-ai-review-2026 (competitors)
+- claude-prompt-caching-cost-optimization-kissapi (ai-llm)
+- ai-receptionist-general-contractors-2026 (verticals)
+- tcpa-sms-compliance-2026 (regulations)
+- INDEX.md updated: 92 → 95 articles
+- embedding_errors=4 (Supabase MCP returned Unauthorized; markdown compile completed)
+
+## [2026-04-29 08:18] discover+compile | cron 18:00 | commits=3 raw=0 wiki=4
+
+## [2026-04-29 cron] compile | 3 articles compiled, embeddings skipped (no VOYAGE_API_KEY in cron env), 1 raw skipped
+- anthropic-managed-agents-pricing-finout-2026 (ai-llm)
+- churnfree-b2b-saas-churn-benchmarks-2026 (small-biz-saas)
+- vantainsights-saas-churn-federal-baseline-2026 (small-biz-saas)
+- INDEX.md updated: 96 → 98 articles
+- skipped: thenewstack-io-ai-agent-harness-pricing-split (raw is empty/JS-rendered, no extractable content)
+- embedding_errors=3 (no Voyage key in cron env); kb_articles upsert NOT attempted
+
+## [2026-04-29 18:19] discover+compile | cron 18:00 | commits=2 raw=0 wiki=3
+
+## [2026-04-30 18:37] discover+compile | cron 18:00 | commits=2 raw=11 wiki=4
+
+## [2026-05-01T22:05:21Z] discover | BLOCKED: network sandbox denies outbound + agent-browser not installed | found 0 | ingested 0
+
+## [2026-05-01 18:19] discover+compile | cron 18:00 | commits=2 raw=0 wiki=4
+
+## [2026-05-02 18:22] discover+compile | cron 18:00 | commits=6 raw=0 wiki=4
+
+## [2026-05-05 11:16] discover+compile | cron 18:00 | commits=4 raw=0 wiki=0
+[2026-05-05 18:09] discover+autopop | cron 18:00 | new_raw=6 rejected=4 deduped=50 known_urls=413
+
+## [2026-05-05 18:22] compile | Birdeye Multi-Location Reputation Platforms 2026
+## [2026-05-05 18:22] compile | Anthropic Economic Index March 2026 — Learning Curves
+## [2026-05-05 18:22] compile | Anthropic Finance Agents — Managed Agents + Cowork May 2026
+## [2026-05-05 18:22] compile | Supabase us-east-2 BPA Incident Feb 12 2026 Postmortem
+
+## [2026-05-05 18:25] cron-gap | Supabase MCP unauthorized — 4 articles compiled to wiki/ but kb_articles upsert + Voyage embeddings deferred. Slugs pending backfill: birdeye-multi-location-reputation-platforms-2026, anthropic-economic-index-learning-curves-march-2026, anthropic-finance-agents-may-2026, supabase-us-east-2-bpa-incident-feb-2026. Next reindex pass should pick up via scripts/reindex_contextual.py once SUPABASE_ACCESS_TOKEN is present.
+
+## [2026-05-05 18:28] discover+compile | cron 18:00 | commits=15 raw=6 wiki=7

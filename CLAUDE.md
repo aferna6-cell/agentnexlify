@@ -38,7 +38,7 @@ Dashboard (React/Vite) ─────────→ FastAPI /api/* ───�
 - `docs/dev-knowledge/` — bug-patterns.md, schema-log.md, architecture-decisions.md
 - `knowledge-base/` — LLM-compiled wiki (`raw/`, `wiki/`, pgvector embeddings)
 - `.claude/` — config, rules, skills, agents, commands, hooks
-- `_archive/`, `landing-page-v2/`, `public/` — **legacy, do not touch**
+- `_archive/`, `public/` — **legacy, do not touch**. `landing-page-v2/` deploys via Vercel project `agentnexlify` — edit deliberately, content-only changes preferred. **WARNING (found 2026-06-12): agentnexlify.com + www are attached to the separate, stale `agentnexlify-site` Vercel project — landing-page-v2 edits do NOT reach the public domain until the domains are moved to the `agentnexlify` project in the Vercel dashboard (its prod URLs are also auth-protected + latest deploy BLOCKED — check spend limits/protection).**
 
 ### Plan names + prices
 - `free`, `growth` ($99/mo Starter), `autopilot` ($150/mo Growth), `professional` ($250/mo Pro), `enterprise` ($899/mo)
@@ -86,6 +86,10 @@ cd frontend && npm run dev              # frontend dev (Vite :3001)
 cd frontend && npm run build            # prod build
 python -m uvicorn backend.main:app --reload --port 8000   # backend dev (requires .venv)
 npm run agent-system:check              # verify Claude/Codex agent control plane
+npm run check:instruction-budget        # keep always-on instruction surface small
+npm run agent-config:scan               # baseline-gated AgentShield scan for agent/MCP/hook config
+npm run kb:health                       # deterministic knowledge-base health report
+npm run kb:lint                         # validate wiki article template + index coverage
 npm run claude:2.1.98 -- --version      # pinned Claude Code runner
 npm run claude:noflicker                # pinned + experimental no-flicker renderer
 bash scripts/install-hooks.sh           # install git hooks
@@ -125,6 +129,8 @@ bash scripts/claude-hooks/auto-commit.sh  # manual auto-commit
 - **Pre-push hook** — frontend build + schema consistency check
 - **GitHub Actions** — daily health check, PR validation, auto bug logging, AI auto-improve
 - **Agent system guardrail** - `scripts/check_agent_system.py` runs in PR validation and proves CLAUDE.md, Everything Claude Code agents, Claude Code 2.1.98 pin, and issue-to-PR workflows are intact.
+- **Instruction budget** - `scripts/check_instruction_budget.py` keeps `CLAUDE.md` under 200 lines and blocks unconditional UserPromptSubmit prompt-injection sprawl.
+- **Agent config security** - `npm run agent-config:scan` runs pinned baseline-gated AgentShield on Claude/Codex agents, hooks, MCP config, and project instruction files; CI triggers on those paths.
 - **Claude Code hooks** — pre-edit sensitive-file warn, post-edit pattern scan, anti-desperation, UltraPlan/UltraThink, 90% confidence gate, 15-msg handoff summary (`scripts/claude-hooks/message-counter.sh`), Opus 4.7 feature reminder (`scripts/claude-hooks/invoke-opus-47-features.sh` — nudges self-verification / /ultrareview / task-budgets / 3x-vision based on prompt keywords), agent-browser router (`scripts/claude-hooks/route-to-agent-browser.sh` — routes WebFetch/WebSearch to agent-browser CLI when installed; falls back to native tools otherwise)
 - **Issue → PR loop** — `.claude/skills/issue-to-pr-loop/SKILL.md`. Polls assigned GH issues every 15 min, Haiku classifies, Sonnet worktree implements, PR opens + feedback loop patches reviews. Replaces `autopilot-loop` (kept for reference).
 - **Nightly commit review** — `.claude/skills/nightly-commit-review/SKILL.md`. Fires daily 2:37 AM local via scheduled-tasks MCP. Haiku triages last 24h commits, Sonnet fixes LOW-risk bugs (commits + pushes), MEDIUM/HIGH → GH issue feeding issue-to-pr-loop. Manual trigger: `bash scripts/daily/nightly-commit-review.sh`. Disable: `CLAUDE_NIGHTLY_REVIEW=0`.
@@ -154,6 +160,7 @@ Prefer these over general Bash/Read when applicable:
 | `scripts/claude_rules_doctor.py` | Validate `paths:` globs in rule frontmatter | Manual grep |
 | `scripts/lint_claude_agents.py` | Lint agent frontmatter (name/desc/model/tools) | Manual review |
 | `scripts/reindex_contextual.py` | Contextual retrieval reindex (--dry-run, --target) | Ad-hoc DB queries |
+| `scripts/check_plan_drift.py` | Detect ghost refs in `plans/` (default; pass `--dirs plans audits` to widen). Mark aspirational paths with `<!-- drift-skip -->` on the line. Wired into pre-push as warning-only CHECK 9. | Manually re-checking plans before starting work |
 
 ### Naming conventions
 - Specs: `/specs/feature-name_spec.md` (root, see `STRUCTURE.md`)
