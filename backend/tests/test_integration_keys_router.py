@@ -207,3 +207,86 @@ def test_integrations_health_aggregate(monkeypatch):
     out = asyncio.run(ik.integrations_health(CLAIMS))
     assert out.overall == "needs_attention"
     assert len(out.providers) == 4
+
+
+# --------------------------------------------------------------------------- #
+# Error / fallback branches
+# --------------------------------------------------------------------------- #
+
+
+def test_save_key_vault_error_500(monkeypatch):
+    def _raise(**kw):
+        raise ik.IntegrationKeyVaultError("vault down")
+
+    monkeypatch.setattr(ik, "save_integration_key", _raise)
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(ik.save_key(SaveIntegrationKeyRequest(provider="stripe", plaintext="k"), CLAIMS))
+    assert exc.value.status_code == 500
+
+
+def test_save_key_unexpected_error_500(monkeypatch):
+    def _raise(**kw):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(ik, "save_integration_key", _raise)
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(ik.save_key(SaveIntegrationKeyRequest(provider="stripe", plaintext="k"), CLAIMS))
+    assert exc.value.status_code == 500
+
+
+def test_list_keys_db_error_500(monkeypatch):
+    def _boom():
+        raise RuntimeError("db down")
+
+    monkeypatch.setattr(ik, "get_service_supabase", _boom)
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(ik.list_keys(CLAIMS))
+    assert exc.value.status_code == 500
+
+
+def test_list_keys_decrypt_error_still_returns(monkeypatch):
+    _use_db(monkeypatch, _FakeDB(rows={"integrations": [{"provider": "stripe", "metadata": {}}]}))
+
+    def _raise(t, p):
+        raise ik.IntegrationKeyVaultError("bad")
+
+    monkeypatch.setattr(ik, "load_integration_key", _raise)
+    monkeypatch.setattr(
+        ik, "check_provider",
+        lambda t, p: {"health": "red", "detail": "x", "last_verified_at": None},
+    )
+    out = asyncio.run(ik.list_keys(CLAIMS))
+    assert out[0]["masked_key"] == ""
+
+
+def test_delete_stripe_guard_db_error_500(monkeypatch):
+    def _boom():
+        raise RuntimeError("db")
+
+    monkeypatch.setattr(ik, "get_service_supabase", _boom)
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(ik.delete_key("stripe", CLAIMS))
+    assert exc.value.status_code == 500
+
+
+def test_delete_stripe_no_tenant_row_ok(monkeypatch):
+    db = _FakeDB(rows={"tenants": []})
+    _use_db(monkeypatch, db)
+    out = asyncio.run(ik.delete_key("stripe", CLAIMS))
+    assert out["deleted"] is True
+    assert "integrations" in db.deletes
+
+
+def test_delete_db_delete_error_500(monkeypatch):
+    class _BoomQuery(_Query):
+        def execute(self):
+            raise RuntimeError("delete fail")
+
+    class _BoomDB(_FakeDB):
+        def table(self, name):
+            return _BoomQuery(self, name)
+
+    _use_db(monkeypatch, _BoomDB())
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(ik.delete_key("twilio", CLAIMS))
+    assert exc.value.status_code == 500

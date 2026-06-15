@@ -268,3 +268,143 @@ def test_check_provider_wraps_adapter_exception(monkeypatch):
     out = hc.check_provider("ten1", "stripe")
     assert out["health"] == "red"
     assert "internal error" in out["detail"]
+
+
+# --------------------------------------------------------------------------- #
+# Error / fallback branches
+# --------------------------------------------------------------------------- #
+
+
+def _vault_raises(monkeypatch):
+    def _raise(tenant_id, provider):
+        raise hc.IntegrationKeyVaultError("vault down")
+
+    monkeypatch.setattr(hc, "load_integration_key", _raise)
+
+
+def test_stripe_vault_error_falls_back_to_env(monkeypatch):
+    _vault_raises(monkeypatch)
+    monkeypatch.setattr(hc.settings, "stripe_secret_key", "livekey_env")
+    monkeypatch.setattr(hc, "is_production", lambda: False)
+    fake = types.ModuleType("stripe")
+
+    class Account:
+        @staticmethod
+        def retrieve(api_key=None):
+            return {"id": "acct_1"}
+
+    fake.Account = Account
+    monkeypatch.setitem(sys.modules, "stripe", fake)
+    out = hc.check_stripe("ten1")
+    assert out["health"] == "green"
+
+
+def test_stripe_generic_error_is_red(monkeypatch):
+    monkeypatch.setattr(hc, "load_integration_key", lambda t, p: "livekey")
+    monkeypatch.setattr(hc, "is_production", lambda: False)
+    fake = types.ModuleType("stripe")
+
+    class Account:
+        @staticmethod
+        def retrieve(api_key=None):
+            raise ValueError("network glitch")
+
+    fake.Account = Account
+    monkeypatch.setitem(sys.modules, "stripe", fake)
+    out = hc.check_stripe("ten1")
+    assert out["health"] == "red"
+    assert "check failed" in out["detail"]
+
+
+def test_twilio_vault_error_falls_back_to_env(monkeypatch):
+    _install_fake_twilio(monkeypatch, lambda: {"sid": "AC1"})
+    _vault_raises(monkeypatch)
+    monkeypatch.setattr(hc.settings, "twilio_auth_token", "tok")
+    monkeypatch.setattr(hc.settings, "twilio_account_sid", "AC1")
+    out = hc.check_twilio("ten1")
+    assert out["health"] == "green"
+
+
+def test_twilio_green_via_vault_with_metadata_sid(monkeypatch):
+    _install_fake_twilio(monkeypatch, lambda: {"sid": "AC999"})
+    monkeypatch.setattr(hc, "load_integration_key", lambda t, p: "vault_token")
+
+    class _Res:
+        data = [{"metadata": {"account_sid": "AC999"}}]
+
+    class _Q:
+        def select(self, *a, **k):
+            return self
+
+        def eq(self, *a, **k):
+            return self
+
+        def limit(self, *a, **k):
+            return self
+
+        def execute(self):
+            return _Res()
+
+    class _DB:
+        def table(self, name):
+            return _Q()
+
+    monkeypatch.setattr("backend.models.database.get_service_supabase", lambda: _DB())
+    out = hc.check_twilio("ten1")
+    assert out["health"] == "green"
+
+
+def test_twilio_metadata_load_error_falls_back_to_env_sid(monkeypatch):
+    _install_fake_twilio(monkeypatch, lambda: {"sid": "AC_ENV"})
+    monkeypatch.setattr(hc, "load_integration_key", lambda t, p: "vault_token")
+
+    def _raise_db():
+        raise RuntimeError("db down")
+
+    monkeypatch.setattr("backend.models.database.get_service_supabase", _raise_db)
+    monkeypatch.setattr(hc.settings, "twilio_account_sid", "AC_ENV")
+    out = hc.check_twilio("ten1")
+    assert out["health"] == "green"
+
+
+def test_twilio_generic_error_is_red(monkeypatch):
+    def _boom():
+        raise ValueError("weird")
+
+    _install_fake_twilio(monkeypatch, _boom)
+    _no_vault(monkeypatch)
+    monkeypatch.setattr(hc.settings, "twilio_auth_token", "tok")
+    monkeypatch.setattr(hc.settings, "twilio_account_sid", "AC")
+    out = hc.check_twilio("ten1")
+    assert out["health"] == "red"
+    assert "check failed" in out["detail"]
+
+
+def test_resend_vault_error_falls_back_to_env(monkeypatch):
+    _vault_raises(monkeypatch)
+    monkeypatch.setattr(hc.settings, "resend_api_key", "re_env")
+    monkeypatch.setattr(hc.httpx, "get", lambda *a, **k: _Resp(200))
+    out = hc.check_resend("ten1")
+    assert out["health"] == "green"
+
+
+def test_resend_generic_error_is_red(monkeypatch):
+    monkeypatch.setattr(hc, "load_integration_key", lambda t, p: "re_key")
+
+    def _boom(*a, **k):
+        raise ValueError("conn reset")
+
+    monkeypatch.setattr(hc.httpx, "get", _boom)
+    out = hc.check_resend("ten1")
+    assert out["health"] == "red"
+    assert "check failed" in out["detail"]
+
+
+def test_google_calendar_error_is_red(monkeypatch):
+    def _boom(tenant_id):
+        raise RuntimeError("oauth fail")
+
+    _patch_gcal(monkeypatch, _boom)
+    out = hc.check_google_calendar("ten1")
+    assert out["health"] == "red"
+    assert "check failed" in out["detail"]
