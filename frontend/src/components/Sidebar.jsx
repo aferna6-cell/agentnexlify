@@ -354,6 +354,12 @@ const allNavItems = [
     label: "Integrations",
   },
   {
+    key: "integration_keys",
+    icon: <Icon d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />,
+    label: "API Keys",
+    roles: ["owner", "admin"],
+  },
+  {
     key: "mcp_setup",
     icon: <Icon d="M13 10V3L4 14h7v7l9-11h-7z" />,
     label: "MCP Setup",
@@ -412,6 +418,7 @@ const NAV_GROUPS = [
       "billing",
       "business_page",
       "integrations",
+      "integration_keys",
       "mcp_setup",
       "settings",
       "inbound_channels",
