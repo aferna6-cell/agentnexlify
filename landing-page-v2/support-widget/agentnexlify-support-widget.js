@@ -27,26 +27,24 @@
   ).replace(/\/+$/, "");
   var ENDPOINT = API_BASE + "/api/v1/platform-support";
 
-  // Stable per-tab session id.
+  // Session id is issued + signed by the server (returned from /chat or
+  // /report). We only ever echo what the server gave us, never invent one.
   var SESSION_KEY = "anlf_support_session";
-  var sessionId;
+  var sessionToken = "";
   try {
-    sessionId = sessionStorage.getItem(SESSION_KEY);
-    if (!sessionId) {
-      sessionId = uuid();
-      sessionStorage.setItem(SESSION_KEY, sessionId);
-    }
+    sessionToken = sessionStorage.getItem(SESSION_KEY) || "";
   } catch (e) {
-    sessionId = uuid();
+    sessionToken = "";
   }
 
-  function uuid() {
-    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-      var r = (Math.random() * 16) | 0;
-      var v = c === "x" ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
+  function adoptToken(token) {
+    if (!token || token === sessionToken) return;
+    sessionToken = token;
+    try {
+      sessionStorage.setItem(SESSION_KEY, token);
+    } catch (e) {
+      /* sessionStorage unavailable; keep in memory for this page */
+    }
   }
 
   var GREETING =
@@ -172,7 +170,7 @@
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        session_id: sessionId,
+        session_id: sessionToken,
         message: text,
         page_url: pageUrl(),
       }),
@@ -181,6 +179,7 @@
         return r.ok ? r.json() : Promise.reject(r);
       })
       .then(function (data) {
+        if (data && data.session_id) adoptToken(data.session_id);
         thinking.textContent =
           (data && data.reply) ||
           "Sorry, something went wrong. Try again or report an issue.";
@@ -213,7 +212,7 @@
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        session_id: sessionId,
+        session_id: sessionToken,
         email: email,
         message: text,
         page_url: pageUrl(),
@@ -223,6 +222,7 @@
         return r.ok ? r.json() : Promise.reject(r);
       })
       .then(function (data) {
+        if (data && data.session_id) adoptToken(data.session_id);
         reportBox.classList.remove("open");
         reportMsg.value = "";
         addMsg(
@@ -242,9 +242,9 @@
   // Email the owner a full transcript when the visitor leaves. sendBeacon
   // survives unload; idempotent server-side so duplicate fires are harmless.
   function endSession() {
-    if (endSent || !started) return;
+    if (endSent || !started || !sessionToken) return;
     endSent = true;
-    var payload = JSON.stringify({ session_id: sessionId });
+    var payload = JSON.stringify({ session_id: sessionToken });
     try {
       if (navigator.sendBeacon) {
         navigator.sendBeacon(

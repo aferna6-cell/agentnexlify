@@ -24,9 +24,9 @@ _RESEND_WEBHOOK_SECRET = os.getenv("RESEND_WEBHOOK_SECRET", "")
 def _verify_resend_signature(payload_bytes: bytes, headers: dict) -> bool:
     """Verify Resend webhook signature using the svix headers.
 
-    Returns True when verification passes or when no secret is configured
-    (allows graceful migration — once the secret env var is set, verification
-    becomes mandatory).
+    Returns False when no secret is configured — an unconfigured webhook is
+    rejected, not allowed through. Set RESEND_WEBHOOK_SECRET before processing
+    live events.
     """
     if not _RESEND_WEBHOOK_SECRET:
         logger.error("RESEND_WEBHOOK_SECRET not set — rejecting webhook (misconfiguration)")
