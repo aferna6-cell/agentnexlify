@@ -1275,3 +1275,26 @@ no half-migrations). The existing service-role RLS policy is untouched.
 **Applied:** 2026-06-14 via `mcp__supabase__apply_migration` (project
 pxserpybmajixqrmzaly). Verified: both `access_token_enc` / `refresh_token_enc`
 present as `bytea`.
+
+### 149 — Platform support inbox tables (support widget + dashboard form + Agent OS alerts)
+
+Three additive, idempotent (`create table if not exists`) platform-level tables
+for the AgentNexLiFy operator's own support channels. Not tenant-scoped (no
+`client_id`) — accessed only via the backend service-role key. RLS enabled with
+no policies (service key bypasses; anon/authenticated denied — matches public.*).
+
+- `platform_support_messages` — support-chat messages (session_id, role, content).
+  Index on `(session_id, created_at)`.
+- `platform_support_sessions` — one row per support-chat session; tracks
+  `transcript_sent_at` for idempotent end-of-conversation transcript email,
+  plus `reporter_email` and `page_url`.
+- `support_messages` — dashboard "Send a message" form. The `/api/v1/support/contact`
+  endpoint inserted here all along, but the table never existed, so the form 500'd.
+  Created now so the form works end-to-end.
+
+Consumed by `backend/routers/platform_support.py` (support widget),
+`backend/routers/support.py` (dashboard form). Both forward to the platform
+owner via `backend/services/platform_mailer.py` (PLATFORM_SUPPORT_EMAIL).
+
+**Applied:** 2026-06-15 via `mcp__supabase__apply_migration` (project
+pxserpybmajixqrmzaly). Verified: all three tables present, `rls_enabled=true`.

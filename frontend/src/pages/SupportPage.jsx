@@ -21,7 +21,7 @@ export default function SupportPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/support`, {
+      const res = await fetch(`${API_BASE}/api/v1/support/contact`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
