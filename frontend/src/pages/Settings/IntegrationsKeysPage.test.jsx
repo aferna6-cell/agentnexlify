@@ -123,7 +123,7 @@ describe("IntegrationsKeysPage", () => {
       expect(verifyIntegrationKey).toHaveBeenCalledWith("stripe", "test-token"),
     );
 
-    // After verify, the Twilio card (yellow) should still be present — Stripe goes green
+    // After verify, the Twilio card (yellow) should still be present - Stripe goes green
     // We assert on the call rather than the DOM pill color since health state is internal
     expect(verifyIntegrationKey).toHaveBeenCalledTimes(1);
   });
@@ -142,7 +142,7 @@ describe("IntegrationsKeysPage", () => {
 
     expect(
       await screen.findByText(
-        /Cannot remove — active Stripe subscription\. Cancel\/migrate the subscription first\./i,
+        /Cannot remove - active Stripe subscription\. Cancel\/migrate the subscription first\./i,
       ),
     ).toBeInTheDocument();
   });
@@ -177,7 +177,7 @@ describe("IntegrationsKeysPage", () => {
     await screen.findByText("Resend");
 
     const editButtons = screen.getAllByRole("button", { name: /edit key/i });
-    // Resend is the third card — click its Edit
+    // Resend is the third card - click its Edit
     fireEvent.click(editButtons[editButtons.length - 1]);
 
     const input = screen.getByPlaceholderText(/Paste your Resend secret key/i);

@@ -12,17 +12,17 @@ const PROVIDERS = [
   {
     key: "stripe",
     label: "Stripe",
-    description: "Payment processing — required for billing and subscriptions.",
+    description: "Payment processing - required for billing and subscriptions.",
   },
   {
     key: "twilio",
     label: "Twilio",
-    description: "SMS and voice — used for appointment reminders and missed-call text-back.",
+    description: "SMS and voice - used for appointment reminders and missed-call text-back.",
   },
   {
     key: "resend",
     label: "Resend",
-    description: "Transactional email — powers drip sequences, review requests, and onboarding emails.",
+    description: "Transactional email - powers drip sequences, review requests, and onboarding emails.",
   },
 ];
 
@@ -106,7 +106,7 @@ export default function IntegrationsKeysPage() {
         <h1>Integration Keys</h1>
         <p>
           Securely store API keys for Stripe, Twilio, and Resend. Keys are
-          encrypted at rest and never returned in full — only a masked preview is
+          encrypted at rest and never returned in full - only a masked preview is
           shown.
         </p>
       </div>

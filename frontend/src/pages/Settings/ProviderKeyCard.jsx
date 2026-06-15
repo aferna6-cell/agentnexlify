@@ -106,7 +106,7 @@ export default function ProviderKeyCard({
     } catch (err) {
       if (err?.status === 409) {
         setDeleteError(
-          "Cannot remove — active Stripe subscription. Cancel/migrate the subscription first."
+          "Cannot remove - active Stripe subscription. Cancel/migrate the subscription first."
         );
       } else {
         setDeleteError(err?.body?.detail || err?.message || "Failed to remove key");
