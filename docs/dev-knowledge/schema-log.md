@@ -1315,3 +1315,11 @@ owner via `backend/services/platform_mailer.py` (PLATFORM_SUPPORT_EMAIL).
 
 **Applied:** 2026-06-15 via `mcp__supabase__apply_migration` (project
 pxserpybmajixqrmzaly). Verified: all three tables present, `rls_enabled=true`.
+
+### 151 — audit_log (security follow-up)
+
+Creates the `audit_log` table (id, tenant_id, action, metadata jsonb, created_at)
+that `integration_key_vault._write_audit` wrote to all along — the table never
+existed, so integration-key audit rows silently no-op'd (try/except-wrapped).
+RLS on, no policies (service-key only). Indexes on (tenant_id, created_at) and
+(action, created_at). Applied to prod 2026-06-15 via apply_migration, verified.

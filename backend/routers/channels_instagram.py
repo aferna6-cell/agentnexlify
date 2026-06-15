@@ -28,12 +28,13 @@ import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from backend.config import settings
 from backend.dependencies import _get_current_tenant, require_role, verify_tenant
+from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.services import facebook_oauth
 
@@ -89,7 +90,9 @@ def _require_platform() -> None:
 
 
 @router.get("/callback")
+@limiter.limit("20/minute")
 async def instagram_oauth_callback(
+    request: Request,
     code: str = Query(None),
     state: str = Query(None),
     error: str = Query(None),

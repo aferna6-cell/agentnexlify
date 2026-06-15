@@ -89,14 +89,14 @@ def get_client_id_key(request: Request) -> str:
 
     # Fallback: client IP. Prefer request.client.host (set by Railway/Vercel
     # edge after TLS termination) over X-Forwarded-For, since XFF is
-    # client-controlled and an attacker can append arbitrary IPs to rotate
-    # rate-limit identities. If we must use XFF, take the LEFT-most entry
-    # (closest to origin client), not the right-most (closest to attacker).
+    # client-controlled. If we must use XFF, take the RIGHT-most entry — the IP
+    # the trusted edge proxy appends — not the left-most, which the client can
+    # spoof to rotate rate-limit identities. Matches backend/limiter.py.
     if request.client and request.client.host:
         return request.client.host
     forwarded = request.headers.get("x-forwarded-for", "")
     if forwarded:
         ips = [ip.strip() for ip in forwarded.split(",") if ip.strip()]
         if ips:
-            return ips[0]
+            return ips[-1]
     return "127.0.0.1"

@@ -36,6 +36,7 @@ from pydantic import BaseModel
 
 from backend.config import settings
 from backend.dependencies import verify_tenant
+from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.dependencies import _get_current_tenant, require_role
 from backend.services import facebook_oauth, facebook_webhook, os_inbound_bridge
