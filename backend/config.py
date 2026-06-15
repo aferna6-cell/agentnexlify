@@ -127,6 +127,16 @@ class Settings(BaseSettings):
     tiktok_client_key: str = ""
     tiktok_client_secret: str = ""
 
+    # Agent OS alert notifications — platform admin email for fail/abstain events.
+    # When unset, notifications are skipped (no-op) and a warning is logged.
+    agent_os_alert_email: str = ""
+    # Confidence threshold below which a support-agent reply is treated as abstain.
+    # Applies to numeric confidence values; string "low" is always treated as abstain.
+    agent_os_abstain_confidence_threshold: float = 0.5
+
+    # Support form — platform email that receives public contact submissions.
+    support_form_email: str = ""
+
     # Claude Managed Agents — populated by scripts/managed_agents/provision.py.
     # Load via BaseSettings from .env AND from .env.managed_agents (see model_config).
     managed_agents_environment_id: str = ""

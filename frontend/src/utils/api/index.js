@@ -35,3 +35,4 @@ export { request, BASE, ApiError } from "./_client";
 export * from "./auth";
 export * from "./onboarding";
 export * from "./os";
+export * from "./support";

@@ -26,6 +26,7 @@ class BrandingConfig(BaseModel):
 class ContactRequest(BaseModel):
     name: str
     email: EmailStr
+    subject: str | None = None
     message: str
 
 

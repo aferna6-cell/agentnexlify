@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from fastapi import BackgroundTasks
 from fastapi.concurrency import run_in_threadpool
 
-from backend.services import agent_os_bridge, agent_sdk_client, os_approval_notify, os_graph_memory, os_kb_feed
+from backend.services import agent_os_bridge, agent_sdk_client, os_alert_notifications, os_approval_notify, os_graph_memory, os_kb_feed
 from backend.services.os_action_dispatch import queue_action_for_run
 from backend.services.os_outbound_mirror import mirror_assistant_message
 from backend.services.tenant_scope import tenant_table
@@ -39,6 +39,77 @@ ENGINE_OFFLINE_REPLY = (
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+# Engine result statuses that warrant a platform-admin alert. "failed" is a
+# hard fail (engine ran, errored); "no_draft" is an abstain (engine ran, chose
+# not to produce a deliverable — i.e. it declined to help). The plain
+# engine-offline path is intentionally NOT alerted: that's a deploy/config
+# state, and emailing on every message while the engine is down would storm.
+_FAIL_STATUSES = {"failed", "error"}
+_ABSTAIN_STATUSES = {"no_draft"}
+
+
+def _thread_transcript(db, client_id: str, thread_id: str) -> list:
+    """Fetch the thread's messages (chronological) for an alert transcript.
+
+    Best-effort: on any read failure returns an empty list so the alert still
+    sends (with a 0-message note) rather than blocking.
+    """
+    try:
+        resp = (
+            tenant_table(db, "os_messages", client_id)
+            .select("role, content, created_at")
+            .eq("thread_id", thread_id)
+            .order("created_at")
+            .execute()
+        )
+        return getattr(resp, "data", None) or []
+    except Exception:
+        logger.warning(
+            "os_alert: transcript fetch failed client_id=%s thread=%s",
+            client_id,
+            thread_id,
+            exc_info=True,
+        )
+        return []
+
+
+async def _fire_os_alert(
+    db,
+    client_id: str,
+    thread_id: str,
+    *,
+    kind: str,
+    reason: str,
+    error: str | None,
+    background_tasks: BackgroundTasks | None,
+) -> None:
+    """Schedule the fail/abstain admin email. Best-effort, never raises.
+
+    The notify function is synchronous (calls Resend), so run it off the event
+    loop: a BackgroundTask when one is available, else a threadpool hop.
+    """
+    conversation = _thread_transcript(db, client_id, thread_id)
+    if background_tasks is not None:
+        background_tasks.add_task(
+            os_alert_notifications.notify_agent_os_event,
+            client_id,
+            conversation,
+            reason=reason,
+            kind=kind,
+            error=error,
+        )
+    else:
+        await run_in_threadpool(
+            os_alert_notifications.notify_agent_os_event,
+            client_id,
+            conversation,
+            reason=reason,
+            kind=kind,
+            error=error,
+        )
+
 
 
 async def process_user_turn(
@@ -74,13 +145,25 @@ async def process_user_turn(
         context["kb"] = os_kb_feed.tenant_kb_entries(
             db, client_id, profile.get("businessType")
         ) + await os_graph_memory.graph_kb_entries(db, client_id, user_content)
-        out = await run_in_threadpool(
-            agent_sdk_client.orchestrate_sync,
-            client_id,
-            user_content,
-            context,
-            force_agent_id=force_agent_id,
-        )
+        try:
+            out = await run_in_threadpool(
+                agent_sdk_client.orchestrate_sync,
+                client_id,
+                user_content,
+                context,
+                force_agent_id=force_agent_id,
+            )
+        except Exception as exc:
+            logger.warning(
+                "agent engine raised: client_id=%s thread=%s", client_id, thread_id,
+                exc_info=True,
+            )
+            await _fire_os_alert(
+                db, client_id, thread_id,
+                kind="fail", reason="engine raised an exception",
+                error=str(exc), background_tasks=background_tasks,
+            )
+            out = None
 
     if out is None:
         return await _degrade_offline(db, client_id, thread_id, user_message_row)
@@ -92,6 +175,23 @@ async def process_user_turn(
 
     agent_run = persisted.get("agent_run")
     await _dispatch_auto_send(db, client_id, agent_run, background_tasks)
+
+    # Platform-admin alert when the engine fails or abstains. Best-effort:
+    # the user already has their reply (or honest fallback) above; this only
+    # notifies the operator with the full transcript attached.
+    engine_status = (persisted.get("status") or "").lower()
+    if engine_status in _FAIL_STATUSES:
+        await _fire_os_alert(
+            db, client_id, thread_id,
+            kind="fail", reason=f"engine status={engine_status}",
+            error=None, background_tasks=background_tasks,
+        )
+    elif engine_status in _ABSTAIN_STATUSES:
+        await _fire_os_alert(
+            db, client_id, thread_id,
+            kind="abstain", reason=f"engine status={engine_status} (no deliverable)",
+            error=None, background_tasks=background_tasks,
+        )
 
     # Owner notification when a draft is parked for approval — without it,
     # approvals rot until the owner happens to open the dashboard. Background
