@@ -17946,3 +17946,14 @@ Full PR Validation gate green on the re-enabled trigger.
 **Author:** aferna6-cell
 **Files Changed:** .github/workflows/agent-config-security.yml,.github/workflows/pr-check.yml,.github/workflows/schema-sync-check.yml,.gitignore,.worktrees/issue-62,backend/routers/stripe_webhooks.py,backend/routers/twilio_webhooks.py,backend/services/fraud_guard.py,backend/tests/test_fraud_guard.py,backend/tests/test_twilio_webhooks.py,demo-platform/package-lock.json,demo-platform/package.json,e2e/demo-smoke.spec.ts,frontend/package-lock.json,frontend/package.json,frontend/src/components/App.jsx,frontend/src/components/CookieConsent.jsx,frontend/src/components/DemoBanner.jsx,frontend/src/components/MarketingUpsell.jsx,frontend/src/components/Sidebar.jsx,frontend/src/components/Sidebar.test.jsx,frontend/src/components/billing/ReferralCard.jsx,frontend/src/components/os/ComposerAttachments.jsx,frontend/src/components/os/DemoTour.jsx,frontend/src/components/os/FirstRunStarters.jsx,frontend/src/components/os/MemoryPanel.jsx,frontend/src/components/os/OsInsightsCard.jsx,frontend/src/context/AuthContext.jsx,frontend/src/main.jsx,frontend/src/pages/AdminAnalyticsPage.jsx,frontend/src/pages/AdminHealthPage.jsx,frontend/src/pages/AgentOS.jsx,frontend/src/pages/AgentOS.test.jsx,frontend/src/pages/DemoLoginPage.jsx,frontend/src/pages/Home.jsx,frontend/src/pages/OnboardingWizardPage.jsx,frontend/src/pages/SignupPage.jsx,frontend/src/pages/settings/MessagingSettingsCards.jsx,frontend/src/pages/wizard/WizardExpressSetup.jsx,frontend/src/pages/wizard/WizardStepCustomize.jsx,frontend/src/pages/wizard/WizardStepEmbed.jsx,frontend/src/utils/api/auth.js,frontend/src/utils/api/os.test.js,frontend/src/utils/pricingExperiment.js,frontend/src/utils/pushNotifications.js,frontend/vite.config.js,landing-page-v2/widget/agentnexlify-widget.js,scripts/check_project_invariants.py,tests/test_activation_nudges.py,tests/test_auth_demo.py,tests/test_stripe_webhook.py,tests/test_voice_call_summary.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Launch hardening: sign support-chat sessions + cap cost (#287)
+
+Fixes the two HIGH findings from the launch-readiness security audit (signed/server-issued support-chat sessions; per-session message cap) plus a misleading webhook docstring. Adds audits/audit-launch-readiness-2026-06-15.md.
+**Date:** 2026-06-15
+**Commit:** cc1bd4a
+**Author:** aferna6-cell
+**Files Changed:** audits/audit-launch-readiness-2026-06-15.md,backend/routers/platform_support.py,backend/routers/resend_webhooks.py,backend/tests/test_platform_support.py,landing-page-v2/support-widget/agentnexlify-support-widget.js
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
