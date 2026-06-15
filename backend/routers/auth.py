@@ -1,4 +1,4 @@
-"""Authentication endpoints — register, login, me."""
+"""Authentication endpoints - register, login, me."""
 
 import html
 import logging
@@ -120,7 +120,7 @@ def _create_token(
     return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
 
 
-# _get_current_tenant and require_role live in backend.dependencies — import for own use.
+# _get_current_tenant and require_role live in backend.dependencies - import for own use.
 from backend.dependencies import _get_current_tenant, require_role  # noqa: E402
 
 
@@ -208,7 +208,7 @@ def _provision_tenant_account(
             raise RuntimeError("widget_configs insert returned no data")
     except Exception:
         logger.error(
-            "Failed to create widget_configs for tenant %s — rolling back",
+            "Failed to create widget_configs for tenant %s - rolling back",
             tenant_id,
             exc_info=True,
         )
@@ -318,7 +318,7 @@ async def register(request: Request, req: RegisterRequest):
         website_url=req.website_url,
     )
 
-    # Referral attribution (?ref=CODE) — never blocks signup, invalid codes ignored.
+    # Referral attribution (?ref=CODE) - never blocks signup, invalid codes ignored.
     apply_referral_attribution(
         get_service_supabase(), new_tenant_id=tenant_id, ref_code=req.ref_code
     )
@@ -447,7 +447,7 @@ async def login(request: Request, req: LoginRequest):
             plan=t.get("plan") or "free",
         )
 
-    # No user found — perform dummy hash to prevent timing attacks
+    # No user found - perform dummy hash to prevent timing attacks
     # This ensures the response time is similar whether user exists or not
     _verify_password(
         req.password,
@@ -463,8 +463,8 @@ async def me(claims: dict = Depends(_get_current_tenant)):
     result = (
         db.table("tenants")
         .select(
-            "id, owner_email, business_name, plan, city, owner_name, "
-            "business_type, referral_code"
+            "id, owner_email, business_name, plan, plan_status, city, owner_name, "
+            "business_type, referral_code, pay_gate_exempt, onboarding_completed_at"
         )
         .eq("id", claims["tenant_id"])
         .limit(1)
@@ -483,6 +483,9 @@ async def me(claims: dict = Depends(_get_current_tenant)):
         owner_name=t.get("owner_name"),
         business_type=t.get("business_type"),
         referral_code=t.get("referral_code"),
+        plan_status=t.get("plan_status"),
+        pay_gate_exempt=bool(t.get("pay_gate_exempt")),
+        onboarding_completed=bool(t.get("onboarding_completed_at")),
     )
 
 
@@ -508,7 +511,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
     t = tenant_result.data[0]
     logger.info("Dashboard tenant row loaded for %s", tenant_id)
 
-    # Widget config — full details for onboarding
+    # Widget config - full details for onboarding
     widget_result = (
         db.table("widget_configs")
         .select(
@@ -794,7 +797,7 @@ async def update_settings(
     if not updates:
         raise HTTPException(status_code=400, detail="No valid fields to update")
 
-    # conversation_notify_email is used as a send_email recipient — reject
+    # conversation_notify_email is used as a send_email recipient - reject
     # anything that isn't a plausible single address. Empty string is allowed
     # (clears the override; the notify job then falls back to owner_email).
     if updates.get("conversation_notify_email"):

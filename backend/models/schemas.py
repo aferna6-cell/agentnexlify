@@ -179,6 +179,10 @@ class MeResponse(BaseModel):
     owner_name: str | None = None
     business_type: str | None = None
     referral_code: str | None = None
+    # Pay-gate fields (migration 152)
+    plan_status: str | None = None
+    pay_gate_exempt: bool = False
+    onboarding_completed: bool = False
 
 
 class WidgetConfigDetail(BaseModel):

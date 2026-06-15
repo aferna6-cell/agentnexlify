@@ -6,12 +6,31 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-prod
 // Two-plan model (as of 2026-06-15): chatbot ($19.99/mo) and agent_os ($99.99/mo)
 const PAID_PLANS = new Set(["chatbot", "agent_os"]);
 
+const PLAN_OPTIONS = [
+  {
+    key: "chatbot",
+    name: "Chatbot",
+    price: "$19.99/mo",
+    description: "AI chat widget, lead capture, FAQ KB, appointment booking",
+  },
+  {
+    key: "agent_os",
+    name: "Full Agent OS",
+    price: "$99.99/mo",
+    description: "Everything in Chatbot + AI staff, marketing, automations",
+    highlight: true,
+  },
+];
+
 // 4 fields and you're in. Industry, website, city, and phone moved into the
 // /setup flow (express or wizard) - asking them twice killed the old funnel.
 export default function SignupPage() {
   const [searchParams] = useSearchParams();
   const requestedPlan = (searchParams.get("plan") || "").toLowerCase();
-  const checkoutPlan = PAID_PLANS.has(requestedPlan) ? requestedPlan : "";
+  // If a valid plan is in the URL, pre-select it; otherwise the user must choose.
+  const [checkoutPlan, setCheckoutPlan] = useState(
+    PAID_PLANS.has(requestedPlan) ? requestedPlan : "",
+  );
   const googleSetupToken = searchParams.get("google_setup") || "";
   const googleEmail = searchParams.get("email") || "";
   const googleName = searchParams.get("name") || "";
@@ -64,6 +83,12 @@ export default function SignupPage() {
     e.preventDefault();
     setError("");
 
+    // A plan is required - no free tier, no fallback to /setup without paying.
+    if (!checkoutPlan) {
+      setError("Please choose a plan to continue.");
+      return;
+    }
+
     if (!isGoogleSignup) {
       const problem = passwordProblem(form.password);
       if (problem) {
@@ -112,7 +137,7 @@ export default function SignupPage() {
       localStorage.setItem("anx_tenant_id", tenant_id);
       trackEvent("sign_up", {
         method: isGoogleSignup ? "google" : "email",
-        plan: checkoutPlan || "free",
+        plan: checkoutPlan,
         source: fromDemo ? "demo" : "direct",
       });
 
@@ -129,25 +154,26 @@ export default function SignupPage() {
         }).catch(() => {});
       }
 
-      if (checkoutPlan) {
-        const checkoutRes = await fetch(`${API_BASE}/api/v1/auth/billing/checkout`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ plan: checkoutPlan }),
-        });
+      // Always redirect to Stripe - there is no free tier.
+      const checkoutRes = await fetch(`${API_BASE}/api/v1/auth/billing/checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ plan: checkoutPlan }),
+      });
 
-        const checkoutData = await checkoutRes.json().catch(() => ({}));
-        if (checkoutRes.ok && checkoutData.checkout_url) {
-          trackEvent("begin_checkout", { event_label: "signup_redirect", plan: checkoutPlan });
-          window.location.href = checkoutData.checkout_url;
-          return;
-        }
+      const checkoutData = await checkoutRes.json().catch(() => ({}));
+      if (checkoutRes.ok && checkoutData.checkout_url) {
+        trackEvent("begin_checkout", { event_label: "signup_redirect", plan: checkoutPlan });
+        window.location.href = checkoutData.checkout_url;
+        return;
       }
-
-      window.location.href = "/setup";
+      // Checkout failed - show error, never drop them into the app unpaid.
+      throw new Error(
+        checkoutData.detail || "Checkout unavailable. Please try again or contact support."
+      );
     } catch (err) {
       setError(err.message);
     } finally {
@@ -179,10 +205,8 @@ export default function SignupPage() {
       ? "Finishing setup..."
       : "Creating account..."
     : checkoutPlan
-      ? "Continue to checkout"
-      : isGoogleSignup
-        ? "Finish Google Signup"
-        : "Meet your AI staff";
+      ? `Continue to checkout`
+      : "Choose a plan above to continue";
 
   return (
     <div className="login-page">
@@ -191,8 +215,44 @@ export default function SignupPage() {
         <p className="login-subtitle">
           {checkoutPlan
             ? "Create your account to continue to checkout"
-            : "Hire your AI staff in under 2 minutes - free"}
+            : "Hire your AI staff. Choose a plan to get started."}
         </p>
+
+        {/* Plan chooser - required, shown before account details */}
+        <div style={{ marginBottom: "1.5rem" }}>
+          <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "0.6rem" }}>
+            Select a plan:
+          </p>
+          <div style={{ display: "flex", gap: 10 }}>
+            {PLAN_OPTIONS.map((plan) => (
+              <button
+                key={plan.key}
+                type="button"
+                onClick={() => setCheckoutPlan(plan.key)}
+                style={{
+                  flex: 1,
+                  padding: "10px 12px",
+                  border: checkoutPlan === plan.key
+                    ? "2px solid #6366f1"
+                    : "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: 10,
+                  background: checkoutPlan === plan.key
+                    ? "rgba(99,102,241,0.15)"
+                    : "rgba(255,255,255,0.04)",
+                  color: "var(--text-primary, #e2e8f0)",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "border-color 0.15s",
+                }}
+              >
+                <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>{plan.name}</div>
+                <div style={{ color: "#a5b4fc", fontWeight: 700, fontSize: "0.9rem", margin: "2px 0" }}>{plan.price}</div>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", lineHeight: 1.3 }}>{plan.description}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {!isGoogleSignup ? (
           <>
             <button

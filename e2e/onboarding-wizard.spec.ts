@@ -77,9 +77,21 @@ async function stubApi(page: Page) {
       },
     }),
   );
-  // Steps 6 and 7 fetch the dashboard for the widget API key (embed snippet).
+  // Steps 5 and 6 fetch the dashboard for the widget API key (embed snippet).
   await page.route("**/api/v1/auth/dashboard/**", (route) =>
     route.fulfill({ json: { widget_api_key: WIDGET_API_KEY } }),
+  );
+  // RequirePaid gate calls /me — the E2E tenant is grandfathered (exempt) so
+  // the pay-gate passes and the wizard renders. Payment is now gated at signup.
+  await page.route("**/api/v1/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        plan: "agent_os",
+        plan_status: "active",
+        pay_gate_exempt: true,
+        onboarding_completed: false,
+      },
+    }),
   );
 }
 
@@ -129,9 +141,12 @@ test("express setup runs auto-kb + complete and lands in the Agent OS", async ({
   await expect(page).toHaveURL(/\/dashboard\/agent-os/, { timeout: 15000 });
 });
 
-test("new owner reaches the plan step with two paid plans and no dead-ends", async ({
+test("new owner walks the full onboarding wizard with no dead-ends", async ({
   page,
 }) => {
+  // Payment is gated at signup now (RequirePaid), so the wizard is onboarding
+  // only — no plan step. 6 steps: chooser(0) -> business(1) -> auto-KB(2) ->
+  // services(3) -> KB(4) -> widget customize(5) -> embed/completion(6).
   await stubApi(page);
   await loginAs(page);
 
@@ -143,7 +158,7 @@ test("new owner reaches the plan step with two paid plans and no dead-ends", asy
     .click();
 
   // Step 1 — Business info.
-  await expect(page.getByText("Step 1 of 7")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText("Step 1 of 6")).toBeVisible({ timeout: 15000 });
   await expect(page.getByText("Tell us about your business")).toBeVisible();
   await page
     .getByPlaceholder("Acme Plumbing & Heating")
@@ -152,58 +167,46 @@ test("new owner reaches the plan step with two paid plans and no dead-ends", asy
   await page.getByRole("button", { name: "Continue →" }).click();
 
   // Step 2 — Auto-KB from website (optional; skip the crawl).
-  await expect(page.getByText("Step 2 of 7")).toBeVisible();
+  await expect(page.getByText("Step 2 of 6")).toBeVisible();
   await expect(page.getByText("Auto-fill from your website")).toBeVisible();
   await page.getByRole("button", { name: /skip/i }).click();
 
   // Step 3 — Services & FAQs (all optional).
-  await expect(page.getByText("Step 3 of 7")).toBeVisible();
+  await expect(page.getByText("Step 3 of 6")).toBeVisible();
   await expect(page.getByText("Services & FAQs")).toBeVisible();
   await page.getByRole("button", { name: "Continue →" }).click();
 
   // Step 4 — Knowledge base auto-generates on mount (stubbed response).
-  await expect(page.getByText("Step 4 of 7")).toBeVisible();
+  await expect(page.getByText("Step 4 of 6")).toBeVisible();
   await expect(page.getByText(/knowledge base ready/i)).toBeVisible({
     timeout: 10000,
   });
   await page.getByRole("button", { name: "Continue →" }).click();
 
-  // Step 5 — Plan choice. Two-plan model (2026-06-15 repricing): no free tier.
-  // Both plans are paid and hard-redirect to Stripe Checkout on click, so the
-  // happy-path wizard ends here — the step must present two real, actionable
-  // plan options (no dead-end).
-  await expect(page.getByText("Step 5 of 7")).toBeVisible();
-  await expect(page.getByText("Choose your plan")).toBeVisible();
-  await expect(page.getByText("$19.99/mo")).toBeVisible();
-  await expect(page.getByText("$99.99/mo")).toBeVisible();
+  // Step 5 — OPTIONAL widget customization (presets pre-filled).
+  await expect(page.getByText("Step 5 of 6")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Start Chatbot" }),
-  ).toBeEnabled();
-  await expect(
-    page.getByRole("button", { name: "Start Agent OS" }),
-  ).toBeEnabled();
+    page.getByText("Optional: customize your website chat"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Continue →" }).click();
+
+  // Step 6 — Completion: Agent OS handoff + embed snippet with the live key.
+  await expect(page.getByText("Step 6 of 6")).toBeVisible();
+  await expect(page.getByText("Your AI staff is on the clock")).toBeVisible({
+    timeout: 10000,
+  });
+  await expect(page.getByText(WIDGET_API_KEY)).toBeVisible();
 });
 
-test("Stripe cancel return deep-links straight to the Plan step", async ({
+test("deep-link to a mid-wizard step resumes there, not the chooser", async ({
   page,
 }) => {
-  // After a paid-plan redirect, Stripe's cancel URL sends the owner back
-  // with ?step=5 (backend/routers/auth.py) — the wizard must resume on the
-  // Plan step, not restart at the chooser.
+  // Stripe success returns to /setup?step=1; ?step= deep-links resume in place.
   await stubApi(page);
   await loginAs(page);
 
   await page.goto("/onboarding?step=5");
-  await expect(page.getByText("Step 5 of 7")).toBeVisible({ timeout: 15000 });
-  await expect(page.getByText("Choose your plan")).toBeVisible();
-});
-
-test("Stripe success return resumes after the Plan step", async ({ page }) => {
-  await stubApi(page);
-  await loginAs(page);
-
-  await page.goto("/onboarding?step=6");
-  await expect(page.getByText("Step 6 of 7")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText("Step 5 of 6")).toBeVisible({ timeout: 15000 });
   await expect(
     page.getByText("Optional: customize your website chat"),
   ).toBeVisible();
