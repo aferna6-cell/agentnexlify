@@ -6,7 +6,7 @@ import { notify } from "../utils/notify";
 
 const SITE_URL = "https://agentnexlify.com";
 
-const PLAN_RANK = { free: 0, growth: 1, professional: 2, enterprise: 3 };
+const PLAN_RANK = { free: 0, chatbot: 1, agent_os: 2 };
 function canAccess(userPlan, requiredPlan) {
   return (PLAN_RANK[userPlan] || 0) >= (PLAN_RANK[requiredPlan] || 0);
 }
@@ -30,7 +30,7 @@ const FONT_OPTIONS = [
 ];
 
 function UpgradeBadge({ requiredPlan }) {
-  const label = requiredPlan === "enterprise" ? "Enterprise" : "Professional";
+  const label = PLAN_RANK[requiredPlan] >= 2 ? "Agent OS" : "Chatbot";
   return (
     <span style={{
       display: "inline-block",
@@ -38,8 +38,8 @@ function UpgradeBadge({ requiredPlan }) {
       fontWeight: 600,
       padding: "2px 8px",
       borderRadius: "10px",
-      background: requiredPlan === "enterprise" ? "rgba(245, 158, 11, 0.15)" : "rgba(139, 92, 246, 0.15)",
-      color: requiredPlan === "enterprise" ? "var(--yellow)" : "var(--purple)",
+      background: "rgba(139, 92, 246, 0.15)",
+      color: "var(--purple)",
       marginLeft: "0.5rem",
       verticalAlign: "middle",
     }}>
@@ -347,7 +347,7 @@ export default function BusinessPageSettings() {
               <h3>Appearance</h3>
               <p className="settings-card-desc">Customize the look of your public business page.</p>
 
-              <GatedField plan={plan} requiredPlan="professional" label="Color Theme">
+              <GatedField plan={plan} requiredPlan="agent_os" label="Color Theme">
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: "0.5rem" }}>
                   {COLOR_THEMES.map((t) => (
                     <button
@@ -376,7 +376,7 @@ export default function BusinessPageSettings() {
                 </div>
               </GatedField>
 
-              <GatedField plan={plan} requiredPlan="professional" label="Font Family">
+              <GatedField plan={plan} requiredPlan="agent_os" label="Font Family">
                 <select
                   value={form.bp_font_family}
                   onChange={handleChange("bp_font_family")}
@@ -398,7 +398,7 @@ export default function BusinessPageSettings() {
               <h3>SEO</h3>
               <p className="settings-card-desc">Customize how your page appears in search results.</p>
 
-              <GatedField plan={plan} requiredPlan="professional" label="Meta Title">
+              <GatedField plan={plan} requiredPlan="agent_os" label="Meta Title">
                 <input
                   value={form.bp_meta_title}
                   onChange={handleChange("bp_meta_title")}
@@ -409,7 +409,7 @@ export default function BusinessPageSettings() {
                 </span>
               </GatedField>
 
-              <GatedField plan={plan} requiredPlan="professional" label="Meta Description">
+              <GatedField plan={plan} requiredPlan="agent_os" label="Meta Description">
                 <textarea
                   value={form.bp_meta_description}
                   onChange={handleChange("bp_meta_description")}
@@ -424,7 +424,7 @@ export default function BusinessPageSettings() {
             <div className="settings-card">
               <h3>Branding</h3>
 
-              <GatedField plan={plan} requiredPlan="professional" label="Hide 'Powered by AgentNexLiFy'">
+              <GatedField plan={plan} requiredPlan="agent_os" label="Hide 'Powered by AgentNexLiFy'">
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <input
                     type="checkbox"
@@ -432,7 +432,7 @@ export default function BusinessPageSettings() {
                     onChange={() => { setForm((f) => ({ ...f, bp_hide_powered_by: !f.bp_hide_powered_by })); setSaved(false); }}
                     id="bp-hide-powered"
                     style={{ width: "auto" }}
-                    disabled={!canAccess(plan, "professional")}
+                    disabled={!canAccess(plan, "agent_os")}
                   />
                   <label htmlFor="bp-hide-powered" style={{ margin: 0, cursor: "pointer", fontSize: "0.9rem" }}>
                     Remove branding footer from public page
@@ -445,14 +445,14 @@ export default function BusinessPageSettings() {
             <div className="settings-card">
               <h3>Advanced</h3>
 
-              <GatedField plan={plan} requiredPlan="enterprise" label="Custom CSS">
+              <GatedField plan={plan} requiredPlan="agent_os" label="Custom CSS">
                 <textarea
                   value={form.bp_custom_css}
                   onChange={handleChange("bp_custom_css")}
                   placeholder={`.bp-page { /* your custom styles */ }`}
                   rows={6}
                   style={{ width: "100%", resize: "vertical", fontFamily: "monospace", fontSize: "0.8rem" }}
-                  disabled={!canAccess(plan, "enterprise")}
+                  disabled={!canAccess(plan, "agent_os")}
                 />
                 <span className="settings-field-hint">
                   Add custom CSS to fully control your page styling. Use .bp-* class selectors.

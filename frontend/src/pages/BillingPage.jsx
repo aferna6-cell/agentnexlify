@@ -1,15 +1,29 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchDashboard, billingCheckout, billingPortal, fetchTrialStatus, changePlan, cancelSubscription } from "../utils/api/dashboard";
+import { fetchDashboard, billingCheckout, billingPortal, fetchTrialStatus, changePlan, cancelSubscription, fetchAiUsage, buyMoreUsage } from "../utils/api/dashboard";
 import SkeletonLoader from "../components/SkeletonLoader";
 import ReferralCard from "../components/billing/ReferralCard";
 import { notify } from "../utils/notify";
 
+// Two purchasable plans. Keys must match the backend PLAN_PRICES keys.
+// Chatbot: $19.99/mo - widget/chatbot features only.
+// Agent OS: $99.99/mo - full platform.
 const PLANS = [
-  { key: "free",         name: "Free",         price: "$0",   period: "/mo" },
-  { key: "growth",       name: "Growth",       price: "$99", period: "/mo", trial: "7-day free trial" },
-  { key: "professional", name: "Professional", price: "$150", period: "/mo", popular: true },
-  { key: "enterprise",  name: "Enterprise",   price: "$250", period: "/mo" },
+  {
+    key: "chatbot",
+    name: "Chatbot",
+    price: "$19.99",
+    period: "/mo",
+    description: "AI chat widget + lead capture for your website.",
+  },
+  {
+    key: "agent_os",
+    name: "Agent OS",
+    price: "$99.99",
+    period: "/mo",
+    popular: true,
+    description: "Full platform - Agent OS, marketing, CRM, and everything.",
+  },
 ];
 
 // Data-driven feature comparison matrix
@@ -17,51 +31,43 @@ const PLANS = [
 const FEATURE_MATRIX = [
   {
     feature: "AI Chat Widget",
-    free: true, growth: true, professional: true, autopilot: true, enterprise: true,
+    chatbot: true, agent_os: true,
   },
   {
-    feature: "Leads & Customer Management",
-    free: "50 leads", growth: "Unlimited", professional: "Unlimited", autopilot: "Unlimited", enterprise: "Unlimited",
+    feature: "Lead Capture & Dashboard",
+    chatbot: true, agent_os: true,
   },
   {
     feature: "Appointments & Booking",
-    free: true, growth: true, professional: true, autopilot: true, enterprise: true,
+    chatbot: false, agent_os: true,
   },
   {
-    feature: "Email Automation",
-    free: false, growth: true, professional: true, autopilot: true, enterprise: true,
+    feature: "Email & SMS Automation",
+    chatbot: false, agent_os: true,
   },
   {
-    feature: "SMS Text-Back",
-    free: false, growth: true, professional: true, autopilot: true, enterprise: true,
+    feature: "CRM & Pipeline Management",
+    chatbot: false, agent_os: true,
   },
   {
-    feature: "Invoicing",
-    free: false, growth: true, professional: true, autopilot: true, enterprise: true,
+    feature: "Marketing Campaigns",
+    chatbot: false, agent_os: true,
   },
   {
-    feature: "Pipeline Management",
-    free: false, growth: true, professional: true, autopilot: true, enterprise: true,
+    feature: "Invoicing & Documents",
+    chatbot: false, agent_os: true,
   },
   {
-    feature: "SEO & Marketing Suite (add-on, $49.99/mo)",
-    free: false, growth: false, professional: false, autopilot: false, enterprise: false,
+    feature: "SEO & Local Marketing",
+    chatbot: false, agent_os: true,
   },
   {
-    feature: "AI Answering Service",
-    free: false, growth: false, professional: true, autopilot: false, enterprise: true,
-  },
-  {
-    feature: "Custom Fields",
-    free: false, growth: false, professional: true, autopilot: false, enterprise: true,
+    feature: "Agent OS (AI workers)",
+    chatbot: false, agent_os: true,
   },
   {
     feature: "Team Members",
-    free: "1", growth: "3", professional: "10", autopilot: "1", enterprise: "Unlimited",
-  },
-  {
-    feature: "White Label",
-    free: false, growth: false, professional: false, autopilot: false, enterprise: true,
+    chatbot: "1", agent_os: "Unlimited",
   },
 ];
 
@@ -88,6 +94,9 @@ export default function BillingPage() {
   const [cancelDetail, setCancelDetail] = useState("");
   const [cancelStatus, setCancelStatus] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const [aiUsage, setAiUsage] = useState(null);
+  const [aiUsageLoading, setAiUsageLoading] = useState(true);
+  const [buyingUsage, setBuyingUsage] = useState(false);
 
   const load = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -108,7 +117,21 @@ export default function BillingPage() {
     }
   }, [user?.tenantId, token]);
 
+  const loadAiUsage = useCallback(async () => {
+    if (!token) return;
+    setAiUsageLoading(true);
+    try {
+      const data = await fetchAiUsage(token);
+      setAiUsage(data);
+    } catch (err) {
+      console.warn("Failed to load AI usage:", err.message || err);
+    } finally {
+      setAiUsageLoading(false);
+    }
+  }, [token]);
+
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadAiUsage(); }, [loadAiUsage]);
 
   // Show success toast when returning from Stripe Checkout
   useEffect(() => {
@@ -251,15 +274,15 @@ export default function BillingPage() {
           </div>
           <button
             className="btn-primary"
-            onClick={() => handleUpgrade("growth")}
-            disabled={upgrading === "growth"}
+            onClick={() => handleUpgrade("chatbot")}
+            disabled={upgrading === "chatbot"}
             style={{
               background: "#fff",
               color: trialData.is_expired ? "#dc2626" : "#1e40af",
               fontWeight: 600,
             }}
           >
-            {upgrading === "growth" ? "Redirecting..." : "Upgrade Now"}
+            {upgrading === "chatbot" ? "Redirecting..." : "Upgrade Now"}
           </button>
         </div>
       )}

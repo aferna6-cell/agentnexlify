@@ -13,10 +13,9 @@ _initialized = False
 _warned_placeholder_prices = False
 
 _PLACEHOLDER_PRICE_IDS = {
-    "price_growth_monthly",
-    "price_professional_monthly",
-    "price_autopilot_monthly",
-    "price_enterprise_monthly",
+    "price_chatbot_monthly",
+    "price_agent_os_monthly",
+    "price_usage_pack",
 }
 
 
@@ -28,12 +27,18 @@ def _price_id(env_value: str, fallback: str) -> str:
 # Price IDs are env-backed so production can use real Stripe prices without
 # hardcoding live identifiers in the repo. Fallback placeholders are kept for
 # local/test environments and are warned on at runtime.
+#
+# Two purchasable plans (2026-06-15 repricing):
+#   chatbot   — $19.99/mo  (widget/chatbot features only)
+#   agent_os  — $99.99/mo  (full platform)
+# "free" is the internal lapsed/no-active-subscription state only; never sold.
 PLAN_PRICES: dict[str, dict[str, str]] = {
-    "growth": {"monthly": _price_id(settings.stripe_price_growth_monthly, "price_growth_monthly")},
-    "professional": {"monthly": _price_id(settings.stripe_price_professional_monthly, "price_professional_monthly")},
-    "autopilot": {"monthly": _price_id(settings.stripe_price_autopilot_monthly, "price_autopilot_monthly")},
-    "enterprise": {"monthly": _price_id(settings.stripe_price_enterprise_monthly, "price_enterprise_monthly")},
+    "chatbot": {"monthly": _price_id(settings.stripe_price_chatbot_monthly, "price_chatbot_monthly")},
+    "agent_os": {"monthly": _price_id(settings.stripe_price_agent_os_monthly, "price_agent_os_monthly")},
 }
+
+# One-time usage-pack price (overage top-up)
+USAGE_PACK_PRICE_ID: str = _price_id(settings.stripe_price_usage_pack, "price_usage_pack")
 
 
 def ensure_plan_prices_configured(plan: str) -> dict[str, str]:

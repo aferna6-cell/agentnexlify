@@ -71,26 +71,26 @@ async def test_plan_upgrade_calls_stripe_with_create_prorations(
     mock_sub_modify,
     mock_log,
 ):
-    """Upgrading from growth → professional passes proration_behavior='create_prorations'."""
+    """Upgrading from chatbot → agent_os passes proration_behavior='create_prorations'."""
     from backend.routers.auth_billing import billing_change_plan
 
     tenant_chain = Chain(data=[{
         "stripe_customer_id": "cus_test",
-        "plan": "growth",
+        "plan": "chatbot",
     }])
     tenant_update_chain = Chain(data=[{"id": "tenant-1"}])
     db = MagicMock()
     db.table.side_effect = [tenant_chain, tenant_update_chain]
     mock_db_factory.return_value = db
 
-    mock_prices.return_value = {"monthly": "price_professional"}
+    mock_prices.return_value = {"monthly": "price_agent_os"}
     mock_sub_list.return_value = MagicMock(data=[_make_sub()])
     mock_sub_modify.return_value = MagicMock()
 
     request = MagicMock()
 
     async def json_body():
-        return {"plan": "professional"}
+        return {"plan": "agent_os"}
 
     request.json = json_body
 
@@ -105,7 +105,7 @@ async def test_plan_upgrade_calls_stripe_with_create_prorations(
         f"Expected proration_behavior='create_prorations', got {call_kwargs.get('proration_behavior')!r}"
     )
     assert result["status"] == "changed"
-    assert result["new_plan"] == "professional"
+    assert result["new_plan"] == "agent_os"
 
 
 @pytest.mark.asyncio
@@ -123,26 +123,26 @@ async def test_plan_downgrade_calls_stripe_with_create_prorations(
     mock_sub_modify,
     mock_log,
 ):
-    """Downgrading from enterprise → growth also passes proration_behavior='create_prorations'."""
+    """Downgrading from agent_os → chatbot also passes proration_behavior='create_prorations'."""
     from backend.routers.auth_billing import billing_change_plan
 
     tenant_chain = Chain(data=[{
         "stripe_customer_id": "cus_test",
-        "plan": "enterprise",
+        "plan": "agent_os",
     }])
     tenant_update_chain = Chain(data=[{"id": "tenant-1"}])
     db = MagicMock()
     db.table.side_effect = [tenant_chain, tenant_update_chain]
     mock_db_factory.return_value = db
 
-    mock_prices.return_value = {"monthly": "price_growth"}
+    mock_prices.return_value = {"monthly": "price_chatbot"}
     mock_sub_list.return_value = MagicMock(data=[_make_sub()])
     mock_sub_modify.return_value = MagicMock()
 
     request = MagicMock()
 
     async def json_body():
-        return {"plan": "growth"}
+        return {"plan": "chatbot"}
 
     request.json = json_body
 
@@ -155,8 +155,8 @@ async def test_plan_downgrade_calls_stripe_with_create_prorations(
     call_kwargs = mock_sub_modify.call_args.kwargs
     assert call_kwargs.get("proration_behavior") == "create_prorations"
     assert result["status"] == "changed"
-    assert result["old_plan"] == "enterprise"
-    assert result["new_plan"] == "growth"
+    assert result["old_plan"] == "agent_os"
+    assert result["new_plan"] == "chatbot"
 
 
 @pytest.mark.asyncio
@@ -184,21 +184,21 @@ async def test_plan_change_updates_tenant_db_immediately(
 
     tenant_chain = Chain(data=[{
         "stripe_customer_id": "cus_test",
-        "plan": "professional",
+        "plan": "agent_os",
     }])
     tenant_update_chain = Chain(data=[{"id": "tenant-1"}])
     db = MagicMock()
     db.table.side_effect = [tenant_chain, tenant_update_chain]
     mock_db_factory.return_value = db
 
-    mock_prices.return_value = {"monthly": "price_autopilot"}
+    mock_prices.return_value = {"monthly": "price_chatbot"}
     mock_sub_list.return_value = MagicMock(data=[_make_sub()])
     mock_sub_modify.return_value = MagicMock()
 
     request = MagicMock()
 
     async def json_body():
-        return {"plan": "autopilot"}
+        return {"plan": "chatbot"}
 
     request.json = json_body
 
@@ -209,7 +209,7 @@ async def test_plan_change_updates_tenant_db_immediately(
 
     # tenant update should have been called with the new plan
     assert tenant_update_chain.updated is not None, "tenants.update() was not called"
-    assert tenant_update_chain.updated.get("plan") == "autopilot"
+    assert tenant_update_chain.updated.get("plan") == "chatbot"
 
 
 @pytest.mark.asyncio
@@ -227,17 +227,17 @@ async def test_plan_change_to_same_plan_rejected(
 
     tenant_chain = Chain(data=[{
         "stripe_customer_id": "cus_test",
-        "plan": "growth",
+        "plan": "chatbot",
     }])
     db = MagicMock()
     db.table.side_effect = [tenant_chain]
     mock_db_factory.return_value = db
-    mock_prices.return_value = {"monthly": "price_growth"}
+    mock_prices.return_value = {"monthly": "price_chatbot"}
 
     request = MagicMock()
 
     async def json_body():
-        return {"plan": "growth"}
+        return {"plan": "chatbot"}
 
     request.json = json_body
 

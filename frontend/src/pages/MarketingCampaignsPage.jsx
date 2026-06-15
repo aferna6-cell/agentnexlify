@@ -223,7 +223,7 @@ export default function MarketingCampaignsPage({ onNavigate }) {
       {showUpgradePrompt && (
         <UpgradePrompt
           feature="Marketing Campaigns"
-          requiredPlan="growth"
+          requiredPlan="agent_os"
           onClose={() => setShowUpgradePrompt(false)}
           onNavigate={onNavigate}
         />
@@ -241,7 +241,7 @@ export default function MarketingCampaignsPage({ onNavigate }) {
         </div>
         <button
           onClick={() => {
-            if (planBelowRequired(livePlan, "growth")) {
+            if (planBelowRequired(livePlan, "agent_os")) {
               setShowUpgradePrompt(true);
             } else {
               setShowCreate(true);
@@ -254,10 +254,10 @@ export default function MarketingCampaignsPage({ onNavigate }) {
       </div>
 
       {/* Plan gate banner for free users */}
-      {planBelowRequired(livePlan, "growth") && (
+      {planBelowRequired(livePlan, "agent_os") && (
         <UpgradePrompt
           feature="Marketing Campaigns"
-          requiredPlan="growth"
+          requiredPlan="agent_os"
           onClose={() => {}}
           onNavigate={onNavigate}
           variant="banner"

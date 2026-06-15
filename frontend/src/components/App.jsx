@@ -331,9 +331,9 @@ export default function App() {
 
   const PageComponent = pages[currentPage] || Dashboard;
 
-  // Marketing plan gate - add-on retired 2026-06-10; marketing pages are
-  // included with Growth (autopilot) and above. Backend enforces via
-  // plan_gate dependency; this is the UI half.
+  // Marketing plan gate - marketing pages require agent_os in the two-plan
+  // model (chatbot / agent_os). Backend enforces via plan_gate dependency;
+  // this is the UI half.
   const marketingGated =
     MARKETING_GATED_KEYS.has(currentPage) &&
     !MARKETING_PLANS.has(activePlan || user.plan);

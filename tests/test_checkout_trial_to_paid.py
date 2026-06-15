@@ -1,11 +1,11 @@
 """Tests for rubric criterion 3.7 — trial → paid transition.
 
-Contract under test:
+Contract under test (two-plan model, 2026-06-15 repricing):
 - checkout.session.completed webhook with metadata.plan set to each canonical
-  plan name (growth, autopilot, professional, enterprise) flips the tenant's
-  plan and plan_status to 'active' immediately.
+  plan name (chatbot, agent_os) flips the tenant's plan and plan_status to
+  'active' immediately.
 - _resolve_plan prefers metadata.plan over amount-based resolution when present.
-- All four plan names resolve without ambiguity.
+- Both plan names resolve without ambiguity.
 - A tenant that was on 'free' or trial is written to the new plan with plan_status='active'.
 """
 
@@ -82,7 +82,7 @@ def _make_checkout_session(plan: str, tenant_id: str = "tenant-1") -> dict:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("plan_name", ["growth", "autopilot", "professional", "enterprise"])
+@pytest.mark.parametrize("plan_name", ["chatbot", "agent_os"])
 def test_checkout_completed_sets_active_plan_status(plan_name):
     """checkout.session.completed for each canonical plan sets plan_status='active'."""
     from backend.routers.billing import _handle_checkout_completed
@@ -105,7 +105,7 @@ def test_checkout_completed_sets_active_plan_status(plan_name):
     )
 
 
-@pytest.mark.parametrize("plan_name", ["growth", "autopilot", "professional", "enterprise"])
+@pytest.mark.parametrize("plan_name", ["chatbot", "agent_os"])
 def test_checkout_completed_writes_stripe_ids(plan_name):
     """checkout.session.completed should also persist stripe_customer_id and stripe_subscription_id."""
     from backend.routers.billing import _handle_checkout_completed
@@ -129,7 +129,7 @@ def test_checkout_completed_writes_stripe_ids(plan_name):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("plan_name", ["growth", "autopilot", "professional", "enterprise"])
+@pytest.mark.parametrize("plan_name", ["chatbot", "agent_os"])
 def test_resolve_plan_from_metadata(plan_name):
     """_resolve_plan returns metadata.plan directly for all four canonical plan names."""
     from backend.routers.billing import _resolve_plan
@@ -188,8 +188,8 @@ def test_checkout_completed_missing_tenant_skips_gracefully():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("initial_plan", ["free", "growth"])
-@pytest.mark.parametrize("new_plan", ["professional", "enterprise"])
+@pytest.mark.parametrize("initial_plan", ["free", "chatbot"])
+@pytest.mark.parametrize("new_plan", ["agent_os"])
 def test_checkout_completed_upgrades_tenant_from_any_plan(initial_plan, new_plan):
     """_handle_checkout_completed writes new plan regardless of what tenant's old plan was.
 

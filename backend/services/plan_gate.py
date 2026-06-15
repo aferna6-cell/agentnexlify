@@ -19,7 +19,7 @@ from backend.services.auth_service import get_current_tenant
 
 logger = logging.getLogger(__name__)
 
-MARKETING_PLANS = {"autopilot", "professional", "enterprise"}
+MARKETING_PLANS = {"agent_os"}
 MARKETING_UPGRADE_PATH = "/billing"
 
 

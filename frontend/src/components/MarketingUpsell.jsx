@@ -1,8 +1,12 @@
 /* Plan upsell for marketing features.
  *
- * The $49.99 Marketing Suite add-on was retired 2026-06-10 - these features
- * are included with the Growth plan (autopilot) and above, and the primary
- * way to use them is through your AI marketing staff in Agent OS.
+ * Two-plan model (as of 2026-06-15):
+ *   chatbot   - $19.99/mo - widget/chatbot features only
+ *   agent_os  - $99.99/mo - full platform: Agent OS + marketing + SEO + social + campaigns
+ *
+ * Marketing features require agent_os. The $49.99 Marketing Suite add-on was
+ * retired 2026-06-10 - marketing is now included with agent_os and surfaced
+ * through your AI marketing staff in Agent OS.
  */
 import React from "react";
 
@@ -17,7 +21,8 @@ const FEATURES = [
 ];
 
 // Plans whose tenants see marketing pages instead of this upsell.
-export const MARKETING_PLANS = new Set(["autopilot", "professional", "enterprise"]);
+// Only agent_os includes marketing features in the two-plan model.
+export const MARKETING_PLANS = new Set(["agent_os"]);
 
 export const MARKETING_GATED_KEYS = new Set([
   "marketing_dashboard",
@@ -42,16 +47,16 @@ export default function MarketingUpsell({ pageKey, onNavigate }) {
         }}
       >
         <div style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)", letterSpacing: 1.2 }}>
-          INCLUDED WITH GROWTH
+          INCLUDED WITH AGENT OS
         </div>
         <h1 style={{ fontSize: 36, margin: "12px 0 8px", color: "var(--text-primary)" }}>
           Marketing comes with your AI staff
         </h1>
         <p style={{ color: "var(--text-secondary)", fontSize: 16, marginBottom: 32 }}>
           {pageKey
-            ? `"${pageKey.replace(/_/g, " ")}" is included with the Growth plan and above.`
-            : "Marketing tools are included with the Growth plan and above."}{" "}
-          Upgrade and your marketing team in Agent OS handles SEO, social posts,
+            ? `"${pageKey.replace(/_/g, " ")}" is included with the Agent OS plan.`
+            : "Marketing tools are included with the Agent OS plan."}{" "}
+          Upgrade to Agent OS ($99.99/mo) and your marketing team handles SEO, social posts,
           campaigns, and automations for you.
         </p>
 

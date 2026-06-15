@@ -1,20 +1,17 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 
+// Two-plan model (as of 2026-06-15):
+//   chatbot   - $19.99/mo - widget/chatbot features only
+//   agent_os  - $99.99/mo - full platform
 const planLabels = {
-  free: "Free",
-  growth: "Starter",
-  autopilot: "Growth",
-  professional: "Pro",
-  enterprise: "Enterprise",
+  chatbot: "Chatbot",
+  agent_os: "Agent OS",
 };
 
 const planColors = {
-  free: { color: "var(--green)", bg: "var(--green-dim)" },
-  growth: { color: "var(--accent)", bg: "var(--accent-dim)" },
-  professional: { color: "var(--purple)", bg: "rgba(139, 92, 246, 0.15)" },
-  autopilot: { color: "var(--accent)", bg: "var(--accent-dim)" },
-  enterprise: { color: "var(--yellow)", bg: "var(--yellow-dim)" },
+  chatbot: { color: "var(--accent)", bg: "var(--accent-dim)" },
+  agent_os: { color: "var(--yellow)", bg: "var(--yellow-dim)" },
 };
 
 const Icon = ({ d, ...props }) => (
@@ -520,7 +517,7 @@ export default function Sidebar({
   pendingApprovalCount = 0,
 }) {
   const { user, logout } = useAuth();
-  const activePlan = plan || user?.plan || "free";
+  const activePlan = plan || user?.plan || "chatbot";
   const userRole = user?.role || "owner";
   const [mobileOpen, setMobileOpen] = useState(false);
 

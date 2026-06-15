@@ -354,23 +354,29 @@ class TestStripeEventRouting:
 
 
 class TestBillingPlanResolution:
-    def test_autopilot_resolves_from_metadata(self):
+    # Two-plan model (2026-06-15 repricing): chatbot $19.99 / agent_os $99.99.
+    def test_agent_os_resolves_from_metadata(self):
         from backend.routers.billing import _resolve_plan
 
-        assert _resolve_plan({"metadata": {"plan": "autopilot"}}) == "autopilot"
+        assert _resolve_plan({"metadata": {"plan": "agent_os"}}) == "agent_os"
 
-    def test_autopilot_resolves_from_amount_total(self):
+    def test_agent_os_resolves_from_amount_total(self):
         from backend.routers.billing import _resolve_plan
 
-        assert _resolve_plan({"metadata": {}, "amount_total": 29900}) == "autopilot"
+        assert _resolve_plan({"metadata": {}, "amount_total": 9999}) == "agent_os"
 
-    def test_autopilot_resolves_from_line_item_description(self):
+    def test_chatbot_resolves_from_amount_total(self):
+        from backend.routers.billing import _resolve_plan
+
+        assert _resolve_plan({"metadata": {}, "amount_total": 1999}) == "chatbot"
+
+    def test_agent_os_resolves_from_line_item_description(self):
         from backend.routers.billing import _resolve_plan
 
         assert _resolve_plan({
             "metadata": {},
-            "line_items": {"data": [{"description": "Autopilot monthly"}]},
-        }) == "autopilot"
+            "line_items": {"data": [{"description": "Agent OS monthly"}]},
+        }) == "agent_os"
 
 
 class TestInvoiceStripePayments:

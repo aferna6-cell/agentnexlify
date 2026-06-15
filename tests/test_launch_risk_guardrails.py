@@ -38,10 +38,11 @@ class FailingChain(Chain):
 def test_ai_usage_policy_uses_plan_baseline():
     from backend.services.ai_usage_guard import resolve_ai_usage_policy
 
-    policy = resolve_ai_usage_policy({"id": "tenant-1", "plan": "growth"})
+    # Two-plan model: agent_os baseline 5M tokens, x3 alert / x5 hard limit.
+    policy = resolve_ai_usage_policy({"id": "tenant-1", "plan": "agent_os"})
 
-    assert policy.alert_threshold_tokens == 3_000_000
-    assert policy.hard_limit_tokens == 5_000_000
+    assert policy.alert_threshold_tokens == 15_000_000
+    assert policy.hard_limit_tokens == 25_000_000
 
 
 def test_ai_usage_policy_honors_tenant_overrides():

@@ -4,6 +4,23 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 150_usage_packs.sql (2026-06-15)
+
+**What:** New table `tenant_usage_packs` for one-time AI usage top-ups purchased via Stripe.
+
+Columns:
+- `id` uuid PK, `tenant_id` uuid FK → tenants, `tokens` bigint (>0), `period` text (YYYY-MM-DD first-of-month format), `stripe_session_id` text UNIQUE (idempotency key), `created_at` timestamptz.
+
+Index on `(tenant_id, period)`.
+
+RLS enabled, no public policies (service-key access only).
+
+**How it works:** `backend/services/ai_usage_guard.py::_sum_usage_packs` reads this table and adds the pack total to the plan-derived hard limit in Python before passing to the `reserve_ai_token_budget` RPC. No migration changes to the RPC — the limit is Python-computed.
+
+**Applied:** Pending — apply via `mcp__supabase__apply_migration` or Supabase SQL editor.
+
+---
+
 ## widget_health service (2026-06-13) — NO NEW MIGRATION
 
 Ported from PR #212 / GH #215. `backend/services/widget_health.py` probes existing tables:

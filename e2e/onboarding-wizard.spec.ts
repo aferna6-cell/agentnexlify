@@ -129,7 +129,7 @@ test("express setup runs auto-kb + complete and lands in the Agent OS", async ({
   await expect(page).toHaveURL(/\/dashboard\/agent-os/, { timeout: 15000 });
 });
 
-test("new owner completes the full wizard on the free plan with no dead-ends", async ({
+test("new owner reaches the plan step with two paid plans and no dead-ends", async ({
   page,
 }) => {
   await stubApi(page);
@@ -168,32 +168,20 @@ test("new owner completes the full wizard on the free plan with no dead-ends", a
   });
   await page.getByRole("button", { name: "Continue →" }).click();
 
-  // Step 5 — Plan choice. FREE persists the wizard data (POST .../complete,
-  // stubbed) and advances in-app; paid plans hard-redirect to Stripe.
+  // Step 5 — Plan choice. Two-plan model (2026-06-15 repricing): no free tier.
+  // Both plans are paid and hard-redirect to Stripe Checkout on click, so the
+  // happy-path wizard ends here — the step must present two real, actionable
+  // plan options (no dead-end).
   await expect(page.getByText("Step 5 of 7")).toBeVisible();
   await expect(page.getByText("Choose your plan")).toBeVisible();
-  await page.getByRole("button", { name: "Continue Free" }).click();
-
-  // Step 6 — OPTIONAL widget customization (presets pre-filled).
-  await expect(page.getByText("Step 6 of 7")).toBeVisible();
+  await expect(page.getByText("$19.99/mo")).toBeVisible();
+  await expect(page.getByText("$99.99/mo")).toBeVisible();
   await expect(
-    page.getByText("Optional: customize your website chat"),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Continue →" }).click();
-
-  // Step 7 — Completion: Agent OS handoff first, optional embed snippet with
-  // the live widget key + the email-to-web-person escape hatch.
-  await expect(page.getByText("Step 7 of 7")).toBeVisible();
-  await expect(page.getByText("Your AI staff is on the clock")).toBeVisible({
-    timeout: 10000,
-  });
-  await expect(page.getByText(WIDGET_API_KEY)).toBeVisible();
+    page.getByRole("button", { name: "Start Chatbot" }),
+  ).toBeEnabled();
   await expect(
-    page.getByRole("link", { name: /meet your ai staff/i }),
-  ).toBeVisible();
-  await expect(
-    page.getByPlaceholder("your web person's email"),
-  ).toBeVisible();
+    page.getByRole("button", { name: "Start Agent OS" }),
+  ).toBeEnabled();
 });
 
 test("Stripe cancel return deep-links straight to the Plan step", async ({

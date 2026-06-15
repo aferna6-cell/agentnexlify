@@ -1283,49 +1283,29 @@ button { font-family: inherit; cursor: pointer; border: none; }
   "offers": [
     {
       "@type": "Offer",
-      "name": "Free",
-      "price": "0",
-      "priceCurrency": "USD",
-      "description": "Free AI chatbot widget for your website"
-    },
-    {
-      "@type": "Offer",
-      "name": "Growth",
-      "price": "99",
+      "name": "Chatbot",
+      "price": "19.99",
       "priceCurrency": "USD",
       "priceSpecification": {
         "@type": "UnitPriceSpecification",
-        "price": "99",
+        "price": "19.99",
         "priceCurrency": "USD",
         "billingDuration": "P1M"
       },
-      "description": "AI chat widget, lead capture, appointment booking, automation, and a 7-day free trial"
+      "description": "AI chatbot widget for your website - lead capture, FAQ answers, and appointment requests"
     },
     {
       "@type": "Offer",
-      "name": "Professional",
-      "price": "150",
+      "name": "Agent OS",
+      "price": "99.99",
       "priceCurrency": "USD",
       "priceSpecification": {
         "@type": "UnitPriceSpecification",
-        "price": "150",
+        "price": "99.99",
         "priceCurrency": "USD",
         "billingDuration": "P1M"
       },
-      "description": "Follow-up sequences, full SEO suite, social media marketing, campaigns, and advanced analytics"
-    },
-    {
-      "@type": "Offer",
-      "name": "Enterprise",
-      "price": "250",
-      "priceCurrency": "USD",
-      "priceSpecification": {
-        "@type": "UnitPriceSpecification",
-        "price": "250",
-        "priceCurrency": "USD",
-        "billingDuration": "P1M"
-      },
-      "description": "Unlimited automation, team accounts, webhooks, AI visibility tracking, and white-label branding"
+      "description": "Full platform: AI staff, Agent OS, marketing, SEO, social media, campaigns, and everything in Chatbot"
     }
   ]
 }
@@ -1341,7 +1321,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
       "name": "What's included in each plan?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Every plan builds on the one below it. Free gets you the chat widget, customer capture, and FAQ knowledge base. Growth ($99/mo) includes a 7-day free trial, booking, SMS, automation, basic SEO audit, and the AI content writer. Professional ($150/mo) adds the full SEO suite, social media marketing, email/SMS campaigns, and advanced analytics. Enterprise ($250/mo) adds AI visibility tracking, team accounts, webhooks, and white-label branding. No setup fees. Cancel anytime."
+        "text": "Two plans. Chatbot ($19.99/mo) gives you the AI chat widget, lead capture, FAQ answers, and appointment requests. Agent OS ($99.99/mo) adds the full platform: AI marketing staff, SEO audit suite, social media scheduling, email/SMS campaigns, automation rules, and advanced analytics. No setup fees. Cancel anytime."
       }
     },
     {
@@ -1373,7 +1353,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
       "name": "Can I upgrade my plan later?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Absolutely. Most of our partners start with Foundation or Growth and upgrade within a few months once they see results. We'll migrate everything seamlessly with no downtime and no lost data."
+        "text": "Absolutely. Most partners start with Chatbot and upgrade to Agent OS within a few months once they see results. We migrate everything seamlessly with no downtime and no lost data."
       }
     },
     {
@@ -1601,134 +1581,69 @@ button { font-family: inherit; cursor: pointer; border: none; }
     </div>
     <div class="pricing-grid">
 
-      <!-- Free AI Widget -->
+      <!-- Chatbot -->
       <div class="pricing-card reveal">
-        <div class="pricing-plan-name">Free AI Widget</div>
-        <div class="pricing-tagline">Start capturing leads today. Zero cost.</div>
+        <div class="pricing-plan-name">Chatbot</div>
+        <div class="pricing-tagline">Your AI front desk on your website.</div>
         <div class="pricing-amount">
-          <span class="pricing-dollar">$0</span>
+          <span class="pricing-dollar">$19.99</span>
           <span class="pricing-period">/month</span>
         </div>
-        <div class="pricing-setup">No setup fee · No credit card</div>
+        <div class="pricing-setup">No setup fee. Cancel anytime.</div>
         <div class="pricing-divider"></div>
         <ul class="pricing-features">
           <li>
             <strong>AI Chatbot Widget</strong>
-            <div class="feat-desc">Embed a conversational chatbot on your website that greets visitors and answers basic questions 24/7.</div>
+            <div class="feat-desc">Embed a conversational chatbot on your website that greets visitors and answers questions 24/7.</div>
           </li>
           <li>
-            <strong>Lead Capture Form</strong>
+            <strong>Lead Capture</strong>
             <div class="feat-desc">Collects name, email, and phone from visitors. Sends you an instant notification for every new lead.</div>
           </li>
           <li>
-            <strong>Up to 50 Conversations/Month</strong>
-            <div class="feat-desc">Handles up to 50 chatbot conversations per month at no charge. Upgrade anytime for unlimited.</div>
+            <strong>Appointment Requests</strong>
+            <div class="feat-desc">Customers request appointments through the chat widget and their details go straight to your dashboard.</div>
           </li>
           <li>
-            <strong>Easy Install</strong>
-            <div class="feat-desc">Copy-paste one line of code onto your website. Works with any site builder or platform.</div>
+            <strong>FAQ Knowledge Base</strong>
+            <div class="feat-desc">Train the chatbot on your services, hours, and common questions so it answers accurately every time.</div>
           </li>
         </ul>
-        <div class="pricing-best">Best for: Trying AI lead capture risk-free</div>
-        <a href="free-chatbot.html" class="pricing-cta">Get Started &#8594;</a>
+        <div class="pricing-best">Best for: Businesses that want AI lead capture without the full platform</div>
+        <a href="/signup?plan=chatbot" class="pricing-cta">Get Started &rarr;</a>
       </div>
 
-      <!-- Growth -->
-      <div class="pricing-card reveal">
-        <div class="pricing-plan-name">Growth</div>
-        <div class="pricing-tagline">Your AI front desk.</div>
-        <div class="pricing-amount">
-          <span class="pricing-dollar">$99</span>
-          <span class="pricing-period">/month</span>
-        </div>
-        <div class="pricing-setup">7-day free trial included</div>
-        <div class="pricing-divider"></div>
-        <ul class="pricing-features">
-          <li>
-            <strong>AI Chat Widget</strong>
-            <div class="feat-desc">Website chatbot that answers visitors, captures contact details, and sends new leads to your dashboard.</div>
-          </li>
-          <li>
-            <strong>Auto Follow-Up Email & SMS</strong>
-            <div class="feat-desc">Keep new leads engaged with simple follow-up messages after they reach out.</div>
-          </li>
-          <li>
-            <strong>Appointment Booking</strong>
-            <div class="feat-desc">Help customers request appointments while keeping their details organized.</div>
-          </li>
-          <li>
-            <strong>Basic SEO & Content Tools</strong>
-            <div class="feat-desc">Includes a basic SEO audit, recommendations, AI content writer, and hosted business page.</div>
-          </li>
-        </ul>
-        <div class="pricing-best">Best for: Businesses ready to capture and follow up with more leads</div>
-        <a href="/signup?plan=growth" class="pricing-cta">Get Started &rarr;</a>
-      </div>
-
-      <!-- Professional -->
+      <!-- Agent OS -->
       <div class="pricing-card popular reveal">
-        <div class="pricing-plan-name">Professional</div>
-        <div class="pricing-tagline">Automate your follow-ups.</div>
+        <div class="pricing-plan-name">Agent OS</div>
+        <div class="pricing-tagline">Your full AI team. Marketing included.</div>
         <div class="pricing-amount">
-          <span class="pricing-dollar">$150</span>
+          <span class="pricing-dollar">$99.99</span>
           <span class="pricing-period">/month</span>
         </div>
-        <div class="pricing-setup">No setup fee. Cancel anytime</div>
+        <div class="pricing-setup">No setup fee. Cancel anytime.</div>
         <div class="pricing-divider"></div>
-        <div class="pricing-includes">Everything in Growth, plus:</div>
+        <div class="pricing-includes">Everything in Chatbot, plus:</div>
         <ul class="pricing-features">
           <li>
-            <strong>Lead Nurturing Sequences</strong>
-            <div class="feat-desc">Send better follow-ups through email and SMS so good leads do not slip away.</div>
+            <strong>Agent OS - AI Staff</strong>
+            <div class="feat-desc">AI workers that handle lead nurturing, follow-ups, and customer outreach around the clock.</div>
           </li>
           <li>
             <strong>Full SEO Audit Suite</strong>
             <div class="feat-desc">Track keywords, find content opportunities, and improve your local search presence.</div>
           </li>
           <li>
-            <strong>Social Media & Campaigns</strong>
-            <div class="feat-desc">Create social posts, marketing content, and email/SMS campaigns from one dashboard.</div>
+            <strong>Social Media and Campaigns</strong>
+            <div class="feat-desc">Schedule social posts, create marketing content, and send email/SMS campaigns from one dashboard.</div>
           </li>
           <li>
-            <strong>Advanced Analytics</strong>
-            <div class="feat-desc">See what is working across leads, campaigns, SEO, and customer conversations.</div>
+            <strong>Automation Rules and Advanced Analytics</strong>
+            <div class="feat-desc">14 triggers, 10 actions, execution logs, and full cross-channel performance reporting.</div>
           </li>
         </ul>
-        <div class="pricing-best">Best for: Growing businesses ready to automate follow-up and marketing</div>
-        <a href="/signup?plan=professional" class="pricing-cta">Get Started &rarr;</a>
-      </div>
-
-      <!-- Enterprise -->
-      <div class="pricing-card reveal">
-        <div class="pricing-plan-name">Enterprise</div>
-        <div class="pricing-tagline">Your full AI employee.</div>
-        <div class="pricing-amount">
-          <span class="pricing-dollar">$250</span>
-          <span class="pricing-period">/month</span>
-        </div>
-        <div class="pricing-setup">No setup fee. Cancel anytime</div>
-        <div class="pricing-divider"></div>
-        <div class="pricing-includes">Everything in Professional, plus:</div>
-        <ul class="pricing-features">
-          <li>
-            <strong>Unlimited Automation Sequences</strong>
-            <div class="feat-desc">Run as many automation workflows as your business needs.</div>
-          </li>
-          <li>
-            <strong>Team Accounts & Roles</strong>
-            <div class="feat-desc">Give your team access while keeping roles and permissions organized.</div>
-          </li>
-          <li>
-            <strong>Webhooks & White-Label Branding</strong>
-            <div class="feat-desc">Connect deeper workflows and customize the customer-facing experience.</div>
-          </li>
-          <li>
-            <strong>Dedicated Support</strong>
-            <div class="feat-desc">Includes priority onboarding, full analytics, and a dedicated account manager.</div>
-          </li>
-        </ul>
-        <div class="pricing-best">Best for: Teams that want the full AI employee system</div>
-        <a href="/signup?plan=enterprise" class="pricing-cta">Get Started &rarr;</a>
+        <div class="pricing-best">Best for: Businesses that want AI-powered marketing and operations in one place</div>
+        <a href="/signup?plan=agent_os" class="pricing-cta">Get Started &rarr;</a>
       </div>
 
     </div>
@@ -1806,7 +1721,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
       </div>
 
       <p class="roi-comparison" id="roi-comparison">
-        AgentNexLiFy Starter is <strong>$99/mo</strong> &mdash; it answers every call so none of that slips away.
+        AgentNexLiFy Chatbot is <strong>$19.99/mo</strong> -- it answers every call so none of that slips away.
       </p>
 
       <div class="roi-cta-wrap">
@@ -1871,7 +1786,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
           <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
         <div class="faq-answer" id="faq-a1" role="region">
-          <div class="faq-answer-inner">Every plan builds on the one below it. Free gets you the chat widget, customer capture, and FAQ knowledge base. Growth ($99/mo) includes a 7-day free trial, booking, SMS, automation, basic SEO audit, and the AI content writer. Professional ($150/mo) adds the full SEO suite, social media marketing, email/SMS campaigns, and advanced analytics. Enterprise ($250/mo) adds AI visibility tracking, team accounts, webhooks, and white-label branding. No setup fees. Cancel anytime.</div>
+          <div class="faq-answer-inner">Two plans. Chatbot ($19.99/mo) gives you the AI chat widget, lead capture, FAQ answers, and appointment requests. Agent OS ($99.99/mo) adds the full platform: AI marketing staff, SEO audit suite, social media scheduling, email/SMS campaigns, automation rules, and advanced analytics. No setup fees. Cancel anytime.</div>
         </div>
       </div>
 
@@ -1911,7 +1826,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
           <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
         <div class="faq-answer" id="faq-a5" role="region">
-          <div class="faq-answer-inner">Absolutely. Most of our partners start with Foundation or Growth and upgrade within a few months once they see results. We'll migrate everything seamlessly with no downtime and no lost data.</div>
+          <div class="faq-answer-inner">Absolutely. Most partners start with Chatbot and upgrade to Agent OS within a few months once they see results. We migrate everything seamlessly with no downtime and no lost data.</div>
         </div>
       </div>
 
@@ -2099,10 +2014,10 @@ button { font-family: inherit; cursor: pointer; border: none; }
       // Update comparison line based on magnitude
       var comparisonText;
       if (monthly < 200) {
-        comparisonText = 'AgentNexLiFy Starter is <strong>$99/mo</strong> &mdash; recover that loss in less than a month.';
+        comparisonText = 'AgentNexLiFy Chatbot is <strong>$19.99/mo</strong> -- recover that loss in less than a month.';
       } else {
-        var multiplier = (monthly / 99).toFixed(0);
-        comparisonText = 'AgentNexLiFy Starter is <strong>$99/mo</strong> &mdash; that\'s a <strong>' + multiplier + 'x return</strong> if it catches even one job.';
+        var multiplier = (monthly / 19.99).toFixed(0);
+        comparisonText = 'AgentNexLiFy Chatbot is <strong>$19.99/mo</strong> -- that\'s a <strong>' + multiplier + 'x return</strong> if it catches even one job.';
       }
       comparison.innerHTML = comparisonText;
     }

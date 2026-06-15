@@ -123,17 +123,20 @@ def test_ai_usage_status_shapes_and_thresholds(monkeypatch):
         usage=[{"input_tokens": 900, "output_tokens": 200,
                 "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0}],
     )
+    # 2026-06-15 repricing: the usage surface is now a customer-facing METER
+    # (units + percent, no raw tokens / no dollars). 1 unit = 1000 tokens.
     out = guard.get_ai_usage_status(db, "t1")
-    assert out["total_tokens"] == 1100
-    assert out["alert_reached"] is True
-    assert out["hard_limit_reached"] is False
+    assert out["used_units"] == 1  # 1100 tokens -> 1 unit
+    assert out["limit_units"] == 2  # 2000-token hard limit -> 2 units
+    assert out["alert_reached"] is True  # 1100 >= 1000 alert threshold
+    assert out["hard_limit_reached"] is False  # 1100 < 2000 hard limit
 
     class _Boom:
         def table(self, _):
             raise RuntimeError("down")
 
     safe = guard.get_ai_usage_status(_Boom(), "t1")
-    assert safe["hard_limit_reached"] is False and safe["total_tokens"] == 0
+    assert safe["hard_limit_reached"] is False and safe["used_units"] == 0
 
 
 def test_thin_knowledge_emits_gap_nudge():

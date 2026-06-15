@@ -5,8 +5,8 @@ turn entry points check the agent-run cap before scheduling a run; counters
 are incremented as messages are posted and agent runs complete.
 
 Caps are plan-tier aware: ``tenants.plan`` resolves through PLAN_AGENT_RUN_CAPS
-(plan names per CLAUDE.md: free / growth / autopilot / professional /
-enterprise). Unknown or unreadable plans fall back to DEFAULT_AGENT_RUN_CAP.
+(two purchasable plans: chatbot / agent_os; free = lapsed state).
+Unknown or unreadable plans fall back to DEFAULT_AGENT_RUN_CAP.
 """
 
 import logging
@@ -19,14 +19,14 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_AGENT_RUN_CAP = 100
 
-# Monthly agent-run allowance by plan tier. Conservative starting points —
-# tune from os_tenant_usage telemetry once real tenants run the engine.
+# Monthly agent-run allowance by plan tier (2026-06-15 repricing).
+# free     = lapsed/no-active-subscription state — minimal cap.
+# chatbot  = widget/chatbot features only.
+# agent_os = full platform (Agent OS + marketing + everything).
 PLAN_AGENT_RUN_CAPS = {
     "free": 25,
-    "growth": 200,
-    "autopilot": 500,
-    "professional": 1500,
-    "enterprise": 10000,
+    "chatbot": 100,
+    "agent_os": 2000,
 }
 
 

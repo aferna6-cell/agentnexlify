@@ -2,45 +2,26 @@
 import { useState } from "react";
 import { completeOnboarding, checkoutForWizard, buildWizardPayload } from "../../utils/api/onboarding";
 
-// Plan keys map to Stripe via PLAN_PRICES on the backend. Display names and
-// prices must match the public pricing page: Free / Starter $99 (growth) /
-// Growth $150 (autopilot) / Professional $250. Enterprise ($899) is sales-led.
+// Plan keys map to Stripe via PLAN_PRICES on the backend. Two plans only:
+// Chatbot $19.99 (chatbot) / Full Agent OS $99.99 (agent_os). No free tier.
 const PLANS = [
   {
-    key: "free",
-    name: "Free",
-    price: "$0/mo",
-    color: "#64748b",
-    features: ["Your AI staff in Agent OS", "AI chat widget", "Up to 50 conversations/mo", "Basic lead capture"],
-    cta: "Continue Free",
-    highlight: false,
-  },
-  {
-    key: "growth",
-    name: "Starter",
-    price: "$99/mo",
+    key: "chatbot",
+    name: "Chatbot",
+    price: "$19.99/mo",
     color: "#6366f1",
-    features: ["7-day free trial", "Unlimited conversations", "CRM & lead management", "Email sequences"],
-    cta: "Start Starter",
+    features: ["AI chat widget", "Lead capture", "FAQ knowledge base", "Appointment booking"],
+    cta: "Start Chatbot",
     highlight: false,
   },
   {
-    key: "autopilot",
-    name: "Growth",
-    price: "$150/mo",
+    key: "agent_os",
+    name: "Full Agent OS",
+    price: "$99.99/mo",
     color: "#8b5cf6",
-    features: ["Everything in Starter", "Marketing campaigns", "Review requests", "Automated follow-ups"],
-    cta: "Start Growth",
+    features: ["Everything in Chatbot", "Your AI staff in Agent OS", "Marketing, SEO & campaigns", "Automations & follow-ups"],
+    cta: "Start Agent OS",
     highlight: true,
-  },
-  {
-    key: "professional",
-    name: "Professional",
-    price: "$250/mo",
-    color: "#0ea5e9",
-    features: ["Everything in Growth", "AI answering service", "Priority support", "White-label options"],
-    cta: "Start Professional",
-    highlight: false,
   },
 ];
 
@@ -55,12 +36,7 @@ export default function WizardStepPlan({ wizardData, onNext, onBack, token, tena
       // Always persist wizard data first
       await completeOnboarding(tenantId, token, buildWizardPayload(wizardData));
 
-      if (plan === "free") {
-        onNext({ chosen_plan: "free" });
-        return;
-      }
-
-      // Paid plan - redirect to Stripe Checkout
+      // Both plans are paid - redirect to Stripe Checkout
       const res = await checkoutForWizard(token, plan);
       if (res.checkout_url) {
         window.location.href = res.checkout_url;
@@ -78,8 +54,7 @@ export default function WizardStepPlan({ wizardData, onNext, onBack, token, tena
     <div>
       <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 8 }}>Choose your plan</h2>
       <p style={{ color: "rgba(255,255,255,0.5)", marginBottom: 32, fontSize: "0.9rem" }}>
-        Start free, or try Starter free for 7 days before billing starts.
-        Need Enterprise? <a href="/contact" style={{ color: "#a5b4fc" }}>Talk to us</a>.
+        Pick the plan that fits. Need something custom? <a href="/contact" style={{ color: "#a5b4fc" }}>Talk to us</a>.
       </p>
 
       {error && <div style={{ background: "rgba(220,38,38,0.1)", border: "1px solid rgba(220,38,38,0.3)", borderRadius: 10, padding: 14, marginBottom: 20, color: "#f87171", fontSize: "0.9rem" }}>{error}</div>}
