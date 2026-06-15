@@ -36,7 +36,7 @@ function makeKeyList(overrides = []) {
       health: "green",
       detail: "Verified",
       last_verified_at: "2026-06-10T12:00:00Z",
-      masked_key: "sk_live_****abcd",
+      masked_key: "sk_l••••abcd",
     },
     {
       provider: "twilio",
@@ -96,7 +96,7 @@ describe("IntegrationsKeysPage", () => {
 
     await screen.findByText("Stripe");
 
-    expect(screen.getByText("sk_live_****abcd")).toBeInTheDocument();
+    expect(screen.getByText("sk_l••••abcd")).toBeInTheDocument();
     expect(screen.getByText("AC****1234")).toBeInTheDocument();
     expect(screen.getByText("re_****5678")).toBeInTheDocument();
 
