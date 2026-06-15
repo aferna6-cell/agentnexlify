@@ -1,5 +1,5 @@
 /*
- * AgentNexLiFy support widget — for the marketing site (agentnexlify.com).
+ * AgentNexLiFy support widget - for the marketing site (agentnexlify.com).
  *
  * A self-contained support chatbot: visitors ask product questions and report
  * issues. Conversations are emailed to the platform owner (new-chat heads-up,
@@ -227,7 +227,7 @@
         reportMsg.value = "";
         addMsg(
           (data && data.message) ||
-            "Thanks — your report is on its way. We'll email you back.",
+            "Thanks - your report is on its way. We'll email you back.",
           "bot"
         );
       })
