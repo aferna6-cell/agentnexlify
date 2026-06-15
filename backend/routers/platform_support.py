@@ -14,8 +14,11 @@ These are platform-level (not tenant-scoped) — the operator's own support inbo
 All Claude/email work is best-effort and never 500s the visitor.
 """
 
+import hashlib
+import hmac
 import html
 import logging
+import secrets
 from datetime import datetime, timezone
 from typing import Any
 
@@ -34,6 +37,13 @@ router = APIRouter(prefix="/api/v1/platform-support", tags=["platform-support"])
 
 _MAX_CONTENT = 4000
 _HISTORY_LIMIT = 20
+# Per-session message cap — bounds Claude cost/abuse on this public, anonymous
+# endpoint (defense-in-depth alongside the per-IP rate limit).
+_MAX_SESSION_MESSAGES = 40
+_CAP_REPLY = (
+    "This chat has reached its message limit. Email help@agentnexlify.com and "
+    "the team will pick it up from here."
+)
 
 _FALLBACK_REPLY = (
     "Sorry — I'm having trouble right now. Email help@agentnexlify.com or use "
@@ -68,6 +78,35 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+# --- session tokens ----------------------------------------------------------
+# Sessions are server-issued and HMAC-signed so a caller cannot guess or forge
+# another visitor's session_id (read their transcript, inject into their Claude
+# context, or attach a report). The signed token is opaque to the client; the
+# inner id is what we key DB rows on.
+
+
+def _sign(session_id: str) -> str:
+    return hmac.new(
+        settings.api_secret_key.encode(), session_id.encode(), hashlib.sha256
+    ).hexdigest()[:32]
+
+
+def _issue_session() -> tuple[str, str]:
+    """Return (signed_token, inner_session_id)."""
+    sid = secrets.token_hex(16)
+    return f"{sid}.{_sign(sid)}", sid
+
+
+def _resolve_session(token: str | None) -> str | None:
+    """Return the inner session id for a valid signed token, else None."""
+    if not token or "." not in token:
+        return None
+    sid, _, sig = token.rpartition(".")
+    if sid and hmac.compare_digest(sig, _sign(sid)):
+        return sid
+    return None
+
+
 def _build_transcript(messages: list[dict[str, Any]]) -> str:
     lines = []
     for m in messages:
@@ -89,6 +128,8 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+    # Signed session token the client must echo on subsequent calls.
+    session_id: str
 
 
 class ReportRequest(BaseModel):
@@ -105,6 +146,7 @@ class EndRequest(BaseModel):
 class AckResponse(BaseModel):
     ok: bool
     message: str = ""
+    session_id: str = ""
 
 
 # --- AI reply ----------------------------------------------------------------
@@ -250,12 +292,17 @@ async def _email_transcript_once(session_id: str) -> None:
 async def platform_support_chat(
     payload: ChatRequest, request: Request, background_tasks: BackgroundTasks
 ):
-    session_id = (payload.session_id or "").strip()
     message = (payload.message or "").strip()
-    if not session_id:
-        raise HTTPException(status_code=400, detail="session_id required")
     if not message:
         raise HTTPException(status_code=400, detail="message required")
+
+    # Resolve a valid signed token, or issue a fresh server-side session. A
+    # client-supplied value that isn't a valid token starts a new session — it
+    # can never address someone else's.
+    token = payload.session_id or ""
+    session_id = _resolve_session(token)
+    if not session_id:
+        token, session_id = _issue_session()
 
     db = get_service_supabase()
     existing = (
@@ -283,10 +330,6 @@ async def platform_support_chat(
             "session_id", session_id
         ).execute()
 
-    db.table("platform_support_messages").insert(
-        {"session_id": session_id, "role": "user", "content": message[:_MAX_CONTENT]}
-    ).execute()
-
     history = (
         db.table("platform_support_messages")
         .select("role, content")
@@ -297,7 +340,16 @@ async def platform_support_chat(
         .data
         or []
     )
+    user_turns = sum(1 for h in history if h.get("role") == "user")
+    if user_turns >= _MAX_SESSION_MESSAGES:
+        return ChatResponse(reply=_CAP_REPLY, session_id=token)
+
+    db.table("platform_support_messages").insert(
+        {"session_id": session_id, "role": "user", "content": message[:_MAX_CONTENT]}
+    ).execute()
+
     messages = [{"role": h["role"], "content": h["content"]} for h in history]
+    messages.append({"role": "user", "content": message[:_MAX_CONTENT]})
 
     reply = await _generate_reply(messages)
 
@@ -310,7 +362,7 @@ async def platform_support_chat(
             _notify_new_chat, session_id, message, payload.page_url
         )
 
-    return ChatResponse(reply=reply)
+    return ChatResponse(reply=reply, session_id=token)
 
 
 @router.post("/report", response_model=AckResponse)
@@ -318,15 +370,17 @@ async def platform_support_chat(
 async def platform_support_report(
     payload: ReportRequest, request: Request, background_tasks: BackgroundTasks
 ):
-    session_id = (payload.session_id or "").strip()
     message = (payload.message or "").strip()
-    if not session_id:
-        raise HTTPException(status_code=400, detail="session_id required")
     if not message:
         raise HTTPException(status_code=400, detail="message required")
 
+    # A report can arrive before any chat — resolve a valid token or issue one.
+    token = payload.session_id or ""
+    session_id = _resolve_session(token)
+    if not session_id:
+        token, session_id = _issue_session()
+
     db = get_service_supabase()
-    # Ensure a session row exists so the report attaches to a transcript.
     existing = (
         db.table("platform_support_sessions")
         .select("session_id")
@@ -354,6 +408,7 @@ async def platform_support_report(
     return AckResponse(
         ok=True,
         message="Thanks — your report is on its way. We'll email you back.",
+        session_id=token,
     )
 
 
@@ -362,8 +417,8 @@ async def platform_support_report(
 async def platform_support_end(
     payload: EndRequest, request: Request, background_tasks: BackgroundTasks
 ):
-    session_id = (payload.session_id or "").strip()
-    if not session_id:
-        raise HTTPException(status_code=400, detail="session_id required")
-    background_tasks.add_task(_email_transcript_once, session_id)
+    # Only act on a valid signed token — a forged/guessed id is a no-op.
+    session_id = _resolve_session(payload.session_id)
+    if session_id:
+        background_tasks.add_task(_email_transcript_once, session_id)
     return AckResponse(ok=True)

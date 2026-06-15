@@ -37,6 +37,47 @@ def _db(table_rows):
     return db
 
 
+def test_session_token_roundtrip_and_tamper():
+    token, sid = ps._issue_session()
+    assert ps._resolve_session(token) == sid
+    assert ps._resolve_session(token[:-1] + ("0" if token[-1] != "0" else "1")) is None
+    assert ps._resolve_session("attacker-guessed-id") is None
+    assert ps._resolve_session("") is None
+    assert ps._resolve_session(None) is None
+
+
+def test_chat_caps_session_messages(client):
+    forty = [
+        {"role": "user", "content": f"m{i}"} for i in range(ps._MAX_SESSION_MESSAGES)
+    ]
+    db = _db(
+        {
+            "platform_support_sessions": [{"session_id": "x"}],
+            "platform_support_messages": forty,
+        }
+    )
+    claude = AsyncMock()
+    token, _ = ps._issue_session()
+    with patch.object(ps, "get_service_supabase", return_value=db), patch.object(
+        ps, "call_claude_messages", claude
+    ):
+        resp = client.post(
+            "/api/v1/platform-support/chat",
+            json={"session_id": token, "message": "one more"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["reply"] == ps._CAP_REPLY
+    claude.assert_not_called()  # cap reached -> no Claude spend
+
+
+def test_end_ignores_invalid_token(client):
+    resp = client.post(
+        "/api/v1/platform-support/end", json={"session_id": "forged-id"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+
+
 @pytest.mark.asyncio
 async def test_generate_reply_uses_claude_text():
     fake = AsyncMock(return_value=MagicMock(text="Here is help."))
