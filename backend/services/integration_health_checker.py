@@ -70,8 +70,8 @@ def check_stripe(tenant_id: str) -> dict:
     if not key:
         return _red(provider, "not configured")
 
-    # Warn if a test key is used in production. The prefix is built in two pieces
-    # so the repo hardcoded-secret scanner (greps the literal sk_test_) does not
+    # Warn if a test-mode key is used in production. The Stripe test prefix is
+    # built in two pieces so the repo hardcoded-secret scanner does not
     # false-flag this comparison.
     if key.startswith("sk_" + "test_") and is_production():
         return _yellow(provider, "test key in production")

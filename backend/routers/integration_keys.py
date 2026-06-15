@@ -21,7 +21,6 @@ from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.models.integration_key import (
     IntegrationsHealthResponse,
-    MaskedKeyResponse,
     ProviderHealth,
     SaveIntegrationKeyRequest,
     SaveKeyResult,
@@ -134,7 +133,6 @@ async def list_keys(
         provider = row.get("provider", "")
         # Decrypt for masking — safe because mask_key never logs the plaintext
         masked = ""
-        health_signal = "red"
         try:
             plaintext = load_integration_key(tenant_id, provider)
             if plaintext:

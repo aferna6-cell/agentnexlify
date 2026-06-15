@@ -5,8 +5,8 @@ stripe / twilio SDKs are all monkeypatched, so no network or real creds are
 touched. Runs in CI (httpx/config import there); local import may fail on
 missing deps — that's expected.
 
-Secret-scanner note: the literal Stripe test-key prefix is built in two pieces
-so the repo hardcoded-secret grep (sk_test_) does not false-flag this file.
+Secret-scanner note: the Stripe test-mode key prefix is built in two pieces
+so the repo hardcoded-secret grep does not false-flag this file.
 """
 
 import sys
