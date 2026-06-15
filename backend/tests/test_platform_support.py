@@ -113,6 +113,88 @@ async def test_email_transcript_once_skips_when_no_user_message():
 
 
 @pytest.mark.asyncio
+async def test_notify_new_chat_sends_heads_up():
+    sender = AsyncMock(return_value={"success": True})
+    with patch.object(ps, "send_platform_email", sender):
+        await ps._notify_new_chat("s1", "first message", "/pricing")
+    body = sender.call_args.kwargs["body_html"]
+    assert "first message" in body and "/pricing" in body
+
+
+# --- endpoint-level coverage -------------------------------------------------
+
+
+def test_chat_endpoint_returns_reply(client):
+    db = _db(
+        {
+            "platform_support_sessions": [],
+            "platform_support_messages": [{"role": "user", "content": "hi"}],
+        }
+    )
+    with patch.object(ps, "get_service_supabase", return_value=db), patch.object(
+        ps, "call_claude_messages", AsyncMock(return_value=MagicMock(text="Hello!"))
+    ), patch.object(ps, "send_platform_email", AsyncMock(return_value={"success": True})):
+        resp = client.post(
+            "/api/v1/platform-support/chat",
+            json={"session_id": "s1", "message": "hi", "page_url": "/x"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["reply"] == "Hello!"
+
+
+def test_chat_endpoint_existing_session(client):
+    db = _db(
+        {
+            "platform_support_sessions": [{"session_id": "s2"}],
+            "platform_support_messages": [{"role": "user", "content": "again"}],
+        }
+    )
+    with patch.object(ps, "get_service_supabase", return_value=db), patch.object(
+        ps, "call_claude_messages", AsyncMock(return_value=MagicMock(text="Hi back"))
+    ):
+        resp = client.post(
+            "/api/v1/platform-support/chat",
+            json={"session_id": "s2", "message": "again"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["reply"] == "Hi back"
+
+
+def test_chat_endpoint_rejects_blank_message(client):
+    resp = client.post(
+        "/api/v1/platform-support/chat",
+        json={"session_id": "s1", "message": "   "},
+    )
+    assert resp.status_code == 400
+
+
+def test_report_endpoint_acks(client):
+    db = _db({"platform_support_sessions": [], "platform_support_messages": []})
+    with patch.object(ps, "get_service_supabase", return_value=db), patch.object(
+        ps, "send_platform_email", AsyncMock(return_value={"success": True})
+    ):
+        resp = client.post(
+            "/api/v1/platform-support/report",
+            json={
+                "session_id": "s1",
+                "email": "u@x.com",
+                "message": "broken",
+                "page_url": "/p",
+            },
+        )
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+
+
+def test_end_endpoint_acks(client):
+    resp = client.post(
+        "/api/v1/platform-support/end", json={"session_id": "s1"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+
+
+@pytest.mark.asyncio
 async def test_email_report_attaches_transcript_and_sets_reply_to():
     db = _db(
         {

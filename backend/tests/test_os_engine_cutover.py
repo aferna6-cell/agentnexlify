@@ -237,3 +237,117 @@ async def test_engine_offline_replies_honestly(monkeypatch):
     assert out["agent_runs"] == []
     assert out["assistant_message"]["content"] == os_thread_runner.ENGINE_OFFLINE_REPLY
     assert inserts and inserts[0]["role"] == "assistant"
+
+
+# --- 5. platform-owner alert on fail / abstain ----------------------------------
+
+
+def _patch_engine_turn(monkeypatch, persisted):
+    """Wire process_user_turn so it reaches persist + the alert branch."""
+    from backend.services import os_thread_runner
+
+    monkeypatch.setattr(
+        os_thread_runner.agent_sdk_client, "is_configured", lambda: True
+    )
+    monkeypatch.setattr(
+        os_thread_runner.agent_os_bridge,
+        "assemble_shared_context",
+        lambda db, cid: {"businessProfile": {"businessName": "Biz"}},
+    )
+    monkeypatch.setattr(
+        os_thread_runner.os_kb_feed, "tenant_kb_entries", lambda *a, **k: []
+    )
+
+    async def _graph_kb(*a, **k):
+        return []
+
+    monkeypatch.setattr(os_thread_runner.os_graph_memory, "graph_kb_entries", _graph_kb)
+
+    async def _inline(fn, *a, **k):
+        return fn(*a, **k)
+
+    monkeypatch.setattr(os_thread_runner, "run_in_threadpool", _inline)
+    monkeypatch.setattr(
+        os_thread_runner.agent_sdk_client,
+        "orchestrate_sync",
+        lambda *a, **k: {"result": {}, "record": {}},
+    )
+    monkeypatch.setattr(
+        os_thread_runner.agent_os_bridge,
+        "persist_orchestration",
+        lambda db, cid, tid, out: persisted,
+    )
+
+    async def _mirror(*a, **k):
+        return None
+
+    monkeypatch.setattr(os_thread_runner, "_mirror_to_channel", _mirror)
+
+    async def _accum(*a, **k):
+        return None
+
+    monkeypatch.setattr(os_thread_runner.os_graph_memory, "accumulate_background", _accum)
+
+    calls = []
+
+    async def _notify(db, cid, tid, reason, business_name=None):
+        calls.append((cid, tid, reason, business_name))
+        return True
+
+    monkeypatch.setattr(
+        os_thread_runner.os_failure_notify, "notify_agent_failure", _notify
+    )
+    return os_thread_runner, calls
+
+
+@pytest.mark.asyncio
+async def test_failed_run_alerts_owner(monkeypatch):
+    runner, calls = _patch_engine_turn(
+        monkeypatch,
+        {
+            "assistant_message": {"content": "Run failed: boom"},
+            "agent_run": {"status": "failed", "id": "r1"},
+            "status": "routed",
+        },
+    )
+    db = _FakeDB({"os_threads": [{"id": "th-1"}]})
+    out = await runner.process_user_turn(
+        db, "t1", "th-1", {"id": "m-1", "content": "quote pls"}, None
+    )
+    assert out["action"] == "delegate"
+    assert calls == [("t1", "th-1", "failed", "Biz")]
+
+
+@pytest.mark.asyncio
+async def test_wishlist_fallback_alerts_owner(monkeypatch):
+    runner, calls = _patch_engine_turn(
+        monkeypatch,
+        {
+            "assistant_message": {"content": "I wasn't sure which department fits."},
+            "agent_run": None,
+            "status": "wishlist_fallback",
+        },
+    )
+    db = _FakeDB({"os_threads": [{"id": "th-2"}]})
+    out = await runner.process_user_turn(
+        db, "t1", "th-2", {"id": "m-2", "content": "do a thing"}, None
+    )
+    assert out["action"] == "answer"
+    assert calls == [("t1", "th-2", "wishlist_fallback", "Biz")]
+
+
+@pytest.mark.asyncio
+async def test_succeeded_run_does_not_alert(monkeypatch):
+    runner, calls = _patch_engine_turn(
+        monkeypatch,
+        {
+            "assistant_message": {"content": "Done."},
+            "agent_run": {"status": "succeeded", "id": "r3"},
+            "status": "routed",
+        },
+    )
+    db = _FakeDB({"os_threads": [{"id": "th-3"}]})
+    await runner.process_user_turn(
+        db, "t1", "th-3", {"id": "m-3", "content": "all good"}, None
+    )
+    assert calls == []  # routine success never alerts
