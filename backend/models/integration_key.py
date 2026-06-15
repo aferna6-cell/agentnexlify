@@ -1,8 +1,10 @@
-"""Pydantic models for the integration key vault (onboarding-v2, GH #131).
+"""Pydantic models for the integration key vault (onboarding-v2, GH #131, #132).
 
 These map to FastAPI request/response bodies, so PEP 563 deferred annotations
 must stay off (they break Pydantic body resolution -> 422s).
 """
+
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -21,3 +23,31 @@ class MaskedKeyResponse(BaseModel):
     provider: str
     masked: str = Field(..., description="e.g. apikey__••••1234")
     enc_key_version: int = 1
+
+
+# ── GH #132 — health checker models ─────────────────────────────────────────
+
+
+class ProviderHealth(BaseModel):
+    """Per-provider health signal returned by the health checker."""
+
+    provider: str
+    health: Literal["green", "yellow", "red"]
+    detail: str
+    last_verified_at: Optional[str] = None
+    masked_key: Optional[str] = None
+
+
+class SaveKeyResult(BaseModel):
+    """Response after saving an integration key (includes inline verify result)."""
+
+    saved: bool
+    verified: str = Field(..., description="green | yellow | red")
+    masked: str
+
+
+class IntegrationsHealthResponse(BaseModel):
+    """Aggregate health response for all configured providers."""
+
+    providers: List[ProviderHealth]
+    overall: Literal["healthy", "needs_attention", "not_ready"]

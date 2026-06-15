@@ -115,6 +115,7 @@ from backend.routers import (
     os_files,
     push_subscriptions,
     widget_health,
+    integration_keys,
 )
 
 # --- JSON logging ---
@@ -898,6 +899,7 @@ app.include_router(os_sync_router.router)
 app.include_router(push_subscriptions.router)
 app.include_router(pricing_experiment.router)
 app.include_router(widget_health.router)
+app.include_router(integration_keys.router)
 
 
 # --- Static files (widget) ---
