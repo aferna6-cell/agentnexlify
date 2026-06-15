@@ -14,7 +14,7 @@ from fastapi import APIRouter, BackgroundTasks, Request
 
 from backend.config import settings
 from backend.limiter import limiter
-from backend.middleware.rate_limit import get_client_id_key, get_tier_limit
+from backend.middleware.rate_limit import get_client_id_key
 from backend.models.database import get_service_supabase
 from backend.models.schemas import WidgetChatRequest, WidgetChatResponse
 from backend.services.activity import log_activity
@@ -35,22 +35,12 @@ from backend.routers.widget_chat_helpers import (
     MODEL,
     MAX_TOKENS,
     TEMPERATURE,
-    _CHAT_CACHE_TTL,
-    _build_flow_instructions,
-    _build_intent_window,
-    _build_system_prompt,
-    _compact_messages_for_llm,
     _check_origin,
-    _get_cached,
     _get_or_create_conversation,
     _get_tenant,
     _get_widget_config,
     _load_chat_history,
-    _needs_bid_context,
-    _needs_job_context,
-    _record_response_metric,
     _save_chat_messages,
-    _set_cache,
 )
 from backend.routers.widget_lead_helpers import (
     _capture_leads_from_session,
@@ -67,6 +57,10 @@ from backend.routers.widget_booking import (
     _strip_bid_request_from_response,
     _process_bid_request_from_chat,
 )
+from backend.routers.widget_rate_limit import _chat_rate_limit
+from backend.routers.widget_context_loader import load_chat_context
+from backend.routers.widget_shortcircuit import check_shortcircuit
+from backend.routers.widget_content_mode import detect_and_handle_content_mode
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/widget", tags=["widget"])
@@ -285,28 +279,6 @@ async def _run_support_fallback(
     return assistant_text, True
 
 
-def _chat_rate_limit(key: str) -> str:
-    """Dynamic per-tenant rate limit based on plan tier.
-
-    slowapi calls this with the result of key_function (the api_key string)
-    when the limit provider's signature includes a `key` parameter
-    (slowapi/wrappers.py:86-92). Looks up tenant plan via api_key, falls
-    back to free-tier (30/minute) if the plan cannot be resolved.
-    """
-    try:
-        from backend.routers.widget_chat_helpers import _get_widget_config, _get_tenant
-
-        widget = _get_widget_config(key)
-        tenant = _get_tenant(widget["tenant_id"])
-        plan = tenant.get("plan", "free") or "free"
-    except Exception as exc:
-        logger.warning(
-            "_chat_rate_limit fallback to free tier for key=%s: %s", key, exc
-        )
-        plan = "free"
-    return get_tier_limit(plan)
-
-
 @router.post("/chat", response_model=WidgetChatResponse)
 @limiter.limit(_chat_rate_limit, key_func=get_client_id_key)
 async def widget_chat(
@@ -458,87 +430,16 @@ async def widget_chat(
         )
 
     # 4c. Content mode detection — repurpose content instead of chatting
-    _content_mode_keywords = [
-        "repurpose",
-        "content mode",
-        "turn this into",
-        "create content from",
-    ]
-    _yt_pattern = re.compile(r"(?:youtube\.com/watch|youtu\.be/)")
-    _msg_lower = req.message.lower()
-    _content_mode = req.content_mode
-    if not _content_mode:
-        for _kw in _content_mode_keywords:
-            if _kw in _msg_lower:
-                _content_mode = True
-                break
-    if not _content_mode and _yt_pattern.search(req.message):
-        _content_mode = True
-    if not _content_mode and len(req.message) > 500 and "?" not in req.message:
-        _content_mode = True
-
-    if _content_mode:
-        plan = tenant.get("plan") or "free"
-        if plan not in ("professional", "enterprise"):
-            _save_chat_messages(tenant["id"], req.session_id, req.message, None)
-            return WidgetChatResponse(
-                response="Content repurposing is available on Professional and Enterprise plans. Upgrade to unlock this feature!",
-                session_id=req.session_id,
-                lead_captured=False,
-                show_watermark=widget.get("show_watermark", True),
-            )
-        # Determine source type
-        if _yt_pattern.search(req.message):
-            _src_type = "youtube"
-        elif req.message.strip().startswith(("http://", "https://")):
-            _src_type = "url"
-        else:
-            _src_type = "text"
-        # Create repurpose job
-        try:
-            from backend.services.content_repurposer import (
-                extract_source,
-                repurpose as do_repurpose,
-            )
-
-            source = await extract_source(_src_type, req.message.strip())
-            outputs = await do_repurpose(
-                source_content=source["content"],
-                title=source["title"],
-                tenant_id=tenant["id"],
-                tone="professional",
-            )
-            db.table("repurpose_jobs").insert(
-                {
-                    "tenant_id": tenant["id"],
-                    "source_type": _src_type,
-                    "source_url": source["source_url"],
-                    "source_content": source["content"],
-                    "source_title": source["title"],
-                    "outputs": outputs,
-                    "status": "completed",
-                    "created_via": "widget",
-                }
-            ).execute()
-            resp_text = (
-                f"Done! I've repurposed \"{source['title']}\" into:\n\n"
-                "- X/Twitter thread (7-10 tweets)\n"
-                "- LinkedIn carousel\n"
-                "- Email sequence (3-5 emails)\n"
-                "- TikTok/Reels scripts\n"
-                "- Social posts (Facebook, Instagram, Google Business)\n\n"
-                "View and edit your results in the Content Repurpose page on your dashboard."
-            )
-        except Exception as e:
-            logger.error("Content mode repurpose failed: %s", e, exc_info=True)
-            resp_text = "Sorry, I had trouble repurposing that content. Please try again or paste the text directly."
-        _save_chat_messages(tenant["id"], req.session_id, req.message, resp_text)
-        return WidgetChatResponse(
-            response=resp_text,
-            session_id=req.session_id,
-            lead_captured=False,
-            show_watermark=widget.get("show_watermark", True),
-        )
+    _content_mode_response = await detect_and_handle_content_mode(
+        tenant=tenant,
+        widget=widget,
+        session_id=req.session_id,
+        message=req.message,
+        content_mode_flag=req.content_mode,
+        db=db,
+    )
+    if _content_mode_response is not None:
+        return _content_mode_response
 
     # 5. Load message history from chat_messages table (last 20 messages)
     messages = _load_chat_history(tenant["id"], req.session_id)
@@ -549,372 +450,43 @@ async def widget_chat(
         messages[0]["role"] if messages else "NONE",
     )
 
-    # 5b. Spam short-circuit — skip Claude API for junk and repeat greetings
-    _stripped = req.message.strip()
-    _normalized = re.sub(r"[^a-z]", "", _stripped.lower())
+    # 5b. Watermark flag (needed by short-circuit guards)
     _is_free = (tenant.get("plan") or "free") == "free"
     _watermark = True if _is_free else widget.get("show_watermark", True)
 
-    # Single-character or empty messages - never worth a Claude API call
-    if len(_normalized) <= 1 and len(messages) >= 2:
-        _canned_junk = "Could you type out your question? I'm happy to help!"
-        _save_chat_messages(tenant["id"], req.session_id, req.message, _canned_junk)
-        logger.info(
-            "widget_chat: junk_shortcircuit=True session=%s msg=%r (skipped Claude API)",
-            req.session_id,
-            _stripped,
-        )
-        return WidgetChatResponse(
-            response=_canned_junk,
-            session_id=req.session_id,
-            lead_captured=False,
-            show_watermark=_watermark,
-            handoff=False,
-        )
-
-    # Repeat greeting detection
-    _GREETINGS = {"hi", "hey", "hello", "yo", "sup", "hiya", "howdy", "hii", "helo"}
-    if _normalized in _GREETINGS:
-        if len(messages) == 0:
-            _biz_name = tenant.get("business_name") or "us"
-            _opening = widget.get("greeting_message") or (
-                f"Hi! Thanks for reaching out to {_biz_name}. How can I help today?"
-            )
-            _save_chat_messages(tenant["id"], req.session_id, req.message, _opening)
-            logger.info(
-                "widget_chat: greeting_shortcircuit=True session=%s first_turn=True (skipped Claude API)",
-                req.session_id,
-            )
-            return WidgetChatResponse(
-                response=_opening,
-                session_id=req.session_id,
-                lead_captured=False,
-                show_watermark=_watermark,
-                handoff=False,
-            )
-
-        # Session already has at least one exchange - this is a repeat greeting
-        _prior_user_greeted = any(
-            m["role"] == "user"
-            and re.sub(r"[^a-z]", "", m.get("content", "").strip().lower())
-            in _GREETINGS
-            for m in messages
-        )
-        if _prior_user_greeted:
-            _biz_name = tenant.get("business_name") or "us"
-            _canned = (
-                f"I'm still here! Is there something specific I can help you with? "
-                f"I can answer questions about {_biz_name} - pricing, services, how to get started, and more."
-            )
-            _save_chat_messages(tenant["id"], req.session_id, req.message, _canned)
-            logger.info(
-                "widget_chat: greeting_shortcircuit=True session=%s (skipped Claude API)",
-                req.session_id,
-            )
-            return WidgetChatResponse(
-                response=_canned,
-                session_id=req.session_id,
-                lead_captured=False,
-                show_watermark=_watermark,
-                handoff=False,
-            )
-
-    # 5c. Null-state guard — if bot has NO grounding at all, show a graceful fallback.
-    # Grounding sources: knowledge_base, custom_instructions, FAQs, or business_type
-    # (business_type alone gives the bot enough vertical context to answer generically).
-    _has_kb = bool((widget.get("knowledge_base") or "").strip())
-    _has_ci = bool((widget.get("custom_instructions") or "").strip())
-    _has_bt = (
-        bool((tenant.get("business_type") or "").strip())
-        and (tenant.get("business_type") or "").lower() != "other"
+    # 5c. Short-circuit guards — junk, repeat greetings, null-state
+    _shortcircuit = check_shortcircuit(
+        tenant=tenant,
+        widget=widget,
+        session_id=req.session_id,
+        message=req.message,
+        messages=messages,
+        watermark=_watermark,
     )
-    if not _has_kb and not _has_ci and not _has_bt and len(messages) == 0:
-        # Final check: FAQs count as grounding too. Probe cheaply.
-        _faq_probe_key = f"faq_count:{tenant['id']}"
-        _faq_count = _get_cached(_faq_probe_key, _CHAT_CACHE_TTL)
-        if _faq_count is None:
-            try:
-                _faq_probe = (
-                    get_service_supabase()
-                    .table("faq_entries")
-                    .select("id", count="exact")
-                    .eq("tenant_id", tenant["id"])
-                    .eq("is_active", True)
-                    .limit(1)
-                    .execute()
-                )
-                _faq_count = int(_faq_probe.count or 0)
-            except Exception:
-                logger.warning(
-                    "faq count probe failed for tenant %s", tenant["id"], exc_info=True
-                )
-                _faq_count = 0
-            _set_cache(_faq_probe_key, _faq_count)
+    if _shortcircuit is not None:
+        return _shortcircuit
 
-        if _faq_count == 0:
-            _biz = tenant.get("business_name") or "our team"
-            _phone = tenant.get("phone") or ""
-            _phone_msg = f" You can also reach us at {_phone}." if _phone else ""
-            _setup_msg = (
-                f"Thanks for reaching out! Our chat assistant is still being set up. "
-                f"In the meantime, please contact {_biz} directly for assistance.{_phone_msg}"
-            )
-            _save_chat_messages(tenant["id"], req.session_id, req.message, _setup_msg)
-            logger.info(
-                "widget_chat: null_state_guard session=%s tenant=%s (no KB, CI, business_type, or FAQs)",
-                req.session_id,
-                tenant["id"],
-            )
-            return WidgetChatResponse(
-                response=_setup_msg,
-                session_id=req.session_id,
-                lead_captured=False,
-                show_watermark=_watermark,
-                handoff=False,
-            )
-
-    # 6. Build system prompt with compact, intent-aware context.
-    tid = tenant["id"]
-    db = get_service_supabase()
-    context_started = perf_counter()
-    intent_window = _build_intent_window(req.message, messages)
-    needs_job_context = _needs_job_context(intent_window)
-    needs_bid_context = _needs_bid_context(intent_window)
-    history_for_model = _compact_messages_for_llm(messages)
-
-    faq_data = _get_cached(f"faq:{tid}", _CHAT_CACHE_TTL)
-    if faq_data is None:
-        try:
-            faq_result = (
-                db.table("faq_entries")
-                .select("question, answer")
-                .eq("tenant_id", tid)
-                .eq("is_active", True)
-                .execute()
-            )
-            faq_data = faq_result.data or []
-        except Exception:
-            logger.warning("faq_entries query failed for tenant %s", tid, exc_info=True)
-            faq_data = []
-        _set_cache(f"faq:{tid}", faq_data)
-
-    bh_cache_key = f"bh:{tid}"
-    bh_data = _get_cached(bh_cache_key, _CHAT_CACHE_TTL)
-    if bh_data is None:
-        try:
-            bh_result = (
-                db.table("business_hours")
-                .select("timezone, hours")
-                .eq("tenant_id", tid)
-                .limit(1)
-                .execute()
-            )
-            bh_data = bh_result.data[0] if bh_result.data else False
-        except Exception:
-            logger.warning(
-                "business_hours query failed for tenant %s", tid, exc_info=True
-            )
-            bh_data = False
-        _set_cache(bh_cache_key, bh_data)
-    if bh_data is False:
-        bh_data = None
-
-    corrections = _get_cached(f"corr:{tid}", _CHAT_CACHE_TTL)
-    if corrections is None:
-        try:
-            fb_result = (
-                db.table("ai_feedback")
-                .select("correction")
-                .eq("tenant_id", tid)
-                .eq("rating", "thumbs_down")
-                .filter("correction", "not.is", "null")
-                .order("created_at", desc=True)
-                .limit(20)
-                .execute()
-            )
-            corrections = fb_result.data or []
-        except Exception:
-            logger.warning("ai_feedback query failed for tenant %s", tid, exc_info=True)
-            corrections = []
-        _set_cache(f"corr:{tid}", corrections)
-
-    website_content = None
-    if not widget.get("knowledge_base"):
-        website_content = _get_cached(f"wsc:{tid}", _CHAT_CACHE_TTL)
-        if website_content is None:
-            try:
-                from backend.services.website_crawler import get_crawled_content
-
-                website_content = get_crawled_content(tid) or False
-            except Exception:
-                logger.warning(
-                    "website_content load failed for tenant %s", tid, exc_info=True
-                )
-                website_content = False
-            _set_cache(f"wsc:{tid}", website_content)
-        if website_content is False:
-            website_content = None
-
-    menu_items = None
-    if (tenant.get("business_type") or "").lower() == "restaurant":
-        try:
-            menu_result = (
-                db.table("menu_items")
-                .select("name, description, price, category, available")
-                .eq("tenant_id", tenant["id"])
-                .order("category")
-                .order("sort_order")
-                .execute()
-            )
-            if menu_result.data:
-                menu_items = menu_result.data
-        except Exception:
-            logger.warning(
-                "menu_items query failed for tenant %s", tenant["id"], exc_info=True
-            )
-
-    job_listings = None
-    if needs_job_context:
-        try:
-            jobs_result = (
-                db.table("jobs")
-                .select("title, pay_range, schedule, location")
-                .eq("tenant_id", tenant["id"])
-                .eq("is_active", True)
-                .limit(20)
-                .execute()
-            )
-            if jobs_result.data:
-                job_listings = jobs_result.data
-        except Exception:
-            logger.warning(
-                "jobs query failed for tenant %s", tenant["id"], exc_info=True
-            )
-
-    bid_templates = None
-    if needs_bid_context:
-        bid_templates = _get_cached(f"bidtpl:{tid}", _CHAT_CACHE_TTL)
-        if bid_templates is None:
-            try:
-                bt_result = (
-                    db.table("bid_templates")
-                    .select("name, description")
-                    .eq("tenant_id", tid)
-                    .limit(20)
-                    .execute()
-                )
-                bid_templates = bt_result.data if bt_result.data else []
-            except Exception:
-                logger.warning(
-                    "bid_templates query failed for tenant %s", tid, exc_info=True
-                )
-                bid_templates = []
-            _set_cache(f"bidtpl:{tid}", bid_templates)
-
-    custom_field_defs = []
-    if needs_bid_context:
-        try:
-            cf_result = (
-                db.table("lead_field_definitions")
-                .select("field_name, field_type, options, is_required")
-                .eq("tenant_id", tid)
-                .order("sort_order")
-                .limit(20)
-                .execute()
-            )
-            custom_field_defs = cf_result.data if cf_result.data else []
-        except Exception:
-            logger.debug(
-                "custom field defs query failed for tenant %s", tid, exc_info=True
-            )
-
-    # Load active chat flow
-    active_flow = None
-    active_flow_id = None
-    try:
-        flow_result = (
-            db.table("chat_flows")
-            .select("id, flow_json")
-            .eq("tenant_id", tenant["id"])
-            .eq("is_active", True)
-            .limit(1)
-            .execute()
-        )
-        if flow_result.data:
-            active_flow = flow_result.data[0].get("flow_json")
-            active_flow_id = flow_result.data[0].get("id")
-    except Exception:
-        logger.warning(
-            "chat_flows query failed for tenant %s", tenant["id"], exc_info=True
-        )
-
-    system_prompt = _build_system_prompt(
-        tenant,
-        faq_data,
-        bh_data,
-        corrections,
-        website_content,
-        menu_items,
-        job_listings,
-        bid_templates=bid_templates or None,
-        custom_field_defs=custom_field_defs or None,
-        custom_instructions=widget.get("custom_instructions") or None,
-        knowledge_base=widget.get("knowledge_base") or None,
+    # 6. Load context data and build system prompt
+    ctx = load_chat_context(
+        tenant=tenant,
+        widget=widget,
+        message=req.message,
+        messages=messages,
+        conversation_id=conversation_id,
+        is_new=is_new,
+        session_id=req.session_id,
     )
-
-    # Inject active flow instructions into system prompt
-    if active_flow and active_flow.get("nodes"):
-        flow_instructions = _build_flow_instructions(active_flow)
-        if flow_instructions:
-            flow_chars = resolve_int_setting("widget_prompt_flow_chars", 1500)
-            if len(flow_instructions) > flow_chars:
-                flow_instructions = (
-                    flow_instructions[: flow_chars - 18].rstrip() + "\n[Flow truncated]"
-                )
-            system_prompt += flow_instructions
-
-    prompt_profile = {
-        "history_messages": len(history_for_model),
-        "faq_count": len(faq_data or []),
-        "has_hours": bool(bh_data),
-        "has_corrections": bool(corrections),
-        "has_website": bool(website_content),
-        "has_kb": bool(widget.get("knowledge_base")),
-        "menu_items": len(menu_items or []),
-        "jobs": len(job_listings or []),
-        "bid_templates": len(bid_templates or []),
-        "custom_fields": len(custom_field_defs or []),
-        "has_flow": bool(active_flow_id),
-    }
-    context_duration_ms = int((perf_counter() - context_started) * 1000)
-
-    # Track flow usage in activity_log for new conversations
-    if active_flow_id and is_new:
-        try:
-            log_activity(
-                tenant_id=tenant["id"],
-                activity_type="flow_used",
-                description="Chat flow used in conversation",
-                metadata={
-                    "flow_id": active_flow_id,
-                    "session_id": req.session_id,
-                    "conversation_id": conversation_id,
-                },
-            )
-        except Exception:
-            logger.warning(
-                "Failed to log flow_used for tenant %s flow %s",
-                tenant["id"],
-                active_flow_id,
-                exc_info=True,
-            )
+    history_for_model = ctx.history_for_model
+    system_prompt = ctx.system_prompt
+    context_duration_ms = ctx.context_duration_ms
+    prompt_profile = ctx.prompt_profile
 
     # Use bot_name from widget config in the system prompt
     if widget.get("bot_name"):
         system_prompt = system_prompt.replace("AI Assistant", widget["bot_name"], 1)
 
     # Booking nudge — if online booking is enabled, tell the AI to suggest it
-    if widget.get("booking_enabled") and bh_data:
+    if widget.get("booking_enabled") and ctx.bh_data:
         system_prompt += (
             "\n\nBOOKING: This business has online booking enabled. "
             "When the visitor shows interest in scheduling, mention they can book an appointment "
@@ -1273,6 +845,8 @@ async def widget_chat(
         )
 
     # 14. Response time tracking (first message → first response)
+    from backend.routers.widget_chat_helpers import _record_response_metric
+
     if total_msgs <= 2:  # First exchange — record response time
         background_tasks.add_task(
             _record_response_metric,
