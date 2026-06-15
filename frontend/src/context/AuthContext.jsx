@@ -77,7 +77,12 @@ export function AuthProvider({ children }) {
                 ...prev,
                 plan: me.plan || prev.plan,
                 planStatus: me.plan_status ?? null,
-                payGateExempt: me.pay_gate_exempt ?? false,
+                // Preserve undefined when /me omits the field so RequirePaid
+                // fails open. Coercing to false here would defeat the gate's
+                // "unknown -> don't gate" contract on a partial or failed /me.
+                // Prod /me always returns the real boolean, so real unpaid
+                // tenants still get pay_gate_exempt=false and are gated.
+                payGateExempt: me.pay_gate_exempt,
                 onboardingCompleted: me.onboarding_completed ?? false,
                 referralCode: me.referral_code || null,
               }
