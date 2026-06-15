@@ -1,4 +1,4 @@
-"""Autopilot Onboarding Wizard — complete setup and status endpoints.
+"""Autopilot Onboarding Wizard - complete setup and status endpoints.
 
 POST /api/v1/onboarding/{tenant_id}/complete
   - Updates tenant with business info
@@ -37,6 +37,7 @@ from backend.models.database import get_service_supabase
 from backend.dependencies import require_role
 from backend.services.business_profiles import get_widget_defaults
 from backend.services.llm_runtime import call_claude_messages
+from backend.services.pay_gate import require_active_plan
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ class FaqInput(BaseModel):
 class OnboardingCompleteRequest(BaseModel):
     business_name: str = Field(..., min_length=1, max_length=200)
     business_type: str = Field(..., min_length=1, max_length=50)
-    # city optional since express setup (2026-06-11) — wizard still collects it
+    # city optional since express setup (2026-06-11) - wizard still collects it
     city: str = Field("", max_length=100)
     phone: str | None = Field(None, max_length=30)
     website_url: str | None = Field(None, max_length=500)
@@ -315,6 +316,7 @@ async def complete_onboarding(
     tenant_id: str,
     req: OnboardingCompleteRequest,
     claims: dict = Depends(require_role("owner", "admin")),
+    _gate: dict = Depends(require_active_plan),
 ):
     """Enhanced onboarding endpoint that configures the tenant in one step."""
     _verify_tenant(claims, tenant_id)
@@ -485,7 +487,7 @@ async def complete_onboarding(
                 "is_active": True,
             })
 
-        # Batched (audit 2026-06-10): per-row inserts were N+1 — the batched
+        # Batched (audit 2026-06-10): per-row inserts were N+1 - the batched
         # pattern already used at the wizard-FAQ insert below.
         if faq_entries:
             try:
@@ -725,7 +727,7 @@ Keep it concise. Do not invent facts not supported by the input. Do not add mark
         db.table("widget_configs").update({"knowledge_base": kb_text}).eq("tenant_id", tenant_id).execute()
     except Exception:
         logger.error("Failed to persist knowledge_base for tenant %s", tenant_id, exc_info=True)
-        # Still return the generated text — frontend can retry or proceed without persistence
+        # Still return the generated text - frontend can retry or proceed without persistence
 
     return GenerateKbResponse(knowledge_base=kb_text, generated=True)
 
@@ -1070,7 +1072,7 @@ async def onboarding_status(
 
 
 # ---------------------------------------------------------------------------
-# Industry Pack endpoints — seed turnkey workflow bundles by business_type
+# Industry Pack endpoints - seed turnkey workflow bundles by business_type
 # ---------------------------------------------------------------------------
 
 
@@ -1119,7 +1121,7 @@ async def list_industry_packs(
 ):
     """List all available industry packs with their component counts.
 
-    Not tenant-scoped — packs are global read-only content. Used by the
+    Not tenant-scoped - packs are global read-only content. Used by the
     onboarding wizard to show the user which pack will be applied.
     """
     from backend.services.industry_packs import list_available_packs
@@ -1140,7 +1142,7 @@ async def apply_industry_pack(
     claims: dict = Depends(require_role("owner", "admin")),
 ):
     """Seed a turnkey industry pack (forms, sequences, smart lists, rules,
-    KB seed articles) into the tenant. Idempotent — re-running skips any
+    KB seed articles) into the tenant. Idempotent - re-running skips any
     rows already seeded with the same source tag.
 
     If `business_type` is omitted, uses the tenant's stored business_type.

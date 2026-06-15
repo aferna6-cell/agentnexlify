@@ -8,7 +8,7 @@ import WizardStepAutoKB from "./wizard/WizardStepAutoKB";
 import WizardStepServices from "./wizard/WizardStepServices";
 import WizardStepKnowledgeBase from "./wizard/WizardStepKnowledgeBase";
 import WizardStepCustomize from "./wizard/WizardStepCustomize";
-import WizardStepPlan from "./wizard/WizardStepPlan";
+// WizardStepPlan imported but NOT in the wizard sequence - used by RequirePaid gate instead.
 import WizardStepEmbed from "./wizard/WizardStepEmbed";
 
 // AuthContext user fields:
@@ -16,7 +16,9 @@ import WizardStepEmbed from "./wizard/WizardStepEmbed";
 // Note: widgetApiKey and city are NOT on the JWT â€” steps that need them fetch from the API.
 
 const STORAGE_KEY = "anx_wizard";
-const TOTAL_STEPS = 7;
+// Plan step removed (2026-06-15): payment gate is now at signup, not inside the wizard.
+// Steps: 0=express, 1=business, 2=auto-KB, 3=services, 4=KB, 5=customize, 6=embed
+const TOTAL_STEPS = 6;
 
 function loadState() {
   try {
@@ -112,9 +114,9 @@ export default function OnboardingWizardPage() {
   // Steps 4 and 6 that need the API key will fetch it themselves via the API.
   const apiKey = null;
 
-  // Order (2026-06-11): teach the AI staff (1-4), pick a plan (5), then the
-  // OPTIONAL website-widget steps (6-7). Agent OS is the product; the widget
-  // is one channel, so its steps come last and can be skipped.
+  // Order (2026-06-15): express chooser (0), then teach the AI staff (1-4),
+  // then the OPTIONAL website-widget steps (5-6). Plan step removed - payment
+  // is gated at signup via RequirePaid before the wizard is ever shown.
   const stepComponents = [
     <WizardExpressSetup
       key="0"
@@ -145,16 +147,8 @@ export default function OnboardingWizardPage() {
       token={token}
       tenantId={user.tenantId}
     />,
-    <WizardStepPlan
-      key="5"
-      wizardData={wizardData}
-      onNext={goNext}
-      onBack={goBack}
-      token={token}
-      tenantId={user.tenantId}
-    />,
     <WizardStepCustomize
-      key="6"
+      key="5"
       wizardData={wizardData}
       onNext={goNext}
       onBack={goBack}
@@ -162,7 +156,7 @@ export default function OnboardingWizardPage() {
       tenantId={user?.tenantId}
     />,
     <WizardStepEmbed
-      key="7"
+      key="6"
       wizardData={wizardData}
       token={token}
       tenantId={user?.tenantId}

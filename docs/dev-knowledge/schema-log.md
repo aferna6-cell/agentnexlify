@@ -4,6 +4,20 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 152_pay_gate_exempt.sql (2026-06-15)
+
+**What:** `pay_gate_exempt boolean NOT NULL DEFAULT false` added to `tenants` table.
+
+**Why:** "Can't sign up without paying" feature. New tenants default to `false` (gated). All
+tenants that existed before this migration are grandfathered via `UPDATE tenants SET
+pay_gate_exempt = true` so no existing customer is blocked.
+
+**Column:** `tenants.pay_gate_exempt` — boolean, not null, default false.
+
+**Applied:** Pending — apply via `mcp__supabase__apply_migration` or Supabase SQL editor.
+
+---
+
 ## 150_usage_packs.sql (2026-06-15)
 
 **What:** New table `tenant_usage_packs` for one-time AI usage top-ups purchased via Stripe.

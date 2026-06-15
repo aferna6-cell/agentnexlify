@@ -6,6 +6,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import App from "./components/App";
 import ErrorBoundary from "./components/ErrorBoundary";
+import RequirePaid from "./components/RequirePaid";
 import Home from "./pages/Home";
 import SignupPage from "./pages/SignupPage";
 import "./index.css";
@@ -152,12 +153,14 @@ ReactDOM.createRoot(document.getElementById("root")).render(
                 OnboardingRoute (same as /onboarding): mounting the wizard
                 bare lost the AuthProvider race on cold load - user is null
                 for a tick while the token parses, and the wizard's own
-                redirect bounced logged-in users to /signup. */}
-            <Route path="/setup" element={<AuthProvider><OnboardingRoute /></AuthProvider>} />
+                redirect bounced logged-in users to /signup.
+                RequirePaid: unpaid non-exempt tenants see the plan gate
+                before reaching the wizard. */}
+            <Route path="/setup" element={<AuthProvider><RequirePaid><OnboardingRoute /></RequirePaid></AuthProvider>} />
             {/* /onboarding - onboarding wizard for authenticated users, signup otherwise */}
-            <Route path="/onboarding" element={<AuthProvider><OnboardingRoute /></AuthProvider>} />
+            <Route path="/onboarding" element={<AuthProvider><RequirePaid><OnboardingRoute /></RequirePaid></AuthProvider>} />
             {/* Everything else falls to auth-gated dashboard */}
-            <Route path="*" element={<AuthProvider><App /></AuthProvider>} />
+            <Route path="*" element={<AuthProvider><RequirePaid><App /></RequirePaid></AuthProvider>} />
             </Routes>
             <CookieConsent />
           </Suspense>

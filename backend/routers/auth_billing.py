@@ -1,6 +1,6 @@
 """Billing endpoints under /api/v1/auth/billing/* (JWT-authenticated proxies).
 
-Extracted from backend/routers/auth.py (audit 2026-06-10 H1 — auth.py was a
+Extracted from backend/routers/auth.py (audit 2026-06-10 H1 - auth.py was a
 1,600-line god file holding five concerns). Same URL prefix, same contracts;
 only the module moved. Tests that patch stripe/settings for these endpoints
 patch backend.routers.auth_billing.* now.
@@ -85,9 +85,10 @@ async def billing_checkout(
 
     source = body.get("source")  # "wizard" | None
     if source == "wizard":
-        # Wizard order (2026-06-11): Plan is step 5; widget steps 6-7 are optional.
-        success_url = f"{settings.frontend_url}/onboarding?step=6&session_id={{CHECKOUT_SESSION_ID}}"
-        cancel_url = f"{settings.frontend_url}/onboarding?step=5&cancelled=1"
+        # Wizard order (2026-06-15): Plan step removed from wizard - success
+        # returns to onboarding step 1 (business info). Cancel returns to signup.
+        success_url = f"{settings.frontend_url}/setup?step=1&session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url = f"{settings.frontend_url}/signup?cancelled=1"
     else:
         success_url = f"{settings.frontend_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}"
         cancel_url = f"{settings.frontend_url}/billing/cancel"

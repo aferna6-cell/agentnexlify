@@ -63,8 +63,8 @@ export function AuthProvider({ children }) {
       userId: payload.user_id || null,
     });
 
-    // Refresh plan from /me - JWT claims go stale after plan changes and
-    // plan data must come from live API (frontend-patterns.md).
+    // Refresh plan + pay-gate fields from /me - JWT claims go stale after plan
+    // changes and plan data must come from live API (frontend-patterns.md).
     fetch(`${import.meta.env.VITE_API_URL || ""}/api/v1/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -76,6 +76,14 @@ export function AuthProvider({ children }) {
             ? {
                 ...prev,
                 plan: me.plan || prev.plan,
+                planStatus: me.plan_status ?? null,
+                // Preserve undefined when /me omits the field so RequirePaid
+                // fails open. Coercing to false here would defeat the gate's
+                // "unknown -> don't gate" contract on a partial or failed /me.
+                // Prod /me always returns the real boolean, so real unpaid
+                // tenants still get pay_gate_exempt=false and are gated.
+                payGateExempt: me.pay_gate_exempt,
+                onboardingCompleted: me.onboarding_completed ?? false,
                 referralCode: me.referral_code || null,
               }
             : prev,
