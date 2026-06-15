@@ -68,6 +68,13 @@ def test_notify_admin_noop_when_email_unset(monkeypatch):
     sup._notify_admin(_payload())
 
 
+def test_notify_admin_noop_when_resend_key_unset(monkeypatch):
+    monkeypatch.setattr(sup.settings, "support_form_email", "admin@example.com")
+    monkeypatch.setattr(sup.settings, "resend_api_key", "")
+    # No raise, no send attempt.
+    sup._notify_admin(_payload())
+
+
 def test_notify_admin_emails_via_resend(monkeypatch):
     monkeypatch.setattr(sup.settings, "support_form_email", "admin@example.com")
     monkeypatch.setattr(sup.settings, "resend_api_key", "re_x")

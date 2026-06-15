@@ -49,21 +49,6 @@ def _build_transcript(conversation: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def _is_low_confidence(confidence) -> bool:
-    """Return True when confidence indicates the agent was uncertain.
-
-    Accepts string ("low", "medium", "high") or numeric (0.0–1.0).
-    """
-    if confidence is None:
-        return False
-    if isinstance(confidence, str):
-        return confidence.lower() == "low"
-    try:
-        return float(confidence) < settings.agent_os_abstain_confidence_threshold
-    except (TypeError, ValueError):
-        return False
-
-
 def _send_alert_via_resend(
     *,
     to: str,

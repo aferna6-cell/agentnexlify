@@ -60,3 +60,59 @@ def test_transcript_contains_all_messages():
     assert "ASSISTANT" in t
     assert "help me" in t
     assert "I cannot help" in t
+
+
+# --------------------------------------------------------------------------- #
+# _send_alert_via_resend (executed with a fake resend module)
+# --------------------------------------------------------------------------- #
+
+
+def _install_fake_resend(monkeypatch, on_send):
+    import sys
+    import types
+
+    fake = types.ModuleType("resend")
+    fake.api_key = None
+
+    class Emails:
+        @staticmethod
+        def send(params):
+            return on_send(params)
+
+    fake.Emails = Emails
+    monkeypatch.setitem(sys.modules, "resend", fake)
+
+
+def test_send_alert_via_resend_attaches_transcript(monkeypatch):
+    monkeypatch.setattr(al.settings, "resend_api_key", "re_x")
+    captured = {}
+    _install_fake_resend(monkeypatch, lambda params: captured.update(params))
+    al._send_alert_via_resend(
+        to="admin@example.com",
+        subject="[Agent OS] fail — tenant ten1",
+        body_html="<p>x</p>",
+        transcript_text="hello transcript",
+        tenant_id="ten1",
+    )
+    assert captured["to"] == ["admin@example.com"]
+    assert captured["attachments"]
+    att = captured["attachments"][0]
+    assert att["filename"].startswith("transcript_ten1_")
+    # content is base64 of the transcript
+    import base64
+
+    assert base64.b64decode(att["content"]).decode() == "hello transcript"
+
+
+def test_send_alert_via_resend_noop_without_api_key(monkeypatch):
+    monkeypatch.setattr(al.settings, "resend_api_key", "")
+    called = {"sent": False}
+    _install_fake_resend(monkeypatch, lambda params: called.update({"sent": True}))
+    al._send_alert_via_resend(
+        to="admin@example.com",
+        subject="s",
+        body_html="<p>x</p>",
+        transcript_text="t",
+        tenant_id="ten1",
+    )
+    assert called["sent"] is False
