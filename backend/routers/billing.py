@@ -181,9 +181,6 @@ async def create_checkout(req: CreateCheckoutRequest, _=Depends(_verify_secret))
             "metadata": {"tenant_id": req.tenant_id, "plan": req.plan},
         },
     }
-    if req.plan == "growth":
-        session_params["subscription_data"]["trial_period_days"] = 7
-
     # Attach promo code if provided
     if req.promo_code:
         promos = stripe.PromotionCode.list(code=req.promo_code, active=True, limit=1)
@@ -234,6 +231,8 @@ async def stripe_webhook(request: Request):
                 from backend.routers.stripe_webhooks import _handle_invoice_payment
 
                 _handle_invoice_payment(db, data)
+            elif metadata.get("kind") == "usage_pack":
+                _handle_usage_pack_completed(db, data)
             elif _is_legacy_marketing_addon(data):
                 logger.info("Ignoring legacy marketing add-on checkout event (add-on retired 2026-06-10)")
             else:
@@ -261,35 +260,16 @@ async def stripe_webhook(request: Request):
 
 
 AMOUNT_TO_PLAN: dict[int, str] = {
-    # Monthly only (current pricing) — see CLAUDE.md "Plan names + prices"
-    9900: "growth",          # $99 Starter
-    15000: "autopilot",      # $150 Growth
-    25000: "professional",   # $250 Pro
-    89900: "enterprise",     # $899
-    # Legacy monthly pricing (keep for existing subscribers)
-    24900: "growth",
-    29900: "autopilot",
-    49900: "professional",
-    19900: "growth",
-    39900: "professional",
-    79900: "enterprise",
-    # Monthly + setup fee (legacy, setup now waived)
-    54800: "growth",         # $249 + $299 setup
-    99800: "professional",   # $499 + $499 setup
-    189800: "enterprise",    # $899 + $999 setup
-    49800: "growth",         # $199 + $299 setup
-    89800: "professional",   # $399 + $499 setup
-    179800: "enterprise",    # $799 + $999 setup
+    # Current pricing (2026-06-15 repricing)
+    1999: "chatbot",         # $19.99/mo chatbot plan
+    9999: "agent_os",        # $99.99/mo agent_os plan
 }
 
 # Keywords to match in product/price descriptions
 PLAN_KEYWORDS: dict[str, str] = {
-    "starter": "growth",
-    "growth": "growth",
-    "autopilot": "autopilot",
-    "pro": "professional",
-    "professional": "professional",
-    "enterprise": "enterprise",
+    "chatbot": "chatbot",
+    "agent_os": "agent_os",
+    "agent os": "agent_os",
 }
 
 
@@ -298,7 +278,7 @@ def _resolve_plan(session: dict) -> str | None:
     metadata = session.get("metadata", {})
     plan = metadata.get("plan")
     logger.info("_resolve_plan: metadata.plan=%s", plan)
-    if plan and plan in {"free", "growth", "professional", "autopilot", "enterprise"}:
+    if plan and plan in {"free", "chatbot", "agent_os"}:
         return plan
 
     # Try amount_total (in cents)
@@ -482,6 +462,67 @@ def _handle_subscription_updated(db, subscription: dict) -> None:
 
     db.table("tenants").update(update_data).eq("id", tenant_id).execute()
     logger.info("Tenant %s subscription updated (plan=%s)", tenant_id, plan)
+
+
+def _handle_usage_pack_completed(db, session: dict) -> None:
+    """Webhook handler for a completed usage-pack one-time purchase.
+
+    Inserts a tenant_usage_packs row to raise the effective AI token cap
+    for the current billing period. Idempotent via stripe_session_id UNIQUE.
+    """
+    from backend.routers.billing_usage import USAGE_PACK_TOKENS
+
+    metadata = session.get("metadata") or {}
+    tenant_id = metadata.get("tenant_id")
+    stripe_session_id = session.get("id")
+
+    if not tenant_id:
+        logger.warning(
+            "usage_pack webhook: no tenant_id in metadata (session=%s)", stripe_session_id
+        )
+        return
+
+    from backend.services.ai_usage_guard import current_period_month
+
+    period = current_period_month()
+
+    try:
+        db.table("tenant_usage_packs").insert(
+            {
+                "tenant_id": tenant_id,
+                "tokens": USAGE_PACK_TOKENS,
+                "period": period,
+                "stripe_session_id": stripe_session_id,
+            }
+        ).execute()
+        logger.info(
+            "Usage pack applied: tenant=%s tokens=%d period=%s session=%s",
+            tenant_id,
+            USAGE_PACK_TOKENS,
+            period,
+            stripe_session_id,
+        )
+    except Exception:
+        # Attempt idempotent replay: if a row with this session_id already exists,
+        # it's a duplicate webhook delivery — log and ignore.
+        try:
+            existing = (
+                db.table("tenant_usage_packs")
+                .select("id")
+                .eq("stripe_session_id", stripe_session_id)
+                .limit(1)
+                .execute()
+            )
+            if existing.data:
+                logger.info(
+                    "usage_pack idempotent replay: session=%s already inserted", stripe_session_id
+                )
+                return
+        except Exception:
+            pass
+        logger.exception(
+            "usage_pack insert failed for tenant=%s session=%s", tenant_id, stripe_session_id
+        )
 
 
 def _handle_subscription_deleted(db, subscription: dict) -> None:

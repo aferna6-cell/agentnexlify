@@ -185,14 +185,14 @@ async def test_dispatch_inline_runs_action_when_no_background(monkeypatch):
 # --- 3. plan-tier caps ----------------------------------------------------------
 
 
+# Caps for the two-plan model (2026-06-15 repricing): the old 5-tier caps
+# (growth/autopilot/professional/enterprise) were retired with the plan model.
 @pytest.mark.parametrize(
     "plan,cap",
     [
         ("free", 25),
-        ("growth", 200),
-        ("autopilot", 500),
-        ("professional", 1500),
-        ("enterprise", 10000),
+        ("chatbot", 100),
+        ("agent_os", 2000),
     ],
 )
 def test_plan_caps_match_tiers(plan, cap):

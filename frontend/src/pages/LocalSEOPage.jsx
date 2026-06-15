@@ -2192,7 +2192,7 @@ export default function LocalSEOPage({ onNavigate }) {
       {showUpgradePrompt && (
         <UpgradePrompt
           feature="Local SEO & Marketing Hub"
-          requiredPlan="professional"
+          requiredPlan="agent_os"
           onClose={() => setShowUpgradePrompt(false)}
           onNavigate={onNavigate}
         />
@@ -2209,10 +2209,10 @@ export default function LocalSEOPage({ onNavigate }) {
       </div>
 
       {/* Plan gate banner for free/growth users - uses live API plan, not JWT */}
-      {planBelowRequired(effectivePlan, "professional") && (
+      {planBelowRequired(effectivePlan, "agent_os") && (
         <UpgradePrompt
           feature="Local SEO & Marketing Hub"
-          requiredPlan="professional"
+          requiredPlan="agent_os"
           onClose={() => {}}
           onNavigate={onNavigate}
           variant="banner"

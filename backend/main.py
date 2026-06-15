@@ -33,6 +33,7 @@ from backend.routers import (
     automations,
     bids,
     billing,
+    billing_usage,
     booking_page,
     business_page,
     calls,
@@ -815,6 +816,7 @@ app.include_router(conversations.router)
 app.include_router(faq.router)
 app.include_router(automations.router)
 app.include_router(billing.router)
+app.include_router(billing_usage.router)
 app.include_router(clients.router)
 app.include_router(email_templates.router)
 app.include_router(email_sequences.router)

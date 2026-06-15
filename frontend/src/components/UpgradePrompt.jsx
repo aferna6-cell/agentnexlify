@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 
-const PLAN_ORDER = ["free", "growth", "autopilot", "professional", "enterprise"];
+// Two-plan model (as of 2026-06-15):
+//   chatbot   - $19.99/mo - widget/chatbot features only
+//   agent_os  - $99.99/mo - full platform (Agent OS + marketing + SEO + social + campaigns)
+const PLAN_ORDER = ["chatbot", "agent_os"];
 
 const PLAN_DISPLAY = {
-  free: { name: "Free", price: "$0" },
-  growth: { name: "Growth", price: "$99/mo" },
-  professional: { name: "Professional", price: "$150/mo" },
-  autopilot: { name: "Autopilot", price: "$299/mo" },
-  enterprise: { name: "Enterprise", price: "$250/mo" },
+  chatbot: { name: "Chatbot", price: "$19.99/mo" },
+  agent_os: { name: "Agent OS", price: "$99.99/mo" },
 };
 
 const overlayStyle = {
@@ -178,7 +178,7 @@ export default function UpgradePrompt({ feature, requiredPlan, onClose, onNaviga
  * Use this to conditionally render an UpgradePrompt.
  */
 export function planBelowRequired(currentPlan, requiredPlan) {
-  const current = PLAN_ORDER.indexOf(currentPlan ?? "free");
+  const current = PLAN_ORDER.indexOf(currentPlan ?? "chatbot");
   const required = PLAN_ORDER.indexOf(requiredPlan);
   if (required === -1) return false;
   return current < required;

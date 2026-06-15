@@ -9,11 +9,9 @@ const cardStyle = {
 };
 
 const PLAN_LABELS = {
-  free: "Free",
-  growth: "Growth",
-  professional: "Professional",
-  autopilot: "Autopilot",
-  enterprise: "Enterprise",
+  free: "Free (lapsed)",
+  chatbot: "Chatbot",
+  agent_os: "Agent OS",
 };
 
 const HEALTH_COLORS = {

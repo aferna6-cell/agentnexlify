@@ -700,36 +700,29 @@ button { font-family: inherit; cursor: pointer; border: none; }
   "offers": [
     {
       "@type": "Offer",
-      "name": "Free",
-      "price": "0",
-      "priceCurrency": "USD",
-      "description": "50 conversations/month, AI-powered responses, lead capture, appointment booking, email notifications"
-    },
-    {
-      "@type": "Offer",
-      "name": "Foundation",
-      "price": "99",
+      "name": "Chatbot",
+      "price": "19.99",
       "priceCurrency": "USD",
       "priceSpecification": {
         "@type": "UnitPriceSpecification",
-        "price": "99",
+        "price": "19.99",
         "priceCurrency": "USD",
         "billingDuration": "P1M"
       },
-      "description": "500 conversations/month, no watermark, basic automations, FAQ training"
+      "description": "AI chatbot widget, lead capture, FAQ answers, appointment requests"
     },
     {
       "@type": "Offer",
-      "name": "Growth",
-      "price": "249",
+      "name": "Agent OS",
+      "price": "99.99",
       "priceCurrency": "USD",
       "priceSpecification": {
         "@type": "UnitPriceSpecification",
-        "price": "249",
+        "price": "99.99",
         "priceCurrency": "USD",
         "billingDuration": "P1M"
       },
-      "description": "2,000 conversations/month, no watermark, full automations, FAQ training, priority support"
+      "description": "Full platform: AI staff, Agent OS, marketing, SEO, social media, campaigns, and everything in Chatbot"
     }
   ]
 }
@@ -895,55 +888,54 @@ button { font-family: inherit; cursor: pointer; border: none; }
   <div class="container">
     <div class="comparison-header">
       <div class="section-label reveal">Compare Plans</div>
-      <h2 class="section-title reveal">Start free, scale when you're ready.</h2>
-      <p class="section-subtitle reveal">Every plan builds on the one below it. Upgrade or downgrade anytime.</p>
+      <h2 class="section-title reveal">Pick the plan that fits your business.</h2>
+      <p class="section-subtitle reveal">Upgrade or downgrade anytime. No setup fees.</p>
     </div>
     <div class="comparison-table-wrap reveal">
       <table class="comparison-table">
         <thead>
           <tr>
             <th></th>
-            <th class="highlight">Free Plan<span class="price-tag">$0/mo</span></th>
-            <th>Starter<span class="price-tag">$99/mo</span></th>
-            <th>Growth<span class="price-tag">$150/mo</span></th>
+            <th class="highlight">Chatbot<span class="price-tag">$19.99/mo</span></th>
+            <th>Agent OS<span class="price-tag">$99.99/mo</span></th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>Monthly conversations</td>
-            <td class="highlight"><strong>50</strong></td>
-            <td><strong>500</strong></td>
-            <td><strong>2,000</strong></td>
-          </tr>
-          <tr>
-            <td>Watermark</td>
-            <td class="highlight"><span class="check">&#10003;</span> Yes</td>
-            <td><span class="dash">-</span> No</td>
-            <td><span class="dash">-</span> No</td>
-          </tr>
-          <tr>
-            <td>Automations</td>
-            <td class="highlight"><span class="dash">-</span></td>
-            <td>Basic</td>
-            <td>Full</td>
-          </tr>
-          <tr>
-            <td>FAQ training</td>
-            <td class="highlight"><span class="dash">-</span></td>
-            <td><span class="check">&#10003;</span></td>
+            <td>AI Chat Widget</td>
+            <td class="highlight"><span class="check">&#10003;</span></td>
             <td><span class="check">&#10003;</span></td>
           </tr>
           <tr>
-            <td>Priority support</td>
+            <td>Lead Capture</td>
+            <td class="highlight"><span class="check">&#10003;</span></td>
+            <td><span class="check">&#10003;</span></td>
+          </tr>
+          <tr>
+            <td>FAQ Training</td>
+            <td class="highlight"><span class="check">&#10003;</span></td>
+            <td><span class="check">&#10003;</span></td>
+          </tr>
+          <tr>
+            <td>Marketing and SEO Suite</td>
             <td class="highlight"><span class="dash">-</span></td>
-            <td><span class="dash">-</span></td>
+            <td><span class="check">&#10003;</span></td>
+          </tr>
+          <tr>
+            <td>Agent OS (AI Staff)</td>
+            <td class="highlight"><span class="dash">-</span></td>
+            <td><span class="check">&#10003;</span></td>
+          </tr>
+          <tr>
+            <td>Social Media and Campaigns</td>
+            <td class="highlight"><span class="dash">-</span></td>
             <td><span class="check">&#10003;</span></td>
           </tr>
         </tbody>
       </table>
     </div>
     <p style="text-align: center; margin-top: 32px;" class="reveal">
-      <a href="/pricing" style="color: var(--accent); font-weight: 600; font-size: 16px;">See all plans &amp; features &rarr;</a>
+      <a href="index.html#pricing" style="color: var(--accent); font-weight: 600; font-size: 16px;">See full plan details &rarr;</a>
     </p>
   </div>
 </section>
@@ -954,7 +946,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
     <h2 class="section-title reveal">Ready to Stop Missing Leads?</h2>
     <p class="section-subtitle reveal">Your next customer could be on your website right now. Give them someone to talk to.</p>
     <div class="hero-buttons reveal" style="margin-bottom: 0;">
-      <a href="/free-signup" class="btn-primary" style="padding: 18px 40px; font-size: 18px;">Create My Free Chatbot &rarr;</a>
+      <a href="/signup?plan=chatbot" class="btn-primary" style="padding: 18px 40px; font-size: 18px;">Start with Chatbot - $19.99/mo &rarr;</a>
     </div>
     <p class="cta-note reveal">No credit card required. Cancel anytime.</p>
   </div>

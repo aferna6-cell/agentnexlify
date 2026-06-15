@@ -11,15 +11,17 @@ from backend.services.llm_runtime import ClaudeCallResult
 
 logger = logging.getLogger(__name__)
 
+# Token baselines by plan (2026-06-15 repricing).
+# free     = lapsed/no-active-subscription state.
+# chatbot  = $19.99/mo — ~$4/mo Claude budget ≈ 800k tokens at blended cost.
+# agent_os = $99.99/mo — ~$25/mo Claude budget ≈ 5M tokens at blended cost.
 PLAN_BASELINE_TOKENS: dict[str, int] = {
-    "free": 150_000,
-    "growth": 1_000_000,
-    "autopilot": 1_200_000,
-    "professional": 2_000_000,
-    "enterprise": 5_000_000,
+    "free": 100_000,
+    "chatbot": 800_000,
+    "agent_os": 5_000_000,
 }
 
-DEFAULT_BASELINE_TOKENS = PLAN_BASELINE_TOKENS["growth"]
+DEFAULT_BASELINE_TOKENS = PLAN_BASELINE_TOKENS["chatbot"]
 ALERT_MULTIPLIER = 3
 HARD_LIMIT_MULTIPLIER = 5
 
@@ -68,8 +70,29 @@ def _coerce_positive_int(value: Any) -> int | None:
     return None
 
 
+def _sum_usage_packs(tenant_id: str, period_month: str) -> int:
+    """Return the total bonus tokens from purchased usage packs for this period.
+
+    Fails open (returns 0) — a DB error must never block an AI call.
+    """
+    try:
+        result = get_service_supabase().table("tenant_usage_packs").select(
+            "tokens"
+        ).eq("tenant_id", tenant_id).eq("period", period_month).execute()
+        rows = result.data or []
+        return sum(int(r.get("tokens") or 0) for r in rows)
+    except Exception:
+        logger.warning(
+            "Failed to sum usage packs for tenant=%s period=%s; defaulting to 0",
+            tenant_id,
+            period_month,
+            exc_info=True,
+        )
+        return 0
+
+
 def resolve_ai_usage_policy(tenant: dict[str, Any]) -> AIUsagePolicy:
-    """Resolve plan-derived usage caps, honoring tenant-level overrides."""
+    """Resolve plan-derived usage caps, honoring tenant-level overrides and purchased packs."""
     plan = str(tenant.get("plan") or "free").lower()
     baseline = PLAN_BASELINE_TOKENS.get(plan, DEFAULT_BASELINE_TOKENS)
     default_alert = baseline * ALERT_MULTIPLIER
@@ -79,6 +102,15 @@ def resolve_ai_usage_policy(tenant: dict[str, Any]) -> AIUsagePolicy:
     hard = _coerce_positive_int(tenant.get("ai_monthly_token_hard_limit"))
     alert_threshold = alert or default_alert
     hard_limit = hard or default_hard
+
+    # Add purchased usage-pack tokens to the effective hard limit.
+    # The RPC receives the Python-computed limit, so packs are pure-Python.
+    tenant_id = tenant.get("id")
+    period_month = current_period_month()
+    if tenant_id:
+        pack_bonus = _sum_usage_packs(str(tenant_id), period_month)
+        hard_limit += pack_bonus
+        alert_threshold += pack_bonus
 
     if hard_limit < alert_threshold:
         logger.warning(
@@ -90,7 +122,7 @@ def resolve_ai_usage_policy(tenant: dict[str, Any]) -> AIUsagePolicy:
         hard_limit = alert_threshold
 
     return AIUsagePolicy(
-        period_month=current_period_month(),
+        period_month=period_month,
         alert_threshold_tokens=alert_threshold,
         hard_limit_tokens=hard_limit,
     )
@@ -288,23 +320,35 @@ def record_ai_usage(
     return record
 
 
-def get_ai_usage_status(db: Any, tenant_id: str) -> dict[str, Any]:
-    """Tenant-facing AI usage snapshot for the current month (rubric 5.3).
+_TOKENS_PER_UNIT = 1_000  # 1 unit = 1000 tokens for customer-facing meter
 
-    Surfaces the same policy the guard enforces — token spend vs the alert
-    and hard-limit thresholds — so the dashboard can show owners how close
-    they are to being rate-limited BEFORE a turn gets refused. Returns a
-    safe zeroed shape on any failure; the usage endpoint must never break.
+
+def get_ai_usage_status(db: Any, tenant_id: str) -> dict[str, Any]:
+    """Tenant-facing AI usage snapshot for the current month.
+
+    Returns a usage METER in abstract units (1 unit = 1000 tokens) so the
+    dashboard can show how close a tenant is to their monthly cap without
+    exposing raw token counts or dollar figures.
+
+    Public shape:
+      limit_units      — monthly hard-limit expressed in units
+      used_units       — tokens consumed this month in units (rounded)
+      remaining_units  — max(0, limit_units - used_units)
+      pct_used         — float 0.0–100.0
+
+    Internal fields (dashboard telemetry, not exposed to end customers):
+      period_month, alert_reached, hard_limit_reached
     """
     try:
         tenant_rows = (
             db.table("tenants")
-            .select("ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit")
+            .select("plan, ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit")
             .eq("id", tenant_id)
             .limit(1)
             .execute()
         ).data or []
-        policy = resolve_ai_usage_policy(tenant_rows[0] if tenant_rows else {})
+        tenant_row = tenant_rows[0] if tenant_rows else {}
+        policy = resolve_ai_usage_policy(tenant_row)
 
         usage_rows = (
             db.table("tenant_ai_usage_monthly")
@@ -315,7 +359,7 @@ def get_ai_usage_status(db: Any, tenant_id: str) -> dict[str, Any]:
             .execute()
         ).data or []
         row = usage_rows[0] if usage_rows else {}
-        total = sum(
+        total_tokens = sum(
             int(row.get(col) or 0)
             for col in (
                 "input_tokens",
@@ -324,21 +368,31 @@ def get_ai_usage_status(db: Any, tenant_id: str) -> dict[str, Any]:
                 "cache_read_input_tokens",
             )
         )
+
+        limit_units = max(1, policy.hard_limit_tokens // _TOKENS_PER_UNIT)
+        used_units = round(total_tokens / _TOKENS_PER_UNIT)
+        remaining_units = max(0, limit_units - used_units)
+        pct_used = round(min(100.0, (used_units / limit_units) * 100.0), 2)
+
         return {
+            # Customer-facing meter (no raw tokens / no $)
+            "limit_units": limit_units,
+            "used_units": used_units,
+            "remaining_units": remaining_units,
+            "pct_used": pct_used,
+            # Internal dashboard fields
             "period_month": current_period_month(),
-            "total_tokens": total,
-            "alert_threshold": policy.alert_threshold_tokens,
-            "hard_limit": policy.hard_limit_tokens,
-            "alert_reached": total >= policy.alert_threshold_tokens,
-            "hard_limit_reached": total >= policy.hard_limit_tokens,
+            "alert_reached": total_tokens >= policy.alert_threshold_tokens,
+            "hard_limit_reached": total_tokens >= policy.hard_limit_tokens,
         }
     except Exception:
         logger.warning("get_ai_usage_status failed tenant=%s", tenant_id, exc_info=True)
         return {
+            "limit_units": 0,
+            "used_units": 0,
+            "remaining_units": 0,
+            "pct_used": 0.0,
             "period_month": current_period_month(),
-            "total_tokens": 0,
-            "alert_threshold": 0,
-            "hard_limit": 0,
             "alert_reached": False,
             "hard_limit_reached": False,
         }

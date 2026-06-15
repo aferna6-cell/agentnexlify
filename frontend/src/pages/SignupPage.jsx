@@ -3,7 +3,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { trackEvent } from "../utils/analytics";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
-const PAID_PLANS = new Set(["growth", "autopilot", "professional", "enterprise"]);
+// Two-plan model (as of 2026-06-15): chatbot ($19.99/mo) and agent_os ($99.99/mo)
+const PAID_PLANS = new Set(["chatbot", "agent_os"]);
 
 // 4 fields and you're in. Industry, website, city, and phone moved into the
 // /setup flow (express or wizard) - asking them twice killed the old funnel.

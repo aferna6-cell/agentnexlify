@@ -84,3 +84,16 @@ export function fetchKnowledgeStats(tenantId, token) {
 export function fetchKpiDeltas(tenantId, token) {
   return request(`/api/v1/analytics/${tenantId}/kpi-deltas`, { token });
 }
+
+// --- AI Usage (for billing usage meter) ---
+// Returns the nested ai_usage object from GET /api/v1/os/usage.
+// Shape: { total_tokens, hard_limit, alert_threshold, alert_reached, hard_limit_reached, period_month }
+export function fetchAiUsage(token) {
+  return request("/api/v1/os/usage", { token }).then((data) => data?.ai_usage ?? null);
+}
+
+// POST /api/v1/billing/buy-usage - purchase additional usage credits.
+// Returns { checkout_url } which the caller redirects to.
+export function buyMoreUsage(token) {
+  return request("/api/v1/billing/buy-usage", { method: "POST", token });
+}

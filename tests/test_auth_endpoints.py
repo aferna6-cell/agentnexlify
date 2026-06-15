@@ -490,7 +490,7 @@ class TestBillingCheckout:
         )
 
         mock_ensure_stripe.return_value = None
-        mock_ensure_prices.return_value = {"monthly": "price_growth_monthly"}
+        mock_ensure_prices.return_value = {"monthly": "price_chatbot_monthly"}
         mock_customer.return_value = MagicMock(id="cus_123")
         mock_create_session.return_value = MagicMock(
             url="https://checkout.stripe.test/session_123"
@@ -499,7 +499,7 @@ class TestBillingCheckout:
         response = client.post(
             "/api/v1/auth/billing/checkout",
             headers={"Authorization": f"Bearer {token}"},
-            json={"plan": "growth"},
+            json={"plan": "chatbot"},
         )
 
         assert response.status_code == 200
