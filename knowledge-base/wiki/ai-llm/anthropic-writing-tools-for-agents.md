@@ -4,7 +4,7 @@ category: ai-llm
 tags: ["anthropic", "tool-use", "mcp", "agent-design", "prompt-engineering", "tool-descriptions", "namespacing", "token-efficiency"]
 sources: ["raw/ai-llm/anthropic-writing-tools-for-agents-2026-04-25.md"]
 created: 2026-04-25
-updated: 2026-04-25
+updated: 2026-06-15
 summary: "Anthropic's evaluation-driven playbook for designing agent tools — consolidate over wrap, namespace by service+resource, return semantic identifiers, cap responses at ~25k tokens, and treat tool descriptions as prompt-engineered surface."
 ---
 
@@ -42,4 +42,6 @@ The methodology behind all five principles is evaluation-driven. Anthropic recom
 
 ## Relevance to AgentNexLiFy
 
-Three concrete actions follow. First, audit the current MCP surface against the consolidation principle — places where the agent makes 3+ tool calls to assemble customer state are candidates for a `get_customer_context`-style consolidator, especially around lead lookups in `backend/services/lead_qualifier.py` and conversation context in `backend/services/chat_service.py`. Second, the `response_format: concise|detailed` enum is a low-effort win for the widget chat flow — most turns need only the concise form, which would cut input tokens to Claude meaningfully and stack with [[claude-prompt-caching-5min-ttl-2026]] for compounding cost reduction. Third, the prompt-engineered tool description guidance applies to every internal MCP server we maintain (Supabase MCP wrappers, Stripe wrappers); investing one focused session in rewriting tool descriptions with explicit input semantics, niche term definitions, and unambiguous parameter names is likely the highest-ROI single change available to our managed-agent stack right now.
+Three concrete actions follow. First, audit the current MCP surface against the consolidation principle — places where the agent makes 3+ tool calls to assemble customer state are candidates for a `get_customer_context`-style consolidator, especially around lead lookups in `backend/services/lead_qualification.py` and conversation context in `backend/services/chat_service.py`. Second, the `response_format: concise|detailed` enum is a low-effort win for the widget chat flow — most turns need only the concise form, which would cut input tokens to Claude meaningfully and stack with [[claude-prompt-caching-5min-ttl-2026]] for compounding cost reduction. Third, the prompt-engineered tool description guidance applies to every internal MCP server we maintain (Supabase MCP wrappers, Stripe wrappers); investing one focused session in rewriting tool descriptions with explicit input semantics, niche term definitions, and unambiguous parameter names is likely the highest-ROI single change available to our managed-agent stack right now.
+
+Updated 2026-06-15 due to #262
