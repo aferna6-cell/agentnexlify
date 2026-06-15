@@ -123,8 +123,8 @@ describe("IntegrationsKeysPage", () => {
       expect(verifyIntegrationKey).toHaveBeenCalledWith("stripe", "test-token"),
     );
 
-    // After verify, the Twilio card (yellow) should still be present - Stripe goes green
-    // We assert on the call rather than the DOM pill color since health state is internal
+    // Observable behavior: the verify result detail renders in the card
+    expect(await screen.findByText(/All checks passed/i)).toBeInTheDocument();
     expect(verifyIntegrationKey).toHaveBeenCalledTimes(1);
   });
 
