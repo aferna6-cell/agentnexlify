@@ -37,23 +37,30 @@ billing amount-map, frontend ×4, landing-page ×2).
 ## Deferred follow-ups (tracked, not in this PR)
 
 Security (hardening, not launch-blocking):
-- **M2** — `admin_api_secret_key` falls back to `api_secret_key` (JWT key).
-  Enforce a distinct value in production. (Deferred: a hard boot-fail could take
-  prod down if the env var isn't set first — coordinate with deploy.)
-- **M3** — JWT expiry 24h carries stale plan/role claims. Add a server-side
-  token-version check or shorten expiry — more relevant once plans change.
-- **L1** — `rate_limit.py` XFF fallback uses leftmost (attacker-controlled) IP;
-  align with `limiter.py` (last entry).
-- **L2** — add rate limits to Instagram/Facebook OAuth callbacks.
-- **L3** — Twilio HMAC builds URL from `request.url`; use `settings.base_url`.
+- **M2** — DONE. `admin_api_secret_key` no longer falls back to `api_secret_key`
+  in production (`admin_analytics._admin_secret`); a leaked JWT key can't grant
+  admin access. Fails closed at the route (401), not at boot.
+- **L1** — DONE. `rate_limit.py` XFF fallback now uses the right-most (trusted
+  edge) entry, matching `limiter.py`.
+- **L2** — DONE. `@limiter.limit("20/minute")` added to the Instagram + Facebook
+  OAuth callbacks.
+
+Still deferred (touch hot paths — warrant a dedicated, unrushed change):
+- **M3** — JWT 24h stale plan/role claims. Token-version check needs a per-request
+  DB read on the auth hot path (perf) + careful backward-compat to avoid mass
+  logout. Deferred to its own change.
+- **L3** — Twilio HMAC URL from `request.url`; switch to `settings.base_url`.
+  Current code fails safe (rejects); changing it risks breaking live webhook
+  verification if base_url is misconfigured. Deferred.
 
 Schema:
-- Create `audit_log` table (match `integration_key_vault` insert shape).
-- Repoint `lead_field_definitions` → `custom_field_definitions` after confirming columns.
+- DONE — `audit_log` table created (migration 151, applied to prod).
+- DONE — widget_chat repointed `lead_field_definitions` → `custom_field_definitions`
+  (columns confirmed identical).
 
-## Pricing / billing rebuild — spec locked, build pending
-- Two plans only: Chatbot $19.99/mo, Full Agent OS $99.99/mo. No Free tier. Clean cut.
-- Cap underlying Anthropic $ spend per plan; customer sees only a usage meter.
-- Overage: buy-more-usage top-ups when the limit is hit.
-- External dependency: Stripe products/prices must be created in the Stripe
-  dashboard (no Stripe tooling in-session); code reads price IDs from env.
+## Pricing / billing rebuild — DONE (#288, merged 2026-06-15)
+- Two plans: Chatbot $19.99/mo, Full Agent OS $99.99/mo. No Free tier. Clean cut.
+- Per-plan AI cap shown as a usage meter; buy-more-usage overage (migration 150).
+- Also found + fixed: `admin_analytics.PLAN_PRICE_CENTS` MRR drift (now the two plans).
+- Remaining: 3 competitor-comparison landing pages (not on the live domain);
+  operator must create the 3 Stripe prices + set Railway env vars.

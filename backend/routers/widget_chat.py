@@ -815,7 +815,7 @@ async def widget_chat(
     if needs_bid_context:
         try:
             cf_result = (
-                db.table("lead_field_definitions")
+                db.table("custom_field_definitions")
                 .select("field_name, field_type, options, is_required")
                 .eq("tenant_id", tid)
                 .order("sort_order")

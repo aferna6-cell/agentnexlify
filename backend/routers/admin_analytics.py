@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Header, HTTPException, Query
 
-from backend.config import settings
+from backend.config import is_production, settings
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 
@@ -18,20 +18,27 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/admin", tags=["platform-admin"])
 
-# Canonical plan prices (cents/month). Source: CLAUDE.md plan names + prices.
-# growth $99, autopilot $150, professional $250, enterprise $899
+# Canonical plan prices (cents/month) for MRR. Two-plan model (2026-06-15).
 PLAN_PRICE_CENTS: dict[str, int] = {
-    "growth": 9900,
-    "autopilot": 15000,
-    "professional": 25000,
-    "enterprise": 89900,
+    "chatbot": 1999,
+    "agent_os": 9999,
 }
 
 
 def _admin_secret() -> str:
+    """Resolve the admin secret.
+
+    In production the admin secret MUST be set distinctly — we do NOT fall back
+    to the shared API/JWT signing key, so a leaked JWT key can't also grant
+    admin access (M2). The fallback is kept for local/dev convenience only.
+    Returning "" makes _verify_admin_secret reject every admin request (401)
+    without breaking app startup.
+    """
     admin_secret = getattr(settings, "admin_api_secret_key", "")
     if isinstance(admin_secret, str) and admin_secret:
         return admin_secret
+    if is_production():
+        return ""
     api_secret = getattr(settings, "api_secret_key", "")
     return api_secret if isinstance(api_secret, str) else ""
 
