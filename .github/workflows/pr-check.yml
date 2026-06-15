@@ -136,7 +136,7 @@ jobs:
 
       - name: Run backend tests with coverage
         run: |
-          python -m pytest tests backend/tests/test_local_seo_handlers.py backend/tests/test_billing_amount_to_plan.py backend/tests/test_fraud_guard.py backend/tests/test_twilio_webhooks.py backend/tests/test_zapier_auth.py backend/tests/test_qualification_rubrics.py backend/tests/test_qualifier_config.py backend/tests/test_lead_qualification.py backend/tests/test_activity.py backend/tests/test_widget_health.py backend/tests/test_email_sequences_processing.py backend/tests/test_integration_key_vault.py backend/tests/test_integration_health_checker.py backend/tests/test_integration_keys_router.py -q --cov=backend --cov-report=xml:coverage-python.xml
+          python -m pytest tests backend/tests/test_local_seo_handlers.py backend/tests/test_billing_amount_to_plan.py backend/tests/test_fraud_guard.py backend/tests/test_twilio_webhooks.py backend/tests/test_zapier_auth.py backend/tests/test_qualification_rubrics.py backend/tests/test_qualifier_config.py backend/tests/test_lead_qualification.py backend/tests/test_activity.py backend/tests/test_widget_health.py backend/tests/test_email_sequences_processing.py backend/tests/test_integration_key_vault.py backend/tests/test_integration_health_checker.py backend/tests/test_integration_keys_router.py backend/tests/test_platform_mailer.py backend/tests/test_os_failure_notify.py backend/tests/test_platform_support.py backend/tests/test_support_contact.py backend/tests/test_os_engine_cutover.py -q --cov=backend --cov-report=xml:coverage-python.xml
 
       # Security-critical: the integration key vault must keep 100% line+branch
       # coverage (GH #131). A dedicated gate so a future edit can't quietly drop it.

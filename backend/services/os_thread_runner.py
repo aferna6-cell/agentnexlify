@@ -24,7 +24,14 @@ from datetime import datetime, timezone
 from fastapi import BackgroundTasks
 from fastapi.concurrency import run_in_threadpool
 
-from backend.services import agent_os_bridge, agent_sdk_client, os_approval_notify, os_graph_memory, os_kb_feed
+from backend.services import (
+    agent_os_bridge,
+    agent_sdk_client,
+    os_approval_notify,
+    os_failure_notify,
+    os_graph_memory,
+    os_kb_feed,
+)
 from backend.services.os_action_dispatch import queue_action_for_run
 from backend.services.os_outbound_mirror import mirror_assistant_message
 from backend.services.tenant_scope import tenant_table
@@ -116,6 +123,31 @@ async def process_user_turn(
                 title=deliverable.get("title"),
             )
 
+    # Platform-owner alert when the turn failed or abstained on a low-confidence
+    # match. Background + best-effort, full transcript attached. Routine
+    # clarification/declined-personal outcomes are intentionally not alerted.
+    decision_status = persisted.get("status")
+    run_status = (agent_run or {}).get("status")
+    alert_reason = None
+    if run_status == "failed":
+        alert_reason = "failed"
+    elif decision_status == "wishlist_fallback":
+        alert_reason = "wishlist_fallback"
+    if alert_reason:
+        if background_tasks is not None:
+            background_tasks.add_task(
+                os_failure_notify.notify_agent_failure,
+                db,
+                client_id,
+                thread_id,
+                alert_reason,
+                business_name,
+            )
+        else:
+            await os_failure_notify.notify_agent_failure(
+                db, client_id, thread_id, alert_reason, business_name
+            )
+
     # Knowledge-graph accumulation AFTER the reply is persisted — memory
     # never adds latency to the conversation and never breaks a turn.
     assistant_text = (assistant_message or {}).get("content")
@@ -172,6 +204,8 @@ async def _degrade_offline(
     tenant_table(db, "os_threads", client_id).update({"updated_at": _now()}).eq(
         "id", thread_id
     ).execute()
+    # Engine-offline is a hard failure to answer — alert the platform owner.
+    await os_failure_notify.notify_agent_failure(db, client_id, thread_id, "offline")
     return {
         "user_message": user_message_row,
         "assistant_message": assistant_message,

@@ -56,6 +56,11 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     sentry_dsn: str = ""
 
+    # Platform-owner support inbox. All platform-level alerts (Agent OS
+    # fail/abstain, dashboard support form, support-chat transcripts) go here.
+    # Distinct from per-tenant owner_email — this is the AgentNexLiFy operator.
+    platform_support_email: str = "aidanfernandes31@gmail.com"
+
     # Web Push (VAPID) — pending-approval browser notifications. All three
     # optional: push silently no-ops when unset (pending manual Railway env
     # step). vapid_subject is a mailto: or https: URI per RFC 8292.

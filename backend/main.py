@@ -70,6 +70,7 @@ from backend.routers import (
     phone,
     pipeline,
     pipeline_automations,
+    platform_support,
     pricing_experiment,
     resend_webhooks,
     revenue,
@@ -823,6 +824,7 @@ app.include_router(resend_webhooks.router)
 app.include_router(sequences.router)
 app.include_router(sequences.leads_router)
 app.include_router(support.router)
+app.include_router(platform_support.router)
 app.include_router(integrations.router)
 # More specific /api/v1/webhooks routes must register before the generic
 # CRUD router so they do not get shadowed by tenant/webhook path params.
