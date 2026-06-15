@@ -1,0 +1,44 @@
+{
+  "run": 58,
+  "date": "2026-06-15-pm",
+  "winner": "Update Check 11 (two-plan repricing fix) + Wire Check 10 (check_project_invariants) in scripts/hooks/pre-commit",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "implementation_channel": "nightly-commit-review",
+  "ideas_count": 5,
+  "debate_rounds": 3,
+  "ideas_explored": [
+    "Idea 1: Update Check 11 + Wire Check 10 (combined pre-commit cleanup) — WINNER",
+    "Idea 2: Fix Check 11 false positive only (narrow variant) — subsumed in Idea 1",
+    "Idea 3: Wire Check 10 only (narrow variant) — subsumed in Idea 1",
+    "Idea 4: JWT stale plan/role claims M3 — WEAKENED → Parking Lot",
+    "Idea 5: AI-to-Human Handoff v1 — WEAKENED → Parking Lot (run 38 active direction stands)"
+  ],
+  "key_evidence": [
+    "PR #288 (9bed342) repriced AMOUNT_TO_PLAN to {1999:chatbot, 9999:agent_os} — Check 11 now false-WARNs on every commit",
+    "PR #257 (3234597) cleared ALL check_project_invariants failures (widget sync, em-dashes, from __future__)",
+    "check_project_invariants.py exits 0 — first time in ~45 days",
+    "Check 10 pending 60+ days with no remaining blocker",
+    "PR #291 (ff2ca28) gated signup behind payment — real paying customers now active",
+    "Launch-readiness audit (2026-06-15): 862 tests passing, security PASS, JWT M3 deferred"
+  ],
+  "governance_corrections": [
+    "Run 55 (channels_instagram from __future__ + em-dashes): pending_autonomous → implemented (PR #257/3234597)",
+    "Run 56 (Check 13 from __future__ guard): pending_autonomous → implemented (PR #257/3234597; Check 2 already covers this)",
+    "Run 57 (widget sync drift): pending_autonomous → implemented (PR #257/3234597)",
+    "Run 51 (PR #183 merge, billing fix): pending_approval → superseded by PR #288 two-plan repricing",
+    "Run 34 (GH #181 critical_standing_action): critical_standing_action → superseded by PR #288 two-plan repricing",
+    "Run 32 (GH #181 run 32 continuation): pending_approval → superseded by PR #288 two-plan repricing",
+    "Run 31 (GH #181 fix): pending_approval → superseded by PR #288 two-plan repricing",
+    "Run 30 (Billing Constants Contract Tests): pending_approval → superseded by PR #288 two-plan repricing",
+    "Run 42 (De-couple Item A from sprint): pending_approval → superseded (subsumed by run 58 winner)",
+    "Run 22 (Wire check_project_invariants as Check 10): pending_autonomous → superseded (subsumed by run 58 winner)",
+    "runs_implemented corrected: 16 → 19"
+  ],
+  "moratorium_active": true,
+  "runs_implemented_after": 19,
+  "implementation_sketch_path": "subconscious/runs/2026-06-15-pm/winning-concept.md",
+  "backlog_path": "subconscious/runs/2026-06-15-pm/improvement-backlog.md",
+  "debate_log_path": "subconscious/runs/2026-06-15-pm/debate/debate-log.md"
+}
