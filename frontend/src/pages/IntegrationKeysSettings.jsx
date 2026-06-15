@@ -30,7 +30,7 @@ const PROVIDERS = [
     description:
       "Processes payments and manages subscriptions for your clients. Required for billing features.",
     keyLabel: "Secret Key",
-    keyPlaceholder: "sk_live_... or sk_test_...",
+    keyPlaceholder: "Stripe secret key (starts with sk_live or sk_test)",
     docsUrl: "https://dashboard.stripe.com/apikeys",
     docsLabel: "Get key from Stripe Dashboard",
   },
