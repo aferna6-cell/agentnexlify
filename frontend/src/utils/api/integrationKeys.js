@@ -1,5 +1,5 @@
 /**
- * API client for /api/v1/integrations/keys — integration key vault (GH #132).
+ * API client for /api/v1/integrations/keys - integration key vault (GH #132).
  *
  * Providers managed here: stripe, twilio, resend.
  * tenant_id comes from JWT on the backend; never passed in the request body.
@@ -10,7 +10,7 @@ const BASE_PATH = "/api/v1/integrations";
 
 /**
  * List all configured providers for this tenant.
- * Returns: ProviderHealth[]  — { provider, health, detail, last_verified_at, masked_key }
+ * Returns: ProviderHealth[]  - { provider, health, detail, last_verified_at, masked_key }
  */
 export function listKeys(token) {
   return request(`${BASE_PATH}/keys`, { token });
@@ -18,11 +18,11 @@ export function listKeys(token) {
 
 /**
  * Save (encrypt) a provider key and run an inline health check.
- * Returns: SaveKeyResult — { saved, verified, masked }
+ * Returns: SaveKeyResult - { saved, verified, masked }
  *
- * @param {string} provider  — stripe | twilio | resend
- * @param {string} plaintext — raw key value
- * @param {object} metadata  — optional auxiliary fields
+ * @param {string} provider  - stripe | twilio | resend
+ * @param {string} plaintext - raw key value
+ * @param {object} metadata  - optional auxiliary fields
  */
 export function saveKey(provider, plaintext, token, metadata = {}) {
   return request(`${BASE_PATH}/keys`, {
@@ -37,7 +37,7 @@ export function saveKey(provider, plaintext, token, metadata = {}) {
  * Returns: { deleted, provider }
  * Throws ApiError with status 409 when deleting Stripe while an active subscription exists.
  *
- * @param {string} provider — stripe | twilio | resend
+ * @param {string} provider - stripe | twilio | resend
  */
 export function deleteKey(provider, token) {
   return request(`${BASE_PATH}/keys/${provider}`, {
@@ -50,7 +50,7 @@ export function deleteKey(provider, token) {
  * Run a live health ping for a single provider (rate-limited: 10/min).
  * Returns: { health, detail }
  *
- * @param {string} provider — stripe | twilio | resend
+ * @param {string} provider - stripe | twilio | resend
  */
 export function verifyKey(provider, token) {
   return request(`${BASE_PATH}/keys/${provider}/verify`, {
@@ -61,7 +61,7 @@ export function verifyKey(provider, token) {
 
 /**
  * Aggregate health for all configured providers.
- * Returns: IntegrationsHealthResponse — { providers: ProviderHealth[], overall }
+ * Returns: IntegrationsHealthResponse - { providers: ProviderHealth[], overall }
  */
 export function fetchIntegrationHealth(token) {
   return request(`${BASE_PATH}/health`, { token });

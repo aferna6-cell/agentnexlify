@@ -1,5 +1,5 @@
 /**
- * Integration Keys Settings page — GH #132
+ * Integration Keys Settings page - GH #132
  *
  * Lets tenant owners save, verify, and delete third-party API keys
  * (Stripe, Twilio, Resend) managed by the backend vault.
@@ -48,7 +48,7 @@ const PROVIDERS = [
     key: "resend",
     label: "Resend",
     description:
-      "Delivers transactional email — confirmations, follow-ups, and automation sequences.",
+      "Delivers transactional email - confirmations, follow-ups, and automation sequences.",
     keyLabel: "API Key",
     keyPlaceholder: "re_...",
     docsUrl: "https://resend.com/api-keys",
@@ -870,7 +870,7 @@ export default function IntegrationKeysSettings() {
           {/* Aggregate health banner */}
           <AggregateHealthBanner overall={overall} />
 
-          {/* Empty state — shown only when no keys are configured */}
+          {/* Empty state - shown only when no keys are configured */}
           {configuredCount === 0 && <EmptyState />}
 
           {/* Provider cards */}
