@@ -375,7 +375,8 @@ function DemoPreview() {
 }
 
 export default function Home() {
-  const pricingVariant = usePricingVariant();
+  // Tracks the pricing A/B "view" event; variant no longer changes copy.
+  usePricingVariant();
   const [navScrolled, setNavScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
@@ -897,11 +898,7 @@ export default function Home() {
                 <li>Widget customization</li>
                 <li>Hosted business page</li>
               </ul>
-              <StripeCta plan="chatbot">
-                {pricingVariant === "variant_b"
-                  ? "Start Chatbot - 2-Minute Setup →"
-                  : "Get Started →"}
-              </StripeCta>
+              <StripeCta plan="chatbot">Get Started {"→"}</StripeCta>
             </div>
 
             {/* Agent OS - Most Popular */}
