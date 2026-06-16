@@ -172,3 +172,68 @@ def test_no_plan_returns_none():
         result = billing._handle_checkout_completed(db, session)
 
     assert result is None
+
+
+def test_activation_returned_even_if_log_activity_raises():
+    """A failing log_activity must not break activation: dict still returned."""
+    db, _ = _capturing_db()
+    session = _make_session()
+
+    with (
+        patch.object(billing, "guard_checkout_for_fraud", return_value=None),
+        patch.object(billing, "_resolve_tenant_id", return_value=_TENANT),
+        patch.object(billing, "_resolve_plan", return_value="growth"),
+        patch.object(billing, "log_activity", side_effect=RuntimeError("boom")),
+    ):
+        result = billing._handle_checkout_completed(db, session)
+
+    assert result is not None, "log_activity failure must not swallow activation"
+    assert result["event"] == "activated"
+    assert result["plan"] == "growth"
+
+
+# ---------------------------------------------------------------------------
+# Webhook dispatcher: checkout.session.completed -> activation -> owner notify
+# ---------------------------------------------------------------------------
+
+def test_webhook_dispatcher_awaits_owner_notify_on_activation():
+    """stripe_webhook dispatches a clean checkout activation to notify_new_paid_signup."""
+    from backend.services import owner_alerts
+
+    event = {
+        "type": "checkout.session.completed",
+        "id": "evt_test",
+        "data": {"object": {"metadata": {"tenant_id": _TENANT, "plan": "growth"}}},
+    }
+    activation = {
+        "event": "activated",
+        "plan": "growth",
+        "amount_total": 9900,
+        "tenant_id": _TENANT,
+        "customer_email": "owner@example.com",
+    }
+
+    request = MagicMock()
+
+    async def _body():
+        return b"{}"
+
+    request.body = _body
+    request.headers.get.return_value = "sig"
+
+    mock_notify = AsyncMock()
+    with (
+        patch.object(billing.stripe.Webhook, "construct_event", return_value=event),
+        patch.object(billing, "get_service_supabase", return_value=MagicMock()),
+        patch.object(billing, "_handle_checkout_completed", return_value=activation),
+        patch.object(owner_alerts, "notify_new_paid_signup", mock_notify),
+    ):
+        result = asyncio.run(billing.stripe_webhook(request))
+
+    assert result == {"status": "ok"}
+    mock_notify.assert_awaited_once()
+    kwargs = mock_notify.await_args.kwargs
+    assert kwargs["plan"] == "growth"
+    assert kwargs["tenant_id"] == _TENANT
+    assert kwargs["amount_total"] == 9900
+    assert kwargs["customer_email"] == "owner@example.com"
