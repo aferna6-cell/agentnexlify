@@ -91,7 +91,7 @@ def test_owner_notify_is_awaited_on_clean_activation():
 
     mock_send = AsyncMock(return_value={"success": True})
     with patch.object(owner_alerts, "send_platform_email", mock_send):
-        asyncio.get_event_loop().run_until_complete(
+        asyncio.run(
             owner_alerts.notify_new_paid_signup(
                 plan="growth",
                 amount_total=9900,
