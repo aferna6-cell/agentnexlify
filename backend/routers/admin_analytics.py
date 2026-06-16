@@ -695,6 +695,83 @@ async def get_industry_breakdown(
         raise HTTPException(status_code=500, detail="Failed to load industry breakdown")
 
 
+# --- Trial-to-Paid Conversion Funnel ---
+
+
+@router.get("/conversion-funnel")
+@limiter.limit("10/minute")
+async def get_conversion_funnel(
+    request: Request,
+    x_api_secret: str | None = Header(None),
+    days: int = Query(30, ge=1, le=365),
+):
+    """Trial-to-paid conversion funnel over a rolling window.
+
+    Returns counts for each funnel stage and the trial_to_paid_rate (0-1 float).
+    This is a cross-tenant platform-owner endpoint — gated by admin secret only.
+    """
+    _verify_admin_secret(x_api_secret)
+
+    try:
+        db = get_service_supabase()
+
+        window_start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+        # signups: tenants created within the window
+        signups_result = (
+            db.table("tenants")
+            .select("id", count="exact")
+            .gte("created_at", window_start)
+            .execute()
+        )
+        signups = signups_result.count or 0
+
+        # All tenants — fetch plan_status + stripe_customer_id for funnel bucketing
+        all_result = (
+            db.table("tenants")
+            .select("plan_status, stripe_customer_id")
+            .execute()
+        )
+        all_tenants = all_result.data or []
+
+        trialing = 0
+        active_paid = 0
+        past_due_or_paused = 0
+        cancelled = 0
+
+        for t in all_tenants:
+            ps = t.get("plan_status") or ""
+            has_stripe = bool(t.get("stripe_customer_id"))
+
+            if ps == "trialing":
+                trialing += 1
+            elif ps == "active" and has_stripe:
+                active_paid += 1
+            elif ps in ("past_due", "paused"):
+                past_due_or_paused += 1
+            elif ps in ("cancelled", "canceled"):
+                cancelled += 1
+
+        denominator = active_paid + trialing
+        trial_to_paid_rate = round(active_paid / denominator, 4) if denominator > 0 else 0.0
+
+        return {
+            "window_days": days,
+            "signups": signups,
+            "trialing": trialing,
+            "active_paid": active_paid,
+            "past_due_or_paused": past_due_or_paused,
+            "cancelled": cancelled,
+            "trial_to_paid_rate": trial_to_paid_rate,
+        }
+
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to get conversion funnel")
+        raise HTTPException(status_code=500, detail="Failed to load conversion funnel")
+
+
 # --- MRR & Churn Metrics ---
 
 

@@ -19,6 +19,9 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import PaymentRecoveryGate, {
+  RECOVERY_STATUSES,
+} from "./PaymentRecoveryGate";
 
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL ||
@@ -155,6 +158,12 @@ export default function RequirePaid({ children }) {
 
   if (!shouldGate(effectiveUser)) {
     return children;
+  }
+
+  // Lapsed payer (was subscribed, card failed) -> guide to update the card via
+  // the Stripe billing portal instead of showing the new-signup plan picker.
+  if (RECOVERY_STATUSES.has(effectiveUser.planStatus)) {
+    return <PaymentRecoveryGate tenantId={effectiveUser.tenantId} token={token} />;
   }
 
   // Render the checkout gate

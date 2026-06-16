@@ -17,6 +17,7 @@ from backend.models.schemas import CreateCheckoutRequest, CheckoutResponse, Port
 from backend.dependencies import _get_current_tenant, block_demo_role
 from backend.services.activity import log_activity
 from backend.services.fraud_guard import guard_checkout_for_fraud
+from backend.services.idempotency import check_and_record, record_response
 from backend.services.stripe_service import (
     PLAN_PRICES,
     ensure_plan_prices_configured,
@@ -221,8 +222,19 @@ async def stripe_webhook(request: Request):
 
     event_type = event["type"]
     data = event["data"]["object"]
-    logger.info("Stripe webhook received: type=%s, id=%s", event_type, event.get("id"))
+    event_id = event.get("id", "")
+    logger.info("Stripe webhook received: type=%s, id=%s", event_type, event_id)
     db = get_service_supabase()
+
+    # Idempotency: Stripe retries delivery for up to 3 days on any non-2xx, and
+    # this endpoint may receive the same event the /api/v1/webhooks/stripe one
+    # does. Dedup on (stripe, event_id) so a redelivery never double-activates a
+    # subscription or double-fires the owner alert.
+    is_new, _cached = await check_and_record(db, "stripe", event_id)
+    if not is_new:
+        logger.info("Stripe duplicate event %s — skipping reprocess", event_id)
+        return {"status": "ok"}
+    idempotency_key = f"stripe:{event_id}"
 
     try:
         if event_type == "checkout.session.completed":
@@ -257,6 +269,11 @@ async def stripe_webhook(request: Request):
                 _handle_subscription_deleted(db, data)
         elif event_type == "invoice.payment_failed":
             await _handle_payment_failed(db, data)
+        elif event_type == "invoice.payment_succeeded":
+            # Dunning recovery: a recovered card un-pauses the tenant. Without
+            # this branch a tenant whose card recovered stayed paused forever on
+            # this endpoint (the /webhooks/stripe endpoint already handled it).
+            await _handle_payment_succeeded(db, data)
         else:
             logger.debug("Unhandled Stripe event: %s", event_type)
     except Exception:
@@ -264,7 +281,9 @@ async def stripe_webhook(request: Request):
         # Return 500 so Stripe retries (Stripe retries for up to 3 days)
         raise HTTPException(status_code=500, detail="Webhook handler failed")
 
-    return {"status": "ok"}
+    response_body = {"status": "ok"}
+    await record_response(db, idempotency_key, 200, response_body)
+    return response_body
 
 
 AMOUNT_TO_PLAN: dict[int, str] = {
@@ -491,6 +510,9 @@ def _handle_subscription_updated(db, subscription: dict) -> None:
     update_data: dict = {"plan_status": raw_status if raw_status in _ALLOWED_STATUSES else "paused"}
     if plan:
         update_data["plan"] = plan
+
+    trial_end = subscription.get("trial_end")
+    update_data["stripe_trial_end"] = _unix_to_iso(trial_end) if trial_end else None
 
     db.table("tenants").update(update_data).eq("id", tenant_id).execute()
     logger.info("Tenant %s subscription updated (plan=%s)", tenant_id, plan)

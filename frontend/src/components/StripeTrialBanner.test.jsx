@@ -91,4 +91,37 @@ describe("StripeTrialBanner", () => {
       screen.queryByTestId("stripe-trial-banner"),
     ).not.toBeInTheDocument();
   });
+
+  it("shows day count and charge date when trialEnd is present ~3 days out", () => {
+    // Set trialEnd to ~3 days from now (3 * 86400 * 1000 ms ahead)
+    const trialEndMs = Date.now() + 3 * 86400 * 1000;
+    const trialEndISO = new Date(trialEndMs).toISOString();
+    useAuth.mockReturnValue({
+      user: { planStatus: "trialing", plan: "growth", trialEnd: trialEndISO },
+    });
+    render(<StripeTrialBanner onNavigate={vi.fn()} />);
+
+    // Day count: ceil((trialEndMs - now) / 86400000) = 3
+    // Rendered text contains "3 day" (singular/plural handled by component)
+    expect(screen.getByTestId("stripe-trial-banner")).toBeInTheDocument();
+    const bannerText = screen.getByTestId("stripe-trial-banner").textContent;
+    expect(bannerText).toMatch(/3 days? left in your free trial/i);
+
+    // Charge date: formatted as "Mon D" (short month + day)
+    const expectedDate = new Date(trialEndISO).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+    expect(bannerText).toContain(expectedDate);
+  });
+
+  it("shows generic copy when trialEnd is null (fallback)", () => {
+    useAuth.mockReturnValue({
+      user: { planStatus: "trialing", plan: "growth", trialEnd: null },
+    });
+    render(<StripeTrialBanner onNavigate={vi.fn()} />);
+    expect(
+      screen.getByText(/you're on a 7-day free trial/i),
+    ).toBeInTheDocument();
+  });
 });
