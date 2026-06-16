@@ -102,8 +102,6 @@ async def billing_checkout(
         "metadata": {"tenant_id": tenant_id, "plan": plan},
         "subscription_data": {"metadata": {"tenant_id": tenant_id, "plan": plan}},
     }
-    if plan == "growth":
-        session_params["subscription_data"]["trial_period_days"] = 7
 
     promo_code = body.get("promo_code")
     if promo_code:

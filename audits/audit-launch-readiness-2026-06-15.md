@@ -64,3 +64,32 @@ Schema:
 - Also found + fixed: `admin_analytics.PLAN_PRICE_CENTS` MRR drift (now the two plans).
 - Remaining: 3 competitor-comparison landing pages (not on the live domain);
   operator must create the 3 Stripe prices + set Railway env vars.
+
+## Launch-readiness final pass — 2026-06-16
+Pay-gate (PR #291) is live; Stripe prices created + Railway env vars set by operator.
+
+- **#1 Paid-signup smoke** — backend half automated (`backend/tests/test_pay_gate_unlock.py`:
+  completed checkout writes `plan_status=active` -> `is_pay_gated` opens). Card-entry
+  half is a manual runbook: `docs/ops/paid-signup-smoke.md` (Stripe Checkout is a
+  third-party redirect, not hermetically drivable). Operator runs the 6-step smoke once.
+- **#2 Vercel domain** — fixed by operator.
+- **#3 Webhook-race hardening** — DONE. `RequirePaid` now polls `/me` with backoff
+  (~10s, stops early on active/exempt) on Stripe return instead of a single fetch, so a
+  slightly-delayed `checkout.session.completed` webhook can't strand a paying customer on
+  the gate. Regression test added. Also removed the dead `growth` trial branch in
+  `auth_billing.py` (growth not in PLAN_PRICES — no trial on either live plan).
+- **#4 Sentry** — code-complete (`backend/main.py` inits when `settings.sentry_dsn` set;
+  `/health` reports `sentry_configured`). Operator sets `SENTRY_DSN` on Railway. No code work.
+- **#5 Agent OS model economics** — Agent OS uses the advisor-executor pattern: Opus 4.7
+  ADVISES (capped ~1200 output tokens/call, ~$0.05-0.15 each) + a Managed-Agent EXECUTOR
+  does the bulk work (`managed_agents_registry.py:14`, `advisor_executor.py:61`). So the
+  5M-token cap is executor-blended + a small Opus advisor premium, NOT pure-Opus
+  economics — the ~$25 estimate holds with a modest per-task advisor surcharge.
+  Operator action: confirm the executor Managed Agent's model in the Anthropic console
+  (Sonnet keeps the $25 math; if it's Opus, re-check the cap against ~$40).
+- **#6** — ADMIN_API_SECRET_KEY: code-complete (`config.py` warns + falls back to
+  API_SECRET_KEY; `/health` reports `admin_api_secret_configured`). Operator sets it.
+  L3 (Twilio webhook URL) + M3 (JWT token-version) remain intentionally deferred — the
+  pay-gate already reads LIVE DB state (`require_active_plan` + `/me` refresh), not JWT
+  claims, so M3's stale-claim risk does not affect plan enforcement; it is low-value
+  pre-launch and touches the auth hot path. Revisit post-launch in a dedicated change.
