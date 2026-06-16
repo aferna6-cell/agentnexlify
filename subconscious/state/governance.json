@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-06-13",
-  "total_runs": 57,
+  "last_run": "2026-06-16",
+  "total_runs": 58,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -16,10 +16,21 @@
   },
   "active_directions": [
     {
+      "title": "Wire check_project_invariants.py into pre-commit as Check 13 (6-line bash, AUTONOMOUS-EXECUTABLE, run 58 winner)",
+      "date": "2026-06-16",
+      "confidence": "HIGH",
+      "status": "pending_autonomous",
+      "autonomous_executable": true,
+      "category": "code_health",
+      "note": "Run 58 winner. AUTONOMOUS-EXECUTABLE. check_project_invariants.py passes all 6 invariant checks since 3234597 (2026-06-13) — first zero-blocker state in 46 days. Launch sprint (PRs #285-291) shipped 5 new services without invariant protection at pre-commit. Check 11/12 both landed autonomously via nightly review — identical mechanism. Five of six invariant classes unguarded: retired schema fields, retired plan names, widget byte-sync, em-dashes in JSX, direct SDK calls. Append 6-line bash block to scripts/hooks/pre-commit after Check 12 (~line 295): runs python3 scripts/check_project_invariants.py, FAIL on non-zero. Implementation sketch: subconscious/runs/2026-06-16/winning-concept.md."
+    },
+    {
       "title": "Fix widget sync drift — cp widget/agentnexlify-widget.js to landing-page-v2/widget/agentnexlify-widget.js (AUTONOMOUS-EXECUTABLE, run 57 winner)",
       "date": "2026-06-13",
       "confidence": "HIGH",
-      "status": "pending_autonomous",
+      "status": "implemented",
+      "implemented_date": "2026-06-13",
+      "implemented_by": "3234597 (Launch-readiness P0-P3: invariant gate)",
       "autonomous_executable": true,
       "category": "code_health",
       "note": "Run 57 winner. AUTONOMOUS-EXECUTABLE. PR #254 (3f79d7f, 2026-06-13) updated widget/ and frontend/public/widget/ (+202 lines each: Spanish translation + web push) but NOT landing-page-v2/widget/. check_project_invariants.py confirms live: 'drift: widget/agentnexlify-widget.js != landing-page-v2/widget/agentnexlify-widget.js'. CLAUDE.md Critical Invariant #4. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js. Eliminates one of 3 check_project_invariants failures. Combined with run 55 (em-dash + from __future__) → exits 0 → Check 10 auto-wires. Implementation sketch: subconscious/runs/2026-06-13/winning-concept.md."
@@ -28,8 +39,8 @@
       "title": "Add pre-commit Check 13: `from __future__ import annotations` guard in FastAPI files (FAIL mode, ~10 lines bash, AUTONOMOUS-EXECUTABLE) (run 56 winner)",
       "date": "2026-06-12",
       "confidence": "HIGH",
-      "status": "pending_autonomous",
-      "autonomous_executable": true,
+      "status": "superseded",
+      "autonomous_executable": false,
       "category": "code_health",
       "note": "Run 56 winner. AUTONOMOUS-EXECUTABLE. PR #238 auth.py split (b8fdcd2) introduced from __future__ in auth_password_reset.py, auth_billing.py, auth_google.py — 3 new violations within 1 day of run 55 targeting channels_instagram.py. Now 4 files infected. 100% recurrence on router splits. Check 13 is the systemic guard; run 55 fixes current violations. Implementation sketch: subconscious/runs/2026-06-12/winning-concept.md. Bash block: grep staged backend/**/*.py for 'from __future__ import annotations', FAIL if found. Insert after Check 12 block (~line 275 in scripts/hooks/pre-commit)."
     },
@@ -37,7 +48,9 @@
       "title": "Fix channels_instagram.py `from __future__ import annotations` + clear 10 em-dash violations → exits 0 → Check 10 auto-wires tonight (run 55 winner)",
       "date": "2026-06-11",
       "confidence": "HIGH",
-      "status": "pending_autonomous",
+      "status": "implemented",
+      "implemented_date": "2026-06-13",
+      "implemented_by": "3234597 (Launch-readiness P0-P3: invariant gate — cleared all from __future__ violations and em-dashes)",
       "autonomous_executable": true,
       "category": "code_health",
       "note": "Run 55 winner. AUTONOMOUS-EXECUTABLE. 7c8825c (Instagram connector PR #232, 2026-06-11) introduced `from __future__ import annotations` on line 1 of channels_instagram.py — ALL Instagram endpoints 422 (CLAUDE.md Critical Invariant #5). Same PR + a5c65b5 introduced 10 em-dash violations across 7 JSX files (most in project history). Fix: (1) remove line 1 from channels_instagram.py; (2) replace 10 em-dash chars with hyphens across main.jsx:152, CookieConsent.jsx:5+31, MarketingUpsell.jsx:3, App.jsx:328, Sidebar.test.jsx:27+49, ReferralCard.jsx:24+45, ComposerAttachments.jsx:1 → exits 0 → Item A auto-wires tonight. Full implementation sketch: subconscious/runs/2026-06-11/winning-concept.md."
@@ -863,10 +876,10 @@
     "runs_pending_approval": 17,
     "runs_pending_approval_raw": 17,
     "runs_pending_approval_note": "Run 57 (2026-06-13): 5 PRs (#246-#254) merged in 3 days (~10k lines). PR #254 (3f79d7f, 3500 lines, 31 files) introduced widget drift (widget/ updated, landing-page-v2/widget/ NOT updated \u2014 check_project_invariants FAIL confirmed live), 10 em-dash violations, and potential new from __future__ in push_subscriptions.py. Run 55 (em-dash + from __future__) and run 56 (Check 13) both pending_autonomous \u2014 nightly d12bd21 did not implement either. Run 57 adds widget cp as third pending_autonomous item. True human-required pending: runs 4/38 (AI-to-Human Handoff), runs 20/21/28/29/30/35/41 (moratorium sprint + email split), PR #183/GH#181.",
-    "runs_implemented": 16,
+    "runs_implemented": 18,
     "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 58)",
-    "governance_correction": "Run 57 (2026-06-13): run 55+56 status remain pending_autonomous. Widget drift is NEW active failure from PR #254. 3 total check_project_invariants failures: from __future__ (3 files), widget drift, 10 em-dashes. runs_implemented stays at 16.",
-    "note": "Moratorium exit path: Run 57 widget cp (autonomous tonight) + Run 55 fix (em-dashes + from __future__ \u2192 exits 0 \u2192 Check 10 wires) + Run 56 Check 13 guard + Merge PRs #209+#200+#183 (~20 min human) \u2192 Items A+B unblocked \u2192 email_sequences split \u2192 pending drops.",
+    "governance_correction": "Run 58 (2026-06-16): runs 55+57 IMPLEMENTED by 3234597 (launch-readiness P0 sweep). Run 56 SUPERSEDED (Check 2 already covers from __future__ in pre-commit). Billing runs 30/31/32/34/51 MOOT \u2014 9bed342 (PR #288) repriced to 2-plan (chatbot $19.99/agent_os $99.99), old AMOUNT_TO_PLAN retired. runs_implemented 16\u219218. check_project_invariants.py exits 0 clean.",
+    "note": "Moratorium exit path after run 58 corrections: pending_autonomous run 42/58 (Check 13 wire); pending_approval runs 4/21/28/29/35/38/41/20 \u2014 ~8 true pending. Corrections reduce from 17 to ~9. Next milestone: nightly wires Check 13 (run 58) \u2192 AI-to-Human Handoff v1 first post-moratorium customer value win.",
     "escalate": true
   },
   "config": {
