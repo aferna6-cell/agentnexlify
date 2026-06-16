@@ -236,7 +236,15 @@ async def stripe_webhook(request: Request):
             elif _is_legacy_marketing_addon(data):
                 logger.info("Ignoring legacy marketing add-on checkout event (add-on retired 2026-06-10)")
             else:
-                _handle_checkout_completed(db, data)
+                activation = _handle_checkout_completed(db, data)
+                if activation:
+                    from backend.services.owner_alerts import notify_new_paid_signup
+                    await notify_new_paid_signup(
+                        plan=activation["plan"],
+                        amount_total=activation["amount_total"],
+                        tenant_id=activation["tenant_id"],
+                        customer_email=activation.get("customer_email"),
+                    )
         elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
             if _is_legacy_marketing_addon(data):
                 logger.info("Ignoring legacy marketing add-on subscription event (add-on retired 2026-06-10)")
@@ -359,7 +367,7 @@ def _resolve_tenant_id(db, session: dict) -> str | None:
     return None
 
 
-def _handle_checkout_completed(db, session: dict) -> None:
+def _handle_checkout_completed(db, session: dict) -> dict | None:
     logger.info(
         "checkout.session.completed: customer_email=%s, customer=%s, "
         "metadata=%s, amount_total=%s, subscription=%s, mode=%s, status=%s",
@@ -382,18 +390,18 @@ def _handle_checkout_completed(db, session: dict) -> None:
             "checkout.session.completed: could not resolve tenant (email=%s, metadata=%s)",
             session.get("customer_email"), session.get("metadata"),
         )
-        return
+        return None
     if not plan:
         logger.warning(
             "checkout.session.completed: could not resolve plan (amount=%s, metadata=%s)",
             session.get("amount_total"), session.get("metadata"),
         )
-        return
+        return None
 
     fraud_reason = guard_checkout_for_fraud(session)
     if fraud_reason:
         logger.warning(
-            "checkout.session.completed: fraud detected for tenant %s — %s. Pausing activation.",
+            "checkout.session.completed: fraud detected for tenant %s - %s. Pausing activation.",
             tenant_id, fraud_reason,
         )
         update_data = {
@@ -409,7 +417,7 @@ def _handle_checkout_completed(db, session: dict) -> None:
             description=f"Checkout flagged: {fraud_reason}. Subscription paused pending review.",
             metadata={"fraud_reason": fraud_reason, "session_id": session.get("id")},
         )
-        return
+        return None
 
     update_data = {
         "plan": plan,
@@ -423,6 +431,30 @@ def _handle_checkout_completed(db, session: dict) -> None:
     logger.info("checkout.session.completed: update result data=%s", update_result.data)
 
     logger.info("Tenant %s upgraded to %s", tenant_id, plan)
+
+    # Feature 3: log paid conversion for funnel analytics
+    try:
+        log_activity(
+            tenant_id=tenant_id,
+            activity_type="subscription_activated",
+            description=f"Subscription activated: plan={plan}",
+            metadata={"plan": plan, "amount_total": session.get("amount_total", 0)},
+        )
+    except Exception as exc:
+        logger.warning(
+            "checkout.session.completed: log_activity failed (tenant=%s)",
+            tenant_id,
+            exc_info=exc,
+        )
+
+    # Return activation info so the async caller can send the owner alert (Feature 5)
+    return {
+        "event": "activated",
+        "plan": plan,
+        "amount_total": session.get("amount_total", 0),
+        "tenant_id": tenant_id,
+        "customer_email": session.get("customer_email"),
+    }
 
 
 def _resolve_tenant_from_subscription(db, subscription: dict) -> str | None:

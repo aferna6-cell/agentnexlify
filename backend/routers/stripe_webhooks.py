@@ -77,7 +77,15 @@ async def stripe_webhook(request: Request):
             elif _is_legacy_marketing_addon(data):
                 logger.info("Ignoring legacy marketing add-on checkout event (add-on retired 2026-06-10)")
             else:
-                _handle_checkout_completed(db, data)
+                activation = _handle_checkout_completed(db, data)
+                if activation:
+                    from backend.services.owner_alerts import notify_new_paid_signup
+                    await notify_new_paid_signup(
+                        plan=activation["plan"],
+                        amount_total=activation["amount_total"],
+                        tenant_id=activation["tenant_id"],
+                        customer_email=activation.get("customer_email"),
+                    )
         elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
             if _is_legacy_marketing_addon(data):
                 logger.info("Ignoring legacy marketing add-on subscription event (add-on retired 2026-06-10)")
