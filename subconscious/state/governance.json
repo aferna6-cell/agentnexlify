@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-06-16",
-  "total_runs": 58,
+  "last_run": "2026-06-16-pm",
+  "total_runs": 59,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -15,6 +15,15 @@
     "note": "Run 9 correction: Lead Source Analytics (run 2) already implemented in AnalyticsPage.jsx \u2014 pending_approvals corrected 5\u21924. Moratorium still active. Run 10 (2026-04-30): same winner confirmed \u2014 JS Silent Catch still oldest pending. New finding: check_project_invariants.py (run 8 winner) fails on em-dash violations in WizardStepAutoKB.jsx:140/172/254 \u2014 wiring blocked until em-dash fixed first. Run 11 (2026-04-30-pm): GOVERNANCE CORRECTION \u2014 original MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a. New violation cluster AdminAnalyticsPage.jsx:117-122 (6 instances). Pre-commit Check 9 still never added. Golden eval harness added but not wired to CI. Run 12 (2026-05-01): CRITICAL FINDING \u2014 pre-commit has 9 existing checks, Check 9 = 'dropped conversations.messages queries'. JS Silent Catch guard is Check 10 (not 9 as cited in runs 9-11 \u2014 numbering error now corrected). Nightly review 2026-05-01 INCORRECTLY reported em-dash blocker as stale \u2014 direct check_project_invariants.py run shows 9 violations: WizardStepAutoKB.jsx:2/140/172/254 + AutomationActivityCard.jsx:156/172/188/251/389 (5 new from 90ba1c5). Em-dash check needs scoping fix (skip .jsx/.tsx) as prerequisite for run 8. Issues #109 (AdminAnalyticsPage) + #110 (eval harness CI) opened by nightly review. Run 13 (2026-05-04): Repo idle 48h. AdminAnalyticsPage.jsx:117-122 confirmed 6 violations on live check. Email sequences N+1 opened (GH #112/#113). California AI companion/chatbot laws (SB 243 + Perkins Coie) added to KB. Em-dash blocker still active. New parking lot: email N+1 (ROI 2.3), extract _process_pending_sends (ROI 1.8), CA companion disclosure audit (ROI 1.6). Run 14 (2026-05-05-pm): MORATORIUM LIFTED \u2014 72f8204 implemented run 13 winner (JS silent catch guard + AdminAnalyticsPage fix). Em-dash blocker also cleared (8f680e8). SettingsPage.jsx split done (27e06f0, parking lot ROI 1.9). check_project_invariants.py passes all 6 checks. New winner: Wire golden eval harness to CI (ROI 2.5). Bonus: wire check_project_invariants.py (run 8 unblocked). Pending: 3 (runs 4, 7, 8)."
   },
   "active_directions": [
+    {
+      "title": "Fix backend/services/zapier_auth.py::_get_api_key_client — add plan_status IN ('active','trialing') check (GH #107, run 59 winner)",
+      "date": "2026-06-16-pm",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "autonomous_executable": false,
+      "category": "code_health",
+      "note": "Run 59 winner. Revenue leak vector: 7-day trial system (PRs #299-301, 2026-06-14/15) launched pay_gate.py web signup gate, but zapier_auth.py::_get_api_key_client has never checked plan_status (GH #107, filed 2026-04-30, 47+ days unfixed). Post-trial: expired-trial tenant can set up Zapier during trial window, trial expires, pay_gate blocks web access but Zapier API key still authenticates indefinitely. Fix: (1) join tenants table via client_id in _get_api_key_client, assert plan_status IN ('active', 'trialing'); (2) return None or raise 402/403 on failed check; (3) regression test: seed cancelled tenant + valid un-revoked key → assert None/402; seed trialing tenant → assert succeeds; seed active tenant → assert succeeds; (4) close GH #107. Governance override: parking lot note 'first non-moratorium winner' written at run 16 before trials existed — time-sensitivity overrides deferral. S-effort ~15 min. Implementation sketch: subconscious/runs/2026-06-16-pm/winning-concept.md."
+    },
     {
       "title": "Wire check_project_invariants.py into pre-commit as Check 13 (6-line bash, AUTONOMOUS-EXECUTABLE, run 58 winner)",
       "date": "2026-06-16",
@@ -833,7 +842,7 @@
       "title": "Zapier API key plan_status enforcement",
       "date": "2026-05-11",
       "roi": 2.5,
-      "note": "Added run 16. GH issue #107 (2026-04-30). backend/services/zapier_auth.py::_get_api_key_client resolves keys without plan_status check. Cancelled tenants with un-revoked keys bypass tier gate. Fix: add plan_status IN ('active','trialing') filter + regression test. HIGH security. Route via issue-to-pr-loop, NOT subconscious winner queue. KILLED in run 16 debate (moratorium + issue already tracked). Promote to first non-moratorium winner if #107 still open."
+      "note": "Added run 16. GH issue #107 (2026-04-30). backend/services/zapier_auth.py::_get_api_key_client resolves keys without plan_status check. Cancelled tenants with un-revoked keys bypass tier gate. Fix: add plan_status IN ('active','trialing') filter + regression test. HIGH security. KILLED in run 16 debate (moratorium + issue already tracked). PROMOTED run 59, time-sensitive — 7-day trial system (PRs #299-301, 2026-06-14/15) makes this an active revenue leak vector: trialing tenant sets up Zapier during 7-day window, trial expires, Zapier access continues indefinitely while pay_gate blocks web access. Governance override: 'first non-moratorium winner' deferral overridden on time-sensitivity grounds. Now active_directions run 59 winner."
     },
     {
       "title": "Automated moratorium escalation hook",
@@ -873,13 +882,13 @@
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 17,
-    "runs_pending_approval_raw": 17,
-    "runs_pending_approval_note": "Run 57 (2026-06-13): 5 PRs (#246-#254) merged in 3 days (~10k lines). PR #254 (3f79d7f, 3500 lines, 31 files) introduced widget drift (widget/ updated, landing-page-v2/widget/ NOT updated \u2014 check_project_invariants FAIL confirmed live), 10 em-dash violations, and potential new from __future__ in push_subscriptions.py. Run 55 (em-dash + from __future__) and run 56 (Check 13) both pending_autonomous \u2014 nightly d12bd21 did not implement either. Run 57 adds widget cp as third pending_autonomous item. True human-required pending: runs 4/38 (AI-to-Human Handoff), runs 20/21/28/29/30/35/41 (moratorium sprint + email split), PR #183/GH#181.",
+    "runs_pending_approval": 18,
+    "runs_pending_approval_raw": 18,
+    "runs_pending_approval_note": "Run 59 (2026-06-16-pm): Zapier plan_status enforcement promoted from parking lot \u2014 active revenue leak via 7-day trial system. Run 57 (2026-06-13): 5 PRs (#246-#254) merged in 3 days. True human-required pending before run 59: runs 4/38 (AI-to-Human Handoff), runs 20/21/28/29/30/35/41 (moratorium sprint + email split). Run 59 adds Zapier fix (pending_approval). True pending ~10 after run 59: 2 pending_autonomous (runs 42+58 Check 13) + 8 pending_approval.",
     "runs_implemented": 18,
-    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 58)",
-    "governance_correction": "Run 58 (2026-06-16): runs 55+57 IMPLEMENTED by 3234597 (launch-readiness P0 sweep). Run 56 SUPERSEDED (Check 2 already covers from __future__ in pre-commit). Billing runs 30/31/32/34/51 MOOT \u2014 9bed342 (PR #288) repriced to 2-plan (chatbot $19.99/agent_os $99.99), old AMOUNT_TO_PLAN retired. runs_implemented 16\u219218. check_project_invariants.py exits 0 clean.",
-    "note": "Moratorium exit path after run 58 corrections: pending_autonomous run 42/58 (Check 13 wire); pending_approval runs 4/21/28/29/35/38/41/20 \u2014 ~8 true pending. Corrections reduce from 17 to ~9. Next milestone: nightly wires Check 13 (run 58) \u2192 AI-to-Human Handoff v1 first post-moratorium customer value win.",
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 61)",
+    "governance_correction": "Run 58 (2026-06-16): runs 55+57 IMPLEMENTED by 3234597 (launch-readiness P0 sweep). Run 56 SUPERSEDED (Check 2 already covers from __future__ in pre-commit). Billing runs 30/31/32/34/51 MOOT \u2014 9bed342 (PR #288) repriced to 2-plan (chatbot $19.99/agent_os $99.99), old AMOUNT_TO_PLAN retired. runs_implemented 16\u219218. check_project_invariants.py exits 0 clean. Run 59 (2026-06-16-pm): Zapier parking lot entry PROMOTED to active_directions (run 59 winner) on time-sensitivity grounds.",
+    "note": "Moratorium exit path after run 59: pending_autonomous run 42/58 (Check 13 wire, nightly 2:37 AM tonight); pending_approval runs 59/4/21/28/29/35/38/41/20 \u2014 ~10 true pending. Next milestone: nightly wires Check 13 (run 58) \u2192 human implements Zapier fix (run 59, ~15 min) \u2192 AI-to-Human Handoff v1 first post-moratorium customer value win.",
     "escalate": true
   },
   "config": {

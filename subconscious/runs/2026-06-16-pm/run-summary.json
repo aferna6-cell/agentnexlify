@@ -1,0 +1,31 @@
+{
+  "run": 59,
+  "date": "2026-06-16-pm",
+  "winner": "Fix backend/services/zapier_auth.py::_get_api_key_client — add plan_status IN ('active','trialing') check (GH #107)",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "effort": "S (~15 min)",
+  "moratorium_active": true,
+  "moratorium_day": "55+",
+  "pending_before": 9,
+  "pending_after": 10,
+  "autonomous_executable": false,
+  "evidence_summary": "7-day trial system launched 2026-06-14/15 (PRs #299-301). pay_gate.py gates web signup by plan_status. zapier_auth.py::_get_api_key_client has NEVER checked plan_status (GH #107, filed 2026-04-30, 47+ days unfixed). Post-trial vector: expired-trial tenant can set up Zapier during 7-day window, trial expires at day 7, pay_gate blocks web access but Zapier API key authenticates indefinitely — value delivery without revenue.",
+  "debate_verdicts": {
+    "Idea 1 (Zapier plan_status)": "SURVIVES → WINNER (3 rounds). Governance override: parking lot 'first non-moratorium winner' deferral written pre-trials; time-sensitivity overrides.",
+    "Idea 3 (AI-to-Human Handoff)": "WEAKENED → parking lot. First post-moratorium customer value win. Do not re-recommend as winner until Zapier fix implemented and moratorium exits.",
+    "Idea 4 (check-widget-sync.sh)": "WEAKENED → deferred. Check 13 (pending_autonomous tonight) already covers widget byte-sync as one of 6 invariant checks.",
+    "Idea 2 (admin_analytics tests)": "Not debated → parking lot. Verify coverage gap before creating tests.",
+    "Idea 5 (RequirePaid audit)": "Not debated → parking lot. Low evidence of active bug."
+  },
+  "governance_overrides": [
+    "Parking lot Zapier note 'first non-moratorium winner if #107 still open' overridden on time-sensitivity: 7-day trial system (launched 2026-06-14/15) creates active revenue leak vector not anticipated when note was written at run 16 (2026-05-11). Fix is S-effort ~15 min. Adding 1 more pending does not meaningfully worsen already-deeply-violated moratorium."
+  ],
+  "bonus_autonomous": "Check 13 (wire check_project_invariants.py into pre-commit, run 58 winner, pending_autonomous) — expected nightly execution tonight at 2:37 AM",
+  "questions_for_next_run": [
+    "Did Check 13 (check_project_invariants pre-commit) auto-execute tonight at 2:37 AM? Check git log for scripts/hooks/pre-commit modification.",
+    "Was GH #107 Zapier plan_status fix implemented? Grep plan_status in backend/services/zapier_auth.py.",
+    "With Check 13 confirmed: is moratorium now blocking only pending_approval items? What is the true pending_approval count?",
+    "With 7-day trials live + pay_gate active: are there other API surfaces that bypass plan_status beyond Zapier?"
+  ]
+}
