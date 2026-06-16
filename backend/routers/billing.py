@@ -622,7 +622,12 @@ async def _handle_payment_succeeded(db, invoice: dict) -> None:
         return  # not a dunning pause (or nothing to recover) — leave untouched
 
     update: dict[str, Any] = {"billing_dunning_attempt_count": 0}
-    if tenant.get("plan_status") == "paused":
+    # Restore access from either dunning-locked status. invoice.payment_failed
+    # writes "paused"; a near-simultaneous customer.subscription.updated can
+    # overwrite that with "past_due". Both are pay-gated, so recovery must clear
+    # either one deterministically — checking only "paused" left a recovered
+    # tenant stuck in past_due when the subscription event landed last.
+    if tenant.get("plan_status") in ("paused", "past_due"):
         update["plan_status"] = "active"
     db.table("tenants").update(update).eq("id", tenant["id"]).execute()
     logger.info(
