@@ -5,17 +5,28 @@ import { useAuth } from "../context/AuthContext";
  * (plan_status === "trialing"). Warns that the card on file will be charged
  * automatically when the trial ends.
  *
- * Deliberately does NOT show an exact countdown - trial_end is not stored
- * client-side yet. That is a follow-up requiring a backend trial_end column.
+ * When user.trialEnd (ISO 8601 from /me) is present, computes days remaining
+ * and formats the exact charge date. Falls back to generic copy when absent.
  *
  * Mutually exclusive with the legacy free TrialBanner (App.jsx) which fires
- * only when trialData.plan === "free" using free_trial_started_at. A trialing
- * tenant is on a paid plan, so the legacy banner never renders for them.
+ * only when trialData.plan === "free" using free_trial_started_at.
  */
 export default function StripeTrialBanner({ onNavigate }) {
   const { user } = useAuth();
 
   if (!user || user.planStatus !== "trialing") return null;
+
+  let countdownText = null;
+  if (user.trialEnd) {
+    const trialEndMs = new Date(user.trialEnd).getTime();
+    const nowMs = Date.now();
+    const daysLeft = Math.ceil((trialEndMs - nowMs) / 86400000);
+    const chargeDate = new Date(user.trialEnd).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+    countdownText = `${daysLeft} day${daysLeft === 1 ? "" : "s"} left in your free trial - your card will be charged on ${chargeDate}.`;
+  }
 
   return (
     <div
@@ -34,8 +45,8 @@ export default function StripeTrialBanner({ onNavigate }) {
       }}
     >
       <span>
-        You're on a 7-day free trial. Your card will be charged automatically
-        when the trial ends.
+        {countdownText ||
+          "You're on a 7-day free trial. Your card will be charged automatically when the trial ends."}
       </span>
       <button
         onClick={() => onNavigate("billing")}

@@ -104,6 +104,11 @@ class RegisterRequest(BaseModel):
     def validate_password(cls, v: str) -> str:
         if len(v) < 10:
             raise ValueError("Password must be at least 10 characters")
+        # Cap at bcrypt's 72-byte limit: longer input is silently truncated by
+        # bcrypt (so chars past 72 are ignored), and very long passwords are a
+        # cheap CPU-DoS vector against the hash. Reject rather than truncate.
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("Password must be at most 72 bytes")
         if not any(c.isupper() for c in v):
             raise ValueError("Password must contain at least one uppercase letter")
         if not any(c.islower() for c in v):
@@ -183,6 +188,8 @@ class MeResponse(BaseModel):
     plan_status: str | None = None
     pay_gate_exempt: bool = False
     onboarding_completed: bool = False
+    # Trial countdown (migration 153)
+    stripe_trial_end: str | None = None
 
 
 class WidgetConfigDetail(BaseModel):

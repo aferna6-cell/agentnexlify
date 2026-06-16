@@ -85,6 +85,7 @@ export function AuthProvider({ children }) {
                 payGateExempt: me.pay_gate_exempt,
                 onboardingCompleted: me.onboarding_completed ?? false,
                 referralCode: me.referral_code || null,
+                trialEnd: me.stripe_trial_end ?? null,
               }
             : prev,
         );

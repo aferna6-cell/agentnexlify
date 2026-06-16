@@ -71,6 +71,19 @@ describe("RequirePaid pay-gate (fail-open)", () => {
     expect(screen.getByText(GATE)).toBeTruthy();
     expect(screen.queryByText("DASHBOARD_CHILD")).toBeNull();
   });
+
+  it("shows the payment-recovery gate (not the plan picker) for a lapsed payer", () => {
+    // past_due means a subscription existed and the card lapsed -> guide them
+    // to update the card, not pick a new plan.
+    renderWith({
+      user: { tenantId: "t1", payGateExempt: false, planStatus: "past_due" },
+      token: "jwt",
+    });
+    expect(screen.getByTestId("payment-recovery-gate")).toBeTruthy();
+    expect(screen.getByText(/your payment didn't go through/i)).toBeTruthy();
+    expect(screen.queryByText(GATE)).toBeNull();
+    expect(screen.queryByText("DASHBOARD_CHILD")).toBeNull();
+  });
 });
 
 describe("RequirePaid Stripe-return webhook race", () => {

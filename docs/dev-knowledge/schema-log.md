@@ -4,6 +4,18 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 153_stripe_trial_end.sql (2026-06-16)
+
+**What:** `stripe_trial_end timestamptz` added to `tenants` table (nullable, no default).
+
+**Why:** Stores the Stripe subscription `trial_end` Unix timestamp as ISO 8601. Enables the trial countdown banner to show exact days remaining and charge date instead of generic copy.
+
+**Column:** `tenants.stripe_trial_end` — timestamptz, nullable. Set by `_handle_subscription_updated` webhook handler when `trial_end` is present; cleared to NULL when trial converts.
+
+**Applied:** Pending — apply via `mcp__supabase__apply_migration` or Supabase SQL editor.
+
+---
+
 ## 152_pay_gate_exempt.sql (2026-06-15)
 
 **What:** `pay_gate_exempt boolean NOT NULL DEFAULT false` added to `tenants` table.

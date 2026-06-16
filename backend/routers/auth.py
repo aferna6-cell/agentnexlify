@@ -464,7 +464,8 @@ async def me(claims: dict = Depends(_get_current_tenant)):
         db.table("tenants")
         .select(
             "id, owner_email, business_name, plan, plan_status, city, owner_name, "
-            "business_type, referral_code, pay_gate_exempt, onboarding_completed_at"
+            "business_type, referral_code, pay_gate_exempt, onboarding_completed_at, "
+            "stripe_trial_end"
         )
         .eq("id", claims["tenant_id"])
         .limit(1)
@@ -486,6 +487,7 @@ async def me(claims: dict = Depends(_get_current_tenant)):
         plan_status=t.get("plan_status"),
         pay_gate_exempt=bool(t.get("pay_gate_exempt")),
         onboarding_completed=bool(t.get("onboarding_completed_at")),
+        stripe_trial_end=t.get("stripe_trial_end"),
     )
 
 

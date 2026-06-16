@@ -16,7 +16,7 @@ const API_BASE =
   import.meta.env.VITE_API_BASE_URL ||
   "https://agentnexlify-production.up.railway.app";
 
-// Statuses that mean "was paying, payment lapsed" — recovery, not signup.
+// Statuses that mean "was paying, payment lapsed" - recovery, not signup.
 export const RECOVERY_STATUSES = new Set(["past_due", "paused", "unpaid"]);
 
 export default function PaymentRecoveryGate({ tenantId, token }) {
@@ -85,7 +85,7 @@ export default function PaymentRecoveryGate({ tenantId, token }) {
           }}
         >
           Your subscription is paused because the last charge failed. Update
-          your card to restore access right away — your data is safe.
+          your card to restore access right away - your data is safe.
         </p>
 
         {error && (
