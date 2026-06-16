@@ -37,7 +37,7 @@ describe("StripeTrialBanner", () => {
 
   it("navigates to billing when the button is clicked", () => {
     // Capture into a real variable (not a mock) so the assertion is against
-    // observable behavior — the navigation target — not a mock interaction.
+    // observable behavior (the navigation target), not a mock interaction.
     let navigatedTo = null;
     useAuth.mockReturnValue({
       user: { planStatus: "trialing", plan: "chatbot" },
