@@ -18024,3 +18024,23 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** .github/workflows/pr-check.yml,backend/routers/billing.py,backend/tests/test_trial_expiry_paygate.py,backend/tests/test_zapier_auth.py,docs/ops/paid-signup-smoke.md,frontend/src/components/App.jsx,frontend/src/components/StripeTrialBanner.jsx,frontend/src/components/StripeTrialBanner.test.jsx
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Fix pricing cards leaving empty space on wide screens (#302)
+
+.pricing-grid was grid-template-columns: repeat(5, 1fr) — left over from
+the retired 5-tier model. With only 2 plans the cards filled 2 of 5
+columns, leaving a large gap on the right (>1100px screens). Switch to
+2 columns, centered with max-width 820px so the two cards sit balanced
+in the middle. Also fix the 1200px breakpoint (was repeat(3) -> repeat(2))
+so it doesn't re-introduce a dead column.
+
+https://claude.ai/code/session_01RxfRZfbp6n8oA265s65nLG
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-06-16
+**Commit:** cd284ba
+**Author:** aferna6-cell
+**Files Changed:** landing-page-v2/index.html
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
