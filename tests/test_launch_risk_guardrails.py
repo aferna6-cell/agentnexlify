@@ -38,11 +38,13 @@ class FailingChain(Chain):
 def test_ai_usage_policy_uses_plan_baseline():
     from backend.services.ai_usage_guard import resolve_ai_usage_policy
 
-    # Two-plan model: agent_os baseline 5M tokens, x3 alert / x5 hard limit.
+    # Profit-guarantee policy (2026-06-16): hard cap = costed baseline so AI
+    # spend never exceeds the plan's budget. agent_os baseline 5M tokens ->
+    # alert at 0.8x (4M), hard cap at 1x (5M). Top-ups via usage packs.
     policy = resolve_ai_usage_policy({"id": "tenant-1", "plan": "agent_os"})
 
-    assert policy.alert_threshold_tokens == 15_000_000
-    assert policy.hard_limit_tokens == 25_000_000
+    assert policy.alert_threshold_tokens == 4_000_000
+    assert policy.hard_limit_tokens == 5_000_000
 
 
 def test_ai_usage_policy_honors_tenant_overrides():

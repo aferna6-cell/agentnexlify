@@ -22,9 +22,12 @@ router = APIRouter(
     tags=["billing"],
 )
 
-# Tokens credited per one-time usage pack purchase.
-# Operator sets STRIPE_PRICE_USAGE_PACK on Railway; this constant controls
-# how many tokens that price entitles the tenant to.
+# One usage pack = 1,000,000 tokens for $24.99 (set 2026-06-16).
+# This constant controls how many tokens the pack entitles a tenant to;
+# the $24.99 charge is the Stripe price the operator must create and wire via
+# STRIPE_PRICE_USAGE_PACK on Railway. ~$5 to serve vs $24.99 charged -> the
+# pack is profit-positive and is the top-up valve once a plan hits its cap.
+USAGE_PACK_PRICE_USD = 24.99
 USAGE_PACK_TOKENS = 1_000_000  # 1 million tokens per pack
 
 

@@ -22,8 +22,14 @@ PLAN_BASELINE_TOKENS: dict[str, int] = {
 }
 
 DEFAULT_BASELINE_TOKENS = PLAN_BASELINE_TOKENS["chatbot"]
-ALERT_MULTIPLIER = 3
-HARD_LIMIT_MULTIPLIER = 5
+# Profit guarantee (2026-06-16): the hard cap equals the costed baseline, so a
+# tenant's monthly AI spend can never exceed the budget priced into their plan
+# (~$4 chatbot vs $19.99, ~$25 agent_os vs $99.99). When they hit the cap, AI
+# pauses and they can buy a usage pack (1M tokens for $24.99 - set the Stripe
+# price in STRIPE_PRICE_USAGE_PACK). Alert fires at 80% of the cap so they can
+# top up before the cutoff.
+ALERT_MULTIPLIER = 0.8
+HARD_LIMIT_MULTIPLIER = 1
 
 
 @dataclass(frozen=True)
@@ -95,8 +101,8 @@ def resolve_ai_usage_policy(tenant: dict[str, Any]) -> AIUsagePolicy:
     """Resolve plan-derived usage caps, honoring tenant-level overrides and purchased packs."""
     plan = str(tenant.get("plan") or "free").lower()
     baseline = PLAN_BASELINE_TOKENS.get(plan, DEFAULT_BASELINE_TOKENS)
-    default_alert = baseline * ALERT_MULTIPLIER
-    default_hard = baseline * HARD_LIMIT_MULTIPLIER
+    default_alert = int(baseline * ALERT_MULTIPLIER)
+    default_hard = int(baseline * HARD_LIMIT_MULTIPLIER)
 
     alert = _coerce_positive_int(tenant.get("ai_monthly_token_alert_threshold"))
     hard = _coerce_positive_int(tenant.get("ai_monthly_token_hard_limit"))
