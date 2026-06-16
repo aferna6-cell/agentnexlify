@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { trackEvent } from "../utils/analytics";
-import { usePricingVariant, trackPricingEvent } from "../utils/pricingExperiment";
+import { usePricingVariant } from "../utils/pricingExperiment";
 import "../styles/home.css";
 
 /* Read email from JWT in localStorage (works outside AuthProvider) */
@@ -61,7 +61,7 @@ const faqData = [
     id: "faq-a1",
     question: "What’s included in each plan?",
     answer:
-      "Every plan builds on the previous tier. Free includes the chat widget, customer capture, and FAQ knowledge base. Growth is $99/month and includes a 7-day free trial, appointment booking, SMS, auto follow-up, and the AI content writer. Professional is $150/month and adds the full SEO suite, social media scheduling, email and SMS campaigns, and advanced analytics. Enterprise is $250/month and adds AI visibility tracking, competitor analysis, team accounts, webhooks, and white-label branding.",
+      "Two plans. Chatbot is $19.99/month and includes the AI chat widget, lead capture, FAQ knowledge base, and appointment requests. Agent OS is $99.99/month and adds the full platform: your AI marketing staff, SEO audit suite, social media scheduling, email and SMS campaigns, automation rules, and advanced analytics. No setup fees. Cancel anytime.",
   },
   {
     id: "faq-a2",
@@ -79,7 +79,7 @@ const faqData = [
     id: "faq-a5",
     question: "Can I upgrade my plan later?",
     answer:
-      "Yes. Start free or on Growth and upgrade as your business grows. You can change your plan anytime from the Billing page.",
+      "Yes. Most businesses start with Chatbot and upgrade to Agent OS as they grow. You can change your plan anytime from the Billing page.",
   },
   {
     id: "faq-a6",
@@ -470,7 +470,7 @@ export default function Home() {
         <title>AgentNexLiFy &mdash; AI Staff for Small Businesses</title>
         <meta
           name="description"
-          content="AgentNexLiFy gives your small business an AI staff that handles sales follow-ups, booking, invoicing, and marketing from one chat. Your website widget captures customers 24/7. Start free."
+          content="AgentNexLiFy gives your small business an AI staff that handles sales follow-ups, booking, invoicing, and marketing from one chat. Your website widget captures customers 24/7. Plans from $19.99/mo."
         />
         <link rel="canonical" href="https://agentnexlify.com/" />
         <meta
@@ -508,17 +508,12 @@ export default function Home() {
   "description": "AI-powered business operating system for small businesses.",
   "url": "https://agentnexlify.com",
   "offers": [
-    { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
-    { "@type": "Offer", "name": "Growth", "price": "99", "priceCurrency": "USD",
-      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "99", "priceCurrency": "USD", "billingDuration": "P1M" }
+    { "@type": "Offer", "name": "Chatbot", "price": "19.99", "priceCurrency": "USD",
+      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "19.99", "priceCurrency": "USD", "billingDuration": "P1M" }
     },
     {
-      "@type": "Offer", "name": "Professional", "price": "150", "priceCurrency": "USD",
-      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "150", "priceCurrency": "USD", "billingDuration": "P1M" }
-    },
-    {
-      "@type": "Offer", "name": "Enterprise", "price": "250", "priceCurrency": "USD",
-      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "250", "priceCurrency": "USD", "billingDuration": "P1M" }
+      "@type": "Offer", "name": "Agent OS", "price": "99.99", "priceCurrency": "USD",
+      "priceSpecification": { "@type": "UnitPriceSpecification", "price": "99.99", "priceCurrency": "USD", "billingDuration": "P1M" }
     }
   ]
 }
@@ -528,10 +523,10 @@ export default function Home() {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Free includes the chat widget, customer capture, and FAQ knowledge base. Growth is $99/month with a 7-day free trial, booking, SMS, auto follow-up, and the AI content writer. Professional is $150/month with SEO suite, social media, campaigns, and advanced analytics. Enterprise is $250/month with AI visibility tracking, competitor analysis, team accounts, webhooks, and white-label branding." } },
+    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Two plans. Chatbot is $19.99/month with the AI chat widget, lead capture, FAQ knowledge base, and appointment requests. Agent OS is $99.99/month with the full platform: AI marketing staff, SEO audit suite, social media, campaigns, automation rules, and advanced analytics. No setup fees, cancel anytime." } },
     { "@type": "Question", "name": "Do I need any technical skills?", "acceptedAnswer": { "@type": "Answer", "text": "None. You run your business by talking to your AI staff the way you would a real employee. The right department picks it up and shows you the work before anything goes out." } },
     { "@type": "Question", "name": "What tools do you integrate with?", "acceptedAnswer": { "@type": "Answer", "text": "Google Calendar (built-in), plus outbound webhooks to connect with Zapier, Slack, HubSpot, and 5,000+ other tools. Twilio for SMS and Stripe for payments." } },
-    { "@type": "Question", "name": "Can I upgrade my plan later?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Start free or on Growth and upgrade as your business grows. Change plans anytime from the Billing page." } },
+    { "@type": "Question", "name": "Can I upgrade my plan later?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Most businesses start with Chatbot and upgrade to Agent OS as they grow. Change plans anytime from the Billing page." } },
     { "@type": "Question", "name": "Is there a contract?", "acceptedAnswer": { "@type": "Answer", "text": "No long-term contracts. Month-to-month billing. Cancel anytime." } },
     { "@type": "Question", "name": "What if the AI makes a mistake?", "acceptedAnswer": { "@type": "Answer", "text": "You stay in control. Every email, text, and invoice sits in your approvals queue until you review it. Nothing reaches a customer without your say-so." } },
     { "@type": "Question", "name": "How is this different from GoHighLevel or ChatGPT?", "acceptedAnswer": { "@type": "Answer", "text": "GoHighLevel takes real time to configure. ChatGPT is a general tool you have to build around yourself. AgentNexLiFy is done-for-you: describe what you need in plain language, an AI department picks it up, and you review the work before it goes out." } }
@@ -622,7 +617,7 @@ export default function Home() {
               </p>
               <div className="lp-hero-buttons reveal">
                 <Link to="/signup" className="btn-primary">
-                  Start free {"→"}
+                  Get Started {"→"}
                 </Link>
                 <a href="#how-it-works" className="btn-secondary">
                   See how it works
@@ -874,146 +869,71 @@ export default function Home() {
           <div className="lp-pricing-header">
             <div className="section-label reveal">Pricing</div>
             <h2 className="section-title reveal">
-              AI staff from $0. No setup fees.
+              Simple pricing. Serious ROI.
             </h2>
             <p className="section-subtitle reveal">
-              Start free and add departments as your business grows. Every paid
-              plan includes hands-on onboarding and ongoing optimization.
+              Two plans, no setup fees. Both include hands-on onboarding and
+              ongoing optimization. Cancel anytime.
             </p>
           </div>
           <div className="lp-pricing-grid">
-            {/* Free */}
+            {/* Chatbot */}
             <div className="lp-pricing-card start-here reveal">
-              <div className="lp-pricing-plan-name">Free</div>
+              <div className="lp-pricing-plan-name">Chatbot</div>
               <div className="lp-pricing-tagline">
-                See what AI can do for your business
+                Your AI front desk on your website.
               </div>
               <div className="lp-pricing-amount">
-                <span className="lp-pricing-dollar">$0</span>
+                <span className="lp-pricing-dollar">$19.99</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
-              <div className="lp-pricing-setup">No credit card required</div>
+              <div className="lp-pricing-setup">No setup fee. Cancel anytime.</div>
               <div className="lp-pricing-divider"></div>
               <ul className="lp-pricing-features">
-                <li>AI chat widget</li>
-                <li>Customer capture</li>
-                <li>Unlimited conversations</li>
-                <li>Free forever</li>
-                <li>Basic dashboard</li>
-                <li>Email notifications</li>
+                <li>AI chat widget that answers questions 24/7</li>
+                <li>Lead capture with instant notifications</li>
+                <li>Appointment requests through the widget</li>
+                <li>FAQ knowledge base trained on your business</li>
                 <li>Widget customization</li>
-                <li>FAQ knowledge base</li>
-                <li>Basic hosted business page</li>
-                <li>Dashboard analytics</li>
-                <li>Community support</li>
-              </ul>
-              <Link
-                to="/signup"
-                className="pricing-cta"
-                onClick={() => trackPricingEvent("cta_click", "free")}
-              >
-                {pricingVariant === "variant_b"
-                  ? "Try It Free - 2-Minute Setup →"
-                  : "Get Started →"}
-              </Link>
-            </div>
-
-            {/* Growth */}
-            <div className="lp-pricing-card reveal">
-              <div className="lp-pricing-plan-name">Growth</div>
-              <div className="lp-pricing-tagline">Your AI front desk</div>
-              <div className="lp-pricing-amount">
-                <span className="lp-pricing-dollar">$99</span>
-                <span className="lp-pricing-period">/month</span>
-              </div>
-              <div className="lp-pricing-setup">
-                <span className="lp-pricing-waived-badge pulse-glow">
-                  7-day free trial included
-                </span>
-              </div>
-              <div className="lp-pricing-divider"></div>
-              <ul className="lp-pricing-features">
-                <li>AI chat widget</li>
-                <li>Email &amp; form lead capture</li>
-                <li>Auto follow-up email &amp; SMS</li>
-                <li>Customer management</li>
-                <li>Appointment booking</li>
-                <li>2 automation sequences</li>
-                <li>Up to 500 conversations/month</li>
-                <li>Basic SEO audit &amp; recommendations</li>
-                <li>AI content writer</li>
                 <li>Hosted business page</li>
-                <li>Basic analytics &amp; reporting</li>
-                <li>Email support</li>
               </ul>
-              <StripeCta plan="growth">Get Started {"→"}</StripeCta>
+              <StripeCta plan="chatbot">
+                {pricingVariant === "variant_b"
+                  ? "Start Chatbot - 2-Minute Setup →"
+                  : "Get Started →"}
+              </StripeCta>
             </div>
 
-            {/* Professional - Most Popular */}
+            {/* Agent OS - Most Popular */}
             <div className="lp-pricing-card popular reveal">
-              <div className="lp-pricing-plan-name">Professional</div>
-              <div className="lp-pricing-tagline">Automate your follow-ups</div>
+              <div className="lp-pricing-plan-name">Agent OS</div>
+              <div className="lp-pricing-tagline">
+                Your full AI team. Marketing included.
+              </div>
               <div className="lp-pricing-amount">
-                <span className="lp-pricing-dollar">$150</span>
+                <span className="lp-pricing-dollar">$99.99</span>
                 <span className="lp-pricing-period">/month</span>
               </div>
               <div className="lp-pricing-setup">
-                No setup fee. Cancel anytime
+                No setup fee. Cancel anytime.
               </div>
               <div className="lp-pricing-divider"></div>
               <div className="lp-pricing-includes">
-                Everything in Growth, plus:
+                Everything in Chatbot, plus:
               </div>
               <ul className="lp-pricing-features">
-                <li>Up to 6 automation sequences</li>
-                <li>Lead nurturing sequences</li>
-                <li>Pipeline automation</li>
-                <li>AI-powered email responses</li>
-                <li>Review request automation</li>
+                <li>Your AI staff in Agent OS: nurturing, follow-ups, outreach</li>
                 <li>Full SEO audit suite &amp; keyword tracking</li>
                 <li>Social media content &amp; scheduling</li>
                 <li>Email &amp; SMS marketing campaigns</li>
-                <li>AI marketing content generator</li>
-                <li>Custom business page styling</li>
-                <li>Advanced analytics &amp; insights</li>
-                <li>Priority email &amp; chat support</li>
+                <li>Automation rules &amp; advanced analytics</li>
+                <li>Priority support</li>
               </ul>
-              <StripeCta plan="professional">Get Started {"→"}</StripeCta>
-            </div>
-
-            {/* Enterprise */}
-            <div className="lp-pricing-card reveal">
-              <div className="lp-pricing-plan-name">Enterprise</div>
-              <div className="lp-pricing-tagline">Your full AI staff</div>
-              <div className="lp-pricing-amount">
-                <span className="lp-pricing-dollar">$250</span>
-                <span className="lp-pricing-period">/month</span>
-              </div>
-              <div className="lp-pricing-setup">
-                No setup fee. Cancel anytime
-              </div>
-              <div className="lp-pricing-divider"></div>
-              <div className="lp-pricing-includes">
-                Everything in Professional, plus:
-              </div>
-              <ul className="lp-pricing-features">
-                <li>Unlimited automation sequences</li>
-                <li>AI appointment booking agent</li>
-                <li>Team accounts &amp; roles</li>
-                <li>AI visibility tracking (GEO score)</li>
-                <li>Priority onboarding &amp; migration support</li>
-                <li>Unlimited social media campaigns</li>
-                <li>Webhook integrations</li>
-                <li>White-label branding &amp; custom CSS</li>
-                <li>White-glove business page design</li>
-                <li>Full analytics suite</li>
-                <li>Dedicated account manager</li>
-              </ul>
-              <StripeCta plan="enterprise">Get Started {"→"}</StripeCta>
+              <StripeCta plan="agent_os">Get Started {"→"}</StripeCta>
             </div>
           </div>
           <p className="lp-pricing-footer-note reveal">
-            No setup fees. No contracts. All paid plans include hands-on
+            No setup fees. No contracts. Both plans include hands-on
             onboarding and ongoing optimization. Cancel anytime.
           </p>
         </div>
@@ -1026,11 +946,11 @@ export default function Home() {
             Your AI staff is ready to start today.
           </h2>
           <p className="section-subtitle reveal" style={{ margin: "0 auto 32px", textAlign: "center" }}>
-            Free to start. No credit card. Takes 2 minutes to set up.
+            No setup fees. Cancel anytime. Takes 2 minutes to get started.
           </p>
           <div className="lp-cta-buttons reveal">
             <Link to="/signup" className="btn-primary">
-              Get Started Free {"→"}
+              Get Started {"→"}
             </Link>
             <Link to="/demo" className="btn-secondary">
               Book a Demo
@@ -1154,7 +1074,7 @@ export default function Home() {
       {showFloatingCta && !floatingCtaDismissed && (
         <div className="lp-floating-cta">
           <Link to="/signup" className="lp-floating-cta-link">
-            <span className="floating-cta-full">Start with AI staff free</span>
+            <span className="floating-cta-full">Get your AI staff started</span>
             <span className="floating-cta-short">Try Out Our AI Staff</span>
           </Link>
           <button
