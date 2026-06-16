@@ -563,8 +563,15 @@ class TestRateLimitIntegration:
     def _key_auth_headers(self, raw_key: str) -> dict:
         return {"x-api-key": raw_key}
 
-    def test_429_after_limit(self, mock_supabase):
+    def test_429_after_limit(self, mock_supabase, monkeypatch):
+        import backend.services.api_key_limiter as _lim
         from backend.services.api_key_auth import generate_api_key
+
+        # Freeze time so all 4 requests land in the same minute bucket.
+        # Without this the test is flaky at minute boundaries: if request 3
+        # and 4 straddle a 60-s boundary the bucket resets and the 4th
+        # request gets count=1 (allowed), returning 200 instead of 429.
+        monkeypatch.setattr(_lim.time, "time", lambda: 1_700_000_030.0)
 
         client = _make_client()
         raw, key_hash, key_prefix = generate_api_key()

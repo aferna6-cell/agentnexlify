@@ -11,6 +11,7 @@ import { fetchTrialStatus } from "../utils/api/dashboard";
 import { fetchOsPendingDeliverables } from "../utils/api/os";
 import DemoBanner from "./DemoBanner";
 import LoginPage from "./LoginPage";
+import StripeTrialBanner from "./StripeTrialBanner";
 import MarketingUpsell, {
   MARKETING_GATED_KEYS,
   MARKETING_PLANS,
@@ -356,6 +357,7 @@ export default function App() {
       >
         <DemoBanner />
         <TrialBanner trialData={trialData} onNavigate={handleNavigate} />
+        <StripeTrialBanner onNavigate={handleNavigate} />
         <div
           style={{
             display: "flex",
