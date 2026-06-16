@@ -17957,3 +17957,70 @@ Fixes the two HIGH findings from the launch-readiness security audit (signed/ser
 **Author:** aferna6-cell
 **Files Changed:** audits/audit-launch-readiness-2026-06-15.md,backend/routers/platform_support.py,backend/routers/resend_webhooks.py,backend/tests/test_platform_support.py,landing-page-v2/support-widget/agentnexlify-support-widget.js
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Launch hardening: trial-end access contract, dunning recovery fix, trial banner, flaky-test fix (#300)
+
+* Pin trial-end access contract + deterministic dunning recovery (#1)
+
+Policy (decided 2026-06-16): lock immediately on first failed charge,
+keep current behavior. is_pay_gated treats only {active, trialing} as
+paid; past_due/paused lock the tenant.
+
+Fix order-dependent recovery: invoice.payment_failed writes plan_status
+'paused' but a near-simultaneous customer.subscription.updated can
+overwrite it with 'past_due'. _handle_payment_succeeded only restored
+from 'paused', stranding a recovered tenant in past_due. Now restores
+from either dunning-locked status (still gated on dunning_count>0 so the
+fraud pause survives).
+
+- backend/tests/test_trial_expiry_paygate.py: pins the status contract
+  + deterministic recovery from paused OR past_due + fraud-pause survival.
+- pr-check.yml: add the new test to the curated suite.
+- docs/ops/paid-signup-smoke.md (#3): reflect the 7-day trial (expect
+  trialing, no upfront charge) + verify the owner paid-signup alert.
+
+https://claude.ai/code/session_01RxfRZfbp6n8oA265s65nLG
+
+* Fix flaky zapier rate-limit test (#4)
+
+test_429_after_limit was flaky in CI: the 4 sequential requests could
+straddle a 60-second minute boundary, resetting api_key_limiter's
+per-minute bucket so the 4th request got count=1 (allowed -> 200) instead
+of 429. Freeze api_key_limiter.time.time to a mid-minute timestamp so all
+4 requests land in one bucket. Assertion + rate_limit_rpm contract intact.
+
+https://claude.ai/code/session_01RxfRZfbp6n8oA265s65nLG
+
+* Add Stripe paid-trial banner to dashboard (#5)
+
+New paid-trial customers (plan_status=trialing on a paid plan) saw no
+warning that their card will be charged when the 7-day trial ends -- the
+legacy TrialBanner only fires for the free plan. Add StripeTrialBanner
+gated on planStatus===trialing: warns the card charges automatically at
+trial end + links to billing. No exact countdown (trial_end not stored;
+follow-up needs a backend column). 7 component tests.
+
+https://claude.ai/code/session_01RxfRZfbp6n8oA265s65nLG
+
+* Assert navigation target by value, not mock interaction
+
+The click test tripped agentnexlify-test-quality/no-interaction-only-tests
+(only asserted onNavigate mock was called). Capture the target in a real
+variable and assert its value — observable behavior, not a mock interaction.
+
+https://claude.ai/code/session_01RxfRZfbp6n8oA265s65nLG
+
+* Replace em dash in test comment (website-source invariant)
+
+https://claude.ai/code/session_01RxfRZfbp6n8oA265s65nLG
+
+---------
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-06-16
+**Commit:** 34b9d0f
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/pr-check.yml,backend/routers/billing.py,backend/tests/test_trial_expiry_paygate.py,backend/tests/test_zapier_auth.py,docs/ops/paid-signup-smoke.md,frontend/src/components/App.jsx,frontend/src/components/StripeTrialBanner.jsx,frontend/src/components/StripeTrialBanner.test.jsx
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
