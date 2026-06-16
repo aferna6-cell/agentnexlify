@@ -35,14 +35,23 @@ describe("StripeTrialBanner", () => {
     ).toBeInTheDocument();
   });
 
-  it("calls onNavigate with 'billing' when button clicked", () => {
-    const onNavigate = vi.fn();
+  it("navigates to billing when the button is clicked", () => {
+    // Capture into a real variable (not a mock) so the assertion is against
+    // observable behavior — the navigation target — not a mock interaction.
+    let navigatedTo = null;
     useAuth.mockReturnValue({
       user: { planStatus: "trialing", plan: "chatbot" },
     });
-    render(<StripeTrialBanner onNavigate={onNavigate} />);
+    render(
+      <StripeTrialBanner
+        onNavigate={(key) => {
+          navigatedTo = key;
+        }}
+      />,
+    );
+    expect(navigatedTo).toBeNull(); // no navigation before interaction
     fireEvent.click(screen.getByRole("button", { name: /manage billing/i }));
-    expect(onNavigate).toHaveBeenCalledWith("billing");
+    expect(navigatedTo).toBe("billing");
   });
 
   it("does not render when planStatus is active", () => {
