@@ -85,17 +85,41 @@ export default function RequirePaid({ children }) {
 
   useEffect(() => {
     if (!hasStripeReturn || !token) return;
-    // Re-fetch /me to pick up the updated plan_status after Stripe webhook fires
+    // Stripe's checkout.session.completed webhook is async - it can land AFTER
+    // the customer is redirected back. A single /me fetch can race ahead of the
+    // webhook and still see the unpaid plan, stranding a paying customer on the
+    // gate. Poll with backoff (~10s total) and stop early once the webhook has
+    // flipped plan_status to active/trialing (or the tenant is exempt).
+    let cancelled = false;
     setVerifying(true);
-    fetch(`${API_BASE}/api/v1/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((me) => {
-        if (me) setMeOverride(me);
-      })
-      .catch(() => {})
-      .finally(() => setVerifying(false));
+    const delaysMs = [0, 750, 1500, 3000, 5000];
+    async function poll() {
+      for (let i = 0; i < delaysMs.length; i++) {
+        if (delaysMs[i]) {
+          await new Promise((resolve) => setTimeout(resolve, delaysMs[i]));
+        }
+        if (cancelled) return;
+        let me = null;
+        try {
+          const r = await fetch(`${API_BASE}/api/v1/auth/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          me = r.ok ? await r.json() : null;
+        } catch {
+          me = null;
+        }
+        if (cancelled) return;
+        if (me) {
+          setMeOverride(me);
+          if (me.pay_gate_exempt || ACTIVE_STATUSES.has(me.plan_status)) break;
+        }
+      }
+      if (!cancelled) setVerifying(false);
+    }
+    poll();
+    return () => {
+      cancelled = true;
+    };
   }, [hasStripeReturn, token]);
 
   // Logged out OR token still parsing - render children so the downstream
