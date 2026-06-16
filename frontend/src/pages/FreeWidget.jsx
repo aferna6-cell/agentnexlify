@@ -70,44 +70,36 @@ export default function FreeWidget() {
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
     description:
-      "Free AI-powered customer service chatbot for websites. Capture leads, answer questions, and book appointments 24/7.",
+      "AI-powered customer service chatbot for websites. Capture leads, answer questions, and book appointments 24/7.",
     url: "https://agentnexlify.com/free-widget",
     offers: [
       {
         "@type": "Offer",
-        name: "Free",
-        price: "0",
-        priceCurrency: "USD",
-        description:
-          "Free forever with AI-powered responses, lead capture, appointment booking, and email notifications",
-      },
-      {
-        "@type": "Offer",
-        name: "Growth",
-        price: "99",
+        name: "Chatbot",
+        price: "19.99",
         priceCurrency: "USD",
         priceSpecification: {
           "@type": "UnitPriceSpecification",
-          price: "99",
+          price: "19.99",
           priceCurrency: "USD",
           billingDuration: "P1M",
         },
         description:
-          "7-day free trial, unlimited conversations, no watermark, basic automations, FAQ training",
+          "AI chatbot widget, lead capture, FAQ answers, appointment booking, email notifications",
       },
       {
         "@type": "Offer",
-        name: "Professional",
-        price: "150",
+        name: "Agent OS",
+        price: "99.99",
         priceCurrency: "USD",
         priceSpecification: {
           "@type": "UnitPriceSpecification",
-          price: "150",
+          price: "99.99",
           priceCurrency: "USD",
           billingDuration: "P1M",
         },
         description:
-          "Unlimited conversations, no watermark, full automations, FAQ training, priority support",
+          "Full platform: AI staff, Agent OS, marketing, SEO, social media, campaigns, and everything in Chatbot",
       },
     ],
   });
@@ -130,19 +122,19 @@ export default function FreeWidget() {
   return (
     <>
       <Helmet>
-        <title>Free AI Chatbot for Your Website | AgentNexLiFy</title>
+        <title>AI Chatbot for Your Website | AgentNexLiFy</title>
         <meta
           name="description"
-          content="Add a free AI chatbot to your website in minutes. Handle customer inquiries 24/7, capture leads automatically, no coding required."
+          content="Add an AI chatbot to your website in minutes. Handle customer inquiries 24/7, capture leads automatically, no coding required."
         />
         <link rel="canonical" href="https://agentnexlify.com/free-widget" />
         <meta
           property="og:title"
-          content="Free AI Chatbot for Your Website | AgentNexLiFy"
+          content="AI Chatbot for Your Website | AgentNexLiFy"
         />
         <meta
           property="og:description"
-          content="Add a free AI chatbot to your website in minutes. Handle customer inquiries 24/7, capture leads automatically, no coding required."
+          content="Add an AI chatbot to your website in minutes. Handle customer inquiries 24/7, capture leads automatically, no coding required."
         />
         <meta
           property="og:url"
@@ -152,11 +144,11 @@ export default function FreeWidget() {
         <meta name="twitter:card" content="summary_large_image" />
         <meta
           name="twitter:title"
-          content="Free AI Chatbot for Your Website | AgentNexLiFy"
+          content="AI Chatbot for Your Website | AgentNexLiFy"
         />
         <meta
           name="twitter:description"
-          content="Add a free AI chatbot to your website in minutes. Handle customer inquiries 24/7, capture leads automatically, no coding required."
+          content="Add an AI chatbot to your website in minutes. Handle customer inquiries 24/7, capture leads automatically, no coding required."
         />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -234,8 +226,8 @@ export default function FreeWidget() {
               </svg>
               <span>Try Demo</span>
             </a>
-            <Link to="/signup" className="nav-cta">
-              Get Free Chatbot
+            <Link to="/signup?plan=chatbot" className="nav-cta">
+              Get Started
             </Link>
           </div>
         </div>
@@ -246,27 +238,26 @@ export default function FreeWidget() {
         <div className="container hero-content">
           <div className="hero-badge reveal" ref={revealRef}>
             <span className="hero-badge-dot" aria-hidden="true"></span>
-            Free forever {"\u2014"} no credit card required
+            $19.99/mo {"\u2014"} No setup fee {"\u2014"} Cancel anytime
           </div>
           <h1 className="reveal" ref={revealRef}>
-            Free AI Chatbot for Your Website
+            AI Chatbot for Your Website
             <br />
             <span className="accent">{"\u2014"} Set Up in 5 Minutes</span>
           </h1>
           <p className="hero-sub reveal" ref={revealRef}>
-            No credit card. No coding. Cancel anytime.
+            $19.99/mo. No setup fee. No coding. Cancel anytime.
           </p>
           <div className="hero-buttons reveal" ref={revealRef}>
-            <Link to="/signup" className="btn-primary">
-              Get My Free Chatbot {"\u2192"}
+            <Link to="/signup?plan=chatbot" className="btn-primary">
+              Start with Chatbot {"\u2192"}
             </Link>
             <a href="/demo" className="btn-secondary">
               See It In Action {"\u2193"}
             </a>
           </div>
           <p className="hero-note reveal" ref={revealRef}>
-            Free forever, with a 7-day Growth trial when you're ready to
-            upgrade {"\u2014"} no pressure
+            Chatbot plan at $19.99/mo {"\u2014"} upgrade to Agent OS anytime
           </p>
         </div>
       </section>
@@ -319,10 +310,10 @@ export default function FreeWidget() {
               <div className="how-step-num" aria-hidden="true">
                 01
               </div>
-              <h3>Sign Up Free</h3>
+              <h3>Sign Up</h3>
               <p>
-                Enter your business name and email. No credit card, no
-                commitment {"\u2014"} just a free account.
+                Enter your business name and email. No setup fee, no
+                commitment {"\u2014"} just your account.
               </p>
             </div>
             <div className="how-step reveal" ref={revealRef}>
@@ -358,14 +349,13 @@ export default function FreeWidget() {
         <div className="container">
           <div className="included-header">
             <div className="section-label reveal" ref={revealRef}>
-              What's Included Free
+              What's Included
             </div>
             <h2 className="section-title reveal" ref={revealRef}>
               Everything you need to start capturing leads.
             </h2>
             <p className="section-subtitle reveal" ref={revealRef}>
-              No hidden fees. Start free now, then unlock Growth with a 7-day
-              trial when you're ready.
+              The Chatbot plan at $19.99/mo includes all of these features with no hidden fees.
             </p>
           </div>
           <div className="included-grid">
@@ -375,7 +365,7 @@ export default function FreeWidget() {
               </div>
               <h3>Unlimited Conversations</h3>
               <p>
-                No conversation limits on the free plan. Capture every lead that
+                No conversation caps. Capture every lead that
                 visits your site after hours or during busy periods.
               </p>
             </div>
@@ -423,10 +413,10 @@ export default function FreeWidget() {
               <div className="included-icon" aria-hidden="true">
                 &#127775;
               </div>
-              <h3>"Powered by AgentNexLiFy" Badge</h3>
+              <h3>One-Line Install</h3>
               <p>
-                Free plan includes a small watermark badge. Upgrade to Growth or
-                higher to remove it.
+                Paste a single script tag on any site - WordPress, Wix,
+                Squarespace, Shopify, or plain HTML. Live in minutes.
               </p>
             </div>
           </div>
@@ -441,11 +431,10 @@ export default function FreeWidget() {
               Compare Plans
             </div>
             <h2 className="section-title reveal" ref={revealRef}>
-              Start free, scale when you're ready.
+              Pick the plan that fits your business.
             </h2>
             <p className="section-subtitle reveal" ref={revealRef}>
-              Every plan builds on the one below it. Upgrade or downgrade
-              anytime.
+              Upgrade or downgrade anytime. No setup fees.
             </p>
           </div>
           <div className="comparison-table-wrap reveal" ref={revealRef}>
@@ -454,55 +443,17 @@ export default function FreeWidget() {
                 <tr>
                   <th></th>
                   <th className="highlight">
-                    Free Plan<span className="price-tag">$0/mo</span>
+                    Chatbot<span className="price-tag">$19.99/mo</span>
                   </th>
                   <th>
-                    Growth<span className="price-tag">$99/mo</span>
-                  </th>
-                  <th>
-                    Professional<span className="price-tag">$150/mo</span>
+                    Agent OS<span className="price-tag">$99.99/mo</span>
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>Monthly conversations</td>
+                  <td>AI Chat Widget</td>
                   <td className="highlight">
-                    <strong>Unlimited</strong>
-                  </td>
-                  <td>
-                    <strong>Unlimited</strong>
-                  </td>
-                  <td>
-                    <strong>Unlimited</strong>
-                  </td>
-                </tr>
-                <tr>
-                  <td>Watermark</td>
-                  <td className="highlight">
-                    <span className="check">&#10003;</span> Yes
-                  </td>
-                  <td>
-                    <span className="dash">{"\u2014"}</span> No
-                  </td>
-                  <td>
-                    <span className="dash">{"\u2014"}</span> No
-                  </td>
-                </tr>
-                <tr>
-                  <td>Automations</td>
-                  <td className="highlight">
-                    <span className="dash">{"\u2014"}</span>
-                  </td>
-                  <td>Basic</td>
-                  <td>Full</td>
-                </tr>
-                <tr>
-                  <td>FAQ training</td>
-                  <td className="highlight">
-                    <span className="dash">{"\u2014"}</span>
-                  </td>
-                  <td>
                     <span className="check">&#10003;</span>
                   </td>
                   <td>
@@ -510,11 +461,44 @@ export default function FreeWidget() {
                   </td>
                 </tr>
                 <tr>
-                  <td>Priority support</td>
+                  <td>Lead Capture</td>
+                  <td className="highlight">
+                    <span className="check">&#10003;</span>
+                  </td>
+                  <td>
+                    <span className="check">&#10003;</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>FAQ Training</td>
+                  <td className="highlight">
+                    <span className="check">&#10003;</span>
+                  </td>
+                  <td>
+                    <span className="check">&#10003;</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Marketing and SEO Suite</td>
                   <td className="highlight">
                     <span className="dash">{"\u2014"}</span>
                   </td>
                   <td>
+                    <span className="check">&#10003;</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Agent OS (AI Staff)</td>
+                  <td className="highlight">
+                    <span className="dash">{"\u2014"}</span>
+                  </td>
+                  <td>
+                    <span className="check">&#10003;</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Social Media and Campaigns</td>
+                  <td className="highlight">
                     <span className="dash">{"\u2014"}</span>
                   </td>
                   <td>
@@ -559,15 +543,15 @@ export default function FreeWidget() {
             style={{ marginBottom: 0 }}
           >
             <Link
-              to="/signup"
+              to="/signup?plan=chatbot"
               className="btn-primary"
               style={{ padding: "18px 40px", fontSize: "18px" }}
             >
-              Create My Free Chatbot {"\u2192"}
+              Start with Chatbot {"\u2192"}
             </Link>
           </div>
           <p className="cta-note reveal" ref={revealRef}>
-            No credit card required. Cancel anytime.
+            $19.99/mo. No setup fee. Cancel anytime.
           </p>
         </div>
       </section>
@@ -584,7 +568,7 @@ export default function FreeWidget() {
               />
               <p>AI-powered automation for businesses.</p>
               <Link
-                to="/signup"
+                to="/signup?plan=chatbot"
                 className="btn-primary"
                 style={{
                   marginTop: "16px",
@@ -592,7 +576,7 @@ export default function FreeWidget() {
                   padding: "12px 24px",
                 }}
               >
-                Get Free Chatbot {"\u2192"}
+                Get Started {"\u2192"}
               </Link>
             </div>
             <div className="footer-col">
@@ -608,7 +592,7 @@ export default function FreeWidget() {
                   <a href="/#faq">FAQ</a>
                 </li>
                 <li>
-                  <Link to="/signup">Free Signup</Link>
+                  <Link to="/signup?plan=chatbot">Sign Up</Link>
                 </li>
               </ul>
             </div>
