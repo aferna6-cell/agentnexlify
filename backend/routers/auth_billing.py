@@ -95,6 +95,10 @@ async def billing_checkout(
 
     session_params: dict = {
         "mode": "subscription",
+        # Card only — disables Stripe Link so customers don't get Link's own
+        # "Welcome to Link / verify your email / your Link wallet" emails,
+        # which look like phishing for a brand-new AgentNexLiFy customer.
+        "payment_method_types": ["card"],
         "customer": customer.id,
         "line_items": line_items,
         "success_url": success_url,
