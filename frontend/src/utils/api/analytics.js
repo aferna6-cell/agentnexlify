@@ -68,3 +68,10 @@ export function fetchRecoveryStats(tenantId, token, days = 30) {
     token,
   });
 }
+
+export function fetchFrontDeskHealth(tenantId, token, period = "30d") {
+  return request(
+    `/api/v1/analytics/${tenantId}/front-desk-health?period=${period}`,
+    { token },
+  );
+}

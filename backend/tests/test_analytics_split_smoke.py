@@ -44,17 +44,25 @@ ANALYTICS_ROUTES = [
     "/api/v1/analytics/{tid}/health",
     "/api/v1/analytics/{tid}/snapshot",
     "/api/v1/analytics/{tid}/recovery-stats",
+    # Added post-split: Front Desk Health dashboard card endpoint.
+    "/api/v1/analytics/{tid}/front-desk-health",
 ]
 
 TENANT_ID = "00000000-0000-0000-0000-000000000001"
 
 
-def test_all_14_analytics_routes_registered(client, auth_headers):
-    """Sanity check: the package's __init__.py wired 14 routes into app."""
+def test_all_analytics_routes_registered(client, auth_headers):
+    """Sanity check: the package's __init__.py wired every route into app.
+
+    Count grows as endpoints are added (front-desk-health added 2026-06). The
+    regression this guards against is a route LOST or duplicated, caught by the
+    exact path-set comparison below.
+    """
     from backend.routers import analytics
-    assert len(analytics.router.routes) == 14, (
-        f"Expected 14 routes in analytics package, got "
-        f"{len(analytics.router.routes)}. Split lost or duplicated a route."
+    expected = len(ANALYTICS_ROUTES)
+    assert len(analytics.router.routes) == expected, (
+        f"Expected {expected} routes in analytics package, got "
+        f"{len(analytics.router.routes)}. A route was lost or duplicated."
     )
     # Registered paths match the parametrized list
     got = sorted(r.path for r in analytics.router.routes)
