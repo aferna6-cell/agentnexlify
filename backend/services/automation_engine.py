@@ -15,7 +15,7 @@ from backend.services.automation.scheduled_jobs import (
     _send_review_followups, send_monthly_reports, send_portal_links, send_csat_surveys,
     check_new_reviews, send_onboarding_emails, send_invoice_payment_reminders,
     send_weekly_intelligence_briefs, send_weekly_digest, send_birthday_greetings,
-    process_recurring_invoices,
+    process_recurring_invoices, run_monthly_conversation_insights,
 )
 from backend.services.automation.rule_engine import (
     evaluate_trigger, _evaluate_conditions, _get_nested_field, _parse_utc_datetime,
