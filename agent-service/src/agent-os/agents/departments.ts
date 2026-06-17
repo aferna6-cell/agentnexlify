@@ -22,6 +22,7 @@ import { aiVisibilityStub } from "./ai_visibility_stub/agent.ts";
 import { invoiceReminder } from "./invoice_reminder/agent.ts";
 import { paymentFollowUp } from "./payment_follow_up/agent.ts";
 import { weeklyBriefing } from "./weekly_briefing/agent.ts";
+import { conversationInsights } from "./conversation_insights/agent.ts";
 
 // v2 department-head skills (new).
 import { financialSummary } from "./financial_summary/agent.ts";
@@ -123,6 +124,7 @@ export const customerService = defineDepartment({
   skills: [
     { agent: complaintHandler, extraKeywords: ["angry", "upset", "complaint", "refund", "unhappy"] },
     { agent: customerQuestion, extraKeywords: ["asked", "question", "do you", "reply", "respond"] },
+    { agent: conversationInsights, extraKeywords: ["insights", "what are customers asking", "common questions", "conversation report", "capture rate", "chat trends"] },
   ],
   defaultSkillId: "customer_question",
   examples: [
