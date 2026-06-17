@@ -19,7 +19,7 @@ function getUserEmail() {
 }
 
 /* Pricing CTA that creates a Stripe checkout session or redirects to signup */
-function StripeCta({ plan, children }) {
+function StripeCta({ plan, children, className }) {
   const handleClick = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem("anx_token");
@@ -50,7 +50,7 @@ function StripeCta({ plan, children }) {
     }
   };
   return (
-    <a href="/signup" onClick={handleClick} className="pricing-cta">
+    <a href="/signup" onClick={handleClick} className={className || "pricing-cta"}>
       {children}
     </a>
   );
@@ -59,7 +59,7 @@ function StripeCta({ plan, children }) {
 const faqData = [
   {
     id: "faq-a1",
-    question: "What’s included in each plan?",
+    question: "What's included in each plan?",
     answer:
       "Two plans. AI Front Desk is $19.99/month and includes the AI chat widget, lead capture, FAQ knowledge base, and appointment requests. AI Workforce is $99.99/month and adds the full platform: your AI marketing staff, SEO audit suite, social media scheduling, email and SMS campaigns, automation rules, and advanced analytics. No setup fees. Cancel anytime.",
   },
@@ -67,7 +67,7 @@ const faqData = [
     id: "faq-a2",
     question: "Do I need any technical skills?",
     answer:
-      "None. You run your business by talking to your AI staff the way you would a real employee: “follow up with the lead from yesterday,” “draft an invoice for the Hendersons.” The right department picks it up and shows you the work before anything goes out.",
+      "None. You run your business by talking to your AI staff the way you would a real employee. The right department picks it up and shows you the work before anything goes out.",
   },
   {
     id: "faq-a3",
@@ -90,13 +90,13 @@ const faqData = [
     id: "faq-a7",
     question: "What if the AI makes a mistake?",
     answer:
-      "You stay in control. By default, every email, text, and invoice sits in your approvals queue until you review it. Nothing reaches a customer without your say-so. If you trust a department to handle routine items on its own, you can turn on auto-send in Settings and turn it off any time.",
+      "You stay in control. By default, every email, text, and invoice sits in your approvals queue until you review it. Nothing reaches a customer without your say-so.",
   },
   {
     id: "faq-a8",
     question: "How is this different from GoHighLevel or ChatGPT?",
     answer:
-      "GoHighLevel is a deep CRM that takes real time to configure. ChatGPT is a general tool you have to build around yourself. AgentNexLiFy is done-for-you: you describe what you need in plain language, an AI department picks it up, and you review the work before it goes out. No pipelines to build, no prompts to write.",
+      "GoHighLevel takes real time to configure. ChatGPT is a general tool you have to build around yourself. AgentNexLiFy is done-for-you: describe what you need in plain language, an AI department picks it up, and you review the work before it goes out.",
   },
 ];
 
@@ -120,7 +120,7 @@ function DemoSlide({ tab }) {
           <div className="ds-os-msg ds-os-msg-bot">
             <span className="ds-os-dept">Sales</span>
             Found Mike Chen from yesterday. He asked about kitchen remodel pricing.
-            Here’s a draft follow-up:
+            Here&apos;s a draft follow-up:
             <div className="ds-os-draft">
               &ldquo;Hi Mike, just checking in on the kitchen quote we discussed. Happy to answer any questions or schedule a walkthrough - just let me know.&rdquo;
             </div>
@@ -130,7 +130,7 @@ function DemoSlide({ tab }) {
             </div>
           </div>
           <div className="ds-os-msg ds-os-msg-user">
-            What’s on my calendar this week?
+            What&apos;s on my calendar this week?
           </div>
           <div className="ds-os-msg ds-os-msg-bot">
             <span className="ds-os-dept">Operations</span>
@@ -146,7 +146,7 @@ function DemoSlide({ tab }) {
         <div className="ds-chat-window">
           <div className="ds-chat-header">
             <span className="ds-chat-status" />
-            AI Front Desk &mdash; Online 24/7
+            AI Front Desk - Online 24/7
           </div>
           <div className="ds-chat-body">
             <div className="ds-msg bot">Hi! How can I help you today?</div>
@@ -312,6 +312,10 @@ function DemoPreview() {
   return (
     <section className="section lp-demo-preview" id="demo">
       <div className="container">
+        <div className="lp-demo-header reveal">
+          <div className="section-label">See It In Action</div>
+          <h2 className="section-title">Real product. Real workflows.</h2>
+        </div>
         <div className="demo-preview-wrap">
           <div className="demo-browser">
             <div className="demo-browser-bar">
@@ -363,10 +367,8 @@ function DemoPreview() {
           </div>
         </div>
         <div className="demo-preview-cta reveal">
-          <div className="section-label">Demo</div>
-          <h2 className="section-title">See It In Action</h2>
-          <Link to="/demo" className="btn-primary">
-            Book a Demo {"→"}
+          <Link to="/demo" className="lp-btn-primary">
+            Book a Demo {"->"}
           </Link>
         </div>
       </div>
@@ -468,10 +470,10 @@ export default function Home() {
   return (
     <div className="landing-page">
       <Helmet>
-        <title>AgentNexLiFy | your AI service partner for small business</title>
+        <title>AgentNexLiFy | AI Workforce Platform for Small Business</title>
         <meta
           name="description"
-          content="Agent NexLiFy builds AI workforces for small businesses. Start with an AI Front Desk that engages customers and captures opportunities, then expand into a full AI Workforce across sales, marketing, customer service, operations, and admin, run by a single AI manager."
+          content="Agent NexLiFy builds AI workforces for small businesses. Start with an AI Front Desk, grow into a full AI Workforce run by a single AI manager."
         />
         <link rel="canonical" href="https://agentnexlify.com/" />
         <meta
@@ -506,7 +508,7 @@ export default function Home() {
   "name": "AgentNexLiFy",
   "applicationCategory": "BusinessApplication",
   "operatingSystem": "Web",
-  "description": "AI-powered business operating system for small businesses.",
+  "description": "AI workforce platform for small businesses.",
   "url": "https://agentnexlify.com",
   "offers": [
     { "@type": "Offer", "name": "AI Front Desk", "price": "19.99", "priceCurrency": "USD",
@@ -552,8 +554,8 @@ export default function Home() {
             <a href="#how-it-works" onClick={closeMenu}>
               How It Works
             </a>
-            <a href="#features" onClick={closeMenu}>
-              Features
+            <a href="#compare" onClick={closeMenu}>
+              Solutions
             </a>
             <a href="#pricing" onClick={closeMenu}>
               Pricing
@@ -601,74 +603,59 @@ export default function Home() {
         <div className="container">
           <div className="lp-hero-inner">
             <div className="lp-hero-text">
-              <div className="lp-hero-badge reveal">
-                <span className="lp-hero-badge-dot" />
-                One AI partner. Two ways to start.
-              </div>
+              <div className="lp-eyebrow reveal">AI WORKFORCE PLATFORM</div>
               <h1 className="reveal">
-                Put Your Business On Autopilot With{" "}
-                <span className="accent-gradient">An AI Workforce</span>
+                Put Your Business On Autopilot With An AI Workforce
               </h1>
-              <p
-                className="lp-hero-sub reveal"
-              >
-                Whether you need a virtual front desk to engage customers 24/7 or a complete AI-powered team to support your business operations, Agent NexLiFy builds and manages the solution for you.
+              <p className="lp-hero-sub reveal">
+                Agent NexLiFy builds AI workforces for small businesses. Start
+                with an AI Front Desk, grow into a full AI Workforce run by a
+                single AI manager.
               </p>
               <div className="lp-hero-buttons reveal">
-                <Link to="/signup" className="btn-primary">
-                  Get Started {"→"}
+                <Link to="/signup" className="lp-btn-primary">
+                  Get started
                 </Link>
-                <a href="#how-it-works" className="btn-secondary">
+                <a href="#how-it-works" className="lp-btn-secondary">
                   See how it works
                 </a>
               </div>
             </div>
 
-            {/* Agent OS chat mockup */}
-            <div className="widget-mockup reveal">
-              <div className="widget-mockup-header">
-                <div className="widget-mockup-avatar">AI</div>
-                <div className="widget-mockup-header-text">
-                  <div className="widget-mockup-name">AI Workforce</div>
-                  <div className="widget-mockup-status">
-                    <span className="widget-mockup-status-dot"></span>
-                    8 departments ready
-                  </div>
-                </div>
+            {/* Centerpiece org-chart diagram */}
+            <div className="lp-org-diagram reveal">
+              <div className="lp-org-owner">Business Owner</div>
+              <div className="lp-org-connector-v" />
+              <div className="lp-org-manager">AI Manager</div>
+              <div className="lp-org-connector-v" />
+              <div className="lp-org-agents">
+                {[
+                  "Sales",
+                  "Marketing",
+                  "Customer Support",
+                  "Operations",
+                  "Finance",
+                  "HR",
+                  "Knowledge",
+                  "Executive Assistant",
+                ].map((name) => (
+                  <span key={name} className="lp-org-chip">{name}</span>
+                ))}
               </div>
-              <div className="widget-mockup-body">
-                <div className="wm-msg wm-msg-user">
-                  Follow up with yesterday&apos;s leads who asked for a quote
-                </div>
-                <div className="wm-typing" aria-hidden="true">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-                <div className="wm-msg wm-msg-bot">
-                  Found 3 leads. Drafting follow-ups now&mdash;I&apos;ll show
-                  you each one before anything sends.
-                </div>
-                <div className="wm-msg wm-msg-user">
-                  Also send an invoice to the Hendersons for the job we finished
-                </div>
-                <div className="wm-msg wm-msg-bot">
-                  Invoice drafted for $1,840. Ready for your review.
-                </div>
-              </div>
+              <p className="lp-org-caption">
+                One prompt controls the entire team.
+              </p>
             </div>
           </div>
         </div>
       </section>
 
       {/* ============ HOW IT WORKS ============ */}
-      <section className="section" id="how-it-works">
+      <section className="section lp-how-section" id="how-it-works">
         <div className="container">
           <div className="lp-how-header">
             <div className="section-label reveal">How It Works</div>
-            <h2 className="section-title reveal">
-              One chat. Your whole business.
-            </h2>
+            <h2 className="section-title reveal">Three steps to an AI team.</h2>
           </div>
           <div className="lp-how-steps">
             <div className="lp-how-step reveal">
@@ -676,284 +663,140 @@ export default function Home() {
               <h3>Tell your AI staff about your business</h3>
               <p>
                 Answer a few questions about your services, prices, and how you
-                work. The system builds a knowledge base so every department
-                knows your business from day one.
+                work. The system builds a knowledge base from day one.
               </p>
             </div>
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">2</div>
               <h3>Add the widget to your website</h3>
               <p>
-                One small piece of code goes on your site. Your 24/7 AI front
-                desk answers visitors, captures their details, and books
-                appointments&mdash;even at 11 PM.
+                One snippet of code. Your AI Front Desk answers visitors,
+                captures leads, and books appointments 24/7.
               </p>
             </div>
             <div className="lp-how-step reveal">
               <div className="lp-how-step-num">3</div>
               <h3>Talk to your team, approve the work</h3>
               <p>
-                Log in and describe what you need: &ldquo;follow up with this
-                week&apos;s leads,&rdquo; &ldquo;draft an invoice.&rdquo; The
-                right department picks it up. You review and approve before
-                anything goes out.
+                Log in and describe what you need. The right department picks it
+                up. You review and approve before anything goes out.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ============ FEATURES / DEPARTMENTS ============ */}
-      <section
-        className="section"
-        id="features"
-        style={{ background: "var(--bg-secondary)" }}
-      >
+      {/* ============ AI FRONT DESK vs AI WORKFORCE ============ */}
+      <section className="section lp-compare-section" id="compare">
         <div className="container">
-          <div className="lp-features-header">
-            <div className="section-label reveal">Departments</div>
+          <div className="lp-compare-header">
+            <div className="section-label reveal">Solutions</div>
             <h2 className="section-title reveal">
-              Eight departments. One conversation.
+              Start with one. Grow into a team.
             </h2>
-            <p className="section-subtitle reveal" style={{ margin: "0 auto" }}>
-              Every part of running a small business, handled by AI staff that
-              knows your business and waits for your approval before acting.
-            </p>
           </div>
-          <div className="lp-features-grid">
-            {/* Front Desk */}
-            <div className="lp-feature-card reveal">
-              <div className="lp-feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-              </div>
-              <h3>Front Desk Widget</h3>
-              <p>
-                Answers customer questions on your website 24/7, captures
-                contact details, and books appointments on the spot. Every
-                conversation feeds your AI staff automatically.
+          <div className="lp-compare-grid">
+            <div className="lp-compare-card reveal">
+              <div className="lp-compare-card-label">AI Front Desk</div>
+              <p className="lp-compare-card-desc">
+                Your website answers customers and captures leads around the
+                clock.
               </p>
-            </div>
-            {/* Sales */}
-            <div className="lp-feature-card reveal">
-              <div className="lp-feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-                </svg>
-              </div>
-              <h3>Sales Follow-Up</h3>
-              <p>
-                Drafts follow-up emails and texts for every lead, times them
-                correctly, and moves prospects toward booked work. You approve
-                before anything sends.
-              </p>
-            </div>
-            {/* Operations */}
-            <div className="lp-feature-card reveal">
-              <div className="lp-feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
-                </svg>
-              </div>
-              <h3>Operations</h3>
-              <p>
-                Keeps scheduling, appointments, and day-to-day tasks moving.
-                Ask what&apos;s on your calendar this week and get a plain-English
-                answer in seconds.
-              </p>
-            </div>
-            {/* Invoicing */}
-            <div className="lp-feature-card reveal">
-              <div className="lp-feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="1" x2="12" y2="23" />
-                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                </svg>
-              </div>
-              <h3>Invoicing</h3>
-              <p>
-                Drafts invoices, sends payment reminders, and chases overdue
-                balances. Say &ldquo;send an invoice to the Hendersons&rdquo; and it
-                handles the rest.
-              </p>
-            </div>
-            {/* Marketing */}
-            <div className="lp-feature-card reveal">
-              <div className="lp-feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 20h9" />
-                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                </svg>
-              </div>
-              <h3>Marketing</h3>
-              <p>
-                Writes campaigns, social posts, and promotions in your voice.
-                Schedule posts across platforms without leaving your dashboard.
-              </p>
-            </div>
-            {/* Memory */}
-            <div className="lp-feature-card reveal">
-              <div className="lp-feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <ellipse cx="12" cy="5" rx="9" ry="3" />
-                  <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-                  <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-                </svg>
-              </div>
-              <h3>Business Memory</h3>
-              <p>
-                Learns your customers, prices, preferences, and how you like
-                things done. Less repeating yourself over time. Every fact is
-                visible and editable in the Memory panel.
-              </p>
-            </div>
-            {/* Customer Data */}
-            <div className="lp-feature-card reveal">
-              <div className="lp-feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
-              </div>
-              <h3>Customer Records</h3>
-              <p>
-                All your leads and customers in one place, scored and organized
-                so you know who to focus on. Pipeline view shows every deal and
-                where it stands.
-              </p>
-            </div>
-            {/* Approval Control */}
-            <div className="lp-feature-card reveal">
-              <div className="lp-feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 11 12 14 22 4" />
-                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                </svg>
-              </div>
-              <h3>Approval Control</h3>
-              <p>
-                Nothing reaches a customer until you approve it. Review every
-                email, text, and invoice in your queue. Turn on auto-send for
-                routine items when you&apos;re ready to.
-              </p>
-            </div>
-            {/* SEO & Online Presence */}
-            <div className="lp-feature-card reveal">
-              <div className="lp-feature-icon" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-              </div>
-              <h3>SEO and Online Presence</h3>
-              <p>
-                Audits your website, tracks your keyword rankings, and gives
-                you clear steps to show up higher in search. Includes a hosted
-                business page if you need one.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============ TWO WAYS ============ */}
-      <section className="section" id="two-ways">
-        <div className="container">
-          <div className="lp-features-header">
-            <div className="section-label reveal">One employee or an entire team</div>
-            <h2 className="section-title reveal">
-              Start With One Employee Or Build An Entire Team
-            </h2>
-            <p className="section-subtitle reveal">Start with one AI employee. Grow into an AI team.</p>
-          </div>
-          <div className="lp-pricing-grid">
-            <div className="lp-pricing-card reveal" style={{ textAlign: "left" }}>
-              <div className="lp-pricing-plan-name">AI Front Desk</div>
-              <ul className="lp-pricing-features" style={{ marginTop: "16px" }}>
+              <ul className="lp-compare-list">
                 <li>Answers questions</li>
                 <li>Captures leads</li>
                 <li>Books appointments</li>
                 <li>Supports customers</li>
               </ul>
-              <p style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: "1.5", marginTop: "16px" }}>
-                Best for businesses looking to automate customer interactions.
-              </p>
+              <div className="lp-compare-footer">Start here.</div>
             </div>
-            <div className="lp-pricing-card reveal" style={{ textAlign: "left" }}>
-              <div className="lp-pricing-plan-name">AI Workforce</div>
-              <ul className="lp-pricing-features" style={{ marginTop: "16px" }}>
+            <div className="lp-compare-card lp-compare-card-accent reveal">
+              <div className="lp-compare-card-label">AI Workforce</div>
+              <p className="lp-compare-card-desc">
+                Eight AI agents. One manager. Everything your business needs
+                to run.
+              </p>
+              <ul className="lp-compare-list">
                 <li>Sales Agent</li>
                 <li>Marketing Agent</li>
                 <li>Customer Support Agent</li>
                 <li>Operations Agent</li>
-                <li>Knowledge Agent</li>
                 <li>Finance Agent</li>
                 <li>HR Agent</li>
-                <li>Executive Assistant Agent</li>
+                <li>Knowledge Agent</li>
+                <li>Executive Assistant</li>
               </ul>
-              <p style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: "1.5", marginTop: "16px" }}>
-                Best for businesses looking to scale operations without adding headcount.
-              </p>
+              <div className="lp-compare-footer">Grow into it.</div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ============ COMPARE HIRE ============ */}
-      <section className="section" id="compare-hire">
+      {/* ============ DEMO PREVIEW ============ */}
+      <DemoPreview />
+
+      {/* ============ BUILT FOR YOUR BUSINESS ============ */}
+      <section className="section lp-industries-section" id="industries">
         <div className="container">
-          <div className="lp-features-header">
-            <h2 className="section-title reveal">Why wouldn't I just hire someone?</h2>
+          <div className="lp-industries-header">
+            <div className="section-label reveal">Built For Your Business</div>
+            <h2 className="section-title reveal">
+              Works out of the box for your industry.
+            </h2>
           </div>
-          <div className="lp-pricing-grid">
-            <div className="lp-pricing-card reveal" style={{ textAlign: "left" }}>
-              <div className="lp-pricing-plan-name">AI Front Desk</div>
-              <ul className="lp-pricing-features" style={{ marginTop: "16px" }}>
-                <li>Works 24/7</li>
-                <li>Never misses an inquiry</li>
-                <li>Instant response times</li>
-                <li>Scales automatically</li>
-              </ul>
+          <div className="lp-industries-grid">
+            <div className="lp-industry-card reveal">
+              <div className="lp-industry-name">Salons &amp; Spas</div>
+              <p>AI books appointments, sends reminders, and follows up on
+              missed calls. Your front desk never goes offline.</p>
             </div>
-            <div className="lp-pricing-card reveal" style={{ textAlign: "left" }}>
-              <div className="lp-pricing-plan-name">AI Workforce</div>
-              <ul className="lp-pricing-features" style={{ marginTop: "16px" }}>
-                <li>Handles thousands of tasks simultaneously</li>
-                <li>No onboarding</li>
-                <li>No turnover</li>
-                <li>No PTO</li>
-                <li>No management overhead</li>
-              </ul>
+            <div className="lp-industry-card reveal">
+              <div className="lp-industry-name">Home Services</div>
+              <p>Plumbers, HVAC, electricians. AI qualifies leads, schedules
+              jobs, and sends estimates while you&apos;re on the truck.</p>
+            </div>
+            <div className="lp-industry-card reveal">
+              <div className="lp-industry-name">Dental &amp; Medical</div>
+              <p>Handles new patient inquiries, appointment requests, and FAQs
+              so your staff focuses on care, not phones.</p>
+            </div>
+            <div className="lp-industry-card reveal">
+              <div className="lp-industry-name">Contractors</div>
+              <p>Captures every inquiry, drafts follow-up quotes, and tracks
+              your pipeline. No lead slips through.</p>
+            </div>
+            <div className="lp-industry-card reveal">
+              <div className="lp-industry-name">Auto Services</div>
+              <p>AI answers service questions, books appointments, and sends
+              service reminders to keep customers coming back.</p>
+            </div>
+            <div className="lp-industry-card reveal">
+              <div className="lp-industry-name">Professional Services</div>
+              <p>Law, accounting, consulting. AI qualifies prospects and
+              schedules consultations so you close more business.</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* ============ PRICING ============ */}
-      <section className="section" id="pricing">
+      <section className="section lp-pricing-section" id="pricing">
         <div className="container">
           <div className="lp-pricing-header">
             <div className="section-label reveal">Pricing</div>
             <h2 className="section-title reveal">
-              Simple pricing. Serious ROI.
+              Simple pricing. No setup fees.
             </h2>
-            <p className="section-subtitle reveal">
-              Two plans, no setup fees. Both include hands-on onboarding and
-              ongoing optimization. Cancel anytime.
+            <p className="section-subtitle reveal lp-pricing-sub">
+              Both plans include hands-on onboarding. Cancel anytime.
             </p>
           </div>
           <div className="lp-pricing-grid">
-            {/* Chatbot */}
+            {/* AI Front Desk */}
             <div className="lp-pricing-card start-here reveal">
               <div className="lp-pricing-plan-name">AI Front Desk</div>
               <div className="lp-pricing-tagline">
-                Handles your inbound website traffic, and the work behind it.
+                Handles your inbound traffic and the work behind it.
               </div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$19.99</span>
@@ -972,14 +815,15 @@ export default function Home() {
                 <li>Widget customization</li>
                 <li>Hosted business page</li>
               </ul>
-              <StripeCta plan="chatbot">Get Started {"→"}</StripeCta>
+              <StripeCta plan="chatbot" className="lp-pricing-cta">Start free trial {"->"}
+              </StripeCta>
             </div>
 
-            {/* Agent OS - Most Popular */}
+            {/* AI Workforce */}
             <div className="lp-pricing-card popular reveal">
               <div className="lp-pricing-plan-name">AI Workforce</div>
               <div className="lp-pricing-tagline">
-                One orchestrator directing a team (8) of AI agents.
+                One orchestrator directing a team of 8 AI agents.
               </div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$99.99</span>
@@ -996,45 +840,23 @@ export default function Home() {
                 Everything in AI Front Desk, plus:
               </div>
               <ul className="lp-pricing-features">
-                <li>Your AI staff in AI Workforce: nurturing, follow-ups, outreach</li>
+                <li>Full AI Workforce: sales, marketing, operations, finance, HR</li>
                 <li>Full SEO audit suite &amp; keyword tracking</li>
                 <li>Social media content &amp; scheduling</li>
                 <li>Email &amp; SMS marketing campaigns</li>
                 <li>Automation rules &amp; advanced analytics</li>
                 <li>Priority support</li>
               </ul>
-              <StripeCta plan="agent_os">Get Started {"→"}</StripeCta>
+              <StripeCta plan="agent_os" className="lp-pricing-cta lp-pricing-cta-accent">
+                Get Started {"->"}
+              </StripeCta>
             </div>
           </div>
           <p className="lp-pricing-footer-note reveal">
-            No setup fees. No contracts. Both plans include hands-on
-            onboarding and ongoing optimization. Cancel anytime.
+            7-day free trial on both plans. No credit card required to start.
           </p>
         </div>
       </section>
-
-      {/* ============ FINAL CTA ============ */}
-      <section className="lp-cta-section" id="cta">
-        <div className="container lp-cta-content">
-          <h2 className="section-title reveal">
-            Your AI staff is ready to start today.
-          </h2>
-          <p className="section-subtitle reveal" style={{ margin: "0 auto 32px", textAlign: "center" }}>
-            No setup fees. Cancel anytime. Takes 2 minutes to get started.
-          </p>
-          <div className="lp-cta-buttons reveal">
-            <Link to="/signup" className="btn-primary">
-              Get Started {"→"}
-            </Link>
-            <Link to="/demo" className="btn-secondary">
-              Book a Demo
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ============ DEMO PREVIEW ============ */}
-      <DemoPreview />
 
       {/* ============ FAQ ============ */}
       <section className="section lp-faq" id="faq">
@@ -1083,6 +905,26 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ============ FINAL CTA ============ */}
+      <section className="lp-cta-section" id="cta">
+        <div className="container lp-cta-content">
+          <h2 className="lp-cta-title reveal">
+            Your AI staff is ready to start today.
+          </h2>
+          <p className="lp-cta-sub reveal">
+            No setup fees. Cancel anytime. Takes 2 minutes.
+          </p>
+          <div className="lp-cta-buttons reveal">
+            <Link to="/signup" className="lp-btn-primary">
+              Get Started {"->"}
+            </Link>
+            <Link to="/demo" className="lp-btn-secondary">
+              Book a Demo
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ============ FOOTER ============ */}
       <footer className="lp-footer">
         <div className="container">
@@ -1102,7 +944,7 @@ export default function Home() {
                   <a href="#how-it-works">How It Works</a>
                 </li>
                 <li>
-                  <a href="#features">Departments</a>
+                  <a href="#compare">Solutions</a>
                 </li>
                 <li>
                   <a href="#faq">FAQ</a>
@@ -1139,7 +981,6 @@ export default function Home() {
             <span className="lp-footer-copy">
               &copy; 2026 Agent NexLiFy. All rights reserved.
             </span>
-            {/* Social links removed until real profiles are created */}
           </div>
         </div>
       </footer>
@@ -1149,14 +990,14 @@ export default function Home() {
         <div className="lp-floating-cta">
           <Link to="/signup" className="lp-floating-cta-link">
             <span className="floating-cta-full">Get your AI staff started</span>
-            <span className="floating-cta-short">Try Out Our AI Staff</span>
+            <span className="floating-cta-short">Try Our AI Staff</span>
           </Link>
           <button
             className="lp-floating-cta-close"
             onClick={dismissFloatingCta}
             aria-label="Dismiss"
           >
-            {"×"}
+            {"x"}
           </button>
         </div>
       )}
