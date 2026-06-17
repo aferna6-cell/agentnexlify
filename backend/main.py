@@ -339,6 +339,7 @@ async def _automation_loop():
     from backend.services.twilio_webhook_sync import sync_twilio_number_webhooks
     from backend.services.demo_reset_job import reset_demo_tenants
     from backend.services.activation_nudges import send_activation_nudges
+    from backend.services.conversation_enrichment_job import run_pending_enrichment
 
     tick = 0
     while True:
@@ -418,6 +419,9 @@ async def _automation_loop():
                         _safe_run("run_opportunity_scan", _run_opportunity_scan),
                         _safe_run("reset_demo_tenants", reset_demo_tenants),
                         _safe_run("send_activation_nudges", send_activation_nudges),
+                        _safe_run(
+                            "run_pending_enrichment", run_pending_enrichment
+                        ),
                     ]
                 )
 

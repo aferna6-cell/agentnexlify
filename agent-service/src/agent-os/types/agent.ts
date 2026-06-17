@@ -26,6 +26,9 @@ export interface WidgetConversationData {
   id: string;
   contactName?: string;
   intent?: string;
+  /** Stored per-conversation tone: positive | neutral | negative. Set by the
+   *  backend conversation_enrichment classifier; absent when unclassified. */
+  sentiment?: string;
   summary: string;
   topics: string[];
   closedAt: string;

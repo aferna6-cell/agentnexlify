@@ -1349,3 +1349,26 @@ that `integration_key_vault._write_audit` wrote to all along — the table never
 existed, so integration-key audit rows silently no-op'd (try/except-wrapped).
 RLS on, no policies (service-key only). Indexes on (tenant_id, created_at) and
 (action, created_at). Applied to prod 2026-06-15 via apply_migration, verified.
+
+### 154 — conversations.sentiment + conversations.intent (per-conversation classification)
+
+Adds two nullable columns to the client_id-scoped `conversations` table so each
+widget conversation can carry a stored sentiment + intent:
+
+- `sentiment TEXT CHECK (sentiment IN ('positive','neutral','negative'))` —
+  vocabulary mirrors the `calls` table (migration 044) exactly.
+- `intent TEXT` — short noun phrase (e.g. "booking request", "complaint").
+
+Both `ADD COLUMN IF NOT EXISTS` (idempotent, additive). Populated off the user
+hot path by `backend/services/conversation_enrichment.py` (Haiku classifier),
+driven by the `run_pending_enrichment` batch job
+(`backend/services/conversation_enrichment_job.py`) wired into the 30-min tier
+of the scheduler loop in `backend/main.py`. Consumed by
+`backend/services/agent_os_bridge.py::_load_conversation_sentiment` ->
+`map_widget_history`, surfacing as `WidgetConversationData.sentiment` for the
+Conversation Insights agent's "Customer sentiment" breakdown. The bridge loader
+degrades to an empty map if the columns are absent, so it is safe to deploy the
+code before the migration is applied.
+
+**NOT YET APPLIED** — apply via `mcp__supabase__apply_migration` after merge,
+then verify both columns exist on `conversations` with the sentiment CHECK.
