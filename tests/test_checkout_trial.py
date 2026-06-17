@@ -1,9 +1,11 @@
-"""Checkout creates a 7-day trial subscription for both paid plans.
+"""Checkout charges immediately for both paid plans (no trial).
 
-Contract: billing_checkout calls stripe.checkout.Session.create with
-subscription_data.trial_period_days == 7 so a new customer's card is captured
-but not charged until day 7. The subscription is "trialing" during the window,
-which is_pay_gated() treats as paid -> dashboard unlocks immediately.
+Contract (changed 2026-06-17 by product decision — charge on signup, no
+free trial): billing_checkout calls stripe.checkout.Session.create WITHOUT
+subscription_data.trial_period_days, so the first charge happens at checkout.
+The subscription is "active" once payment succeeds, which is_pay_gated()
+treats as paid -> dashboard unlocks immediately. Existing "trialing"
+subscriptions created before this change are unaffected.
 """
 
 import sys
@@ -47,7 +49,7 @@ def _db():
 @patch("backend.routers.auth_billing.ensure_stripe_configured")
 @patch("backend.routers.auth_billing.ensure_plan_prices_configured")
 @patch("backend.routers.auth_billing.get_service_supabase")
-async def test_checkout_includes_7_day_trial(
+async def test_checkout_charges_immediately_no_trial(
     mock_db, mock_prices, _mock_ensure, mock_customer, mock_session_create, plan
 ):
     from backend.routers.auth_billing import billing_checkout
@@ -71,8 +73,8 @@ async def test_checkout_includes_7_day_trial(
     mock_session_create.assert_called_once()
     kwargs = mock_session_create.call_args.kwargs
     assert kwargs["mode"] == "subscription"
-    assert kwargs["subscription_data"]["trial_period_days"] == 7, (
-        f"{plan}: expected a 7-day trial, got "
+    assert "trial_period_days" not in kwargs["subscription_data"], (
+        f"{plan}: expected no trial (immediate charge), got "
         f"{kwargs['subscription_data'].get('trial_period_days')!r}"
     )
     assert result["checkout_url"].startswith("https://checkout.stripe.com")
