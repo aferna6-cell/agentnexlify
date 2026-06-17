@@ -61,7 +61,7 @@ const faqData = [
     id: "faq-a1",
     question: "What’s included in each plan?",
     answer:
-      "Two plans. Chatbot is $19.99/month and includes the AI chat widget, lead capture, FAQ knowledge base, and appointment requests. Agent OS is $99.99/month and adds the full platform: your AI marketing staff, SEO audit suite, social media scheduling, email and SMS campaigns, automation rules, and advanced analytics. No setup fees. Cancel anytime.",
+      "Two plans. AI Front Desk is $19.99/month and includes the AI chat widget, lead capture, FAQ knowledge base, and appointment requests. AI Workforce is $99.99/month and adds the full platform: your AI marketing staff, SEO audit suite, social media scheduling, email and SMS campaigns, automation rules, and advanced analytics. No setup fees. Cancel anytime.",
   },
   {
     id: "faq-a2",
@@ -79,7 +79,7 @@ const faqData = [
     id: "faq-a5",
     question: "Can I upgrade my plan later?",
     answer:
-      "Yes. Most businesses start with Chatbot and upgrade to Agent OS as they grow. You can change your plan anytime from the Billing page.",
+      "Yes. Most businesses start with AI Front Desk and upgrade to AI Workforce as they grow. You can change your plan anytime from the Billing page.",
   },
   {
     id: "faq-a6",
@@ -102,7 +102,7 @@ const faqData = [
 
 /* ── Demo slideshow tabs ── */
 const demoTabs = [
-  "Agent OS",
+  "AI Workforce",
   "Front Desk",
   "Leads",
   "Automations",
@@ -110,7 +110,7 @@ const demoTabs = [
 ];
 
 function DemoSlide({ tab }) {
-  if (tab === "Agent OS")
+  if (tab === "AI Workforce")
     return (
       <div className="ds-agent-os">
         <div className="ds-os-thread">
@@ -471,7 +471,7 @@ export default function Home() {
         <title>AgentNexLiFy | your AI service partner for small business</title>
         <meta
           name="description"
-          content="AgentNexLiFy is your AI service partner. Start with a chatbot that handles your website traffic, or Agent OS to direct an AI team (8) across sales, marketing, and support."
+          content="Agent NexLiFy builds AI workforces for small businesses. Start with an AI Front Desk that engages customers and captures opportunities, then expand into a full AI Workforce across sales, marketing, customer service, operations, and admin, run by a single AI manager."
         />
         <link rel="canonical" href="https://agentnexlify.com/" />
         <meta
@@ -509,11 +509,11 @@ export default function Home() {
   "description": "AI-powered business operating system for small businesses.",
   "url": "https://agentnexlify.com",
   "offers": [
-    { "@type": "Offer", "name": "Chatbot", "price": "19.99", "priceCurrency": "USD",
+    { "@type": "Offer", "name": "AI Front Desk", "price": "19.99", "priceCurrency": "USD",
       "priceSpecification": { "@type": "UnitPriceSpecification", "price": "19.99", "priceCurrency": "USD", "billingDuration": "P1M" }
     },
     {
-      "@type": "Offer", "name": "Agent OS", "price": "99.99", "priceCurrency": "USD",
+      "@type": "Offer", "name": "AI Workforce", "price": "99.99", "priceCurrency": "USD",
       "priceSpecification": { "@type": "UnitPriceSpecification", "price": "99.99", "priceCurrency": "USD", "billingDuration": "P1M" }
     }
   ]
@@ -524,10 +524,10 @@ export default function Home() {
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Two plans. Chatbot is $19.99/month with the AI chat widget, lead capture, FAQ knowledge base, and appointment requests. Agent OS is $99.99/month with the full platform: AI marketing staff, SEO audit suite, social media, campaigns, automation rules, and advanced analytics. No setup fees, cancel anytime." } },
+    { "@type": "Question", "name": "What's included in each plan?", "acceptedAnswer": { "@type": "Answer", "text": "Two plans. AI Front Desk is $19.99/month with the AI chat widget, lead capture, FAQ knowledge base, and appointment requests. AI Workforce is $99.99/month with the full platform: AI marketing staff, SEO audit suite, social media, campaigns, automation rules, and advanced analytics. No setup fees, cancel anytime." } },
     { "@type": "Question", "name": "Do I need any technical skills?", "acceptedAnswer": { "@type": "Answer", "text": "None. You run your business by talking to your AI staff the way you would a real employee. The right department picks it up and shows you the work before anything goes out." } },
     { "@type": "Question", "name": "What tools do you integrate with?", "acceptedAnswer": { "@type": "Answer", "text": "Google Calendar (built-in), plus outbound webhooks to connect with Zapier, Slack, HubSpot, and 5,000+ other tools. Twilio for SMS and Stripe for payments." } },
-    { "@type": "Question", "name": "Can I upgrade my plan later?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Most businesses start with Chatbot and upgrade to Agent OS as they grow. Change plans anytime from the Billing page." } },
+    { "@type": "Question", "name": "Can I upgrade my plan later?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Most businesses start with AI Front Desk and upgrade to AI Workforce as they grow. Change plans anytime from the Billing page." } },
     { "@type": "Question", "name": "Is there a contract?", "acceptedAnswer": { "@type": "Answer", "text": "No long-term contracts. Month-to-month billing. Cancel anytime." } },
     { "@type": "Question", "name": "What if the AI makes a mistake?", "acceptedAnswer": { "@type": "Answer", "text": "You stay in control. Every email, text, and invoice sits in your approvals queue until you review it. Nothing reaches a customer without your say-so." } },
     { "@type": "Question", "name": "How is this different from GoHighLevel or ChatGPT?", "acceptedAnswer": { "@type": "Answer", "text": "GoHighLevel takes real time to configure. ChatGPT is a general tool you have to build around yourself. AgentNexLiFy is done-for-you: describe what you need in plain language, an AI department picks it up, and you review the work before it goes out." } }
@@ -866,26 +866,70 @@ export default function Home() {
       <section className="section" id="two-ways">
         <div className="container">
           <div className="lp-features-header">
-            <div className="section-label reveal">Two ways to start</div>
+            <div className="section-label reveal">One employee or an entire team</div>
             <h2 className="section-title reveal">
-              Start where you are. Grow into the rest.
+              Start With One Employee Or Build An Entire Team
             </h2>
-            <p className="section-subtitle reveal" style={{ margin: "0 auto" }}>
-              Both run on the same AgentNexLiFy engine. Move from one to the other anytime.
-            </p>
+            <p className="section-subtitle reveal">Start with one AI employee. Grow into an AI team.</p>
           </div>
           <div className="lp-pricing-grid">
             <div className="lp-pricing-card reveal" style={{ textAlign: "left" }}>
-              <div className="lp-pricing-plan-name">Chatbot, $19.99/mo</div>
-              <p style={{ marginTop: "12px", fontSize: "15px", color: "var(--text-secondary)", lineHeight: "1.65" }}>
-                Your front desk on the website. It answers visitors 24/7, captures and qualifies leads, books appointments, and follows up, then hands the work to the backend automatically. Best when you want inbound handled without lifting a finger.
+              <div className="lp-pricing-plan-name">AI Front Desk</div>
+              <ul className="lp-pricing-features" style={{ marginTop: "16px" }}>
+                <li>Answers questions</li>
+                <li>Captures leads</li>
+                <li>Books appointments</li>
+                <li>Supports customers</li>
+              </ul>
+              <p style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: "1.5", marginTop: "16px" }}>
+                Best for businesses looking to automate customer interactions.
               </p>
             </div>
             <div className="lp-pricing-card reveal" style={{ textAlign: "left" }}>
-              <div className="lp-pricing-plan-name">Agent OS, $99.99/mo</div>
-              <p style={{ marginTop: "12px", fontSize: "15px", color: "var(--text-secondary)", lineHeight: "1.65" }}>
-                Your AI operations team. You prompt one orchestrator in plain English and it directs a team (8) handling sales, marketing, SEO, social, campaigns, follow-ups, and support. Best when you want to run the whole business from one conversation.
+              <div className="lp-pricing-plan-name">AI Workforce</div>
+              <ul className="lp-pricing-features" style={{ marginTop: "16px" }}>
+                <li>Sales Agent</li>
+                <li>Marketing Agent</li>
+                <li>Customer Support Agent</li>
+                <li>Operations Agent</li>
+                <li>Knowledge Agent</li>
+                <li>Finance Agent</li>
+                <li>HR Agent</li>
+                <li>Executive Assistant Agent</li>
+              </ul>
+              <p style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: "1.5", marginTop: "16px" }}>
+                Best for businesses looking to scale operations without adding headcount.
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ COMPARE HIRE ============ */}
+      <section className="section" id="compare-hire">
+        <div className="container">
+          <div className="lp-features-header">
+            <h2 className="section-title reveal">Why wouldn't I just hire someone?</h2>
+          </div>
+          <div className="lp-pricing-grid">
+            <div className="lp-pricing-card reveal" style={{ textAlign: "left" }}>
+              <div className="lp-pricing-plan-name">AI Front Desk</div>
+              <ul className="lp-pricing-features" style={{ marginTop: "16px" }}>
+                <li>Works 24/7</li>
+                <li>Never misses an inquiry</li>
+                <li>Instant response times</li>
+                <li>Scales automatically</li>
+              </ul>
+            </div>
+            <div className="lp-pricing-card reveal" style={{ textAlign: "left" }}>
+              <div className="lp-pricing-plan-name">AI Workforce</div>
+              <ul className="lp-pricing-features" style={{ marginTop: "16px" }}>
+                <li>Handles thousands of tasks simultaneously</li>
+                <li>No onboarding</li>
+                <li>No turnover</li>
+                <li>No PTO</li>
+                <li>No management overhead</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -907,7 +951,7 @@ export default function Home() {
           <div className="lp-pricing-grid">
             {/* Chatbot */}
             <div className="lp-pricing-card start-here reveal">
-              <div className="lp-pricing-plan-name">Chatbot</div>
+              <div className="lp-pricing-plan-name">AI Front Desk</div>
               <div className="lp-pricing-tagline">
                 Handles your inbound website traffic, and the work behind it.
               </div>
@@ -933,7 +977,7 @@ export default function Home() {
 
             {/* Agent OS - Most Popular */}
             <div className="lp-pricing-card popular reveal">
-              <div className="lp-pricing-plan-name">Agent OS</div>
+              <div className="lp-pricing-plan-name">AI Workforce</div>
               <div className="lp-pricing-tagline">
                 One orchestrator directing a team (8) of AI agents.
               </div>
@@ -949,10 +993,10 @@ export default function Home() {
               </div>
               <div className="lp-pricing-divider"></div>
               <div className="lp-pricing-includes">
-                Everything in Chatbot, plus:
+                Everything in AI Front Desk, plus:
               </div>
               <ul className="lp-pricing-features">
-                <li>Your AI staff in Agent OS: nurturing, follow-ups, outreach</li>
+                <li>Your AI staff in AI Workforce: nurturing, follow-ups, outreach</li>
                 <li>Full SEO audit suite &amp; keyword tracking</li>
                 <li>Social media content &amp; scheduling</li>
                 <li>Email &amp; SMS marketing campaigns</li>

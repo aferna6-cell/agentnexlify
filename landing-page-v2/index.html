@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AgentNexLiFy | your AI service partner for small business</title>
-<meta name="description" content="AgentNexLiFy is your AI service partner. Start with a chatbot that handles your website traffic, or Agent OS to direct an AI team (8) across sales, marketing, and support.">
+<meta name="description" content="Agent NexLiFy builds AI workforces for small businesses. Start with an AI Front Desk that engages customers and captures opportunities, then expand into a full AI Workforce across sales, marketing, customer service, operations, and admin, run by a single AI manager.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="apple-touch-icon" href="/favicon.svg">
@@ -655,6 +655,46 @@ button { font-family: inherit; cursor: pointer; border: none; }
 }
 
 /* ============================================
+   TWO WAYS SECTION
+   ============================================ */
+.two-ways-header { text-align: center; margin-bottom: 48px; }
+.two-ways-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+.two-ways-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+}
+.two-ways-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 0;
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.two-ways-list li::before {
+  content: '\2713';
+  color: var(--accent);
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.two-ways-footer {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+@media (max-width: 768px) {
+  .two-ways-grid { grid-template-columns: 1fr; }
+}
+
+/* ============================================
    PRICING
    ============================================ */
 .pricing { background: var(--bg-secondary); }
@@ -1291,7 +1331,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
   "offers": [
     {
       "@type": "Offer",
-      "name": "Chatbot",
+      "name": "AI Front Desk",
       "price": "19.99",
       "priceCurrency": "USD",
       "priceSpecification": {
@@ -1304,7 +1344,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
     },
     {
       "@type": "Offer",
-      "name": "Agent OS",
+      "name": "AI Workforce",
       "price": "99.99",
       "priceCurrency": "USD",
       "priceSpecification": {
@@ -1313,7 +1353,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
         "priceCurrency": "USD",
         "billingDuration": "P1M"
       },
-      "description": "Full platform: AI staff, Agent OS, marketing, SEO, social media, campaigns, and everything in Chatbot"
+      "description": "Full platform: AI staff, AI Workforce, marketing, SEO, social media, campaigns, and everything in AI Front Desk"
     }
   ]
 }
@@ -1329,7 +1369,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
       "name": "What's included in each plan?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Two plans. Chatbot ($19.99/mo) gives you the AI chat widget, lead capture, FAQ answers, and appointment requests. Agent OS ($99.99/mo) adds the full platform: AI marketing staff, SEO audit suite, social media scheduling, email/SMS campaigns, automation rules, and advanced analytics. No setup fees. Cancel anytime."
+        "text": "Two plans. AI Front Desk ($19.99/mo) gives you the AI chat widget, lead capture, FAQ answers, and appointment requests. AI Workforce ($99.99/mo) adds the full platform: AI marketing staff, SEO audit suite, social media scheduling, email/SMS campaigns, automation rules, and advanced analytics. No setup fees. Cancel anytime."
       }
     },
     {
@@ -1361,7 +1401,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
       "name": "Can I upgrade my plan later?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Absolutely. Most partners start with Chatbot and upgrade to Agent OS within a few months once they see results. We migrate everything seamlessly with no downtime and no lost data."
+        "text": "Absolutely. Most partners start with AI Front Desk and upgrade to AI Workforce within a few months once they see results. We migrate everything seamlessly with no downtime and no lost data."
       }
     },
     {
@@ -1582,19 +1622,65 @@ button { font-family: inherit; cursor: pointer; border: none; }
 <!-- ============ TWO WAYS ============ -->
 <section class="section" id="two-ways">
   <div class="container">
-    <div class="who-header">
-      <div class="section-label reveal">Two ways to start</div>
-      <h2 class="section-title reveal">Start where you are. Grow into the rest.</h2>
-      <p class="section-subtitle reveal">Both run on the same AgentNexLiFy engine. Move from one to the other anytime.</p>
+    <div class="two-ways-header">
+      <div class="section-label reveal">One employee or an entire team</div>
+      <h2 class="section-title reveal">Start With One Employee Or Build An Entire Team</h2>
+      <p class="section-subtitle reveal">Start with one AI employee. Grow into an AI team.</p>
     </div>
-    <div class="who-grid" style="grid-template-columns: repeat(2, 1fr);">
-      <div class="who-card reveal">
-        <h3>Chatbot, $19.99/mo</h3>
-        <p>Your front desk on the website. It answers visitors 24/7, captures and qualifies leads, books appointments, and follows up, then hands the work to the backend automatically. Best when you want inbound handled without lifting a finger.</p>
+    <div class="two-ways-grid">
+      <div class="who-card reveal" style="text-align: left;">
+        <h3>AI Front Desk</h3>
+        <ul class="two-ways-list">
+          <li>Answers questions</li>
+          <li>Captures leads</li>
+          <li>Books appointments</li>
+          <li>Supports customers</li>
+        </ul>
+        <p class="two-ways-footer">Best for businesses looking to automate customer interactions.</p>
       </div>
-      <div class="who-card reveal">
-        <h3>Agent OS, $99.99/mo</h3>
-        <p>Your AI operations team. You prompt one orchestrator in plain English and it directs a team (8) handling sales, marketing, SEO, social, campaigns, follow-ups, and support. Best when you want to run the whole business from one conversation.</p>
+      <div class="who-card reveal" style="text-align: left;">
+        <h3>AI Workforce</h3>
+        <ul class="two-ways-list">
+          <li>Sales Agent</li>
+          <li>Marketing Agent</li>
+          <li>Customer Support Agent</li>
+          <li>Operations Agent</li>
+          <li>Knowledge Agent</li>
+          <li>Finance Agent</li>
+          <li>HR Agent</li>
+          <li>Executive Assistant Agent</li>
+        </ul>
+        <p class="two-ways-footer">Best for businesses looking to scale operations without adding headcount.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ COMPARE HIRE ============ -->
+<section class="section" id="compare-hire">
+  <div class="container">
+    <div class="two-ways-header">
+      <h2 class="section-title reveal">Why wouldn't I just hire someone?</h2>
+    </div>
+    <div class="two-ways-grid">
+      <div class="who-card reveal" style="text-align: left;">
+        <h3>AI Front Desk</h3>
+        <ul class="two-ways-list">
+          <li>Works 24/7</li>
+          <li>Never misses an inquiry</li>
+          <li>Instant response times</li>
+          <li>Scales automatically</li>
+        </ul>
+      </div>
+      <div class="who-card reveal" style="text-align: left;">
+        <h3>AI Workforce</h3>
+        <ul class="two-ways-list">
+          <li>Handles thousands of tasks simultaneously</li>
+          <li>No onboarding</li>
+          <li>No turnover</li>
+          <li>No PTO</li>
+          <li>No management overhead</li>
+        </ul>
       </div>
     </div>
   </div>
@@ -1612,7 +1698,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 
       <!-- Chatbot -->
       <div class="pricing-card reveal">
-        <div class="pricing-plan-name">Chatbot</div>
+        <div class="pricing-plan-name">AI Front Desk</div>
         <div class="pricing-tagline">Handles your inbound website traffic, and the work behind it.</div>
         <div class="pricing-amount">
           <span class="pricing-dollar">$19.99</span>
@@ -1645,7 +1731,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 
       <!-- Agent OS -->
       <div class="pricing-card popular reveal">
-        <div class="pricing-plan-name">Agent OS</div>
+        <div class="pricing-plan-name">AI Workforce</div>
         <div class="pricing-tagline">One orchestrator directing a team (8) of AI agents.</div>
         <div class="pricing-amount">
           <span class="pricing-dollar">$99.99</span>
@@ -1654,10 +1740,10 @@ button { font-family: inherit; cursor: pointer; border: none; }
         <div class="pricing-setup">No setup fee. Cancel anytime.</div>
         <div class="pricing-usage">5M AI tokens/mo. Add more for $24.99/million.</div>
         <div class="pricing-divider"></div>
-        <div class="pricing-includes">Everything in Chatbot, plus:</div>
+        <div class="pricing-includes">Everything in AI Front Desk, plus:</div>
         <ul class="pricing-features">
           <li>
-            <strong>Agent OS - AI Staff</strong>
+            <strong>AI Workforce - AI Staff</strong>
             <div class="feat-desc">AI workers that handle lead nurturing, follow-ups, and customer outreach around the clock.</div>
           </li>
           <li>
@@ -1752,7 +1838,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
       </div>
 
       <p class="roi-comparison" id="roi-comparison">
-        AgentNexLiFy Chatbot is <strong>$19.99/mo</strong> -- it answers every call so none of that slips away.
+        AgentNexLiFy AI Front Desk is <strong>$19.99/mo</strong> -- it answers every call so none of that slips away.
       </p>
 
       <div class="roi-cta-wrap">
@@ -1817,7 +1903,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
           <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
         <div class="faq-answer" id="faq-a1" role="region">
-          <div class="faq-answer-inner">Two plans. Chatbot ($19.99/mo) gives you the AI chat widget, lead capture, FAQ answers, and appointment requests. Agent OS ($99.99/mo) adds the full platform: AI marketing staff, SEO audit suite, social media scheduling, email/SMS campaigns, automation rules, and advanced analytics. No setup fees. Cancel anytime.</div>
+          <div class="faq-answer-inner">Two plans. AI Front Desk ($19.99/mo) gives you the AI chat widget, lead capture, FAQ answers, and appointment requests. AI Workforce ($99.99/mo) adds the full platform: AI marketing staff, SEO audit suite, social media scheduling, email/SMS campaigns, automation rules, and advanced analytics. No setup fees. Cancel anytime.</div>
         </div>
       </div>
 
@@ -1857,7 +1943,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
           <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
         <div class="faq-answer" id="faq-a5" role="region">
-          <div class="faq-answer-inner">Absolutely. Most partners start with Chatbot and upgrade to Agent OS within a few months once they see results. We migrate everything seamlessly with no downtime and no lost data.</div>
+          <div class="faq-answer-inner">Absolutely. Most partners start with AI Front Desk and upgrade to AI Workforce within a few months once they see results. We migrate everything seamlessly with no downtime and no lost data.</div>
         </div>
       </div>
 
@@ -2045,10 +2131,10 @@ button { font-family: inherit; cursor: pointer; border: none; }
       // Update comparison line based on magnitude
       var comparisonText;
       if (monthly < 200) {
-        comparisonText = 'AgentNexLiFy Chatbot is <strong>$19.99/mo</strong> -- recover that loss in less than a month.';
+        comparisonText = 'AgentNexLiFy AI Front Desk is <strong>$19.99/mo</strong> -- recover that loss in less than a month.';
       } else {
         var multiplier = (monthly / 19.99).toFixed(0);
-        comparisonText = 'AgentNexLiFy Chatbot is <strong>$19.99/mo</strong> -- that\'s a <strong>' + multiplier + 'x return</strong> if it catches even one job.';
+        comparisonText = 'AgentNexLiFy AI Front Desk is <strong>$19.99/mo</strong> -- that\'s a <strong>' + multiplier + 'x return</strong> if it catches even one job.';
       }
       comparison.innerHTML = comparisonText;
     }
