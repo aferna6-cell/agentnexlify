@@ -1,13 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <defs>
-    <radialGradient id="glow" cx="50%" cy="36%" r="48%">
-      <stop offset="0%" stop-color="#00bfff" stop-opacity="0.22"/>
-      <stop offset="100%" stop-color="#08090f" stop-opacity="0"/>
-    </radialGradient>
-  </defs>
-  <rect width="1200" height="630" fill="#08090f"/>
-  <rect width="1200" height="630" fill="url(#glow)"/>
-  <image href="/logo.png" x="275" y="92" width="650" height="410" preserveAspectRatio="xMidYMid meet"/>
-  <text x="72" y="542" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="700" fill="#f5f8ff">AI that helps run your business</text>
-  <text x="76" y="589" font-family="Segoe UI, Arial, sans-serif" font-size="28" fill="#00bfff">agentnexlify.com</text>
+  <rect width="1200" height="630" fill="#ffffff"/>
+  <rect width="1200" height="10" fill="#2563EB"/>
+  <text x="72" y="118" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#0b0b0c">AgentNexLiFy</text>
+  <text x="72" y="248" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" letter-spacing="6" fill="#2563EB">AI WORKFORCE PLATFORM</text>
+  <text x="68" y="338" font-family="Arial, Helvetica, sans-serif" font-size="86" font-weight="800" fill="#0b0b0c">Deploy an</text>
+  <text x="68" y="436" font-family="Arial, Helvetica, sans-serif" font-size="86" font-weight="800" fill="#2563EB">AI Workforce.</text>
+  <text x="72" y="512" font-family="Arial, Helvetica, sans-serif" font-size="30" fill="#6b7280">Start with an AI Front Desk. Grow into a full AI team,</text>
+  <text x="72" y="552" font-family="Arial, Helvetica, sans-serif" font-size="30" fill="#6b7280">run by a single AI manager.</text>
+  <text x="72" y="596" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#2563EB">agentnexlify.com</text>
 </svg>
