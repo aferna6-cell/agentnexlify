@@ -90,7 +90,11 @@ async def billing_checkout(
         success_url = f"{settings.frontend_url}/setup?step=1&session_id={{CHECKOUT_SESSION_ID}}"
         cancel_url = f"{settings.frontend_url}/signup?cancelled=1"
     else:
-        success_url = f"{settings.frontend_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}"
+        # Land paying customers on the dashboard (a real authed route), still
+        # signed in, not a dead /billing/success path that fell through to the
+        # router catch-all and read as "logged out". session_id lets RequirePaid
+        # poll /me until the webhook flips plan_status to active.
+        success_url = f"{settings.frontend_url}/dashboard?checkout_success=1&session_id={{CHECKOUT_SESSION_ID}}"
         cancel_url = f"{settings.frontend_url}/billing/cancel"
 
     session_params: dict = {
