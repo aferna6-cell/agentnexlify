@@ -115,7 +115,7 @@ const data = {
       {
         question: "Does NexLiFy have a free plan?",
         answer:
-          "No. NexLiFy has no free plan — AI Front Desk is $19.99/mo and AI Workforce is $99.99/mo. No setup fees. Cancel anytime.",
+          "No. NexLiFy has no free plan. AI Front Desk is $19.99/mo and AI Workforce is $99.99/mo. No setup fees. Cancel anytime.",
       },
     ],
   },
