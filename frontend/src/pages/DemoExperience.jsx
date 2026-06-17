@@ -522,12 +522,12 @@ export default function DemoExperience() {
           <div className="de-cta">
             <h2 className="de-cta-title">Ready to put your AI staff to work?</h2>
             <p className="de-cta-sub">
-              This is the real product running on sample data. Start free and
+              This is the real product running on sample data. Get started and
               connect your own widget, leads, and calendar in minutes.
             </p>
             <div className="de-cta-actions">
               <Link to="/signup" className="lp-btn-primary">
-                Start free {"->"}
+                Get Started {"->"}
               </Link>
               <Link to="/contact" className="lp-btn-secondary">
                 Talk to us

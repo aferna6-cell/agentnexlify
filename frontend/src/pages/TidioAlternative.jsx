@@ -12,7 +12,7 @@ const data = {
     h1Accent: "Here\u2019s Why",
     subtitle:
       "Tidio is great for ecommerce. NexLiFy is built for service businesses \u2014 plumbers, dentists, salons, law firms, and any local business that needs to capture leads and respond fast, even after hours.",
-    primaryCta: "Switch from Tidio \u2014 Start Free \u2192",
+    primaryCta: "Switch from Tidio \u2014 Get Started \u2192",
     secondaryCta: "See the Comparison \u2193",
   },
   comparison: {
@@ -23,8 +23,8 @@ const data = {
     columns: ["Feature", "NexLiFy", "Tidio"],
     rows: [
       {
-        feature: "Free tier",
-        nexlify: "50 convos/mo",
+        feature: "Starting price",
+        nexlify: "From $19.99/mo",
         nexlifyClass: "check",
         competitor: "Yes (limited features)",
         competitorClass: "muted",
@@ -90,7 +90,7 @@ const data = {
       {
         icon: "tag",
         heading: "Flat pricing means no surprises",
-        body: "Tidio charges per agent seat, which gets expensive as your team grows. NexLiFy uses flat monthly pricing \u2014 $99, $150, or $250/mo \u2014 regardless of how many people use the dashboard. Plus, you get SEO tools, social media marketing, and AI content generation included.",
+        body: "Tidio charges per agent seat, which gets expensive as your team grows. NexLiFy uses flat monthly pricing \u2014 $19.99/mo (AI Front Desk) or $99.99/mo (AI Workforce) \u2014 regardless of how many people use the dashboard. Plus, you get SEO tools, social media marketing, and AI content generation included.",
       },
     ],
   },
@@ -113,16 +113,16 @@ const data = {
           "Absolutely. NexLiFy can be set up in under 5 minutes. There\u2019s no complex migration process \u2014 just add the NexLiFy widget to your site and configure your business details. Your AI agent starts handling conversations immediately.",
       },
       {
-        question: "Does NexLiFy have a free plan like Tidio?",
+        question: "Does NexLiFy have a free plan?",
         answer:
-          "Yes. NexLiFy has a free plan, and the $99 Growth plan includes a 7-day free trial with full AI capabilities, missed call text-back, and SMS. No credit card is required to get started.",
+          "No. NexLiFy has no free plan — AI Front Desk is $19.99/mo and AI Workforce is $99.99/mo. No setup fees. Cancel anytime.",
       },
     ],
   },
   cta: {
     title: "Ready to switch from Tidio?",
-    subtitle: "Set up NexLiFy in under 5 minutes. No credit card required.",
-    primaryCta: "Switch from Tidio \u2014 Start Free \u2192",
+    subtitle: "Set up NexLiFy in under 5 minutes. No setup fees. Cancel anytime.",
+    primaryCta: "Switch from Tidio \u2014 Get Started \u2192",
     secondaryCta: "See Pricing \u2193",
     note: "No commitment. No pressure. Just a conversation.",
   },

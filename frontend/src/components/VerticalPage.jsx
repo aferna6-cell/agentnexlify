@@ -56,7 +56,7 @@ export default function VerticalPage({ meta, hero, features, stats, slug, faqs, 
           <p className="vp-hero__pain">{hero.painPoint}</p>
           <div className="vp-hero__cta">
             <Link to="/signup" className="vp-btn vp-btn--primary">
-              Start Free
+              Get Started
             </Link>
             <a href="/demo" className="vp-btn vp-btn--outline">
               Book a Demo

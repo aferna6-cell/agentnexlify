@@ -128,7 +128,7 @@ export default function ComparisonPage({ meta, hero, comparison, reasons, crossL
               </svg>
               <span>Book Demo</span>
             </a>
-            <Link to="/signup" className="nav-cta">Start Free</Link>
+            <Link to="/signup" className="nav-cta">Get Started</Link>
           </div>
         </div>
       </nav>
@@ -272,7 +272,7 @@ export default function ComparisonPage({ meta, hero, comparison, reasons, crossL
               <img src="/logo.png" alt="Agent NexLiFy Logo" className="footer-brand-logo" />
               <p>AI-powered automation for businesses.</p>
               <Link to="/signup" className="btn-primary" style={{ marginTop: "16px", fontSize: "14px", padding: "12px 24px" }}>
-                Start Free {"\u2192"}
+                Get Started {"\u2192"}
               </Link>
             </div>
             <div className="footer-col">

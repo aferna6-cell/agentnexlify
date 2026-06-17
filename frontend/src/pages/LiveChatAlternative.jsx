@@ -12,7 +12,7 @@ const data = {
     h1Accent: "NexLiFy Works While You Sleep.",
     subtitle:
       "LiveChat requires a live human at the keyboard. That\u2019s a great concept \u2014 but the wrong tool for a business owner who also has to fix the pipes, cut the hair, or pull the teeth. NexLiFy\u2019s AI handles customer conversations 24/7, no staff required.",
-    primaryCta: "Try NexLiFy Free \u2014 No Human Required \u2192",
+    primaryCta: "Get Started \u2014 No Human Required \u2192",
     secondaryCta: "See the Comparison \u2193",
   },
   comparison: {
@@ -45,7 +45,7 @@ const data = {
       },
       {
         feature: "Price",
-        nexlify: "Free \u2013 $250/mo flat",
+        nexlify: "$19.99 \u2013 $99.99/mo flat",
         nexlifyClass: "check",
         competitor: "$29\u201369/agent/mo",
         competitorClass: "muted",
@@ -90,7 +90,7 @@ const data = {
       {
         icon: "tag",
         heading: "Flat pricing that doesn\u2019t grow with headcount",
-        body: "LiveChat\u2019s $29\u201369/agent/mo adds up: 3 agents covering business hours costs $87\u2013207/mo. NexLiFy starts free and tops out at $250/mo for unlimited conversations, SEO tools, social media marketing, and AI content \u2014 no agent seats to manage.",
+        body: "LiveChat\u2019s $29\u201369/agent/mo adds up: 3 agents covering business hours costs $87\u2013207/mo. NexLiFy is $19.99/mo (AI Front Desk) or $99.99/mo (AI Workforce) flat for unlimited conversations, SEO tools, social media marketing, and AI content \u2014 no agent seats to manage.",
       },
     ],
   },
@@ -115,7 +115,7 @@ const data = {
       {
         question: "Is NexLiFy more affordable than LiveChat?",
         answer:
-          "Yes. LiveChat charges $29\u201369 per agent per month, and you need at least one human agent online at all times. NexLiFy starts free, Growth includes a 7-day trial at $99/month, and paid plans stay flat-rate ($99\u2013$250/mo) with no per-agent fees. The AI handles conversations automatically \u2014 no staff scheduling required. Plus, you get SEO tools, social media marketing, and AI content generation included.",
+          "Yes. LiveChat charges $29\u201369 per agent per month, and you need at least one human agent online at all times. NexLiFy is flat-rate \u2014 $19.99/mo (AI Front Desk) or $99.99/mo (AI Workforce) \u2014 with no per-agent fees. No setup fees. Cancel anytime. The AI handles conversations automatically \u2014 no staff scheduling required.",
       },
     ],
   },
@@ -123,9 +123,9 @@ const data = {
     title: "Stop scheduling chat agents. Let AI handle it.",
     subtitle:
       "NexLiFy responds to customers 24/7 \u2014 no humans needed, no shifts to cover.",
-    primaryCta: "Try NexLiFy Free \u2014 No Human Required \u2192",
+    primaryCta: "Get Started \u2014 No Human Required \u2192",
     secondaryCta: "See Pricing \u2193",
-    note: "No commitment. No credit card. No hiring required.",
+    note: "No setup fees. No long-term contracts. No hiring required.",
   },
 };
 
