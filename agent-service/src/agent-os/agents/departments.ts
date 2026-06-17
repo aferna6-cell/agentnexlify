@@ -13,6 +13,7 @@ import { complaintHandler } from "./complaint_handler/agent.ts";
 import { leadNurture } from "./lead_nurture/agent.ts";
 import { quoteFollowUp } from "./quote_follow_up/agent.ts";
 import { quoteGenerator } from "./quote_generator/agent.ts";
+import { outreach } from "./outreach/agent.ts";
 import { campaign } from "./campaign/agent.ts";
 import { contentWriter } from "./content_writer/agent.ts";
 import { socialPost } from "./social_post/agent.ts";
@@ -48,7 +49,8 @@ export const sales = defineDepartment({
   skills: [
     { agent: quoteGenerator, extraKeywords: ["draft a quote", "write up a quote", "estimate for", "parts", "labor"] },
     { agent: quoteFollowUp, extraKeywords: ["chase", "hasn't booked", "didn't book"] },
-    { agent: leadNurture, extraKeywords: ["re-engage", "reach out", "lapsed", "haven't seen", "referral"] },
+    { agent: leadNurture, extraKeywords: ["re-engage", "lapsed", "haven't seen", "referral"] },
+    { agent: outreach, extraKeywords: ["cold email", "reach out to", "prospect", "outreach", "new business", "cold outreach"] },
   ],
   defaultSkillId: "lead_nurture",
   // V-02: pipeline-aware skill selection. "Follow up with X on her quote" must
