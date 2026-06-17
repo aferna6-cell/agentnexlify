@@ -368,7 +368,7 @@ function DemoPreview() {
         </div>
         <div className="demo-preview-cta reveal">
           <Link to="/demo" className="lp-btn-primary">
-            Book a Demo {"->"}
+            See it in action {"->"}
           </Link>
         </div>
       </div>
@@ -919,7 +919,7 @@ export default function Home() {
               Get Started {"->"}
             </Link>
             <Link to="/demo" className="lp-btn-secondary">
-              Book a Demo
+              See it in action
             </Link>
           </div>
         </div>
@@ -961,7 +961,7 @@ export default function Home() {
                   <Link to="/contact">Contact</Link>
                 </li>
                 <li>
-                  <Link to="/demo">Book a Demo</Link>
+                  <Link to="/demo">Live Demo</Link>
                 </li>
               </ul>
             </div>
