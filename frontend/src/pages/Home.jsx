@@ -468,10 +468,10 @@ export default function Home() {
   return (
     <div className="landing-page">
       <Helmet>
-        <title>AgentNexLiFy &mdash; AI Staff for Small Businesses</title>
+        <title>AgentNexLiFy | your AI service partner for small business</title>
         <meta
           name="description"
-          content="AgentNexLiFy gives your small business an AI staff that handles sales follow-ups, booking, invoicing, and marketing from one chat. Your website widget captures customers 24/7. Plans from $19.99/mo."
+          content="AgentNexLiFy is your AI service partner. Start with a chatbot that handles your website traffic, or Agent OS to direct an AI team (8) across sales, marketing, and support."
         />
         <link rel="canonical" href="https://agentnexlify.com/" />
         <meta
@@ -603,18 +603,16 @@ export default function Home() {
             <div className="lp-hero-text">
               <div className="lp-hero-badge reveal">
                 <span className="lp-hero-badge-dot" />
-                AI staff, not another tool to learn
+                One AI partner. Two ways to start.
               </div>
               <h1 className="reveal">
-                Run your business by{" "}
-                <span className="accent-gradient">talking to your AI staff.</span>
+                An AI team for your business.{" "}
+                <span className="accent-gradient">Start with a chatbot, or run the whole operation.</span>
               </h1>
               <p
                 className="lp-hero-sub reveal"
               >
-                Eight AI departments handle follow-ups, bookings, invoices, and
-                marketing. Your 24/7 website widget captures customers while you
-                sleep. You approve everything from one chat.
+                AgentNexLiFy is your AI service partner. Pick the chatbot to handle every visitor on your website and do the work behind it, or Agent OS to direct an AI team (8) across sales, marketing, and support, all from plain-language prompts. Same engine, two ways in.
               </p>
               <div className="lp-hero-buttons reveal">
                 <Link to="/signup" className="btn-primary">
@@ -864,6 +862,35 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ============ TWO WAYS ============ */}
+      <section className="section" id="two-ways">
+        <div className="container">
+          <div className="lp-features-header">
+            <div className="section-label reveal">Two ways to start</div>
+            <h2 className="section-title reveal">
+              Start where you are. Grow into the rest.
+            </h2>
+            <p className="section-subtitle reveal" style={{ margin: "0 auto" }}>
+              Both run on the same AgentNexLiFy engine. Move from one to the other anytime.
+            </p>
+          </div>
+          <div className="lp-pricing-grid">
+            <div className="lp-pricing-card reveal" style={{ textAlign: "left" }}>
+              <div className="lp-pricing-plan-name">Chatbot, $19.99/mo</div>
+              <p style={{ marginTop: "12px", fontSize: "15px", color: "var(--text-secondary)", lineHeight: "1.65" }}>
+                Your front desk on the website. It answers visitors 24/7, captures and qualifies leads, books appointments, and follows up, then hands the work to the backend automatically. Best when you want inbound handled without lifting a finger.
+              </p>
+            </div>
+            <div className="lp-pricing-card reveal" style={{ textAlign: "left" }}>
+              <div className="lp-pricing-plan-name">Agent OS, $99.99/mo</div>
+              <p style={{ marginTop: "12px", fontSize: "15px", color: "var(--text-secondary)", lineHeight: "1.65" }}>
+                Your AI operations team. You prompt one orchestrator in plain English and it directs a team (8) handling sales, marketing, SEO, social, campaigns, follow-ups, and support. Best when you want to run the whole business from one conversation.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ============ PRICING ============ */}
       <section className="section" id="pricing">
         <div className="container">
@@ -882,7 +909,7 @@ export default function Home() {
             <div className="lp-pricing-card start-here reveal">
               <div className="lp-pricing-plan-name">Chatbot</div>
               <div className="lp-pricing-tagline">
-                Your AI front desk on your website.
+                Handles your inbound website traffic, and the work behind it.
               </div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$19.99</span>
@@ -908,7 +935,7 @@ export default function Home() {
             <div className="lp-pricing-card popular reveal">
               <div className="lp-pricing-plan-name">Agent OS</div>
               <div className="lp-pricing-tagline">
-                Your full AI team. Marketing included.
+                One orchestrator directing a team (8) of AI agents.
               </div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$99.99</span>
