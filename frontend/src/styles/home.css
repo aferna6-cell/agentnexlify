@@ -885,6 +885,14 @@
   flex-wrap: wrap;
 }
 
+.landing-page .lp-pricing-usage {
+  font-size: 13px;
+  color: var(--accent, #6366f1);
+  font-weight: 600;
+  margin-top: -16px;
+  margin-bottom: 24px;
+}
+
 .landing-page .lp-pricing-setup-original {
   text-decoration: line-through;
   color: var(--text-muted);

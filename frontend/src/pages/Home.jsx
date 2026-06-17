@@ -889,6 +889,9 @@ export default function Home() {
                 <span className="lp-pricing-period">/month</span>
               </div>
               <div className="lp-pricing-setup">No setup fee. Cancel anytime.</div>
+              <div className="lp-pricing-usage">
+                800K AI tokens/mo. Add more for $24.99/million.
+              </div>
               <div className="lp-pricing-divider"></div>
               <ul className="lp-pricing-features">
                 <li>AI chat widget that answers questions 24/7</li>
@@ -913,6 +916,9 @@ export default function Home() {
               </div>
               <div className="lp-pricing-setup">
                 No setup fee. Cancel anytime.
+              </div>
+              <div className="lp-pricing-usage">
+                5M AI tokens/mo. Add more for $24.99/million.
               </div>
               <div className="lp-pricing-divider"></div>
               <div className="lp-pricing-includes">
