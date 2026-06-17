@@ -629,7 +629,7 @@ export default function Home() {
               <div className="widget-mockup-header">
                 <div className="widget-mockup-avatar">AI</div>
                 <div className="widget-mockup-header-text">
-                  <div className="widget-mockup-name">Agent OS</div>
+                  <div className="widget-mockup-name">AI Workforce</div>
                   <div className="widget-mockup-status">
                     <span className="widget-mockup-status-dot"></span>
                     8 departments ready

@@ -32,7 +32,7 @@ const ACTIVE_STATUSES = new Set(["active", "trialing"]);
 const PLANS = [
   {
     key: "chatbot",
-    name: "Chatbot",
+    name: "AI Front Desk",
     price: "$19.99/mo",
     features: [
       "AI chat widget",
@@ -40,20 +40,20 @@ const PLANS = [
       "FAQ knowledge base",
       "Appointment booking",
     ],
-    cta: "Start Chatbot",
+    cta: "Start AI Front Desk",
     highlight: false,
   },
   {
     key: "agent_os",
-    name: "Full Agent OS",
+    name: "AI Workforce",
     price: "$99.99/mo",
     features: [
-      "Everything in Chatbot",
-      "Your AI staff in Agent OS",
+      "Everything in AI Front Desk",
+      "Your AI staff in AI Workforce",
       "Marketing, SEO & campaigns",
       "Automations & follow-ups",
     ],
-    cta: "Start Agent OS",
+    cta: "Start AI Workforce",
     highlight: true,
   },
 ];

@@ -47,16 +47,16 @@ export default function MarketingUpsell({ pageKey, onNavigate }) {
         }}
       >
         <div style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)", letterSpacing: 1.2 }}>
-          INCLUDED WITH AGENT OS
+          INCLUDED WITH AI WORKFORCE
         </div>
         <h1 style={{ fontSize: 36, margin: "12px 0 8px", color: "var(--text-primary)" }}>
           Marketing comes with your AI staff
         </h1>
         <p style={{ color: "var(--text-secondary)", fontSize: 16, marginBottom: 32 }}>
           {pageKey
-            ? `"${pageKey.replace(/_/g, " ")}" is included with the Agent OS plan.`
-            : "Marketing tools are included with the Agent OS plan."}{" "}
-          Upgrade to Agent OS ($99.99/mo) and your marketing team handles SEO, social posts,
+            ? `"${pageKey.replace(/_/g, " ")}" is included with the AI Workforce plan.`
+            : "Marketing tools are included with the AI Workforce plan."}{" "}
+          Upgrade to AI Workforce ($99.99/mo) and your marketing team handles SEO, social posts,
           campaigns, and automations for you.
         </p>
 

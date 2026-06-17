@@ -9,15 +9,15 @@ const PAID_PLANS = new Set(["chatbot", "agent_os"]);
 const PLAN_OPTIONS = [
   {
     key: "chatbot",
-    name: "Chatbot",
+    name: "AI Front Desk",
     price: "$19.99/mo",
     description: "AI chat widget, lead capture, FAQ KB, appointment booking",
   },
   {
     key: "agent_os",
-    name: "Full Agent OS",
+    name: "AI Workforce",
     price: "$99.99/mo",
-    description: "Everything in Chatbot + AI staff, marketing, automations",
+    description: "Everything in AI Front Desk + AI staff, marketing, automations",
     highlight: true,
   },
 ];
