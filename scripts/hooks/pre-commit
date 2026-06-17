@@ -287,6 +287,17 @@ else
     echo -e "${GREEN}OK${NC} (agent-service/src not present, skipped)"
 fi
 
+# Check 13: project invariants gate
+echo -n "Check 13: project invariants gate... "
+if python3 scripts/check_project_invariants.py > /dev/null 2>&1; then
+    echo -e "${GREEN}OK${NC}"
+else
+    echo -e "${RED}FAIL${NC}"
+    python3 scripts/check_project_invariants.py 2>&1 | grep -v "^PASS"
+    echo "ERROR: Fix project invariant violations above before committing."
+    ERRORS=$((ERRORS + 1))
+fi
+
 if [ $ERRORS -gt 0 ]; then
     echo -e "${RED}COMMIT BLOCKED: $ERRORS critical issue(s) found.${NC}"
     echo "Fix the issues above before committing."
