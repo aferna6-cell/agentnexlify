@@ -18044,3 +18044,30 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** landing-page-v2/index.html
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Fix AgentShield CI (Linux runner) + finish brand-tagline pluralization (#310)
+
+#1 — AgentShield scan ran on windows-latest and emitted backslash finding
+paths (.claude\agents\...), which never matched the forward-slash paths in
+config/agentshield-baseline.json. Result: all 44 pre-existing agent/hook
+findings were miscounted as "new" and the gate failed on any PR touching
+.claude/. Switch the job to ubuntu-latest so finding paths are POSIX and
+match the baseline. Verified locally: `npm run agent-config:scan` →
+"Gate: PASSED — No regressions detected." agent-system guardrail still
+passes (workflow path assertions intact).
+
+#2 — Finish the brand-tagline pluralization left out of #307: the
+startup-playbook primary tagline now reads "Your hardest working employees
+that don't stop. They answer, follow up, and sell while you sleep."
+
+
+Claude-Session: https://claude.ai/code/session_01RxfRZfbp6n8oA265s65nLG
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-06-17
+**Commit:** 9f76829
+**Author:** aferna6-cell
+**Files Changed:** .claude/skills/startup-playbook/SKILL.md,.github/workflows/agent-config-security.yml
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
