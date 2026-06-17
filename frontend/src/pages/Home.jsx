@@ -815,7 +815,7 @@ export default function Home() {
                 <li>Widget customization</li>
                 <li>Hosted business page</li>
               </ul>
-              <StripeCta plan="chatbot" className="lp-pricing-cta">Start free trial {"->"}
+              <StripeCta plan="chatbot" className="lp-pricing-cta">Get Started {"->"}
               </StripeCta>
             </div>
 
