@@ -92,14 +92,19 @@ def map_business_profile(row: dict | None) -> dict:
     return {k: v for k, v in out.items() if v is not None}
 
 
-def map_widget_history(messages: list[dict]) -> list[dict]:
+def map_widget_history(
+    messages: list[dict], sentiment_by_session: dict[str, dict] | None = None
+) -> list[dict]:
     """chat_messages rows -> WidgetConversationData[], grouped by session.
 
     chat_messages is per-message; the engine wants per-conversation summaries.
     Group by session_id, summarize with the first user message, and use the
-    last message time as closedAt. Honest + lossy: no intent/topics in the
-    canonical store, so those stay empty rather than fabricated.
+    last message time as closedAt. Topics stay empty (not in the canonical
+    store). When ``sentiment_by_session`` carries a stored classification for a
+    session (see conversation_enrichment), its sentiment + intent are attached;
+    otherwise those keys are omitted rather than fabricated.
     """
+    sentiment_by_session = sentiment_by_session or {}
     by_session: dict[str, list[dict]] = {}
     for m in messages:
         sid = m.get("session_id") or "unknown"
@@ -110,14 +115,20 @@ def map_widget_history(messages: list[dict]) -> list[dict]:
         ordered = sorted(msgs, key=lambda m: m.get("created_at") or "")
         first_user = next((m for m in ordered if m.get("role") == "user"), None)
         summary = (first_user or ordered[-1] if ordered else {}).get("content", "") or ""
-        conversations.append(
-            {
-                "id": sid,
-                "summary": summary[:500],
-                "topics": [],
-                "closedAt": (ordered[-1].get("created_at") if ordered else None) or _now(),
-            }
-        )
+        convo: dict = {
+            "id": sid,
+            "summary": summary[:500],
+            "topics": [],
+            "closedAt": (ordered[-1].get("created_at") if ordered else None) or _now(),
+        }
+        stored = sentiment_by_session.get(sid) or {}
+        sentiment = stored.get("sentiment")
+        if sentiment:
+            convo["sentiment"] = sentiment
+        intent = stored.get("intent")
+        if intent:
+            convo["intent"] = intent
+        conversations.append(convo)
     # Most-recent conversation first.
     conversations.sort(key=lambda c: c["closedAt"], reverse=True)
     return conversations
@@ -228,6 +239,41 @@ def resolve_deliverable_status(
 # --- data access ------------------------------------------------------------
 
 
+def _load_conversation_sentiment(db: Any, client_id: str) -> dict[str, dict]:
+    """session_id -> {'sentiment', 'intent'} from conversations (client_id-scoped).
+
+    Degrades to an empty map if the columns do not exist yet (pre-migration) or
+    the query fails, so the bridge keeps working before migration 154 is applied.
+    """
+    try:
+        rows = (
+            tenant_table(db, "conversations", client_id)
+            .select("session_id, sentiment, intent")
+            .gte("last_message_at", _since(_WIDGET_DAYS))
+            .limit(_WIDGET_MSG_CAP)
+            .execute()
+        ).data or []
+    except Exception:
+        logger.warning(
+            "agent_os_bridge: conversation sentiment load failed for %s", client_id, exc_info=True
+        )
+        return {}
+
+    out: dict[str, dict] = {}
+    for row in rows:
+        sid = row.get("session_id")
+        if not sid:
+            continue
+        entry: dict = {}
+        if row.get("sentiment"):
+            entry["sentiment"] = row["sentiment"]
+        if row.get("intent"):
+            entry["intent"] = row["intent"]
+        if entry:
+            out[sid] = entry
+    return out
+
+
 def assemble_shared_context(db: Any, client_id: str) -> dict:
     """Build the engine's SharedContext for one tenant from Supabase."""
     profile_resp = (
@@ -243,6 +289,8 @@ def assemble_shared_context(db: Any, client_id: str) -> dict:
         .limit(_WIDGET_MSG_CAP)
         .execute()
     ).data or []
+
+    sentiment_by_session = _load_conversation_sentiment(db, client_id)
 
     leads = (
         tenant_table(db, "leads", client_id)
@@ -279,7 +327,7 @@ def assemble_shared_context(db: Any, client_id: str) -> dict:
 
     return {
         "businessProfile": map_business_profile(profile_row),
-        "widgetHistory": map_widget_history(widget_msgs),
+        "widgetHistory": map_widget_history(widget_msgs, sentiment_by_session),
         "pipelineLeads": [map_lead(r) for r in leads],
         "appointments": [map_appointment(r) for r in appts],
         "invoices": [map_invoice(r) for r in invoices],

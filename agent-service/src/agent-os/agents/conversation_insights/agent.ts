@@ -29,6 +29,24 @@ function topCounts(values: string[], limit: number): string[] {
     .map(([label, n]) => (n > 1 ? `${label} (${n})` : label));
 }
 
+interface SentimentCounts {
+  positive: number;
+  neutral: number;
+  negative: number;
+}
+
+/** Tally stored per-conversation sentiment, ignoring unclassified rows. */
+function countSentiment(convos: { sentiment?: string }[]): SentimentCounts {
+  const out: SentimentCounts = { positive: 0, neutral: 0, negative: 0 };
+  for (const c of convos) {
+    const s = (c.sentiment ?? "").trim().toLowerCase();
+    if (s === "positive" || s === "neutral" || s === "negative") {
+      out[s] += 1;
+    }
+  }
+  return out;
+}
+
 /**
  * Build ONLY non-empty sections from real conversation data. Same honest-load
  * rule as the Weekly Briefing: never emit "none this period" filler.
@@ -63,6 +81,21 @@ function buildSections(ctx: SharedContext): Section[] {
     if (lines.length) sections.push({ heading: "What customers ask about", content: lines.join(" ") });
   }
 
+  // 2b. Customer sentiment: real breakdown from the stored per-conversation
+  // classification (conversation_enrichment). Only conversations the classifier
+  // labelled count toward the breakdown; unlabelled ones are excluded so the
+  // numbers stay honest. Section appears only when at least one is labelled.
+  const sentimentCounts = countSentiment(convos);
+  const labelled = sentimentCounts.positive + sentimentCounts.neutral + sentimentCounts.negative;
+  if (labelled > 0) {
+    sections.push({
+      heading: "Customer sentiment",
+      content:
+        `${sentimentCounts.positive} positive / ${sentimentCounts.neutral} neutral / ` +
+        `${sentimentCounts.negative} negative across ${labelled} classified conversation(s).`,
+    });
+  }
+
   // 3. Needs attention (QA) — complaints + knowledge-base gaps. This is the
   // "AI Quality" surface: where the front desk underperformed.
   const attention: string[] = [];
@@ -94,6 +127,11 @@ function buildSections(ctx: SharedContext): Section[] {
   }
   if (complaints.length) {
     recs.push("Review the flagged complaints and confirm each got a follow-up.");
+  }
+  if (sentimentCounts.negative > 0 && labelled > 0 && sentimentCounts.negative / labelled >= 0.25) {
+    recs.push(
+      `${sentimentCounts.negative} of ${labelled} classified chats read as negative. Review those transcripts to find what is frustrating customers.`,
+    );
   }
   if (recs.length) {
     sections.push({ heading: "Recommendations", content: recs.map((r) => `- ${r}`).join("\n") });

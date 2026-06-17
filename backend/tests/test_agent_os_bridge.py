@@ -118,3 +118,80 @@ def test_map_model_call_row_snake_cases_tokens_and_cost():
         "ok": True,
         "error": None,
     }
+
+
+def test_map_widget_history_merges_stored_sentiment_and_intent():
+    msgs = [
+        {"session_id": "s1", "role": "user", "content": "Hi", "created_at": "2026-06-01T10:00:00Z"},
+        {"session_id": "s2", "role": "user", "content": "Hours?", "created_at": "2026-06-02T09:00:00Z"},
+    ]
+    sentiment_by_session = {
+        "s1": {"sentiment": "negative", "intent": "complaint"},
+        "s2": {"sentiment": "positive"},
+    }
+    convos = bridge.map_widget_history(msgs, sentiment_by_session)
+    by_id = {c["id"]: c for c in convos}
+    assert by_id["s1"]["sentiment"] == "negative"
+    assert by_id["s1"]["intent"] == "complaint"
+    assert by_id["s2"]["sentiment"] == "positive"
+    # s2 had no stored intent -> key omitted, never fabricated
+    assert "intent" not in by_id["s2"]
+
+
+def test_map_widget_history_omits_sentiment_when_unclassified():
+    msgs = [
+        {"session_id": "s1", "role": "user", "content": "Hi", "created_at": "2026-06-01T10:00:00Z"},
+    ]
+    convos = bridge.map_widget_history(msgs)
+    assert "sentiment" not in convos[0]
+    assert "intent" not in convos[0]
+
+
+class _FakeChain:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def select(self, *a, **k):
+        return self
+
+    def eq(self, *a, **k):
+        return self
+
+    def gte(self, *a, **k):
+        return self
+
+    def limit(self, *a, **k):
+        return self
+
+    def execute(self):
+        from types import SimpleNamespace
+
+        return SimpleNamespace(data=self._rows)
+
+
+class _FakeDB:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def table(self, name):
+        return _FakeChain(self._rows)
+
+
+def test_load_conversation_sentiment_builds_session_map():
+    db = _FakeDB(
+        [
+            {"session_id": "s1", "sentiment": "positive", "intent": "booking request"},
+            {"session_id": "s2", "sentiment": None, "intent": None},
+            {"session_id": None, "sentiment": "negative", "intent": "complaint"},
+        ]
+    )
+    out = bridge._load_conversation_sentiment(db, "client-1")
+    assert out == {"s1": {"sentiment": "positive", "intent": "booking request"}}
+
+
+def test_load_conversation_sentiment_degrades_on_query_failure():
+    class _BoomDB:
+        def table(self, name):
+            raise RuntimeError("no such column: sentiment")
+
+    assert bridge._load_conversation_sentiment(_BoomDB(), "client-1") == {}
