@@ -248,6 +248,8 @@ def persist_faq_entries(db, tenant_id: str, entries: list[dict]) -> int:
     """
     rows = []
     for entry in entries or []:
+        if not isinstance(entry, dict):
+            continue
         question = str(entry.get("question") or "").strip()
         answer = str(entry.get("answer") or "").strip()
         if not question or not answer:

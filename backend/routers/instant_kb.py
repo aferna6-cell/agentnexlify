@@ -96,8 +96,8 @@ async def draft_instant_kb(
     try:
         website_text = await fetch_website_text(req.url)
         faqs = await draft_faq_entries(
-            business_name=t.get("business_name") or "",
-            business_type=t.get("business_type") or "",
+            business_name=str(t.get("business_name") or ""),
+            business_type=str(t.get("business_type") or ""),
             website_text=website_text,
         )
     except InstantKbError as exc:
