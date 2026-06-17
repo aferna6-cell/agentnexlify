@@ -56,6 +56,7 @@ from backend.routers import (
     faq,
     forms,
     gbp,
+    instant_kb,
     integrations,
     invoices,
     jobs,
@@ -858,6 +859,7 @@ app.include_router(calls.router)
 app.include_router(local_seo.router)
 app.include_router(managed_agent_runs.router)
 app.include_router(onboarding.router)
+app.include_router(instant_kb.router)
 app.include_router(phone.router)
 app.include_router(gbp.router)
 app.include_router(csat.router)

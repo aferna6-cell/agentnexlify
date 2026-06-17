@@ -5,6 +5,7 @@ import { trackWizardEvent } from "../utils/api/onboarding";
 import WizardExpressSetup from "./wizard/WizardExpressSetup";
 import WizardStepBusiness from "./wizard/WizardStepBusiness";
 import WizardStepAutoKB from "./wizard/WizardStepAutoKB";
+import WizardStepInstantKB from "./wizard/WizardStepInstantKB";
 import WizardStepServices from "./wizard/WizardStepServices";
 import WizardStepKnowledgeBase from "./wizard/WizardStepKnowledgeBase";
 import WizardStepCustomize from "./wizard/WizardStepCustomize";
@@ -17,8 +18,8 @@ import WizardStepEmbed from "./wizard/WizardStepEmbed";
 
 const STORAGE_KEY = "anx_wizard";
 // Plan step removed (2026-06-15): payment gate is now at signup, not inside the wizard.
-// Steps: 0=express, 1=business, 2=auto-KB, 3=services, 4=KB, 5=customize, 6=embed
-const TOTAL_STEPS = 6;
+// Steps: 0=express, 1=business, 2=auto-KB, 3=instant-FAQs, 4=services, 5=KB, 6=customize, 7=embed
+const TOTAL_STEPS = 7;
 
 function loadState() {
   try {
@@ -133,14 +134,22 @@ export default function OnboardingWizardPage() {
       token={token}
       tenantId={user?.tenantId}
     />,
-    <WizardStepServices
+    <WizardStepInstantKB
       key="3"
+      wizardData={wizardData}
+      onNext={goNext}
+      onBack={goBack}
+      token={token}
+      tenantId={user?.tenantId}
+    />,
+    <WizardStepServices
+      key="4"
       wizardData={wizardData}
       onNext={goNext}
       onBack={goBack}
     />,
     <WizardStepKnowledgeBase
-      key="4"
+      key="5"
       wizardData={wizardData}
       onNext={goNext}
       onBack={goBack}
@@ -148,7 +157,7 @@ export default function OnboardingWizardPage() {
       tenantId={user.tenantId}
     />,
     <WizardStepCustomize
-      key="5"
+      key="6"
       wizardData={wizardData}
       onNext={goNext}
       onBack={goBack}
@@ -156,7 +165,7 @@ export default function OnboardingWizardPage() {
       tenantId={user?.tenantId}
     />,
     <WizardStepEmbed
-      key="6"
+      key="7"
       wizardData={wizardData}
       token={token}
       tenantId={user?.tenantId}

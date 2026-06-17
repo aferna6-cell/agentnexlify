@@ -96,3 +96,26 @@ export function autoGenerateKb(tenantId, token, url) {
     body: { url },
   });
 }
+
+/**
+ * Instant KB - draft FAQ entries from a website URL without saving them.
+ * Returns { faqs: [{question, answer, category}], chars_extracted, source_url }.
+ * Throws Error(detail) on fetch / non-HTML / empty-page / AI failure.
+ */
+export function draftInstantKb(tenantId, token, url) {
+  return apiFetch(`/api/v1/instant-kb/${tenantId}/draft`, {
+    token,
+    body: { url },
+  });
+}
+
+/**
+ * Instant KB - persist the owner-approved FAQ entries.
+ * Returns { saved: number }.
+ */
+export function confirmInstantKb(tenantId, token, faqs) {
+  return apiFetch(`/api/v1/instant-kb/${tenantId}/confirm`, {
+    token,
+    body: { faqs },
+  });
+}
