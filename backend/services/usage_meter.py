@@ -30,11 +30,13 @@ PLAN_AGENT_RUN_CAPS = {
 }
 
 
-def plan_cap(db, client_id: str) -> int:
-    """Resolve the tenant's monthly agent-run cap from its plan.
+def tenant_plan(db, client_id: str, on_error: str = "free") -> str:
+    """Resolve the tenant's live plan name from the tenants table.
 
-    Read failures fall back to DEFAULT_AGENT_RUN_CAP so metering can never
-    take down a turn.
+    Returns a normalized (lowercased) plan name. A missing plan resolves to
+    "free"; a read failure resolves to ``on_error``. Read live here (never
+    trust stale JWT claims) so the upgrade nudge always reflects the current
+    subscription state.
     """
     try:
         resp = (
@@ -45,11 +47,21 @@ def plan_cap(db, client_id: str) -> int:
             .execute()
         )
         rows = getattr(resp, "data", None) or []
-        plan = (rows[0].get("plan") or "").lower() if rows else ""
-        return PLAN_AGENT_RUN_CAPS.get(plan, DEFAULT_AGENT_RUN_CAP)
+        return (rows[0].get("plan") or "free").lower() if rows else "free"
     except Exception:
-        logger.warning("usage_meter: plan lookup failed; using default cap", exc_info=True)
-        return DEFAULT_AGENT_RUN_CAP
+        logger.warning("usage_meter: plan lookup failed", exc_info=True)
+        return on_error
+
+
+def plan_cap(db, client_id: str) -> int:
+    """Resolve the tenant's monthly agent-run cap from its plan.
+
+    Read failures fall back to DEFAULT_AGENT_RUN_CAP so metering can never
+    take down a turn. Sentinel plan name on read failure routes to the
+    default cap rather than the free-tier cap.
+    """
+    plan = tenant_plan(db, client_id, on_error="__read_error__")
+    return PLAN_AGENT_RUN_CAPS.get(plan, DEFAULT_AGENT_RUN_CAP)
 
 
 @dataclass

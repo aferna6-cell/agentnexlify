@@ -26,6 +26,7 @@ import MemoryPanel from "../components/os/MemoryPanel";
 import FirstRunStarters from "../components/os/FirstRunStarters";
 import OsInsightsCard from "../components/os/OsInsightsCard";
 import ComposerAttachments from "../components/os/ComposerAttachments";
+import UsageUpgradeNudge from "../components/UsageUpgradeNudge";
 import useIsMobile from "../hooks/useIsMobile";
 
 const POLL_MS = 3000;
@@ -71,7 +72,7 @@ const SOURCE_FILTERS = [
   { key: "facebook", label: "Facebook" },
 ];
 
-export default function AgentOS() {
+export default function AgentOS({ onNavigate }) {
   const { token, user } = useAuth();
 
   const [threads, setThreads] = useState([]);
@@ -587,6 +588,8 @@ export default function AgentOS() {
             New tasks resume next billing cycle.
           </div>
         )}
+
+        <UsageUpgradeNudge usage={usage} onNavigate={onNavigate} />
 
         <div
           ref={scrollRef}
