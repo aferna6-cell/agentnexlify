@@ -58,7 +58,7 @@ class _FakeDB:
 
 
 def _run(coro):
-    return asyncio.get_event_loop().run_until_complete(coro)
+    return asyncio.run(coro)
 
 
 def _call(monkeypatch, plan, agent_runs, cap_rows_plan=None):
