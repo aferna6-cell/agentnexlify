@@ -2,8 +2,18 @@
 // Onboarding v2 - auto-fill wizard from existing website URL.
 // Calls /api/v1/onboarding/{tenant}/auto-kb, surfaces structured services + hours
 // + KB + FAQs for owner review before continuing.
+//
+// After the crawl, this step also offers an OPTIONAL Instant KB pass: draft
+// FAQ entries via POST /instant-kb/{t}/draft (writes nothing), let the owner
+// review them with checkboxes, and persist the checked ones via
+// POST /instant-kb/{t}/confirm so the chat widget answers on day one. The
+// Skip path and the heading stay intact whether or not the owner drafts FAQs.
 import { useState } from "react";
-import { autoGenerateKb } from "../../utils/api/onboarding";
+import {
+  autoGenerateKb,
+  draftInstantKb,
+  confirmInstantKb,
+} from "../../utils/api/onboarding";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -18,6 +28,11 @@ export default function WizardStepAutoKB({
   const [status, setStatus] = useState("idle"); // idle | loading | done | error
   const [errorMsg, setErrorMsg] = useState("");
   const [result, setResult] = useState(null);
+
+  // Instant KB FAQ drafting (optional, runs after the crawl).
+  const [faqStatus, setFaqStatus] = useState("idle"); // idle | drafting | review | saving | error
+  const [faqError, setFaqError] = useState("");
+  const [faqs, setFaqs] = useState([]); // [{question, answer, category, keep}]
 
   async function handleAutoFill() {
     if (!url || url.length < 5) {
@@ -37,7 +52,57 @@ export default function WizardStepAutoKB({
     }
   }
 
-  function handleContinue() {
+  async function handleDraftFaqs() {
+    const trimmed = (url || "").trim();
+    if (trimmed.length < 4) {
+      setFaqError("Enter your website URL first");
+      setFaqStatus("error");
+      return;
+    }
+    setFaqStatus("drafting");
+    setFaqError("");
+    try {
+      const res = await draftInstantKb(tenantId, token, trimmed);
+      const drafted = (res.faqs || []).map((f) => ({ ...f, keep: true }));
+      if (drafted.length === 0) {
+        setFaqError("No FAQs could be drafted. You can add them by hand later.");
+        setFaqStatus("error");
+        return;
+      }
+      setFaqs(drafted);
+      setFaqStatus("review");
+    } catch (e) {
+      setFaqError(e?.message || "Could not draft FAQs. Try again or skip.");
+      setFaqStatus("error");
+    }
+  }
+
+  function toggleFaq(idx) {
+    setFaqs((prev) =>
+      prev.map((f, i) => (i === idx ? { ...f, keep: !f.keep } : f)),
+    );
+  }
+
+  // Persist any kept drafted FAQs, then hand the crawl result up the wizard.
+  // Saving FAQs is best-effort: a failure surfaces an error but never blocks
+  // the owner from continuing onboarding.
+  async function handleContinue() {
+    const chosen = faqs
+      .filter((f) => f.keep)
+      .map(({ question, answer, category }) => ({ question, answer, category }));
+
+    if (faqStatus === "review" && chosen.length > 0) {
+      setFaqStatus("saving");
+      setFaqError("");
+      try {
+        await confirmInstantKb(tenantId, token, chosen);
+      } catch (e) {
+        setFaqError(e?.message || "Could not save the FAQs. Try again.");
+        setFaqStatus("error");
+        return;
+      }
+    }
+
     if (result) {
       onNext({
         website_url: url,
@@ -51,6 +116,8 @@ export default function WizardStepAutoKB({
       onNext({ website_url: url });
     }
   }
+
+  const keptFaqCount = faqs.filter((f) => f.keep).length;
 
   return (
     <div>
@@ -207,6 +274,114 @@ export default function WizardStepAutoKB({
               {(result.knowledge_base || "").length > 600 ? "…" : ""}
             </pre>
           </div>
+
+          {/* Optional Instant KB: draft FAQ entries the chat widget can use. */}
+          <div style={previewBlock}>
+            <div style={previewHeader}>Instant FAQs for your chat assistant</div>
+
+            {faqStatus === "idle" && (
+              <>
+                <p
+                  style={{
+                    color: "rgba(255,255,255,0.55)",
+                    fontSize: "0.85rem",
+                    margin: "0 0 12px",
+                  }}
+                >
+                  Draft answers to common customer questions from your website.
+                  Optional. Nothing is saved until you confirm.
+                </p>
+                <button
+                  onClick={handleDraftFaqs}
+                  style={{ ...btnStyle, padding: "10px 14px", fontSize: "0.9rem" }}
+                >
+                  Draft FAQs from my website
+                </button>
+              </>
+            )}
+
+            {faqStatus === "drafting" && (
+              <div style={{ textAlign: "center", padding: "16px 0" }}>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    border: "3px solid rgba(255,255,255,0.1)",
+                    borderTopColor: "#6366f1",
+                    borderRadius: "50%",
+                    animation: "spin 0.8s linear infinite",
+                    margin: "0 auto 10px",
+                  }}
+                />
+                <p
+                  style={{
+                    color: "rgba(255,255,255,0.5)",
+                    fontSize: "0.85rem",
+                    margin: 0,
+                  }}
+                >
+                  Drafting FAQs from your website…
+                </p>
+              </div>
+            )}
+
+            {faqStatus === "error" && (
+              <p
+                style={{ color: "#f87171", margin: "0 0 12px", fontSize: "0.85rem" }}
+              >
+                {faqError}
+              </p>
+            )}
+
+            {(faqStatus === "review" || faqStatus === "saving") && (
+              <div>
+                <div
+                  style={{
+                    fontSize: "0.8rem",
+                    color: "rgba(255,255,255,0.55)",
+                    marginBottom: 10,
+                  }}
+                >
+                  {keptFaqCount} of {faqs.length} selected
+                </div>
+                <div style={{ maxHeight: 280, overflowY: "auto" }}>
+                  {faqs.map((f, i) => (
+                    <label key={i} style={faqRowStyle(f.keep)}>
+                      <input
+                        type="checkbox"
+                        checked={f.keep}
+                        onChange={() => toggleFaq(i)}
+                        style={{ marginTop: 4, accentColor: "#6366f1" }}
+                        disabled={faqStatus === "saving"}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div
+                          style={{
+                            color: "#e2e8f0",
+                            fontWeight: 600,
+                            fontSize: "0.9rem",
+                          }}
+                        >
+                          {f.question}
+                        </div>
+                        <div
+                          style={{
+                            color: "rgba(255,255,255,0.6)",
+                            fontSize: "0.85rem",
+                            marginTop: 2,
+                          }}
+                        >
+                          {f.answer}
+                        </div>
+                        <span style={categoryChip}>{f.category}</span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -230,8 +405,21 @@ export default function WizardStepAutoKB({
             {status === "loading" ? "Reading…" : "Auto-fill from website"}
           </button>
         ) : (
-          <button onClick={handleContinue} style={{ ...btnStyle, flex: 2 }}>
-            Use this and continue →
+          <button
+            onClick={handleContinue}
+            disabled={faqStatus === "saving" || faqStatus === "drafting"}
+            style={{
+              ...btnStyle,
+              flex: 2,
+              opacity:
+                faqStatus === "saving" || faqStatus === "drafting" ? 0.5 : 1,
+            }}
+          >
+            {faqStatus === "saving"
+              ? "Saving FAQs…"
+              : faqStatus === "review" && keptFaqCount > 0
+                ? `Save ${keptFaqCount} FAQ${keptFaqCount === 1 ? "" : "s"} and continue →`
+                : "Use this and continue →"}
           </button>
         )}
       </div>
@@ -320,3 +508,28 @@ const dayCell = {
   padding: "8px 4px",
   textAlign: "center",
 };
+
+const categoryChip = {
+  display: "inline-block",
+  marginTop: 6,
+  background: "rgba(99,102,241,0.15)",
+  border: "1px solid rgba(99,102,241,0.35)",
+  color: "#c7d2fe",
+  borderRadius: 999,
+  padding: "2px 10px",
+  fontSize: "0.72rem",
+};
+
+function faqRowStyle(keep) {
+  return {
+    display: "flex",
+    gap: 10,
+    alignItems: "flex-start",
+    background: keep ? "rgba(99,102,241,0.06)" : "rgba(255,255,255,0.03)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+    cursor: "pointer",
+  };
+}
