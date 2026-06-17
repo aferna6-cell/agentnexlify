@@ -35,7 +35,7 @@ const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const AuthCallbackPage = lazy(() => import("./pages/AuthCallbackPage"));
 // OnboardingWizardPage kept for direct access; /onboarding route uses OnboardingRedirect below
 const OnboardingWizardPage = lazy(() => import("./pages/OnboardingWizardPage"));
-const DemoLoginPage = lazy(() => import("./pages/DemoLoginPage"));
+const DemoExperience = lazy(() => import("./pages/DemoExperience"));
 
 
 
@@ -136,8 +136,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/pricing" element={<HomeSection anchor="pricing" />} />
             <Route path="/features" element={<HomeSection anchor="features" />} />
             <Route path="/about" element={<HomeSection anchor="about-us" />} />
-            {/* /demo - live sandbox: calls demo-login, stores session, redirects to dashboard */}
-            <Route path="/demo" element={<AuthProvider><DemoLoginPage /></AuthProvider>} />
+            {/* /demo - hands-on interactive product sample (self-contained, no auth) */}
+            <Route path="/demo" element={<DemoExperience />} />
             {/* Alias routes for /industries/:vertical and /compare/:competitor */}
             <Route path="/industries/:vertical" element={<IndustryRoute />} />
             <Route path="/compare/:competitor" element={<CompareRoute />} />
