@@ -1,0 +1,69 @@
+{
+  "run": 59,
+  "date": "2026-06-17",
+  "total_runs": 59,
+  "prior_winner_status": "implemented",
+  "prior_winner": "Wire check_project_invariants.py into pre-commit as Check 13",
+  "prior_winner_implemented_by": "nightly bc91e97 (2026-06-17)",
+  "evidence_digest": {
+    "commits_3d": 10,
+    "key_commits": [
+      "bc91e97 — nightly-commit-review 2026-06-17: Check 13 wired, GH #308 filed",
+      "25d5aac — brand tagline update (AI Workforce positioning)",
+      "c03df18 — light-theme floating CTA fix",
+      "529dd7b — OG card refresh (AI Workforce)",
+      "021e245 — landing redesign + AI Front Desk / AI Workforce repositioning",
+      "ac8ac3b — profit-guarantee usage caps + $24.99 usage pack",
+      "47c7f8b — dunning recovery, trial countdown, conversion funnel, webhook fixes"
+    ],
+    "invariant_check": "PASS (all 6 checks clean, first time in 46 days)",
+    "pre_commit_checks": 13,
+    "active_god_classes": [
+      "widget_chat.py 1307L",
+      "email_sequences.py 1143L",
+      "invoices.py 1243L",
+      "onboarding.py 1206L",
+      "leads.py 1176L"
+    ],
+    "open_bugs": [
+      "GH #308 (webhook idempotency retry-drop, MEDIUM, billing.py + stripe_webhooks.py)"
+    ],
+    "moratorium_active": true,
+    "moratorium_pending_approvals": 9,
+    "oldest_pending_days": 62
+  },
+  "ideas_generated": 5,
+  "ideas": [
+    "Fix GH #308 — webhook idempotency retry-drop bug (billing.py + stripe_webhooks.py)",
+    "Fix email_sequences N+1 queries (GH #112, ROI 2.3)",
+    "AI-to-Human Handoff v1 — explicit trigger in widget_chat.py",
+    "Split widget_chat.py god class (1307L → core/session/lead)",
+    "Fix kb-autopopulate.sh — restore KB intelligence pipeline"
+  ],
+  "debate_results": {
+    "idea_1_webhook_idempotency": "SURVIVES → WINNER",
+    "idea_3_ai_handoff": "WEAKENED → parking lot (block: moratorium ~9 pending, widget_chat split prerequisite)",
+    "idea_4_widget_chat_split": "WEAKENED → parking lot (block: active PR traffic, email split as mechanism proof first)"
+  },
+  "winner": "Fix GH #308 — webhook idempotency retry-drop bug in billing.py + stripe_webhooks.py",
+  "winner_category": "code_health",
+  "winner_confidence": "HIGH",
+  "winner_autonomous_executable": true,
+  "winner_effort": "S (~8 lines, 2 files + test)",
+  "governance_corrections": [
+    "run 58 status: pending_autonomous → implemented (bc91e97, nightly 2026-06-17)",
+    "runs_implemented: 18 → 19"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-06-17/ideas/ideas.md",
+    "subconscious/runs/2026-06-17/debate/debate-log.md",
+    "subconscious/runs/2026-06-17/winning-concept.md",
+    "subconscious/runs/2026-06-17/improvement-backlog.md",
+    "subconscious/runs/2026-06-17/run-summary.json"
+  ],
+  "next_run_questions": [
+    "Was GH #308 idempotency fix implemented by nightly? Check billing.py:236.",
+    "Has email_sequences split (run 41) been implemented? If yes, promote N+1 fix and widget_chat split.",
+    "Current moratorium pending count? If ≤ 5, AI-to-Human Handoff becomes viable."
+  ]
+}
