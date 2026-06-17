@@ -333,6 +333,7 @@ async def _automation_loop():
         send_birthday_greetings,
         send_aftercare_instructions,
         schedule_automation_check,
+        run_monthly_conversation_insights,
     )
     from backend.services.os_sync import run_due_syncs as _os_sync_tick
     from backend.services.os_opportunities import run_opportunity_scan as _run_opportunity_scan
@@ -421,6 +422,10 @@ async def _automation_loop():
                         _safe_run("send_activation_nudges", send_activation_nudges),
                         _safe_run(
                             "run_pending_enrichment", run_pending_enrichment
+                        ),
+                        _safe_run(
+                            "run_monthly_conversation_insights",
+                            run_monthly_conversation_insights,
                         ),
                     ]
                 )

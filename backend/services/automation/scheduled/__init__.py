@@ -21,6 +21,9 @@ from backend.services.automation.scheduled.email_jobs import (
 from backend.services.automation.scheduled.billing_jobs import (
     send_invoice_payment_reminders,
 )
+from backend.services.automation.scheduled.conversation_insights_job import (
+    run_monthly_conversation_insights,
+)
 
 __all__ = [
     "check_no_response_leads",
@@ -36,4 +39,5 @@ __all__ = [
     "send_csat_surveys",
     "send_onboarding_emails",
     "send_invoice_payment_reminders",
+    "run_monthly_conversation_insights",
 ]

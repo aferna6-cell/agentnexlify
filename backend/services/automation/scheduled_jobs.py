@@ -43,6 +43,7 @@ from backend.services.automation.scheduled import (
     check_new_reviews,
     send_onboarding_emails,
     send_invoice_payment_reminders,
+    run_monthly_conversation_insights,
 )
 
 # Re-export from scheduled_jobs_ext to keep the public API of this module intact
@@ -67,6 +68,7 @@ __all__ = [
     "check_new_reviews",
     "send_onboarding_emails",
     "send_invoice_payment_reminders",
+    "run_monthly_conversation_insights",
     "send_weekly_intelligence_briefs",
     "send_weekly_digest",
     "send_birthday_greetings",
