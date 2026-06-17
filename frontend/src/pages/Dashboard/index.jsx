@@ -24,6 +24,7 @@ import OnboardingChecklist from "./OnboardingChecklist";
 import TodayAppointments from "./TodayAppointments";
 import ActionItemsWidget from "./ActionItemsWidget";
 import AIInsightsWidget from "./AIInsightsWidget";
+import FrontDeskHealthCard from "./FrontDeskHealthCard";
 import RecoveryStatsWidget from "./RecoveryStatsWidget";
 import SkeletonLoader from "../../components/SkeletonLoader";
 
@@ -471,6 +472,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
               onNavigate={onNavigate}
             />
             <AIInsightsWidget tenantId={user.tenantId} token={token} />
+            <FrontDeskHealthCard tenantId={user.tenantId} token={token} />
             <WidgetEmbed
               apiKey={dashData?.widget_api_key}
               tenantId={user.tenantId}

@@ -9,6 +9,7 @@ from backend.routers.analytics.operations import router as operations_router
 from backend.routers.analytics.insights import router as insights_router
 from backend.routers.analytics.control_center import router as control_center_router
 from backend.routers.analytics.recovery import router as recovery_router
+from backend.routers.analytics.front_desk_health import router as front_desk_health_router
 
 router = APIRouter(prefix="/api/v1/analytics", tags=["analytics"])
 router.include_router(dashboard_router)
@@ -16,3 +17,4 @@ router.include_router(operations_router)
 router.include_router(insights_router)
 router.include_router(control_center_router)
 router.include_router(recovery_router)
+router.include_router(front_desk_health_router)
