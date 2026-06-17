@@ -59,7 +59,7 @@ async def _run_new_lead_followups(
         logger.warning("Failed to trigger automation for lead %s", lead_id, exc_info=True)
 
     logger.info(
-        "SMS_TRIGGER[/lead]: about to call SMS notification for lead %s email=%s",
+        "LEAD_ALERT[/lead]: about to fire owner alert for lead %s email=%s",
         lead_id,
         fields.get("email"),
     )
@@ -68,18 +68,20 @@ async def _run_new_lead_followups(
             tenant_id,
             fields.get("name", "Unknown"),
             fields,
+            lead_id=lead_id,
         )
     except Exception:
-        logger.error("SMS_TRIGGER[/lead]: FAILED for lead %s", lead_id, exc_info=True)
+        logger.error("LEAD_ALERT[/lead]: SMS FAILED for lead %s", lead_id, exc_info=True)
 
     try:
         await _send_new_lead_email_notification(
             tenant_id,
             fields.get("name", "Unknown"),
             fields,
+            lead_id=lead_id,
         )
     except Exception:
-        logger.error("EMAIL_TRIGGER[/lead]: FAILED for lead %s", lead_id, exc_info=True)
+        logger.error("LEAD_ALERT[/lead]: EMAIL FAILED for lead %s", lead_id, exc_info=True)
 
     try:
         from backend.routers.email_sequences import enroll_lead_in_sequences

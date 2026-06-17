@@ -21,7 +21,6 @@ import anthropic
 
 from backend.models.database import get_service_supabase
 from backend.services.activity import log_activity
-from backend.services.email_sender import send_email
 from backend.services.lead_scoring import score_lead_background
 from backend.services.llm_runtime import call_claude_messages_sync
 from backend.services.tenant_scope import tenant_insert, tenant_select, tenant_update
@@ -543,16 +542,16 @@ async def _capture_leads_from_session(
             except Exception:
                 logger.warning("lead_capture: enroll_lead_in_sequences failed for lead %s", lead_id, exc_info=True)
 
-            logger.info("SMS_TRIGGER: about to call SMS notification for lead %s email=%s", lead_id, combined.get("email"))
+            logger.info("LEAD_ALERT: about to fire owner alert for lead %s email=%s", lead_id, combined.get("email"))
             try:
-                await _send_new_lead_sms_notification(tenant_id, lead_name, combined)
+                await _send_new_lead_sms_notification(tenant_id, lead_name, combined, lead_id=lead_id)
             except Exception:
-                logger.error("SMS_TRIGGER: FAILED for lead %s", lead_id, exc_info=True)
+                logger.error("LEAD_ALERT: SMS FAILED for lead %s", lead_id, exc_info=True)
 
             try:
-                await _send_new_lead_email_notification(tenant_id, lead_name, combined)
+                await _send_new_lead_email_notification(tenant_id, lead_name, combined, lead_id=lead_id)
             except Exception:
-                logger.error("EMAIL_TRIGGER: FAILED for lead %s", lead_id, exc_info=True)
+                logger.error("LEAD_ALERT: EMAIL FAILED for lead %s", lead_id, exc_info=True)
 
             try:
                 tags = await asyncio.to_thread(_extract_tags_from_conversation, messages)
@@ -585,102 +584,33 @@ async def _capture_leads_from_session(
 
 
 async def _send_new_lead_sms_notification(
-    tenant_id: str, lead_name: str, lead_info: dict[str, str]
+    tenant_id: str, lead_name: str, lead_info: dict[str, str], lead_id: str = ""
 ) -> None:
-    """Send SMS notification to tenant owner when a new lead is captured."""
-    logger.info("SMS_FUNCTION: entered function tenant=%s lead=%s", tenant_id, lead_name)
-    logger.info(
-        "sms_notification: starting for tenant=%s lead=%s info_keys=%s",
-        tenant_id, lead_name, list(lead_info.keys()),
-    )
-    db = get_service_supabase()
-    result = (
-        db.table("tenants")
-        .select("notification_phone, sms_notifications_enabled, business_name")
-        .eq("id", tenant_id)
-        .limit(1)
-        .execute()
-    )
-    if not result.data:
-        logger.warning("sms_notification: no tenant found for id=%s", tenant_id)
-        return
-    tenant = result.data[0]
-    sms_enabled = tenant.get("sms_notifications_enabled")
-    phone = tenant.get("notification_phone")
-    logger.info(
-        "sms_notification: tenant=%s sms_enabled=%s phone=%s",
-        tenant_id, sms_enabled, phone,
-    )
-    if not sms_enabled or not phone:
-        logger.info("sms_notification: skipping — sms_enabled=%s phone=%s", sms_enabled, phone)
-        return
+    """Fire the instant owner alert (email + SMS) for a new lead.
 
-    contact = lead_info.get("email") or lead_info.get("phone") or "no contact info"
-    body = f"New lead for {tenant.get('business_name', 'your business')}: {lead_name} ({contact})"
-    logger.info("sms_notification: sending to=%s body_len=%d", phone, len(body))
+    Delegates to the dedicated `lead_alerts` module, which sends both
+    channels in one idempotent, demo-safe, non-blocking call. Kept as a
+    thin shim so existing call sites and test patches keep working while
+    the alert logic lives in one place (see backend/services/lead_alerts.py).
+    """
+    from backend.services.lead_alerts import send_new_lead_alert
 
-    try:
-        from backend.services.twilio_service import send_sms
-        await send_sms(to=phone, body=body)
-        logger.info("sms_notification: sent successfully for tenant=%s", tenant_id)
-    except Exception:
-        logger.error("sms_notification: FAILED to send for tenant=%s", tenant_id, exc_info=True)
+    await send_new_lead_alert(tenant_id, lead_name, lead_info, lead_id=lead_id)
 
 
 async def _send_new_lead_email_notification(
-    tenant_id: str, lead_name: str, lead_info: dict[str, str]
+    tenant_id: str, lead_name: str, lead_info: dict[str, str], lead_id: str = ""
 ) -> None:
-    """Send email notification to tenant owner when a new lead is captured."""
-    import html as html_mod
+    """Companion shim to `_send_new_lead_sms_notification`.
 
-    db = get_service_supabase()
-    result = (
-        db.table("tenants")
-        .select("owner_email, business_name")
-        .eq("id", tenant_id)
-        .limit(1)
-        .execute()
-    )
-    if not result.data:
-        return
-    tenant = result.data[0]
-    owner_email = tenant.get("owner_email")
-    if not owner_email:
-        return
+    Both shims delegate to `lead_alerts.send_new_lead_alert`, which sends
+    email + SMS together and is idempotent per (tenant_id, lead_id). When
+    a caller invokes both shims for the same lead (the historical two-call
+    pattern), the second call is deduped and does not re-send.
+    """
+    from backend.services.lead_alerts import send_new_lead_alert
 
-    raw_business_name = tenant.get("business_name") or "your business"
-    business_name = html_mod.escape(raw_business_name)
-    safe_name = html_mod.escape(lead_name)
-    safe_email = html_mod.escape(lead_info.get("email") or "not provided")
-    safe_phone = html_mod.escape(lead_info.get("phone") or "not provided")
-
-    body_html = (
-        f"<h2>New lead for {business_name}</h2>"
-        f"<p>A new lead was just captured from your chat widget:</p>"
-        f"<table style='border-collapse:collapse;margin:16px 0;'>"
-        f"<tr><td style='padding:4px 12px 4px 0;font-weight:bold;'>Name</td>"
-        f"<td style='padding:4px 0;'>{safe_name}</td></tr>"
-        f"<tr><td style='padding:4px 12px 4px 0;font-weight:bold;'>Email</td>"
-        f"<td style='padding:4px 0;'>{safe_email}</td></tr>"
-        f"<tr><td style='padding:4px 12px 4px 0;font-weight:bold;'>Phone</td>"
-        f"<td style='padding:4px 0;'>{safe_phone}</td></tr>"
-        f"</table>"
-        f"<p>Log in to your dashboard to view and follow up with this lead.</p>"
-        f"<p>— The AgentNexLiFy Team</p>"
-    )
-
-    try:
-        await send_email(
-            to=owner_email,
-            subject=f"New lead for {raw_business_name}: {lead_name}",
-            body_html=body_html,
-            tenant_id=tenant_id,
-        )
-    except Exception:
-        logger.error(
-            "email_notification: FAILED for tenant=%s lead=%s",
-            tenant_id, lead_name, exc_info=True,
-        )
+    await send_new_lead_alert(tenant_id, lead_name, lead_info, lead_id=lead_id)
 
 
 # ---------------------------------------------------------------------------
