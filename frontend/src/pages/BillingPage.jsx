@@ -324,7 +324,7 @@ export default function BillingPage() {
               }}
             >
               Need help with a billing mistake or accidental renewal? Email{" "}
-              <a href="mailto:help@agentnexlify.com">help@agentnexlify.com</a>{" "}
+              <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>{" "}
               within 5 business days. Duplicate charges and service-activation
               billing errors are eligible for manual review.
             </div>

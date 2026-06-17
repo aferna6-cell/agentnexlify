@@ -73,7 +73,7 @@ export default function Contact() {
             <strong style={{ display: "block", marginBottom: 4 }}>
               Email us directly
             </strong>
-            <a href="mailto:help@agentnexlify.com">help@agentnexlify.com</a>
+            <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>
           </div>
           <div>
             <strong style={{ display: "block", marginBottom: 4 }}>
@@ -93,7 +93,7 @@ export default function Contact() {
             </strong>
             <span>
               Email us at{" "}
-              <a href="mailto:help@agentnexlify.com">help@agentnexlify.com</a>{" "}
+              <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>{" "}
               for the fastest response.
             </span>
           </div>

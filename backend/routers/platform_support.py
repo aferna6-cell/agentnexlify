@@ -41,12 +41,12 @@ _HISTORY_LIMIT = 20
 # endpoint (defense-in-depth alongside the per-IP rate limit).
 _MAX_SESSION_MESSAGES = 40
 _CAP_REPLY = (
-    "This chat has reached its message limit. Email help@agentnexlify.com and "
+    "This chat has reached its message limit. Email support@agentnexlify.com and "
     "the team will pick it up from here."
 )
 
 _FALLBACK_REPLY = (
-    "Sorry — I'm having trouble right now. Email help@agentnexlify.com or use "
+    "Sorry — I'm having trouble right now. Email support@agentnexlify.com or use "
     "“Report an issue” and the team will follow up."
 )
 

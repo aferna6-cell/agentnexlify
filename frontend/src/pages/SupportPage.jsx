@@ -56,10 +56,10 @@ export default function SupportPage() {
         <div className="settings-card">
           <h3 style={{ marginBottom: "0.5rem" }}>Email Us</h3>
           <a
-            href="mailto:help@agentnexlify.com"
+            href="mailto:support@agentnexlify.com"
             style={{ color: "var(--accent)" }}
           >
-            help@agentnexlify.com
+            support@agentnexlify.com
           </a>
         </div>
         <div className="settings-card">

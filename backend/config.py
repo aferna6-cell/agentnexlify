@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     # Platform-owner support inbox. All platform-level alerts (Agent OS
     # fail/abstain, dashboard support form, support-chat transcripts) go here.
     # Distinct from per-tenant owner_email — this is the AgentNexLiFy operator.
-    platform_support_email: str = "aidanfernandes31@gmail.com"
+    platform_support_email: str = "support@agentnexlify.com"
 
     # Web Push (VAPID) — pending-approval browser notifications. All three
     # optional: push silently no-ops when unset (pending manual Railway env

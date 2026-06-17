@@ -606,7 +606,7 @@ export default function FreeWidget() {
                   <a href="/#about-us">About</a>
                 </li>
                 <li>
-                  <a href="mailto:hello@agentnexlify.com">Contact</a>
+                  <a href="mailto:support@agentnexlify.com">Contact</a>
                 </li>
               </ul>
             </div>

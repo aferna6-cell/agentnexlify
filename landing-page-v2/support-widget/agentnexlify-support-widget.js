@@ -232,7 +232,7 @@
         );
       })
       .catch(function () {
-        addMsg("Couldn't send the report. Email help@agentnexlify.com instead.", "bot");
+        addMsg("Couldn't send the report. Email support@agentnexlify.com instead.", "bot");
       })
       .finally(function () {
         reportSend.disabled = false;

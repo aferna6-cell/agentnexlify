@@ -129,7 +129,7 @@ export default function TermsOfService() {
             </li>
             <li>
               <strong>Refund requests:</strong> Contact{" "}
-              <a href="mailto:help@agentnexlify.com">help@agentnexlify.com</a>{" "}
+              <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>{" "}
               within 5 business days of the billing event so we can review it
               before it turns into a dispute.
             </li>
@@ -247,7 +247,7 @@ export default function TermsOfService() {
             <li>
               <strong>By you:</strong> Cancel anytime from your dashboard or by
               emailing{" "}
-              <a href="mailto:help@agentnexlify.com">help@agentnexlify.com</a>.
+              <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>.
             </li>
             <li>
               <strong>By us:</strong> We may suspend or terminate your account
@@ -287,8 +287,8 @@ export default function TermsOfService() {
           <ul className="legal-contact">
             <li>
               <strong>Email:</strong>{" "}
-              <a href="mailto:help@agentnexlify.com">
-                help@agentnexlify.com
+              <a href="mailto:support@agentnexlify.com">
+                support@agentnexlify.com
               </a>
             </li>
             <li>

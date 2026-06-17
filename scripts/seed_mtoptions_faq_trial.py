@@ -50,7 +50,7 @@ TRIAL_FAQS = [
             "Enter your code there before completing registration and your extended trial "
             "or discount will be applied automatically. "
             "If you already signed up and forgot to enter a code, email us at "
-            "help@agentnexlify.com and we'll apply it manually."
+            "support@agentnexlify.com and we'll apply it manually."
         ),
         "category": "Pricing & Trials",
     },

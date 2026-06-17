@@ -262,7 +262,7 @@ export default function PrivacyPolicy() {
           </ul>
           <p>
             To exercise any of these rights, email us at{" "}
-            <a href="mailto:help@agentnexlify.com">help@agentnexlify.com</a>.
+            <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>.
             We&rsquo;ll respond within 30 days.
           </p>
         </section>
@@ -326,7 +326,7 @@ export default function PrivacyPolicy() {
           </ul>
           <p>
             To make a CCPA request, email{" "}
-            <a href="mailto:help@agentnexlify.com">help@agentnexlify.com</a>{" "}
+            <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>{" "}
             with the subject line &ldquo;CCPA Request.&rdquo;
           </p>
         </section>
@@ -379,7 +379,7 @@ export default function PrivacyPolicy() {
           <ul className="legal-contact">
             <li>
               <strong>Email:</strong>{" "}
-              <a href="mailto:help@agentnexlify.com">help@agentnexlify.com</a>
+              <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>
             </li>
             <li>
               <strong>Website:</strong>{" "}
@@ -401,7 +401,7 @@ export default function PrivacyPolicy() {
           <p>
             If you want AgentNexLiFy to delete your conversation data directly,
             email us at{" "}
-            <a href="mailto:help@agentnexlify.com">help@agentnexlify.com</a>{" "}
+            <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>{" "}
             with the business name and approximate date of your interaction.
           </p>
         </section>

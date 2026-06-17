@@ -295,7 +295,7 @@ export default function ComparisonPage({ meta, hero, comparison, reasons, crossL
               <h4>Company</h4>
               <ul>
                 <li><a href="/#why">Why Us</a></li>
-                <li><a href="mailto:hello@agentnexlify.com">Contact</a></li>
+                <li><a href="mailto:support@agentnexlify.com">Contact</a></li>
               </ul>
             </div>
           </div>
