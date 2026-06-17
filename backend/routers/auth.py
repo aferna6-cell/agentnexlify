@@ -237,7 +237,7 @@ async def _run_signup_side_effects(
             body_html=(
                 f"<h2>Welcome to AgentNexLiFy, {owner_name or 'there'}!</h2>"
                 "<p>Your AI staff is ready. Ask them to send invoices, follow up "
-                "with leads, draft posts, and book appointments &mdash; just by typing.</p>"
+                "with leads, draft posts, and book appointments, just by typing.</p>"
                 "<p><strong>Try this first:</strong></p>"
                 "<ol>"
                 "<li>Open the Agent OS and say hi to your AI staff</li>"
@@ -247,7 +247,7 @@ async def _run_signup_side_effects(
                 f"<p><a href='{settings.frontend_url}/dashboard/agent-os' style='background:#6366f1;color:#fff;"
                 "padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;'>"
                 "Meet your AI staff &rarr;</a></p>"
-                "<p>&mdash; The AgentNexLiFy Team</p>"
+                "<p>The AgentNexLiFy Team</p>"
             ),
             tenant_id=tenant_id,
         )
