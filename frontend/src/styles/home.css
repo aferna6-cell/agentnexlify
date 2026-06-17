@@ -793,11 +793,14 @@
 
 .landing-page .lp-pricing-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
   align-items: start;
   overflow: visible;
   padding-top: 16px;
+  max-width: 820px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .landing-page .lp-pricing-card {
