@@ -853,7 +853,7 @@ export default function Home() {
             </div>
           </div>
           <p className="lp-pricing-footer-note reveal">
-            7-day free trial on both plans. No credit card required to start.
+            No setup fees. Cancel anytime.
           </p>
         </div>
       </section>

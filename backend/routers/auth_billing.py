@@ -100,14 +100,13 @@ async def billing_checkout(
         "success_url": success_url,
         "cancel_url": cancel_url,
         "metadata": {"tenant_id": tenant_id, "plan": plan},
-        # 7-day free trial: card is captured at checkout, first charge is on
-        # day 7. Lets a new customer get into the product without paying upfront
-        # while keeping the no-free-tier model (a card is still required). The
-        # subscription is "trialing" during this window, which is_pay_gated()
-        # treats as paid, so the dashboard unlocks immediately.
+        # No trial: the first charge happens immediately at checkout. The
+        # subscription is "active" once payment succeeds, which is_pay_gated()
+        # treats as paid, so the dashboard unlocks right away. (Existing
+        # "trialing" subscriptions created before this change keep working —
+        # is_pay_gated() still treats "trialing" as paid until they convert.)
         "subscription_data": {
             "metadata": {"tenant_id": tenant_id, "plan": plan},
-            "trial_period_days": 7,
         },
     }
 
