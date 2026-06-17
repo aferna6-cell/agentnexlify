@@ -11,6 +11,7 @@ import pytest
 from backend.services import instant_kb
 from backend.services.instant_kb import (
     InstantKbError,
+    _coerce_entries,
     _parse_faq_json,
     draft_faq_entries,
     fetch_website_text,
@@ -121,6 +122,20 @@ def test_fetch_huge_page_truncated(monkeypatch):
     assert len(text) <= instant_kb._MAX_TEXT_CHARS
 
 
+def test_fetch_bad_encoding_falls_back_to_utf8(monkeypatch):
+    # A bogus encoding label makes raw.decode(encoding) raise LookupError; the
+    # service must fall back to utf-8 rather than crash (covers the except branch).
+    _allow_url(monkeypatch)
+    html = (
+        b"<html><body><h1>Acme Plumbing</h1><p>We fix drains and water "
+        b"heaters across the greater Austin area every single day.</p></body></html>"
+    )
+    _patch_httpx(monkeypatch, _FakeResponse(content=html, encoding="not-a-real-codec"))
+    text = asyncio.run(fetch_website_text("acme.com"))
+    assert "Acme Plumbing" in text
+    assert "We fix drains" in text
+
+
 # --- _parse_faq_json -------------------------------------------------------
 
 
@@ -151,6 +166,34 @@ def test_parse_drops_incomplete_and_handles_wrapper():
 def test_parse_unusable_returns_empty():
     assert _parse_faq_json("not json at all") == []
     assert _parse_faq_json("") == []
+
+
+def test_parse_array_in_prose_but_invalid_json_returns_empty():
+    # A "[ ... ]" shape that is NOT valid JSON exercises the regex-extraction
+    # fallback's own JSONDecodeError handler (returns []).
+    raw = "Here: [this is not, valid json at all]"
+    assert _parse_faq_json(raw) == []
+
+
+def test_coerce_non_list_returns_empty():
+    # A bare JSON object with no recognized wrapper key is not a list -> [].
+    assert _coerce_entries({"unexpected": "shape"}) == []
+    assert _coerce_entries("a string") == []
+
+
+def test_coerce_skips_non_dict_items():
+    parsed = ["just a string", 42, {"question": "Q", "answer": "A"}]
+    out = _coerce_entries(parsed)
+    assert out == [{"question": "Q", "answer": "A", "category": "general"}]
+
+
+def test_coerce_caps_at_max_entries():
+    parsed = [
+        {"question": f"Q{i}", "answer": f"A{i}"}
+        for i in range(instant_kb._MAX_FAQ_ENTRIES + 5)
+    ]
+    out = _coerce_entries(parsed)
+    assert len(out) == instant_kb._MAX_FAQ_ENTRIES
 
 
 # --- draft_faq_entries -----------------------------------------------------
@@ -236,6 +279,31 @@ def test_persist_db_failure_raises():
     with pytest.raises(InstantKbError) as ei:
         persist_faq_entries(db, "tenant-1", [{"question": "Q", "answer": "A"}])
     assert ei.value.code == "persist_failed"
+
+
+def test_persist_skips_non_dict_entries():
+    # The confirm endpoint passes client-supplied JSON; a non-dict element must
+    # be skipped, not crash on .get() (hardening guard).
+    db = _FakeDB()
+    saved = persist_faq_entries(
+        db,
+        "tenant-1",
+        ["not a dict", 123, {"question": "Q1", "answer": "A1"}],
+    )
+    assert saved == 1
+    assert db.inserted[0][0]["question"] == "Q1"
+
+
+def test_persist_no_usable_rows_returns_zero_without_db_write():
+    # All entries invalid -> no insert call, returns 0 (covers the early return).
+    db = _FakeDB(raise_exc=RuntimeError("must not be called"))
+    saved = persist_faq_entries(
+        db,
+        "tenant-1",
+        [{"question": "", "answer": ""}, "junk"],
+    )
+    assert saved == 0
+    assert db.inserted == []
 
 
 # --- endpoint tests --------------------------------------------------------

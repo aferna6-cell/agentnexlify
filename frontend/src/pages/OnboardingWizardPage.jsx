@@ -5,7 +5,6 @@ import { trackWizardEvent } from "../utils/api/onboarding";
 import WizardExpressSetup from "./wizard/WizardExpressSetup";
 import WizardStepBusiness from "./wizard/WizardStepBusiness";
 import WizardStepAutoKB from "./wizard/WizardStepAutoKB";
-import WizardStepInstantKB from "./wizard/WizardStepInstantKB";
 import WizardStepServices from "./wizard/WizardStepServices";
 import WizardStepKnowledgeBase from "./wizard/WizardStepKnowledgeBase";
 import WizardStepCustomize from "./wizard/WizardStepCustomize";
@@ -18,8 +17,9 @@ import WizardStepEmbed from "./wizard/WizardStepEmbed";
 
 const STORAGE_KEY = "anx_wizard";
 // Plan step removed (2026-06-15): payment gate is now at signup, not inside the wizard.
-// Steps: 0=express, 1=business, 2=auto-KB, 3=instant-FAQs, 4=services, 5=KB, 6=customize, 7=embed
-const TOTAL_STEPS = 7;
+// Steps: 0=express, 1=business, 2=auto-KB (also drafts/saves instant FAQs),
+//        3=services, 4=KB, 5=customize, 6=embed
+const TOTAL_STEPS = 6;
 
 function loadState() {
   try {
@@ -88,7 +88,7 @@ export default function OnboardingWizardPage() {
     saveState(step, wizardData);
   }, [step, wizardData]);
 
-  // Track step entries for drop-off analytics (0 = express chooser, 1-7 wizard)
+  // Track step entries for drop-off analytics (0 = express chooser, 1-6 wizard)
   const prevStep = useRef(step);
   useEffect(() => {
     if (!user?.tenantId || !token) return;
@@ -115,9 +115,11 @@ export default function OnboardingWizardPage() {
   // Steps 4 and 6 that need the API key will fetch it themselves via the API.
   const apiKey = null;
 
-  // Order (2026-06-15): express chooser (0), then teach the AI staff (1-4),
-  // then the OPTIONAL website-widget steps (5-6). Plan step removed - payment
+  // Order (2026-06-15): express chooser (0), then teach the AI staff (1-3),
+  // then the OPTIONAL website-widget steps (4-6). Plan step removed - payment
   // is gated at signup via RequirePaid before the wizard is ever shown.
+  // Auto-KB (step 2) both pre-fills the profile from the site AND drafts/saves
+  // instant FAQs for the chat widget; there is no standalone instant-FAQ step.
   const stepComponents = [
     <WizardExpressSetup
       key="0"
@@ -134,22 +136,14 @@ export default function OnboardingWizardPage() {
       token={token}
       tenantId={user?.tenantId}
     />,
-    <WizardStepInstantKB
-      key="3"
-      wizardData={wizardData}
-      onNext={goNext}
-      onBack={goBack}
-      token={token}
-      tenantId={user?.tenantId}
-    />,
     <WizardStepServices
-      key="4"
+      key="3"
       wizardData={wizardData}
       onNext={goNext}
       onBack={goBack}
     />,
     <WizardStepKnowledgeBase
-      key="5"
+      key="4"
       wizardData={wizardData}
       onNext={goNext}
       onBack={goBack}
@@ -157,7 +151,7 @@ export default function OnboardingWizardPage() {
       tenantId={user.tenantId}
     />,
     <WizardStepCustomize
-      key="6"
+      key="5"
       wizardData={wizardData}
       onNext={goNext}
       onBack={goBack}
@@ -165,7 +159,7 @@ export default function OnboardingWizardPage() {
       tenantId={user?.tenantId}
     />,
     <WizardStepEmbed
-      key="7"
+      key="6"
       wizardData={wizardData}
       token={token}
       tenantId={user?.tenantId}
