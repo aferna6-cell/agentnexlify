@@ -606,13 +606,13 @@ export default function Home() {
                 One AI partner. Two ways to start.
               </div>
               <h1 className="reveal">
-                An AI team for your business.{" "}
-                <span className="accent-gradient">Start with a chatbot, or run the whole operation.</span>
+                Put Your Business On Autopilot With{" "}
+                <span className="accent-gradient">An AI Workforce</span>
               </h1>
               <p
                 className="lp-hero-sub reveal"
               >
-                AgentNexLiFy is your AI service partner. Pick the chatbot to handle every visitor on your website and do the work behind it, or Agent OS to direct an AI team (8) across sales, marketing, and support, all from plain-language prompts. Same engine, two ways in.
+                Whether you need a virtual front desk to engage customers 24/7 or a complete AI-powered team to support your business operations, Agent NexLiFy builds and manages the solution for you.
               </p>
               <div className="lp-hero-buttons reveal">
                 <Link to="/signup" className="btn-primary">
