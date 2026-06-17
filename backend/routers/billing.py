@@ -173,6 +173,9 @@ async def create_checkout(req: CreateCheckoutRequest, _=Depends(_verify_secret))
     )
     session_params: dict = {
         "mode": "subscription",
+        # Card only — disables Stripe Link so customers don't get Link's own
+        # wallet/verification emails (they read like phishing for a new customer).
+        "payment_method_types": ["card"],
         "customer": customer.id,
         "line_items": line_items,
         "success_url": success_path,
