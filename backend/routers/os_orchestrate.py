@@ -57,6 +57,30 @@ def _demo_turns_exhausted(db, client_id: str) -> bool:
         return False
 
 
+def _require_agent_os_plan(db, client_id: str) -> None:
+    """The AI Workforce (Agent OS) is the agent_os plan only.
+
+    The chatbot plan's AI Front Desk runs through the widget chat endpoint,
+    not orchestrate, so a chatbot/free tenant must not reach the multi-agent
+    workforce here. Demo tenants always pass so the public sales demo works.
+    Reads the live plan (never stale JWT claims) and fails closed.
+    """
+    if is_demo_tenant(client_id):
+        return
+    if usage_meter.tenant_plan(db, client_id) != "agent_os":
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "error": "plan_upgrade_required",
+                "message": (
+                    "The AI Workforce is included with the AI Workforce plan. "
+                    "Upgrade to put your full AI staff to work."
+                ),
+                "upgrade_path": "/billing",
+            },
+        )
+
+
 class OrchestrateRequest(BaseModel):
     thread_id: str = Field(min_length=1)
     content: str = Field(min_length=1, max_length=8000)
@@ -68,6 +92,7 @@ async def get_context(claims: dict = Depends(_get_current_tenant)):
     """Debug/inspection: the SharedContext the engine would receive."""
     client_id = claims["tenant_id"]
     db = get_service_supabase()
+    _require_agent_os_plan(db, client_id)
     return agent_os_bridge.assemble_shared_context(db, client_id)
 
 
@@ -79,6 +104,9 @@ async def orchestrate(
 ):
     client_id = claims["tenant_id"]
     db = get_service_supabase()
+
+    # AI Workforce is agent_os-plan only (demo tenants exempt).
+    _require_agent_os_plan(db, client_id)
 
     if is_demo_tenant(client_id) and _demo_turns_exhausted(db, client_id):
         raise HTTPException(
