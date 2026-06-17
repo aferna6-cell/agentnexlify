@@ -30,11 +30,16 @@ PLAN_AGENT_RUN_CAPS = {
 }
 
 
-def plan_cap(db, client_id: str) -> int:
-    """Resolve the tenant's monthly agent-run cap from its plan.
+def tenant_plan(
+    db, client_id: str, on_error: str = "free", on_missing: str = "free"
+) -> str:
+    """Resolve the tenant's live plan name from the tenants table.
 
-    Read failures fall back to DEFAULT_AGENT_RUN_CAP so metering can never
-    take down a turn.
+    Returns a normalized (lowercased) plan name. ``on_missing`` is returned
+    when no tenant row exists or its plan is null/empty (display callers want
+    "free"); ``on_error`` is returned on a read failure. Read live here (never
+    trust stale JWT claims) so the upgrade nudge always reflects the current
+    subscription state.
     """
     try:
         resp = (
@@ -45,11 +50,26 @@ def plan_cap(db, client_id: str) -> int:
             .execute()
         )
         rows = getattr(resp, "data", None) or []
-        plan = (rows[0].get("plan") or "").lower() if rows else ""
-        return PLAN_AGENT_RUN_CAPS.get(plan, DEFAULT_AGENT_RUN_CAP)
+        if not rows:
+            return on_missing
+        return (rows[0].get("plan") or on_missing).lower()
     except Exception:
-        logger.warning("usage_meter: plan lookup failed; using default cap", exc_info=True)
-        return DEFAULT_AGENT_RUN_CAP
+        logger.warning("usage_meter: plan lookup failed", exc_info=True)
+        return on_error
+
+
+def plan_cap(db, client_id: str) -> int:
+    """Resolve the tenant's monthly agent-run cap from its plan.
+
+    A missing tenant row, a null/empty plan, or a read failure all fall back
+    to DEFAULT_AGENT_RUN_CAP so metering never wrongly throttles a tenant to
+    the free-tier cap when the plan simply could not be resolved. Sentinel
+    plan names route those cases to the default cap rather than the free cap.
+    """
+    plan = tenant_plan(
+        db, client_id, on_error="__read_error__", on_missing="__no_row__"
+    )
+    return PLAN_AGENT_RUN_CAPS.get(plan, DEFAULT_AGENT_RUN_CAP)
 
 
 @dataclass
