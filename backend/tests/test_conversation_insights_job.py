@@ -29,11 +29,12 @@ _MID_MONTH = datetime(2026, 6, 17, 9, 0, tzinfo=timezone.utc)
 class _Builder:
     """Chained supabase-py builder stub with per-table canned data."""
 
-    def __init__(self, table_name, tenants, existing_threads, dedup_count):
+    def __init__(self, table_name, tenants, existing_threads, dedup_count, raise_on=None):
         self.table_name = table_name
         self._tenants = tenants
         self._existing_threads = existing_threads
         self._dedup_count = dedup_count
+        self._raise_on = raise_on
 
     def select(self, *a, **k):
         return self
@@ -58,6 +59,8 @@ class _Builder:
         return self
 
     def execute(self):
+        if self._raise_on is not None and self.table_name == self._raise_on:
+            raise RuntimeError("simulated db failure")
         if self.table_name == "tenants":
             return SimpleNamespace(data=self._tenants, count=len(self._tenants))
         if self.table_name == "activity_log":
@@ -76,16 +79,36 @@ class _Builder:
         return SimpleNamespace(data=[], count=0)
 
 
-def _stub_db(tenants, existing_threads=True, dedup_count=0):
+def _stub_db(tenants, existing_threads=True, dedup_count=0, raise_on=None):
     db = MagicMock(name="db")
     db.table.side_effect = lambda name: _Builder(
-        name, tenants, existing_threads, dedup_count
+        name, tenants, existing_threads, dedup_count, raise_on
     )
     return db
 
 
-def _run(*, tenants, now, configured=True, cap_reached=False, dedup_count=0):
-    db = _stub_db(tenants, dedup_count=dedup_count)
+def _run(
+    *,
+    tenants,
+    now,
+    configured=True,
+    cap_reached=False,
+    dedup_count=0,
+    existing_threads=True,
+    raise_on=None,
+    turn_exc=False,
+):
+    db = _stub_db(
+        tenants,
+        existing_threads=existing_threads,
+        dedup_count=dedup_count,
+        raise_on=raise_on,
+    )
+    turn_mock = (
+        AsyncMock(side_effect=RuntimeError("turn boom"))
+        if turn_exc
+        else AsyncMock(return_value={"agent_runs": [{}]})
+    )
     fixed_now = MagicMock()
     fixed_now.now.return_value = now
     with patch.object(job, "get_service_supabase", return_value=db), patch.object(
@@ -95,7 +118,7 @@ def _run(*, tenants, now, configured=True, cap_reached=False, dedup_count=0):
     ), patch.object(
         job.usage_meter, "record_message"
     ), patch.object(
-        job, "process_user_turn", new=AsyncMock(return_value={"agent_runs": [{}]})
+        job, "process_user_turn", new=turn_mock
     ) as turn, patch(
         "backend.services.activity.log_activity"
     ) as log_activity, patch.object(
@@ -191,3 +214,61 @@ def test_dispatches_across_multiple_tenants():
 
 def test_month_tag_format():
     assert job._month_tag(_FIRST_OF_MONTH) == "conversation_insights_monthly_2026-06"
+
+
+def test_creates_thread_when_none_exists():
+    # No existing "Monthly conversation insights" thread -> the insert branch
+    # runs and the new thread id is used for the dispatch.
+    count, turn, log_activity, _db = _run(
+        tenants=[{"id": _CLIENT_A, "plan": "agent_os"}],
+        now=_FIRST_OF_MONTH,
+        existing_threads=False,
+    )
+    assert count == 1
+    turn.assert_awaited_once()
+    log_activity.assert_called_once()
+
+
+def test_dedup_check_failure_fails_closed():
+    # A transient activity_log error must skip the tenant (never double-dispatch
+    # + double Claude spend), so no run is dispatched.
+    count, turn, log_activity, _db = _run(
+        tenants=[{"id": _CLIENT_A, "plan": "agent_os"}],
+        now=_FIRST_OF_MONTH,
+        raise_on="activity_log",
+    )
+    assert count == 0
+    turn.assert_not_awaited()
+    log_activity.assert_not_called()
+
+
+def test_tenants_query_failure_returns_zero():
+    count, turn, _log, _db = _run(
+        tenants=[{"id": _CLIENT_A, "plan": "agent_os"}],
+        now=_FIRST_OF_MONTH,
+        raise_on="tenants",
+    )
+    assert count == 0
+    turn.assert_not_awaited()
+
+
+def test_skips_tenant_without_id():
+    count, turn, log_activity, _db = _run(
+        tenants=[{"plan": "agent_os"}],  # no id
+        now=_FIRST_OF_MONTH,
+    )
+    assert count == 0
+    turn.assert_not_awaited()
+    log_activity.assert_not_called()
+
+
+def test_dispatch_exception_is_swallowed_per_tenant():
+    # A turn that raises must not abort the batch or mark the month done.
+    count, turn, log_activity, _db = _run(
+        tenants=[{"id": _CLIENT_A, "plan": "agent_os"}],
+        now=_FIRST_OF_MONTH,
+        turn_exc=True,
+    )
+    assert count == 0
+    turn.assert_awaited_once()
+    log_activity.assert_not_called()

@@ -47,10 +47,6 @@ _RUN_PROMPT = (
 )
 
 
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
 def _month_tag(now: datetime) -> str:
     return f"conversation_insights_monthly_{now.strftime('%Y-%m')}"
 
