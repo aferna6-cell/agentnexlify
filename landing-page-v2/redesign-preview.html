@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgentNexLiFy - Redesign Preview (Internal)</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --white: #ffffff;
+      --near-black: #0b0b0c;
+      --secondary: #6b7280;
+      --border: #e5e7eb;
+      --font: -apple-system, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+      --radius: 10px;
+    }
+
+    html {
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background: var(--white);
+      color: var(--near-black);
+      font-family: var(--font);
+      line-height: 1.6;
+    }
+
+    /* ---- STICKY PREVIEW BAR ---- */
+    .preview-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: #111111;
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-align: center;
+      padding: 10px 24px;
+      border-bottom: 1px solid #2a2a2a;
+    }
+
+    /* ---- VARIANT LABEL ---- */
+    .variant-label {
+      background: var(--near-black);
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-align: center;
+      padding: 14px 24px;
+    }
+
+    /* ---- DIVIDER ---- */
+    .variant-divider {
+      width: 100%;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ---- VARIANT WRAPPER ---- */
+    .variant {
+      padding: 0;
+    }
+
+    /* ---- SHARED LAYOUT ---- */
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 40px;
+    }
+
+    @media (max-width: 760px) {
+      .container {
+        padding: 0 20px;
+      }
+    }
+
+    /* ---- HERO ---- */
+    .hero {
+      padding: 110px 0 100px;
+    }
+
+    .eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--secondary);
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      font-size: clamp(40px, 6vw, 72px);
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      line-height: 1.08;
+      color: var(--near-black);
+      margin-bottom: 28px;
+    }
+
+    .hero-sub {
+      font-size: 20px;
+      color: var(--secondary);
+      max-width: 620px;
+      line-height: 1.6;
+      margin-bottom: 44px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      display: inline-block;
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      color: #ffffff;
+      transition: opacity 0.15s ease;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.88;
+    }
+
+    .btn-outline {
+      display: inline-block;
+      padding: 13px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--near-black);
+      background: var(--white);
+      transition: border-color 0.15s ease;
+    }
+
+    .btn-outline:hover {
+      border-color: #9ca3af;
+    }
+
+    /* ---- ARCHITECTURE DIAGRAM ---- */
+    .diagram-section {
+      padding: 80px 0 90px;
+      border-top: 1px solid var(--border);
+    }
+
+    .diagram-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    .diagram-box {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 13px 28px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--near-black);
+      background: var(--white);
+      min-width: 170px;
+      text-align: center;
+      letter-spacing: -0.01em;
+    }
+
+    .diagram-box.accent-box {
+      background: var(--white);
+    }
+
+    .diagram-connector {
+      width: 1px;
+      height: 32px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    .diagram-arrow {
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 7px solid var(--border);
+      margin-top: -1px;
+      flex-shrink: 0;
+    }
+
+    .connector-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .diagram-agents {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 840px;
+      margin-top: 0;
+    }
+
+    @media (max-width: 760px) {
+      .diagram-agents {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 440px) {
+      .diagram-agents {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .agent-chip {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--near-black);
+      text-align: center;
+      background: #fafafa;
+    }
+
+    .diagram-caption {
+      margin-top: 28px;
+      font-size: 13px;
+      color: var(--secondary);
+      text-align: center;
+      letter-spacing: 0.01em;
+    }
+
+    /* ---- FRONT DESK VS WORKFORCE ---- */
+    .compare-section {
+      padding: 80px 0 100px;
+      border-top: 1px solid var(--border);
+    }
+
+    .compare-section h2 {
+      font-size: clamp(26px, 3vw, 36px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 44px;
+      color: var(--near-black);
+    }
+
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 760px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .compare-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 36px 36px 28px;
+    }
+
+    .compare-card h3 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      margin-bottom: 24px;
+      color: var(--near-black);
+    }
+
+    .bullet-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+
+    .bullet-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 15px;
+      color: var(--near-black);
+      line-height: 1.5;
+    }
+
+    .bullet-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      margin-top: 8px;
+      flex-shrink: 0;
+    }
+
+    .card-footer {
+      font-size: 13px;
+      color: var(--secondary);
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-weight: 500;
+    }
+
+    /* ---- ACCENT VARIANTS ---- */
+
+    /* Variant A - Electric Blue #2563EB */
+    .variant-a .btn-primary { background: #2563EB; }
+    .variant-a .diagram-box.accent-box {
+      border-color: #2563EB;
+      color: #2563EB;
+    }
+    .variant-a .diagram-connector.top { background: #2563EB; }
+    .variant-a .diagram-arrow.top { border-top-color: #2563EB; }
+    .variant-a .bullet-dot { background: #2563EB; }
+    .variant-a .variant-label { background: #1e40af; }
+
+    /* Variant B - Deep Purple #6D28D9 */
+    .variant-b .btn-primary { background: #6D28D9; }
+    .variant-b .diagram-box.accent-box {
+      border-color: #6D28D9;
+      color: #6D28D9;
+    }
+    .variant-b .diagram-connector.top { background: #6D28D9; }
+    .variant-b .diagram-arrow.top { border-top-color: #6D28D9; }
+    .variant-b .bullet-dot { background: #6D28D9; }
+    .variant-b .variant-label { background: #4c1d95; }
+
+    /* Variant C - Mono near-black #111111 */
+    .variant-c .btn-primary { background: #111111; }
+    .variant-c .diagram-box.accent-box {
+      border-color: #111111;
+      color: #111111;
+    }
+    .variant-c .diagram-connector.top { background: #111111; }
+    .variant-c .diagram-arrow.top { border-top-color: #111111; }
+    .variant-c .bullet-dot { background: #111111; }
+    .variant-c .variant-label { background: #111111; }
+  </style>
+</head>
+<body>
+
+  <!-- STICKY PREVIEW NOTICE -->
+  <div class="preview-bar">
+    Internal preview - not live. Pick an accent color: A, B, or C.
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- VARIANT A - ELECTRIC BLUE                                   -->
+  <!-- ============================================================ -->
+  <div class="variant variant-a">
+    <div class="variant-label">Option A - Electric Blue (#2563EB)</div>
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="container">
+        <p class="eyebrow">AI Workforce Platform</p>
+        <h1>Deploy an AI Workforce.</h1>
+        <p class="hero-sub">
+          Agent NexLiFy builds AI workforces for small businesses. Start with an AI Front Desk
+          that engages customers and captures opportunities, then grow into a full AI Workforce
+          run by a single AI manager.
+        </p>
+        <div class="hero-actions">
+          <a href="#" class="btn-primary">Get started</a>
+          <a href="#" class="btn-outline">See how it works</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ARCHITECTURE DIAGRAM -->
+    <section class="diagram-section">
+      <div class="container">
+        <div class="diagram-wrap">
+
+          <div class="diagram-box">Business Owner</div>
+
+          <div class="connector-group">
+            <div class="diagram-connector top"></div>
+            <div class="diagram-arrow top"></div>
+          </div>
+
+          <div class="diagram-box accent-box">AI Manager</div>
+
+          <div class="connector-group">
+            <div class="diagram-connector"></div>
+            <div class="diagram-arrow"></div>
+          </div>
+
+          <div class="diagram-agents">
+            <div class="agent-chip">Sales</div>
+            <div class="agent-chip">Marketing</div>
+            <div class="agent-chip">Customer Support</div>
+            <div class="agent-chip">Operations</div>
+            <div class="agent-chip">Finance</div>
+            <div class="agent-chip">HR</div>
+            <div class="agent-chip">Knowledge</div>
+            <div class="agent-chip">Executive Assistant</div>
+          </div>
+
+          <p class="diagram-caption">One prompt controls the entire team.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FRONT DESK VS WORKFORCE -->
+    <section class="compare-section">
+      <div class="container">
+        <h2>Start small. Scale with you.</h2>
+        <div class="compare-grid">
+
+          <div class="compare-card">
+            <h3>AI Front Desk</h3>
+            <ul class="bullet-list">
+              <li>
+                <span class="bullet-dot"></span>
+                Answers questions
+              </li>
+              <li>
+                <span class="bullet-dot"></span>
+                Captures leads
+              </li>
+              <li>
+                <span class="bullet-dot"></span>
+                Books appointments
+              </li>
+              <li>
+                <span class="bullet-dot"></span>
+                Supports customers
+              </li>
+            </ul>
+            <div class="card-footer">Start here.</div>
+          </div>
+
+          <div class="compare-card">
+            <h3>AI Workforce</h3>
+            <ul class="bullet-list">
+              <li><span class="bullet-dot"></span>Sales</li>
+              <li><span class="bullet-dot"></span>Marketing</li>
+              <li><span class="bullet-dot"></span>Customer Support</li>
+              <li><span class="bullet-dot"></span>Operations, Finance, HR, Knowledge, Executive Assistant</li>
+            </ul>
+            <div class="card-footer">Grow into it.</div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="variant-divider"></div>
+
+  <!-- ============================================================ -->
+  <!-- VARIANT B - DEEP PURPLE                                     -->
+  <!-- ============================================================ -->
+  <div class="variant variant-b">
+    <div class="variant-label">Option B - Deep Purple (#6D28D9)</div>
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="container">
+        <p class="eyebrow">AI Workforce Platform</p>
+        <h1>Deploy an AI Workforce.</h1>
+        <p class="hero-sub">
+          Agent NexLiFy builds AI workforces for small businesses. Start with an AI Front Desk
+          that engages customers and captures opportunities, then grow into a full AI Workforce
+          run by a single AI manager.
+        </p>
+        <div class="hero-actions">
+          <a href="#" class="btn-primary">Get started</a>
+          <a href="#" class="btn-outline">See how it works</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ARCHITECTURE DIAGRAM -->
+    <section class="diagram-section">
+      <div class="container">
+        <div class="diagram-wrap">
+
+          <div class="diagram-box">Business Owner</div>
+
+          <div class="connector-group">
+            <div class="diagram-connector top"></div>
+            <div class="diagram-arrow top"></div>
+          </div>
+
+          <div class="diagram-box accent-box">AI Manager</div>
+
+          <div class="connector-group">
+            <div class="diagram-connector"></div>
+            <div class="diagram-arrow"></div>
+          </div>
+
+          <div class="diagram-agents">
+            <div class="agent-chip">Sales</div>
+            <div class="agent-chip">Marketing</div>
+            <div class="agent-chip">Customer Support</div>
+            <div class="agent-chip">Operations</div>
+            <div class="agent-chip">Finance</div>
+            <div class="agent-chip">HR</div>
+            <div class="agent-chip">Knowledge</div>
+            <div class="agent-chip">Executive Assistant</div>
+          </div>
+
+          <p class="diagram-caption">One prompt controls the entire team.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FRONT DESK VS WORKFORCE -->
+    <section class="compare-section">
+      <div class="container">
+        <h2>Start small. Scale with you.</h2>
+        <div class="compare-grid">
+
+          <div class="compare-card">
+            <h3>AI Front Desk</h3>
+            <ul class="bullet-list">
+              <li><span class="bullet-dot"></span>Answers questions</li>
+              <li><span class="bullet-dot"></span>Captures leads</li>
+              <li><span class="bullet-dot"></span>Books appointments</li>
+              <li><span class="bullet-dot"></span>Supports customers</li>
+            </ul>
+            <div class="card-footer">Start here.</div>
+          </div>
+
+          <div class="compare-card">
+            <h3>AI Workforce</h3>
+            <ul class="bullet-list">
+              <li><span class="bullet-dot"></span>Sales</li>
+              <li><span class="bullet-dot"></span>Marketing</li>
+              <li><span class="bullet-dot"></span>Customer Support</li>
+              <li><span class="bullet-dot"></span>Operations, Finance, HR, Knowledge, Executive Assistant</li>
+            </ul>
+            <div class="card-footer">Grow into it.</div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="variant-divider"></div>
+
+  <!-- ============================================================ -->
+  <!-- VARIANT C - MONO NEAR-BLACK                                 -->
+  <!-- ============================================================ -->
+  <div class="variant variant-c">
+    <div class="variant-label">Option C - Mono (near-black accent, #111111)</div>
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="container">
+        <p class="eyebrow">AI Workforce Platform</p>
+        <h1>Deploy an AI Workforce.</h1>
+        <p class="hero-sub">
+          Agent NexLiFy builds AI workforces for small businesses. Start with an AI Front Desk
+          that engages customers and captures opportunities, then grow into a full AI Workforce
+          run by a single AI manager.
+        </p>
+        <div class="hero-actions">
+          <a href="#" class="btn-primary">Get started</a>
+          <a href="#" class="btn-outline">See how it works</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ARCHITECTURE DIAGRAM -->
+    <section class="diagram-section">
+      <div class="container">
+        <div class="diagram-wrap">
+
+          <div class="diagram-box">Business Owner</div>
+
+          <div class="connector-group">
+            <div class="diagram-connector top"></div>
+            <div class="diagram-arrow top"></div>
+          </div>
+
+          <div class="diagram-box accent-box">AI Manager</div>
+
+          <div class="connector-group">
+            <div class="diagram-connector"></div>
+            <div class="diagram-arrow"></div>
+          </div>
+
+          <div class="diagram-agents">
+            <div class="agent-chip">Sales</div>
+            <div class="agent-chip">Marketing</div>
+            <div class="agent-chip">Customer Support</div>
+            <div class="agent-chip">Operations</div>
+            <div class="agent-chip">Finance</div>
+            <div class="agent-chip">HR</div>
+            <div class="agent-chip">Knowledge</div>
+            <div class="agent-chip">Executive Assistant</div>
+          </div>
+
+          <p class="diagram-caption">One prompt controls the entire team.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FRONT DESK VS WORKFORCE -->
+    <section class="compare-section">
+      <div class="container">
+        <h2>Start small. Scale with you.</h2>
+        <div class="compare-grid">
+
+          <div class="compare-card">
+            <h3>AI Front Desk</h3>
+            <ul class="bullet-list">
+              <li><span class="bullet-dot"></span>Answers questions</li>
+              <li><span class="bullet-dot"></span>Captures leads</li>
+              <li><span class="bullet-dot"></span>Books appointments</li>
+              <li><span class="bullet-dot"></span>Supports customers</li>
+            </ul>
+            <div class="card-footer">Start here.</div>
+          </div>
+
+          <div class="compare-card">
+            <h3>AI Workforce</h3>
+            <ul class="bullet-list">
+              <li><span class="bullet-dot"></span>Sales</li>
+              <li><span class="bullet-dot"></span>Marketing</li>
+              <li><span class="bullet-dot"></span>Customer Support</li>
+              <li><span class="bullet-dot"></span>Operations, Finance, HR, Knowledge, Executive Assistant</li>
+            </ul>
+            <div class="card-footer">Grow into it.</div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  </div>
+
+</body>
+</html>
