@@ -1,0 +1,21 @@
+{
+  "run": 59,
+  "date": "2026-06-17-pm",
+  "evidence_summary": "Check 13 (project invariants gate) wired by nightly review bc91e97 — run 58 winner implemented. Nine feature PRs merged (PRs #311-320): Conversation Insights, Instant KB from URL, Lead Alerts, Usage Upgrade Nudge, Front Desk Health card, Outbound Outreach agent, AI Workforce brand repositioning, 2-plan repricing ($19.99 chatbot / $99.99 agent_os). GH #308 filed: idempotency early-write drops payment events on handler failure — tenants stay dunning-locked after card fix. GH #292/#293: chatbot/agent_os missing from 4 plan-name dicts — new paid tenants get broken SMS/Zapier/email. check_project_invariants.py passes all 6 checks.",
+  "ideas_count": 5,
+  "winner": "Fix GH #308 — Webhook Idempotency Early-Write Drops Payment Events",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "autonomous_executable": false,
+  "moratorium_override": true,
+  "moratorium_override_reason": "Payment revenue bug — dunning-lock after card fix = failed payment recovery. Exempt from pending-count constraint.",
+  "nightly_review_path": true,
+  "nightly_review_note": "MEDIUM-risk, sketch complete, regression test spec included — nightly review can implement 2026-06-18",
+  "bonus_a": "Fix GH #292/#293 — wire chatbot/agent_os into sms_rate_limiter.py, api_key_auth.py, orchestrator.py, billing_reconciliation.py (requires product decision on SMS limits)",
+  "bonus_b": "Add plan-name guard (check 7) to check_project_invariants.py — AUTONOMOUS-EXECUTABLE after Bonus A lands",
+  "debate_log": "subconscious/runs/2026-06-17-pm/debate/debate-log.md",
+  "winning_concept": "subconscious/runs/2026-06-17-pm/winning-concept.md",
+  "ideas_file": "subconscious/runs/2026-06-17-pm/ideas/ideas.md",
+  "moratorium_active": true,
+  "true_pending_approvals": 9
+}
