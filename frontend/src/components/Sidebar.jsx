@@ -5,8 +5,8 @@ import { useAuth } from "../context/AuthContext";
 //   chatbot   - $19.99/mo - widget/chatbot features only
 //   agent_os  - $99.99/mo - full platform
 const planLabels = {
-  chatbot: "Chatbot",
-  agent_os: "Agent OS",
+  chatbot: "AI Front Desk",
+  agent_os: "AI Workforce",
 };
 
 const planColors = {
@@ -61,7 +61,7 @@ const allNavItems = [
     icon: (
       <Icon d="M4 4h16v16H4zM9 9h6v6H9zM9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3" />
     ),
-    label: "Agent OS",
+    label: "AI Workforce",
   },
   {
     key: "clients",

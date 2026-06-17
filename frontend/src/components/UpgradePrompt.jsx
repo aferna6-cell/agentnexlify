@@ -6,8 +6,8 @@ import { useEffect } from "react";
 const PLAN_ORDER = ["chatbot", "agent_os"];
 
 const PLAN_DISPLAY = {
-  chatbot: { name: "Chatbot", price: "$19.99/mo" },
-  agent_os: { name: "Agent OS", price: "$99.99/mo" },
+  chatbot: { name: "AI Front Desk", price: "$19.99/mo" },
+  agent_os: { name: "AI Workforce", price: "$99.99/mo" },
 };
 
 const overlayStyle = {

@@ -7,20 +7,20 @@ import { completeOnboarding, checkoutForWizard, buildWizardPayload } from "../..
 const PLANS = [
   {
     key: "chatbot",
-    name: "Chatbot",
+    name: "AI Front Desk",
     price: "$19.99/mo",
     color: "#6366f1",
     features: ["AI chat widget", "Lead capture", "FAQ knowledge base", "Appointment booking"],
-    cta: "Start Chatbot",
+    cta: "Start AI Front Desk",
     highlight: false,
   },
   {
     key: "agent_os",
-    name: "Full Agent OS",
+    name: "AI Workforce",
     price: "$99.99/mo",
     color: "#8b5cf6",
-    features: ["Everything in Chatbot", "Your AI staff in Agent OS", "Marketing, SEO & campaigns", "Automations & follow-ups"],
-    cta: "Start Agent OS",
+    features: ["Everything in AI Front Desk", "Your AI staff in AI Workforce", "Marketing, SEO & campaigns", "Automations & follow-ups"],
+    cta: "Start AI Workforce",
     highlight: true,
   },
 ];

@@ -84,7 +84,7 @@ describe("Sidebar navigation (agent-first consolidation)", () => {
     // Collapsed groups render their items only after expansion.
     fireEvent.click(screen.getByText("SETTINGS"));
 
-    for (const label of ["Agent OS", "Clients", "Conversations", "Billing"]) {
+    for (const label of ["AI Workforce", "Clients", "Conversations", "Billing"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
   });
