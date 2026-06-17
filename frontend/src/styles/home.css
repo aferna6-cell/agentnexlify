@@ -1659,10 +1659,10 @@
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: #0b0b0c;
-  border: 1px solid rgba(37,99,235,0.3);
+  background: #2563EB;
+  border: 1px solid #1d4ed8;
   border-radius: 100px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+  box-shadow: 0 6px 22px rgba(37,99,235,0.32);
   animation: lpFloatIn 0.4s ease-out;
 }
 
