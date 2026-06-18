@@ -125,7 +125,7 @@ export default function WizardStepBusiness({ wizardData, onNext }) {
             </select>
           </div>
           {DAYS.map(day => (
-            <div key={day} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, fontSize: "0.85rem" }}>
+            <div key={day} style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 8, fontSize: "0.85rem" }}>
               <input
                 type="checkbox"
                 checked={form.hours[day]?.enabled || false}
