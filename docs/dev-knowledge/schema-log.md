@@ -1370,5 +1370,7 @@ Conversation Insights agent's "Customer sentiment" breakdown. The bridge loader
 degrades to an empty map if the columns are absent, so it is safe to deploy the
 code before the migration is applied.
 
-**NOT YET APPLIED** — apply via `mcp__supabase__apply_migration` after merge,
-then verify both columns exist on `conversations` with the sentiment CHECK.
+**APPLIED to prod 2026-06-18** via `apply_migration` (project pxserpybmajixqrmzaly).
+Verified both `conversations.sentiment` (text) and `conversations.intent` (text)
+exist via information_schema. Closes the half-shipped state — enrichment code was
+already referencing these columns before they existed in prod.

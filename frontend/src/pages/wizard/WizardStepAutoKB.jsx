@@ -21,6 +21,7 @@ export default function WizardStepAutoKB({
   wizardData,
   onNext,
   onBack,
+  onTalkToAiNow,
   token,
   tenantId,
 }) {
@@ -83,10 +84,11 @@ export default function WizardStepAutoKB({
     );
   }
 
-  // Persist any kept drafted FAQs, then hand the crawl result up the wizard.
-  // Saving FAQs is best-effort: a failure surfaces an error but never blocks
-  // the owner from continuing onboarding.
-  async function handleContinue() {
+  // Save any kept drafted FAQs (best-effort) and return the wizard-data updates
+  // built from the crawl. Returns null when an FAQ save fails so callers can
+  // bail without advancing. A failure surfaces an error but never silently
+  // drops the owner's progress.
+  async function persistAndCollectUpdates() {
     const chosen = faqs
       .filter((f) => f.keep)
       .map(({ question, answer, category }) => ({ question, answer, category }));
@@ -99,25 +101,45 @@ export default function WizardStepAutoKB({
       } catch (e) {
         setFaqError(e?.message || "Could not save the FAQs. Try again.");
         setFaqStatus("error");
-        return;
+        return null;
       }
     }
 
-    if (result) {
-      onNext({
-        website_url: url,
-        services: result.services || [],
-        hours: result.hours || {},
-        knowledge_base: result.knowledge_base || "",
-        custom_instructions: result.custom_instructions || "",
-        faqs: result.faqs || [],
-      });
-    } else {
-      onNext({ website_url: url });
-    }
+    return result
+      ? {
+          website_url: url,
+          services: result.services || [],
+          hours: result.hours || {},
+          knowledge_base: result.knowledge_base || "",
+          custom_instructions: result.custom_instructions || "",
+          faqs: result.faqs || [],
+        }
+      : { website_url: url };
+  }
+
+  async function handleContinue() {
+    const updates = await persistAndCollectUpdates();
+    if (updates === null) return;
+    onNext(updates);
+  }
+
+  // Skip the remaining wizard steps and go talk to the AI now. Same save path
+  // as Continue; jumps to the widget instead of advancing.
+  async function handleTalkToAiNow() {
+    const updates = await persistAndCollectUpdates();
+    if (updates === null) return;
+    onTalkToAiNow(updates);
   }
 
   const keptFaqCount = faqs.filter((f) => f.keep).length;
+  // The crawl came back with nothing usable - no services, no FAQs, empty KB.
+  // Surface a clear "add by hand" path instead of a silent empty preview.
+  const crawlEmpty =
+    status === "done" &&
+    result &&
+    (!result.services || result.services.length === 0) &&
+    (!result.faqs || result.faqs.length === 0) &&
+    !(result.knowledge_base || "").trim();
 
   return (
     <div>
@@ -187,6 +209,23 @@ export default function WizardStepAutoKB({
 
       {status === "done" && result && (
         <div style={{ marginBottom: 20 }}>
+          {crawlEmpty && (
+            <div
+              style={{
+                background: "rgba(234,179,8,0.1)",
+                border: "1px solid rgba(234,179,8,0.3)",
+                borderRadius: 10,
+                padding: 16,
+                marginBottom: 16,
+              }}
+            >
+              <p style={{ color: "#fde68a", margin: 0, fontSize: "0.9rem" }}>
+                We couldn't read much from that site. Draft a few FAQs below, or
+                continue and add your services and details by hand in the next
+                steps.
+              </p>
+            </div>
+          )}
           <div style={previewBlock}>
             <div style={previewHeader}>
               Services found ({result.services?.length || 0})
@@ -440,6 +479,30 @@ export default function WizardStepAutoKB({
           }}
         >
           Skip - I'll fill in by hand
+        </button>
+      )}
+
+      {/* After the crawl, let the owner jump straight to their AI and finish
+          the remaining setup steps later. Highest-leverage path to first value. */}
+      {status === "done" && onTalkToAiNow && (
+        <button
+          onClick={handleTalkToAiNow}
+          disabled={faqStatus === "saving" || faqStatus === "drafting"}
+          style={{
+            marginTop: 12,
+            width: "100%",
+            background: "transparent",
+            color: "#a5b4fc",
+            border: "none",
+            fontSize: "0.9rem",
+            fontWeight: 600,
+            cursor: "pointer",
+            padding: "12px",
+            minHeight: 44,
+            opacity: faqStatus === "saving" || faqStatus === "drafting" ? 0.5 : 1,
+          }}
+        >
+          Talk to your AI now - finish setup later →
         </button>
       )}
     </div>

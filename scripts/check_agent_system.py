@@ -361,7 +361,10 @@ def main() -> int:
     )
 
     issue_loop = read_text(".github/workflows/autopilot-issue-loop.yml")
-    check('"*/15 * * * *"' in issue_loop, "autopilot issue loop runs every 15 minutes", failures)
+    # Assert the loop is scheduled, not a fixed cadence. The cron was throttled
+    # 2026-06-18 (*/15 -> hourly) to conserve GitHub Actions minutes; the
+    # cadence is a tunable, the schedule itself is the invariant.
+    check("cron:" in issue_loop, "autopilot issue loop is scheduled (cron)", failures)
     check("workflow_dispatch" in issue_loop, "autopilot issue loop can run manually", failures)
     check("classify_and_dispatch.py" in issue_loop, "issue loop dispatch script is wired", failures)
     check("AUTOPILOT_MAX_TOKENS_PER_RUN" in issue_loop, "issue loop token budget is wired", failures)

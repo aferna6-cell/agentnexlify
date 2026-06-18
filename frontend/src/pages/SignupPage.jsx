@@ -40,9 +40,12 @@ export default function SignupPage() {
   // Vertical toured in the demo - pre-selects the industry so onboarding
   // (FAQs, starters, widget defaults) matches what the visitor just saw.
   const demoVertical = (searchParams.get("vertical") || "").trim().slice(0, 50);
+  // Business name from the personalized demo link - pre-fill it so a visitor
+  // who just saw a demo framed for "Acme Roofing" confirms rather than retypes.
+  const demoBusiness = (searchParams.get("business") || "").trim().slice(0, 80);
   const isGoogleSignup = Boolean(googleSetupToken);
   const [form, setForm] = useState(() => ({
-    business_name: "",
+    business_name: demoBusiness,
     owner_name: googleName,
     email: googleEmail,
     password: "",

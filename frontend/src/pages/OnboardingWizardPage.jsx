@@ -108,6 +108,18 @@ export default function OnboardingWizardPage() {
     setStep((s) => Math.max(s - 1, 1));
   }, []);
 
+  // Skip-ahead from Auto-KB: persist whatever the crawl produced, then jump
+  // straight to the widget so the owner can talk to their AI now and finish
+  // Services/Customize/Embed later. /dashboard/widget is reachable on every
+  // paid tier (the gated AI Workforce page would 402 a chatbot-tier signup).
+  const goTalkToAiNow = useCallback(
+    (updates = {}) => {
+      setWizardData((prev) => ({ ...prev, ...updates }));
+      navigate("/dashboard/widget");
+    },
+    [navigate],
+  );
+
   // Don't render until user is resolved (avoids flash before redirect)
   if (!user) return null;
 
@@ -133,6 +145,7 @@ export default function OnboardingWizardPage() {
       wizardData={wizardData}
       onNext={goNext}
       onBack={goBack}
+      onTalkToAiNow={goTalkToAiNow}
       token={token}
       tenantId={user?.tenantId}
     />,

@@ -482,13 +482,14 @@ export default function DemoExperience() {
     demoTabs.find((t) => t.key === active)?.label || "AI Workforce";
 
   // Build signup URL carrying attribution forward.
-  // SignupPage already reads ?ref (line 38), ?plan (line 29), ?from (line 39),
-  // and ?vertical (line 42), so these just work on the receiving side.
+  // SignupPage reads ?ref, ?plan, ?from, ?vertical, and ?business, so these
+  // just work on the receiving side (business pre-fills business_name).
   const signupParams = new URLSearchParams();
   signupParams.set("plan", "chatbot");
   signupParams.set("from", "demo");
   if (ref) signupParams.set("ref", ref);
   if (type) signupParams.set("vertical", type);
+  if (business) signupParams.set("business", business);
   const signupTo = `/signup?${signupParams.toString()}`;
 
   // Fire demo_view on mount with whatever attribution we have.
