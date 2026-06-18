@@ -77,7 +77,36 @@ for HOOD in "Austin Heights" "South Congress" "East Austin" "Mueller"; do
 done
 ```
 
-Combine CSVs and deduplicate by `place_id` before importing.
+Combine the per-neighborhood CSVs and deduplicate with `merge_leads.py`:
+
+```bash
+python -m scripts.leadgen.merge_leads --glob "leads_*.csv" --out leads.csv
+```
+
+## Merging + Instantly import (merge_leads.py)
+
+`merge_leads.py` combines multiple `build_leads.py` outputs into one
+import-ready file. It deduplicates by `place_id` (so a business found in two
+overlapping searches is emailed once), prefers the enriched copy when a
+duplicate has an email the other lacked, and drops rows with no email by
+default.
+
+```bash
+# merge everything matching a glob
+python -m scripts.leadgen.merge_leads --glob "leads_*.csv" --out leads.csv
+
+# merge explicit files, keep rows that have no email
+python -m scripts.leadgen.merge_leads a.csv b.csv --out leads.csv --keep-no-email
+
+# emit Instantly-ready columns (email, company_name, + custom vars)
+python -m scripts.leadgen.merge_leads --glob "leads_*.csv" \
+  --out instantly.csv --instantly
+```
+
+The `--instantly` format maps `name -> company_name` and keeps
+`email, website, phone, city, category, demo_url`. Instantly auto-maps
+email/company_name/website/phone; the rest become custom variables usable in a
+sequence as `{{demo_url}}`, `{{city}}`, etc.
 
 ## Google Maps Platform Terms of Service Caveat
 
