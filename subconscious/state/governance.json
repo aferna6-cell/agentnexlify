@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-06-17-pm",
-  "total_runs": 59,
+  "last_run": "2026-06-18-pm",
+  "total_runs": 60,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -25,7 +25,7 @@
       "category": "code_health",
       "moratorium_override": true,
       "moratorium_override_reason": "Payment revenue bug — dunning-lock after card fix = failed payment recovery. Exempt from pending-count constraint.",
-      "note": "Run 59 winner. idempotency.py:85-93 writes idempotency row BEFORE handler completes. Handler failure → row persists → Stripe retry sees is_new=False → returns 200 without processing → event permanently dropped. Introduced by 47c7f8b (launch hardening, 2026-06-16). Fix: wrap handler call in try/except in billing.py:233-236 + stripe_webhooks.py:64-66; delete idempotency row on exception before re-raising 500. Add idempotency_service.delete(event_id) method if not present. Regression test spec in winning-concept.md. Bonus A: fix GH #292/#293 (chatbot/agent_os missing from 4 plan-name dicts). Bonus B: add plan-name guard check 7 to check_project_invariants.py (AUTONOMOUS-EXECUTABLE after Bonus A). Implementation sketch: subconscious/runs/2026-06-17-pm/winning-concept.md."
+      "note": "Run 59 winner. CONFIRMED unimplemented by run 60 (2026-06-18-pm). idempotency.py:85-93 writes idempotency row BEFORE handler completes. Handler failure → row persists → Stripe retry sees is_new=False → returns 200 without processing → event permanently dropped. Introduced by 47c7f8b (launch hardening, 2026-06-16). Fix: add async delete_key(supabase, key) method to idempotency.py; in stripe_webhooks.py exception handler call await delete_key(db, idempotency_key) before re-raising HTTPException(500). Regression test spec: test must FAIL on HEAD, PASS after fix. Bonus A: fix GH #292/#293 (chatbot/agent_os missing from sms_rate_limiter._UNLIMITED_PLANS + api_key_auth._ALLOWED_PLANS + billing_reconciliation). Bonus B: add plan-name guard check 7 to check_project_invariants.py (AUTONOMOUS-EXECUTABLE after Bonus A). Implementation sketch: subconscious/runs/2026-06-18-pm/winning-concept.md (run 60 — complete sketch). Also: subconscious/runs/2026-06-17-pm/winning-concept.md (run 59 original)."
     },
     {
       "title": "Wire check_project_invariants.py into pre-commit as Check 13 (6-line bash, AUTONOMOUS-EXECUTABLE, run 58 winner)",
@@ -104,9 +104,9 @@
       "title": "Verify and merge PR #183 — close GH #181 (billing.py AMOUNT_TO_PLAN missing 15000→autopilot + 25000→professional) via existing 12-day draft PR (run 51 winner)",
       "date": "2026-06-05-pm",
       "confidence": "MEDIUM-HIGH",
-      "status": "pending_approval",
+      "status": "moot",
       "category": "code_health",
-      "note": "Run 51 PM winner. New framing: 'review + merge existing PR' bypasses rejected_paths governance (condition b met: path confirmed run 47, PR exists 12 days, morning digest endorses merge, CI gate prevents bad state). Step 0: merge PR #200 FIRST (Bonus A — before tonight's nightly 2:37 AM). Step 1: read PR #183 diff, verify targets backend/routers/billing.py (not services/), contains AMOUNT_TO_PLAN + 15000/25000 entries AND test_billing_amount_to_plan.py with corrected assertions. Step 2: verify CI green. Step 3: gh pr ready 183 && gh pr merge 183 --squash. Step 4: grep + pytest verify. Step 5: update GH #181 critical_standing_action → implemented. Implementation sketch: subconscious/runs/2026-06-05-pm/winning-concept.md."
+      "note": "Run 51 PM winner. MOOT as of run 60 (2026-06-18-pm). PR #183 targeted old AMOUNT_TO_PLAN dict with 4-plan pricing. Billing repriced to 2-plan model (9bed342/PR #288): AMOUNT_TO_PLAN now {1999: 'chatbot', 9999: 'agent_os'}. Old 15000/25000 entries are intentionally retired. PR #183 would restore retired entries — do not merge. GH #181 resolved by repricing, not by restoring old keys. Governance correction applied run 60."
     },
     {
       "title": "Extend nightly scope + mark Item B AUTONOMOUS-EXECUTABLE (check-widget-sync.sh + pre-push wire + CLAUDE.md fix) (run 50 winner)",
@@ -892,7 +892,7 @@
     "runs_pending_approval_note": "Run 57 (2026-06-13): 5 PRs (#246-#254) merged in 3 days (~10k lines). PR #254 (3f79d7f, 3500 lines, 31 files) introduced widget drift (widget/ updated, landing-page-v2/widget/ NOT updated — check_project_invariants FAIL confirmed live), 10 em-dash violations, and potential new from __future__ in push_subscriptions.py. Run 55 (em-dash + from __future__) and run 56 (Check 13) both pending_autonomous — nightly d12bd21 did not implement either. Run 57 adds widget cp as third pending_autonomous item. True human-required pending: runs 4/38 (AI-to-Human Handoff), runs 20/21/28/29/30/35/41 (moratorium sprint + email split), PR #183/GH#181.",
     "runs_implemented": 18,
     "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 58)",
-    "governance_correction": "Run 58 (2026-06-16): runs 55+57 IMPLEMENTED by 3234597 (launch-readiness P0 sweep). Run 56 SUPERSEDED (Check 2 already covers from __future__ in pre-commit). Billing runs 30/31/32/34/51 MOOT — 9bed342 (PR #288) repriced to 2-plan (chatbot $19.99/agent_os $99.99), old AMOUNT_TO_PLAN retired. runs_implemented 16→18. check_project_invariants.py exits 0 clean. Run 59 (2026-06-17-pm): run 58 winner IMPLEMENTED by nightly review bc91e97 (Check 13 wired). runs_implemented 18→19. Run 59 winner (GH #308 idempotency fix) added as pending_approval with moratorium_override — payment revenue bug. true_pending ~9.",
+    "governance_correction": "Run 58 (2026-06-16): runs 55+57 IMPLEMENTED by 3234597 (launch-readiness P0 sweep). Run 56 SUPERSEDED (Check 2 already covers from __future__ in pre-commit). Billing runs 30/31/32/34/51 MOOT — 9bed342 (PR #288) repriced to 2-plan (chatbot $19.99/agent_os $99.99), old AMOUNT_TO_PLAN retired. runs_implemented 16→18. check_project_invariants.py exits 0 clean. Run 59 (2026-06-17-pm): run 58 winner IMPLEMENTED by nightly review bc91e97 (Check 13 wired). runs_implemented 18→19. Run 59 winner (GH #308 idempotency fix) added as pending_approval with moratorium_override — payment revenue bug. true_pending ~9. Run 60 (2026-06-18-pm): GH #308 STILL unimplemented (confirmed by direct code read — no delete_key in idempotency.py). Same winner as run 59 (moratorium override maintained). PR #183 status→moot (targeted old AMOUNT_TO_PLAN, superseded by 2-plan repricing). GH #292/#293 confirmed unimplemented — Bonus A/B in run 60 winning-concept.md. runs_implemented stays 19. true_pending unchanged ~9.",
     "note": "Moratorium exit path after run 59: true pending ~9 (runs 4/20/21/28/29/35/38/41 + run 59). Payment bug (run 59) has nightly review path — if implemented, pending stays ~8. Next milestone: fix GH #308 (payment recovery) → fix GH #292/#293 (plan-name dicts) → exit moratorium via moratorium-sprint on remaining S-effort items.",
     "escalate": true
   },
