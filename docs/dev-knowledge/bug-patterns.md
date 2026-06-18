@@ -18071,3 +18071,15 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** .claude/skills/startup-playbook/SKILL.md,.github/workflows/agent-config-security.yml
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Fix em-dash in Tidio FAQ copy (project invariant)
+
+check_project_invariants bans literal em-dash bytes in website source.
+The rewritten FAQ answer used a real em dash; replaced with a period.
+**Date:** 2026-06-18
+**Commit:** 8af5e94
+**Author:** Claude
+**Files Changed:** frontend/src/pages/TidioAlternative.jsx
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
