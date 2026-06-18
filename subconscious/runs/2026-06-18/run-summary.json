@@ -1,0 +1,27 @@
+{
+  "run": 60,
+  "date": "2026-06-18",
+  "total_runs": 60,
+  "evidence_summary": "16 commits since run 59. Plan repricing (chatbot $19.99 / agent_os $99.99, 2026-06-15) left 4 files with stale plan-name dicts. Confirmed bugs: sms_rate_limiter.py:10 (_UNLIMITED_PLANS missing agent_os → 50 SMS/day cap on paid tier), api_key_auth.py:29 (_ALLOWED_PLANS missing chatbot/agent_os → Zapier broken for all new paid tenants), billing_reconciliation.py:33-49 (old plan names only), orchestrator.py:238/319 (branded email gated to professional/enterprise not agent_os). GH #308 still open (idempotency.py no delete method). check_project_invariants passes 6 checks (no plan-name guard yet). email_sequences.py 1143L (run 41, day 29+).",
+  "ideas_count": 5,
+  "winner": "Fix plan-name access dicts — sms_rate_limiter.py + api_key_auth.py (GH #292/#293 scope)",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "autonomous_executable": false,
+  "moratorium_override": true,
+  "moratorium_override_reason": "Broken core features (SMS, Zapier) for 100% of new paid tenants — direct churn risk",
+  "rejected": [],
+  "weakened": [
+    "Idea 2 GH #308 idempotency — WEAKENED: nightly has sketch, lower breadth, demoted to standing action",
+    "Idea 3 Check 7 invariant guard — WEAKENED: correct but wrong sequence, promoted to Bonus B"
+  ],
+  "bonus_a": "Fix billing_reconciliation.py + orchestrator.py (complete GH #292/#293 — requires product decision on cap values)",
+  "bonus_b": "Add Check 7 to check_project_invariants.py — scan for chatbot/agent_os in plan-name dicts (AUTONOMOUS-EXECUTABLE after Bonus A)",
+  "governance_corrections": [
+    "run 59 winner (GH #308) status unchanged: pending_approval with nightly_review_path. Not superseded — parallel standing action.",
+    "runs_implemented stays at 19 (no new implementations confirmed this cycle)"
+  ],
+  "moratorium_active": true,
+  "true_pending_approvals": 9,
+  "key_finding": "Plan repricing 3 days ago left sms_rate_limiter.py and api_key_auth.py with stale plan-name sets. New chatbot/agent_os tenants get FREE-tier SMS cap and zero Zapier access. Confirmed by direct grep on live files. check_project_invariants has no guard for this class of bug — Bonus B adds it after the fix."
+}
