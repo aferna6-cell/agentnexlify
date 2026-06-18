@@ -53,6 +53,10 @@ def _make_html_response(html: str, status_code: int = 200) -> MagicMock:
     mock.status_code = status_code
     mock.text = html
     mock.raise_for_status.return_value = None
+    # _fetch_page now follows redirects manually; a non-redirect response must
+    # report is_redirect=False so the fetch loop returns the body.
+    mock.is_redirect = False
+    mock.next_request = None
     return mock
 
 

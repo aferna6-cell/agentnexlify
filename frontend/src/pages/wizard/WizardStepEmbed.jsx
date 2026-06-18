@@ -96,7 +96,7 @@ export default function WizardStepEmbed({ wizardData, token, tenantId }) {
         </div>
         <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.85rem", marginTop: 0, marginBottom: 16 }}>
           One line of code puts the chat widget on your site so it captures leads 24/7.
-          You can also do this later from the dashboard.
+          We email you the moment it captures a lead. You can also add it later from the dashboard.
         </p>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>

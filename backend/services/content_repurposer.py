@@ -18,6 +18,10 @@ from backend.services.url_validation import is_safe_url
 
 logger = logging.getLogger(__name__)
 
+# Cap redirect hops when fetching a user-supplied URL; each hop is re-validated
+# for SSRF (see extract_source).
+_MAX_REDIRECTS = 5
+
 
 def _strip_json_fences(raw_text: str) -> str:
     cleaned = raw_text.strip()
@@ -152,10 +156,28 @@ async def extract_source(source_type: str, source_input: str) -> dict:
             source_input = f"https://{source_input}"
         if not is_safe_url(source_input):
             raise ValueError("Invalid or unsafe URL. Please provide a public website URL.")
-        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-            resp = await client.get(source_input, headers={"User-Agent": "AgentNexLiFy/1.0"})
-            resp.raise_for_status()
-            html = resp.text
+        # Follow redirects manually and re-validate every hop: a safe initial
+        # host can 302 to an internal/metadata address, which would bypass the
+        # single up-front is_safe_url check above.
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=False) as client:
+            current_url = source_input
+            html = None
+            for _ in range(_MAX_REDIRECTS + 1):
+                resp = await client.get(
+                    current_url, headers={"User-Agent": "AgentNexLiFy/1.0"}
+                )
+                if resp.is_redirect and resp.next_request is not None:
+                    current_url = str(resp.next_request.url)
+                    if not is_safe_url(current_url):
+                        raise ValueError(
+                            "Invalid or unsafe URL. Please provide a public website URL."
+                        )
+                    continue
+                resp.raise_for_status()
+                html = resp.text
+                break
+            if html is None:
+                raise ValueError("Too many redirects while fetching the URL.")
         title = _extract_title(html)
         content = _strip_html(html)
         # Cap at 50K characters

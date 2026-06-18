@@ -53,6 +53,35 @@ async def test_extract_source_url_validates():
 
 
 @pytest.mark.asyncio
+async def test_extract_source_url_blocks_redirect_to_internal():
+    """A safe initial URL that 302s to an internal address is rejected.
+
+    Guards against SSRF via redirect: the up-front is_safe_url check passes,
+    but the redirect hop must be re-validated.
+    """
+    redirect_resp = MagicMock()
+    redirect_resp.is_redirect = True
+    redirect_resp.next_request = MagicMock()
+    redirect_resp.next_request.url = "http://169.254.169.254/latest/meta-data/"
+
+    mock_client = MagicMock()
+    mock_client.get = AsyncMock(return_value=redirect_resp)
+    acm = MagicMock()
+    acm.__aenter__ = AsyncMock(return_value=mock_client)
+    acm.__aexit__ = AsyncMock(return_value=False)
+
+    # Initial host is "safe", the metadata redirect target is not.
+    def fake_is_safe(url):
+        return "169.254" not in url
+
+    with patch("backend.services.content_repurposer.httpx.AsyncClient", return_value=acm), patch(
+        "backend.services.content_repurposer.is_safe_url", side_effect=fake_is_safe
+    ):
+        with pytest.raises(ValueError, match="unsafe URL"):
+            await extract_source("url", "https://safe.example.com/post")
+
+
+@pytest.mark.asyncio
 async def test_extract_source_youtube():
     """YouTube extraction mocks the transcript API and joins text entries."""
 

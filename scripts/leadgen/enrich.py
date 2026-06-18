@@ -54,23 +54,35 @@ def _is_junk_email(email: str) -> bool:
     return False
 
 
+_MAX_REDIRECTS = 5
+
+
 def _fetch_page(url: str, timeout: float) -> str:
     """Fetch a single URL and return its text body. Returns '' on error.
 
     SSRF guard: a scraped prospect URL (or a future server caller) must not be
-    able to point this at internal/metadata addresses.
+    able to point this at internal/metadata addresses. Redirects are followed
+    manually and re-validated each hop, since a safe host can 302 to an
+    internal one.
     """
-    if not is_safe_url(url):
-        logger.debug("skipping unsafe url: %s", url)
-        return ""
     try:
-        response = httpx.get(
-            url,
-            headers={"User-Agent": _USER_AGENT},
-            timeout=timeout,
-            follow_redirects=True,
-        )
-        return response.text
+        current = url
+        for _ in range(_MAX_REDIRECTS + 1):
+            if not is_safe_url(current):
+                logger.debug("skipping unsafe url: %s", current)
+                return ""
+            response = httpx.get(
+                current,
+                headers={"User-Agent": _USER_AGENT},
+                timeout=timeout,
+                follow_redirects=False,
+            )
+            if response.is_redirect and response.next_request is not None:
+                current = str(response.next_request.url)
+                continue
+            return response.text
+        logger.debug("too many redirects for %s", url)
+        return ""
     except Exception as exc:
         logger.debug("fetch error for %s: %s", url, exc)
         return ""
