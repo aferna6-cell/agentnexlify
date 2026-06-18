@@ -12,6 +12,8 @@ from urllib.parse import urljoin, urlparse
 
 import httpx
 
+from backend.services.url_validation import is_safe_url
+
 logger = logging.getLogger(__name__)
 
 _EMAIL_REGEX = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
@@ -53,7 +55,14 @@ def _is_junk_email(email: str) -> bool:
 
 
 def _fetch_page(url: str, timeout: float) -> str:
-    """Fetch a single URL and return its text body. Returns '' on error."""
+    """Fetch a single URL and return its text body. Returns '' on error.
+
+    SSRF guard: a scraped prospect URL (or a future server caller) must not be
+    able to point this at internal/metadata addresses.
+    """
+    if not is_safe_url(url):
+        logger.debug("skipping unsafe url: %s", url)
+        return ""
     try:
         response = httpx.get(
             url,

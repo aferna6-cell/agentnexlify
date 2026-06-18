@@ -5,17 +5,16 @@ repurposes it into multiple platform-specific formats via Claude, and optionally
 connects the outputs to existing social_posts and email_sequences tables.
 """
 
-import ipaddress
 import json
 import logging
 import re
-from urllib.parse import urlparse
 
 import httpx
 from youtube_transcript_api import YouTubeTranscriptApi
 
 from backend.models.database import get_service_supabase
 from backend.services.llm_runtime import call_claude_messages
+from backend.services.url_validation import is_safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -100,25 +99,6 @@ PLATFORM_LIMITS = {
 ALL_FORMATS = {"x_thread", "linkedin_carousel", "email_sequence", "tiktok_scripts", "social_posts"}
 
 
-def _is_safe_url(url: str) -> bool:
-    """Block internal/private URLs to prevent SSRF."""
-    parsed = urlparse(url)
-    if parsed.scheme not in ("http", "https"):
-        return False
-    hostname = parsed.hostname or ""
-    if hostname in ("localhost", "127.0.0.1", "0.0.0.0", "::1", ""):
-        return False
-    try:
-        ip = ipaddress.ip_address(hostname)
-        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
-            return False
-    except ValueError:
-        pass  # hostname is a domain name, not an IP — that's fine
-    if hostname.endswith((".local", ".internal", ".lan")):
-        return False
-    return True
-
-
 def _strip_html(text: str) -> str:
     """Remove HTML tags and collapse whitespace."""
     # Remove script, style, nav, header, footer blocks entirely
@@ -170,7 +150,7 @@ async def extract_source(source_type: str, source_input: str) -> dict:
     if source_type == "url":
         if not source_input.startswith(("http://", "https://")):
             source_input = f"https://{source_input}"
-        if not _is_safe_url(source_input):
+        if not is_safe_url(source_input):
             raise ValueError("Invalid or unsafe URL. Please provide a public website URL.")
         async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
             resp = await client.get(source_input, headers={"User-Agent": "AgentNexLiFy/1.0"})

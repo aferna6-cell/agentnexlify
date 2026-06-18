@@ -24,6 +24,16 @@ from scripts.leadgen.enrich import best_email, extract_emails_from_site
 from scripts.leadgen.places import is_usable, place_fields, search_text
 
 
+@pytest.fixture(autouse=True)
+def _allow_urls_offline():
+    # _fetch_page now runs an SSRF guard (is_safe_url) that resolves DNS via the
+    # network. These tests cover email-extraction logic and must stay fully
+    # offline, so stub the guard to allow. SSRF guard behavior itself is covered
+    # in backend/tests/test_url_safety.py.
+    with patch("scripts.leadgen.enrich.is_safe_url", return_value=True):
+        yield
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

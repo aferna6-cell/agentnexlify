@@ -29,6 +29,18 @@ _BLOCKED_TLDS = (
 )
 
 
+def _ip_is_blocked(ip: ipaddress._BaseAddress) -> bool:
+    """True for any address that must not be reachable from an outbound fetch."""
+    return (
+        ip.is_private
+        or ip.is_loopback
+        or ip.is_link_local  # 169.254.0.0/16 — cloud metadata lives here
+        or ip.is_reserved
+        or ip.is_multicast
+        or ip.is_unspecified
+    )
+
+
 def is_safe_url(url: str) -> bool:
     """Return True if ``url`` is safe for outbound HTTP from a backend service.
 
@@ -56,24 +68,25 @@ def is_safe_url(url: str) -> bool:
 
     # Direct IP literals: check without DNS.
     try:
-        ip = ipaddress.ip_address(hostname)
-        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
-            return False
-        return True
+        return not _ip_is_blocked(ipaddress.ip_address(hostname))
     except ValueError:
         pass  # hostname is a domain — resolve it below
 
     try:
         resolved = socket.getaddrinfo(hostname, None)
-    except socket.gaierror:
+    except (socket.gaierror, UnicodeError, OSError):
+        return False
+
+    if not resolved:
         return False
 
     for _family, _type, _proto, _canonname, sockaddr in resolved:
         try:
-            ip = ipaddress.ip_address(sockaddr[0])
+            # Strip IPv6 scope id (e.g. fe80::1%eth0) before parsing.
+            ip = ipaddress.ip_address(sockaddr[0].split("%")[0])
         except (ValueError, IndexError):
             return False
-        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+        if _ip_is_blocked(ip):
             return False
 
     return True
