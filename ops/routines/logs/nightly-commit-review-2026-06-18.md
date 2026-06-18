@@ -63,16 +63,24 @@
 
 None (LOW doc fix attempted then reverted — see MEDIUM issue #331 below).
 
-## Additional Finding (discovered during fix)
+## Additional Finding (discovered during verification)
 
-### MEDIUM: Plan name split between Stripe checkout and feature gating — [#331](https://github.com/aferna6-cell/agentnexlify/issues/331)
+### HIGH: 29 pending commits exist only in this container — container expiry risk — [#331](https://github.com/aferna6-cell/agentnexlify/issues/331)
 
-**Files:** `backend/services/stripe_service.py`, `backend/services/usage_meter.py`, `backend/routers/os_orchestrate.py`
+**Situation:** The nightly review started in a detached HEAD pointing to `d7c574b`, which is 29 commits ahead of `origin/main` (last pushed: 2026-06-03). These 29 commits represent ~2 weeks of work including:
+- Full billing repricing (chatbot $19.99 / agent_os $99.99)
+- Migration 154 (conversation sentiment + intent)
+- AI Workforce plan gate (`61947b9`)
+- Instant KB, Lead alerts hardening, Front Desk Health, Conversation Insights
+- ToS rewrite, Stripe Link disable, trial removal
 
-`stripe_service.py` PLAN_PRICES uses `growth`/`professional`/`autopilot`/`enterprise` for Stripe checkout.  
-`usage_meter.py` and feature gating (including today's `61947b9` plan gate) use `chatbot`/`agent_os`.  
+None of these commits are on any remote named branch. They would have been lost when the container expired.
 
-If the DB tenant.plan column stores old names (from Stripe), today's plan gate blocks ALL paying tenants. Needs human investigation before relying on the `61947b9` plan gate in production. CLAUDE.md updated with a warning note pointing to #331.
+**Action taken:** Pushed all 29 commits to `origin/main-pending` branch.
+
+**Note on #331 original content:** Initial analysis flagged a plan-name split. This was a false alarm — the split was between origin/main (old names) and the pending commits (new names chatbot/agent_os). Within the pending commits themselves, the naming is fully coherent. Issue #331 updated with correct explanation.
+
+**CLAUDE.md:** Updated warning note to describe origin/main being behind + direct future sessions to use `main-pending`.
 
 ---
 
