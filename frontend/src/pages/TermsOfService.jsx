@@ -108,12 +108,13 @@ export default function TermsOfService() {
           <h2>4. Payment Terms</h2>
           <ul>
             <li>
-              <strong>Free plan:</strong> Available at no cost with usage
-              limits. No credit card required.
+              <strong>Plans:</strong> AgentNexLiFy offers two paid plans, AI
+              Front Desk ($19.99/month) and AI Workforce ($99.99/month). A valid
+              payment method is required and your first charge occurs at signup.
             </li>
             <li>
-              <strong>Paid plans:</strong> Billed monthly via Stripe. Your
-              subscription auto-renews each billing cycle unless you cancel.
+              <strong>Billing:</strong> Plans are billed monthly via Stripe and
+              auto-renew each billing cycle unless you cancel. No setup fees.
             </li>
             <li>
               <strong>Cancellation:</strong> You can cancel anytime from your
@@ -139,9 +140,9 @@ export default function TermsOfService() {
               constitutes acceptance.
             </li>
             <li>
-              <strong>Failed payments:</strong> If a payment fails, we may
-              downgrade your account to the free plan after a 7-day grace
-              period.
+              <strong>Failed payments:</strong> If a payment fails, we retry for
+              a short grace period. If it continues to fail, your subscription
+              may be canceled and access to paid features suspended.
             </li>
           </ul>
         </section>

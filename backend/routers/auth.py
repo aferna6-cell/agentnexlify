@@ -233,20 +233,26 @@ async def _run_signup_side_effects(
     try:
         await send_email(
             to=email,
-            subject="Welcome to AgentNexLiFy!",
+            subject="Welcome to AgentNexLiFy - your account is ready",
             body_html=(
                 f"<h2>Welcome to AgentNexLiFy, {owner_name or 'there'}!</h2>"
+                "<p>Your AgentNexLiFy account is live. AgentNexLiFy is the AI "
+                "workforce for your business: it answers your customers, captures "
+                "leads, books appointments, and follows up automatically, so you "
+                "never miss a lead even after hours.</p>"
                 "<p>Your AI staff is ready. Ask them to send invoices, follow up "
                 "with leads, draft posts, and book appointments, just by typing.</p>"
                 "<p><strong>Try this first:</strong></p>"
                 "<ol>"
-                "<li>Open the Agent OS and say hi to your AI staff</li>"
+                "<li>Open your AgentNexLiFy dashboard and say hi to your AI staff</li>"
                 "<li>Ask: &quot;What can you do for my business?&quot;</li>"
                 "<li>Optional: add the chat widget to your website to capture leads 24/7</li>"
                 "</ol>"
                 f"<p><a href='{settings.frontend_url}/dashboard/agent-os' style='background:#6366f1;color:#fff;"
                 "padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:600;'>"
-                "Meet your AI staff &rarr;</a></p>"
+                "Open my AgentNexLiFy dashboard &rarr;</a></p>"
+                "<p>Charges for your subscription appear on your statement as "
+                "AGENT NEXLIFY.</p>"
                 "<p>The AgentNexLiFy Team</p>"
             ),
             tenant_id=tenant_id,
