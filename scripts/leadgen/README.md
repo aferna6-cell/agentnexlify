@@ -1,28 +1,42 @@
 # AgentNexLiFy Lead-Gen CLI
 
-Internal outreach tool. Pulls local businesses from Google Places, enriches
-each with a scraped email address, deduplicates, and writes a CSV ready to
-import into Instantly, Apollo, or similar cold-email platforms.
+Internal outreach tool. Pulls local businesses from Google Places **or**
+OpenStreetMap (keyless), enriches each with a scraped email address,
+deduplicates, and writes a CSV ready to import into Instantly, Apollo, or
+similar cold-email platforms.
 
 ## Quick Start
 
 ```bash
-export GOOGLE_PLACES_API_KEY="your_api_key_here"
+# Keyless — uses OpenStreetMap, no API key needed:
+python -m scripts.leadgen.build_leads --vertical "roofing" --city "Austin, TX" --out leads.csv
 
-python -m scripts.leadgen.build_leads \
-  --vertical "roofing" \
-  --city "Austin, TX" \
-  --out leads.csv \
-  --max 200
+# Google Places (richer coverage) — set a key first:
+export GOOGLE_PLACES_API_KEY="your_api_key_here"
+python -m scripts.leadgen.build_leads --vertical "roofing" --city "Austin, TX" --out leads.csv --max 200
 ```
 
 Output columns: `name, category, phone, website, email, address, city, rating, place_id, demo_url`
 
-## Required Environment Variable
+## Sources
+
+`--source auto` (default) uses **Google Places** when `GOOGLE_PLACES_API_KEY`
+is set, otherwise the free **OpenStreetMap** (Overpass) source. Force one with
+`--source google` or `--source osm`.
+
+| Source | Key | Cost | Coverage |
+|--------|-----|------|----------|
+| `google` | required | ~$32/1k searches | broadest SMB coverage |
+| `osm` | none | free (ODbL) | strong for trades (`craft=roofer/plumber/electrician`) + retail; patchier for some service verticals |
+
+OSM resolves the city to an area via Nominatim, then queries Overpass for the
+vertical's tags. Unknown verticals fall back to a `craft`/`shop`/`office` guess.
+
+## Environment Variables
 
 | Variable | Description |
 |----------|-------------|
-| `GOOGLE_PLACES_API_KEY` | Google Places API key (Maps Platform). Required. |
+| `GOOGLE_PLACES_API_KEY` | Google Places API key. Required only for `--source google` (or `auto` when you want Google). OSM needs nothing. |
 
 Optional:
 
@@ -38,6 +52,7 @@ Optional:
 --out TEXT        Output CSV file path. Default: leads.csv
 --max INT         Max leads to pull. Default: 200
 --api-key TEXT    API key override (falls back to GOOGLE_PLACES_API_KEY).
+--source TEXT     auto (default) | google | osm. See Sources above.
 ```
 
 ## Google Places API Notes

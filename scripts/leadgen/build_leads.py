@@ -25,6 +25,7 @@ from typing import Optional
 from urllib.parse import quote
 
 from scripts.leadgen.enrich import best_email, extract_emails_from_site
+from scripts.leadgen.osm import search_osm
 from scripts.leadgen.places import is_usable, search_text
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -56,22 +57,35 @@ def run(args: argparse.Namespace) -> int:
     Orchestrate lead generation.
 
     Returns the number of leads written to CSV.
-    Exits via sys.exit(2) if the API key is missing.
+    Exits via sys.exit(2) if the Google source is selected without an API key.
     """
     api_key: Optional[str] = args.api_key or os.environ.get("GOOGLE_PLACES_API_KEY")
-    if not api_key:
-        print(
-            "ERROR: Google Places API key required.\n"
-            "  Set GOOGLE_PLACES_API_KEY environment variable or pass --api-key.",
-            file=sys.stderr,
-        )
-        sys.exit(2)
+
+    # Source selection: 'auto' uses Google when a key is present, else the free
+    # keyless OpenStreetMap source. 'google'/'osm' force one explicitly.
+    source = args.source
+    if source == "auto":
+        source = "google" if api_key else "osm"
 
     demo_template = os.environ.get("DEMO_URL_TEMPLATE", _DEFAULT_DEMO_TEMPLATE)
-    query = f"{args.vertical} in {args.city}"
 
-    logger.info("Searching: %s (max %d results)", query, args.max)
-    places = search_text(query, api_key, max_results=args.max)
+    if source == "google":
+        if not api_key:
+            print(
+                "ERROR: --source google needs a key.\n"
+                "  Set GOOGLE_PLACES_API_KEY / pass --api-key, or use --source osm.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        query = f"{args.vertical} in {args.city}"
+        logger.info("Searching Google Places: %s (max %d results)", query, args.max)
+        places = search_text(query, api_key, max_results=args.max)
+    else:  # osm
+        logger.info(
+            "Searching OpenStreetMap: %s in %s (max %d results)",
+            args.vertical, args.city, args.max,
+        )
+        places = search_osm(args.vertical, args.city, max_results=args.max)
 
     usable = [p for p in places if is_usable(p)]
     logger.info("Found %d places, %d operational with website", len(places), len(usable))
@@ -178,6 +192,15 @@ def main() -> None:
         help=(
             "Google Places API key. "
             "Defaults to GOOGLE_PLACES_API_KEY environment variable."
+        ),
+    )
+    parser.add_argument(
+        "--source",
+        choices=["auto", "google", "osm"],
+        default="auto",
+        help=(
+            "Lead source. 'auto' (default): Google if a key is present, else "
+            "the free keyless OpenStreetMap source. 'google'/'osm' force one."
         ),
     )
     args = parser.parse_args()

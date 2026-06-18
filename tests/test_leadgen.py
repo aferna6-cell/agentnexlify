@@ -304,6 +304,7 @@ class TestBuildLeadsRun:
             out=str(tmp_path / "leads.csv"),
             max=max_results,
             api_key="fake_key_xyz",
+            source="auto",  # api_key present -> resolves to google (existing behavior)
         )
         return ns
 
@@ -443,7 +444,10 @@ class TestBuildLeadsRun:
         assert "2 with email" in captured.out
         assert count == 3
 
-    def test_missing_api_key_exits(self, tmp_path, monkeypatch):
+    def test_missing_api_key_exits_when_google_forced(self, tmp_path, monkeypatch):
+        # Contract changed (2026-06-18, OSM source added): a missing key only
+        # exits when Google is explicitly forced. `--source auto` falls back to
+        # the keyless OSM source instead (covered separately below).
         from scripts.leadgen.build_leads import run
 
         monkeypatch.delenv("GOOGLE_PLACES_API_KEY", raising=False)
@@ -453,9 +457,28 @@ class TestBuildLeadsRun:
             out=str(tmp_path / "leads.csv"),
             max=10,
             api_key=None,
+            source="google",
         )
 
         with pytest.raises(SystemExit) as exc_info:
             run(args)
 
         assert exc_info.value.code == 2
+
+    def test_auto_without_key_falls_back_to_osm(self, tmp_path, monkeypatch):
+        from scripts.leadgen.build_leads import run
+
+        monkeypatch.delenv("GOOGLE_PLACES_API_KEY", raising=False)
+        args = argparse.Namespace(
+            vertical="roofing",
+            city="Austin, TX",
+            out=str(tmp_path / "leads.csv"),
+            max=10,
+            api_key=None,
+            source="auto",
+        )
+        # No key -> auto picks OSM. Stub the OSM source so the run stays offline.
+        with patch("scripts.leadgen.build_leads.search_osm", return_value=[]) as mock_osm:
+            count = run(args)
+        mock_osm.assert_called_once()
+        assert count == 0
