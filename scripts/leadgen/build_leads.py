@@ -11,8 +11,9 @@ Usage:
 
 Environment:
     GOOGLE_PLACES_API_KEY  - Google Places API key (required if --api-key not set)
-    DEMO_URL_TEMPLATE      - URL template with {place_id} placeholder
-                             (default: https://agentnexlify.com/demo?ref={place_id})
+    DEMO_URL_TEMPLATE      - URL template; placeholders {business} {vertical}
+                             {place_id} are URL-encoded before substitution.
+                             (default points at the personalized demo page)
 """
 
 import argparse
@@ -21,6 +22,7 @@ import logging
 import os
 import sys
 from typing import Optional
+from urllib.parse import quote
 
 from scripts.leadgen.enrich import best_email, extract_emails_from_site
 from scripts.leadgen.places import is_usable, search_text
@@ -41,7 +43,12 @@ CSV_HEADER = [
     "demo_url",
 ]
 
-_DEFAULT_DEMO_TEMPLATE = "https://agentnexlify.com/demo?ref={place_id}"
+# Personalized demo page: business + vertical pre-fill the landing page so the
+# prospect sees a demo framed for their business; ref carries attribution.
+# Template values are URL-encoded before formatting.
+_DEFAULT_DEMO_TEMPLATE = (
+    "https://agentnexlify.com/demo?business={business}&type={vertical}&ref={place_id}"
+)
 
 
 def run(args: argparse.Namespace) -> int:
@@ -90,11 +97,16 @@ def run(args: argparse.Namespace) -> int:
             email_count += 1
 
         place_id = place.get("place_id", "")
+        fmt = {
+            "place_id": quote(str(place_id), safe=""),
+            "business": quote(str(place.get("name", "")), safe=""),
+            "vertical": quote(str(args.vertical), safe=""),
+        }
         try:
-            demo_url = demo_template.format(place_id=place_id)
+            demo_url = demo_template.format(**fmt)
         except (KeyError, ValueError) as exc:
             logger.warning("demo_url_template format error: %s", exc)
-            demo_url = _DEFAULT_DEMO_TEMPLATE.format(place_id=place_id)
+            demo_url = _DEFAULT_DEMO_TEMPLATE.format(**fmt)
 
         rows.append({
             "name": place.get("name", ""),

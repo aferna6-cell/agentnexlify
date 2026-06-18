@@ -28,7 +28,7 @@ Optional:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DEMO_URL_TEMPLATE` | URL template for the demo column. Use `{place_id}` as a placeholder. | `https://agentnexlify.com/demo?ref={place_id}` |
+| `DEMO_URL_TEMPLATE` | URL template for the demo column. Placeholders `{business}`, `{vertical}`, `{place_id}` are URL-encoded before substitution. | `https://agentnexlify.com/demo?business={business}&type={vertical}&ref={place_id}` |
 
 ## Arguments
 

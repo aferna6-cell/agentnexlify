@@ -1,7 +1,41 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { trackEvent } from "../utils/analytics";
 import "../styles/home.css";
+
+/* ----- URL param helpers ----- */
+
+function sanitizeParam(raw, maxLen) {
+  if (!raw) return "";
+  return raw.trim().slice(0, maxLen);
+}
+
+/**
+ * Map a vertical/type string to the most relevant demo tab key.
+ * Falls back to "workforce" (the existing default) for unknown types.
+ */
+function typeToDefaultTab(type) {
+  if (!type) return "workforce";
+  const t = type.toLowerCase();
+  const frontDeskKeywords = [
+    "frontdesk", "front desk", "front-desk", "receptionist",
+    "dental", "dentist", "insurance", "salon", "spa",
+    "medical", "clinic", "chiropractor", "veterinary", "vet",
+    "optometry", "therapist",
+  ];
+  if (frontDeskKeywords.some((kw) => t.includes(kw))) return "frontdesk";
+  if (t.includes("lead") || t.includes("roofing") || t.includes("contractor") ||
+      t.includes("hvac") || t.includes("plumber") || t.includes("plumbing") ||
+      t.includes("landscap") || t.includes("remodel"))
+    return "leads";
+  if (t.includes("automat") || t.includes("follow") || t.includes("marketing"))
+    return "automations";
+  if (t.includes("calendar") || t.includes("booking") || t.includes("schedule") ||
+      t.includes("appoint"))
+    return "calendar";
+  return "workforce";
+}
 
 /*
  * /demo - hands-on interactive product sample.
@@ -435,14 +469,62 @@ function ActivePanel({ tab }) {
 }
 
 export default function DemoExperience() {
-  const [active, setActive] = useState("workforce");
+  const [searchParams] = useSearchParams();
+
+  // Read + sanitize attribution params. Treat missing/empty as no personalization.
+  const business = sanitizeParam(searchParams.get("business"), 80);
+  const type = sanitizeParam(searchParams.get("type"), 40);
+  const ref = sanitizeParam(searchParams.get("ref"), 200);
+
+  const defaultTab = typeToDefaultTab(type);
+  const [active, setActive] = useState(defaultTab);
   const activeLabel =
     demoTabs.find((t) => t.key === active)?.label || "AI Workforce";
+
+  // Build signup URL carrying attribution forward.
+  // SignupPage already reads ?ref (line 38), ?plan (line 29), ?from (line 39),
+  // and ?vertical (line 42), so these just work on the receiving side.
+  const signupParams = new URLSearchParams();
+  signupParams.set("plan", "chatbot");
+  signupParams.set("from", "demo");
+  if (ref) signupParams.set("ref", ref);
+  if (type) signupParams.set("vertical", type);
+  const signupTo = `/signup?${signupParams.toString()}`;
+
+  // Fire demo_view on mount with whatever attribution we have.
+  useEffect(() => {
+    const payload = {};
+    if (business) payload.business = business;
+    if (type) payload.vertical = type;
+    if (ref) payload.ref = ref;
+    trackEvent("demo_view", payload);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleCtaClick() {
+    const payload = {};
+    if (business) payload.business = business;
+    if (type) payload.vertical = type;
+    if (ref) payload.ref = ref;
+    trackEvent("demo_cta_click", payload);
+  }
+
+  // Personalized hero copy. ASCII-only, no em dashes.
+  const heroH1 = business
+    ? `See what AgentNexLiFy looks like for ${business}.`
+    : "Try the product yourself.";
+  const heroSub = business
+    ? "Your AI front desk, answering customers and booking jobs 24/7."
+    : "Click between the surfaces below. Chat with the AI Front Desk, give the AI manager a task, sort your leads, and browse the calendar. Nothing to install, no sign-up.";
 
   return (
     <div className="landing-page de-page">
       <Helmet>
-        <title>Interactive Demo | AgentNexLiFy</title>
+        <title>
+          {business
+            ? `AgentNexLiFy for ${business} | Interactive Demo`
+            : "Interactive Demo | AgentNexLiFy"}
+        </title>
         <meta
           name="description"
           content="Try AgentNexLiFy hands-on. Drive the AI Workforce, chat with the AI Front Desk, browse leads, automations, and the calendar. No sign-up needed."
@@ -461,7 +543,7 @@ export default function DemoExperience() {
             <a href="/" className="lp-nav-login">
               <span>Back to home</span>
             </a>
-            <Link to="/signup" className="lp-nav-cta">
+            <Link to={signupTo} className="lp-nav-cta" onClick={handleCtaClick}>
               Get Started
             </Link>
           </div>
@@ -472,12 +554,8 @@ export default function DemoExperience() {
         <div className="container">
           <div className="de-hero-inner">
             <div className="section-label">Interactive Demo</div>
-            <h1 className="section-title">Try the product yourself.</h1>
-            <p className="section-subtitle de-hero-sub">
-              Click between the surfaces below. Chat with the AI Front Desk,
-              give the AI manager a task, sort your leads, and browse the
-              calendar. Nothing to install, no sign-up.
-            </p>
+            <h1 className="section-title">{heroH1}</h1>
+            <p className="section-subtitle de-hero-sub">{heroSub}</p>
           </div>
         </div>
       </section>
@@ -526,7 +604,7 @@ export default function DemoExperience() {
               connect your own widget, leads, and calendar in minutes.
             </p>
             <div className="de-cta-actions">
-              <Link to="/signup" className="lp-btn-primary">
+              <Link to={signupTo} className="lp-btn-primary" onClick={handleCtaClick}>
                 Get Started {"->"}
               </Link>
               <Link to="/contact" className="lp-btn-secondary">
