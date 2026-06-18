@@ -27,6 +27,7 @@ import FirstRunStarters from "../components/os/FirstRunStarters";
 import OsInsightsCard from "../components/os/OsInsightsCard";
 import ComposerAttachments from "../components/os/ComposerAttachments";
 import UsageUpgradeNudge from "../components/UsageUpgradeNudge";
+import UpgradePrompt from "../components/UpgradePrompt";
 import useIsMobile from "../hooks/useIsMobile";
 
 const POLL_MS = 3000;
@@ -90,6 +91,9 @@ export default function AgentOS({ onNavigate }) {
   const [error, setError] = useState(null);
   const [panelRunId, setPanelRunId] = useState(null);
   const [showMemory, setShowMemory] = useState(false);
+  // Shown when orchestrate returns 402 (AI Front Desk tenant hitting the
+  // AI Workforce) - a clean upgrade prompt instead of a raw error string.
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   const scrollRef = useRef(null);
   const composerRef = useRef(null);
@@ -239,7 +243,10 @@ export default function AgentOS({ onNavigate }) {
       setComposer("");
       refreshUsage();
     } catch (err) {
-      if (err.status === 429) {
+      if (err.status === 402) {
+        // AI Front Desk plan hitting the AI Workforce - show the upgrade modal.
+        setShowUpgrade(true);
+      } else if (err.status === 429) {
         setError("Monthly agent-run cap reached for this billing cycle.");
         refreshUsage();
       } else if (err.status === 503) {
@@ -590,6 +597,14 @@ export default function AgentOS({ onNavigate }) {
         )}
 
         <UsageUpgradeNudge usage={usage} onNavigate={onNavigate} />
+        {showUpgrade && (
+          <UpgradePrompt
+            feature="the AI Workforce"
+            requiredPlan="agent_os"
+            onClose={() => setShowUpgrade(false)}
+            onNavigate={onNavigate}
+          />
+        )}
 
         <div
           ref={scrollRef}
