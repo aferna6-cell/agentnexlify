@@ -61,11 +61,18 @@
 
 ## Fixes Applied
 
-### LOW: CLAUDE.md plan names updated
+None (LOW doc fix attempted then reverted — see MEDIUM issue #331 below).
 
-**File:** `CLAUDE.md` — `### Plan names + prices`
+## Additional Finding (discovered during fix)
 
-CLAUDE.md listed `growth`, `autopilot`, `professional`, `enterprise` as current plan names. The actual codebase uses `chatbot` ($19.99/mo) and `agent_os` ($99.99/mo) since the 2026-06-15 repricing. Stale names in CLAUDE.md would cause future sessions to write wrong plan names in code. Updated to reflect `stripe_service.py` PLAN_PRICES as source of truth.
+### MEDIUM: Plan name split between Stripe checkout and feature gating — [#331](https://github.com/aferna6-cell/agentnexlify/issues/331)
+
+**Files:** `backend/services/stripe_service.py`, `backend/services/usage_meter.py`, `backend/routers/os_orchestrate.py`
+
+`stripe_service.py` PLAN_PRICES uses `growth`/`professional`/`autopilot`/`enterprise` for Stripe checkout.  
+`usage_meter.py` and feature gating (including today's `61947b9` plan gate) use `chatbot`/`agent_os`.  
+
+If the DB tenant.plan column stores old names (from Stripe), today's plan gate blocks ALL paying tenants. Needs human investigation before relying on the `61947b9` plan gate in production. CLAUDE.md updated with a warning note pointing to #331.
 
 ---
 

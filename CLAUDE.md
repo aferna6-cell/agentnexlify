@@ -41,9 +41,10 @@ Dashboard (React/Vite) ─────────→ FastAPI /api/* ───�
 - `_archive/`, `landing-page-v2/`, `public/` — **legacy, do not touch**
 
 ### Plan names + prices
-- `free` (lapsed/no-pay state), `chatbot` ($19.99/mo, AI Front Desk), `agent_os` ($99.99/mo, AI Workforce)
-- Retired names, **never use in new code**: `foundation`, `operations`, `growth`, `autopilot`, `professional`, `enterprise`
-- Source of truth: `backend/services/stripe_service.py` `PLAN_PRICES` dict (repriced 2026-06-15)
+- `free`, `growth` ($99/mo Starter), `autopilot` ($150/mo Growth), `professional` ($250/mo Pro), `enterprise` ($899/mo)
+- Legacy prices (billed on old contracts): growth $199/$249, professional $399/$499, enterprise $799/$899
+- Retired names, **never use**: `foundation`, `operations`
+- ⚠️ Plan name split detected (2026-06-18): `stripe_service.py` PLAN_PRICES uses growth/professional/autopilot/enterprise but `usage_meter.py` and feature-gating use `chatbot`/`agent_os`. See GH #331 for investigation.
 
 ### Agents + skills
 - 57 agents in `.claude/agents/` — backend-dev, frontend-dev, schema-guardian, widget-specialist, devops, opus-advisor, sonnet-executor, vertical-checker, qa-tester, gan-*, + 39 from `everything-claude-code` (per-language reviewers, build resolvers, loop-operator, etc.). Load lazily; don't burn context unless invoked.
