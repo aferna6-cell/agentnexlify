@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     # Distinct from per-tenant owner_email — this is the AgentNexLiFy operator.
     platform_support_email: str = "support@agentnexlify.com"
 
+    # Where new-signup alerts go (founder's inbox). Separate from the support
+    # inbox so signup notifications land where the founder watches them.
+    signup_alert_email: str = "aidanfernandes31@gmail.com"
+
     # Web Push (VAPID) — pending-approval browser notifications. All three
     # optional: push silently no-ops when unset (pending manual Railway env
     # step). vapid_subject is a mailto: or https: URI per RFC 8292.

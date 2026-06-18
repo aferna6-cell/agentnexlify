@@ -262,6 +262,22 @@ async def _run_signup_side_effects(
             "Welcome email failed for new tenant %s", tenant_id, exc_info=True
         )
 
+    # Alert the founder that a new business signed up (best-effort).
+    try:
+        from backend.services.signup_alert import send_signup_alert
+
+        await send_signup_alert(
+            business_name=business_name,
+            owner_name=owner_name,
+            email=email,
+            industry=industry,
+            city=city,
+        )
+    except Exception:
+        logger.warning(
+            "Signup alert failed for new tenant %s", tenant_id, exc_info=True
+        )
+
     if website_url:
         try:
             from backend.services.website_crawler import start_crawl

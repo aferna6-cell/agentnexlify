@@ -37,9 +37,14 @@ async def send_platform_email(
     body_html: str,
     attachments: list[dict[str, Any]] | None = None,
     reply_to: str | None = None,
+    recipient: str | None = None,
 ) -> dict[str, Any]:
-    """Send a transactional email to the platform owner. Never raises."""
-    recipient = settings.platform_support_email
+    """Send a transactional email to the platform owner. Never raises.
+
+    ``recipient`` overrides the default platform support inbox (e.g. signup
+    alerts go to the founder's inbox instead).
+    """
+    recipient = recipient or settings.platform_support_email
     if not recipient:
         logger.warning("platform_mailer: PLATFORM_SUPPORT_EMAIL unset; skipping send")
         return {"success": False, "detail": "platform_support_email not configured"}
