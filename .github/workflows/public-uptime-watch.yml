@@ -2,7 +2,7 @@ name: Public Uptime Watch
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/30 * * * *"  # throttled 2026-06-18 from */5 to conserve Actions minutes (exhausted quota)
   workflow_dispatch: {}
 
 concurrency:

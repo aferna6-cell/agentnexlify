@@ -2,7 +2,7 @@ name: Autopilot Issue Loop
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "0 * * * *"  # throttled 2026-06-18 from */15 to hourly to conserve Actions minutes (exhausted quota)
   workflow_dispatch:
 
 concurrency:

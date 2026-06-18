@@ -13,7 +13,7 @@ name: Railway Error Watch
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "0 * * * *"  # throttled 2026-06-18 from */10 to hourly to conserve Actions minutes (exhausted quota)
   workflow_dispatch: {}
 
 concurrency:
