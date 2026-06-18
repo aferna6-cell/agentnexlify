@@ -90,6 +90,7 @@ export default function BillingPage() {
   const [trialData, setTrialData] = useState(null);
   const [changingPlan, setChangingPlan] = useState(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [showSaveOffer, setShowSaveOffer] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelDetail, setCancelDetail] = useState("");
   const [cancelStatus, setCancelStatus] = useState(null);
@@ -191,7 +192,8 @@ export default function BillingPage() {
 
   const handleCancel = async () => {
     if (!confirmCancel) {
-      setConfirmCancel(true);
+      // Step 1: open the save offer before revealing the cancel form.
+      setShowSaveOffer(true);
       return;
     }
     if (!cancelReason) {
@@ -327,6 +329,56 @@ export default function BillingPage() {
               <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>{" "}
               within 5 business days. Duplicate charges and service-activation
               billing errors are eligible for manual review.
+            </div>
+          )}
+          {showSaveOffer && !confirmCancel && currentPlan !== "free" && (
+            <div style={{
+              marginTop: 12,
+              padding: 14,
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              background: "rgba(99,102,241,0.06)",
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>Before you go</div>
+              {currentPlan === "agent_os" ? (
+                <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: 10 }}>
+                  Keep your AI receptionist for less. Downgrade to AI Front Desk
+                  ($19.99/mo) and your widget keeps answering customers, capturing
+                  leads, and booking appointments 24/7.
+                </p>
+              ) : (
+                <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: 10 }}>
+                  Not getting value yet? We can help you set it up. Email{" "}
+                  <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>{" "}
+                  and we will get your AI working for you.
+                </p>
+              )}
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {currentPlan === "agent_os" && (
+                  <button
+                    className="btn-primary"
+                    style={{ fontSize: "0.8rem" }}
+                    disabled={changingPlan === "chatbot"}
+                    onClick={() => { setShowSaveOffer(false); handleChangePlan("chatbot"); }}
+                  >
+                    {changingPlan === "chatbot" ? "Switching..." : "Downgrade to AI Front Desk"}
+                  </button>
+                )}
+                <button
+                  className="btn-secondary"
+                  style={{ fontSize: "0.8rem" }}
+                  onClick={() => setShowSaveOffer(false)}
+                >
+                  Keep my plan
+                </button>
+                <button
+                  className="btn-danger"
+                  style={{ fontSize: "0.8rem" }}
+                  onClick={() => { setShowSaveOffer(false); setConfirmCancel(true); }}
+                >
+                  Cancel anyway
+                </button>
+              </div>
             </div>
           )}
           {confirmCancel && currentPlan !== "free" && (
