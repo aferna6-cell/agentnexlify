@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "timestamp": "2026-05-26T23:45:05.684Z",
+  "timestamp": "2026-06-18T11:30:49.173Z",
   "score": {
     "grade": "C",
     "numericScore": 60,
@@ -253,22 +253,31 @@
       "fingerprint": "hooks-global-install-1555::scripts/claude-hooks/rtk-rewrite.sh::cargo install"
     },
     {
-      "id": "hooks-logging-disabled-206",
+      "id": "hooks-logging-disabled-256",
       "severity": "high",
       "category": "hooks",
       "title": "Hook disables logging: > /dev/null 2>&1",
       "file": "scripts/claude-hooks/require-tests-for-pr.sh",
       "evidence": "> /dev/null 2>&1",
-      "fingerprint": "hooks-logging-disabled-206::scripts/claude-hooks/require-tests-for-pr.sh::> /dev/null 2>&1"
+      "fingerprint": "hooks-logging-disabled-256::scripts/claude-hooks/require-tests-for-pr.sh::> /dev/null 2>&1"
     },
     {
-      "id": "hooks-logging-disabled-330",
+      "id": "hooks-logging-disabled-388",
       "severity": "high",
       "category": "hooks",
       "title": "Hook disables logging: &>/dev/null",
       "file": "scripts/claude-hooks/require-tests-for-pr.sh",
       "evidence": "&>/dev/null",
-      "fingerprint": "hooks-logging-disabled-330::scripts/claude-hooks/require-tests-for-pr.sh::&>/dev/null"
+      "fingerprint": "hooks-logging-disabled-388::scripts/claude-hooks/require-tests-for-pr.sh::&>/dev/null"
+    },
+    {
+      "id": "hooks-logging-disabled-443",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: &>/dev/null",
+      "file": "scripts/claude-hooks/require-tests-for-pr.sh",
+      "evidence": "&>/dev/null",
+      "fingerprint": "hooks-logging-disabled-443::scripts/claude-hooks/require-tests-for-pr.sh::&>/dev/null"
     },
     {
       "id": "hooks-global-install-1277",
