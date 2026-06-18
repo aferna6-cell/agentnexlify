@@ -1,13 +1,15 @@
 name: PR Validation
 
-# Re-enabled 2026-06-13: the 2026-05-26 GHA infra failure (sub-5s pre-checkout
-# startup failures) has cleared - sibling workflows run with real durations and
-# a full workflow_dispatch run of this file passed green on the branch
-# (run 27474501085). Restores PR-gating for every PR + push to main.
+# Triggers trimmed 2026-06-18: GitHub Actions minute quota was exhausted, so
+# every job failed at runner allocation (~2s, HTTP 404 logs). The push-to-main
+# trigger double-charged minutes on every merge (PR run + push run for the same
+# commit). Dropped `push: branches: [main]` — `pull_request` still gates real
+# PRs and `workflow_dispatch` allows a manual run. Local pre-merge verification
+# now runs via `bash scripts/ci-local.sh`, which mirrors these gates with zero
+# Actions minutes. Re-add the push trigger once minutes are topped up if a
+# belt-and-suspenders main-branch gate is wanted.
 on:
   pull_request:
-  push:
-    branches: [main]
   workflow_dispatch: {}
 
 jobs:
