@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-06-18-pm",
-  "total_runs": 60,
+  "last_run": "2026-06-19",
+  "total_runs": 61,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -25,7 +25,7 @@
       "category": "code_health",
       "moratorium_override": true,
       "moratorium_override_reason": "Payment revenue bug — dunning-lock after card fix = failed payment recovery. Exempt from pending-count constraint.",
-      "note": "Run 59 winner. CONFIRMED unimplemented by run 60 (2026-06-18-pm). idempotency.py:85-93 writes idempotency row BEFORE handler completes. Handler failure → row persists → Stripe retry sees is_new=False → returns 200 without processing → event permanently dropped. Introduced by 47c7f8b (launch hardening, 2026-06-16). Fix: add async delete_key(supabase, key) method to idempotency.py; in stripe_webhooks.py exception handler call await delete_key(db, idempotency_key) before re-raising HTTPException(500). Regression test spec: test must FAIL on HEAD, PASS after fix. Bonus A: fix GH #292/#293 (chatbot/agent_os missing from sms_rate_limiter._UNLIMITED_PLANS + api_key_auth._ALLOWED_PLANS + billing_reconciliation). Bonus B: add plan-name guard check 7 to check_project_invariants.py (AUTONOMOUS-EXECUTABLE after Bonus A). Implementation sketch: subconscious/runs/2026-06-18-pm/winning-concept.md (run 60 — complete sketch). Also: subconscious/runs/2026-06-17-pm/winning-concept.md (run 59 original)."
+      "note": "Run 59 winner. CONFIRMED unimplemented by run 60 (2026-06-18-pm) and run 61 (2026-06-19). delete_key absent from idempotency.py confirmed by direct grep both runs. Nightly 2026-06-19 (6310848) ran with no implementation commit — nightly_review_path=true but autonomous_executable=false by design (medium-risk payment code). idempotency.py:85-93 writes idempotency row BEFORE handler completes. Handler failure → row persists → Stripe retry sees is_new=False → returns 200 without processing → event permanently dropped. Introduced by 47c7f8b (launch hardening, 2026-06-16). Fix: add async delete_key(supabase, key) method to idempotency.py; in stripe_webhooks.py exception handler call await delete_key(db, idempotency_key) before re-raising HTTPException(500). Regression test spec: test must FAIL on HEAD, PASS after fix. Bonus A: fix GH #292/#293 (chatbot/agent_os missing from sms_rate_limiter._UNLIMITED_PLANS + api_key_auth._ALLOWED_PLANS + billing_reconciliation). Bonus B: add plan-name guard check 7 to check_project_invariants.py (AUTONOMOUS-EXECUTABLE after Bonus A). Implementation sketch: subconscious/runs/2026-06-19/winning-concept.md (run 61 — complete sketch). Also: subconscious/runs/2026-06-18-pm/winning-concept.md (run 60), subconscious/runs/2026-06-17-pm/winning-concept.md (run 59 original). RUN 62 MANDATE: if still unimplemented by next run, winner switches to GH #292/#293 (chatbot/agent_os plan-name dicts, 10 min, lower activation energy). 4-consecutive-run threshold per GH #181 governance precedent."
     },
     {
       "title": "Wire check_project_invariants.py into pre-commit as Check 13 (6-line bash, AUTONOMOUS-EXECUTABLE, run 58 winner)",
