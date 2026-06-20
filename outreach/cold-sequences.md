@@ -11,11 +11,23 @@ plain text, one idea per email, one soft CTA, pain-first. No images, no HTML, no
 - Merge fields (Instantly/Smartlead style): `{{first_name}}`, `{{company}}`, `{{city}}`, `{{demo_url}}`.
   `{{demo_url}}` comes from the lead-engine CSV (a per-business demo link).
 - Spacing: Day 1, Day 3, Day 6, Day 10. Stop the sequence on any reply.
-- Every email needs a real physical address + one-line opt-out in the footer (CAN-SPAM).
+## CAN-SPAM compliance (required before sending)
+US cold email is legal only with all three:
+1. **A real physical mailing address** in every email (PO box is fine).
+2. **A working opt-out** in every email.
+3. **Accurate from-name + subject** (already handled by the copy).
 
-Footer (append to every email):
+The footer below is on every email in this doc. **In Instantly, set it once at the
+campaign level** (Settings -> add your address + enable the unsubscribe link) so it
+auto-appends — you don't hand-paste it per send. `{{unsubscribe}}` is Instantly's
+opt-out merge tag; the "reply STOP" line is a courtesy that also works. Replace the
+address placeholder with your real CT mailing address before the first send.
+
+Footer (already appended to every email below):
 ```
-AgentNexLiFy, [physical address]. Not relevant? Reply "stop" and I won't follow up.
+--
+AgentNexLiFy, [your mailing address, City, ST ZIP]
+Not relevant? Reply STOP or unsubscribe: {{unsubscribe}}
 ```
 
 ---
@@ -38,6 +50,10 @@ the lead, and books the estimate - 24/7, even when you're on a roof.
 I built a quick demo on your business so you can see it: {{demo_url}}
 
 Worth a look?
+
+--
+AgentNexLiFy, [your mailing address, City, ST ZIP]
+Not relevant? Reply STOP or unsubscribe: {{unsubscribe}}
 ```
 
 ### Email 2 (Day 3)
@@ -51,6 +67,10 @@ Most contractors miss a third of their calls (jobs, weather, after hours).
 The AI catches those, texts you the lead, and books the estimate while you work.
 
 Demo on {{company}}: {{demo_url}}
+
+--
+AgentNexLiFy, [your mailing address, City, ST ZIP]
+Not relevant? Reply STOP or unsubscribe: {{unsubscribe}}
 ```
 
 ### Email 3 (Day 6)
@@ -64,6 +84,10 @@ next guy. The AI answers, qualifies, and books. You see the lead in the morning.
 $19.99/mo, no setup, cancel anytime. Live in under 10 minutes.
 
 Want me to turn it on for {{company}}?
+
+--
+AgentNexLiFy, [your mailing address, City, ST ZIP]
+Not relevant? Reply STOP or unsubscribe: {{unsubscribe}}
 ```
 
 ### Email 4 (Day 10 - breakup)
@@ -74,6 +98,10 @@ Subject: should I close this out?
 If missed after-hours calls ever become a problem, the demo's here: {{demo_url}}
 
 I'll leave you alone. Good luck with the busy season.
+
+--
+AgentNexLiFy, [your mailing address, City, ST ZIP]
+Not relevant? Reply STOP or unsubscribe: {{unsubscribe}}
 ```
 
 ---
@@ -94,6 +122,10 @@ the lead, and books the service call - around the clock.
 Built you a demo on {{company}}: {{demo_url}}
 
 Take a look?
+
+--
+AgentNexLiFy, [your mailing address, City, ST ZIP]
+Not relevant? Reply STOP or unsubscribe: {{unsubscribe}}
 ```
 
 ### Email 2 (Day 3)
@@ -106,6 +138,10 @@ The AI picks up after hours, gets the address and the problem, books the slot, a
 texts you the job. No more "I called but nobody answered."
 
 {{company}} demo: {{demo_url}}
+
+--
+AgentNexLiFy, [your mailing address, City, ST ZIP]
+Not relevant? Reply STOP or unsubscribe: {{unsubscribe}}
 ```
 
 ### Email 3 (Day 6)
@@ -118,6 +154,10 @@ The AI answers it, books it, and hands it to you. Works on your site and your ph
 $19.99/mo, live in minutes, cancel anytime.
 
 Want it on for {{company}}?
+
+--
+AgentNexLiFy, [your mailing address, City, ST ZIP]
+Not relevant? Reply STOP or unsubscribe: {{unsubscribe}}
 ```
 
 ### Email 4 (Day 10 - breakup)
@@ -128,6 +168,10 @@ Subject: should I close this out?
 If after-hours calls ever start slipping through, the demo's ready: {{demo_url}}
 
 Appreciate your time.
+
+--
+AgentNexLiFy, [your mailing address, City, ST ZIP]
+Not relevant? Reply STOP or unsubscribe: {{unsubscribe}}
 ```
 
 ---
@@ -149,6 +193,10 @@ the call - 24/7.
 Built a demo on {{company}} so you can see it: {{demo_url}}
 
 Worth 60 seconds?
+
+--
+AgentNexLiFy, [your mailing address, City, ST ZIP]
+Not relevant? Reply STOP or unsubscribe: {{unsubscribe}}
 ```
 
 ### Email 2 (Day 3)
@@ -160,6 +208,10 @@ The AI responds in seconds every time, day or night, captures the contact, and b
 the appointment before they shop the next agency.
 
 {{company}} demo: {{demo_url}}
+
+--
+AgentNexLiFy, [your mailing address, City, ST ZIP]
+Not relevant? Reply STOP or unsubscribe: {{unsubscribe}}
 ```
 
 ### Email 3 (Day 6)
@@ -174,6 +226,10 @@ your team focuses on writing policies.
 $19.99/mo, no setup, cancel anytime.
 
 Turn it on for {{company}}?
+
+--
+AgentNexLiFy, [your mailing address, City, ST ZIP]
+Not relevant? Reply STOP or unsubscribe: {{unsubscribe}}
 ```
 
 ### Email 4 (Day 10 - breakup)
@@ -184,6 +240,10 @@ Subject: should I close this out?
 If speed-to-lead ever becomes the bottleneck, the demo's here: {{demo_url}}
 
 Thanks for reading.
+
+--
+AgentNexLiFy, [your mailing address, City, ST ZIP]
+Not relevant? Reply STOP or unsubscribe: {{unsubscribe}}
 ```
 
 ---
