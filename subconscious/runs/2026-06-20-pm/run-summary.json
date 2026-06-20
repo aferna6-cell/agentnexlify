@@ -1,0 +1,56 @@
+{
+  "run": 64,
+  "date": "2026-06-20-pm",
+  "winner": "Fix GH #292/#293 — Wire chatbot/agent_os into plan-name dicts",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "mandate_fired": true,
+  "mandate_reason": "GH #308 unimplemented 6 consecutive cycles — alternating mandate switches winner to GH #292/#293",
+  "autonomous_executable": false,
+  "moratorium_override": true,
+  "ideas_count": 5,
+  "ideas": [
+    "Fix GH #292/#293 — Wire chatbot/agent_os into plan-name dicts",
+    "Fix GH #308 — Webhook Idempotency Early-Write Drops Payment Events",
+    "Fix kb-autopopulate.sh — Restore 46-Day Stale KB",
+    "Add New-Table Checklist to schema-discipline.md",
+    "Add Cross-Tenant Isolation Test for os_graph_memory.py"
+  ],
+  "debate_verdicts": {
+    "Fix GH #292/#293": "SURVIVES → WINNER (mandate compliance + active product breakage + implementation sketch complete)",
+    "Fix GH #308": "WEAKENED → Bonus A (mandate hierarchy; included in winning concept)",
+    "Fix kb-autopopulate.sh": "WEAKENED → parking lot"
+  },
+  "bonus_actions": [
+    "Bonus A: Fix GH #308 — add delete_key() to idempotency.py, call in stripe_webhooks.py exception handler (~20 min, human required)",
+    "Bonus B: Add plan-name guard Check 7 to check_project_invariants.py (AUTONOMOUS-EXECUTABLE after Bonus A lands)"
+  ],
+  "parking_lot": [
+    "Fix kb-autopopulate.sh (ROI 1.8, 46-day stale KB)",
+    "Add New-Table Checklist to schema-discipline.md (ROI 2.0)",
+    "Cross-tenant isolation test for os_graph_memory.py (ROI 2.1)"
+  ],
+  "run_65_mandate": "If GH #292/#293 still unimplemented: switch winner back to GH #308 (alternating mandate continues)",
+  "evidence_sources": [
+    "git log 3 days (zero code commits in last 24h)",
+    "idempotency.py direct grep (no delete_key)",
+    "sms_rate_limiter.py direct grep (chatbot/agent_os absent from _UNLIMITED_PLANS line 10)",
+    "api_key_auth.py direct grep (chatbot/agent_os absent)",
+    "billing_reconciliation.py direct grep (chatbot/agent_os absent from _PLAN_AGENT_RUN_CAPS)",
+    "governance.json mandates (run 63 RUN 64 MANDATE: GH #308 still unimplemented → switch to GH #292/#293)"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-06-20-pm/ideas/ideas.md",
+    "subconscious/runs/2026-06-20-pm/debate/debate-log.md",
+    "subconscious/runs/2026-06-20-pm/winning-concept.md",
+    "subconscious/runs/2026-06-20-pm/improvement-backlog.md",
+    "subconscious/runs/2026-06-20-pm/run-summary.json"
+  ],
+  "questions_for_next_run": [
+    "Was GH #292/#293 implemented? (grep chatbot in sms_rate_limiter.py — should show _UNLIMITED_PLANS containing chatbot)",
+    "Was GH #308 implemented? (grep delete_key in idempotency.py)",
+    "Was plan-name guard Check 7 added to check_project_invariants.py?",
+    "Has the leadgen pipeline introduced any new test coverage gaps? (scripts/leadgen/osm.py, merge_leads.py, enrich.py)",
+    "Is AI-to-Human Handoff (run 4, now 65+ days pending) worth moving to a different track given no movement?"
+  ]
+}
