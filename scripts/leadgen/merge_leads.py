@@ -43,11 +43,13 @@ logger = logging.getLogger(__name__)
 INSTANTLY_HEADER = [
     "email",
     "company_name",
+    "owner_name",
     "website",
     "phone",
     "city",
     "category",
     "demo_url",
+    "contact_form",
 ]
 
 
@@ -94,11 +96,13 @@ def to_instantly(row: dict) -> dict:
     return {
         "email": row.get("email", ""),
         "company_name": row.get("name", ""),
+        "owner_name": row.get("owner_name", ""),
         "website": row.get("website", ""),
         "phone": row.get("phone", ""),
         "city": row.get("city", ""),
         "category": row.get("category", ""),
         "demo_url": row.get("demo_url", ""),
+        "contact_form": row.get("contact_form", ""),
     }
 
 

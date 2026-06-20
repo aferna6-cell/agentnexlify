@@ -16,7 +16,9 @@ export GOOGLE_PLACES_API_KEY="your_api_key_here"
 python -m scripts.leadgen.build_leads --vertical "roofing" --city "Austin, TX" --out leads.csv --max 200
 ```
 
-Output columns: `name, category, phone, website, email, address, city, rating, place_id, demo_url`
+Output columns: `name, category, phone, website, email, owner_name, contact_form, address, city, rating, place_id, demo_url`
+
+`owner_name` (best-effort, from the site's about/contact pages — blank unless confident) and `contact_form` (a contact/quote-page URL when no email is found) let you personalize with `{{owner_name}}` and reach the ~60% of businesses that have no scrapeable email via their form.
 
 ## Sources
 
@@ -119,7 +121,7 @@ python -m scripts.leadgen.merge_leads --glob "leads_*.csv" \
 ```
 
 The `--instantly` format maps `name -> company_name` and keeps
-`email, website, phone, city, category, demo_url`. Instantly auto-maps
+`email, owner_name, website, phone, city, category, demo_url, contact_form`. Instantly auto-maps
 email/company_name/website/phone; the rest become custom variables usable in a
 sequence as `{{demo_url}}`, `{{city}}`, etc.
 

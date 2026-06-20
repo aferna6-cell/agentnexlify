@@ -24,7 +24,7 @@ import sys
 from typing import Optional
 from urllib.parse import quote
 
-from scripts.leadgen.enrich import best_email, extract_emails_from_site
+from scripts.leadgen.enrich import enrich_site
 from scripts.leadgen.osm import search_osm
 from scripts.leadgen.places import is_usable, search_text
 
@@ -37,6 +37,8 @@ CSV_HEADER = [
     "phone",
     "website",
     "email",
+    "owner_name",
+    "contact_form",
     "address",
     "city",
     "rating",
@@ -105,8 +107,8 @@ def run(args: argparse.Namespace) -> int:
 
     for place in deduped:
         website = place.get("website", "")
-        emails = extract_emails_from_site(website) if website else []
-        email = best_email(emails)
+        enr = enrich_site(website) if website else {"email": "", "owner_name": "", "contact_form": ""}
+        email = enr["email"]
         if email:
             email_count += 1
 
@@ -128,6 +130,8 @@ def run(args: argparse.Namespace) -> int:
             "phone": place.get("phone", ""),
             "website": website,
             "email": email or "",
+            "owner_name": enr.get("owner_name", ""),
+            "contact_form": enr.get("contact_form", ""),
             "address": place.get("address", ""),
             "city": args.city,
             "rating": place.get("rating", ""),

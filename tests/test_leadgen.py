@@ -331,14 +331,17 @@ class TestBuildLeadsRun:
         fake_places = self._fake_places(3)
 
         with patch("scripts.leadgen.build_leads.search_text", return_value=fake_places), \
-             patch("scripts.leadgen.build_leads.extract_emails_from_site",
-                   return_value=["info@roofer.com"]):
+             patch("scripts.leadgen.build_leads.enrich_site",
+                   return_value={"email": "info@roofer.com", "owner_name": "", "contact_form": ""}):
             run(args)
 
         with open(str(tmp_path / "leads.csv"), newline="") as fh:
             reader = csv.DictReader(fh)
+            # Header expanded 2026-06-18: owner_name + contact_form added by the
+            # enrichment upgrade (capture owner + form so the no-email 60% are reachable).
             assert reader.fieldnames == [
                 "name", "category", "phone", "website", "email",
+                "owner_name", "contact_form",
                 "address", "city", "rating", "place_id", "demo_url",
             ]
             rows = list(reader)
@@ -364,8 +367,8 @@ class TestBuildLeadsRun:
 
         args = self._make_args(tmp_path)
         with patch("scripts.leadgen.build_leads.search_text", return_value=fake_places), \
-             patch("scripts.leadgen.build_leads.extract_emails_from_site",
-                   return_value=[]):
+             patch("scripts.leadgen.build_leads.enrich_site",
+                   return_value={"email": "", "owner_name": "", "contact_form": ""}):
             run(args)
 
         with open(str(tmp_path / "leads.csv"), newline="") as fh:
@@ -382,8 +385,8 @@ class TestBuildLeadsRun:
         fake_places = self._fake_places(1)
 
         with patch("scripts.leadgen.build_leads.search_text", return_value=fake_places), \
-             patch("scripts.leadgen.build_leads.extract_emails_from_site",
-                   return_value=[]):
+             patch("scripts.leadgen.build_leads.enrich_site",
+                   return_value={"email": "", "owner_name": "", "contact_form": ""}):
             run(args)
 
         with open(str(tmp_path / "leads.csv"), newline="") as fh:
@@ -402,8 +405,8 @@ class TestBuildLeadsRun:
         fake_places = self._fake_places(1)
 
         with patch("scripts.leadgen.build_leads.search_text", return_value=fake_places), \
-             patch("scripts.leadgen.build_leads.extract_emails_from_site",
-                   return_value=[]):
+             patch("scripts.leadgen.build_leads.enrich_site",
+                   return_value={"email": "", "owner_name": "", "contact_form": ""}):
             run(args)
 
         with open(str(tmp_path / "leads.csv"), newline="") as fh:
@@ -418,8 +421,8 @@ class TestBuildLeadsRun:
         fake_places = self._fake_places(2)
 
         with patch("scripts.leadgen.build_leads.search_text", return_value=fake_places), \
-             patch("scripts.leadgen.build_leads.extract_emails_from_site",
-                   return_value=[]):
+             patch("scripts.leadgen.build_leads.enrich_site",
+                   return_value={"email": "", "owner_name": "", "contact_form": ""}):
             run(args)
 
         with open(str(tmp_path / "leads.csv"), newline="") as fh:
@@ -433,11 +436,15 @@ class TestBuildLeadsRun:
 
         args = self._make_args(tmp_path)
         fake_places = self._fake_places(3)
-        emails_by_call = [["info@a.com"], [], ["contact@b.com"]]
+        enrich_by_call = [
+            {"email": "info@a.com", "owner_name": "", "contact_form": ""},
+            {"email": "", "owner_name": "", "contact_form": ""},
+            {"email": "contact@b.com", "owner_name": "", "contact_form": ""},
+        ]
 
         with patch("scripts.leadgen.build_leads.search_text", return_value=fake_places), \
-             patch("scripts.leadgen.build_leads.extract_emails_from_site",
-                   side_effect=emails_by_call):
+             patch("scripts.leadgen.build_leads.enrich_site",
+                   side_effect=enrich_by_call):
             count = run(args)
 
         captured = capsys.readouterr()
