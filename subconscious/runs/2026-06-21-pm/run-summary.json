@@ -1,0 +1,47 @@
+{
+  "run": 65,
+  "date": "2026-06-21-pm",
+  "total_runs": 65,
+  "mandate_fired": "RUN 65 MANDATE — GH #292/#293 still unimplemented → per run 64 winning-concept.md, winner switches back to GH #308",
+  "mechanism_change": true,
+  "mechanism_change_reason": "7-cycle alternating mandate without implementation — combined PR mechanism proposed to exit loop with single approval",
+  "winner": "Combined PR fix/two-production-bugs — Fix GH #308 (idempotency delete_key) + Fix GH #292/#293 (chatbot/agent_os plan-name dicts) in one branch",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "autonomous_executable": false,
+  "moratorium_override": true,
+  "moratorium_override_reason": "Both bugs are moratorium-override (payment revenue bug + active product breakage for all new paid tenants since 2026-06-16)",
+  "key_evidence": [
+    "GH #292/#293 CONFIRMED unimplemented run 65: sms_rate_limiter._UNLIMITED_PLANS missing chatbot/agent_os (line 10), api_key_auth._ALLOWED_PLANS missing (line 29), billing_reconciliation._PLAN_AGENT_RUN_CAPS/_PLAN_BASELINE_AI_TOKENS missing — direct file reads confirm",
+    "GH #308 CONFIRMED unimplemented run 65: no delete_key in idempotency.py (direct read), stripe_webhooks.py line 110 has no cleanup path on exception",
+    "b3279b0 (today, Jun 21): fixed 7 failing tests from stale plan names in test_admin_analytics_mrr.py — proves plan-name drift is active and batch-fix-in-one-commit is viable in this repo",
+    "check_project_invariants.py PASSES all 6 checks but plan-name guard checks ABSENCE of retired names, not PRESENCE of new names (chatbot/agent_os) — scope gap confirmed",
+    "2163 tests pass, 36 skipped, 0 failed after b3279b0 (per commit message) — test suite healthy"
+  ],
+  "run_66_mandate": "If combined PR still unimplemented by run 66: create GH issue tagged ai-ready with both fix sketches inlined — lowest-activation-energy path for autonomous loop pickup",
+  "ideas_count": 5,
+  "debated_count": 3,
+  "surviving_ideas": [
+    "Combined PR (winner)",
+    "Fix GH #308 alone (weakened, subsumed)",
+    "Plan-name presence guard Check 7 (survives, Bonus B AUTONOMOUS-EXECUTABLE)"
+  ],
+  "killed_in_debate": [],
+  "weakened_ideas": [
+    "Fix GH #308 alone (subsumed into combined PR)",
+    "Fix kb-autopopulate.sh (parking lot priority)"
+  ],
+  "parking_lot": [
+    "Fix kb-autopopulate.sh (ROI 1.8, 46-day stale)",
+    "Cross-tenant isolation test for os_graph_memory.py (ROI 2.1)",
+    "Home.jsx god-class split (1006L)",
+    "AI-to-Human Handoff v1 (run 4, 66+ days)"
+  ],
+  "bonus_actions": [
+    "Bonus B: Plan-name presence guard Check 7 to check_project_invariants.py (AUTONOMOUS-EXECUTABLE after combined PR merges)",
+    "Bonus C: Broader grep for other plan-gating dicts missing chatbot/agent_os (research, ~15 min)"
+  ],
+  "moratorium_active": true,
+  "true_pending_estimate": 9,
+  "new_evidence_this_run": "b3279b0 batch plan-name test fix + check_project_invariants scope gap confirmed + both production bugs directly verified in source files"
+}
