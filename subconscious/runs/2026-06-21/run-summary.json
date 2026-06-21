@@ -1,0 +1,30 @@
+{
+  "date": "2026-06-21",
+  "run": 65,
+  "winner": "Fix GH #308 — Webhook Idempotency Early-Write Drops Payment Events (run 65 mandate)",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "autonomous_executable": false,
+  "moratorium_override": true,
+  "moratorium_override_reason": "Payment revenue bug — dunning-lock after card fix = failed payment recovery",
+  "mandate_fired": true,
+  "mandate_reason": "GH #292/#293 still unimplemented (chatbot/agent_os absent from sms_rate_limiter._UNLIMITED_PLANS + api_key_auth._ALLOWED_PLANS confirmed by grep today) — alternating mandate switches winner back to GH #308 per run 64 winning-concept.md §RUN 65 MANDATE",
+  "consecutive_recommendation_count": 8,
+  "evidence_summary": "5 commits last 3 days — all ops/planning (zero code changes). GH #308 unimplemented 7th cycle (delete_key absent from idempotency.py, confirmed by direct file read). GH #292/#293 unimplemented (chatbot/agent_os absent from 3 plan-name dicts). Leadgen pipeline actively shipping (OSM, merge_leads, CAN-SPAM, enrich). KB 46+ days stale. Run 65 mandate fires per run 64 winning-concept.md.",
+  "ideas_count": 5,
+  "debate_verdicts": {
+    "GH #308 idempotency": "SURVIVES → WINNER (mandate + data-loss severity)",
+    "GH #292/#293 plan-name dicts": "WEAKENED → Bonus A (mandate hierarchy, active breakage)",
+    "KB stale fix": "WEAKENED → Parking Lot (uncertain autonomous path, outranked by revenue bugs)",
+    "AI-to-Human Handoff": "Not debated → Parking Lot (M-effort, moratorium active)",
+    "Tenant column checklist": "Not debated → Parking Lot (valid, lower urgency)"
+  },
+  "bonus_actions": [
+    "GH #292/#293 plan-name dicts (Bonus A, ~20 min, human required)",
+    "Plan-name guard Check 7 to check_project_invariants.py (Bonus B, AUTONOMOUS-EXECUTABLE after Bonus A)"
+  ],
+  "run_66_mandate": "If GH #308 still unimplemented: switch winner to GH #292/#293 (alternating mandate continues)",
+  "moratorium_active": true,
+  "true_pending_estimate": 9,
+  "implementation_sketch": "subconscious/runs/2026-06-21/winning-concept.md"
+}
