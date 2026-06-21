@@ -159,9 +159,9 @@ class TestMrrMetricsAuth:
 
 
 class TestMrrCalculation:
-    def test_single_growth_tenant(self, client, mock_supabase, admin_headers):
+    def test_single_chatbot_tenant(self, client, mock_supabase, admin_headers):
         db = _make_db(
-            active_tenants=[{"id": "t1", "plan": "growth", "plan_status": "active", "billing_dunning_attempt_count": 0}],
+            active_tenants=[{"id": "t1", "plan": "chatbot", "plan_status": "active", "billing_dunning_attempt_count": 0}],
             cancellations_count=0,
         )
         mock_supabase.table.side_effect = db.table.side_effect
@@ -170,22 +170,20 @@ class TestMrrCalculation:
         assert resp.status_code == 200
         data = resp.json()
 
-        assert data["mrr_cents"] == PLAN_PRICE_CENTS["growth"]  # 9900
-        assert data["mrr_dollars"] == 99.0
+        assert data["mrr_cents"] == PLAN_PRICE_CENTS["chatbot"]  # 1999
+        assert data["mrr_dollars"] == 19.99
         assert data["active_paying_count"] == 1
 
     def test_mixed_plan_mrr(self, client, mock_supabase, admin_headers):
-        """Two growth + one professional + one enterprise = correct sum."""
+        """Two chatbot + one agent_os = correct sum across the two paid plans."""
         active = [
-            {"id": "t1", "plan": "growth",       "plan_status": "active", "billing_dunning_attempt_count": 0},
-            {"id": "t2", "plan": "growth",       "plan_status": "active", "billing_dunning_attempt_count": 0},
-            {"id": "t3", "plan": "professional", "plan_status": "active", "billing_dunning_attempt_count": 0},
-            {"id": "t4", "plan": "enterprise",   "plan_status": "active", "billing_dunning_attempt_count": 0},
+            {"id": "t1", "plan": "chatbot",  "plan_status": "active", "billing_dunning_attempt_count": 0},
+            {"id": "t2", "plan": "chatbot",  "plan_status": "active", "billing_dunning_attempt_count": 0},
+            {"id": "t3", "plan": "agent_os", "plan_status": "active", "billing_dunning_attempt_count": 0},
         ]
         expected = (
-            2 * PLAN_PRICE_CENTS["growth"]
-            + PLAN_PRICE_CENTS["professional"]
-            + PLAN_PRICE_CENTS["enterprise"]
+            2 * PLAN_PRICE_CENTS["chatbot"]
+            + PLAN_PRICE_CENTS["agent_os"]
         )
         db = _make_db(active_tenants=active, cancellations_count=0)
         mock_supabase.table.side_effect = db.table.side_effect
@@ -195,13 +193,13 @@ class TestMrrCalculation:
         data = resp.json()
 
         assert data["mrr_cents"] == expected
-        assert data["active_paying_count"] == 4
+        assert data["active_paying_count"] == 3
 
     def test_mrr_by_plan_breakdown(self, client, mock_supabase, admin_headers):
         active = [
-            {"id": "t1", "plan": "autopilot", "plan_status": "active", "billing_dunning_attempt_count": 0},
-            {"id": "t2", "plan": "autopilot", "plan_status": "active", "billing_dunning_attempt_count": 0},
-            {"id": "t3", "plan": "professional", "plan_status": "active", "billing_dunning_attempt_count": 0},
+            {"id": "t1", "plan": "chatbot",  "plan_status": "active", "billing_dunning_attempt_count": 0},
+            {"id": "t2", "plan": "chatbot",  "plan_status": "active", "billing_dunning_attempt_count": 0},
+            {"id": "t3", "plan": "agent_os", "plan_status": "active", "billing_dunning_attempt_count": 0},
         ]
         db = _make_db(active_tenants=active, cancellations_count=0)
         mock_supabase.table.side_effect = db.table.side_effect
@@ -211,10 +209,10 @@ class TestMrrCalculation:
         data = resp.json()
         breakdown = data["mrr_by_plan"]
 
-        assert breakdown["autopilot"]["count"] == 2
-        assert breakdown["autopilot"]["mrr_cents"] == 2 * PLAN_PRICE_CENTS["autopilot"]
-        assert breakdown["professional"]["count"] == 1
-        assert breakdown["professional"]["mrr_cents"] == PLAN_PRICE_CENTS["professional"]
+        assert breakdown["chatbot"]["count"] == 2
+        assert breakdown["chatbot"]["mrr_cents"] == 2 * PLAN_PRICE_CENTS["chatbot"]
+        assert breakdown["agent_os"]["count"] == 1
+        assert breakdown["agent_os"]["mrr_cents"] == PLAN_PRICE_CENTS["agent_os"]
 
     def test_zero_active_tenants_returns_zero_mrr(self, client, mock_supabase, admin_headers):
         db = _make_db(active_tenants=[], cancellations_count=0)
@@ -247,9 +245,9 @@ class TestChurnRate:
     def test_churn_rate_with_cancellations(self, client, mock_supabase, admin_headers):
         """churn = cancellations / (active + cancellations) × 100."""
         active = [
-            {"id": "t1", "plan": "growth", "plan_status": "active", "billing_dunning_attempt_count": 0},
-            {"id": "t2", "plan": "growth", "plan_status": "active", "billing_dunning_attempt_count": 0},
-            {"id": "t3", "plan": "growth", "plan_status": "active", "billing_dunning_attempt_count": 0},
+            {"id": "t1", "plan": "chatbot", "plan_status": "active", "billing_dunning_attempt_count": 0},
+            {"id": "t2", "plan": "chatbot", "plan_status": "active", "billing_dunning_attempt_count": 0},
+            {"id": "t3", "plan": "chatbot", "plan_status": "active", "billing_dunning_attempt_count": 0},
         ]
         # 3 active + 1 cancellation → 1/4 = 25%
         db = _make_db(active_tenants=active, cancellations_count=1)
@@ -276,7 +274,7 @@ class TestChurnRate:
 
     def test_no_cancellations_zero_churn(self, client, mock_supabase, admin_headers):
         active = [
-            {"id": "t1", "plan": "professional", "plan_status": "active", "billing_dunning_attempt_count": 0},
+            {"id": "t1", "plan": "agent_os", "plan_status": "active", "billing_dunning_attempt_count": 0},
         ]
         db = _make_db(active_tenants=active, cancellations_count=0)
         mock_supabase.table.side_effect = db.table.side_effect
@@ -314,7 +312,7 @@ class TestFaultTolerance:
     ):
         """If tenant_cancellation_events is unavailable, endpoint still returns 200."""
         active = [
-            {"id": "t1", "plan": "growth", "plan_status": "active", "billing_dunning_attempt_count": 0},
+            {"id": "t1", "plan": "chatbot", "plan_status": "active", "billing_dunning_attempt_count": 0},
         ]
         db = _make_db(active_tenants=active, cancel_raise=True)
         mock_supabase.table.side_effect = db.table.side_effect
@@ -323,7 +321,7 @@ class TestFaultTolerance:
         assert resp.status_code == 200
         data = resp.json()
         # MRR still computes correctly
-        assert data["mrr_cents"] == PLAN_PRICE_CENTS["growth"]
+        assert data["mrr_cents"] == PLAN_PRICE_CENTS["chatbot"]
         # Churn fields are null because the table query failed
         assert data["cancellations_30d"] is None
         assert data["churn_rate_30d_pct"] is None
@@ -333,7 +331,7 @@ class TestFaultTolerance:
     ):
         """If dunning query fails, dunning_paused_count is None but 200 is returned."""
         active = [
-            {"id": "t1", "plan": "growth", "plan_status": "active", "billing_dunning_attempt_count": 0},
+            {"id": "t1", "plan": "chatbot", "plan_status": "active", "billing_dunning_attempt_count": 0},
         ]
         db = _make_db(active_tenants=active, dunning_raise=True, cancellations_count=0)
         mock_supabase.table.side_effect = db.table.side_effect
@@ -342,5 +340,5 @@ class TestFaultTolerance:
         assert resp.status_code == 200
         data = resp.json()
 
-        assert data["mrr_cents"] == PLAN_PRICE_CENTS["growth"]
+        assert data["mrr_cents"] == PLAN_PRICE_CENTS["chatbot"]
         assert data["dunning_paused_count"] is None
