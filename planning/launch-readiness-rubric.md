@@ -150,9 +150,9 @@
 | 9.2 | Outbound email domain warmed + SPF/DKIM/DMARC clean | 1 | Resend DNS pending per rubric note |
 | 9.3 | Pricing page A/B test wired (Growthbook / equiv) | 2 | Experiment `pricing_page_cta_2026_06`: deterministic server-side variant (`backend/routers/pricing_experiment.py`), anonymous cookie visitor id, view + cta_click events to `pricing_ab_events` (migration 134, applied), Free-plan CTA copy varies on Home.jsx; 11 tests. 2026-06-10. |
 | 9.4 | Referral / affiliate tracking | 2 | End-to-end: `?ref=CODE` captured on SignupPage → `RegisterRequest.ref_code` → `backend/services/referral.py` validates vs tenants.referral_code + referral promo, writes referred_by + discount; every new tenant gets a referral_code at signup; invalid codes silently ignored, signup never blocked; 6 tests; tenants see + copy their share link on BillingPage (ReferralCard, /me returns referral_code). CORRECTION 2026-06-10 evening: migrations/001 listed referral columns but the LIVE schema never had them — the wiring in PR #227 made /register insert a nonexistent column (signup 500). Migration 135 added the columns + backfilled within the hour; signup_attempts confirms zero signups hit the broken window. |
-| 9.5 | Cold-outreach templates + partner assignment | 0 | No outreach template set or partner assignment rules |
+| 9.5 | Cold-outreach templates + partner assignment | 2 | `planning/outreach-templates.md` (2026-06-22) — 3 sequences (cold email 4-touch, LinkedIn, referral) + objection one-liners + a partner-assignment table with per-source owners and SLAs. Voice follows personality.md (no hype). |
 
-**Subtotal:** 7 / 10 × 1 = **7 / 10** (9.3 + 9.4 closed 2026-06-10)
+**Subtotal:** 9 / 10 × 1 = **9 / 10** (9.3 + 9.4 closed 2026-06-10; 9.5 closed 2026-06-22)
 
 ---
 
@@ -183,11 +183,16 @@
 | 6. Data integrity | 9 / 10 | 18 | 20 | — |
 | 7. Support | 7 / 10 | 7 | 10 | — |
 | 8. Brand | 7 / 10 | 7 | 10 | — |
-| 9. Sales | 7 / 10 | 7 | 10 | — |
+| 9. Sales | 9 / 10 | 9 | 10 | — |
 | 10. Risk | 8 / 12 | 16 | 24 | **10.6** |
-| **TOTAL** | — | **221** | **262** | **1 HIGH zero (10.6)** |
+| **TOTAL** | — | **223** | **262** | **1 HIGH zero (10.6)** |
 
-**Score:** 221 / 262 = **84.4%**
+**Score:** 223 / 262 = **85.1%** (9.5 closed 2026-06-22)
+
+> **Remaining work (2026-06-22):** all sub-2 criteria are now partner / legal /
+> ops / external-service — **no pure-engineering items remain**. Owner punch-list:
+> `planning/launch-readiness-remaining-2026-06-22.md`. Sole HIGH-severity blocker
+> for paid launch is **10.6 (insurance)**, a partner task.
 
 ## Verdict — 2026-06-10 (evening)
 
