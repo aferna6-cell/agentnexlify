@@ -41,12 +41,20 @@ _DEFAULT_AGENT_RUN_CAP = 100
 
 _PLAN_BASELINE_AI_TOKENS: dict[str, int] = {
     "free": 150_000,
+    # New two-plan model (2026-06-15) — mirrors the canonical
+    # ai_usage_guard.PLAN_BASELINE_TOKENS so audit reports match enforcement.
+    "chatbot": 800_000,
+    "agent_os": 5_000_000,
+    # Legacy plans (grandfathered tenants on old contracts).
     "growth": 1_000_000,
     "autopilot": 1_200_000,
     "professional": 2_000_000,
     "enterprise": 5_000_000,
 }
 _DEFAULT_BASELINE_AI_TOKENS = _PLAN_BASELINE_AI_TOKENS["growth"]
+# Agent-run caps for chatbot/agent_os are intentionally absent: the two-plan
+# model doesn't cap agent runs the same way, so new plans use
+# _DEFAULT_AGENT_RUN_CAP pending a product decision (GH #293).
 _HARD_LIMIT_MULTIPLIER = 5
 
 # conversations_used_this_month: plan no longer has a hard cap (migration 013

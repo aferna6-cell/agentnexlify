@@ -40,10 +40,11 @@ Dashboard (React/Vite) ─────────→ FastAPI /api/* ───�
 - `.claude/` — config, rules, skills, agents, commands, hooks
 - `_archive/`, `public/` — **legacy, do not touch**. `landing-page-v2/` deploys via Vercel project `agentnexlify` — edit deliberately, content-only changes preferred. **WARNING (found 2026-06-12): agentnexlify.com + www are attached to the separate, stale `agentnexlify-site` Vercel project — landing-page-v2 edits do NOT reach the public domain until the domains are moved to the `agentnexlify` project in the Vercel dashboard (its prod URLs are also auth-protected + latest deploy BLOCKED — check spend limits/protection).**
 
-### Plan names + prices
-- `free`, `growth` ($99/mo Starter), `autopilot` ($150/mo Growth), `professional` ($250/mo Pro), `enterprise` ($899/mo)
-- Legacy prices (billed on old contracts): growth $199/$249, professional $399/$499, enterprise $799/$899
-- Retired names, **never use**: `foundation`, `operations`
+### Plan names + prices (repriced 2026-06-15)
+- **Current paid plans**: `chatbot` ($19.99/mo — widget/chat only) · `agent_os` ($99.99/mo — full platform). `free` = internal lapsed/no-subscription state, never sold. Canonical: `backend/services/stripe_service.py` + `ai_usage_guard.PLAN_BASELINE_TOKENS`.
+- **Feature gating**: `agent_os` unlocks all premium gates (Zapier, unlimited SMS, doc drafting, lead qualification, branded automation, white-label). `chatbot` is widget/chat only. New gates → add to `backend/tests/test_plan_gating_new_plans.py`.
+- **Legacy/grandfathered** (still honored on old contracts; gates include them): `growth`, `autopilot`, `professional`, `enterprise`.
+- **Retired names, never use**: `foundation`, `operations`.
 
 ### Agents + skills
 - 57 agents in `.claude/agents/` — backend-dev, frontend-dev, schema-guardian, widget-specialist, devops, opus-advisor, sonnet-executor, vertical-checker, qa-tester, gan-*, + 39 from `everything-claude-code` (per-language reviewers, build resolvers, loop-operator, etc.). Load lazily; don't burn context unless invoked.

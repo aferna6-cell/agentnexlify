@@ -74,6 +74,16 @@ def test_chatbot_excluded_from_premium_backoffice_gates():
     assert "chatbot" not in LQ
 
 
+def test_reconciliation_baseline_tokens_match_canonical():
+    # billing_reconciliation (read-only audit) must mirror the canonical
+    # ai_usage_guard.PLAN_BASELINE_TOKENS for the new plans, or audit reports
+    # mis-state caps for chatbot/agent_os tenants (GH #293 issue 2).
+    from backend.services.ai_usage_guard import PLAN_BASELINE_TOKENS
+    from backend.services.billing_reconciliation import _PLAN_BASELINE_AI_TOKENS
+    assert _PLAN_BASELINE_AI_TOKENS["chatbot"] == PLAN_BASELINE_TOKENS["chatbot"]
+    assert _PLAN_BASELINE_AI_TOKENS["agent_os"] == PLAN_BASELINE_TOKENS["agent_os"]
+
+
 def test_chatbot_gets_widget_branding_but_no_white_label():
     from backend.services.branding_helpers import _filter_branding_for_plan
     full = {
