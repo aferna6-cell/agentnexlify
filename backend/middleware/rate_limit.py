@@ -23,9 +23,18 @@ from starlette.requests import Request
 
 logger = logging.getLogger(__name__)
 
-# Per-tier RPM defaults, overridable via environment variables
+# Per-tier RPM defaults, overridable via environment variables.
+# Current paid plans (chatbot, agent_os — see backend/services/plan_catalog.py)
+# MUST have entries here. Without them get_tier_limit() falls back to the free
+# 30 rpm cap, silently throttling paying tenants on /api/v1/widget/chat
+# (a $99.99 agent_os tenant would be capped like free). Keep in sync with
+# plan_catalog.CURRENT_PAID_PLANS; test_rate_limit_current_plans guards it.
 _TIER_DEFAULTS: dict[str, int] = {
     "free": 30,
+    # Current sellable plans (repriced 2026-06-15)
+    "chatbot": 120,      # AI Front Desk — widget/chat entry tier
+    "agent_os": 480,     # AI Workforce — full platform
+    # Legacy / grandfathered
     "growth": 120,
     "autopilot": 240,
     "professional": 480,

@@ -235,6 +235,8 @@ class TestRateLimiting:
         # Verify the per-tier resolver returns sane defaults for each plan
         for tier, expected_rpm in [
             ("free", 30),
+            ("chatbot", 120),
+            ("agent_os", 480),
             ("growth", 120),
             ("autopilot", 240),
             ("professional", 480),
@@ -243,6 +245,31 @@ class TestRateLimiting:
             assert get_tier_limit(tier) == f"{expected_rpm}/minute", (
                 f"Tier '{tier}' expected {expected_rpm}/minute, "
                 f"got {get_tier_limit(tier)}"
+            )
+
+    def test_rate_limit_current_plans(self, test_client):
+        """Every current paid plan must resolve to a cap ABOVE the free tier.
+
+        Regression for the silent-throttle bug: chatbot/agent_os had no entry in
+        _TIER_DEFAULTS, so get_tier_limit() fell back to free (30 rpm) — a paying
+        agent_os tenant was rate-limited like a free one. Tied to plan_catalog so
+        the next repricing that adds a plan can't reintroduce the fallback.
+        """
+        _client, _db_mock = test_client
+
+        from backend.middleware.rate_limit import get_tier_limit, _TIER_DEFAULTS
+        from backend.services.plan_catalog import CURRENT_PAID_PLANS
+
+        free_rpm = _TIER_DEFAULTS["free"]
+        for plan in sorted(CURRENT_PAID_PLANS):
+            assert plan in _TIER_DEFAULTS, (
+                f"Current paid plan '{plan}' missing from _TIER_DEFAULTS — it "
+                f"would silently fall back to the free {free_rpm} rpm cap."
+            )
+            rpm = int(get_tier_limit(plan).split("/")[0])
+            assert rpm > free_rpm, (
+                f"Current paid plan '{plan}' resolves to {rpm}/minute, not above "
+                f"the free {free_rpm}/minute cap."
             )
 
     def test_chat_rate_limit_signature_contract(self, test_client):
