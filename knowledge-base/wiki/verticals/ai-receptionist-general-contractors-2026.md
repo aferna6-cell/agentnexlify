@@ -5,7 +5,7 @@ tags: [general-contractors, ai-receptionist, missed-calls, speed-to-lead, vertic
 sources:
   - https://niceagents.com/blog/ai-receptionist-general-contractors-2026/
 created: 2026-04-28
-updated: 2026-04-28
+updated: 2026-06-22
 summary: "GCs miss 20-30% of inbound calls on busy job sites; 85% of missed callers never call back, 62% try a competitor; AI receptionists at $49-$449/mo turn that revenue back on."
 ---
 
@@ -47,6 +47,10 @@ This is the cleanest missed-call vertical for the AgentNexLiFy widget + voice fa
 Concrete moves:
 1. Build a GC-specific knowledge-base template under `widget/knowledge-bases/general-contractor_kb.md` that handles scope qualification (kitchen / bath / addition / roof / new build), budget banding ($30k / $30-80k / $80-200k / $200k+), timeline bucketing, permit-status questions, and emergency triage. The vertical KB is the moat per `CLAUDE.md` competitive-positioning section.
 2. Map the four lifecycle automations from the operations PRD — missed-call-text-back, appointment booker, auto-follow-up, doc drafter — directly onto the GC use case. The doc drafter is particularly load-bearing here because GCs need same-day estimate-confirmation PDFs to compete with Sameday-tier players who already do this.
-3. Pricing positioning: AgentNexLiFy's $99/mo Starter and $150/mo Growth tiers sit between NiceAgents ($49) and Smith.ai ($97.50), undercutting Sameday ($449) by an order of magnitude. The pitch is widget-first capture (which NiceAgents and Sameday don't lead with) plus voice fallback, not voice-only.
+3. Pricing positioning: AgentNexLiFy's Chatbot plan ($19.99/mo) undercuts NiceAgents ($49) and Smith.ai ($97.50); the Agent OS plan ($99.99/mo) matches Smith.ai while adding widget capture and appointment booking, and both undercut Sameday ($449) by an order of magnitude. The pitch is widget-first capture (which NiceAgents and Sameday don't lead with) plus voice fallback, not voice-only.
 4. ROI calculator: ship a GC-specific calculator on the marketing site that mirrors NiceAgents' missed-call calculator but adds the widget-capture leg. The 16,926% headline number is portable; the differentiator is "we capture web leads too, not just calls."
 5. Competitive intelligence: Sameday AI at $449/mo is the enterprise-tier benchmark to track; NiceAgents at $49/mo is the bottom anchor. AgentNexLiFy's positioning lives in the middle with broader channel coverage.
+
+---
+
+*Updated 2026-06-22 due to #288*

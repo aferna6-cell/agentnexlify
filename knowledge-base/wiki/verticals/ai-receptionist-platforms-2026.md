@@ -4,7 +4,7 @@ category: verticals
 tags: ["ai-receptionist", "voice-ai", "competitive-landscape", "smith-ai", "synthflow", "vapi", "bland-ai", "nextphone", "parallel-ai"]
 sources: ["raw/verticals/the-10-best-ai-receptionist-platforms-compared.md"]
 created: 2026-04-20
-updated: 2026-04-20
+updated: 2026-06-22
 summary: "Voice-AI receptionist category has bifurcated into phone-only niche tools (Smith.ai, NextPhone, Abby) vs. omni-channel platforms (Parallel AI, Synthflow); pricing spans flat $199/mo to $9.50/call, with channel breadth now the primary buyer decision."
 ---
 
@@ -41,4 +41,8 @@ The five buyer mistakes from the Parallel article map directly onto AgentNexLiFy
 
 ## Relevance to AgentNexLiFy
 
-Three strategic takeaways. First, AgentNexLiFy's chat-widget-first positioning is the right niche to defend — the voice-AI category has commoditized at the bottom (per-minute infrastructure) and concentrated at the top (Parallel AI, Dialpad, Vonage fighting for omni-channel bundles), leaving widget-native capture + SMB pricing as a defensible middle. Second, the NextPhone comparison is the one to sharpen: at $199 flat-rate vs AgentNexLiFy's `growth` $249, the value story has to be "widget leads are cheaper per capture than inbound calls, and you get both SMS and appointment booking, not just voice." Third, action completion is the production-readiness test the sales team should offer every trial — a widget that captures a lead but can't book an appointment or update the tenant's CRM is demo-complete, not production-complete. Build and advertise the end-to-end booking → confirmation → calendar-write flow as the differentiator, not the chat prose quality.
+Three strategic takeaways. First, AgentNexLiFy's chat-widget-first positioning is the right niche to defend — the voice-AI category has commoditized at the bottom (per-minute infrastructure) and concentrated at the top (Parallel AI, Dialpad, Vonage fighting for omni-channel bundles), leaving widget-native capture + SMB pricing as a defensible middle. Second, the NextPhone comparison is the one to sharpen: at $199 flat-rate vs AgentNexLiFy's Chatbot plan ($19.99/mo) or Agent OS plan ($99.99/mo), the value story has to be "widget leads are cheaper per capture than inbound calls, and you get both SMS and appointment booking, not just voice." Third, action completion is the production-readiness test the sales team should offer every trial — a widget that captures a lead but can't book an appointment or update the tenant's CRM is demo-complete, not production-complete. Build and advertise the end-to-end booking → confirmation → calendar-write flow as the differentiator, not the chat prose quality.
+
+---
+
+*Updated 2026-06-22 due to #288*

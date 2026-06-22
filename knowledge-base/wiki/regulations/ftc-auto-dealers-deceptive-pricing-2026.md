@@ -4,7 +4,7 @@ category: regulations
 tags: ["ftc", "price-transparency", "deceptive-advertising", "auto-dealers", "junk-fees", "saas-compliance"]
 sources: ["raw/regulations/ftc-warns-auto-dealers-deceptive-pricing-2026.md"]
 created: 2026-04-18
-updated: 2026-04-18
+updated: 2026-06-22
 summary: "FTC sent warning letters in March 2026 to 97 auto dealership groups citing advertised prices that excluded mandatory fees, conditioned discounts, or referenced unavailable vehicles — part of cross-market price-transparency enforcement (auto, rental housing, ticketing, grocery) that signals expansion to adjacent industries including SaaS."
 ---
 
@@ -37,4 +37,8 @@ Two secondary implications matter. First, for tenants in auto sales, auto repair
 
 ## Relevance to AgentNexLiFy
 
-Direct implications: (1) Our public pricing page must keep all tiers, fees, and overages disclosed. The plan name and price log in `CLAUDE.md` — `free`, `growth $249/mo`, `professional $499/mo`, `autopilot $299/mo`, `enterprise $899/mo` — is the right posture. Do not hide billing thresholds. (2) When the widget quotes any price to an end-customer (service pricing, estimate, membership fee), the quote must be sourced from the tenant's authoritative pricing record and logged with timestamp + tenant_id + source. This is an audit-trail requirement, not a nice-to-have. (3) For tenants in auto sales, auto repair, home services, and dental — all of which quote prices through the widget — we should add a "pricing source" field to the tenant KB and refuse to quote prices that are not grounded in that source. Saying "contact us for pricing" is always safer than hallucinating a number. (4) Longer term, the cross-market doctrine suggests SaaS pricing transparency will be regulated more explicitly. Building the transparent-pricing muscle now is cheap insurance against a future rule that would be expensive to retrofit.
+Direct implications: (1) Our public pricing page must keep all tiers, fees, and overages disclosed. The plan name and price log in `CLAUDE.md` — `chatbot $19.99/mo`, `agent_os $99.99/mo` (legacy grandfathered plans honored but not sold) — is the right posture. Do not hide billing thresholds. (2) When the widget quotes any price to an end-customer (service pricing, estimate, membership fee), the quote must be sourced from the tenant's authoritative pricing record and logged with timestamp + tenant_id + source. This is an audit-trail requirement, not a nice-to-have. (3) For tenants in auto sales, auto repair, home services, and dental — all of which quote prices through the widget — we should add a "pricing source" field to the tenant KB and refuse to quote prices that are not grounded in that source. Saying "contact us for pricing" is always safer than hallucinating a number. (4) Longer term, the cross-market doctrine suggests SaaS pricing transparency will be regulated more explicitly. Building the transparent-pricing muscle now is cheap insurance against a future rule that would be expensive to retrofit.
+
+---
+
+*Updated 2026-06-22 due to #288*

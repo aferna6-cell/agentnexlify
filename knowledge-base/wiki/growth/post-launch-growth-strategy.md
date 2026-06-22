@@ -4,7 +4,7 @@ category: growth
 tags: ["activation", "retention", "viral-growth", "pricing", "lock-in", "onboarding", "quickbooks", "reviews", "referrals", "multi-location"]
 sources: ["raw/growth/post-launch-growth-features.md"]
 created: 2026-04-04
-updated: 2026-04-04
+updated: 2026-06-22
 summary: "Top-10 post-launch feature roadmap prioritized across activation (P0), viral growth (P1), lock-in (P2), and enterprise lift (P3) with target conversion metrics."
 ---
 
@@ -76,7 +76,7 @@ Research-backed feature recommendations for driving signup activation, viral gro
 **9. "Instant Website" AI-Generated Landing Page**
 - One-click professional landing page for businesses with no website
 - 30-40% of small businesses lack a good website
-- "Powered by" footer on free/growth plans for viral awareness
+- "Powered by" footer on Chatbot plan for viral awareness
 
 ### P3 — Next Quarter (Large effort, enterprise value)
 
@@ -116,3 +116,7 @@ Research-backed feature recommendations for driving signup activation, viral gro
 ## Relevance to AgentNexLiFy
 
 The platform is feature-broad but needs to deepen value for retention. The P0 features (onboarding wizard, daily briefing, review requests) are all small-effort and compound: onboarding drives activation, briefing drives daily usage, reviews drive visible ROI. Together they transform the pitch from "we have a lot of features" to "your business runs on this." See also [[competitive-landscape-march-2026]] for how these features compare to competitors, and [[customer-gaps-by-industry]] for industry-specific priorities.
+
+---
+
+*Updated 2026-06-22 due to #288*

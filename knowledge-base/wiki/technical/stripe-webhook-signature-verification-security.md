@@ -4,7 +4,7 @@ category: technical
 tags: ["stripe", "webhooks", "signature-verification", "hmac", "payments-security", "replay-attacks", "idempotency", "secret-rotation"]
 sources: ["raw/technical/stripe-webhook-security-guide-signature-verification.md"]
 created: 2026-04-24
-updated: 2026-04-24
+updated: 2026-06-22
 summary: "HMAC-SHA256 signature verification against the raw request bytes with a ≤5-minute timestamp tolerance is the minimum bar; constant-time comparison, idempotency keyed on event.id, and secret rotation with overlap close the remaining attack surface."
 ---
 
@@ -68,6 +68,10 @@ Unit testing without the CLI requires generating valid `Stripe-Signature` header
 
 ## Relevance to AgentNexLiFy
 
-The immediate audit target is `backend/routers/stripe_webhooks.py` against the production security checklist. The twelve items (HTTPS-only ingress, missing-signature 400 rejection, SDK-based verification, env-var secrets, constant-time comparison, raw-bytes-to-verifier, `event.id` idempotency store, ≤5-minute tolerance, structured log per event, failed-verification alerting, documented rotation runbook with overlap, per-environment separate secrets) map one-to-one onto failure modes that have produced real incidents in Stripe-integrated SaaS. The AgentNexLiFy billing surface covers five plan tiers (free, growth $249, professional $499, autopilot $299, enterprise $899) plus three legacy prices — a forged `customer.subscription.created` at enterprise tier is a $10,788/year fraud vector that signature verification plus `client_id` authorization closes completely.
+The immediate audit target is `backend/routers/stripe_webhooks.py` against the production security checklist. The twelve items (HTTPS-only ingress, missing-signature 400 rejection, SDK-based verification, env-var secrets, constant-time comparison, raw-bytes-to-verifier, `event.id` idempotency store, ≤5-minute tolerance, structured log per event, failed-verification alerting, documented rotation runbook with overlap, per-environment separate secrets) map one-to-one onto failure modes that have produced real incidents in Stripe-integrated SaaS. The AgentNexLiFy billing surface covers two active plans (Chatbot $19.99/mo, Agent OS $99.99/mo) plus legacy grandfathered plans still honored on old contracts — a forged `customer.subscription.created` on any plan is a real fraud vector that signature verification plus `client_id` authorization closes completely.
 
 The one invariant to flag is secret rotation: there is no documented runbook in `docs/dev-knowledge/` for `STRIPE_WEBHOOK_SECRET` rotation, and SOC 2 compliance posture for enterprise tenants will require one before any enterprise contract closes. The rotation pattern (Dashboard "Roll secret" with 24-hour overlap, deploy with both secrets in the verifier array, monitor Verification failures metric, remove old) needs to land in `docs/dev-knowledge/security-runbooks.md` alongside similar runbooks for Twilio, Anthropic, and Resend. The testing side is cheap: `stripe trigger` fixtures plus a pytest case that asserts 400-on-tamper for every handled event type gives CI coverage against the two most common regression modes.
+
+---
+
+*Updated 2026-06-22 due to #288*

@@ -5,7 +5,7 @@ tags: [plumbing, ai-receptionist, trillet, agentzap, my-ai-front-desk, mybusines
 sources:
   - https://www.myaifrontdesk.com/blogs/top-5-ai-receptionist-solutions-for-plumbing-businesses-in-2026
 created: 2026-05-01
-updated: 2026-05-01
+updated: 2026-06-22
 summary: MyAIFrontDesk's 2026 plumbing roundup maps AgentZap, My AI Front Desk, MyBusinessFlow, Trillet, and AI Frontdesk against plumbing-specific realities: emergency after-hours calls, winter-freeze call spikes, ServiceTitan or Housecall Pro integration pressure, sub-2-second response expectations, and Trillet's $49/month budget floor.
 ---
 
@@ -43,6 +43,10 @@ The strategic read for any platform selling into plumbing: vertical training is 
 
 Three concrete moves drop out of this for our plumbing go-to-market:
 
-1. **Lock the price ceiling at $99/month entry tier when selling plumbing.** Trillet's $49/150-minute floor sets the procurement reference point. Our existing Starter ($99) and Growth ($150) tiers are within range, but any higher-priced tier needs to clearly differentiate on conversation quality, ServiceTitan integration depth, or follow-up automation — the three places where Trillet's price-driven product makes tradeoffs.
+1. **Anchor on price story vs Trillet when selling plumbing.** Trillet's $49/150-minute floor sets the procurement reference point. Our Chatbot plan ($19.99/mo) undercuts Trillet's floor and wins on price; the Agent OS plan ($99.99/mo) sits above that floor and needs to clearly differentiate on conversation quality, ServiceTitan integration depth, or follow-up automation — the three places where Trillet's price-driven product makes tradeoffs.
 2. **Stand up plumbing terminology training as a tenant-KB pattern.** Our knowledge-base architecture already supports per-tenant KBs in `widget/knowledge-bases/`. Build a `plumbing_kb.md` template with the trade's top 100 terms, common emergency triage flows (burst pipe, frozen pipe, sewage backup, water heater failure), and standard intake questions. Drop it into the new-tenant onboarding for any plumbing customer.
 3. **Add ServiceTitan / Housecall Pro / Jobber integration to the integration roadmap.** These three are table stakes per the article. Even if we don't build deep integrations on day one, the public roadmap should list them. Operators evaluating us against AgentZap or MyBusinessFlow will eliminate any product that can't show a path to their existing CRM. Document the integration shape in `planning/integrations-roadmap.md` and link from the plumbing pitch deck.
+
+---
+
+*Updated 2026-06-22 due to #288*
