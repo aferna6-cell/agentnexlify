@@ -1,0 +1,58 @@
+{
+  "run": 65,
+  "date": "2026-06-22",
+  "mandate_status": "MOOT — both moratorium_override items implemented before run 65",
+  "winner": {
+    "title": "Add plan-name guard Check 7 to check_project_invariants.py",
+    "category": "code_health",
+    "confidence": "HIGH",
+    "effort": "S (~15 lines Python, ~30 min)",
+    "autonomous_executable": true,
+    "implementation_sketch": "subconscious/runs/2026-06-22/winning-concept.md"
+  },
+  "moratorium_override_resolved": [
+    {
+      "title": "Fix GH #308 — Webhook Idempotency Early-Write Drops Payment Events",
+      "implemented_by": "3a958e5",
+      "implemented_date": "2026-06-22"
+    },
+    {
+      "title": "Fix GH #292/#293 — Wire chatbot/agent_os into plan-name dicts",
+      "implemented_by": "57f2bb4 + 29ed1d4",
+      "implemented_date": "2026-06-22"
+    }
+  ],
+  "evidence_highlights": [
+    "2163 tests passing, 0 failed",
+    "GH #308: delete_key() in idempotency.py + stripe_webhooks.py exception handler (3a958e5)",
+    "GH #292/#293: chatbot/agent_os wired into 6 service files (57f2bb4) + billing reconciliation caps (29ed1d4)",
+    "test_plan_gating_new_plans.py: 90 new assertions locking plan-gating constants at PR time",
+    "New find: widget_chat.py at 1307L (first time tracked, highest-blast-radius router)"
+  ],
+  "ideas_generated": 5,
+  "top_3_debated": [
+    "Idea 1: Plan-name guard Check 7 — SURVIVES → WINNER",
+    "Idea 2: AI-to-Human Handoff v1 — WEAKENED → Parking Lot (M-effort, scheduling friction bottleneck)",
+    "Idea 3: widget_chat.py god-class split (1307L) — WEAKENED → Parking Lot (sequence after email_sequences.py)"
+  ],
+  "parking_lot_state": [
+    "AI-to-Human Handoff v1 (Critical, 57 days, all 7 industries — scheduling friction is bottleneck)",
+    "widget_chat.py split (1307L, new find, sequence after email_sequences.py)",
+    "email_sequences.py split (1143L, run 41 active_direction, pending_approval)",
+    "Fix kb-autopopulate.sh (ROI 1.8, 46+ days broken)",
+    "GH #263 triage (24 pending migrations CRITICAL)"
+  ],
+  "governance_corrections": [
+    "GH #308 status: pending_approval → implemented (3a958e5, 2026-06-22)",
+    "GH #292/#293 status: pending_approval → implemented (57f2bb4 + 29ed1d4, 2026-06-22)",
+    "runs_implemented: 18 → 21 (correcting stale field: 19 after Check 13, +2 for both revenue bugs)",
+    "total_runs: 64 → 65",
+    "last_run: 2026-06-20-pm → 2026-06-22"
+  ],
+  "run_66_questions": [
+    "1. Was Check 7 implemented (grep check_project_invariants.py for _check_plan_gating_constants)? If yes: governance correction + free-choice winner from parking lot.",
+    "2. Has AI-to-Human Handoff GH issue been created or scheduled? If yes: promote to run 66 winner.",
+    "3. Has email_sequences.py split (run 41) been executed? If yes: widget_chat.py split becomes next god-class target.",
+    "4. Is GH #263 still open? If yes: triage in run 66 as S-effort investigation."
+  ]
+}
