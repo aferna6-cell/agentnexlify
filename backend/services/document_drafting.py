@@ -54,14 +54,15 @@ from backend.services.managed_agents_registry import (
     ManagedAgentNotConfigured,
     document_drafter,
 )
+from backend.services.plan_catalog import PREMIUM_PLANS
 
 logger = logging.getLogger(__name__)
 
-# Plans allowed to spend on the document drafter. Same gate as
-# lead_qualification — free tier explicitly excluded. agent_os ($99.99 full
-# platform) included; chatbot ($19.99 widget-only) is not. Legacy names kept
-# for grandfathered tenants.
-_ELIGIBLE_PLANS = frozenset({"agent_os", "growth", "professional", "autopilot", "enterprise"})
+# Plans allowed to spend on the document drafter. Single source of truth is
+# plan_catalog.PREMIUM_PLANS (agent_os + grandfathered legacy); chatbot
+# ($19.99 widget-only) and free are excluded. Same canonical gate as every
+# other premium feature; test_plan_catalog_coverage.py enforces parity.
+_ELIGIBLE_PLANS = PREMIUM_PLANS
 
 _VALID_KINDS = frozenset({"quote", "invoice", "proposal"})
 

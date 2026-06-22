@@ -14,8 +14,16 @@ from backend.dependencies import _get_current_tenant
 from backend.services.plan_gate import require_marketing_access
 from backend.services.campaign_service import _send_campaign_background
 from backend.services.llm_runtime import call_claude_messages
+from backend.services.plan_catalog import PREMIUM_PLANS
 
 logger = logging.getLogger(__name__)
+
+# Plans allowed to SEND campaigns. Premium feature — single source of truth is
+# plan_catalog.PREMIUM_PLANS (agent_os + grandfathered legacy). chatbot ($19.99
+# entry tier) and free are excluded. Previously a legacy-only literal that
+# omitted agent_os, so the $99.99 plan could not send campaigns (drift bug).
+# test_plan_catalog_coverage.py enforces parity.
+_CAMPAIGN_SEND_PLANS = PREMIUM_PLANS
 
 router = APIRouter(
     prefix="/api/v1/campaigns",
@@ -363,10 +371,9 @@ async def send_campaign(
     """
     verify_tenant(claims, tenant_id)
 
-    # Plan gate: free plan cannot send campaigns
-    _PAID_PLANS = {"growth", "professional", "autopilot", "enterprise"}
+    # Plan gate: campaign sending is a premium feature (see _CAMPAIGN_SEND_PLANS)
     tenant_plan = claims.get("plan", "free")
-    if tenant_plan not in _PAID_PLANS:
+    if tenant_plan not in _CAMPAIGN_SEND_PLANS:
         raise HTTPException(status_code=403, detail="Campaign sending requires a paid plan")
 
     try:

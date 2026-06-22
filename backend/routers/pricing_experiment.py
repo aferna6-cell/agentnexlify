@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
+from backend.services.plan_catalog import ALL_KNOWN_PLANS
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,11 @@ router = APIRouter(prefix="/api/v1/public/pricing-experiment", tags=["public"])
 EXPERIMENT = "pricing_page_cta_2026_06"
 VARIANTS = ("control", "variant_b")
 _ALLOWED_EVENTS = {"view", "cta_click"}
-_ALLOWED_PLANS = {"free", "growth", "autopilot", "professional", "enterprise"}
+# Accepted plan names on pricing-page analytics events. Single source of truth is
+# plan_catalog.ALL_KNOWN_PLANS (free + current chatbot/agent_os + legacy). The old
+# literal omitted the current plans, so cta_click events for the actually-displayed
+# chatbot/agent_os cards were rejected as invalid.
+_ALLOWED_PLANS = ALL_KNOWN_PLANS
 _VISITOR_RE = re.compile(r"^[A-Za-z0-9-]{8,64}$")
 
 
