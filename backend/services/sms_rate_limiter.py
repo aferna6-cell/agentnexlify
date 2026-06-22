@@ -6,8 +6,10 @@ from datetime import datetime, timezone
 _daily_sms: dict[str, int] = {}
 _last_reset_date: str = ""
 
-# Plans with unlimited SMS
-_UNLIMITED_PLANS = {"growth", "professional", "autopilot", "enterprise"}
+# Plans with unlimited SMS. agent_os ($99.99 full platform) included; chatbot
+# ($19.99 widget-only) stays on the FREE_DAILY_LIMIT cap. Legacy names kept for
+# grandfathered tenants.
+_UNLIMITED_PLANS = {"agent_os", "growth", "professional", "autopilot", "enterprise"}
 FREE_DAILY_LIMIT = 50
 
 

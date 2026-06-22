@@ -58,8 +58,10 @@ from backend.services.managed_agents_registry import (
 logger = logging.getLogger(__name__)
 
 # Plans allowed to spend on the document drafter. Same gate as
-# lead_qualification — free tier explicitly excluded.
-_ELIGIBLE_PLANS = frozenset({"growth", "professional", "autopilot", "enterprise"})
+# lead_qualification — free tier explicitly excluded. agent_os ($99.99 full
+# platform) included; chatbot ($19.99 widget-only) is not. Legacy names kept
+# for grandfathered tenants.
+_ELIGIBLE_PLANS = frozenset({"agent_os", "growth", "professional", "autopilot", "enterprise"})
 
 _VALID_KINDS = frozenset({"quote", "invoice", "proposal"})
 

@@ -22,6 +22,11 @@ _BRANDING_PLAN_FIELDS: dict[str, set[str]] = {
     "growth": {"primary_color", "secondary_color", "accent_color", "widget_title", "powered_by_text", "powered_by_url"},
     "professional": {"primary_color", "secondary_color", "accent_color", "widget_title", "powered_by_text", "powered_by_url", "hide_powered_by", "logo_url", "font_family"},
     "enterprise": {"primary_color", "secondary_color", "accent_color", "widget_title", "powered_by_text", "powered_by_url", "hide_powered_by", "logo_url", "font_family", "custom_css"},
+    # 2026-06-15 repricing: chatbot ($19.99) is the widget/chat entry tier —
+    # widget look-and-feel but no white-label (can't hide "powered by").
+    # agent_os ($99.99) is the full platform — enterprise-grade white-label.
+    "chatbot": {"primary_color", "secondary_color", "accent_color", "widget_title", "powered_by_text", "powered_by_url"},
+    "agent_os": {"primary_color", "secondary_color", "accent_color", "widget_title", "powered_by_text", "powered_by_url", "hide_powered_by", "logo_url", "font_family", "custom_css"},
 }
 
 _DANGEROUS_CSS_RE = re.compile(
@@ -56,6 +61,6 @@ def _filter_branding_for_plan(branding: dict | None, plan: str) -> dict:
         return {}
     allowed = _BRANDING_PLAN_FIELDS.get(plan, _BRANDING_PLAN_FIELDS["free"])
     filtered = {k: v for k, v in branding.items() if k in allowed and v is not None}
-    if plan in ("free", "growth"):
+    if plan in ("free", "growth", "chatbot"):
         filtered.pop("hide_powered_by", None)
     return filtered

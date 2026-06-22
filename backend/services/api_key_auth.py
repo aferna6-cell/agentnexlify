@@ -25,8 +25,10 @@ _BCRYPT_ROUNDS = 12
 _KEY_PREFIX_LEN = 8
 _KEY_PREFIX = "zap_"
 
-# Tiers allowed to use Zapier integration
-_ALLOWED_PLANS = {"growth", "autopilot", "professional", "enterprise"}
+# Tiers allowed to use Zapier integration.
+# agent_os ($99.99 full platform) included; chatbot ($19.99 widget-only) is not.
+# Legacy plan names kept for grandfathered tenants on old contracts.
+_ALLOWED_PLANS = {"agent_os", "growth", "autopilot", "professional", "enterprise"}
 
 
 def generate_api_key() -> tuple[str, str, str]:

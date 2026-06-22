@@ -49,8 +49,10 @@ logger = logging.getLogger(__name__)
 
 # Plans that are allowed to spend on Claude Managed Agents for auto
 # qualification. Free tier is explicitly excluded so we don't burn
-# credits on drive-by traffic.
-_ELIGIBLE_PLANS = frozenset({"growth", "professional", "autopilot", "enterprise"})
+# credits on drive-by traffic. agent_os ($99.99 full platform) included;
+# chatbot ($19.99 widget-only) is not. Legacy names kept for grandfathered
+# tenants.
+_ELIGIBLE_PLANS = frozenset({"agent_os", "growth", "professional", "autopilot", "enterprise"})
 
 _VALID_RECOMMENDATIONS = frozenset({
     "hot_call_now",

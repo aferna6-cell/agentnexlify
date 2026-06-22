@@ -235,7 +235,7 @@ async def execute_step(execution_id: str, execution_data: dict | None = None) ->
 
         # Branded wrapping
         plan = tenant.get("plan") or "free"
-        if plan in ("professional", "enterprise"):
+        if plan in ("professional", "enterprise", "agent_os"):
             try:
                 wc_result = (
                     db.table("widget_configs")
@@ -314,9 +314,9 @@ async def execute_step(execution_id: str, execution_data: dict | None = None) ->
         subject = render_template(step["subject_template"], context)
         body = render_template(step["body_template"], context)
 
-        # Branded email wrapping for Professional/Enterprise plans
+        # Branded email wrapping for Professional/Enterprise/Agent OS plans
         plan = tenant.get("plan") or "free"
-        if plan in ("professional", "enterprise"):
+        if plan in ("professional", "enterprise", "agent_os"):
             try:
                 wc_result = (
                     db.table("widget_configs")
