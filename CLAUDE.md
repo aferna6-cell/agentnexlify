@@ -4,6 +4,9 @@ AI-powered business automation platform. Embeddable chat widget captures leads, 
 
 > This file is your onboarding doc, not a README. Keep it ≤200 lines per [Anthropic guidance](https://docs.claude.com/en/docs/claude-code/memory#write-effective-instructions) — files >200 lines reduce adherence. Reference rule files — never duplicate their contents.
 
+## SECOND BRAIN — READ FIRST
+Before any task, read `brain/Maps/Home.md` — the source-backed operating memory for AgentNexLiFy (people, products, decisions, open loops, procedures, DB schema, competitors). Start there, follow wikilinks for depth. Re-sync with `brain/_tools/refresh_connectors.py`; ask it questions via `brain/_tools/ask.py`. Full guide: `brain/README.md`.
+
 ## Scope Ladder
 Claude merges CLAUDE.md files in this order (last wins on conflict):
 1. **Global** — `~/.claude/CLAUDE.md` — personal defaults across all projects

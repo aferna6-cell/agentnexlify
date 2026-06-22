@@ -1,0 +1,132 @@
+{
+  "output_path": "/home/user/agentnexlify/brain (committed in repo; canonical home)",
+  "current_phase": "complete (deep connector ingestion done; refresh mechanism in place)",
+  "checkpoint_2": "APPROVED 2026-06-22: pull all GitHub + Supabase history; build auto-refresh so brain updates on GitHub/Supabase changes",
+  "scope": "agentnexlify-business-only (personal/student excluded)",
+  "checkpoint_1": "APPROVED 2026-06-22: local-first; business-only; connectors GitHub+Supabase+Slack read; Google blocked; persistence deferred (likely separate GitHub repo)",
+  "completed_phases": [
+    "scaffold",
+    "filesystem-orientation",
+    "connector-verification",
+    "checkpoint-1-approved"
+  ],
+  "sources_discovered": [
+    "repo-agentnexlify",
+    "repo-agent-os",
+    "kb-wiki",
+    "dev-knowledge",
+    "eng-memory",
+    "ai-memory",
+    "planning",
+    "specs-plans-audits"
+  ],
+  "sources_ingested": [
+    "repo-agentnexlify (CLAUDE.md, README, AGENTS.md)",
+    "repo-agent-os (README + v2 spec)",
+    "dev-knowledge (architecture-decisions, canonical-schema, customer-gaps, lessons-learned, blocked-items)",
+    "planning (launch-readiness, gap-analysis, vertical-positioning, graph-memory decision)",
+    "docs (managed-agents, deployment-surfaces, production-runbook, marketing-addon)",
+    "kb-index",
+    "connector-github-issues (smoke)",
+    "connector-supabase-schema (smoke)",
+    "connector-slack (smoke)"
+  ],
+  "notes_by_folder": {
+    "People": 1,
+    "Companies": 5,
+    "Projects": 6,
+    "Products": 5,
+    "Topics": 9,
+    "Decisions": 7,
+    "Commitments": 6,
+    "Procedures": 6,
+    "Preferences": 3,
+    "Context Packs": 3,
+    "Sources": 21,
+    "Maps": 4
+  },
+  "connector_status": {
+    "github": {
+      "account": "aferna6-cell",
+      "verified": true,
+      "read_ok": true,
+      "approved_for_ingest": false
+    },
+    "vercel": {
+      "team": "aferna6-cell's projects",
+      "verified": true,
+      "read_ok": true,
+      "approved_for_ingest": false
+    },
+    "supabase": {
+      "org": "VoltOps",
+      "org_id": "jsymlqyawvukrxtcoiqz",
+      "verified": true,
+      "read_ok": true,
+      "approved_for_ingest": false
+    },
+    "slack": {
+      "account": "aidanfernandes31@gmail.com",
+      "user_id": "U0AU23Y8PSN",
+      "workspace": "Agent Nexlify",
+      "verified": true,
+      "read_ok": true,
+      "approved_for_ingest": false
+    },
+    "google_calendar": {
+      "account": "aferna6@g.clemson.edu",
+      "verified": true,
+      "read_ok": true,
+      "approved_for_ingest": false,
+      "blocker": "identity-scope-decision"
+    },
+    "gmail": {
+      "account": "unconfirmed",
+      "label_hint": "afernandes@hamdenhall.org",
+      "verified": "partial",
+      "read_ok": true,
+      "approved_for_ingest": false,
+      "blocker": "confirm-address-and-scope"
+    },
+    "google_drive": {
+      "account": "unknown",
+      "verified": false,
+      "read_ok": false,
+      "approved_for_ingest": false,
+      "blocker": "mcp-requires-approval"
+    }
+  },
+  "batches_completed": 4,
+  "canonical_notes_created": 57,
+  "source_traces_created": 22,
+  "tools_created": 8,
+  "deep_ingestion": {
+    "github": "open issues (84) + ~50 open PRs + ~74 closed issues + ~85 merged PRs + recent commits \u2192 connector-github-history",
+    "supabase": "list_tables full inventory (~130 tables) \u2192 Database Schema topic"
+  },
+  "refresh_mechanism": "_tools/refresh_connectors.py (stdlib; env creds; read-only) + Procedures/Refresh The Brain; last_refresh stamped below",
+  "validation_status": "ALL GATES PASS (2026-06-22): artifacts, slugs, wikilinks(0 unresolved), provenance(57), secrets(0), manifest(7)",
+  "next_actions": [
+    "Persistence: move vault to its own GitHub repo + add a GitHub Action running refresh_connectors.py daily (user leaning this way; deferred)",
+    "On major GitHub/Supabase change: run _tools/refresh_connectors.py, then a Claude pass to synthesize new Decisions/Topics",
+    "Google (Calendar/Gmail/Drive) remain out-of-scope (business-only)"
+  ],
+  "blockers": [
+    "ephemeral-container-durability (vault must be committed/exported to persist; persistence decision deferred to separate GitHub repo)",
+    "no-always-on-daemon-possible (refresh runs on demand/cron, documented in Refresh The Brain)"
+  ],
+  "last_refresh": {
+    "at": "2026-06-22T13:42Z",
+    "results": {
+      "github": "skipped \u2014 GITHUB_TOKEN not set",
+      "supabase": "skipped \u2014 SUPABASE_ACCESS_TOKEN not set"
+    }
+  },
+  "home": "agentnexlify/brain on branch claude/agent-nexlify-testing-28d597",
+  "enhancements_built": [
+    "graph export (_tools/export_graph.py \u2192 _index/graph.json+viewer.html)",
+    "embeddings query (_tools/embed_notes.py + ask.py, Voyage voyage-3-lite)",
+    "daily refresh GitHub Action (.github/workflows/refresh-brain.yml)",
+    "agent-first wiring (CLAUDE.md + AGENTS.md read brain first)"
+  ]
+}

@@ -2,6 +2,9 @@
 
 Use this file as a **thin adapter for Codex and general coding agents**.
 
+## Read the second brain first
+Before any task, read `brain/Maps/Home.md` — source-backed operating memory (people, products, decisions, open loops, procedures, DB schema). Follow wikilinks for depth. Guide: `brain/README.md`. Re-sync: `brain/_tools/refresh_connectors.py`.
+
 ## Agent-Facing Command Layer
 Prefer these root commands before hunting through package files or ad-hoc scripts:
 
