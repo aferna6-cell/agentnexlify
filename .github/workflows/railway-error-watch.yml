@@ -13,7 +13,7 @@ name: Railway Error Watch
 
 on:
   schedule:
-    - cron: "0 * * * *"  # throttled 2026-06-18 from */10 to hourly to conserve Actions minutes (exhausted quota)
+    - cron: "0 */4 * * *"  # every 4h — throttled 2026-06-22 from hourly (quota still exhausting). Real-time error capture belongs on Sentry, not log polling.
   workflow_dispatch: {}
 
 concurrency:
