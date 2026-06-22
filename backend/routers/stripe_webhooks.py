@@ -13,7 +13,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from backend.config import settings
 from backend.models.database import get_service_supabase
-from backend.services.idempotency import check_and_record, record_response
+from backend.services.idempotency import check_and_record, delete_key, record_response
 from backend.routers.billing import (
     _handle_checkout_completed,
     _handle_payment_failed,
@@ -104,6 +104,10 @@ async def stripe_webhook(request: Request):
             logger.debug("Unhandled Stripe event: %s", event_type)
     except Exception:
         logger.exception("Stripe webhook handler failed for event %s", event_type)
+        # Release the in-flight idempotency row so Stripe's retry reprocesses
+        # instead of short-circuiting on the NULL-response row and permanently
+        # dropping the event (GH #308).
+        await delete_key(db, idempotency_key)
         raise HTTPException(status_code=500, detail="Webhook handler failed")
 
     response_body = {"status": "ok"}

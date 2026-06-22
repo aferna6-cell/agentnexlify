@@ -93,6 +93,23 @@ async def check_and_record(
     return False, cached
 
 
+async def delete_key(supabase, key: str) -> None:
+    """Remove an idempotency row so a failed handler can be retried cleanly.
+
+    The row is written by check_and_record BEFORE the handler runs (so
+    concurrent redeliveries dedup). If the handler then raises, the row would
+    otherwise persist with a NULL response_body and short-circuit every Stripe
+    retry as an "in-flight duplicate" — permanently dropping the event and
+    leaving dunning-locked tenants stuck (GH #308). Deleting it on failure lets
+    the next delivery reprocess from scratch.
+    """
+    try:
+        supabase.table("idempotency_keys").delete().eq("key", key).execute()
+        logger.info("idempotency: released key=%s after handler failure", key)
+    except Exception:
+        logger.exception("idempotency delete_key failed for key=%s", key)
+
+
 async def record_response(
     supabase,
     key: str,

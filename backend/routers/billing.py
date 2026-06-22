@@ -17,7 +17,7 @@ from backend.models.schemas import CreateCheckoutRequest, CheckoutResponse, Port
 from backend.dependencies import _get_current_tenant, block_demo_role
 from backend.services.activity import log_activity
 from backend.services.fraud_guard import guard_checkout_for_fraud
-from backend.services.idempotency import check_and_record, record_response
+from backend.services.idempotency import check_and_record, delete_key, record_response
 from backend.services.stripe_service import (
     PLAN_PRICES,
     ensure_plan_prices_configured,
@@ -281,6 +281,10 @@ async def stripe_webhook(request: Request):
             logger.debug("Unhandled Stripe event: %s", event_type)
     except Exception:
         logger.exception("Stripe webhook handler failed for event %s", event_type)
+        # Release the in-flight idempotency row so Stripe's retry reprocesses
+        # instead of short-circuiting on the NULL-response row and permanently
+        # dropping the event (GH #308).
+        await delete_key(db, idempotency_key)
         # Return 500 so Stripe retries (Stripe retries for up to 3 days)
         raise HTTPException(status_code=500, detail="Webhook handler failed")
 

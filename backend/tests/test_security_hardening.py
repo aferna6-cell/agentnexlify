@@ -70,6 +70,35 @@ async def test_billing_webhook_skips_duplicate_event():
     handler.assert_not_called()
 
 
+@pytest.mark.asyncio
+async def test_billing_webhook_releases_idempotency_row_on_handler_failure():
+    """GH #308: if the handler raises, the in-flight idempotency row is deleted
+    so Stripe's retry reprocesses instead of being acked as a duplicate.
+
+    Without the fix, the NULL-response row written before the handler persists,
+    every retry short-circuits, and the event is permanently dropped."""
+    from fastapi import HTTPException
+
+    released = AsyncMock()
+    with (
+        patch.object(billing.stripe.Webhook, "construct_event",
+                     return_value=_event("invoice.payment_succeeded", {"customer": "cus_1"})),
+        patch.object(billing, "get_service_supabase", return_value=MagicMock()),
+        patch.object(billing, "check_and_record", AsyncMock(return_value=(True, None))),
+        patch.object(billing, "record_response", AsyncMock()),
+        patch.object(billing, "delete_key", released),
+        patch.object(billing, "_handle_payment_succeeded",
+                     AsyncMock(side_effect=RuntimeError("db down"))),
+    ):
+        with pytest.raises(HTTPException) as exc:
+            await billing.stripe_webhook(_request())
+
+    assert exc.value.status_code == 500
+    # The in-flight row for this event was released so the retry reprocesses.
+    released.assert_awaited_once()
+    assert released.await_args.args[1] == "stripe:evt_x"
+
+
 def test_register_rejects_overlong_password():
     """MEDIUM-2: passwords beyond bcrypt's 72-byte limit are rejected, not truncated."""
     import pydantic
