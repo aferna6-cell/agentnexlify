@@ -63,6 +63,12 @@
 
 **Subtotal:** 16 / 16 × 3 = **48 / 48** — no HIGH-severity zeros in this dimension
 
+> **Plan-lineup note (2026-06-22):** rows above predate the 2026-06-15 repricing and
+> reference legacy plan names (growth/autopilot/professional/enterprise). Those checkout
+> flows still exist for grandfathered contracts, so the test evidence remains valid. Current
+> sell lineup is `chatbot` ($19.99) + `agent_os` ($99.99); `free` = lapsed internal state.
+> New billing tests should assert the current plans — see `backend/tests/test_plan_gating_new_plans.py`.
+
 ---
 
 ## Dimension 4 — Observability (weight: 2)

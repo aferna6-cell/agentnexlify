@@ -1,7 +1,7 @@
 # Canonical Database Schema Reference
 
-**Last updated:** 2026-04-18
-**Migration number:** 106
+**Last updated:** 2026-06-22
+**Migration number:** 154
 **Status:** Authoritative — this file reflects PRODUCTION reality, not historical migration intent.
 
 ---
@@ -31,7 +31,7 @@ Multi-tenant accounts (business owners).
 | phone | TEXT | | |
 | city | TEXT | | |
 | website_url | TEXT | | |
-| plan | TEXT | DEFAULT 'free' | free/growth/professional/autopilot/enterprise |
+| plan | TEXT | DEFAULT 'free' | Current paid: chatbot ($19.99) / agent_os ($99.99). free = lapsed/no-subscription. Legacy grandfathered: growth/professional/autopilot/enterprise (repriced 2026-06-15). |
 | plan_status | TEXT | DEFAULT 'trial' | |
 | stripe_customer_id | TEXT | | |
 | stripe_subscription_id | TEXT | | |
