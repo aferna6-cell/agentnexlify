@@ -2,14 +2,16 @@
 
 from datetime import datetime, timezone
 
+from backend.services.plan_catalog import PREMIUM_PLANS
+
 # In-memory daily SMS tracking per tenant (reset at midnight UTC)
 _daily_sms: dict[str, int] = {}
 _last_reset_date: str = ""
 
-# Plans with unlimited SMS. agent_os ($99.99 full platform) included; chatbot
-# ($19.99 widget-only) stays on the FREE_DAILY_LIMIT cap. Legacy names kept for
-# grandfathered tenants.
-_UNLIMITED_PLANS = {"agent_os", "growth", "professional", "autopilot", "enterprise"}
+# Plans with unlimited SMS. Single source of truth is plan_catalog.PREMIUM_PLANS
+# (agent_os + grandfathered legacy); chatbot ($19.99 widget-only) stays on the
+# FREE_DAILY_LIMIT cap. test_plan_catalog_coverage.py enforces parity.
+_UNLIMITED_PLANS = PREMIUM_PLANS
 FREE_DAILY_LIMIT = 50
 
 

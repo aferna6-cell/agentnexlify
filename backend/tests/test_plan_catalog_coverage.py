@@ -37,12 +37,14 @@ def _premium_gates():
     from backend.services.sms_rate_limiter import _UNLIMITED_PLANS
     from backend.services.document_drafting import _ELIGIBLE_PLANS as DOC
     from backend.services.lead_qualification import _ELIGIBLE_PLANS as LQ
+    from backend.routers.marketing_campaigns import _CAMPAIGN_SEND_PLANS
 
     return [
         ("api_key_auth._ALLOWED_PLANS (Zapier)", set(_ALLOWED_PLANS)),
         ("sms_rate_limiter._UNLIMITED_PLANS", set(_UNLIMITED_PLANS)),
         ("document_drafting._ELIGIBLE_PLANS", set(DOC)),
         ("lead_qualification._ELIGIBLE_PLANS", set(LQ)),
+        ("marketing_campaigns._CAMPAIGN_SEND_PLANS", set(_CAMPAIGN_SEND_PLANS)),
     ]
 
 

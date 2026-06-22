@@ -44,15 +44,16 @@ from backend.services.managed_agents_registry import (
     lead_qualifier,
 )
 from backend.services.qualification_rubrics import get_qualification_rubric
+from backend.services.plan_catalog import PREMIUM_PLANS
 
 logger = logging.getLogger(__name__)
 
-# Plans that are allowed to spend on Claude Managed Agents for auto
-# qualification. Free tier is explicitly excluded so we don't burn
-# credits on drive-by traffic. agent_os ($99.99 full platform) included;
-# chatbot ($19.99 widget-only) is not. Legacy names kept for grandfathered
-# tenants.
-_ELIGIBLE_PLANS = frozenset({"agent_os", "growth", "professional", "autopilot", "enterprise"})
+# Plans allowed to spend on Claude Managed Agents for auto qualification.
+# Single source of truth is plan_catalog.PREMIUM_PLANS (agent_os + grandfathered
+# legacy); free and chatbot ($19.99 widget-only) are excluded so we don't burn
+# credits on entry-tier / drive-by traffic. test_plan_catalog_coverage.py
+# enforces parity with every other premium gate.
+_ELIGIBLE_PLANS = PREMIUM_PLANS
 
 _VALID_RECOMMENDATIONS = frozenset({
     "hot_call_now",
