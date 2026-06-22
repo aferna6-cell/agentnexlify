@@ -1,0 +1,47 @@
+{
+  "run": 65,
+  "date": "2026-06-22-pm",
+  "phase": "complete",
+  "winner": {
+    "title": "Add Check 7 — Plan-Catalog Drift Guard to scripts/check_project_invariants.py",
+    "category": "code_health",
+    "confidence": "HIGH",
+    "autonomous_executable": true,
+    "files_to_touch": ["scripts/check_project_invariants.py"],
+    "estimated_lines": 15,
+    "pre_condition": "57f2bb4+29ed1d4 landed (plan_catalog.CURRENT_PAID_PLANS exists)"
+  },
+  "moratorium_exit": true,
+  "moratorium_exit_reason": "GH #308 implemented by 3a958e5 + GH #292/#293 implemented by 57f2bb4+29ed1d4. pending_approval=0. Moratorium active 44 days (runs 15-65).",
+  "governance_corrections": [
+    "GH #292/#293 status: pending_approval → implemented (57f2bb4+29ed1d4, 2026-06-22)",
+    "GH #308 status: pending_approval → implemented (3a958e5, 2026-06-22)",
+    "moratorium_active: true → false"
+  ],
+  "ideas_generated": 5,
+  "top_3_debated": [
+    "Idea 1 — Check 7: Plan-Catalog Drift Guard (WINNER)",
+    "Idea 2 — AI-to-Human Handoff v1 (parking lot — moratorium now unblocked, Priority 1)",
+    "Idea 3 — Migration Coverage Script (parking lot — Priority 2)"
+  ],
+  "parking_lot": [
+    "AI-to-Human Handoff v1 (Priority 1, Critical gap, 1.5 day human effort, GoHighLevel moat)",
+    "scripts/check_migration_coverage.py (Priority 2, 2h, Supabase dep)",
+    "billing_reconciliation._PLAN_AGENT_RUN_CAPS product decision (Priority 3, product decision needed)",
+    "email_sequences.py god-class split (Priority 4, M-effort, skills ready)"
+  ],
+  "artifacts": {
+    "ideas": [
+      "subconscious/runs/2026-06-22-pm/ideas/idea-1-check-7-plan-catalog-guard.md",
+      "subconscious/runs/2026-06-22-pm/ideas/idea-2-ai-to-human-handoff.md",
+      "subconscious/runs/2026-06-22-pm/ideas/idea-3-migration-audit-script.md",
+      "subconscious/runs/2026-06-22-pm/ideas/idea-4-billing-agent-run-caps.md",
+      "subconscious/runs/2026-06-22-pm/ideas/idea-5-email-sequences-split.md"
+    ],
+    "debate": "subconscious/runs/2026-06-22-pm/debate/debate-log.md",
+    "winning_concept": "subconscious/runs/2026-06-22-pm/winning-concept.md",
+    "improvement_backlog": "subconscious/runs/2026-06-22-pm/improvement-backlog.md",
+    "run_summary": "subconscious/runs/2026-06-22-pm/run-summary.json"
+  },
+  "key_finding": "First free-choice run in 6+ cycles. Both alternating-mandate bugs discovered implemented this run. Moratorium exits. Winner is AUTONOMOUS-EXECUTABLE, closes recurring plan-name-drift class (4 incidents). Moratorium exit unlocks AI-to-Human Handoff as next human priority."
+}
