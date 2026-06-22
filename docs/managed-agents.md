@@ -409,7 +409,7 @@ Sessions are billed:
 
 For high-volume product flows (e.g. lead qualification) prefer
 `claude-sonnet-4-6`. For developer flows where correctness matters more
-than latency (code review), `claude-opus-4-6` is fine.
+than latency (code review), `claude-opus-4-7` is fine.
 
 **Rule of thumb:** if you can do it with a single `messages.create()` call
 against the existing `llm_runtime.py`, do that instead. Managed Agents is

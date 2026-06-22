@@ -17,7 +17,14 @@ a background task; 4 tests.
 
 ## Open gaps, ranked by what breaks trust first
 
-### G2. The owner never sees what the AI was worth ($) — HIGHEST OPEN [M]
+### G2. The owner never sees what the AI was worth ($) — ~~HIGHEST OPEN~~ SHIPPED [M]
+
+> **UPDATE 2026-06-22: SHIPPED.** Weekly value digest is live —
+> `backend/services/weekly_value.py::compute_weekly_value` +
+> `backend/services/automation/scheduled_jobs_ext.py::send_weekly_digest`
+> (Friday email, dollar-framed, all paying tenants). G2 is no longer an open
+> gap. Original text preserved below as the point-in-time record.
+
 Daily briefing (SMS, opt-in) and monthly report (autopilot-only) exist, but
 nothing tells every paying owner weekly, in dollars-adjacent plain English:
 "your AI handled 14 conversations, captured 9 leads, booked 3 appointments,
@@ -45,6 +52,14 @@ flow); (b) "no website" path in onboarding that leads with the hosted page +
 widget pre-installed. (a) is copy, ~2 hrs; (b) ~1 day.
 
 ### G5. Three different price stories on three surfaces [S — needs OWNER decision]
+
+> **UPDATE 2026-06-22:** Repricing on 2026-06-15 resolved the open decision.
+> Current canonical lineup is `chatbot` $19.99 + `agent_os` $99.99 (free =
+> lapsed internal state). The growth/autopilot/professional/enterprise prices
+> quoted below are LEGACY/grandfathered only — no longer the sell lineup.
+> Surface-alignment (BillingPage / Home / HelpPage) tracks against the new two
+> plans. Original text preserved below as the point-in-time record.
+
 Canonical (CLAUDE.md): growth $99 / autopilot $150 / professional $250 /
 enterprise $899. BillingPage table: Professional $150, Enterprise $250, no
 autopilot row. Home FAQ: a third variant. An owner comparing checkout vs
@@ -83,8 +98,9 @@ consent + DPA; dunning + recovery + fraud pause; review requests; referral
 links; daily briefing; uptime/load/billing test evidence (rubric 221/262).
 
 ## Sequence recommendation
-1. G2 weekly value digest (before MTOptions week 2)
-2. G5 pricing decision (owner) + alignment pass (same day as decision)
+<!-- UPDATE 2026-06-22: item 1 (G2) SHIPPED; item 2 (G5) pricing decided 2026-06-15 (chatbot/agent_os). -->
+1. ~~G2 weekly value digest~~ DONE — shipped (`weekly_value.py` + `scheduled_jobs_ext.send_weekly_digest`)
+2. ~~G5 pricing decision~~ DONE — repriced 2026-06-15 to chatbot $19.99 + agent_os $99.99; alignment pass tracks the two plans
 3. G4a platform install cards (copy-level, quick)
 4. G7 proactive suggestions v1 (after first beta feedback)
 5. G6 granular auto-send (when a beta tenant asks for it — they will)

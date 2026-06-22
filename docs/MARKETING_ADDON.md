@@ -1,4 +1,18 @@
-# Marketing Suite Add-on — $49.99/mo
+# Marketing Suite Add-on — RETIRED (2026-06-09)
+
+> **RETIRED — DO NOT FOLLOW THE STEPS BELOW.**
+> The standalone $49.99/mo Marketing Suite add-on was retired and folded into
+> the `agent_os` plan (PR #228). Migration **137** dropped the
+> `marketing_addon_*` columns from `tenants`. Marketing features (SEO Audit Hub,
+> Social Media, Campaigns, Dashboard, A/B Tests, Automation Rules, Trigger Logs)
+> now ship as part of `agent_os` ($99.99/mo) — no separate subscription, no
+> separate gate. **Do not apply migration 102 on new deploys** (its columns were
+> dropped by 137). The content below is kept only as a historical record of how
+> the add-on worked before it was folded in.
+
+---
+
+## Historical record (pre-2026-06-09)
 
 Separate Stripe subscription gating 7 features:
 SEO Audit Hub, Social Media, Marketing Campaigns, Marketing Dashboard,

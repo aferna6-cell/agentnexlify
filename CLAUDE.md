@@ -37,7 +37,7 @@ Dashboard (React/Vite) ─────────→ FastAPI /api/* ───�
 - `backend/` — FastAPI service (`main.py`, `routers/`, `services/`)
 - `frontend/` — React/Vite dashboard (`src/pages/`, `src/utils/api/`)
 - `widget/` + `frontend/public/widget/` — embeddable chat widget (**must stay byte-identical**)
-- `migrations/` — SQL migration files, numbered 001–102+
+- `migrations/` — SQL migration files, numbered 001–154+
 - `docs/dev-knowledge/` — bug-patterns.md, schema-log.md, architecture-decisions.md
 - `knowledge-base/` — LLM-compiled wiki (`raw/`, `wiki/`, pgvector embeddings)
 - `.claude/` — config, rules, skills, agents, commands, hooks
