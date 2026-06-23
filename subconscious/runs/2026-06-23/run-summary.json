@@ -1,0 +1,42 @@
+{
+  "run": 65,
+  "date": "2026-06-23",
+  "phase": "completed",
+  "mode": "free_choice",
+  "mode_note": "First free-choice run since run 58. Both alternating-mandate items (GH #292/#293, GH #308) resolved as of 2026-06-21.",
+  "winner": "Add plan-name guard Check 7 to check_project_invariants.py",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "evidence_summary": "GH #292/#293 FIXED (29ed1d4/57f2bb4/c461cef, 2026-06-21) — 4th repricing-triggered gate drift incident resolved. GH #308 FIXED (3a958e5, 2026-06-21) — payment idempotency early-write patched. plan_catalog.py created (3d4c7db) as canonical plan sets source: CURRENT_PAID_PLANS = frozenset({'chatbot','agent_os'}). Bonus B (Check 7 guard) was deferred 6 consecutive runs pending GH #292/#293 — now unblocked. PR audit (2026-06-22) flagged 48 open PRs; Batch A+D MERGE-SAFE; PR #209 security fix needs review. GH #263 (24 pending migrations) confirmed false positive by migration-triage-2026-06-22.md.",
+  "ideas_generated": 5,
+  "ideas": [
+    "Add plan-name guard Check 7 to check_project_invariants.py",
+    "Review and merge PR #209 (timing-safe token comparison, agent-service auth.ts)",
+    "AI-to-Human Handoff v1 (explicit trigger, run 4, 68 days)",
+    "Merge Batch A + D Dependency PRs (#342, #281, #279, #277, #340, #273, #15, #14, #13, #12, #11)",
+    "Deterministic migration object-existence audit (kill GH #263 false-alarm class)"
+  ],
+  "debate_outcomes": {
+    "Plan-name guard Check 7": "SURVIVES → WINNER",
+    "PR #209 timing-safe token comparison": "WEAKENED → Bonus Action (investigate + merge/close)",
+    "AI-to-Human Handoff v1": "WEAKENED → Parking Lot (first priority after quick wins)"
+  },
+  "governance_corrections": [
+    "GH #292/#293 active_direction status: pending_approval → implemented (29ed1d4/57f2bb4/c461cef, 2026-06-21)",
+    "GH #308 active_direction status: pending_approval → implemented (3a958e5, 2026-06-21)",
+    "total_runs: 64 → 65",
+    "last_run: 2026-06-20-pm → 2026-06-23",
+    "runs_implemented: 19 → 21",
+    "alternating mandate resolved — both moratorium_override active_directions now implemented"
+  ],
+  "moratorium_active": true,
+  "true_pending_estimate": 9,
+  "artifacts": [
+    "subconscious/runs/2026-06-23/ideas/ideas.md",
+    "subconscious/runs/2026-06-23/debate/debate-log.md",
+    "subconscious/runs/2026-06-23/winning-concept.md",
+    "subconscious/runs/2026-06-23/improvement-backlog.md",
+    "subconscious/runs/2026-06-23/run-summary.json"
+  ]
+}
