@@ -44,9 +44,11 @@ logger = logging.getLogger(__name__)
 # Max AI conversation rounds before ending the call
 _MAX_VOICE_ROUNDS = 3
 
-# Live AI answering is the Professional-tier feature ("AI answering service").
-# Lower tiers get voicemail mode (recording -> transcription -> recovery draft).
-_AI_VOICE_PLANS = {"professional", "enterprise"}
+# Live AI answering is an agent_os feature (full platform plan, $99.99/mo).
+# Grandfathered professional/enterprise contracts are also included.
+# Lower tiers (chatbot, free) get voicemail mode (recording -> transcription
+# -> recovery draft). See CLAUDE.md plan names + docs/dev-knowledge/schema-log.md.
+_AI_VOICE_PLANS = {"agent_os", "professional", "enterprise"}
 
 
 def _ai_voice_mode(tenant: dict) -> bool:

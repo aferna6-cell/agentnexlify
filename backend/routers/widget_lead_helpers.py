@@ -464,6 +464,66 @@ async def _capture_leads_from_session(
                         logger.warning("lead_capture: failed to update lead_captured on conversation %s", conversation_id, exc_info=True)
                 return
 
+        # Dedup: fallback check by phone when no email was captured.
+        # Without this, every session where the visitor shares only a phone
+        # number creates a duplicate lead row instead of updating the existing one.
+        if combined.get("phone") and not combined.get("email"):
+            try:
+                phone_existing = (
+                    tenant_select(
+                        db, "leads", tenant_id,
+                        "id, name, email, phone, areas_of_interest, conversation_summary"
+                    )
+                    .eq("phone", combined["phone"])
+                    .limit(1)
+                    .execute()
+                )
+            except Exception as phone_dedup_err:
+                logger.error(
+                    "lead_capture: phone dedup query FAILED: %s",
+                    phone_dedup_err, exc_info=True,
+                )
+                phone_existing = type("R", (), {"data": []})()
+
+            if phone_existing.data:
+                lead = phone_existing.data[0]
+                logger.info(
+                    "lead_capture: existing phone-only lead found id=%s", lead["id"]
+                )
+                updates: dict[str, str] = {}
+                if combined.get("name") and not lead.get("name"):
+                    updates["name"] = combined["name"]
+                phone_service_interest = _extract_service_interest(messages)
+                if phone_service_interest and not lead.get("areas_of_interest"):
+                    updates["areas_of_interest"] = phone_service_interest
+                summary = _build_conversation_summary(messages)
+                if summary and not lead.get("conversation_summary"):
+                    updates["conversation_summary"] = summary
+                if updates:
+                    tenant_update(db, "leads", tenant_id, updates).eq(
+                        "id", lead["id"]
+                    ).execute()
+                    logger.info(
+                        "lead_capture: updated phone-only lead %s fields=%s",
+                        lead["id"], list(updates.keys()),
+                    )
+                if conversation_id:
+                    try:
+                        from uuid import UUID
+                        UUID(conversation_id)
+                        tenant_update(
+                            db, "conversations", tenant_id, {"lead_captured": True}
+                        ).eq("id", conversation_id).execute()
+                    except (ValueError, AttributeError):
+                        pass
+                    except Exception:
+                        logger.warning(
+                            "lead_capture: failed to update lead_captured on "
+                            "conversation %s (phone path)", conversation_id,
+                            exc_info=True,
+                        )
+                return
+
         # Extract service interest from conversation context
         service_interest = _extract_service_interest(messages)
 
