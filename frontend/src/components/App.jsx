@@ -11,7 +11,6 @@ import { fetchTrialStatus } from "../utils/api/dashboard";
 import { fetchOsPendingDeliverables } from "../utils/api/os";
 import DemoBanner from "./DemoBanner";
 import LoginPage from "./LoginPage";
-import StripeTrialBanner from "./StripeTrialBanner";
 import MarketingUpsell, {
   MARKETING_GATED_KEYS,
   MARKETING_PLANS,
@@ -103,6 +102,9 @@ const AdminAnalyticsPage = lazy(() => import("../pages/AdminAnalyticsPage"));
 const AdminHealthPage = lazy(() => import("../pages/AdminHealthPage"));
 const AdminPromotionsPage = lazy(() => import("../pages/AdminPromotionsPage"));
 const AdminFunnelPage = lazy(() => import("../pages/AdminFunnelPage"));
+const AdminTenantHealthPage = lazy(
+  () => import("../pages/AdminTenantHealthPage"),
+);
 const IntegrationsKeysPage = lazy(
   () => import("../pages/Settings/IntegrationsKeysPage"),
 );
@@ -141,6 +143,7 @@ const pages = {
   admin_health: AdminHealthPage,
   admin_promotions: AdminPromotionsPage,
   admin_funnel: AdminFunnelPage,
+  admin_tenant_health: AdminTenantHealthPage,
 };
 
 // --------------------------------------------------------------------------
@@ -180,6 +183,7 @@ const PAGE_TO_PATH = {
   admin_health: "/admin/health",
   admin_promotions: "/admin/promotions",
   admin_funnel: "/admin/funnel",
+  admin_tenant_health: "/admin/tenant-health",
 };
 
 const PATH_TO_PAGE = Object.fromEntries(
@@ -359,8 +363,6 @@ export default function App() {
         }}
       >
         <DemoBanner />
-        <TrialBanner trialData={trialData} onNavigate={handleNavigate} />
-        <StripeTrialBanner onNavigate={handleNavigate} />
         <div
           style={{
             display: "flex",

@@ -102,6 +102,7 @@ from backend.routers import (
     admin_funnel,
     admin_health,
     admin_promotions,
+    admin_tenant_health,
     funnel,
     onboarding_presets,
     referral,
@@ -913,6 +914,7 @@ app.include_router(admin_funnel.router)
 app.include_router(admin_health.router)
 app.include_router(admin_promotions.router)
 app.include_router(funnel.router)
+app.include_router(admin_tenant_health.router)
 app.include_router(referral.router)
 app.include_router(invoices.router)
 app.include_router(documents.router)

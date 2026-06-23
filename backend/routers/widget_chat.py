@@ -933,12 +933,17 @@ async def widget_chat(
     if widget.get("bot_name"):
         system_prompt = system_prompt.replace("AI Assistant", widget["bot_name"], 1)
 
-    # Booking nudge — if online booking is enabled, tell the AI to suggest it
+    # Booking nudge — if online booking is enabled, tell the AI to actively offer
+    # booking. Two-thirds of captured leads were not booking; a passive "mention
+    # it" prompt under-converts, so this proactively offers a slot once there is
+    # any service/pricing/scheduling interest or once contact info is shared.
     if widget.get("booking_enabled"):
         system_prompt += (
             "\n\nBOOKING: This business has online booking enabled. "
-            "When the visitor shows interest in scheduling, mention they can book an appointment "
-            "directly through the booking link. Don't push it — only suggest when relevant."
+            "When the visitor shows any interest in a service, pricing, or scheduling — or once "
+            "they have shared their name and contact info — actively offer to book them an "
+            "appointment through the booking link and ask for their preferred day and time. "
+            "Make booking the clear next step rather than waiting for them to ask."
         )
 
     # AI fallback protocol — when enabled, a second-tier managed agent can

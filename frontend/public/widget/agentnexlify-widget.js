@@ -2041,6 +2041,27 @@
       .addEventListener("click", () => toggleWindow(false));
     document.getElementById("anx-send").addEventListener("click", handleSend);
 
+    // Referral click tracking — fire-and-forget, keepalive so it survives navigation
+    document
+      .getElementById("anx-powered")
+      .querySelector("a")
+      .addEventListener("click", function () {
+        try {
+          fetch(API_BASE + "/api/v1/referral/click", {
+            method: "POST",
+            keepalive: true,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ref: API_KEY,
+              path: window.location.pathname,
+              referrer: document.referrer,
+            }),
+          });
+        } catch (_) {
+          // tracking failure must never break the widget
+        }
+      });
+
     // File attachment
     document
       .getElementById("anx-attach")
