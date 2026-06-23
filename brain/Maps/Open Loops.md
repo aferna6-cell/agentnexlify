@@ -13,12 +13,12 @@ Unfinished work + blockers (business scope). Ordered by priority.
 
 ## High
 - ~~[[Insurance Quote for Launch]]~~ — **DONE 2026-06-23 (owner).** The single HIGH rubric zero is cleared → launch verdict flips NO-GO → GO. Remaining launch items are MEDIUM/owner-content (log sink 4.5, case study 8.5, outreach 9.5).
-- [[Align Pricing Across Surfaces]] — owner decision + alignment pass (G5).
-- [[Convert Beta Tenants to Paid]] — revenue priority (led by [[MTOptions]]).
+- ~~[[Align Pricing Across Surfaces]]~~ — **DONE 2026-06-23** (G5 alignment shipped round 2; live surfaces + landing all at chatbot $19.99 / agent_os $99.99; stale High entry cleared).
+- ~~[[Convert Beta Tenants to Paid]]~~ — **DONE 2026-06-23 (owner): all beta tenants converted to paid.**
 - ~~[[Weekly Value Digest]]~~ — G2 retention lever. **Shipped 2026-06-23**: the Friday emailer already existed; added dollar-framed estimated pipeline `$`, configurable `avg_lead_value` (graceful when column absent, no migration), conversations count, + 23 tests. `backend/services/weekly_value.py` + `scheduled_jobs_ext.py`.
 
 ## Medium
-- [[Connect Public Domain]] — repoint agentnexlify.com to the live Vercel project.
+- ~~[[Connect Public Domain]]~~ — **DONE 2026-06-23 (owner): agentnexlify.com connected to the live Vercel project.** The per-vertical SEO landing pages (`/ai-front-desk/{salons,plumbers,dentists}`) + marketing site now reach the public.
 - [[Proactive AI Opportunities Job]] — nightly proactive suggestions (G7).
 
 ## Infra / hygiene (from sources, not yet broken out)
@@ -46,7 +46,7 @@ Theme: launch is gated by the owner insurance call; engineering de-risks the bet
 - **KB embeddings — code half DONE.** `backend/services/embeddings.py` now raises typed `EmbeddingUnavailable` on missing key (no doomed 401), 13 tests. Still owner-gated: set `VOYAGE_API_KEY` in Railway + `/kb-compile --full` backfill, AND guard the cron snippet in `.claude/skills/kb-compile/SKILL.md:104-115` with `try/except EmbeddingUnavailable` (SKILL.md = owner edit). Until the SKILL guard lands the cron still skips embeddings, but now fails observably, not as a 401 swallowed-as-success.
 - **Reproducibility — 3 untracked deps pinned** in `backend/requirements.txt` (authoritative per railway.json→Dockerfile): **PyYAML** (was a module-level `import yaml` reachable from boot → clean Railway deploy would CRASH AT STARTUP), `qrcode[pil]`, `python-dateutil`. Source: `audits/audit-untracked-deps-2026-06-23.md`.
 - **G5 pricing alignment — DONE (2026-06-23).** `landing-page-v2/index.html` swept to chatbot $19.99 / agent_os $99.99. Audited `frontend/src`: live conversion surfaces ALREADY correct (`SignupPage.jsx`, `wizard/WizardStepPlan.jsx`, `TidioAlternative.jsx` all state $19.99/$99.99 + no free tier). Fixed gating copy in `MessagingSettingsCards.jsx`: "Professional plan" → "Agent OS plan" (Professional is retired-from-sale legacy; live-answering gate unlocks on agent_os). Competitor prices + widget JS untouched; invariants pass.
-- **OWNER DECISION NEEDED — trial UI vs the killed-trial decision.** `frontend/src/components/StripeTrialBanner.jsx` (`plan_status==="trialing"`, "card charged when trial ends") + the legacy free `TrialBanner` in `App.jsx` (`plan==="free"`) still render 7-day-trial messaging, but [[Decision Log]] has "Kill Trial Charge On Signup" — which itself was "reversed #299" once. Whether tenants still enter `trialing` is a Stripe-config + backend `plan_status` question; NOT safe to blind-edit. Decide: are paid trials live or dead? If dead, remove both banners + the `trialing` UI path.
+- **OWNER DECIDED 2026-06-23 — KILL the free trial; tenants pay on signup.** No `trialing` state. Build task (in progress round 6): remove `trial_period_days` from Stripe subscription/checkout creation so the card is charged at signup, and remove the trial banners (`StripeTrialBanner.jsx` + the legacy free `TrialBanner` in `App.jsx`). Original note kept below for context. ~~OWNER DECISION NEEDED — trial UI vs the killed-trial decision.~~ `frontend/src/components/StripeTrialBanner.jsx` (`plan_status==="trialing"`, "card charged when trial ends") + the legacy free `TrialBanner` in `App.jsx` (`plan==="free"`) still render 7-day-trial messaging, but [[Decision Log]] has "Kill Trial Charge On Signup" — which itself was "reversed #299" once. Whether tenants still enter `trialing` is a Stripe-config + backend `plan_status` question; NOT safe to blind-edit. Decide: are paid trials live or dead? If dead, remove both banners + the `trialing` UI path.
 
 ## Review 2026-06-23 (round 3) — owner-gated action pass
 Owner cleared #1 (insurance) + is setting env-var secrets (#2). I did the doable parts of 3/4/5/6:

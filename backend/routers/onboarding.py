@@ -231,22 +231,34 @@ def _apply_vertical_preset_defaults(
     business_type: str | None,
     explicit_greeting: str | None,
     existing_greeting: str | None,
+    tenant_updates: dict[str, Any] | None = None,
+    explicit_services: list[str] | None = None,
+    existing_services: list[str] | None = None,
+    explicit_hours_display: str | None = None,
+    existing_hours_display: str | None = None,
 ) -> None:
-    """Apply vertical preset defaults to widget_updates in-place.
+    """Apply vertical preset defaults in-place.
 
-    Priority chain for greeting_message (highest wins):
-      1. explicit_greeting  — value the tenant sent in the request body
-      2. existing_greeting  — value already stored in DB for this tenant
-      3. preset["greeting"] — vertical-specific preset from vertical_presets.yaml
-      4. widget_updates["greeting_message"] — business_profiles.py generic default
+    Modifies widget_updates (for widget_configs table) and optionally
+    tenant_updates (for tenants table) with preset values, but only when the
+    tenant has not already provided or stored a value.
 
-    Only updates greeting_message when neither (1) nor (2) is present.
+    Priority chain per field (highest wins):
+      1. explicit_*      — value the tenant sent in the request body
+      2. existing_*      — value already stored in DB for this tenant
+      3. preset[field]   — vertical-specific preset from vertical_presets.yaml
+
+    Fields mapped:
+      greeting_message  (widget_configs) ← preset["greeting"]
+      business_services (tenants)        ← preset["services"]   [if tenant_updates provided]
+      business_hours_display (tenants)   ← preset["business_hours"] [if tenant_updates provided]
+
+    Skipped (no matching column in widget_configs or mapped table):
+      preset["faqs"] — goes to faq_entries table; handled separately in the
+                       onboarding flow. Not applied here to avoid double-seeding.
+
     Never raises: missing YAML or unknown vertical fall back to generic ({}).
     """
-    # Skip if tenant already specified or already has a value in DB.
-    if explicit_greeting or existing_greeting:
-        return
-
     bt = (business_type or "").strip()
     if not bt:
         return
@@ -259,9 +271,23 @@ def _apply_vertical_preset_defaults(
         )
         return
 
-    greeting = (preset.get("greeting") or "").strip()
-    if greeting:
-        widget_updates["greeting_message"] = greeting
+    # --- greeting_message → widget_configs ---
+    if not explicit_greeting and not existing_greeting:
+        greeting = (preset.get("greeting") or "").strip()
+        if greeting:
+            widget_updates["greeting_message"] = greeting
+
+    # --- business_services → tenants (only when caller passes tenant_updates) ---
+    if tenant_updates is not None and not explicit_services and not existing_services:
+        services = preset.get("services") or []
+        if services:
+            tenant_updates["business_services"] = list(services)
+
+    # --- business_hours_display → tenants (only when caller passes tenant_updates) ---
+    if tenant_updates is not None and not explicit_hours_display and not existing_hours_display:
+        hours_display = (preset.get("business_hours") or "").strip()
+        if hours_display:
+            tenant_updates["business_hours_display"] = hours_display
 
 
 async def _generate_ai_content(
@@ -397,6 +423,21 @@ async def complete_onboarding(
         tenant_update["website_url"] = req.website_url
     if req.services:
         tenant_update["business_services"] = req.services
+
+    # Apply vertical preset tenant-level defaults (services, business hours) into
+    # the same tenants write — only where the tenant hasn't provided/stored a value.
+    _existing_tenant = tenant_result.data[0] if tenant_result.data else {}
+    _apply_vertical_preset_defaults(
+        widget_updates={},  # greeting handled in the widget_configs call below
+        business_type=req.business_type,
+        explicit_greeting=None,
+        existing_greeting=None,
+        tenant_updates=tenant_update,
+        explicit_services=req.services,
+        existing_services=_existing_tenant.get("business_services"),
+        explicit_hours_display=None,
+        existing_hours_display=_existing_tenant.get("business_hours_display"),
+    )
 
     try:
         db.table("tenants").update(tenant_update).eq("id", tenant_id).execute()

@@ -252,3 +252,53 @@ class TestApplyVerticalPresetDefaults:
         assert isinstance(result, str) and result.strip(), (
             f"Expected a non-empty greeting; got {result!r}"
         )
+
+    # --- tenant-level fields: services + business_hours_display ---
+
+    def test_tenant_services_and_hours_applied_when_empty(self):
+        """salon preset fills business_services + business_hours_display when unset."""
+        fn = self._fn()
+        tenant_updates = {}
+        fn(
+            widget_updates={},
+            business_type="salon",
+            explicit_greeting=None,
+            existing_greeting=None,
+            tenant_updates=tenant_updates,
+            explicit_services=None,
+            existing_services=None,
+            explicit_hours_display=None,
+            existing_hours_display=None,
+        )
+        assert tenant_updates.get("business_services"), "expected preset services applied"
+        assert tenant_updates.get("business_hours_display"), "expected preset hours applied"
+
+    def test_explicit_services_not_overwritten(self):
+        """A tenant-supplied services value blocks the preset."""
+        fn = self._fn()
+        tenant_updates = {}
+        fn(
+            widget_updates={},
+            business_type="salon",
+            explicit_greeting=None,
+            existing_greeting=None,
+            tenant_updates=tenant_updates,
+            explicit_services=["my own service"],
+            existing_services=None,
+            explicit_hours_display=None,
+            existing_hours_display="Mon-Fri 9-5",
+        )
+        assert "business_services" not in tenant_updates
+        assert "business_hours_display" not in tenant_updates
+
+    def test_no_tenant_updates_dict_skips_tenant_fields(self):
+        """Without a tenant_updates dict, only widget greeting is touched (back-compat)."""
+        fn = self._fn()
+        widget_updates = {}
+        fn(
+            widget_updates=widget_updates,
+            business_type="salon",
+            explicit_greeting=None,
+            existing_greeting=None,
+        )
+        assert widget_updates.get("greeting_message")
