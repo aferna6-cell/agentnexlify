@@ -180,6 +180,8 @@ Closed the referral loop: clicks were tracked (round 6); now signups are too.
 - **Signup capture**: register endpoint stores `req.ref_code` (the existing field) as `referred_by_widget_key`, best-effort/non-blocking. Frontend captures `?ref=` via sessionStorage (survives nav, cleared post-signup, not localStorage) + sends `ref_code` on email AND Google register.
 - **Stats**: `GET /api/v1/referral/my-stats` now returns `referred_signups`; Referral page shows a "Signups referred" card.
 - 17 referral tests + auth-register regression green; build clean; widget untouched. The incentive/credit on top is still an owner decision — but the channel is now MEASURABLE (clicks→signups), which is what was missing.
+- **MERGED to prod: PR #368 (sha b15071c).** 10th PR; migration 159 applied; both Vercel previews Ready; CI infra-death.
+- Round-13 in progress: admin referral overview (per-tenant clicks + referred-signups, ranked) — gives the owner visibility to make the incentive decision data-informed.
 
 ## Related
 - [[Paid Launch Readiness]] · [[Paid Launch Readiness Pack]] · [[Autonomous Dev Operation]]
