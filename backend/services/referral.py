@@ -12,7 +12,11 @@ Two independent attribution paths:
    Stores the raw api_key in tenants.referred_by_widget_key (TEXT).
    Used by the referral stats endpoint to count referred_signups.
 
-Security contract for both:
+3. notify_referrer_of_signup — fire-and-forget email to the referrer.
+   Called after apply_widget_referral_attribution succeeds.
+   Resolves the referrer's owner_email and sends a short plain notification.
+
+Security contract for all:
 - Invalid / expired / unknown code → silently ignored, signup proceeds.
 - Never log the raw code alongside PII (email/business_name).
 - Validation is entirely server-side.
@@ -191,5 +195,90 @@ def apply_widget_referral_attribution(
         logger.warning(
             "widget-referral: attribution failed for new tenant %s — ignored",
             new_tenant_id,
+            exc_info=True,
+        )
+
+
+async def notify_referrer_of_signup(
+    db,
+    *,
+    widget_key: str,
+) -> None:
+    """Send a short email to the referrer when someone signs up via their link.
+
+    Fire-and-forget — never raises.  Silently skips if the widget_key is
+    unresolvable or the referrer has no owner_email configured.
+
+    Args:
+        db: Supabase service client.
+        widget_key: The raw api_key stored in tenants.referred_by_widget_key.
+    """
+    if not widget_key:
+        return
+
+    try:
+        from backend.services.platform_mailer import send_platform_email
+        from backend.config import settings as _settings
+
+        # Resolve widget_key → referrer tenant_id
+        wc_result = (
+            db.table("widget_configs")
+            .select("tenant_id")
+            .eq("api_key", widget_key)
+            .limit(1)
+            .execute()
+        )
+        if not wc_result.data:
+            logger.debug("referral-notify: widget_key not found — skipping email")
+            return
+
+        referring_tenant_id = str(wc_result.data[0]["tenant_id"])
+
+        # Resolve tenant_id → owner_email
+        tenant_result = (
+            db.table("tenants")
+            .select("owner_email")
+            .eq("id", referring_tenant_id)
+            .limit(1)
+            .execute()
+        )
+        if not tenant_result.data:
+            logger.debug(
+                "referral-notify: referrer tenant %s not found — skipping email",
+                referring_tenant_id,
+            )
+            return
+
+        owner_email = (tenant_result.data[0].get("owner_email") or "").strip()
+        if not owner_email:
+            logger.debug(
+                "referral-notify: referrer tenant %s has no owner_email — skipping",
+                referring_tenant_id,
+            )
+            return
+
+        frontend_url = (_settings.frontend_url or "").rstrip("/")
+        referral_dashboard_url = f"{frontend_url}/dashboard/referral"
+
+        body_html = (
+            "<p>Good news — someone just signed up for AgentNexLiFy through "
+            "your referral link.</p>"
+            f'<p>View your referral stats: <a href="{referral_dashboard_url}">'
+            f"{referral_dashboard_url}</a></p>"
+        )
+
+        await send_platform_email(
+            subject="Someone signed up through your referral link",
+            body_html=body_html,
+            recipient=owner_email,
+        )
+        logger.info(
+            "referral-notify: email sent to referrer tenant %s", referring_tenant_id
+        )
+
+    except Exception:
+        # Never let notification failure affect the caller
+        logger.warning(
+            "referral-notify: failed for widget_key (redacted) — ignored",
             exc_info=True,
         )
