@@ -333,3 +333,138 @@ def test_list_verticals_includes_new_verticals():
     result = loader.list_verticals()
     for expected in ("law_firm", "restaurant", "fitness_studio"):
         assert expected in result, f"expected {expected!r} in list_verticals()"
+
+
+# ---------------------------------------------------------------------------
+# Tests: new verticals — roofing
+# ---------------------------------------------------------------------------
+
+
+def test_load_roofing_returns_expected_keys():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("roofing")
+    for key in ("greeting", "services", "business_hours", "faqs"):
+        assert key in preset, f"roofing preset missing key: {key}"
+
+
+def test_load_roofing_greeting_is_nonempty():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("roofing")
+    assert preset["greeting"].strip(), "roofing greeting should not be empty"
+
+
+def test_load_roofing_faqs_count():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("roofing")
+    faqs = preset.get("faqs", [])
+    assert 5 <= len(faqs) <= 8, f"expected 5-8 FAQs for roofing, got {len(faqs)}"
+
+
+def test_load_roofing_faq_has_question_and_answer():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("roofing")
+    for faq in preset["faqs"]:
+        assert "question" in faq
+        assert "answer" in faq
+        assert faq["question"].strip()
+        assert faq["answer"].strip()
+
+
+def test_load_roofing_services_nonempty():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("roofing")
+    assert len(preset.get("services", [])) > 0
+
+
+# ---------------------------------------------------------------------------
+# Tests: new verticals — home_cleaning
+# ---------------------------------------------------------------------------
+
+
+def test_load_home_cleaning_returns_expected_keys():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("home_cleaning")
+    for key in ("greeting", "services", "business_hours", "faqs"):
+        assert key in preset, f"home_cleaning preset missing key: {key}"
+
+
+def test_load_home_cleaning_greeting_is_nonempty():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("home_cleaning")
+    assert preset["greeting"].strip(), "home_cleaning greeting should not be empty"
+
+
+def test_load_home_cleaning_faqs_count():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("home_cleaning")
+    faqs = preset.get("faqs", [])
+    assert 5 <= len(faqs) <= 8, f"expected 5-8 FAQs for home_cleaning, got {len(faqs)}"
+
+
+def test_load_home_cleaning_faq_has_question_and_answer():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("home_cleaning")
+    for faq in preset["faqs"]:
+        assert "question" in faq
+        assert "answer" in faq
+        assert faq["question"].strip()
+        assert faq["answer"].strip()
+
+
+def test_load_home_cleaning_services_nonempty():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("home_cleaning")
+    assert len(preset.get("services", [])) > 0
+
+
+# ---------------------------------------------------------------------------
+# Tests: new verticals — veterinary
+# ---------------------------------------------------------------------------
+
+
+def test_load_veterinary_returns_expected_keys():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("veterinary")
+    for key in ("greeting", "services", "business_hours", "faqs"):
+        assert key in preset, f"veterinary preset missing key: {key}"
+
+
+def test_load_veterinary_greeting_is_nonempty():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("veterinary")
+    assert preset["greeting"].strip(), "veterinary greeting should not be empty"
+
+
+def test_load_veterinary_faqs_count():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("veterinary")
+    faqs = preset.get("faqs", [])
+    assert 5 <= len(faqs) <= 8, f"expected 5-8 FAQs for veterinary, got {len(faqs)}"
+
+
+def test_load_veterinary_faq_has_question_and_answer():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("veterinary")
+    for faq in preset["faqs"]:
+        assert "question" in faq
+        assert "answer" in faq
+        assert faq["question"].strip()
+        assert faq["answer"].strip()
+
+
+def test_load_veterinary_services_nonempty():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("veterinary")
+    assert len(preset.get("services", [])) > 0
+
+
+# ---------------------------------------------------------------------------
+# Tests: list_verticals now includes all three new verticals
+# ---------------------------------------------------------------------------
+
+
+def test_list_verticals_includes_roofing_home_cleaning_veterinary():
+    loader = _reload_loader()
+    result = loader.list_verticals()
+    for expected in ("roofing", "home_cleaning", "veterinary"):
+        assert expected in result, f"expected {expected!r} in list_verticals()"

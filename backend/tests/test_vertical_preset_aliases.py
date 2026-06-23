@@ -116,3 +116,78 @@ def test_yoga_alias_maps_to_fitness_studio():
 
 def test_pilates_alias_maps_to_fitness_studio():
     assert _greeting("pilates") == _greeting("fitness_studio")
+
+
+# ---------------------------------------------------------------------------
+# New alias tests: roofing
+# ---------------------------------------------------------------------------
+
+
+def test_roofing_direct_key_resolves():
+    assert _greeting("roofing")
+
+
+def test_roofer_alias_maps_to_roofing():
+    assert _greeting("roofer") == _greeting("roofing")
+
+
+def test_contractor_alias_maps_to_roofing():
+    assert _greeting("contractor") == _greeting("roofing")
+
+
+def test_construction_alias_maps_to_roofing():
+    assert _greeting("construction") == _greeting("roofing")
+
+
+# ---------------------------------------------------------------------------
+# New alias tests: home_cleaning
+# ---------------------------------------------------------------------------
+
+
+def test_home_cleaning_direct_key_resolves():
+    assert _greeting("home_cleaning")
+
+
+def test_cleaning_alias_maps_to_home_cleaning():
+    assert _greeting("cleaning") == _greeting("home_cleaning")
+
+
+def test_cleaner_alias_maps_to_home_cleaning():
+    assert _greeting("cleaner") == _greeting("home_cleaning")
+
+
+def test_maid_alias_maps_to_home_cleaning():
+    assert _greeting("maid") == _greeting("home_cleaning")
+
+
+def test_housekeeping_alias_maps_to_home_cleaning():
+    assert _greeting("housekeeping") == _greeting("home_cleaning")
+
+
+def test_janitorial_alias_maps_to_home_cleaning():
+    assert _greeting("janitorial") == _greeting("home_cleaning")
+
+
+# ---------------------------------------------------------------------------
+# New alias tests: veterinary
+# ---------------------------------------------------------------------------
+
+
+def test_veterinary_direct_key_resolves():
+    assert _greeting("veterinary")
+
+
+def test_vet_alias_maps_to_veterinary():
+    assert _greeting("vet") == _greeting("veterinary")
+
+
+def test_veterinarian_alias_maps_to_veterinary():
+    assert _greeting("veterinarian") == _greeting("veterinary")
+
+
+def test_animal_hospital_alias_maps_to_veterinary():
+    assert _greeting("animal_hospital") == _greeting("veterinary")
+
+
+def test_animal_clinic_alias_maps_to_veterinary():
+    assert _greeting("animal_clinic") == _greeting("veterinary")

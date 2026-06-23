@@ -378,6 +378,202 @@ fitness_studio:
         a few minutes early for your first visit so we can show you around and
         get you checked in smoothly.
 
+roofing:
+  greeting: >
+    Hi! Need a roofing estimate or repair? I can help you schedule an
+    inspection, get a free quote, or reach our crew fast if you have storm
+    damage or an active leak. What can I do for you?
+  services:
+    - Free roof inspections and estimates
+    - Shingle, tile, and metal roof repair
+    - Full roof replacement
+    - Storm and hail damage assessment
+    - Gutter installation and repair
+    - Flat and commercial roofing
+    - Insurance claim assistance
+  business_hours: >
+    Monday through Friday during regular business hours, with some Saturday
+    appointments available for estimates. Emergency tarping and leak response
+    is available outside regular hours for active damage situations.
+  faqs:
+    - question: Do you offer free estimates or inspections?
+      answer: >
+        Yes. We provide free on-site inspections and estimates for most
+        residential and commercial jobs. A technician will assess the condition
+        of your roof, identify any damage, and walk you through the options
+        before any work begins or any money changes hands.
+    - question: I have an active leak or storm damage. Can you come today?
+      answer: >
+        Active leaks and storm damage are treated as urgent. We can often
+        dispatch an emergency tarp crew same day to stop further water
+        intrusion while a full repair is scheduled. Tell us your address
+        and what is happening and we will get you the fastest available help.
+    - question: How much does a roof replacement cost?
+      answer: >
+        Replacement pricing depends on the roof size, pitch, material, and
+        access conditions. Asphalt shingles are typically the most affordable
+        option; metal and tile run higher. We give you a written, itemized
+        estimate after the inspection so you know exactly what is included
+        before you commit.
+    - question: Will my homeowner's insurance cover the repair or replacement?
+      answer: >
+        Storm damage, hail, and wind-related repairs are commonly covered
+        under homeowner's policies. We work with insurance adjusters regularly
+        and can help document the damage and file the claim. Coverage depends
+        on your policy and deductible. We can walk you through the process
+        at no cost.
+    - question: How long does a roof replacement take?
+      answer: >
+        Most residential replacements are completed in one to two days depending
+        on the roof size, complexity, and weather. We handle cleanup and debris
+        removal before we leave. You will get a timeline in writing as part of
+        the estimate.
+    - question: Are your roofers licensed and insured?
+      answer: >
+        Yes. We carry general liability insurance and workers' compensation,
+        and we are licensed in the states where we operate. We can provide
+        proof of insurance before any work starts. Never let an unlicensed
+        contractor on your roof — it can void your homeowner's policy.
+    - question: What roofing materials do you work with?
+      answer: >
+        We install and repair asphalt shingles (3-tab and architectural),
+        metal roofing, tile, flat TPO and EPDM membranes, and cedar shake.
+        We can help you compare the lifespan and cost trade-offs of each
+        material during the estimate visit.
+
+home_cleaning:
+  greeting: >
+    Hi! Looking for cleaning services? I can help you get a quote, check
+    availability, or book your first clean. What can I help you with?
+  services:
+    - Standard recurring house cleaning
+    - Deep cleaning and move-in/move-out cleaning
+    - Post-construction cleaning
+    - Apartment and condo cleaning
+    - Office and commercial cleaning
+    - Eco-friendly cleaning options
+    - One-time cleaning bookings
+  business_hours: >
+    Monday through Saturday with crews available from early morning through
+    late afternoon. Sunday availability varies by location. Book online or
+    chat with us to find the next open slot.
+  faqs:
+    - question: How much does house cleaning cost?
+      answer: >
+        Pricing depends on the size of the home, the number of rooms, the
+        frequency of service, and the type of clean (standard vs. deep).
+        Recurring cleans are generally priced lower than one-time or deep
+        cleans because the home is maintained between visits. Tell us your
+        square footage and what you are looking for and we can give you a
+        closer estimate.
+    - question: What is the difference between a standard clean and a deep clean?
+      answer: >
+        A standard clean covers the main areas — kitchen surfaces, bathrooms,
+        floors, and common areas — and is designed for homes that are
+        maintained regularly. A deep clean goes further: inside appliances,
+        baseboards, window sills, grout, behind furniture, and other areas
+        that are skipped in routine visits. Deep cleans are recommended for
+        first-time bookings and move-in or move-out situations.
+    - question: Do I need to provide cleaning supplies?
+      answer: >
+        No. Our team brings all the supplies and equipment needed. If you
+        have a preferred product for a specific surface or a sensitivity to
+        certain chemicals, let us know in advance and we will do our best to
+        accommodate. We also offer eco-friendly and fragrance-free options
+        on request.
+    - question: Do I need to be home during the cleaning?
+      answer: >
+        Most clients are not home during the clean. You can leave a key,
+        a lockbox code, or make arrangements with your building. We are
+        background-checked and insured, and we treat your home with care.
+        If you prefer to be present for the first visit, that is completely
+        fine.
+    - question: What if I am not happy with the cleaning?
+      answer: >
+        We stand behind our work. If you are not satisfied with an area we
+        cleaned, contact us within 24 hours and we will send a team back to
+        re-clean it at no charge. Your satisfaction is the standard we hold
+        ourselves to.
+    - question: How do I book recurring service?
+      answer: >
+        You can book weekly, bi-weekly, or monthly service right here in chat,
+        on our website, or by phone. Recurring clients typically receive a
+        discounted rate compared to one-time bookings and get priority on their
+        preferred time slots.
+    - question: Are your cleaners background checked and insured?
+      answer: >
+        Yes. All cleaning professionals are screened, background-checked, and
+        covered by our liability insurance and bonding. You have the same
+        team members on your recurring visits whenever possible so you get
+        familiar faces each time.
+
+veterinary:
+  greeting: >
+    Hi! Welcome. I can help you book an appointment for your pet, answer
+    questions about our services, or connect you with our team for urgent
+    concerns. What can I help you with?
+  services:
+    - Wellness exams and vaccinations
+    - Sick and urgent care visits
+    - Surgery and dental cleanings under anesthesia
+    - Spay and neuter procedures
+    - Parasite prevention and treatment
+    - Diagnostics (bloodwork, X-rays, ultrasound)
+    - Prescription diets and medications
+  business_hours: >
+    Monday through Friday during regular clinic hours, with Saturday morning
+    appointments available at most locations. After-hours and emergency care
+    varies by clinic — contact us to confirm availability for urgent situations.
+  faqs:
+    - question: How do I book an appointment for my pet?
+      answer: >
+        You can book right here in chat, on our website, or by phone during
+        clinic hours. Tell us your pet's name, species, and the reason for
+        the visit and we will find you the next available slot. New patients
+        are always welcome.
+    - question: My pet seems sick or is in pain. Can you see them today?
+      answer: >
+        Urgent or sick visits are given priority whenever possible. Tell us
+        what symptoms you are seeing and we will get your pet in as soon as
+        we can. If the situation is a life-threatening emergency, please
+        call our clinic directly or go to the nearest emergency animal hospital
+        right away.
+    - question: Do you see all types of animals?
+      answer: >
+        Most of our locations see dogs and cats. Some also see small mammals
+        such as rabbits, guinea pigs, hamsters, and ferrets. Exotic animals
+        like reptiles, birds, and pocket pets may require a specialist. Tell
+        us what type of animal you have and we will confirm whether we are
+        the right fit.
+    - question: How much does a wellness exam or vaccination visit cost?
+      answer: >
+        Wellness exam pricing varies by location and the type of pet. Vaccines
+        are priced individually or as bundles depending on what is due. A
+        typical annual wellness visit including core vaccines falls into a
+        moderate range. We can give you a closer estimate for the specific
+        services your pet needs before you come in.
+    - question: Do you accept pet insurance?
+      answer: >
+        Yes. We work with most major pet insurance providers. You typically
+        pay at the time of the visit and then submit a claim to your insurer
+        for reimbursement. Share your provider name and we will confirm the
+        process at our clinic. If you do not have insurance, ask us about
+        wellness plans or payment options.
+    - question: What should I do if my pet needs emergency care after hours?
+      answer: >
+        If your pet is in a life-threatening situation and the clinic is
+        closed, go directly to the nearest emergency animal hospital. We can
+        share the contact information for the closest emergency facility in
+        your area. For non-emergency concerns that arise after hours, call
+        our main line to hear the after-hours guidance message.
+    - question: What vaccinations does my pet need?
+      answer: >
+        Core vaccines for dogs include rabies, distemper-parvo (DHPP), and
+        sometimes Bordetella depending on lifestyle. Core vaccines for cats
+        include rabies and the FVRCP combination. Your veterinarian will
+        review your pet's history at the exam and recommend the right
+        schedule based on age, lifestyle, and local disease risks.
+
 generic:
   greeting: >
     Hi there! How can I help you today? I can answer questions about our

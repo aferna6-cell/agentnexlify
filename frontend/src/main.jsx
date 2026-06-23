@@ -140,6 +140,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/ai-front-desk/law-firms" element={<VerticalLanding />} />
             <Route path="/ai-front-desk/restaurants" element={<VerticalLanding />} />
             <Route path="/ai-front-desk/fitness" element={<VerticalLanding />} />
+            <Route path="/ai-front-desk/roofing" element={<VerticalLanding />} />
+            <Route path="/ai-front-desk/cleaning-services" element={<VerticalLanding />} />
+            <Route path="/ai-front-desk/veterinary" element={<VerticalLanding />} />
             <Route path="/ai-front-desk/:vertical" element={<VerticalLanding />} />
             {/* Comparison pages (canonical URLs) */}
             <Route path="/intercom-alternative" element={<IntercomAlternative />} />
