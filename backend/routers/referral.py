@@ -1,24 +1,132 @@
 """Referral click tracking — records watermark clicks from tenant-embedded widgets.
 
+Also exposes an admin endpoint for cross-tenant referral performance ranking:
+  GET /api/v1/referral/admin/overview  (x-api-secret gated)
+
 WARNING: PEP 563 deferred annotations are incompatible with FastAPI.
 Never add 'from __future__ import annotations' to this file.
 """
 
+import hmac
 import logging
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 
+from backend.config import is_production, settings
 from backend.dependencies import _get_current_tenant
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
+from backend.services.referral_overview import compute_referral_overview
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/referral", tags=["referral"])
 
 _SHARE_BASE = "https://agentnexlify.com?ref={ref_code}&utm_source=widget"
+
+
+# ---------------------------------------------------------------------------
+# Admin auth — mirrors funnel.py pattern exactly
+# ---------------------------------------------------------------------------
+
+
+def _admin_secret() -> str:
+    """Resolve the admin secret key.
+
+    Production: requires admin_api_secret_key to be set distinctly.
+    Local/dev: falls back to api_secret_key for convenience.
+    Returns "" on failure — _verify_admin_secret then rejects all requests (401).
+    """
+    admin_secret = getattr(settings, "admin_api_secret_key", "")
+    if isinstance(admin_secret, str) and admin_secret:
+        return admin_secret
+    if is_production():
+        return ""
+    api_secret = getattr(settings, "api_secret_key", "")
+    return api_secret if isinstance(api_secret, str) else ""
+
+
+def _verify_admin_secret(x_api_secret: str | None) -> None:
+    """Reject with 401 if caller lacks the platform admin secret."""
+    admin_secret = _admin_secret()
+    if (
+        not admin_secret
+        or not x_api_secret
+        or not hmac.compare_digest(x_api_secret, admin_secret)
+    ):
+        raise HTTPException(status_code=401, detail="Invalid admin secret")
+
+
+# ---------------------------------------------------------------------------
+# Pydantic models for admin overview
+# ---------------------------------------------------------------------------
+
+
+class TenantReferralRow(BaseModel):
+    tenant_id: str
+    business_name: str
+    ref_code: str
+    total_clicks: int
+    referred_signups: int
+
+
+class ReferralOverviewTotals(BaseModel):
+    total_clicks: int
+    total_referred_signups: int
+
+
+class ReferralOverviewResponse(BaseModel):
+    tenants: list[TenantReferralRow]
+    totals: ReferralOverviewTotals
+    computed_at: str
+
+
+# ---------------------------------------------------------------------------
+# Admin route — MUST appear before any /{param} route (FastAPI order matters)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/admin/overview", response_model=ReferralOverviewResponse)
+@limiter.limit("10/minute")
+async def get_referral_overview(
+    request: Request,
+    x_api_secret: str | None = Header(None),
+):
+    """Return per-tenant referral performance ranked by referred_signups desc.
+
+    Admin-secret gated (x-api-secret header, HMAC constant-time compare).
+
+    Response shape:
+        tenants[]:
+            tenant_id        str — tenant UUID
+            business_name    str — tenant's business name
+            ref_code         str — tenant's widget api_key (their referral identity)
+            total_clicks     int — clicks on their watermark (referral_clicks table)
+            referred_signups int — tenants who signed up via their ref link
+        totals:
+            total_clicks           int — platform-wide click sum
+            total_referred_signups int — platform-wide signup sum
+        computed_at str — UTC ISO timestamp
+    """
+    _verify_admin_secret(x_api_secret)
+
+    try:
+        data = compute_referral_overview()
+    except Exception:
+        logger.exception("get_referral_overview: unexpected error in compute_referral_overview")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to compute referral overview",
+        )
+
+    return data
+
+
+# ---------------------------------------------------------------------------
+# Pydantic models for tenant-facing endpoints (existing)
+# ---------------------------------------------------------------------------
 
 
 class ReferralClickRequest(BaseModel):
