@@ -502,7 +502,7 @@ export function VoiceAICard({
         speaking with callers, answering questions from your knowledge base,
         and capturing lead details. When OFF, callers reach voicemail and your
         AI staff transcribes the message, summarizes it, and drafts a text-back
-        for your approval. Live answering requires the Professional plan.
+        for your approval. Live answering requires the Agent OS plan.
       </p>
       <CheckboxSettingRow
         id="voice-ai-toggle"
@@ -515,7 +515,7 @@ export function VoiceAICard({
         label={
           planEligible
             ? "Answer calls live with AI"
-            : "Answer calls live with AI (Professional plan required)"
+            : "Answer calls live with AI (Agent OS plan required)"
         }
       />
       <SaveButton

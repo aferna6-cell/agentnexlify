@@ -11,7 +11,7 @@ BackgroundTasks get treated as query params, causing 422 errors.
 import logging
 import re
 import time as _time
-from typing import Any
+from typing import Any, List, Dict
 from urllib.parse import urlparse
 
 from fastapi import HTTPException, Request
@@ -590,6 +590,7 @@ def _build_system_prompt(
     custom_field_defs: list[dict] | None = None,
     custom_instructions: str | None = None,
     knowledge_base: str | None = None,
+    kb_article_refs: list | None = None,
 ) -> str:
     business_name = tenant.get("business_name") or "our company"
     business_type = tenant.get("business_type") or ""
@@ -792,6 +793,35 @@ def _build_system_prompt(
             + "\n- Only ask for these when it fits the conversation flow. Don't interrogate the visitor."
         )
 
+    # KB article references retrieved per-message (semantic/FTS search).
+    # Rendered as a compact block: title + summary, capped at 120 chars each.
+    # kb_articles table is global (not tenant-scoped) — the search query already
+    # limits which articles surface via relevance. Do not add client_id filter here.
+    kb_article_refs_block = ""
+    if kb_article_refs:
+        _kb_article_refs_limit = resolve_int_setting(
+            "widget_prompt_kb_article_refs_chars", 2000
+        )
+        _article_lines = []
+        _chars_used = 0
+        for _art in kb_article_refs:
+            _title = (_art.get("title") or "").strip()
+            _summary = (_art.get("summary") or "").strip()
+            if not _title:
+                continue
+            _summary_truncated = _summary[:120] + ("..." if len(_summary) > 120 else "")
+            _line = f"- {_title}: {_summary_truncated}" if _summary_truncated else f"- {_title}"
+            if _chars_used + len(_line) > _kb_article_refs_limit:
+                break
+            _article_lines.append(_line)
+            _chars_used += len(_line)
+        if _article_lines:
+            kb_article_refs_block = _format_reference_block(
+                "KB_ARTICLE_REFERENCES",
+                "\n".join(_article_lines),
+                _kb_article_refs_limit,
+            )
+
     # Industry-specific persona (replaces the old inline healthcare/legal block)
     healthcare_block = _format_industry_persona_block(business_type)
 
@@ -828,6 +858,7 @@ def _build_system_prompt(
         f"{faq_block}"
         f"{website_block}"
         f"{knowledge_block}"
+        f"{kb_article_refs_block}"
         f"{custom_fields_block}"
         f"{menu_block}"
         f"{jobs_block}"
@@ -977,3 +1008,114 @@ def _record_response_metric(
             session_id,
             exc_info=True,
         )
+
+
+# ---------------------------------------------------------------------------
+# KB article retrieval — semantic search with FTS fallback
+# ---------------------------------------------------------------------------
+
+# Shape of a KB article dict returned to callers.  Fields mirror both the
+# semantic match_kb_articles RPC and the FTS match_kb_articles_fts RPC so
+# callers never need to branch on which path was used.
+_KB_ARTICLE_FIELDS = "id, slug, title, summary"
+
+_KB_FTS_RPC = "match_kb_articles_fts"
+_KB_SEMANTIC_RPC = "match_kb_articles"
+
+
+async def _query_kb_articles(
+    query: str,
+    match_count: int = 5,
+) -> List[Dict[str, Any]]:
+    """Retrieve KB articles matching *query*.
+
+    Primary path — semantic search via ``match_kb_articles`` RPC (Voyage embeddings).
+    Fallback path — Postgres FTS via ``match_kb_articles_fts`` RPC (migration 155).
+
+    The fallback fires when:
+    - ``VOYAGE_API_KEY`` is absent/empty (``EmbeddingUnavailable`` raised by embed_query).
+    - The embed call succeeds but the semantic RPC returns an empty result set.
+
+    Return shape is identical regardless of path:
+    ``[{"id": ..., "slug": ..., "title": ..., "summary": ..., "similarity": ...}, ...]``
+
+    Always returns ``[]`` on any error — never raises.  Callers are unchanged
+    by which path executed.
+
+    kb_articles is a global (non-tenant-scoped) table.
+    """
+    if not query or not query.strip():
+        return []
+
+    db = get_service_supabase()
+
+    # --- Primary: semantic search ---
+    try:
+        from backend.services.embeddings import EmbeddingUnavailable, embed_query
+
+        embedding = await embed_query(query)
+
+        result = db.rpc(
+            _KB_SEMANTIC_RPC,
+            {
+                "query_embedding": embedding,
+                "match_count": match_count,
+            },
+        ).execute()
+
+        rows = result.data or []
+        if rows:
+            logger.info(
+                "kb_query: semantic path returned %d articles for query=%r",
+                len(rows),
+                query[:60],
+            )
+            return rows
+
+        # Semantic succeeded but returned nothing — fall through to FTS.
+        logger.info(
+            "kb_query: semantic returned 0 results, falling back to FTS for query=%r",
+            query[:60],
+        )
+
+    except Exception as exc:
+        from backend.services.embeddings import EmbeddingUnavailable
+
+        if isinstance(exc, EmbeddingUnavailable):
+            logger.info(
+                "kb_query: VOYAGE_API_KEY absent — using FTS fallback (query=%r)",
+                query[:60],
+            )
+        else:
+            logger.warning(
+                "kb_query: semantic path failed (%s) — using FTS fallback",
+                exc,
+                exc_info=True,
+            )
+
+    # --- Fallback: Postgres full-text search ---
+    try:
+        result = db.rpc(
+            _KB_FTS_RPC,
+            {
+                "query_text": query.strip(),
+                "match_count": match_count,
+            },
+        ).execute()
+
+        rows = result.data or []
+        logger.info(
+            "kb_query: FTS path returned %d articles for query=%r",
+            len(rows),
+            query[:60],
+        )
+        return rows
+
+    except Exception as exc:
+        logger.error(
+            "kb_query: FTS fallback also failed (%s) for query=%r",
+            exc,
+            query[:60],
+            exc_info=True,
+        )
+        return []

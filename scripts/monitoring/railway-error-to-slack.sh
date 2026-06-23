@@ -2,6 +2,13 @@
 #
 # railway-error-to-slack.sh
 #
+# DEPRECATED 2026-06-23. The Slack alert path is retired. SLACK_ALERT_WEBHOOK_URL
+# is no longer a configured secret. CI now scans Railway logs inline and emails
+# the owner via Resend, see scripts/monitoring/send-alert-email.sh and
+# .github/workflows/railway-error-watch.yml. This file is kept only as a record
+# of the previous Slack flow and is no longer invoked by any workflow. Do not
+# wire it back in without restoring the SLACK_ALERT_WEBHOOK_URL secret.
+#
 # Polls Railway deploy logs for WARNING/ERROR levelname entries in the last
 # lookback window and posts a compact summary to a Slack incoming webhook.
 #

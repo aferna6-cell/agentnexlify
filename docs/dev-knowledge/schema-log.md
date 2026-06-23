@@ -1374,3 +1374,16 @@ code before the migration is applied.
 Verified both `conversations.sentiment` (text) and `conversations.intent` (text)
 exist via information_schema. Closes the half-shipped state — enrichment code was
 already referencing these columns before they existed in prod.
+
+## 117_zapier_api_keys + 129_chat_messages_os_mirror
+
+**APPLIED to prod 2026-06-23** via `apply_migration` (project pxserpybmajixqrmzaly).
+The only 2 genuinely-pending migrations (see `audits/audit-schema-drift-2026-06-23.md`:
+issue #263's "24 pending" was a false count from 005/007 duplicate-numbered files plus
+an unreliable migration-history table). Both pure idempotent `ADD COLUMN IF NOT EXISTS`:
+- 117: `tenant_api_keys.rate_limit_rpm` (int default 100), `tenant_api_keys.notes` (text),
+  indexes `idx_tenant_api_keys_prefix`, `idx_tenant_api_keys_client`.
+- 129: `chat_messages.os_message_id` (uuid null) + partial unique index
+  `chat_messages_os_message_id_uniq` on (tenant_id, os_message_id) WHERE os_message_id IS NOT NULL.
+Verified all 6 objects exist post-apply (information_schema + pg_indexes). 154 was already
+live. Prod schema drift = 0.

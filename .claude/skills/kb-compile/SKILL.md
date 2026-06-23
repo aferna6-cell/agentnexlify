@@ -107,12 +107,24 @@ Call the embedding service. This step requires Python execution:
 import asyncio
 import sys
 sys.path.insert(0, '.')
-from backend.services.embeddings import embed_text
+from backend.services.embeddings import embed_text, EmbeddingUnavailable
 
 text = "Title\n\nSummary\n\nFirst 500 words..."
-embedding = asyncio.run(embed_text(text))
-print(f"Embedding generated: {len(embedding)} dimensions")
+try:
+    embedding = asyncio.run(embed_text(text))
+    print(f"Embedding generated: {len(embedding)} dimensions")
+except EmbeddingUnavailable as e:
+    embedding = None
+    print(f"embedding_errors=1 reason={e}")
+except Exception as e:
+    embedding = None
+    print(f"embedding_errors=1 reason={e!r}")
 ```
+
+When `embedding is None`, skip the vector for that article and continue the
+compile — the markdown article still upserts (store `NULL` for the `embedding`
+column in Step 5). Tally the `embedding_errors=N` lines so the cron run reports
+an observable count instead of exiting 0 as if every vector succeeded.
 
 ### Step 5: Store in Supabase
 

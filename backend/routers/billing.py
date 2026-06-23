@@ -418,9 +418,28 @@ def _handle_checkout_completed(db, session: dict) -> dict | None:
         )
         return None
     if not plan:
-        logger.warning(
-            "checkout.session.completed: could not resolve plan (amount=%s, metadata=%s)",
-            session.get("amount_total"), session.get("metadata"),
+        payment_status = session.get("payment_status", "unknown")
+        session_id = session.get("id", "unknown")
+        customer = session.get("customer", "unknown")
+        # LOUD error — greppable / alertable in log aggregators (Railway, Sentry,
+        # Datadog, etc. alert on ERROR-level lines).
+        # Fires when a comped ($0 / 100%-off coupon) checkout or any checkout
+        # completes but carries no resolvable plan in metadata or line items.
+        # The tenant is NOT activated.  No default plan is assigned — that would
+        # be a billing risk.  Owner must fix the Stripe checkout metadata (add a
+        # 'plan' key) and resend or manually activate the tenant.
+        logger.error(
+            "checkout.session.completed: TENANT NOT ACTIVATED — plan unresolvable. "
+            "session_id=%s customer=%s payment_status=%s tenant_id=%s "
+            "amount_total=%s metadata=%s. "
+            "Action required: add 'plan' key to Stripe checkout/subscription metadata "
+            "for this session and manually activate the tenant if comped.",
+            session_id,
+            customer,
+            payment_status,
+            tenant_id,
+            session.get("amount_total"),
+            session.get("metadata"),
         )
         return None
 
