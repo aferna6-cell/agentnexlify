@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Claude Code post-edit hook
-# Checks edited files for known dangerous patterns
+# Checks edited files for known dangerous patterns + CLAUDE.md invariants.
+# Advisory only: prints WARNING/CRITICAL/REMINDER notes, always exits 0.
 
 INPUT=$(cat)
 
@@ -32,11 +33,36 @@ if grep -qE "sk_live_|sk_test_|sk-ant-" "$FILE_PATH" 2>/dev/null; then
     ISSUES="$ISSUES\nCRITICAL: Possible hardcoded API key detected in $FILE_PATH. Use environment variables instead."
 fi
 
-# Check for tenant_id in leads-related backend files (should be client_id for leads table)
-if [[ "$FILE_PATH" == backend/*.py || "$FILE_PATH" == backend/**/*.py ]]; then
-    if grep -q "lead" "$FILE_PATH" 2>/dev/null; then
-        if grep -q "tenant_id" "$FILE_PATH" 2>/dev/null; then
-            ISSUES="$ISSUES\nWARNING: Found 'tenant_id' in leads-related code in $FILE_PATH. The leads table uses 'client_id', not 'tenant_id'. Verify this is correct."
+# Backend Python schema-discipline checks (CLAUDE.md invariants #1/#2/#3).
+# Note: in [[ == ]] the '*' matches '/', so backend/*.py also matches subdir
+# files like backend/services/foo.py — one pattern covers the whole tree.
+if [[ "$FILE_PATH" == backend/*.py ]]; then
+    # Invariant #1: leads/conversations use client_id, not tenant_id.
+    if grep -q "lead" "$FILE_PATH" 2>/dev/null && grep -q "tenant_id" "$FILE_PATH" 2>/dev/null; then
+        ISSUES="$ISSUES\nWARNING: Found 'tenant_id' in leads-related code in $FILE_PATH. The leads + conversations tables use 'client_id', not 'tenant_id'. Verify this is correct."
+    fi
+    # Invariant #2: lead status column is 'status', never 'lead_stage'.
+    if grep -qw "lead_stage" "$FILE_PATH" 2>/dev/null; then
+        ISSUES="$ISSUES\nWARNING: Found 'lead_stage' in $FILE_PATH. The leads status column is 'status' — 'lead_stage' never existed."
+    fi
+    # Invariant #3: leads service interest is 'areas_of_interest', never 'service_interest'.
+    if grep -qw "service_interest" "$FILE_PATH" 2>/dev/null; then
+        ISSUES="$ISSUES\nWARNING: Found 'service_interest' in $FILE_PATH. The leads column is 'areas_of_interest' — 'service_interest' never existed."
+    fi
+fi
+
+# Retired / invalid Claude model IDs (.claude/rules/model-routing.md).
+# Valid: claude-opus-4-7, claude-opus-4-6 (legacy-ok), claude-sonnet-4-6,
+# claude-haiku-4-5-20251001. Flag clearly-retired families only — never flag 4-6/4-7.
+if grep -qE "claude-opus-4-5|claude-opus-4-4|claude-sonnet-4-5|claude-haiku-4-[0-4]([^0-9]|$)|claude-3[.-]|claude-2[.-]" "$FILE_PATH" 2>/dev/null; then
+    ISSUES="$ISSUES\nWARNING: Retired/invalid Claude model ID detected in $FILE_PATH. Valid IDs: claude-opus-4-7, claude-sonnet-4-6, claude-haiku-4-5-20251001 (claude-opus-4-6 legacy-ok). See .claude/rules/model-routing.md."
+fi
+
+# Invariant #4: widget JS must stay byte-identical across all mirrors.
+if [[ "$FILE_PATH" == *agentnexlify-widget.js ]]; then
+    if command -v python3 >/dev/null 2>&1 && [ -f scripts/sync_widget_assets.py ]; then
+        if ! python3 scripts/sync_widget_assets.py --check >/dev/null 2>&1; then
+            ISSUES="$ISSUES\nCRITICAL: Widget assets are OUT OF SYNC after editing $FILE_PATH. Copy the change byte-identical to every mirror (widget/, frontend/public/widget/, landing-page-v2/widget/). Run: python3 scripts/sync_widget_assets.py --check"
         fi
     fi
 fi
