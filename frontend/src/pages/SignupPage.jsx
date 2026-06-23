@@ -35,7 +35,16 @@ export default function SignupPage() {
   const googleEmail = searchParams.get("email") || "";
   const googleName = searchParams.get("name") || "";
   const googleError = searchParams.get("google_error") || "";
-  const refCode = (searchParams.get("ref") || "").trim().slice(0, 200);
+  // Persist ref through internal navigation. The watermark link lands visitors
+  // on the homepage (?ref=<api_key>), not /signup directly. sessionStorage
+  // (not localStorage — per project rule) bridges the gap for the session.
+  const urlRef = (searchParams.get("ref") || "").trim().slice(0, 200);
+  if (urlRef) {
+    try { sessionStorage.setItem("anx_ref", urlRef); } catch { /* storage unavailable */ }
+  }
+  const refCode = urlRef || (() => {
+    try { return (sessionStorage.getItem("anx_ref") || "").trim(); } catch { return ""; }
+  })();
   const fromDemo = searchParams.get("from") === "demo";
   // Vertical toured in the demo - pre-selects the industry so onboarding
   // (FAQs, starters, widget defaults) matches what the visitor just saw.
@@ -109,6 +118,7 @@ export default function SignupPage() {
         ? {
             setup_token: googleSetupToken,
             business_name: form.business_name,
+            ref_code: refCode || undefined,
           }
         : {
             business_name: form.business_name,
@@ -138,6 +148,8 @@ export default function SignupPage() {
       const { token, tenant_id } = await res.json();
       localStorage.setItem("anx_token", token);
       localStorage.setItem("anx_tenant_id", tenant_id);
+      // Clear the persisted ref once signup succeeds — no longer needed.
+      try { sessionStorage.removeItem("anx_ref"); } catch { /* ignore */ }
       trackEvent("sign_up", {
         method: isGoogleSignup ? "google" : "email",
         plan: checkoutPlan,

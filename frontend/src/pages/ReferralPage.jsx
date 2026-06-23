@@ -209,6 +209,7 @@ export default function ReferralPage() {
         <StatCard label="Total clicks" value={stats?.total_clicks ?? 0} />
         <StatCard label="Last 7 days" value={stats?.clicks_last_7d ?? 0} />
         <StatCard label="Last 30 days" value={stats?.clicks_last_30d ?? 0} />
+        <StatCard label="Signups referred" value={stats?.referred_signups ?? 0} />
       </div>
 
       {/* Empty / encouraging state */}

@@ -169,5 +169,17 @@ Each new vertical extends THREE shipped systems at once (KB moat + SEO landing p
 - **MERGED to prod: PR #366 (sha f5fb9ae).** 8th PR; CI infra-death; both Vercel previews Ready.
 - **Round-11 DONE: roofing/contractor + home cleaning + veterinary → 13 verticals.** KB packs upserted to prod (10→13 vertical packs, FTS verified: roof leak→roofing, recurring deep clean→home-cleaning, sick pet/new patient→veterinary). 12 SEO landing pages (`/ai-front-desk/roofing,cleaning-services,veterinary`). Presets `roofing`/`home_cleaning`/`veterinary` + 13 aliases (roofer/contractor, cleaner/maid/housekeeping, vet/animal_hospital). 88 loader/alias tests green. Vet pack hard-routes medical emergencies to call-the-clinic (never diagnoses). Major service-business vertical coverage now broad (salon, plumber/HVAC, dental, med-spa, auto, real-estate, law, restaurant, fitness, roofing, cleaning, vet + generic).
 
+## Loop status 2026-06-23 — 9 PRs shipped this session (#360-#367); buildable backlog genuinely exhausted
+Every major product/GTM lever is now built + live in prod: funnel analytics+UI, lead-capture + booking conversion fixes, vertical presets (apply+depth+FAQ seed), 12 per-vertical SEO pages, referral (attribution+tracking+stats+dashboard), voice tests, per-tenant health dashboard, churn-watch job, wizard instrumentation fix, internal-tenant metric exclusion, kill-trial, and a 13-vertical KB moat (salon, plumber/HVAC, dental, med-spa, auto, real-estate, law, restaurant, fitness, roofing, cleaning, vet + generic). All owner items cleared.
+**Vertical expansion has reached diminishing returns at 13 — it covers the major service-business categories; further verticals (chiropractor, pest control, landscaping, accounting, optometry) are increasingly niche/low-marginal-value.**
+**No remaining engineering item is BOTH high-value AND buildable-without-owner-input.** What's left: (a) referral incentive/credit program — needs an owner decision on the incentive + Stripe credits; (b) measure-and-iterate the shipped conversion fixes — needs real post-deploy usage data that doesn't exist yet; (c) a deliberate net-new feature (new agent capability, new integration) — better as a planned fresh session than a loop iteration. Continuing the loop now would mean manufacturing low-value niche work, against the "highest value" intent.
+
+## Review 2026-06-23 (round 12) — referral signup attribution (channel now measurable end-to-end)
+Closed the referral loop: clicks were tracked (round 6); now signups are too.
+- **migration 159** `tenants.referred_by_widget_key TEXT` + partial index (kept SEPARATE from the migration-135 promo-code `referred_by` UUID FK). Applied to prod.
+- **Signup capture**: register endpoint stores `req.ref_code` (the existing field) as `referred_by_widget_key`, best-effort/non-blocking. Frontend captures `?ref=` via sessionStorage (survives nav, cleared post-signup, not localStorage) + sends `ref_code` on email AND Google register.
+- **Stats**: `GET /api/v1/referral/my-stats` now returns `referred_signups`; Referral page shows a "Signups referred" card.
+- 17 referral tests + auth-register regression green; build clean; widget untouched. The incentive/credit on top is still an owner decision — but the channel is now MEASURABLE (clicks→signups), which is what was missing.
+
 ## Related
 - [[Paid Launch Readiness]] · [[Paid Launch Readiness Pack]] · [[Autonomous Dev Operation]]

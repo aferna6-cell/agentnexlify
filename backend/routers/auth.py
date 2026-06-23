@@ -49,7 +49,10 @@ from backend.services.fraud_guard import (
 )
 from backend.services import dashboard_service as _dash_svc
 from backend.services import widget_config_service as _widget_svc
-from backend.services.referral import apply_referral_attribution
+from backend.services.referral import (
+    apply_referral_attribution,
+    apply_widget_referral_attribution,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -343,6 +346,11 @@ async def register(request: Request, req: RegisterRequest):
     # Referral attribution (?ref=CODE) - never blocks signup, invalid codes ignored.
     apply_referral_attribution(
         get_service_supabase(), new_tenant_id=tenant_id, ref_code=req.ref_code
+    )
+    # Widget-watermark referral: if ref_code is a widget api_key, store it on
+    # the new tenant row so referred_signups can be counted on the stats endpoint.
+    apply_widget_referral_attribution(
+        get_service_supabase(), new_tenant_id=tenant_id, ref=req.ref_code
     )
 
     token = _create_token(

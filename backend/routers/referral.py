@@ -33,6 +33,7 @@ class ReferralStatsResponse(BaseModel):
     total_clicks: int
     clicks_last_7d: int
     clicks_last_30d: int
+    referred_signups: int
 
 
 # NOTE: static route /my-stats MUST appear before any /{param} route.
@@ -108,6 +109,20 @@ async def get_my_referral_stats(
         )
         raise HTTPException(status_code=500, detail="Failed to fetch referral stats")
 
+    # Step 3: count tenants that signed up via this widget's referral link
+    try:
+        signups_result = (
+            db.table("tenants")
+            .select("id", count="exact")
+            .eq("referred_by_widget_key", ref_code)
+            .execute()
+        )
+    except Exception:
+        logger.exception(
+            "Failed to count referred signups for ref_code=%s", ref_code
+        )
+        raise HTTPException(status_code=500, detail="Failed to fetch referral stats")
+
     # Supabase count= returns count on the result object; data length as fallback
     def _count(result) -> int:
         if result.count is not None:
@@ -120,6 +135,7 @@ async def get_my_referral_stats(
         total_clicks=_count(total_result),
         clicks_last_7d=_count(last_7d_result),
         clicks_last_30d=_count(last_30d_result),
+        referred_signups=_count(signups_result),
     )
 
 
