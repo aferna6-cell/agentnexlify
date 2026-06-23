@@ -18083,3 +18083,54 @@ The rewritten FAQ answer used a real em dash; replaced with a period.
 **Author:** Claude
 **Files Changed:** frontend/src/pages/TidioAlternative.jsx
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Repricing half-migration: feature gates kept retired plan names (#292/#293)
+
+**Date:** 2026-06-23
+**Commits:** 57f2bb4d, 29ed1d43
+**Symptom:** Paying `agent_os` ($99.99 "full platform") tenants were locked out of every premium
+feature after the 2026-06-15 reprice — Zapier API keys (402), SMS capped at 50/day, document
+drafting blocked, lead qualification blocked, automation emails unbranded, no white-label.
+**Root cause:** The reprice updated billing (`stripe_service.py PLAN_PRICES`, `ai_usage_guard`)
+but left 6 feature gates hard-coding old plan names — `api_key_auth._ALLOWED_PLANS`,
+`sms_rate_limiter._UNLIMITED_PLANS`, `document_drafting._ELIGIBLE_PLANS`,
+`lead_qualification._ELIGIBLE_PLANS`, `automation/orchestrator.py` branded-email tuples,
+`branding_helpers._BRANDING_PLAN_FIELDS`. Classic half-migration (user-rules Rule 8).
+**Fix:** Added `agent_os` to all premium gates; `chatbot` stays widget/chat-only (documented
+intent). `billing_reconciliation` baselines mirrored to `ai_usage_guard`.
+**Prevention:** Plan names live in many gates. When adding/renaming a plan, grep ALL of
+`_ALLOWED_PLANS|_UNLIMITED_PLANS|_ELIGIBLE_PLANS|_BRANDING_PLAN_FIELDS|PLAN_PRICE|PLAN_BASELINE`
+plus `in ("professional", "enterprise")`-style tuples. New gates → assert in
+`backend/tests/test_plan_gating_new_plans.py`.
+
+### Webhook idempotency early-write drops events on handler failure (#308)
+
+**Date:** 2026-06-23
+**Commit:** 3a958e5f
+**Symptom:** A Stripe handler exception left the event permanently dropped; for
+`invoice.payment_succeeded` a recovered card never un-paused the tenant.
+**Root cause:** `check_and_record` writes the idempotency row BEFORE the handler runs (so
+concurrent redeliveries dedup). On handler exception the row persisted with `response_body=NULL`;
+every Stripe retry saw it as an "in-flight duplicate", got acked 200 without reprocessing, and
+Stripe stopped retrying.
+**Fix:** Added `idempotency.delete_key()` and call it in the except block of both webhook
+endpoints (`billing.py`, `stripe_webhooks.py`) before raising 500, so the retry reprocesses.
+**Prevention:** Any "write marker before doing work, then dedup on the marker" pattern MUST
+release the marker on failure, or failed work becomes permanently invisible to retries.
+
+### Test pollution: duplicate mock.patch leaks a global mock across the suite
+
+**Date:** 2026-06-23
+**Commit:** b3279b07
+**Symptom:** `test_widget_chat` invalid-key tests passed alone but failed in the full suite (500
+instead of 404).
+**Root cause:** `tests/test_widget_api.py` listed the same `patch(...)` target twice; teardown
+stopped patchers in forward list order, so stopping the first restored the real function and
+stopping the second re-applied a leftover MagicMock — leaving
+`widget_chat_helpers.get_service_supabase` permanently patched for the rest of the run.
+**Fix:** Removed the duplicate patch line so start/stop is balanced.
+**Prevention:** Never list the same patch target twice. If a test flakes only in full runs,
+suspect a leaked global patch; bisect test files to the polluter, then confirm by inspecting the
+global's identity after the suspect runs.
