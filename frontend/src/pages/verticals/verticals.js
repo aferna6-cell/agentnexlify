@@ -432,6 +432,264 @@ export const VERTICAL_DATA = {
     ],
   },
 
+  "law-firms": {
+    slug: "law-firms",
+    meta: {
+      title: "AI Front Desk for Law Firms | AgentNexLiFy",
+      description:
+        "An AI front desk that answers potential client questions, books consultations, and handles intake 24/7 for law firms and solo practitioners. Starts at $19.99/month.",
+      canonical: "https://agentnexlify.com/ai-front-desk/law-firms",
+    },
+    hero: {
+      h1: "AI Front Desk for Law Firms",
+      subhead:
+        "Answers prospective client questions, books consultations, and collects intake information at any hour. The firm that responds first gets the case.",
+      painPoint:
+        "People with a legal problem call two or three firms and hire whoever calls back first.",
+    },
+    features: [
+      {
+        icon: "📅",
+        title: "Consultation Booking",
+        description:
+          "Prospective clients book a consultation directly through the chat. Their matter type, timeline, and contact details land on your calendar before the call.",
+      },
+      {
+        icon: "📋",
+        title: "Intake Before the Call",
+        description:
+          "The AI collects the facts of the matter, the opposing party, and relevant dates before the consultation. Your attorney walks in prepared instead of starting from scratch.",
+      },
+      {
+        icon: "💬",
+        title: "24/7 Practice Area Questions",
+        description:
+          "Prospective clients ask whether you handle their type of case at any hour. The AI answers based on your practice areas and books a consultation for qualifying matters.",
+      },
+      {
+        icon: "🔔",
+        title: "Consultation Reminders",
+        description:
+          "Automated reminders go out before each scheduled consultation. Clients confirm or reschedule by text, cutting no-shows without your staff making calls.",
+      },
+      {
+        icon: "⚖️",
+        title: "Conflict and Eligibility Screening",
+        description:
+          "Add basic screening questions to the intake flow. The AI collects the opposing party name and key facts so you can check for conflicts before the meeting.",
+      },
+      {
+        icon: "⭐",
+        title: "Review Requests After Matters Close",
+        description:
+          "After a matter closes, the system sends a review request automatically. Positive Google reviews build credibility for future clients searching for counsel.",
+      },
+    ],
+    stats: [
+      { number: "$19.99", label: "per month to start" },
+      { number: "24/7", label: "intake and consultation booking" },
+      { number: "$99.99", label: "per month for the full platform" },
+    ],
+    faqs: [
+      {
+        q: "What is an AI front desk for a law firm?",
+        a: "It is a chat widget on your website that answers prospective client questions, collects intake information, and books consultations at any hour. People with a legal matter contact two or three firms and hire whoever responds, so faster intake wins more cases.",
+      },
+      {
+        q: "Can it screen for case type and conflicts?",
+        a: "Yes. You define your practice areas and the AI only routes qualifying matters to a consultation. You can add intake questions that collect the opposing party name and key facts so you can run a conflict check before the meeting.",
+      },
+      {
+        q: "Does the AI give legal advice?",
+        a: "No. The AI answers questions about your firm, practice areas, and consultation process. It does not provide legal opinions or advice. All substantive legal questions are directed to a consultation with your attorney.",
+      },
+      {
+        q: "What does it cost?",
+        a: "The AI Front Desk plan is $19.99 per month. It includes the chat widget, intake collection, consultation booking, and FAQ management. The full platform with marketing automations, email and SMS campaigns, and analytics is $99.99 per month.",
+      },
+      {
+        q: "How long does setup take?",
+        a: "Most firms are live within an hour. Add your practice areas, consultation process, and common questions. The AI starts answering prospective client questions the same day.",
+      },
+      {
+        q: "Will this work for a solo practitioner?",
+        a: "Yes. Solo practitioners benefit most because there is no receptionist to answer calls after hours. The AI handles intake, books consultations, and sends reminders so you can focus on client work during the day.",
+      },
+    ],
+  },
+
+  restaurants: {
+    slug: "restaurants",
+    meta: {
+      title: "AI Front Desk for Restaurants | AgentNexLiFy",
+      description:
+        "An AI front desk that answers hours and menu questions, takes reservations, and handles takeout inquiries 24/7 for restaurants. Starts at $19.99/month.",
+      canonical: "https://agentnexlify.com/ai-front-desk/restaurants",
+    },
+    hero: {
+      h1: "AI Front Desk for Restaurants",
+      subhead:
+        "Answers hours and menu questions, books reservations, and handles takeout inquiries around the clock. Your dining room stays full even when the host is busy.",
+      painPoint:
+        "Guests who cannot reach a restaurant quickly move on to the next option on the list.",
+    },
+    features: [
+      {
+        icon: "🍽️",
+        title: "Reservation Booking",
+        description:
+          "Guests pick a date, time, and party size directly through the chat. The booking lands on your reservation system with the guest's contact details and any special requests.",
+      },
+      {
+        icon: "📋",
+        title: "Menu and Hours Questions",
+        description:
+          "The AI answers questions about your menu, daily specials, hours, location, and parking. Guests get accurate answers without calling during the dinner rush.",
+      },
+      {
+        icon: "📦",
+        title: "Takeout and Delivery Information",
+        description:
+          "Guests ask about takeout ordering, delivery availability, and pickup times. The AI shares your ordering options and directs guests to the right channel.",
+      },
+      {
+        icon: "🎂",
+        title: "Private Events and Group Inquiries",
+        description:
+          "Guests asking about private dining, buyouts, or large parties get routed to a booking request. Collect the date, party size, and event type before your events coordinator follows up.",
+      },
+      {
+        icon: "🔔",
+        title: "Reservation Reminders",
+        description:
+          "Automated reminders go out before each reservation. Guests confirm or cancel by text, giving your team time to fill the table from a waitlist.",
+      },
+      {
+        icon: "⭐",
+        title: "Post-Visit Review Requests",
+        description:
+          "After each visit, the system sends a review request automatically. Positive Google and Yelp reviews help new guests choose your restaurant over the competition.",
+      },
+    ],
+    stats: [
+      { number: "$19.99", label: "per month to start" },
+      { number: "24/7", label: "reservation and inquiry coverage" },
+      { number: "$99.99", label: "per month for the full platform" },
+    ],
+    faqs: [
+      {
+        q: "What is an AI front desk for a restaurant?",
+        a: "It is a chat widget on your website that answers guest questions about your hours, menu, and location, books reservations, and handles takeout inquiries at any hour. Guests who cannot reach a restaurant move on, so faster responses keep tables filled.",
+      },
+      {
+        q: "Can it take reservations directly?",
+        a: "Yes. Guests pick a date, time, and party size from the chat. The booking goes to your calendar or reservation system with the guest's contact details and any notes. You manage the final seating from your existing system.",
+      },
+      {
+        q: "Does it handle takeout and delivery questions?",
+        a: "Yes. The AI answers questions about your takeout and delivery options, hours, and ordering process. It can direct guests to your online ordering platform or phone number for placing orders.",
+      },
+      {
+        q: "What does it cost?",
+        a: "The AI Front Desk plan is $19.99 per month. It includes the chat widget, reservation booking, lead capture, and FAQ management. The full platform with marketing automations, email and SMS campaigns, and analytics is $99.99 per month.",
+      },
+      {
+        q: "Can it handle dietary restriction and allergy questions?",
+        a: "Yes. Add your menu details and common allergy information to the FAQ manager. The AI answers questions accurately and directs guests with serious allergies to call the kitchen directly for confirmation.",
+      },
+      {
+        q: "How long does setup take?",
+        a: "Most restaurants are live within an hour. Add your hours, menu highlights, reservation process, and common questions. The AI starts answering guest questions the same day.",
+      },
+    ],
+  },
+
+  fitness: {
+    slug: "fitness",
+    meta: {
+      title: "AI Front Desk for Gyms and Fitness Studios | AgentNexLiFy",
+      description:
+        "An AI front desk that answers membership questions, books free trials, and handles class inquiries 24/7 for gyms and fitness studios. Starts at $19.99/month.",
+      canonical: "https://agentnexlify.com/ai-front-desk/fitness",
+    },
+    hero: {
+      h1: "AI Front Desk for Gyms and Fitness Studios",
+      subhead:
+        "Answers membership questions, books free trials, and handles class schedule inquiries at any hour. Prospective members who do not get a quick answer sign up somewhere else.",
+      painPoint:
+        "Prospective members research two or three gyms and sign up with whoever responds to their questions first.",
+    },
+    features: [
+      {
+        icon: "🏋️",
+        title: "Free Trial and Tour Booking",
+        description:
+          "Prospective members book a free trial class or facility tour directly through the chat. Their contact details and fitness goals land on your schedule before the visit.",
+      },
+      {
+        icon: "💳",
+        title: "Membership and Pricing Questions",
+        description:
+          "The AI explains your membership tiers, pricing, contract terms, and any current promotions. Prospective members get accurate answers without waiting for a sales call.",
+      },
+      {
+        icon: "📅",
+        title: "Class Schedule Inquiries",
+        description:
+          "Members ask about class times, instructors, and availability. The AI answers based on your current schedule and directs members to your booking platform for sign-ups.",
+      },
+      {
+        icon: "🔄",
+        title: "Member Retention Follow-Ups",
+        description:
+          "Reach out automatically to members who have not checked in recently. A simple message inviting them back converts dormant members before they cancel.",
+      },
+      {
+        icon: "🎯",
+        title: "Goal and Program Matching",
+        description:
+          "Prospective members describe their fitness goals and the AI recommends the right membership tier or class type. Matching people to the right program from the start improves retention.",
+      },
+      {
+        icon: "⭐",
+        title: "Review Requests",
+        description:
+          "After a member milestone or a positive check-in, the system sends a review request automatically. Positive reviews help new prospects choose your gym over the competition.",
+      },
+    ],
+    stats: [
+      { number: "$19.99", label: "per month to start" },
+      { number: "24/7", label: "membership and class inquiry coverage" },
+      { number: "$99.99", label: "per month for the full platform" },
+    ],
+    faqs: [
+      {
+        q: "What is an AI front desk for a gym or fitness studio?",
+        a: "It is a chat widget on your website that answers prospective member questions about memberships, pricing, and classes, books free trials or tours, and handles class inquiries at any hour. Prospective members compare a few options and join wherever responds first.",
+      },
+      {
+        q: "Can it book free trials and tours?",
+        a: "Yes. Prospective members pick a date and time directly from the chat. The booking lands on your calendar with their contact details and any fitness goals they shared. Your team follows up with a welcome message before the visit.",
+      },
+      {
+        q: "Can it answer questions about class schedules?",
+        a: "Yes. Add your current class schedule and the AI answers questions about times, instructors, and formats. For live class availability and sign-ups, it directs members to your booking platform.",
+      },
+      {
+        q: "What does it cost?",
+        a: "The AI Front Desk plan is $19.99 per month. It includes the chat widget, trial booking, lead capture, and FAQ management. The full platform with member retention automations, email and SMS campaigns, and analytics is $99.99 per month.",
+      },
+      {
+        q: "How does it help with member retention?",
+        a: "The full platform includes automation rules that reach out to members who have not checked in recently with an invitation to come back. Catching dormant members early costs far less than replacing a cancelled membership.",
+      },
+      {
+        q: "How long does setup take?",
+        a: "Most gyms and studios are live within an hour. Add your membership options, class schedule, and common questions. The AI starts answering prospective member questions the same day.",
+      },
+    ],
+  },
+
   "real-estate": {
     slug: "real-estate",
     meta: {

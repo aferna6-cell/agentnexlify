@@ -84,6 +84,28 @@ _VERTICAL_ALIASES: dict[str, str] = {
     "dentist": "dental",
     "dentistry": "dental",
     "dental_office": "dental",
+    # law_firm
+    "law": "law_firm",
+    "lawyer": "law_firm",
+    "attorney": "law_firm",
+    "legal": "law_firm",
+    "law_office": "law_firm",
+    "attorneys": "law_firm",
+    # restaurant
+    "restaurant": "restaurant",
+    "cafe": "restaurant",
+    "food": "restaurant",
+    "dining": "restaurant",
+    "eatery": "restaurant",
+    "bistro": "restaurant",
+    # fitness_studio
+    "gym": "fitness_studio",
+    "fitness": "fitness_studio",
+    "studio": "fitness_studio",
+    "yoga": "fitness_studio",
+    "pilates": "fitness_studio",
+    "crossfit": "fitness_studio",
+    "personal_training": "fitness_studio",
 }
 
 

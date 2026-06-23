@@ -198,3 +198,138 @@ def test_list_verticals_is_sorted():
     loader = _reload_loader()
     result = loader.list_verticals()
     assert result == sorted(result), "list_verticals should return a sorted list"
+
+
+# ---------------------------------------------------------------------------
+# Tests: new verticals — law_firm
+# ---------------------------------------------------------------------------
+
+
+def test_load_law_firm_returns_expected_keys():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("law_firm")
+    for key in ("greeting", "services", "business_hours", "faqs"):
+        assert key in preset, f"law_firm preset missing key: {key}"
+
+
+def test_load_law_firm_greeting_is_nonempty():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("law_firm")
+    assert preset["greeting"].strip(), "law_firm greeting should not be empty"
+
+
+def test_load_law_firm_faqs_count():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("law_firm")
+    faqs = preset.get("faqs", [])
+    assert 5 <= len(faqs) <= 8, f"expected 5-8 FAQs for law_firm, got {len(faqs)}"
+
+
+def test_load_law_firm_faq_has_question_and_answer():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("law_firm")
+    for faq in preset["faqs"]:
+        assert "question" in faq
+        assert "answer" in faq
+        assert faq["question"].strip()
+        assert faq["answer"].strip()
+
+
+def test_load_law_firm_services_nonempty():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("law_firm")
+    assert len(preset.get("services", [])) > 0
+
+
+# ---------------------------------------------------------------------------
+# Tests: new verticals — restaurant
+# ---------------------------------------------------------------------------
+
+
+def test_load_restaurant_returns_expected_keys():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("restaurant")
+    for key in ("greeting", "services", "business_hours", "faqs"):
+        assert key in preset, f"restaurant preset missing key: {key}"
+
+
+def test_load_restaurant_greeting_is_nonempty():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("restaurant")
+    assert preset["greeting"].strip(), "restaurant greeting should not be empty"
+
+
+def test_load_restaurant_faqs_count():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("restaurant")
+    faqs = preset.get("faqs", [])
+    assert 5 <= len(faqs) <= 8, f"expected 5-8 FAQs for restaurant, got {len(faqs)}"
+
+
+def test_load_restaurant_faq_has_question_and_answer():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("restaurant")
+    for faq in preset["faqs"]:
+        assert "question" in faq
+        assert "answer" in faq
+        assert faq["question"].strip()
+        assert faq["answer"].strip()
+
+
+def test_load_restaurant_services_nonempty():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("restaurant")
+    assert len(preset.get("services", [])) > 0
+
+
+# ---------------------------------------------------------------------------
+# Tests: new verticals — fitness_studio
+# ---------------------------------------------------------------------------
+
+
+def test_load_fitness_studio_returns_expected_keys():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("fitness_studio")
+    for key in ("greeting", "services", "business_hours", "faqs"):
+        assert key in preset, f"fitness_studio preset missing key: {key}"
+
+
+def test_load_fitness_studio_greeting_is_nonempty():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("fitness_studio")
+    assert preset["greeting"].strip(), "fitness_studio greeting should not be empty"
+
+
+def test_load_fitness_studio_faqs_count():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("fitness_studio")
+    faqs = preset.get("faqs", [])
+    assert 5 <= len(faqs) <= 8, f"expected 5-8 FAQs for fitness_studio, got {len(faqs)}"
+
+
+def test_load_fitness_studio_faq_has_question_and_answer():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("fitness_studio")
+    for faq in preset["faqs"]:
+        assert "question" in faq
+        assert "answer" in faq
+        assert faq["question"].strip()
+        assert faq["answer"].strip()
+
+
+def test_load_fitness_studio_services_nonempty():
+    loader = _reload_loader()
+    preset = loader.load_vertical_preset("fitness_studio")
+    assert len(preset.get("services", [])) > 0
+
+
+# ---------------------------------------------------------------------------
+# Tests: list_verticals now includes the three new verticals
+# ---------------------------------------------------------------------------
+
+
+def test_list_verticals_includes_new_verticals():
+    loader = _reload_loader()
+    result = loader.list_verticals()
+    for expected in ("law_firm", "restaurant", "fitness_studio"):
+        assert expected in result, f"expected {expected!r} in list_verticals()"

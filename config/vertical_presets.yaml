@@ -214,6 +214,170 @@ dental:
         depend on the provider. We can note your interest and the team will
         go over the options at your visit.
 
+law_firm:
+  greeting: >
+    Hello! Welcome. I can help you schedule a consultation, answer general
+    questions about our practice areas, or connect you with the right attorney.
+    How can I assist you?
+  services:
+    - Free or low-cost initial consultations
+    - Personal injury and accident claims
+    - Business formation and contracts
+    - Estate planning and wills
+    - Family law and divorce
+    - Criminal defense
+    - Real estate transactions
+  business_hours: >
+    Monday through Friday during regular business hours. Some attorneys offer
+    early-morning or evening consultations by appointment. Contact us to find
+    a time that works for your schedule.
+  faqs:
+    - question: Do you offer a free consultation?
+      answer: >
+        Many of our practice areas offer a free or low-cost initial consultation
+        so you can share your situation and get a sense of whether we are the
+        right fit. The specifics depend on the type of matter. Reach out and we
+        will confirm what applies to your case.
+    - question: How much does it cost to hire an attorney?
+      answer: >
+        Legal fees vary based on the type of matter, complexity, and how your
+        case is handled. Personal injury cases are often taken on contingency,
+        meaning no upfront fee and we collect a percentage if we win. Other
+        matters may be billed hourly or at a flat rate. We go over fees clearly
+        before any engagement.
+    - question: What should I bring to my first consultation?
+      answer: >
+        Bring any documents relevant to your situation — contracts, court papers,
+        police reports, insurance correspondence, or anything else you have
+        received or signed. A brief written summary of the key events and dates
+        is also helpful. The more context you can provide, the more useful the
+        consultation will be.
+    - question: How long will my case take?
+      answer: >
+        Timeline depends heavily on the type of matter and whether it settles or
+        goes to court. Straightforward matters like a simple will or contract
+        review can be handled quickly. Litigation, custody disputes, and complex
+        transactions often take months or longer. We give you a realistic
+        timeline after reviewing your situation.
+    - question: Is what I tell you confidential?
+      answer: >
+        Yes. Attorney-client privilege applies from the moment you consult with
+        us. What you share in the context of seeking legal advice is confidential
+        and cannot be disclosed without your permission. We take that obligation
+        seriously.
+    - question: Do you handle cases outside your local area?
+      answer: >
+        Our attorneys are licensed in specific jurisdictions. Depending on your
+        matter, we may be able to assist you directly or refer you to a qualified
+        colleague in another area. Tell us where you are located and we will
+        confirm whether we can help.
+
+restaurant:
+  greeting: >
+    Hi! Welcome. I can help you make a reservation, answer questions about our
+    menu and hours, or let you know about takeout and delivery options. What
+    can I do for you?
+  services:
+    - Dine-in reservations
+    - Takeout and curbside pickup
+    - Delivery (in-house or third-party)
+    - Private dining and event bookings
+    - Catering inquiries
+    - Gift cards
+  business_hours: >
+    Open for lunch and dinner most days of the week. Hours vary by day — we
+    are often closed one day a week and hours shift on weekends and holidays.
+    Check with us or visit our website for the current schedule.
+  faqs:
+    - question: Do you take reservations?
+      answer: >
+        Yes, we accept reservations. You can book right here in chat, on our
+        website, or by phone during business hours. For large parties or
+        special occasions, we recommend booking well in advance as popular
+        times fill up quickly.
+    - question: Do you have takeout or delivery?
+      answer: >
+        Yes. We offer takeout for pickup and delivery through our own system
+        or third-party apps depending on your area. Tell us what you want and
+        we can walk you through the ordering options or share a direct link.
+    - question: What are your hours today?
+      answer: >
+        Our hours vary by day and can shift on holidays. We can confirm today's
+        hours right here, or you can check our website for the current schedule.
+        When we are closed or between services, you can still place an order or
+        reserve a table for another time.
+    - question: Do you accommodate dietary restrictions or allergies?
+      answer: >
+        We do our best to accommodate common dietary needs including vegetarian,
+        vegan, and gluten-aware dishes. Please let your server know about any
+        allergies when you arrive, or mention them when placing a takeout or
+        delivery order so the kitchen can take proper precautions.
+    - question: Can I book the space for a private event?
+      answer: >
+        Yes. We have options for private dining and larger gatherings. Capacity,
+        minimums, and availability depend on the date and size of your group.
+        Share your details and we will connect you with the right person to
+        go over the options.
+    - question: Do you offer catering?
+      answer: >
+        Catering availability depends on the event size, location, and date.
+        Some locations offer full off-site catering while others focus on
+        in-house events. Tell us about your event and we will confirm what we
+        can do.
+
+fitness_studio:
+  greeting: >
+    Hi! Welcome. I can help you learn about our memberships, browse class
+    schedules, or get you set up with a free trial. What are you looking for?
+  services:
+    - Group fitness classes (yoga, HIIT, cycling, Pilates, and more)
+    - Personal training sessions
+    - Open gym access
+    - Membership plans (monthly and annual)
+    - Drop-in class passes
+    - Free trial or introductory offer
+  business_hours: >
+    Open early mornings through evenings on weekdays, with reduced hours on
+    weekends. Holiday schedules may vary. Check with us or see the app for the
+    current class schedule and studio hours.
+  faqs:
+    - question: Do you offer a free trial or intro class?
+      answer: >
+        Yes. Most of our locations offer a free introductory class or a
+        discounted first-week pass so you can try before you commit. Tell us
+        where you are located and we will share the current offer and get you
+        set up.
+    - question: What membership options do you have?
+      answer: >
+        We offer month-to-month and annual memberships, as well as class packs
+        and drop-in passes for people who prefer flexibility. Pricing varies by
+        location and plan type. We can walk you through the current options and
+        find the right fit for how often you plan to come in.
+    - question: What classes do you offer?
+      answer: >
+        Our schedule typically includes yoga, Pilates, HIIT, cycling, barre,
+        strength, and more depending on the location. Classes run at various
+        times throughout the day to fit different schedules. Check the class
+        schedule in our app or ask here and we will share what is coming up.
+    - question: Do I need to reserve a spot in a class?
+      answer: >
+        Most classes require a reservation, especially popular ones that fill
+        up fast. You can reserve through our app, website, or right here in
+        chat. We recommend booking ahead for peak-time classes like early
+        morning and evening sessions.
+    - question: Do you offer personal training?
+      answer: >
+        Yes. Personal training is available at most locations either as a
+        standalone session or in packages. Trainers are certified and can
+        work with you on specific goals, injuries, or a structured program.
+        Ask us about availability and pricing for one-on-one sessions.
+    - question: What should I bring for my first class?
+      answer: >
+        Bring comfortable workout clothes and water. Most studios have mats
+        and equipment available, but you are welcome to bring your own. Arrive
+        a few minutes early for your first visit so we can show you around and
+        get you checked in smoothly.
+
 generic:
   greeting: >
     Hi there! How can I help you today? I can answer questions about our

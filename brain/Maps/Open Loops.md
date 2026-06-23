@@ -160,5 +160,12 @@ Shipped this session, all merged to prod: funnel analytics + UI, lead-capture co
 **Remaining backlog is now low-value or owner/external:** (a) funnel-exclusion DONE; (b) referral incentive/credit program (needs owner decision on the incentive + Stripe credits — owner-gated); (c) larger bets from gap analysis (G3 deeper voice live-answering, G8 KB depth beyond 7 verticals) — incremental; (d) marketing/outreach send (owner). No remaining HIGH-value engineering item that's both buildable-by-me and not owner-gated.
 **Recommendation: the autonomous loop has exhausted the high-value buildable backlog. Next work should be owner-driven (sales/outreach/referral-incentive decision) or a fresh-session deliberate feature, not more loop iterations.**
 
+## Review 2026-06-23 (round 10) — G8 vertical expansion 7→10 (law firm, restaurant, fitness)
+Each new vertical extends THREE shipped systems at once (KB moat + SEO landing page + onboarding preset). Added law-firm, restaurant, fitness/gym end-to-end:
+- **KB packs** (`knowledge-base/wiki/verticals/{law-firm,restaurant,fitness-studio}-faqs.md`) + **upserted to prod kb_articles (7→10 vertical packs).** FTS verified: "free consultation contingency"→law-firm, "reservations takeout"→restaurant, "membership free trial"→fitness. Law-firm pack hard-routes legal-advice questions to an attorney consult (bot never advises).
+- **SEO landing pages** — 3 entries in `verticals.js` + named routes → **9 `/ai-front-desk/*` URLs** now (salons/plumbers/dentists/med-spas/auto-repair/real-estate/law-firms/restaurants/fitness).
+- **Onboarding presets** — `law_firm`/`restaurant`/`fitness_studio` blocks in `vertical_presets.yaml` + 13 new aliases (law/lawyer/attorney→law_firm, cafe/dining→restaurant, gym/yoga/pilates→fitness_studio). 57 loader/alias tests green.
+- Vertical-pack pattern is now a clean repeatable loop: KB md + prod upsert + verticals.js entry + preset block + aliases. Next verticals (e.g. roofing, cleaning, vet, accounting) follow the same 4-file recipe.
+
 ## Related
 - [[Paid Launch Readiness]] · [[Paid Launch Readiness Pack]] · [[Autonomous Dev Operation]]
