@@ -339,6 +339,7 @@ async def _automation_loop():
         send_aftercare_instructions,
         schedule_automation_check,
         run_monthly_conversation_insights,
+        run_churn_watch,
     )
     from backend.services.os_sync import run_due_syncs as _os_sync_tick
     from backend.services.os_opportunities import run_opportunity_scan as _run_opportunity_scan
@@ -432,6 +433,7 @@ async def _automation_loop():
                             "run_monthly_conversation_insights",
                             run_monthly_conversation_insights,
                         ),
+                        _safe_run("run_churn_watch", run_churn_watch),
                     ]
                 )
 

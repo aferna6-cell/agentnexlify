@@ -134,6 +134,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/ai-front-desk/salons" element={<VerticalLanding />} />
             <Route path="/ai-front-desk/plumbers" element={<VerticalLanding />} />
             <Route path="/ai-front-desk/dentists" element={<VerticalLanding />} />
+            <Route path="/ai-front-desk/med-spas" element={<VerticalLanding />} />
+            <Route path="/ai-front-desk/auto-repair" element={<VerticalLanding />} />
+            <Route path="/ai-front-desk/real-estate" element={<VerticalLanding />} />
             <Route path="/ai-front-desk/:vertical" element={<VerticalLanding />} />
             {/* Comparison pages (canonical URLs) */}
             <Route path="/intercom-alternative" element={<IntercomAlternative />} />

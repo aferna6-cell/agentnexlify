@@ -52,6 +52,7 @@ from backend.services.automation.scheduled_jobs_ext import (
     send_weekly_digest,
     send_birthday_greetings,
     process_recurring_invoices,
+    run_churn_watch,
 )
 
 __all__ = [
@@ -73,4 +74,5 @@ __all__ = [
     "send_weekly_digest",
     "send_birthday_greetings",
     "process_recurring_invoices",
+    "run_churn_watch",
 ]

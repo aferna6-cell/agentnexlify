@@ -259,4 +259,262 @@ export const VERTICAL_DATA = {
       },
     ],
   },
+
+  "med-spas": {
+    slug: "med-spas",
+    meta: {
+      title: "AI Front Desk for Med Spas and Aesthetics Clinics | AgentNexLiFy",
+      description:
+        "An AI front desk that answers treatment questions, books consultations, and captures leads 24/7 for med spas and aesthetics clinics. Starts at $19.99/month.",
+      canonical: "https://agentnexlify.com/ai-front-desk/med-spas",
+    },
+    hero: {
+      h1: "AI Front Desk for Med Spas and Aesthetics Clinics",
+      subhead:
+        "Answers treatment questions, books consultations, and captures leads at any hour. The clinic that responds first wins the booking.",
+      painPoint:
+        "Visitors comparing clinics for injectables or laser book with whoever answers first.",
+    },
+    features: [
+      {
+        icon: "📅",
+        title: "Consultation Booking",
+        description:
+          "Visitors book a consultation directly from the chat. Their treatment interest and timing go to your calendar with the lead details attached.",
+      },
+      {
+        icon: "💬",
+        title: "Treatment and Pricing Questions",
+        description:
+          "The AI explains how Botox is priced per unit, how filler is priced per syringe, and what to expect at a consultation. Accurate answers without overpromising.",
+      },
+      {
+        icon: "⏱",
+        title: "Downtime and Safety Guidance",
+        description:
+          "Visitors ask about recovery before they book. The AI gives realistic downtime ranges per treatment and routes medical screening questions to your provider.",
+      },
+      {
+        icon: "📋",
+        title: "Candidacy and Intake",
+        description:
+          "Collects the visitor's main concern and any relevant conditions before the consultation. Your provider walks in prepared.",
+      },
+      {
+        icon: "💳",
+        title: "Financing and Packages",
+        description:
+          "Surfaces your financing options and package deals to visitors who ask. Moves high-consideration buyers toward a booked consultation instead of a lost tab.",
+      },
+      {
+        icon: "⭐",
+        title: "Post-Treatment Review Requests",
+        description:
+          "After each appointment, an automated message asks satisfied clients for a Google review. Builds your rating without manual follow-up.",
+      },
+    ],
+    stats: [
+      { number: "$19.99", label: "per month to start" },
+      { number: "24/7", label: "coverage with no extra staff" },
+      { number: "$99.99", label: "per month for the full platform" },
+    ],
+    faqs: [
+      {
+        q: "What is an AI front desk for a med spa?",
+        a: "It is a chat widget on your website that answers visitor questions about treatments, books consultations, and captures lead details at any hour. Visitors researching injectables or laser compare a few clinics before booking, so the clinic that answers fast wins.",
+      },
+      {
+        q: "Can it answer pricing questions for Botox or filler?",
+        a: "Yes. The AI explains that Botox is priced per unit and filler is priced per syringe, gives a starting range, and books a consultation where your provider confirms the final plan and cost. It never quotes a fixed total before a provider sees the client.",
+      },
+      {
+        q: "How does it handle candidacy and medical questions?",
+        a: "The AI collects the visitor's main concern and flags any conditions or medications they mention. It routes anything medical to your provider rather than answering it directly, which keeps the clinic accurate and the client safe.",
+      },
+      {
+        q: "What does it cost?",
+        a: "The AI Front Desk plan is $19.99 per month. It includes the chat widget, lead capture, consultation booking, and FAQ management. The full platform with marketing automations, email and SMS campaigns, and analytics is $99.99 per month.",
+      },
+      {
+        q: "How long does setup take?",
+        a: "Most med spas are live within an hour. Add your treatment menu, pricing ranges, and consultation process. The AI starts answering visitor questions the same day.",
+      },
+      {
+        q: "Does it handle downtime and safety questions?",
+        a: "Yes. You add the typical downtime for each treatment during setup and the AI gives visitors accurate expectations. For anything that needs a clinical answer, it routes them to book a consultation rather than guessing.",
+      },
+    ],
+  },
+
+  "auto-repair": {
+    slug: "auto-repair",
+    meta: {
+      title: "AI Front Desk for Auto Repair Shops | AgentNexLiFy",
+      description:
+        "An AI front desk that answers customer questions, qualifies repair jobs, and books drop-offs 24/7 for auto repair shops. Starts at $19.99/month.",
+      canonical: "https://agentnexlify.com/ai-front-desk/auto-repair",
+    },
+    hero: {
+      h1: "AI Front Desk for Auto Repair Shops",
+      subhead:
+        "Answers questions, qualifies the job, and books the car while you are under a hood. Drivers with a problem shop two or three shops and go with whoever responds first.",
+      painPoint:
+        "Drivers with a warning light or a noise message multiple shops and book with whoever responds first.",
+    },
+    features: [
+      {
+        icon: "🔧",
+        title: "Job Qualification",
+        description:
+          "The AI asks for the vehicle year, make, model, and the symptom. It flags urgent issues like a flashing check engine light or brake problems and routes them for faster scheduling.",
+      },
+      {
+        icon: "📆",
+        title: "Appointment and Drop-Off Booking",
+        description:
+          "Drivers pick an available drop-off or appointment slot directly from the chat. The booking lands on your calendar with the vehicle details and the job description attached.",
+      },
+      {
+        icon: "💰",
+        title: "Pricing and Estimate Questions",
+        description:
+          "The AI gives typical ranges for common jobs like oil changes or brake pads and explains that a final price comes after a diagnostic. Sets expectations without overpromising.",
+      },
+      {
+        icon: "🚗",
+        title: "Vehicle Fit Check",
+        description:
+          "Before booking, the AI confirms you service the customer's make and model. No wasted trips for vehicles outside your scope.",
+      },
+      {
+        icon: "🔔",
+        title: "Towing and Urgency Routing",
+        description:
+          "Drivers with a car that will not start get a towing path and faster scheduling. Urgent safety issues like brake grinding are flagged immediately.",
+      },
+      {
+        icon: "⭐",
+        title: "Post-Job Review Requests",
+        description:
+          "After each completed job, the system asks the customer for a Google review. Positive reviews build credibility in your service area.",
+      },
+    ],
+    stats: [
+      { number: "$19.99", label: "per month to start" },
+      { number: "24/7", label: "lead capture with no extra staff" },
+      { number: "$99.99", label: "per month for the full platform" },
+    ],
+    faqs: [
+      {
+        q: "What is an AI front desk for an auto repair shop?",
+        a: "It is a chat widget on your website that answers driver questions, collects the vehicle details and job description, and books a drop-off or appointment. It runs while you are on a job so no service request goes unanswered.",
+      },
+      {
+        q: "Can it handle urgent issues like a car that will not start?",
+        a: "Yes. Add urgency keywords and the AI flags those leads immediately and routes them to a faster scheduling path or sends you an alert. It can also explain towing options to drivers with an undrivable car.",
+      },
+      {
+        q: "How does it handle pricing questions?",
+        a: "The AI gives typical ranges for common jobs like oil changes and brake pads. For unknown problems, it explains that a diagnostic confirms the real number and books the car in. It never quotes a final repair cost before a tech sees the vehicle.",
+      },
+      {
+        q: "What does it cost?",
+        a: "The AI Front Desk plan is $19.99 per month. It includes the chat widget, lead capture, appointment booking, and FAQ management. The full platform with marketing campaigns, automations, and analytics is $99.99 per month.",
+      },
+      {
+        q: "Does it confirm whether you service a specific vehicle?",
+        a: "Yes. Set the makes and models you service during setup. The AI confirms fit before booking so drivers do not show up with a vehicle you do not work on.",
+      },
+      {
+        q: "How does it integrate with my existing workflow?",
+        a: "AgentNexLiFy syncs with Google Calendar. Bookings land on your calendar with the vehicle details and job description. Outbound webhooks connect to Zapier and 5,000 plus apps so lead data flows to whatever you use to manage jobs.",
+      },
+    ],
+  },
+
+  "real-estate": {
+    slug: "real-estate",
+    meta: {
+      title: "AI Front Desk for Real Estate and Property Management | AgentNexLiFy",
+      description:
+        "An AI front desk that schedules showings, handles maintenance requests, and captures leads 24/7 for real estate agents and property managers. Starts at $19.99/month.",
+      canonical: "https://agentnexlify.com/ai-front-desk/real-estate",
+    },
+    hero: {
+      h1: "AI Front Desk for Real Estate and Property Management",
+      subhead:
+        "Books showings, handles tenant requests, and captures buyer and renter leads at any hour. Two different visitors, both answered immediately.",
+      painPoint:
+        "Prospective renters and buyers move on to the next listing if no one answers their question quickly.",
+    },
+    features: [
+      {
+        icon: "🏠",
+        title: "Showing and Tour Booking",
+        description:
+          "Prospective renters and buyers book showings directly through the chat with a property and a time. The booking lands on your calendar with the lead's contact details and what they are looking for.",
+      },
+      {
+        icon: "📋",
+        title: "Application and Screening Questions",
+        description:
+          "The AI explains the application process, the documents needed, and the screening criteria for a specific property. Qualified leads start the process faster.",
+      },
+      {
+        icon: "🔔",
+        title: "Maintenance Request Routing",
+        description:
+          "Current residents submit maintenance requests through the chat. Urgent issues like a major leak, no heat, or a lockout get flagged for the emergency maintenance line.",
+      },
+      {
+        icon: "💬",
+        title: "Availability Checks",
+        description:
+          "Visitors ask whether a unit is still available. The AI confirms against your current listings and books a showing or captures the lead for a similar property.",
+      },
+      {
+        icon: "🏢",
+        title: "Owner and Investor Inquiries",
+        description:
+          "Property owners asking about management services get routed to a consultation booking. Covers tenant screening, rent collection, and maintenance coordination questions.",
+      },
+      {
+        icon: "📧",
+        title: "Follow-Up and Review Requests",
+        description:
+          "After a closing or a lease signing, the system sends a follow-up and review request automatically. Builds your reputation without manual outreach.",
+      },
+    ],
+    stats: [
+      { number: "$19.99", label: "per month to start" },
+      { number: "24/7", label: "lead capture and tenant support" },
+      { number: "$99.99", label: "per month for the full platform" },
+    ],
+    faqs: [
+      {
+        q: "What is an AI front desk for real estate and property management?",
+        a: "It is a chat widget on your website that handles two types of visitors: prospective renters or buyers who want to see a property and apply, and current residents who need to report a problem or ask about rent. Both get answered immediately.",
+      },
+      {
+        q: "Can it book property showings?",
+        a: "Yes. A visitor picks the property and a time and the booking goes to your calendar with their contact details and what they are looking for. Some properties can also be set up for self-guided or virtual tour options.",
+      },
+      {
+        q: "How does it handle maintenance requests from current tenants?",
+        a: "Residents submit a request through the chat and it gets routed to the right team. Urgent issues like a major leak, no heat, or a lockout are flagged for the emergency maintenance line. Life-safety issues are directed to emergency services first.",
+      },
+      {
+        q: "What does it cost?",
+        a: "The AI Front Desk plan is $19.99 per month. It includes the chat widget, showing bookings, lead capture, maintenance request routing, and FAQ management. The full platform with marketing campaigns, automations, and analytics is $99.99 per month.",
+      },
+      {
+        q: "Can it handle both renters and property owners?",
+        a: "Yes. The AI routes each visitor based on their intent. A renter or buyer goes to a showing or application. A property owner asking about management services gets routed to a consultation booking that covers screening, rent collection, and maintenance.",
+      },
+      {
+        q: "How does it handle pricing and availability questions?",
+        a: "The AI confirms availability against your current listings and points visitors to the listing for the exact rent or sale price. It does not quote a specific price as a fact across many properties, which keeps your responses accurate as listings change.",
+      },
+    ],
+  },
 };

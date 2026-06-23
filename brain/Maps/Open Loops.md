@@ -133,5 +133,13 @@ Owner cleared the last 2 gated items: **domain connected** (SEO pages now public
 - Tests green per-suite: tenant_health 29, onboarding-preset 12, aliases 8, lead-prompt 5, funnel 19, voice 11, embeddings 13. (funnel+embeddings share a pre-existing cross-file pollution quirk when run together under --noconftest — each passes alone; not a regression.)
 - **Remaining buildable follow-ups:** preset FAQs not auto-seeded (separate faq_entries path); tenant-health does full-table scans (fine <500 tenants, cap later); `StripeTrialBanner.jsx` file now dead (unimported) — safe to delete next cleanup.
 
+## Review 2026-06-23 (round 7) — measurement pass findings + 5 acquisition/retention lanes dispatched
+Constraint shifted: product plumbing is built + all owner blockers cleared, so the lever is now top-of-funnel acquisition + retention of the 7 paid. Measurement findings (live prod):
+- **5 free-plan tenants identified** — 3 internal ("AgentNexLiFy", "AgentNexLiFy Smoke Test", "Agent Nexlify"), 2 never-onboarded signups ("Sunset Mobile Detailing", "Niko's Consulting"). Confirms "all beta converted" — no real paying customer is on free. The 2 abandoned signups = real onboarding drop-off (never completed wizard).
+- **DATA QUALITY: the "Smoke Test" account holds 1,336 of 2,717 chat_messages (~49%).** Half the funnel volume is internal testing. funnel_metrics + tenant_health should exclude internal tenants or the conversion read is inflated. (Buildable fix — pending this round.)
+- **Wizard instrumentation broken:** `wizard_events` has rows ONLY for step 1 (4 tenants); steps 2-7 emit nothing → signup drop-off is unmeasurable. Re-scoped the "signup-fix" lane to FIX the instrumentation first (can't optimize an unmeasured funnel).
+- **referral_clicks = 0** — click-POST just shipped; no live widget traffic through updated JS yet.
+- Lanes dispatched (round 7): (1) SEO 4→7 vertical landing pages, (2) wizard step instrumentation fix, (3) churn-watch weekly owner-alert job for at-risk paid tenants, (4) referral my-stats endpoint, (5) referral tenant dashboard page. Plus my own follow-up: exclude internal tenants from funnel/health metrics.
+
 ## Related
 - [[Paid Launch Readiness]] · [[Paid Launch Readiness Pack]] · [[Autonomous Dev Operation]]
