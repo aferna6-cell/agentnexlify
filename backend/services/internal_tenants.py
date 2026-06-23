@@ -29,7 +29,8 @@ Usage
 # Match is: any pattern in INTERNAL_TENANT_NAME_PATTERNS is a substring of
 # business_name.lower().strip()
 INTERNAL_TENANT_NAME_PATTERNS: tuple[str, ...] = (
-    "agentnexlify",   # covers "AgentNexLiFy", "AgentNexLiFy Smoke Test", "Agent NexLiFy"
+    "agentnexlify",   # covers "AgentNexLiFy", "AgentNexLiFy Smoke Test"
+    "agent nexlify",  # spaced variant used in older seeds: "Agent Nexlify"
     "smoke test",     # belt-and-suspenders for any "Smoke Test" account
     "test account",   # generic internal test accounts
 )

@@ -151,6 +151,9 @@ SEO 7 verticals, wizard instrumentation fix (migration 158 applied to prod), chu
 - **ReferralCard** migrated off stale JWT to the live `/api/v1/referral/my-stats`.
 - **DEFERRED: funnel_metrics internal-exclusion.** The subagent's funnel change required restructuring `count="exact"` → fetch+filter+len, which breaks the 17-test `_make_db` harness (hard-keyed to the old 3×-count tenants call order). Reverted to keep green; redo as a first-class task = rewrite `test_funnel_metrics.py::_make_db` to return tenant ROWS, then apply `is_internal_tenant`. tenant_health/churn already excluded so the headline funnel is the only place still counting the Smoke Test.
 - Tests: 90 green across tenant_health/churn/onboarding-faq/onboarding-preset/funnel(original).
+- **MERGED to prod: PR #364 (sha 3fe118d).** CI infra-death (6th PR); both Vercel previews Ready. No DB migration.
+- **CORRECTION:** the funnel internal-exclusion was NOT actually deferred — the round-8 agent re-wrote `funnel_metrics.py` (with `is_internal_tenant`) after my mid-round revert, and `git add -A` staged it, so #364 SHIPPED the funnel exclusion to prod. But #364 committed the STALE `test_funnel_metrics.py` (CI infra-death hid the test/code mismatch). The headline funnel fix is LIVE; only the test file was inconsistent.
+- **Round-9 (this commit):** rewrote `test_funnel_metrics.py` to match the shipped exclusion (31/31) + added "agent nexlify" pattern to `internal_tenants.py`. 106 green across internal_tenants/funnel/tenant_health/churn. Internal/test tenants now excluded from ALL three surfaces (funnel + tenant_health + churn). Process lesson: never `git checkout` a file while a subagent editing it is still running.
 
 ## Related
 - [[Paid Launch Readiness]] · [[Paid Launch Readiness Pack]] · [[Autonomous Dev Operation]]
