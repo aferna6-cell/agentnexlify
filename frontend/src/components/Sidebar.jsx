@@ -379,6 +379,14 @@ const allNavItems = [
     roles: ["owner", "admin"],
   },
   {
+    key: "referral",
+    icon: (
+      <Icon d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    ),
+    label: "Referral",
+    roles: ["owner"],
+  },
+  {
     key: "support",
     icon: (
       <Icon d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 16v-4M12 8h.01" />
@@ -413,6 +421,7 @@ const NAV_GROUPS = [
     items: [
       "team",
       "billing",
+      "referral",
       "business_page",
       "integrations",
       "integration_keys",

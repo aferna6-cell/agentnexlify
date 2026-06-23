@@ -8,6 +8,7 @@ from backend.models.database import get_service_supabase
 from backend.services.email_sender import mask_email, send_email
 from backend.services.webhook_dispatcher import fire_event_background
 from backend.services.automation.trigger import BATCH_LIMIT
+from backend.services.churn_watch import run_churn_watch
 
 logger = logging.getLogger(__name__)
 
