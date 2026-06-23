@@ -45,6 +45,7 @@ def _mock_chain(
     last_7d_result = _make_result([], last_7d_count)
     last_30d_result = _make_result([], last_30d_count)
     signups_result = _make_result([], signups_count)
+    rewards_result = _make_result([], 0)  # referral_rewards aggregation (earned credit)
 
     # Each table().select().eq()...execute() call returns one of the results in order.
     # Use side_effect on the deepest .execute() to sequence the responses.
@@ -54,6 +55,7 @@ def _mock_chain(
         last_7d_result,
         last_30d_result,
         signups_result,
+        rewards_result,
     ])
 
     chain = MagicMock()
@@ -166,7 +168,12 @@ class TestGetMyReferralStats:
         assert resp.status_code == 500
 
     def test_response_schema_fields_present(self, client, mock_supabase):
-        """Response contains all six expected fields including referred_signups."""
+        """Response contains all expected fields, including referral-reward earnings.
+
+        rewards_count + rewards_earned_cents added 2026-06-23 with the referral
+        reward feature (flat $20 credit to the referrer on the referee's first
+        paid invoice). The contract intentionally grew — keys updated to match.
+        """
         _mock_chain(
             mock_supabase,
             wc_data=[{"api_key": REF_CODE}],
@@ -182,6 +189,7 @@ class TestGetMyReferralStats:
         assert set(body.keys()) == {
             "ref_code", "share_link", "total_clicks",
             "clicks_last_7d", "clicks_last_30d", "referred_signups",
+            "rewards_count", "rewards_earned_cents",
         }
 
     def test_referred_signups_count_returned(self, client, mock_supabase):

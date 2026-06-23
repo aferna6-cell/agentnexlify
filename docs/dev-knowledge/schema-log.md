@@ -1387,3 +1387,20 @@ an unreliable migration-history table). Both pure idempotent `ADD COLUMN IF NOT 
   `chat_messages_os_message_id_uniq` on (tenant_id, os_message_id) WHERE os_message_id IS NOT NULL.
 Verified all 6 objects exist post-apply (information_schema + pg_indexes). 154 was already
 live. Prod schema drift = 0.
+
+## 160_referral_rewards (PENDING apply)
+
+**Created 2026-06-23** — NOT yet applied to prod (ships with the referral-reward
+feature branch `claude/agent-nexlify-testing-28d597`; apply via `apply_migration`
+when the branch deploys).
+
+New table `referral_rewards` records the flat $20 (2000-cent) Stripe customer-balance
+credit granted to a referrer when a tenant they referred pays their FIRST invoice.
+- `referred_tenant_id` is UNIQUE → idempotency: one reward per referee, ever. This
+  enforces "first paid invoice only" and is safe against Stripe webhook redeliveries
+  and the two parallel webhook endpoints (billing.py + stripe_webhooks.py).
+- `attribution_channel`: 'promo_code' (tenants.referred_by UUID) or 'widget_watermark'
+  (tenants.referred_by_widget_key → widget_configs.api_key → tenant).
+- `status`: pending → granted | failed. Pure additive `CREATE TABLE IF NOT EXISTS`.
+Consumed by `backend/services/referral_reward.py` and surfaced (earned credit) on
+`GET /api/v1/referral/my-stats`.
