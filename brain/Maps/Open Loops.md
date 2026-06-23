@@ -85,7 +85,9 @@ Owner-only GTM: DNS repoint, send outreach, sales calls (convert-beta via MTOpti
 
 ## Prod data snapshot (2026-06-23, project pxserpybmajixqrmzaly)
 - 12 tenants (7 paid), **2,717 chat_messages**, **27 leads**, **9 appointments**, 16 kb_articles (all embedded).
-- Read: the product is LIVE and used, not pre-launch theory. The funnel `2717 messages → 27 leads → 9 appointments` is the value chain — improving chat→lead→booking conversion is now the highest-value product lever (it's literally the product's job). The KB moat content is THIN (16 global articles; per-tenant depth is the `widget.knowledge_base` config) → G8 vertical depth matters.
+- Read: the product is LIVE and used, not pre-launch theory. The funnel `2717 messages → 27 leads → 9 appointments` is the value chain — improving chat→lead→booking conversion is now the highest-value product lever (it's literally the product's job).
+- **MOAT NOW LIVE END-TO-END (2026-06-23).** kb_articles went 16 → **19** (+3 vertical packs: salon-spa, plumber-hvac, dental, 52 Q&As, inserted directly to prod). FTS retrieval verified: "balayage"→salon, "burst pipe"→plumbing, "dental insurance"→dental. Combined with the widget wiring (#358) + migration 155, the widget now answers customers from the vertical KB in prod. G8 depth beyond these 3 verticals is the next content lever.
+- **Shipped to prod this session: #358 + #359 merged** (moat wiring, value digest, billing fixes, dependency reduction, status page, lead-capture dedup, voice plan-gate fix) + migrations 117/129/154/155/156 applied + 3 KB packs inserted. Backend live on Railway, frontend on Vercel.
 
 ### Next highest-value (data-grounded, 2026-06-23)
 1. **Lead-capture + booking conversion audit/improve** — verify the widget actually extracts a lead + offers booking at the right moments across the 2717 messages; fix any leak. Core revenue lever. (`tenant-chatbot-audit` skill; `_extract_lead_info`, booking flow)
