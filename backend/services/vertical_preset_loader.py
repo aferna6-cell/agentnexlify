@@ -106,6 +106,22 @@ _VERTICAL_ALIASES: dict[str, str] = {
     "pilates": "fitness_studio",
     "crossfit": "fitness_studio",
     "personal_training": "fitness_studio",
+    # roofing
+    "roofing": "roofing",
+    "roofer": "roofing",
+    "contractor": "roofing",
+    "construction": "roofing",
+    # home_cleaning
+    "cleaning": "home_cleaning",
+    "cleaner": "home_cleaning",
+    "maid": "home_cleaning",
+    "housekeeping": "home_cleaning",
+    "janitorial": "home_cleaning",
+    # veterinary
+    "vet": "veterinary",
+    "veterinarian": "veterinary",
+    "animal_hospital": "veterinary",
+    "animal_clinic": "veterinary",
 }
 
 

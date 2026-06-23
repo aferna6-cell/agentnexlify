@@ -690,6 +690,264 @@ export const VERTICAL_DATA = {
     ],
   },
 
+  roofing: {
+    slug: "roofing",
+    meta: {
+      title: "AI Front Desk for Roofing Contractors | AgentNexLiFy",
+      description:
+        "An AI front desk that answers homeowner questions, qualifies storm damage leads, and books inspections 24/7 for roofing contractors. Starts at $19.99/month.",
+      canonical: "https://agentnexlify.com/ai-front-desk/roofing",
+    },
+    hero: {
+      h1: "AI Front Desk for Roofing Contractors",
+      subhead:
+        "Answers homeowner questions, qualifies storm damage calls, and books inspection appointments around the clock. Every missed call after a storm is a job for a competitor.",
+      painPoint:
+        "Homeowners with storm damage contact two or three roofers and go with whoever answers first.",
+    },
+    features: [
+      {
+        icon: "🏚️",
+        title: "Storm Damage Lead Capture",
+        description:
+          "When a storm passes through your area, the AI captures every homeowner inquiry on your website. It collects the address, the damage description, and the best contact time before you even check your phone.",
+      },
+      {
+        icon: "📋",
+        title: "Inspection Booking",
+        description:
+          "Homeowners pick an available inspection slot directly from the chat. The booking lands on your calendar with the property address, damage type, and contact details attached.",
+      },
+      {
+        icon: "🔍",
+        title: "Insurance Claim Questions",
+        description:
+          "The AI answers questions about the inspection process, what to expect during an insurance claim, and what your company handles. Homeowners get accurate information before the appointment.",
+      },
+      {
+        icon: "⚡",
+        title: "Urgency Routing",
+        description:
+          "Active leaks, interior water damage, or structural concerns get flagged immediately with an alert to your team. Emergency jobs rise to the top of the queue.",
+      },
+      {
+        icon: "💰",
+        title: "Estimate Follow-Up",
+        description:
+          "After an inspection, the system prompts you to send an estimate and follows up with the homeowner automatically. No job goes cold while you are on a roof.",
+      },
+      {
+        icon: "⭐",
+        title: "Review Requests After Completion",
+        description:
+          "After each completed job, the system sends a review request to the homeowner. Positive Google reviews build credibility in your service area for the next storm season.",
+      },
+    ],
+    stats: [
+      { number: "$19.99", label: "per month to start" },
+      { number: "24/7", label: "lead capture with no extra staff" },
+      { number: "$99.99", label: "per month for the full platform" },
+    ],
+    faqs: [
+      {
+        q: "What is an AI front desk for a roofing contractor?",
+        a: "It is a chat widget on your website that answers homeowner questions, qualifies storm damage and repair leads, and books inspections at any hour. After a major storm, the contractors who respond first win the most jobs.",
+      },
+      {
+        q: "Can it handle emergency calls like an active leak?",
+        a: "Yes. Add urgency keywords and the AI flags those leads immediately and sends you an alert. Homeowners with active water intrusion get routed to a faster scheduling path so you can prioritize emergency jobs.",
+      },
+      {
+        q: "How does it handle insurance claim questions?",
+        a: "The AI answers questions about the inspection process and what to expect during a claim. It explains what your company handles and routes specific insurance or adjuster questions to your team rather than guessing.",
+      },
+      {
+        q: "What does it cost?",
+        a: "The AI Front Desk plan is $19.99 per month. It includes the chat widget, lead capture, inspection booking, and FAQ management. The full platform with marketing campaigns, estimate follow-up automations, and analytics is $99.99 per month.",
+      },
+      {
+        q: "How long does setup take?",
+        a: "Most roofing contractors are live within an hour. Add your service area, inspection process, and common questions about storm damage and insurance claims. The AI starts capturing leads the same day.",
+      },
+      {
+        q: "Can it qualify leads by roof type or damage extent?",
+        a: "Yes. Add qualifying questions to the intake flow. The AI can ask about the roof material, approximate age, and the type of damage before booking an inspection, so your team arrives prepared.",
+      },
+    ],
+  },
+
+  "cleaning-services": {
+    slug: "cleaning-services",
+    meta: {
+      title: "AI Front Desk for Cleaning Services | AgentNexLiFy",
+      description:
+        "An AI front desk that answers questions, books recurring and deep-clean appointments, and captures leads 24/7 for residential and commercial cleaning companies. Starts at $19.99/month.",
+      canonical: "https://agentnexlify.com/ai-front-desk/cleaning-services",
+    },
+    hero: {
+      h1: "AI Front Desk for Cleaning Services",
+      subhead:
+        "Answers questions, books recurring cleanings and one-time deep cleans, and captures leads at any hour. Clients searching for a cleaner book with whoever responds first.",
+      painPoint:
+        "Clients searching for a cleaning service message two or three companies and hire whoever replies fastest.",
+    },
+    features: [
+      {
+        icon: "📅",
+        title: "Recurring Booking Setup",
+        description:
+          "Clients choose weekly, biweekly, or monthly schedules directly through the chat. The booking lands on your calendar with the frequency, address, and any special instructions.",
+      },
+      {
+        icon: "🧹",
+        title: "Deep Clean and Move-In Quotes",
+        description:
+          "The AI collects the home size, number of bedrooms, and any specific requests. You get a lead with the details you need to send an accurate quote without a phone call.",
+      },
+      {
+        icon: "💬",
+        title: "Service and Pricing Questions",
+        description:
+          "The AI explains your service types, what is included in a standard clean versus a deep clean, and your pricing structure. Clients get accurate answers immediately.",
+      },
+      {
+        icon: "🔔",
+        title: "Appointment Reminders",
+        description:
+          "Automated reminders go out before each scheduled cleaning. Clients confirm or reschedule by text, reducing same-day cancellations for your crew.",
+      },
+      {
+        icon: "🏢",
+        title: "Commercial Cleaning Inquiries",
+        description:
+          "Office managers and property managers asking about commercial contracts get routed to a quote request. Collect the square footage, frequency, and scope before your follow-up call.",
+      },
+      {
+        icon: "⭐",
+        title: "Review Requests",
+        description:
+          "After each completed cleaning, the system sends a review request automatically. Positive reviews attract new clients searching for cleaners in your area.",
+      },
+    ],
+    stats: [
+      { number: "$19.99", label: "per month to start" },
+      { number: "24/7", label: "booking and inquiry coverage" },
+      { number: "$99.99", label: "per month for the full platform" },
+    ],
+    faqs: [
+      {
+        q: "What is an AI front desk for a cleaning company?",
+        a: "It is a chat widget on your website that answers visitor questions about your services, books recurring or one-time cleanings, and captures lead details at any hour. Clients comparing cleaning companies go with whoever responds first, so faster replies win more jobs.",
+      },
+      {
+        q: "Can it set up recurring cleaning schedules?",
+        a: "Yes. Clients pick their preferred frequency, the address, and a time window directly through the chat. The booking goes to your calendar with the details attached. Your team manages the ongoing schedule from the dashboard.",
+      },
+      {
+        q: "How does it handle deep clean and move-in pricing questions?",
+        a: "The AI collects the home size, number of rooms, and any special requests, then explains that your team will confirm the final price after reviewing the details. It never quotes a fixed price for a job it has not seen.",
+      },
+      {
+        q: "What does it cost?",
+        a: "The AI Front Desk plan is $19.99 per month. It includes the chat widget, booking requests, lead capture, and FAQ management. The full platform with recurring client automations, email and SMS campaigns, and analytics is $99.99 per month.",
+      },
+      {
+        q: "Does it handle commercial cleaning inquiries differently from residential?",
+        a: "Yes. Commercial visitors asking about office or property cleaning get routed to a quote request flow that collects the square footage, cleaning frequency, and scope. Your sales team follows up with a commercial proposal.",
+      },
+      {
+        q: "How long does setup take?",
+        a: "Most cleaning companies are live within an hour. Add your service types, pricing ranges, and coverage area. The AI starts answering client questions and capturing booking requests the same day.",
+      },
+    ],
+  },
+
+  veterinary: {
+    slug: "veterinary",
+    meta: {
+      title: "AI Front Desk for Veterinary Clinics | AgentNexLiFy",
+      description:
+        "An AI front desk that handles pet owner questions, books appointments and wellness visits, and routes emergencies 24/7 for veterinary clinics. Starts at $19.99/month.",
+      canonical: "https://agentnexlify.com/ai-front-desk/veterinary",
+    },
+    hero: {
+      h1: "AI Front Desk for Veterinary Clinics",
+      subhead:
+        "Handles pet owner questions, books routine appointments and wellness visits, and routes emergencies to the right line at any hour. Pet owners with a sick animal cannot wait on hold.",
+      painPoint:
+        "Pet owners with a sick or injured animal contact the first clinic that answers and book on the spot.",
+    },
+    features: [
+      {
+        icon: "🐾",
+        title: "Appointment and Wellness Booking",
+        description:
+          "Pet owners book routine checkups, vaccinations, and wellness visits directly through the chat. The booking lands on your schedule with the pet's species, age, and reason for the visit.",
+      },
+      {
+        icon: "🚨",
+        title: "Emergency Triage Routing",
+        description:
+          "Owners describing symptoms like labored breathing, trauma, or seizures get routed to your emergency line or the nearest emergency clinic immediately. Life-safety concerns are never handled with wait times.",
+      },
+      {
+        icon: "💬",
+        title: "24/7 Pet Owner Questions",
+        description:
+          "The AI answers questions about your services, accepted species, vaccine schedules, and appointment availability at any hour. Owners get a response instead of a voicemail during busy clinic hours.",
+      },
+      {
+        icon: "📋",
+        title: "New Pet Intake",
+        description:
+          "New clients share their pet's breed, age, vaccination history, and any known conditions before the first visit. Your vet team walks in with context instead of starting from scratch.",
+      },
+      {
+        icon: "🔔",
+        title: "Appointment Reminders and Vaccine Recalls",
+        description:
+          "Automated reminders go out before each appointment. The full platform adds proactive recall messages for pets overdue for vaccines or annual wellness exams.",
+      },
+      {
+        icon: "⭐",
+        title: "Post-Visit Review Requests",
+        description:
+          "After each appointment, the system sends a review request to the pet owner. Positive Google reviews help new pet owners in your area choose your clinic.",
+      },
+    ],
+    stats: [
+      { number: "$19.99", label: "per month to start" },
+      { number: "24/7", label: "pet owner support coverage" },
+      { number: "$99.99", label: "per month for the full platform" },
+    ],
+    faqs: [
+      {
+        q: "What is an AI front desk for a veterinary clinic?",
+        a: "It is a chat widget on your website that answers pet owner questions, books routine and wellness appointments, and routes emergency situations to the right line at any hour. Pet owners with an urgent problem call the first clinic that picks up.",
+      },
+      {
+        q: "How does it handle medical emergencies?",
+        a: "The AI recognizes descriptions of life-threatening symptoms like labored breathing, trauma, or collapse and immediately directs the owner to your emergency line or the nearest 24-hour emergency veterinary clinic. It does not attempt to triage emergencies itself.",
+      },
+      {
+        q: "Can it answer questions about vaccine schedules and services?",
+        a: "Yes. Add your vaccine protocols, accepted species, and service list during setup. The AI answers questions about core and non-core vaccines, spay and neuter services, and what to bring to the first appointment.",
+      },
+      {
+        q: "What does it cost?",
+        a: "The AI Front Desk plan is $19.99 per month. It includes the chat widget, appointment booking, lead capture, and FAQ management. The full platform with vaccine recall automations, email and SMS campaigns, and analytics is $99.99 per month.",
+      },
+      {
+        q: "Does it collect new patient information before the first visit?",
+        a: "Yes. New clients can share the pet's species, breed, age, weight, vaccination history, and any known conditions through the intake flow. Your team reviews the information before the appointment.",
+      },
+      {
+        q: "Will this work for a multi-doctor clinic?",
+        a: "Yes. The AI captures the appointment request and the reason for the visit. Your front desk team assigns the doctor from the dashboard. Doctor-specific booking is on the roadmap.",
+      },
+    ],
+  },
+
   "real-estate": {
     slug: "real-estate",
     meta: {

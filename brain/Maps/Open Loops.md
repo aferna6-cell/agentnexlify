@@ -166,6 +166,8 @@ Each new vertical extends THREE shipped systems at once (KB moat + SEO landing p
 - **SEO landing pages** — 3 entries in `verticals.js` + named routes → **9 `/ai-front-desk/*` URLs** now (salons/plumbers/dentists/med-spas/auto-repair/real-estate/law-firms/restaurants/fitness).
 - **Onboarding presets** — `law_firm`/`restaurant`/`fitness_studio` blocks in `vertical_presets.yaml` + 13 new aliases (law/lawyer/attorney→law_firm, cafe/dining→restaurant, gym/yoga/pilates→fitness_studio). 57 loader/alias tests green.
 - Vertical-pack pattern is now a clean repeatable loop: KB md + prod upsert + verticals.js entry + preset block + aliases. Next verticals (e.g. roofing, cleaning, vet, accounting) follow the same 4-file recipe.
+- **MERGED to prod: PR #366 (sha f5fb9ae).** 8th PR; CI infra-death; both Vercel previews Ready.
+- **Round-11 DONE: roofing/contractor + home cleaning + veterinary → 13 verticals.** KB packs upserted to prod (10→13 vertical packs, FTS verified: roof leak→roofing, recurring deep clean→home-cleaning, sick pet/new patient→veterinary). 12 SEO landing pages (`/ai-front-desk/roofing,cleaning-services,veterinary`). Presets `roofing`/`home_cleaning`/`veterinary` + 13 aliases (roofer/contractor, cleaner/maid/housekeeping, vet/animal_hospital). 88 loader/alias tests green. Vet pack hard-routes medical emergencies to call-the-clinic (never diagnoses). Major service-business vertical coverage now broad (salon, plumber/HVAC, dental, med-spa, auto, real-estate, law, restaurant, fitness, roofing, cleaning, vet + generic).
 
 ## Related
 - [[Paid Launch Readiness]] · [[Paid Launch Readiness Pack]] · [[Autonomous Dev Operation]]
