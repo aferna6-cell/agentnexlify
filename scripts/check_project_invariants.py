@@ -265,7 +265,10 @@ def check_widget_assets(failures: list[str]) -> None:
 
 def check_website_copy_avoids_em_dashes(failures: list[str]) -> None:
     issues: list[str] = []
-    em_dash = "\u2014"
+    # Catch the literal em dash AND its HTML-entity spellings (&mdash;, &#8212;,
+    # &#x2014;) \u2014 they render identically but a literal-only scan misses the
+    # entities (e.g. landing-page-v2/index.html shipped a `&mdash;`).
+    em_dash_markers = ("\u2014", "&mdash;", "&#8212;", "&#x2014;")
 
     for path in iter_website_files():
         try:
@@ -275,7 +278,8 @@ def check_website_copy_avoids_em_dashes(failures: list[str]) -> None:
             continue
 
         for lineno, line in enumerate(lines, start=1):
-            if em_dash in line:
+            lowered = line.lower()
+            if any(marker in lowered for marker in em_dash_markers):
                 issues.append(f"{rel(path)}:{lineno}: contains em dash")
 
     check(
