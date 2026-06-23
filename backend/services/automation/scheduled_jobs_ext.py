@@ -2,6 +2,7 @@
 
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from backend.models.database import get_service_supabase
 from backend.services.email_sender import mask_email, send_email
@@ -333,14 +334,17 @@ async def send_weekly_digest() -> int:
     week_tag = f"weekly_digest_{now.date().isoformat()}"
     sent = 0
 
-    # Fetch paid tenants (not free plan).
+    # Fetch active paid tenants.
+    # Filters: plan != 'free' AND plan_status IN ('active','trialing').
+    # This excludes cancelled/paused subscriptions — same guard as pay_gate.py.
     # avg_lead_value is optional — column may not exist on all deployments;
     # the query falls back to 0 gracefully if the column is absent.
     try:
         tenants = (
             db.table("tenants")
-            .select("id, business_name, owner_email, owner_name, avg_lead_value")
+            .select("id, business_name, owner_email, owner_name, avg_lead_value, plan_status")
             .neq("plan", "free")
+            .in_("plan_status", ["active", "trialing"])
             .limit(BATCH_LIMIT)
             .execute()
         )
@@ -349,8 +353,9 @@ async def send_weekly_digest() -> int:
         try:
             tenants = (
                 db.table("tenants")
-                .select("id, business_name, owner_email, owner_name")
+                .select("id, business_name, owner_email, owner_name, plan_status")
                 .neq("plan", "free")
+                .in_("plan_status", ["active", "trialing"])
                 .limit(BATCH_LIMIT)
                 .execute()
             )
@@ -380,67 +385,166 @@ async def send_weekly_digest() -> int:
             logger.warning("send_weekly_digest: dedup check failed for tenant %s", tid)
             continue
 
-        # ---- Gather 7-day value metrics ----
-        # compute_weekly_value handles leads (client_id), appointments,
-        # conversations, invoices, and agent runs in one fault-tolerant call.
-        # avg_lead_value is read from the tenant row (0.0 if absent/unset).
-        from backend.services.weekly_value import compute_weekly_value
-
-        avg_lead_value = float(tenant.get("avg_lead_value") or 0)
-        value = compute_weekly_value(db, tid, avg_lead_value=avg_lead_value)
-        leads_count = value["leads_captured"]
-        conversations = value["conversations_handled"]
-
-        # Top question — most common user message (exclude greetings / single chars)
-        top_question = "N/A"
+        # ---- Per-tenant work wrapped for best-effort isolation ----
+        # A crash for one tenant must not abort the batch for others.
         try:
-            user_msgs = (
-                db.table("chat_messages")
-                .select("content")
-                .eq("tenant_id", tid)
-                .eq("role", "user")
-                .gte("created_at", week_start)
-                .limit(500)
-                .execute()
+            ok = await _build_and_send_digest(
+                db=db,
+                tenant=tenant,
+                tid=tid,
+                email=email,
+                week_start=week_start,
+                week_tag=week_tag,
+                # opportunity_html: leave None here.
+                # When the os_opportunities lane is ready, the orchestrator
+                # can pre-fetch highlights and pass them in.
+                # DO NOT import os_opportunities in this module.
+                opportunity_html=None,
             )
-            skip_words = {
-                "hi",
-                "hello",
-                "hey",
-                "e",
-                "ok",
-                "yes",
-                "no",
-                "thanks",
-                "thank you",
-            }
-            freq: dict[str, int] = {}
-            for m in user_msgs.data or []:
-                content = (m.get("content") or "").strip()
-                if not content or len(content) <= 2:
-                    continue
-                if content.lower() in skip_words:
-                    continue
-                key = content[:120]  # Normalize long messages
-                freq[key] = freq.get(key, 0) + 1
-            if freq:
-                top_question = max(freq, key=freq.get)  # type: ignore[arg-type]
+            if ok:
+                sent += 1
         except Exception:
-            logger.warning(
-                "send_weekly_digest: failed to find top question for tenant %s",
-                tid,
-                exc_info=True,
+            logger.exception(
+                "send_weekly_digest: unhandled error for tenant %s — skipping", tid
             )
 
-        # ---- Build branded HTML email ----
-        # html.escape everything user/customer-controlled: top_question is
-        # customer-typed chat content (same injection class as the 2026-06-10
-        # approval-notify fix); business/owner names are tenant input.
-        import html as _html
+    return sent
 
-        owner_name = _html.escape(tenant.get("owner_name") or "there")
-        biz_name = _html.escape(tenant.get("business_name") or "Your Business")
 
+async def _build_and_send_digest(
+    db: Any,
+    tenant: dict,
+    tid: str,
+    email: str,
+    week_start: str,
+    week_tag: str,
+    # --- OPPORTUNITY HIGHLIGHTS SEAM ---
+    # Pass pre-formatted HTML from the opportunity scanner here when that lane
+    # is ready.  Do NOT import os_opportunities in this module — keep lanes
+    # separate.  The outer scheduler can call os_opportunities.get_highlights(tid)
+    # and pass the result in.  When None, no opportunity section is rendered.
+    opportunity_html: "str | None" = None,
+) -> bool:
+    """Build + send one tenant's weekly value digest email.
+
+    Returns True if the email was sent successfully, False otherwise.
+    Raises only on programming errors (not send/db failures).
+    """
+    import html as _html
+    from backend.services.weekly_value import compute_weekly_value, empty_state_message
+
+    # ---- Gather 7-day value metrics ----
+    # compute_weekly_value handles leads (client_id), appointments,
+    # conversations, invoices, and agent runs in one fault-tolerant call.
+    # avg_lead_value is read from the tenant row (0.0 if absent/unset).
+    avg_lead_value = float(tenant.get("avg_lead_value") or 0)
+    value = compute_weekly_value(db, tid, avg_lead_value=avg_lead_value)
+    leads_count = value["leads_captured"]
+    conversations = value["conversations_handled"]
+
+    # Detect zero-activity week before building email body
+    total_activity = (
+        leads_count
+        + value["appointments_booked"]
+        + conversations
+        + value["invoices_sent"]
+        + value["agent_runs_completed"]
+    )
+    is_empty_week = total_activity == 0
+
+    # Top question — most common user message (exclude greetings / single chars)
+    top_question = "N/A"
+    try:
+        user_msgs = (
+            db.table("chat_messages")
+            .select("content")
+            .eq("tenant_id", tid)
+            .eq("role", "user")
+            .gte("created_at", week_start)
+            .limit(500)
+            .execute()
+        )
+        skip_words = {
+            "hi",
+            "hello",
+            "hey",
+            "e",
+            "ok",
+            "yes",
+            "no",
+            "thanks",
+            "thank you",
+        }
+        freq: dict[str, int] = {}
+        for m in user_msgs.data or []:
+            content = (m.get("content") or "").strip()
+            if not content or len(content) <= 2:
+                continue
+            if content.lower() in skip_words:
+                continue
+            key = content[:120]  # Normalize long messages
+            freq[key] = freq.get(key, 0) + 1
+        if freq:
+            top_question = max(freq, key=freq.get)  # type: ignore[arg-type]
+    except Exception:
+        logger.warning(
+            "send_weekly_digest: failed to find top question for tenant %s",
+            tid,
+            exc_info=True,
+        )
+
+    # ---- Build branded HTML email ----
+    # html.escape everything user/customer-controlled: top_question is
+    # customer-typed chat content (same injection class as the 2026-06-10
+    # approval-notify fix); business/owner names are tenant input.
+    owner_name = _html.escape(tenant.get("owner_name") or "there")
+    biz_name = _html.escape(tenant.get("business_name") or "Your Business")
+
+    pipeline_val = value["estimated_pipeline_value"]
+
+    if is_empty_week:
+        # Empty-state email: helpful "here's what your AI is ready to do" message.
+        # No zeros table — that would look like a bug report, not a value digest.
+        subject = f"Your AI staff is ready — {tenant.get('business_name') or 'your business'}"
+        empty_lines = empty_state_message().split("\n")
+        empty_body_parts = []
+        for line in empty_lines:
+            if line.startswith("•"):
+                empty_body_parts.append(
+                    f"<li style='margin-bottom:8px;color:#374151;'>{_html.escape(line[1:].strip())}</li>"
+                )
+            else:
+                empty_body_parts.append(
+                    f"<p style='color:#374151;'>{_html.escape(line)}</p>"
+                )
+        # Wrap bullet items in a <ul>
+        formatted_empty = ""
+        in_list = False
+        for part in empty_body_parts:
+            if part.startswith("<li"):
+                if not in_list:
+                    formatted_empty += "<ul style='padding-left:20px;'>"
+                    in_list = True
+                formatted_empty += part
+            else:
+                if in_list:
+                    formatted_empty += "</ul>"
+                    in_list = False
+                formatted_empty += part
+        if in_list:
+            formatted_empty += "</ul>"
+
+        body_html = (
+            f"<div style='font-family:sans-serif;max-width:600px;margin:0 auto;'>"
+            f"<h2 style='color:#1e293b;'>Hi {owner_name},</h2>"
+            f"{formatted_empty}"
+            f"<p style='margin-top:24px;'>"
+            f"<a href='https://app.agentnexlify.com/dashboard' "
+            f"style='color:#6366f1;font-weight:600;text-decoration:none;'>View your dashboard &rarr;</a></p>"
+            f"<p style='color:#6b7280;margin-top:16px;'>— The AgentNexLiFy Team</p>"
+            f"</div>"
+        )
+    else:
         subject = f"What your AI staff got done — {tenant.get('business_name') or 'your business'}"
 
         display_question = _html.escape(
@@ -455,7 +559,6 @@ async def send_weekly_digest() -> int:
                 f"<td style='padding:12px 16px;color:#f1f5f9;text-align:right;font-size:18px;font-weight:bold;'>{val}</td></tr>"
             )
 
-        pipeline_val = value["estimated_pipeline_value"]
         pipeline_str = f"${pipeline_val:,.0f}" if pipeline_val > 0 else "—"
 
         rows = [
@@ -490,6 +593,18 @@ async def send_weekly_digest() -> int:
             f"background:#1e293b;border-radius:8px;overflow:hidden;'>"
             + "".join(rows)
             + f"</table>"
+        )
+
+        # --- OPPORTUNITY HIGHLIGHTS SEAM ---
+        # When the opportunity scanner lane is wired in, the outer scheduler
+        # passes opportunity_html here. This module never imports os_opportunities.
+        if opportunity_html:
+            body_html += (
+                f"<h3 style='color:#1e293b;margin-top:24px;'>Opportunities this week</h3>"
+                f"<div style='color:#374151;'>{opportunity_html}</div>"
+            )
+
+        body_html += (
             f"<p style='margin-top:24px;'>"
             f"<a href='https://app.agentnexlify.com/dashboard/agent-os' "
             f"style='color:#6366f1;font-weight:600;text-decoration:none;'>Ask your AI staff for more &rarr;</a></p>"
@@ -497,27 +612,20 @@ async def send_weekly_digest() -> int:
             f"</div>"
         )
 
-        try:
-            result = await send_email(
-                to=email, subject=subject, body_html=body_html, tenant_id=tid
-            )
-            if result.get("success"):
-                sent += 1
-                logger.info("Sent weekly digest to %s (tenant %s)", mask_email(email), tid)
-                # Track in activity_log for dedup
-                from backend.services.activity import log_activity
+    result = await send_email(
+        to=email, subject=subject, body_html=body_html, tenant_id=tid
+    )
+    if result.get("success"):
+        logger.info("Sent weekly digest to %s (tenant %s)", mask_email(email), tid)
+        from backend.services.activity import log_activity
 
-                log_activity(
-                    tenant_id=tid,
-                    activity_type=week_tag,
-                    description=f"Weekly digest sent: {conversations} conversations, {leads_count} leads, ${pipeline_val:,.0f} pipeline",
-                )
-        except Exception:
-            logger.exception(
-                "Failed to send weekly digest to %s (tenant %s)", email, tid
-            )
-
-    return sent
+        log_activity(
+            tenant_id=tid,
+            activity_type=week_tag,
+            description=f"Weekly digest sent: {conversations} conversations, {leads_count} leads, ${pipeline_val:,.0f} pipeline",
+        )
+        return True
+    return False
 
 
 async def send_birthday_greetings() -> int:

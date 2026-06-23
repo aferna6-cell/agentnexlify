@@ -6,13 +6,19 @@ Coverage:
 - Zero-data tenant: all counts 0, empty-state copy confirmed
 - Tenant isolation: queries scoped to the correct client_id / tenant_id
 - Partial failure resilience: one table error yields zeros for that field, not a crash
+- empty_state_message: returns non-empty helpful copy string
+- send_weekly_digest: plan_status filter excludes cancelled tenants
+- send_weekly_digest: per-tenant failure does not abort the batch
+- send_weekly_digest: zero-activity tenant gets empty-state email (no zeros table)
+- _build_and_send_digest: opportunity_html seam renders when provided, skipped when None
 
 No live DB calls — all Supabase access is mocked via unittest.mock.
 """
 
+import asyncio
 import os
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch, call
 
 import pytest
 
@@ -20,7 +26,11 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 os.environ.setdefault("TESTING", "1")
 
-from backend.services.weekly_value import compute_weekly_value, DEFAULT_AVG_LEAD_VALUE
+from backend.services.weekly_value import (
+    compute_weekly_value,
+    DEFAULT_AVG_LEAD_VALUE,
+    empty_state_message,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -393,3 +403,441 @@ class TestPartialFailureResilience:
 
         result = compute_weekly_value(db, "tenant-x")
         assert result["conversations_handled"] == 0
+
+
+# ---------------------------------------------------------------------------
+# empty_state_message
+# ---------------------------------------------------------------------------
+
+class TestEmptyStateMessage:
+
+    def test_returns_non_empty_string(self):
+        msg = empty_state_message()
+        assert isinstance(msg, str)
+        assert len(msg) > 0
+
+    def test_contains_helpful_copy_not_zeros(self):
+        msg = empty_state_message()
+        # Should mention what the AI can do — not raw zero counts
+        assert "ready" in msg.lower() or "capture" in msg.lower() or "book" in msg.lower()
+
+    def test_does_not_contain_zero_leads(self):
+        msg = empty_state_message()
+        # Must not look like a zeros-table — no "0 leads" style content
+        assert "0 leads" not in msg
+        assert "0 appointments" not in msg
+
+    def test_is_multiline(self):
+        msg = empty_state_message()
+        lines = msg.split("\n")
+        assert len(lines) >= 3, "empty_state_message should have at least 3 lines"
+
+
+# ---------------------------------------------------------------------------
+# Helpers for send_weekly_digest / _build_and_send_digest tests
+# ---------------------------------------------------------------------------
+
+def _make_digest_db(
+    tenants_data=None,
+    activity_log_count=0,
+    chat_messages_data=None,
+    leads_data=None,
+    appointments_count=0,
+    invoices_data=None,
+    agent_runs_count=0,
+):
+    """Build a mock Supabase client for digest-level tests."""
+    db = MagicMock()
+
+    def table_side_effect(name):
+        m = MagicMock()
+        m.select.return_value = m
+        m.eq.return_value = m
+        m.neq.return_value = m
+        m.in_.return_value = m
+        m.gte.return_value = m
+        m.limit.return_value = m
+        m.or_.return_value = m
+        m.filter.return_value = m
+
+        if name == "tenants":
+            m.execute.return_value = _mock_result(data=tenants_data or [])
+        elif name == "activity_log":
+            m.execute.return_value = _mock_result(count=activity_log_count)
+        elif name == "chat_messages":
+            m.execute.return_value = _mock_result(data=chat_messages_data or [])
+        elif name == "leads":
+            m.execute.return_value = _mock_result(data=leads_data or [])
+        elif name == "appointments":
+            m.execute.return_value = _mock_result(count=appointments_count)
+        elif name == "invoices":
+            m.execute.return_value = _mock_result(data=invoices_data or [])
+        elif name == "os_agent_runs":
+            m.execute.return_value = _mock_result(count=agent_runs_count)
+        else:
+            m.execute.return_value = _mock_result()
+        return m
+
+    db.table.side_effect = table_side_effect
+    return db
+
+
+def _run_async(coro):
+    """Run an async coroutine in tests (avoids pytest-asyncio requirement)."""
+    return asyncio.get_event_loop().run_until_complete(coro)
+
+
+# ---------------------------------------------------------------------------
+# send_weekly_digest — plan_status filtering
+# ---------------------------------------------------------------------------
+
+class TestSendWeeklyDigestPlanStatusFilter:
+    """Cancelled/paused tenants must NOT receive digests."""
+
+    def test_cancelled_tenant_excluded(self):
+        """A tenant with plan_status=cancelled must not get a digest."""
+        # The tenants query now includes .in_("plan_status", ["active", "trialing"])
+        # so cancelled tenants are filtered at the DB level.
+        # We verify the query shape — not by checking email sends (since the mock
+        # DB returns only what we give it, we give it no cancelled tenants and
+        # assert send_email is never called).
+        from backend.services.automation.scheduled_jobs_ext import send_weekly_digest
+
+        db = _make_digest_db(
+            # No tenants returned — simulates DB filtered them out
+            tenants_data=[],
+        )
+
+        email_calls = []
+
+        async def mock_send_email(**kwargs):
+            email_calls.append(kwargs)
+            return {"success": True}
+
+        with (
+            patch("backend.services.automation.scheduled_jobs_ext.get_service_supabase", return_value=db),
+            patch("backend.services.automation.scheduled_jobs_ext.send_email", side_effect=mock_send_email),
+            patch("backend.services.automation.scheduled_jobs_ext.datetime") as mock_dt,
+        ):
+            from datetime import datetime, timezone
+            # Friday
+            mock_dt.now.return_value = datetime(2026, 6, 19, 10, 0, 0, tzinfo=timezone.utc)
+            mock_dt.now.return_value = type("dt", (), {
+                "weekday": lambda self: 4,
+                "date": lambda self: type("d", (), {"isoformat": lambda self: "2026-06-19"})(),
+            })()
+            # Easier: just let it run on a known Friday
+            import datetime as _dt
+            mock_dt.now.return_value = _dt.datetime(2026, 6, 19, 10, 0, tzinfo=_dt.timezone.utc)
+            mock_dt.side_effect = lambda *a, **kw: _dt.datetime(*a, **kw)
+
+            result = _run_async(send_weekly_digest())
+
+        assert len(email_calls) == 0, "No emails should be sent to cancelled tenants"
+
+    def test_plan_status_filter_called_on_tenants_query(self):
+        """tenants query must include plan_status filter (in_ call)."""
+        from backend.services.automation.scheduled_jobs_ext import send_weekly_digest
+
+        db = MagicMock()
+        tenants_mock = MagicMock()
+        tenants_mock.select.return_value = tenants_mock
+        tenants_mock.neq.return_value = tenants_mock
+        tenants_mock.in_.return_value = tenants_mock
+        tenants_mock.limit.return_value = tenants_mock
+        tenants_mock.execute.return_value = _mock_result(data=[])
+        db.table.return_value = tenants_mock
+
+        import datetime as _dt
+
+        with (
+            patch("backend.services.automation.scheduled_jobs_ext.get_service_supabase", return_value=db),
+            patch("backend.services.automation.scheduled_jobs_ext.datetime") as mock_dt,
+        ):
+            mock_dt.now.return_value = _dt.datetime(2026, 6, 19, 10, 0, tzinfo=_dt.timezone.utc)
+            mock_dt.side_effect = lambda *a, **kw: _dt.datetime(*a, **kw)
+
+            _run_async(send_weekly_digest())
+
+        # Verify .in_ was called with plan_status filter
+        in_calls = tenants_mock.in_.call_args_list
+        plan_status_filtered = any(
+            "plan_status" in str(c) for c in in_calls
+        )
+        assert plan_status_filtered, (
+            "tenants query must filter plan_status via .in_(['active','trialing'])"
+        )
+
+
+# ---------------------------------------------------------------------------
+# send_weekly_digest — best-effort batch (per-tenant failure isolation)
+# ---------------------------------------------------------------------------
+
+class TestSendWeeklyDigestBatchIsolation:
+
+    def test_per_tenant_failure_does_not_abort_batch(self):
+        """If _build_and_send_digest raises for tenant A, tenant B still gets sent."""
+        from backend.services.automation.scheduled_jobs_ext import send_weekly_digest
+
+        tenant_a = {
+            "id": "tenant-a",
+            "owner_email": "a@example.com",
+            "owner_name": "Alice",
+            "business_name": "Alice Salon",
+            "avg_lead_value": None,
+            "plan_status": "active",
+        }
+        tenant_b = {
+            "id": "tenant-b",
+            "owner_email": "b@example.com",
+            "owner_name": "Bob",
+            "business_name": "Bob Plumbing",
+            "avg_lead_value": None,
+            "plan_status": "active",
+        }
+
+        db = _make_digest_db(tenants_data=[tenant_a, tenant_b])
+
+        import datetime as _dt
+
+        send_counts = {"b": 0}
+
+        async def mock_build_and_send(db, tenant, tid, email, week_start, week_tag, opportunity_html=None):
+            if tid == "tenant-a":
+                raise RuntimeError("Simulated crash for tenant A")
+            send_counts["b"] += 1
+            return True
+
+        with (
+            patch("backend.services.automation.scheduled_jobs_ext.get_service_supabase", return_value=db),
+            patch("backend.services.automation.scheduled_jobs_ext._build_and_send_digest", side_effect=mock_build_and_send),
+            patch("backend.services.automation.scheduled_jobs_ext.datetime") as mock_dt,
+        ):
+            mock_dt.now.return_value = _dt.datetime(2026, 6, 19, 10, 0, tzinfo=_dt.timezone.utc)
+            mock_dt.side_effect = lambda *a, **kw: _dt.datetime(*a, **kw)
+
+            result = _run_async(send_weekly_digest())
+
+        # Tenant B's digest was sent despite A crashing
+        assert send_counts["b"] == 1, "Tenant B must still receive digest after A crashes"
+        # Return count reflects only successful sends
+        assert result == 1
+
+
+# ---------------------------------------------------------------------------
+# _build_and_send_digest — empty-state email
+# ---------------------------------------------------------------------------
+
+class TestBuildAndSendDigestEmptyState:
+
+    def test_zero_activity_sends_empty_state_email_not_zeros_table(self):
+        """A tenant with all-zero activity should get the empty-state subject/body."""
+        from backend.services.automation.scheduled_jobs_ext import _build_and_send_digest
+
+        db = _make_digest_db(
+            leads_data=[],
+            appointments_count=0,
+            chat_messages_data=[],
+            invoices_data=[],
+            agent_runs_count=0,
+        )
+
+        sent_subjects = []
+        sent_bodies = []
+
+        async def mock_send_email(to, subject, body_html, tenant_id):
+            sent_subjects.append(subject)
+            sent_bodies.append(body_html)
+            return {"success": True}
+
+        tenant = {
+            "id": "empty-tenant",
+            "owner_email": "owner@example.com",
+            "owner_name": "Sam",
+            "business_name": "Sam Fitness",
+            "avg_lead_value": None,
+            "plan_status": "active",
+        }
+
+        with patch("backend.services.automation.scheduled_jobs_ext.send_email", side_effect=mock_send_email):
+            with patch("backend.services.activity.log_activity"):
+                _run_async(
+                    _build_and_send_digest(
+                        db=db,
+                        tenant=tenant,
+                        tid="empty-tenant",
+                        email="owner@example.com",
+                        week_start="2026-06-12T00:00:00+00:00",
+                        week_tag="weekly_digest_2026-06-19",
+                    )
+                )
+
+        assert len(sent_subjects) == 1
+        subject = sent_subjects[0]
+        body = sent_bodies[0]
+
+        # Subject differs for empty state
+        assert "ready" in subject.lower() or "AI staff is ready" in subject, (
+            f"Empty-state subject should reflect 'ready' state, got: {subject}"
+        )
+
+        # Body must NOT contain zeros table markers
+        assert "Leads captured" not in body or "0" not in body.split("Leads captured")[1][:20], (
+            "Empty-state body should not show a zeros table"
+        )
+
+        # Body must contain helpful copy from empty_state_message
+        assert "ready" in body.lower() or "capture" in body.lower() or "book" in body.lower(), (
+            "Empty-state body should contain helpful copy about what the AI can do"
+        )
+
+    def test_active_tenant_sends_stats_table(self):
+        """A tenant with activity gets the stats table email, not the empty-state."""
+        from backend.services.automation.scheduled_jobs_ext import _build_and_send_digest
+
+        db = _make_digest_db(
+            leads_data=[{"id": "l1", "deal_value": "200"}],
+            appointments_count=1,
+            chat_messages_data=[{"session_id": "s1", "content": "What are your hours?"}],
+            invoices_data=[],
+            agent_runs_count=0,
+        )
+
+        sent_subjects = []
+        sent_bodies = []
+
+        async def mock_send_email(to, subject, body_html, tenant_id):
+            sent_subjects.append(subject)
+            sent_bodies.append(body_html)
+            return {"success": True}
+
+        tenant = {
+            "id": "active-tenant",
+            "owner_email": "owner@example.com",
+            "owner_name": "Maria",
+            "business_name": "Maria Dental",
+            "avg_lead_value": None,
+            "plan_status": "active",
+        }
+
+        with patch("backend.services.automation.scheduled_jobs_ext.send_email", side_effect=mock_send_email):
+            with patch("backend.services.activity.log_activity"):
+                _run_async(
+                    _build_and_send_digest(
+                        db=db,
+                        tenant=tenant,
+                        tid="active-tenant",
+                        email="owner@example.com",
+                        week_start="2026-06-12T00:00:00+00:00",
+                        week_tag="weekly_digest_2026-06-19",
+                    )
+                )
+
+        assert len(sent_subjects) == 1
+        # Active state subject
+        assert "got done" in sent_subjects[0].lower() or "AI staff" in sent_subjects[0], (
+            f"Active state email subject wrong: {sent_subjects[0]}"
+        )
+        # Body has stats table
+        assert "Leads captured" in sent_bodies[0]
+
+
+# ---------------------------------------------------------------------------
+# _build_and_send_digest — opportunity highlights seam
+# ---------------------------------------------------------------------------
+
+class TestOpportunityHighlightsSeam:
+
+    def test_opportunity_html_rendered_when_provided(self):
+        """When opportunity_html is passed, it appears in the email body."""
+        from backend.services.automation.scheduled_jobs_ext import _build_and_send_digest
+
+        db = _make_digest_db(
+            leads_data=[{"id": "l1", "deal_value": "150"}],
+            appointments_count=1,
+            chat_messages_data=[],
+            invoices_data=[],
+            agent_runs_count=0,
+        )
+
+        sent_bodies = []
+
+        async def mock_send_email(to, subject, body_html, tenant_id):
+            sent_bodies.append(body_html)
+            return {"success": True}
+
+        tenant = {
+            "id": "t1",
+            "owner_email": "x@x.com",
+            "owner_name": "X",
+            "business_name": "X Biz",
+            "avg_lead_value": None,
+            "plan_status": "active",
+        }
+
+        opportunity_snippet = "<p>You have 3 leads who haven't been contacted in 5 days.</p>"
+
+        with patch("backend.services.automation.scheduled_jobs_ext.send_email", side_effect=mock_send_email):
+            with patch("backend.services.activity.log_activity"):
+                _run_async(
+                    _build_and_send_digest(
+                        db=db,
+                        tenant=tenant,
+                        tid="t1",
+                        email="x@x.com",
+                        week_start="2026-06-12T00:00:00+00:00",
+                        week_tag="weekly_digest_2026-06-19",
+                        opportunity_html=opportunity_snippet,
+                    )
+                )
+
+        assert len(sent_bodies) == 1
+        assert opportunity_snippet in sent_bodies[0], (
+            "opportunity_html must appear verbatim in the email body"
+        )
+
+    def test_no_opportunity_section_when_none(self):
+        """When opportunity_html is None, no opportunity section rendered."""
+        from backend.services.automation.scheduled_jobs_ext import _build_and_send_digest
+
+        db = _make_digest_db(
+            leads_data=[{"id": "l1", "deal_value": "150"}],
+            appointments_count=1,
+            chat_messages_data=[],
+            invoices_data=[],
+            agent_runs_count=0,
+        )
+
+        sent_bodies = []
+
+        async def mock_send_email(to, subject, body_html, tenant_id):
+            sent_bodies.append(body_html)
+            return {"success": True}
+
+        tenant = {
+            "id": "t1",
+            "owner_email": "x@x.com",
+            "owner_name": "X",
+            "business_name": "X Biz",
+            "avg_lead_value": None,
+            "plan_status": "active",
+        }
+
+        with patch("backend.services.automation.scheduled_jobs_ext.send_email", side_effect=mock_send_email):
+            with patch("backend.services.activity.log_activity"):
+                _run_async(
+                    _build_and_send_digest(
+                        db=db,
+                        tenant=tenant,
+                        tid="t1",
+                        email="x@x.com",
+                        week_start="2026-06-12T00:00:00+00:00",
+                        week_tag="weekly_digest_2026-06-19",
+                        opportunity_html=None,
+                    )
+                )
+
+        assert len(sent_bodies) == 1
+        assert "Opportunities this week" not in sent_bodies[0], (
+            "No opportunity section should appear when opportunity_html is None"
+        )

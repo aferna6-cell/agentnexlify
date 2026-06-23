@@ -28,6 +28,27 @@ logger = logging.getLogger(__name__)
 # and no tenant-level override. Callers can override per tenant.
 DEFAULT_AVG_LEAD_VALUE: float = 0.0
 
+# --- EMPTY STATE ---
+# Used when a tenant has zero activity this week.
+# Email builder calls empty_state_message() instead of showing a zeros table.
+_EMPTY_STATE_LINES = [
+    "Your AI staff is set up and ready to work — here's what it's waiting to do for you:",
+    "• Capture leads 24/7 from your website chat widget, even when you're offline.",
+    "• Book appointments automatically and send reminders so you never miss a client.",
+    "• Follow up with leads via SMS and email so no prospect goes cold.",
+    "• Answer customer questions instantly, any time of day.",
+    "Share your widget link with a customer this week and let the AI do the rest.",
+]
+
+
+def empty_state_message() -> str:
+    """Human-friendly copy for a tenant whose week had zero activity.
+
+    Returns a plain-text multi-line string suitable for HTML wrapping.
+    Callers are responsible for HTML-escaping if injected into an email template.
+    """
+    return "\n".join(_EMPTY_STATE_LINES)
+
 
 def compute_weekly_value(
     db: Any,
