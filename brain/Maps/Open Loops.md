@@ -119,5 +119,16 @@ Goal "complete all 5". Theme: product works but the funnel leaks (2,717 messages
 - **Lane 4 — preset auto-apply + alias fix.** `onboarding.py::_apply_vertical_preset_defaults` applies the vertical preset greeting during onboarding only when the tenant hasn't set one. **Caught a real gap:** `load_vertical_preset` matched keys `salon_spa/plumber_hvac/dental` but onboarding sends `salon/hvac/dentist` → always fell back to generic. Added `_VERTICAL_ALIASES` in `vertical_preset_loader.py` (salon→salon_spa, hvac/plumbing→plumber_hvac, dentist→dental, etc.) so real business types resolve. + 8 alias tests. **Also fixed** lane 4's own test: its fastapi-mocking import shim broke Pydantic (`no signature found for dict`) → replaced with a normal import (harness fix, contract unchanged).
 - **Lane 5 — KB vertical depth.** med-spa, auto-repair, real-estate FAQ packs (16 Q&A each) in `knowledge-base/wiki/verticals/` + **upserted to prod kb_articles (19→22)**. FTS verified in prod: "how much is botox"→med-spa, "check engine light"→auto-repair, showing/maintenance→real-estate. Moat now covers 7 verticals.
 
+## Review 2026-06-23 (round 6) — 5 conversion lanes + owner items resolved (commit d15d3f0)
+Owner cleared the last 2 gated items: **domain connected** (SEO pages now public) + **kill free trial / pay on signup**. All beta tenants converted to paid. Five buildable lanes shipped to branch.
+- **Booking conversion** (`widget_chat.py`): booking nudge was passive (27 leads → 9 appts ≈ 33%); now proactively offers a slot on service/pricing/scheduling interest or once contact captured. The investigating subagent stalled, so I landed the prompt fix directly.
+- **Per-tenant health dashboard** (`tenant_health.py` + `admin_tenant_health.py` + `AdminTenantHealthPage.jsx`, `/admin/tenant-health`): active/at_risk/dormant + paid per tenant, dormant-paid first = the call list. 29 tests. Registered in main.py.
+- **Referral click tracking** (widget JS): watermark click POSTs to `/api/v1/referral/click` (keepalive, non-blocking) → `referral_clicks` populates. Byte-identical.
+- **Deeper preset auto-apply** (`onboarding.py`): preset now also fills `business_services` + `business_hours_display` (cols verified) in the same tenants write, overwrite-guarded. I finished the subagent's half-wired helper (added call site + 3 tests).
+- **KB-embeddings**: verified already fully patched (EmbeddingUnavailable + cron guard + 22 tests) — no change.
+- **Kill free trial**: removed `TrialBanner` + `StripeTrialBanner` from `App.jsx`. Backend was already trial-free (`compute_trial_status`→no-trial, `free_trial_started_at` never set, Stripe checkout has no `trial_period_days` → charges at signup). So "pay on signup" needed only the UI cleanup.
+- Tests green per-suite: tenant_health 29, onboarding-preset 12, aliases 8, lead-prompt 5, funnel 19, voice 11, embeddings 13. (funnel+embeddings share a pre-existing cross-file pollution quirk when run together under --noconftest — each passes alone; not a regression.)
+- **Remaining buildable follow-ups:** preset FAQs not auto-seeded (separate faq_entries path); tenant-health does full-table scans (fine <500 tenants, cap later); `StripeTrialBanner.jsx` file now dead (unimported) — safe to delete next cleanup.
+
 ## Related
 - [[Paid Launch Readiness]] · [[Paid Launch Readiness Pack]] · [[Autonomous Dev Operation]]
