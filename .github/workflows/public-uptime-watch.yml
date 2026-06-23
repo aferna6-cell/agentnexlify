@@ -32,12 +32,26 @@ jobs:
 
       - name: Probe public endpoints
         id: probe
-        env:
-          SLACK_ALERT_WEBHOOK_URL: ${{ secrets.SLACK_ALERT_WEBHOOK_URL }}
-        run: python scripts/monitoring/public_uptime_probe.py | tee probe-output.txt
+        run: |
+          set -o pipefail
+          python scripts/monitoring/public_uptime_probe.py | tee probe-output.txt
 
-      # Slack secret is not configured yet, so a failed probe must still
-      # reach a human: open (or comment on) a pinned downtime issue.
+      # Best-effort email alert on failure via Resend. Never hard-fails the
+      # job: the GitHub-issue step below stays the durable alert of record.
+      - name: Email owner on failure
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          OWNER_ALERT_EMAIL: ${{ secrets.OWNER_ALERT_EMAIL }}
+        run: |
+          chmod +x scripts/monitoring/send-alert-email.sh
+          BODY="$(printf 'Public uptime probe failed.\n\n%s\n\nRun: %s/%s/actions/runs/%s' \
+            "$(cat probe-output.txt 2>/dev/null || echo '(no probe output captured)')" \
+            "${GITHUB_SERVER_URL}" "${GITHUB_REPOSITORY}" "${GITHUB_RUN_ID}")"
+          bash scripts/monitoring/send-alert-email.sh "DOWNTIME: public uptime probe failing" "${BODY}"
+
+      # A failed probe must still reach a human even if email send is skipped:
+      # open (or comment on) a pinned downtime issue.
       - name: Alert via GitHub issue on failure
         if: failure()
         uses: actions/github-script@v7
