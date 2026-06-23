@@ -11,7 +11,7 @@ BackgroundTasks get treated as query params, causing 422 errors.
 import logging
 import re
 import time as _time
-from typing import Any
+from typing import Any, List, Dict
 from urllib.parse import urlparse
 
 from fastapi import HTTPException, Request
@@ -977,3 +977,114 @@ def _record_response_metric(
             session_id,
             exc_info=True,
         )
+
+
+# ---------------------------------------------------------------------------
+# KB article retrieval — semantic search with FTS fallback
+# ---------------------------------------------------------------------------
+
+# Shape of a KB article dict returned to callers.  Fields mirror both the
+# semantic match_kb_articles RPC and the FTS match_kb_articles_fts RPC so
+# callers never need to branch on which path was used.
+_KB_ARTICLE_FIELDS = "id, slug, title, summary"
+
+_KB_FTS_RPC = "match_kb_articles_fts"
+_KB_SEMANTIC_RPC = "match_kb_articles"
+
+
+async def _query_kb_articles(
+    query: str,
+    match_count: int = 5,
+) -> List[Dict[str, Any]]:
+    """Retrieve KB articles matching *query*.
+
+    Primary path — semantic search via ``match_kb_articles`` RPC (Voyage embeddings).
+    Fallback path — Postgres FTS via ``match_kb_articles_fts`` RPC (migration 155).
+
+    The fallback fires when:
+    - ``VOYAGE_API_KEY`` is absent/empty (``EmbeddingUnavailable`` raised by embed_query).
+    - The embed call succeeds but the semantic RPC returns an empty result set.
+
+    Return shape is identical regardless of path:
+    ``[{"id": ..., "slug": ..., "title": ..., "summary": ..., "similarity": ...}, ...]``
+
+    Always returns ``[]`` on any error — never raises.  Callers are unchanged
+    by which path executed.
+
+    kb_articles is a global (non-tenant-scoped) table.
+    """
+    if not query or not query.strip():
+        return []
+
+    db = get_service_supabase()
+
+    # --- Primary: semantic search ---
+    try:
+        from backend.services.embeddings import EmbeddingUnavailable, embed_query
+
+        embedding = await embed_query(query)
+
+        result = db.rpc(
+            _KB_SEMANTIC_RPC,
+            {
+                "query_embedding": embedding,
+                "match_count": match_count,
+            },
+        ).execute()
+
+        rows = result.data or []
+        if rows:
+            logger.info(
+                "kb_query: semantic path returned %d articles for query=%r",
+                len(rows),
+                query[:60],
+            )
+            return rows
+
+        # Semantic succeeded but returned nothing — fall through to FTS.
+        logger.info(
+            "kb_query: semantic returned 0 results, falling back to FTS for query=%r",
+            query[:60],
+        )
+
+    except Exception as exc:
+        from backend.services.embeddings import EmbeddingUnavailable
+
+        if isinstance(exc, EmbeddingUnavailable):
+            logger.info(
+                "kb_query: VOYAGE_API_KEY absent — using FTS fallback (query=%r)",
+                query[:60],
+            )
+        else:
+            logger.warning(
+                "kb_query: semantic path failed (%s) — using FTS fallback",
+                exc,
+                exc_info=True,
+            )
+
+    # --- Fallback: Postgres full-text search ---
+    try:
+        result = db.rpc(
+            _KB_FTS_RPC,
+            {
+                "query_text": query.strip(),
+                "match_count": match_count,
+            },
+        ).execute()
+
+        rows = result.data or []
+        logger.info(
+            "kb_query: FTS path returned %d articles for query=%r",
+            len(rows),
+            query[:60],
+        )
+        return rows
+
+    except Exception as exc:
+        logger.error(
+            "kb_query: FTS fallback also failed (%s) for query=%r",
+            exc,
+            query[:60],
+            exc_info=True,
+        )
+        return []

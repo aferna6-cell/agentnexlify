@@ -68,5 +68,12 @@ Goal: fewer external API keys to set/own. Each env-var the owner must provision 
 3. Slack → Resend owner-email alert path (dependency reduction #2). (S)
 Owner-only (unchanged): trials live/dead decision, env-var values, DNS, log-sink, case-study consent, convert-beta.
 
+### BUILT 2026-06-23 (all 4 dependency-reduction lanes shipped to branch / PR #358)
+- **L1 KB cron guard** — `.claude/skills/kb-compile/SKILL.md` catches `EmbeddingUnavailable`. DONE.
+- **L2 Voyage-optional FTS** — `migrations/155_kb_articles_fts.sql` (content_tsv + GIN + `match_kb_articles_fts` RPC) + `_query_kb_articles` embedding→FTS fallback in `widget_chat_helpers.py` + 9 tests. **Follow-ups:** apply 155 to prod (owner/approved); the helper is built+tested but NOT yet wired into the live widget retrieval path (separate integration, touches `widget_chat.py` hot path).
+- **L3 Slack→Resend email** — `scripts/monitoring/send-alert-email.sh` + both monitoring workflows swapped off Slack; also fixed a real latent bug (uptime probe exit swallowed by `| tee` → downtime alert was dead). **Owner:** add `RESEND_API_KEY` + `OWNER_ALERT_EMAIL` GitHub secrets, delete `SLACK_ALERT_WEBHOOK_URL`.
+- **L4 Sentry-optional** — `migrations/156_error_events.sql` + `error_events.py` + wired into existing `global_error_handler` + 6 tests. **Follow-up:** apply 156 to prod (owner/approved).
+- **Net:** required external secrets can drop from 4 → 1 (RESEND only); Voyage + Sentry become optional enhancements. Two prod migrations (155, 156) await owner-approved apply; FTS hot-path wiring is the one remaining code follow-up.
+
 ## Related
 - [[Paid Launch Readiness]] · [[Paid Launch Readiness Pack]] · [[Autonomous Dev Operation]]
