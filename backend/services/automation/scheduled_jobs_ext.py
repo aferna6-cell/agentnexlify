@@ -333,18 +333,30 @@ async def send_weekly_digest() -> int:
     week_tag = f"weekly_digest_{now.date().isoformat()}"
     sent = 0
 
-    # Fetch paid tenants (not free plan)
+    # Fetch paid tenants (not free plan).
+    # avg_lead_value is optional — column may not exist on all deployments;
+    # the query falls back to 0 gracefully if the column is absent.
     try:
         tenants = (
             db.table("tenants")
-            .select("id, business_name, owner_email, owner_name")
+            .select("id, business_name, owner_email, owner_name, avg_lead_value")
             .neq("plan", "free")
             .limit(BATCH_LIMIT)
             .execute()
         )
     except Exception:
-        logger.exception("send_weekly_digest: failed to query tenants")
-        return 0
+        # avg_lead_value column may not exist yet — retry without it
+        try:
+            tenants = (
+                db.table("tenants")
+                .select("id, business_name, owner_email, owner_name")
+                .neq("plan", "free")
+                .limit(BATCH_LIMIT)
+                .execute()
+            )
+        except Exception:
+            logger.exception("send_weekly_digest: failed to query tenants")
+            return 0
 
     for tenant in tenants.data or []:
         tid = tenant["id"]
@@ -368,38 +380,16 @@ async def send_weekly_digest() -> int:
             logger.warning("send_weekly_digest: dedup check failed for tenant %s", tid)
             continue
 
-        # ---- Gather 7-day chatbot metrics ----
-
-        # Total conversations (distinct session_ids) and total messages
-        conversations = 0
-        messages = 0
-        try:
-            msgs_result = (
-                db.table("chat_messages")
-                .select("session_id")
-                .eq("tenant_id", tid)
-                .gte("created_at", week_start)
-                .limit(5000)
-                .execute()
-            )
-            msgs_data = msgs_result.data or []
-            messages = len(msgs_data)
-            conversations = len(
-                {m["session_id"] for m in msgs_data if m.get("session_id")}
-            )
-        except Exception:
-            logger.warning(
-                "send_weekly_digest: failed to count messages for tenant %s",
-                tid,
-                exc_info=True,
-            )
-
-        # Value recap (G2): leads, appointments, invoice $ — shared with
-        # the Agent OS insights card via weekly_value.compute_weekly_value.
+        # ---- Gather 7-day value metrics ----
+        # compute_weekly_value handles leads (client_id), appointments,
+        # conversations, invoices, and agent runs in one fault-tolerant call.
+        # avg_lead_value is read from the tenant row (0.0 if absent/unset).
         from backend.services.weekly_value import compute_weekly_value
 
-        value = compute_weekly_value(db, tid)
+        avg_lead_value = float(tenant.get("avg_lead_value") or 0)
+        value = compute_weekly_value(db, tid, avg_lead_value=avg_lead_value)
         leads_count = value["leads_captured"]
+        conversations = value["conversations_handled"]
 
         # Top question — most common user message (exclude greetings / single chars)
         top_question = "N/A"
@@ -465,8 +455,15 @@ async def send_weekly_digest() -> int:
                 f"<td style='padding:12px 16px;color:#f1f5f9;text-align:right;font-size:18px;font-weight:bold;'>{val}</td></tr>"
             )
 
+        pipeline_val = value["estimated_pipeline_value"]
+        pipeline_str = f"${pipeline_val:,.0f}" if pipeline_val > 0 else "—"
+
         rows = [
             _row("Leads captured", str(leads_count)),
+            _row(
+                "Estimated pipeline value",
+                f"<span style='color:#10b981;'>{pipeline_str}</span>",
+            ),
             _row("Appointments booked", str(value["appointments_booked"])),
             _row(
                 "Invoices sent",
@@ -513,7 +510,7 @@ async def send_weekly_digest() -> int:
                 log_activity(
                     tenant_id=tid,
                     activity_type=week_tag,
-                    description=f"Weekly digest sent: {conversations} conversations, {messages} messages, {leads_count} leads",
+                    description=f"Weekly digest sent: {conversations} conversations, {leads_count} leads, ${pipeline_val:,.0f} pipeline",
                 )
         except Exception:
             logger.exception(
