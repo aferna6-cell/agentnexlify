@@ -52,7 +52,9 @@ from backend.services import widget_config_service as _widget_svc
 from backend.services.referral import (
     apply_referral_attribution,
     apply_widget_referral_attribution,
+    notify_referrer_of_signup,
 )
+from backend.services.task_utils import safe_create_task
 
 logger = logging.getLogger(__name__)
 
@@ -352,6 +354,12 @@ async def register(request: Request, req: RegisterRequest):
     apply_widget_referral_attribution(
         get_service_supabase(), new_tenant_id=tenant_id, ref=req.ref_code
     )
+    # Notify the referrer — fire-and-forget, never blocks or fails signup.
+    if req.ref_code:
+        safe_create_task(
+            notify_referrer_of_signup(get_service_supabase(), widget_key=req.ref_code),
+            name="referral_signup_notify",
+        )
 
     token = _create_token(
         tenant_id, req.email, "free", req.business_name, business_type=req.industry
