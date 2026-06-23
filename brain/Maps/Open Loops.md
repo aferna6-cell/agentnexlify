@@ -82,7 +82,7 @@ Owner-only (unchanged): trials live/dead decision, env-var values, DNS, log-sink
 ### Next highest-value (data-grounded, 2026-06-23)
 1. **Lead-capture + booking conversion audit/improve** — verify the widget actually extracts a lead + offers booking at the right moments across the 2717 messages; fix any leak. Core revenue lever. (`tenant-chatbot-audit` skill; `_extract_lead_info`, booking flow)
 2. **KB content depth (G8)** — 16 global articles is shallow; build per-vertical KB packs for the top-PMF industries (salon, plumber/HVAC, dental) so the moat actually answers.
-3. **Ship it** — PR #358 now carries ~25 commits of real product work (moat, digest, deps, billing, schema). Highest-leverage non-build move: get #358 reviewed + merged so all of it goes live.
+3. ~~**Ship it**~~ — **DONE: PR #358 MERGED to prod 2026-06-23 (merge sha e85b73f).** 15 commits live on main (auto-deploy Railway+Vercel): KB moat wiring (widget retrieves tenant KB), value digest hardening, billing fixes (fraud-guard comp path + comp-activation alerting), dependency reduction (FTS/email/error-sink), status page, schema audits. Migrations 117/129/154/155/156 all applied to prod. Next product work lands in a follow-up PR off the same branch.
 4. **G3 voice/phone live-answering** — partly built; competitors answer phones.
 
 ## Product activation — highest-value next (analysis 2026-06-23)
