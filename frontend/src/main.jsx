@@ -35,6 +35,8 @@ const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const AuthCallbackPage = lazy(() => import("./pages/AuthCallbackPage"));
 // OnboardingWizardPage kept for direct access; /onboarding route uses OnboardingRedirect below
 const OnboardingWizardPage = lazy(() => import("./pages/OnboardingWizardPage"));
+// SEO vertical landing pages - /ai-front-desk/:vertical
+const VerticalLanding = lazy(() => import("./pages/verticals/VerticalLanding"));
 const DemoExperience = lazy(() => import("./pages/DemoExperience"));
 
 
@@ -128,6 +130,11 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/salon-booking-chatbot" element={<SalonChatbot />} />
             <Route path="/medical-office-chatbot" element={<MedicalOfficeChatbot />} />
             <Route path="/restaurant-chatbot" element={<RestaurantChatbot />} />
+            {/* AI Front Desk SEO landing pages - targets "AI front desk for [vertical]" */}
+            <Route path="/ai-front-desk/salons" element={<VerticalLanding />} />
+            <Route path="/ai-front-desk/plumbers" element={<VerticalLanding />} />
+            <Route path="/ai-front-desk/dentists" element={<VerticalLanding />} />
+            <Route path="/ai-front-desk/:vertical" element={<VerticalLanding />} />
             {/* Comparison pages (canonical URLs) */}
             <Route path="/intercom-alternative" element={<IntercomAlternative />} />
             <Route path="/livechat-alternative" element={<LiveChatAlternative />} />

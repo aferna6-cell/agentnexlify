@@ -102,6 +102,8 @@ from backend.routers import (
     admin_funnel,
     admin_health,
     admin_promotions,
+    funnel,
+    onboarding_presets,
     zapier,
     os_threads,
     os_orchestrate,
@@ -894,6 +896,7 @@ app.include_router(calls.router)
 app.include_router(local_seo.router)
 app.include_router(managed_agent_runs.router)
 app.include_router(onboarding.router)
+app.include_router(onboarding_presets.router)
 app.include_router(instant_kb.router)
 app.include_router(phone.router)
 app.include_router(gbp.router)
@@ -908,6 +911,7 @@ app.include_router(admin_analytics.router)
 app.include_router(admin_funnel.router)
 app.include_router(admin_health.router)
 app.include_router(admin_promotions.router)
+app.include_router(funnel.router)
 app.include_router(invoices.router)
 app.include_router(documents.router)
 app.include_router(pipeline.router)

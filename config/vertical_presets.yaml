@@ -1,0 +1,254 @@
+# Vertical preset defaults for new-tenant activation.
+#
+# Each key is a canonical vertical name. The `generic` key is the fallback
+# for any unknown vertical.
+#
+# Fields per preset:
+#   greeting          - Default widget greeting message shown on first open.
+#   services          - Short list of common services for this vertical.
+#   business_hours    - Plain-English default hours string.
+#   faqs              - 5-8 starter Q&A pairs drawn from the knowledge-base
+#                       wiki vertical FAQ articles. Values are generic and
+#                       range-based so they apply across any tenant in the
+#                       vertical. Tenants override during onboarding.
+#
+# No specific prices, business names, or locations appear here.
+# All pricing uses ranges or "varies by" language.
+
+salon_spa:
+  greeting: >
+    Hi there! Welcome. I can help you book an appointment, answer questions
+    about our services and pricing, or check availability for you. What can
+    I help you with today?
+  services:
+    - Haircuts and styling
+    - Color, highlights, and balayage
+    - Blowouts and treatments
+    - Facials and skincare
+    - Massage therapy
+    - Waxing and nail services
+  business_hours: >
+    Tuesday through Saturday, mid-morning to early evening. Many locations
+    are also open Sunday. Call or chat to confirm the exact schedule.
+  faqs:
+    - question: Do you take walk-ins or do I need an appointment?
+      answer: >
+        We welcome walk-ins when a stylist is available, but booking ahead
+        is the best way to secure the time and stylist you want. Popular
+        slots on Friday afternoons and Saturdays fill up quickly. You can
+        book right here in a minute.
+    - question: How much does a haircut cost?
+      answer: >
+        Haircut pricing varies by stylist level and hair length. Shorter cuts
+        start at a lower range and longer or thicker hair is priced higher.
+        A wash and style adds to the total. Ask us about the specific service
+        and we can give you a closer estimate.
+    - question: How much is color, balayage, or highlights?
+      answer: >
+        Color services vary based on hair length, density, and the number of
+        sessions the result needs. Single-process color is at the lower end,
+        while balayage and full highlights take more time and product. A big
+        change or a color correction can span multiple visits. Share what you
+        have in mind and we can give you a range.
+    - question: How long will my appointment take?
+      answer: >
+        A haircut is usually under an hour. Color, balayage, and highlight
+        services commonly run two to four hours depending on length and the
+        look you want. Spa services like facials and massage are typically
+        30, 60, or 90 minutes. We block the right amount of time when you
+        book so you are not rushed.
+    - question: Can I request a specific stylist?
+      answer: >
+        Yes. You can choose your preferred stylist or therapist when you book.
+        If they are fully booked on the day you want, we can show you their
+        next opening or match you with another team member who does the same
+        service.
+    - question: What is your cancellation policy?
+      answer: >
+        We ask for notice before your appointment, typically 24 to 48 hours,
+        so the slot can go to another client. Late cancellations or no-shows
+        on longer color and spa bookings may carry a fee. The exact window
+        depends on the service.
+    - question: What services do you offer?
+      answer: >
+        We offer cuts, color, highlights, balayage, blowouts, and styling.
+        Many locations also carry treatments, extensions, and bridal or
+        special-occasion services. Spa-side options often include facials,
+        massage, waxing, and nail care. Ask about a specific service and we
+        will confirm it is available.
+    - question: Can I get in today or this week?
+      answer: >
+        Same-day and same-week openings depend on the service and how busy
+        the schedule is. Shorter services are easier to fit in on short notice
+        than multi-hour color. Tell us the service and your preferred time and
+        we will show you the soonest opening or add you to a waitlist.
+
+plumber_hvac:
+  greeting: >
+    Hi! Need a plumber or HVAC technician? I can help you book a visit,
+    get a quote, or reach someone fast if you have an emergency. What is
+    going on?
+  services:
+    - Drain cleaning and unclogging
+    - Pipe leak detection and repair
+    - Water heater repair and replacement
+    - Sewer line inspection and service
+    - AC repair and installation
+    - Furnace and heating repair
+    - Duct cleaning and maintenance plans
+  business_hours: >
+    Standard weekday hours with some Saturday availability. Emergency service
+    is available outside regular hours for urgent issues. Contact us to
+    confirm exact hours and after-hours coverage.
+  faqs:
+    - question: Do you handle emergencies or after-hours calls?
+      answer: >
+        Yes. Urgent problems like burst pipes, active flooding, or no heat
+        in winter are treated as emergencies. Tell us what is happening and
+        we will get you to the fastest available help. If we are outside
+        regular hours, we route you to the on-call line or the earliest
+        next opening.
+    - question: I have a burst pipe or flooding. What should I do?
+      answer: >
+        Shut off your main water valve if you can reach it safely, then turn
+        off electricity to any wet area if it is safe to do so. This is an
+        emergency. Share your address and we will dispatch the soonest
+        available technician or connect you to our on-call team.
+    - question: My heat or air conditioning stopped working. Can someone come today?
+      answer: >
+        No heat in winter or no cooling during extreme heat is treated as
+        urgent. Tell us your address and the symptoms and we will show you
+        the soonest available visit. Same-day appointments are often possible
+        depending on demand and your area.
+    - question: How much does a service call cost?
+      answer: >
+        Most companies charge a service-call or diagnostic fee to send a
+        technician and assess the problem. That fee is often credited toward
+        the repair if you move forward. Repair pricing depends on the job,
+        so the technician quotes it on site after seeing the issue.
+    - question: Do you offer free estimates?
+      answer: >
+        Free estimates are common for larger jobs like a water heater
+        replacement, a furnace or AC system, or a repipe. Smaller diagnostic
+        visits may carry a fee. Tell us what you need and we can confirm
+        whether an estimate is free.
+    - question: Are your technicians licensed and insured?
+      answer: >
+        Yes. We use licensed and insured technicians for all work that
+        requires it. The specific licenses depend on the trade and your area.
+        We can confirm the credentials for the team handling your job.
+    - question: How soon can you come out?
+      answer: >
+        Emergencies get priority and are often same day. Routine work is
+        usually scheduled within a few days. Give us your address and a
+        description of the problem and we will show you the soonest opening.
+    - question: Do you offer maintenance plans or tune-ups?
+      answer: >
+        Many of our locations offer maintenance plans and seasonal tune-ups
+        that keep equipment running and may include priority scheduling and
+        discounts. Ask us about the options available at your location.
+
+dental:
+  greeting: >
+    Hello! I can help you schedule an appointment, answer questions about
+    insurance or services, or get you seen quickly if you have a dental
+    emergency. How can I help?
+  services:
+    - Routine cleanings and checkups
+    - X-rays and exams
+    - Fillings and restorations
+    - Crowns and bridges
+    - Root canal treatment
+    - Teeth whitening and cosmetic care
+    - Orthodontics and clear aligners
+  business_hours: >
+    Most weekdays, with some locations offering early-morning, evening, or
+    Saturday appointments. Hours vary by provider and location. Contact us
+    to confirm the schedule that works for you.
+  faqs:
+    - question: Are you accepting new patients?
+      answer: >
+        Yes, we welcome new patients. We can usually schedule a first visit
+        within a week or two. New patients typically start with an exam and
+        cleaning so we can get a full picture of your oral health.
+    - question: Do you take my insurance?
+      answer: >
+        We work with a range of dental plans. Whether yours is in network
+        depends on your specific carrier and policy. Share your insurance
+        name and we will pass it to our team to confirm coverage. We also
+        see patients out of network and can file claims on your behalf.
+    - question: What if I do not have insurance?
+      answer: >
+        You can still be seen without insurance. We offer self-pay pricing
+        and some locations have membership or discount plans for routine care.
+        Tell us what you need and we can share the options.
+    - question: How much is a cleaning or checkup?
+      answer: >
+        With insurance, preventive visits are often fully covered or low
+        cost. Without insurance, a cleaning and exam falls into a self-pay
+        range that varies by location. Ask us and we can give you a closer
+        idea before you come in.
+    - question: Can I be seen today? I have a toothache.
+      answer: >
+        Severe tooth pain is treated as urgent and many locations keep room
+        for same-day emergency visits. Tell us your symptoms and we will get
+        you the soonest available appointment. If you are calling after hours,
+        we will route you to the right next step.
+    - question: I knocked out or broke a tooth. What do I do?
+      answer: >
+        A knocked-out or broken tooth is a dental emergency and time matters.
+        If a tooth came out, keep it moist, handle it by the crown rather
+        than the root, and seek care quickly. Contact us right away and we
+        will get you in as soon as possible.
+    - question: What happens at a first visit?
+      answer: >
+        A first visit usually includes a health and dental history, an exam,
+        x-rays if needed, and often a cleaning. Plan to arrive a few minutes
+        early to complete new-patient forms, or fill them out ahead if we
+        send them to you. The dentist reviews findings and any recommended
+        care with you before any work begins.
+    - question: Do you offer payment plans or financing?
+      answer: >
+        Many of our locations offer payment plans or third-party financing
+        for larger treatment such as crowns, implants, or orthodontics. Terms
+        depend on the provider. We can note your interest and the team will
+        go over the options at your visit.
+
+generic:
+  greeting: >
+    Hi there! How can I help you today? I can answer questions about our
+    services, help you book an appointment, or connect you with our team.
+  services:
+    - General consultations
+    - Appointments and scheduling
+    - Customer support
+    - Quotes and estimates
+  business_hours: >
+    Monday through Friday during standard business hours. Some Saturday
+    availability may be offered. Contact us to confirm exact hours.
+  faqs:
+    - question: How do I book an appointment or get a quote?
+      answer: >
+        You can book right here in the chat, on our website, or by phone
+        during business hours. Tell us what you need and we will find a
+        time that works for you.
+    - question: What are your hours?
+      answer: >
+        We are open Monday through Friday during regular business hours.
+        Some locations also have Saturday availability. Contact us to confirm
+        the exact schedule.
+    - question: How can I contact someone on your team?
+      answer: >
+        You can reach us through this chat, by phone during business hours,
+        or by email. Leave your name and contact information and someone
+        will get back to you as soon as possible.
+    - question: Do you offer free estimates or consultations?
+      answer: >
+        Many of our services include a free initial consultation or estimate.
+        Tell us what you are looking for and we can confirm what applies to
+        your situation.
+    - question: What payment methods do you accept?
+      answer: >
+        We accept most major credit and debit cards. Some locations also
+        take digital payments or cash. Contact us to confirm the accepted
+        methods at your location.

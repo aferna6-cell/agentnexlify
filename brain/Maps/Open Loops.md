@@ -4,7 +4,7 @@ name: "Open Loops"
 tags:
   - map
   - moc
-last_updated: 2026-06-22
+last_updated: 2026-06-23
 ---
 
 # Open Loops
@@ -85,7 +85,9 @@ Owner-only GTM: DNS repoint, send outreach, sales calls (convert-beta via MTOpti
 
 ## Prod data snapshot (2026-06-23, project pxserpybmajixqrmzaly)
 - 12 tenants (7 paid), **2,717 chat_messages**, **27 leads**, **9 appointments**, 16 kb_articles (all embedded).
-- Read: the product is LIVE and used, not pre-launch theory. The funnel `2717 messages → 27 leads → 9 appointments` is the value chain — improving chat→lead→booking conversion is now the highest-value product lever (it's literally the product's job). The KB moat content is THIN (16 global articles; per-tenant depth is the `widget.knowledge_base` config) → G8 vertical depth matters.
+- Read: the product is LIVE and used, not pre-launch theory. The funnel `2717 messages → 27 leads → 9 appointments` is the value chain — improving chat→lead→booking conversion is now the highest-value product lever (it's literally the product's job).
+- **MOAT NOW LIVE END-TO-END (2026-06-23).** kb_articles went 16 → **19** (+3 vertical packs: salon-spa, plumber-hvac, dental, 52 Q&As, inserted directly to prod). FTS retrieval verified: "balayage"→salon, "burst pipe"→plumbing, "dental insurance"→dental. Combined with the widget wiring (#358) + migration 155, the widget now answers customers from the vertical KB in prod. G8 depth beyond these 3 verticals is the next content lever.
+- **Shipped to prod this session: #358 + #359 merged** (moat wiring, value digest, billing fixes, dependency reduction, status page, lead-capture dedup, voice plan-gate fix) + migrations 117/129/154/155/156 applied + 3 KB packs inserted. Backend live on Railway, frontend on Vercel.
 
 ### Next highest-value (data-grounded, 2026-06-23)
 1. **Lead-capture + booking conversion audit/improve** — verify the widget actually extracts a lead + offers booking at the right moments across the 2717 messages; fix any leak. Core revenue lever. (`tenant-chatbot-audit` skill; `_extract_lead_info`, booking flow)
@@ -100,6 +102,14 @@ Launch-hardening is done; the bottleneck is now beta→paid conversion, which de
 - **Value digest is LIVE + hardened (2026-06-23).** `send_weekly_digest` targeting fixed to `plan != 'free' AND plan_status IN ('active','trialing')` (was missing the status filter → would have emailed cancelled/paused tenants); per-tenant work now isolated (one crash can't abort the batch); `empty_state_message()` gives zero-activity tenants a "here's what your AI is ready to do" message instead of a zeros table. 23 dollar-math tests still green.
 - **Migrations 155 + 156 — APPLIED to prod 2026-06-23** (project pxserpybmajixqrmzaly): `kb_articles.content_tsv` + GIN + `match_kb_articles_fts` (155), `error_events` table + index (156). All 5 objects verified live. FTS path + error sink active in prod; the moat goes fully live when the widget-wiring lane merges.
 - Bigger bets (gap analysis): G3 voice/phone live-answering (partly built — `voice_ai_enabled`, `calls.py`, `propose_appointment`), G8 vertical-pack depth beyond top-5 industries.
+
+## Review 2026-06-23 (round 4) — 4 GTM/product lanes BUILT (follow-up PR off same branch)
+All 4 lanes from the business-level GTM analysis (line 78-84) shipped to branch `claude/agent-nexlify-testing-28d597`. Commit `15402b2`. Tests: funnel 19, presets 19, voice 11 — all green; widget byte-identical; frontend build clean; both new routers registered in `main.py` + import-smoke verified.
+- **Lane A — Funnel analytics (visibility = #1 GTM lever).** `backend/services/funnel_metrics.py::compute_funnel()` (7 metrics: total/activated/with-leads/paid tenants + weekly signups/leads/appointments, best-effort per-metric) + `backend/routers/funnel.py` → `GET /api/v1/admin/product-funnel` (admin-secret gated, HMAC compare, mirrors admin_analytics pattern). Schema-correct: `client_id` for leads, `tenant_id` for chat_messages/appointments, paid = `plan != 'free' AND plan_status IN ('active','trialing')`. Distinct from `admin_funnel` (wizard drop-off). Signup→activation→lead→paid is now measurable instead of guessed.
+- **Lane B — Onboarding vertical presets (activation speed = #2 lever).** `config/vertical_presets.yaml` (salon_spa/plumber_hvac/dental/generic, sourced from the 3 KB packs) + `backend/services/vertical_preset_loader.py` (`load_vertical_preset` w/ generic fallback, returns {} if file absent; `list_verticals`) + `backend/routers/onboarding_presets.py` → `GET /api/v1/onboarding/presets[/{vertical}]`. New tenant gets vertical-tuned widget defaults. (Named `vertical_presets.yaml` to avoid the existing attribution-owned `vertical_defaults.yaml`.)
+- **Lane C — Per-vertical SEO landing pages (distribution = #3 lever, the buildable part).** `frontend/src/pages/verticals/` (data-driven `verticals.js` + `VerticalLanding.jsx`, reuses existing `VerticalPage`, react-helmet-async + JSON-LD LocalBusiness/FAQPage) + routes in `main.jsx`: `/ai-front-desk/{salons,plumbers,dentists}` + `/:vertical` catch-all. CTAs → `/signup?plan=chatbot` + `/signup?plan=agent_os`. Programmatic SEO surface for the top-PMF verticals.
+- **Lane D — Voice integration tests (closes the deferred harness gap).** `backend/tests/test_voice_incoming_call.py` — 11 TestClient tests for `handle_incoming_call` via `SyncASGITestClient` + `verify_twilio_request` override (solves the slowapi-needs-real-Request problem noted in `test_voice_plan_gate.py`). Confirmed `handle_incoming_call` already robust (unknown caller / voicemail / AI mode / DB-failure all return valid TwiML); no `calls.py` change needed.
+- **Follow-ups (owner/integration):** funnel + presets endpoints are admin/onboarding-gated and live once the follow-up PR merges; the SEO pages reach the public domain only after the DNS repoint (owner, [[Connect Public Domain]]); preset defaults are served but not yet auto-applied in the wizard write path (separate wiring, touches `onboarding.py`).
 
 ## Related
 - [[Paid Launch Readiness]] · [[Paid Launch Readiness Pack]] · [[Autonomous Dev Operation]]
