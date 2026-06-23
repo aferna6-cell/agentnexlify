@@ -75,6 +75,14 @@ Owner-only (unchanged): trials live/dead decision, env-var values, DNS, log-sink
 - **L4 Sentry-optional** — `migrations/156_error_events.sql` + `error_events.py` + wired into existing `global_error_handler` + 6 tests. **Follow-up:** apply 156 to prod (owner/approved).
 - **Net:** required external secrets 4 → 1 (RESEND only), and **`RESEND_API_KEY` is already configured — DONE (confirmed by owner 2026-06-23)**. So the core path needs ZERO new external keys; Voyage + Sentry are now optional enhancements only. Remaining (non-secret) follow-ups: apply prod migrations 155 + 156 (owner-approved), wire FTS into the widget hot path, and confirm the monitoring workflows can read `RESEND_API_KEY` + `OWNER_ALERT_EMAIL` as GitHub Actions secrets (app env already has the Resend key; Actions secret store is separate).
 
+## Business-level (GTM) highest-value — the constraint is now distribution (2026-06-23)
+Product is live + works (7 paid tenants, moat wired, retention loops running). The binding constraint is no longer product quality, it is **distribution + activation** (only 12 tenants total). Highest-value business levers:
+1. **Funnel visibility / instrumentation (I can build).** No analytics today — signup→activate→first-lead→paid→retained is invisible. Build an internal funnel/cohort metrics view so optimization stops being guesswork. Highest leverage: makes every later decision data-driven.
+2. **Activation speed / onboarding-v2 (I can build).** The onboarding-v2 epic (#128-142, vertical presets + wizard) is frozen. A new tenant should get a vertical-tuned widget live in minutes. Faster activation = more beta→paid.
+3. **Distribution (mostly owner / partial me).** Public site not live (DNS repoint = owner), outreach templates drafted-but-unsent (owner), SEO + programmatic per-vertical landing pages untapped (I can build the SEO/landing side).
+4. **Referral loop (I can build, cheap + compounding).** The widget "Powered by AgentNexLiFy" watermark sits on every tenant site = a free distribution surface. Make it a real referral/attribution link.
+Owner-only GTM: DNS repoint, send outreach, sales calls (convert-beta via MTOptions).
+
 ## Prod data snapshot (2026-06-23, project pxserpybmajixqrmzaly)
 - 12 tenants (7 paid), **2,717 chat_messages**, **27 leads**, **9 appointments**, 16 kb_articles (all embedded).
 - Read: the product is LIVE and used, not pre-launch theory. The funnel `2717 messages → 27 leads → 9 appointments` is the value chain — improving chat→lead→booking conversion is now the highest-value product lever (it's literally the product's job). The KB moat content is THIN (16 global articles; per-tenant depth is the `widget.knowledge_base` config) → G8 vertical depth matters.
@@ -82,7 +90,7 @@ Owner-only (unchanged): trials live/dead decision, env-var values, DNS, log-sink
 ### Next highest-value (data-grounded, 2026-06-23)
 1. **Lead-capture + booking conversion audit/improve** — verify the widget actually extracts a lead + offers booking at the right moments across the 2717 messages; fix any leak. Core revenue lever. (`tenant-chatbot-audit` skill; `_extract_lead_info`, booking flow)
 2. **KB content depth (G8)** — 16 global articles is shallow; build per-vertical KB packs for the top-PMF industries (salon, plumber/HVAC, dental) so the moat actually answers.
-3. **Ship it** — PR #358 now carries ~25 commits of real product work (moat, digest, deps, billing, schema). Highest-leverage non-build move: get #358 reviewed + merged so all of it goes live.
+3. ~~**Ship it**~~ — **DONE: PR #358 MERGED to prod 2026-06-23 (merge sha e85b73f).** 15 commits live on main (auto-deploy Railway+Vercel): KB moat wiring (widget retrieves tenant KB), value digest hardening, billing fixes (fraud-guard comp path + comp-activation alerting), dependency reduction (FTS/email/error-sink), status page, schema audits. Migrations 117/129/154/155/156 all applied to prod. Next product work lands in a follow-up PR off the same branch.
 4. **G3 voice/phone live-answering** — partly built; competitors answer phones.
 
 ## Product activation — highest-value next (analysis 2026-06-23)
