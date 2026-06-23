@@ -40,5 +40,12 @@ Unfinished work + blockers (business scope). Ordered by priority.
 - Remaining buildable zeros are owner-gated content/secrets: 4.5 needs a log-sink account, 8.5 needs partner+MTOptions consent, 9.5 is owner-authored sales copy.
 - Source: `audits/audit-launch-readiness-2026-06-23.md`
 
+## Review 2026-06-23 (round 2) — money-path + moat hardening
+Theme: launch is gated by the owner insurance call; engineering de-risks the beta→paid conversion path + the KB moat so nothing breaks on conversion day.
+- **#93 money-path bug — ALREADY FIXED on this branch (verified 2026-06-23).** `guard_checkout_for_fraud` already exempts `payment_status=no_payment_required` (100%-off coupon / comped $0 checkout) — `backend/services/fraud_guard.py:122-128`, regression test `test_allows_no_payment_required`, 16/16 pass. No net change needed; GitHub issue #93 can be closed. **Watch-out:** comped checkout sessions must carry the `plan` key in Stripe metadata or `_handle_checkout_completed` silently no-ops the upgrade.
+- **KB embeddings — code half DONE.** `backend/services/embeddings.py` now raises typed `EmbeddingUnavailable` on missing key (no doomed 401), 13 tests. Still owner-gated: set `VOYAGE_API_KEY` in Railway + `/kb-compile --full` backfill, AND guard the cron snippet in `.claude/skills/kb-compile/SKILL.md:104-115` with `try/except EmbeddingUnavailable` (SKILL.md = owner edit). Until the SKILL guard lands the cron still skips embeddings, but now fails observably, not as a 401 swallowed-as-success.
+- **Reproducibility — 3 untracked deps pinned** in `backend/requirements.txt` (authoritative per railway.json→Dockerfile): **PyYAML** (was a module-level `import yaml` reachable from boot → clean Railway deploy would CRASH AT STARTUP), `qrcode[pil]`, `python-dateutil`. Source: `audits/audit-untracked-deps-2026-06-23.md`.
+- **G5 pricing alignment — landing page DONE, dashboard remainder in progress.** `landing-page-v2/index.html` swept to chatbot $19.99 / agent_os $99.99 (invariants pass, competitor prices + widget JS untouched). Remaining: real stale trial/free language in `frontend/src` (e.g. `StripeTrialBanner.jsx` — trials were killed per decision log). Skip false positives (`FirstRunStarters.jsx` "Starter" = starter prompts, not the plan) + historical docs/specs.
+
 ## Related
 - [[Paid Launch Readiness]] · [[Paid Launch Readiness Pack]] · [[Autonomous Dev Operation]]
