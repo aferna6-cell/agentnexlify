@@ -562,6 +562,13 @@ async def _build_and_send_digest(
 
         pipeline_str = f"${pipeline_val:,.0f}" if pipeline_val > 0 else "—"
 
+        # Referral stats for the same 7-day window. Only surfaced when the
+        # tenant's share link had activity — a zero referral row every week
+        # reads as nagging, not value. Fault-tolerant: zeros on any failure.
+        from backend.services.weekly_referrals import compute_weekly_referrals
+
+        referrals = compute_weekly_referrals(db, tid, value["since"])
+
         rows = [
             _row("Leads captured", str(leads_count)),
             _row(
@@ -579,12 +586,30 @@ async def _build_and_send_digest(
             ),
             _row("Tasks your AI staff completed", str(value["agent_runs_completed"])),
             _row("Conversations handled", str(conversations)),
+        ]
+
+        # Referral row(s) — inserted before the "Top customer question" closer
+        # so the table still ends on the italic question. Signups are the
+        # money line (each is a new paying tenant referred); clicks show reach.
+        signups = referrals["referred_signups"]
+        clicks = referrals["referral_clicks"]
+        if signups > 0:
+            rows.append(
+                _row(
+                    "People you referred",
+                    f"<span style='color:#10b981;'>{signups}</span>",
+                )
+            )
+        elif clicks > 0:
+            rows.append(_row("Referral link clicks", str(clicks)))
+
+        rows.append(
             _row(
                 "Top customer question",
                 f"<span style='font-style:italic;font-size:14px;font-weight:normal;'>&ldquo;{display_question}&rdquo;</span>",
                 last=True,
-            ),
-        ]
+            )
+        )
 
         body_html = (
             f"<div style='font-family:sans-serif;max-width:600px;margin:0 auto;'>"
