@@ -48,6 +48,7 @@ from backend.routers.widget_chat_helpers import (
     _load_chat_history,
     _needs_bid_context,
     _needs_job_context,
+    _query_kb_articles,
     _record_response_metric,
     _save_chat_messages,
     _set_cache,
@@ -848,6 +849,24 @@ async def widget_chat(
             "chat_flows query failed for tenant %s", tenant["id"], exc_info=True
         )
 
+    # KB article retrieval — one DB/FTS round trip per message.
+    # Gated on widget_kb_articles_enabled (default 1 = ON).
+    # Failures yield [] so the chat response is never blocked.
+    # Latency note: adds ~15-80ms per message (pgvector semantic search or
+    # Postgres FTS). Acceptable for this path; can be disabled per-deployment
+    # by setting widget_kb_articles_enabled=0 in llm_runtime settings.
+    kb_article_refs = []
+    if resolve_int_setting("widget_kb_articles_enabled", 1):
+        try:
+            kb_article_refs = await _query_kb_articles(req.message)
+        except Exception:
+            logger.warning(
+                "widget_chat: kb_articles retrieval failed for session=%s — "
+                "continuing without KB augmentation",
+                req.session_id,
+                exc_info=True,
+            )
+
     system_prompt = _build_system_prompt(
         tenant,
         faq_data,
@@ -860,6 +879,7 @@ async def widget_chat(
         custom_field_defs=custom_field_defs or None,
         custom_instructions=widget.get("custom_instructions") or None,
         knowledge_base=widget.get("knowledge_base") or None,
+        kb_article_refs=kb_article_refs or None,
     )
 
     # Inject active flow instructions into system prompt

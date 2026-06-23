@@ -590,6 +590,7 @@ def _build_system_prompt(
     custom_field_defs: list[dict] | None = None,
     custom_instructions: str | None = None,
     knowledge_base: str | None = None,
+    kb_article_refs: list | None = None,
 ) -> str:
     business_name = tenant.get("business_name") or "our company"
     business_type = tenant.get("business_type") or ""
@@ -792,6 +793,35 @@ def _build_system_prompt(
             + "\n- Only ask for these when it fits the conversation flow. Don't interrogate the visitor."
         )
 
+    # KB article references retrieved per-message (semantic/FTS search).
+    # Rendered as a compact block: title + summary, capped at 120 chars each.
+    # kb_articles table is global (not tenant-scoped) — the search query already
+    # limits which articles surface via relevance. Do not add client_id filter here.
+    kb_article_refs_block = ""
+    if kb_article_refs:
+        _kb_article_refs_limit = resolve_int_setting(
+            "widget_prompt_kb_article_refs_chars", 2000
+        )
+        _article_lines = []
+        _chars_used = 0
+        for _art in kb_article_refs:
+            _title = (_art.get("title") or "").strip()
+            _summary = (_art.get("summary") or "").strip()
+            if not _title:
+                continue
+            _summary_truncated = _summary[:120] + ("..." if len(_summary) > 120 else "")
+            _line = f"- {_title}: {_summary_truncated}" if _summary_truncated else f"- {_title}"
+            if _chars_used + len(_line) > _kb_article_refs_limit:
+                break
+            _article_lines.append(_line)
+            _chars_used += len(_line)
+        if _article_lines:
+            kb_article_refs_block = _format_reference_block(
+                "KB_ARTICLE_REFERENCES",
+                "\n".join(_article_lines),
+                _kb_article_refs_limit,
+            )
+
     # Industry-specific persona (replaces the old inline healthcare/legal block)
     healthcare_block = _format_industry_persona_block(business_type)
 
@@ -828,6 +858,7 @@ def _build_system_prompt(
         f"{faq_block}"
         f"{website_block}"
         f"{knowledge_block}"
+        f"{kb_article_refs_block}"
         f"{custom_fields_block}"
         f"{menu_block}"
         f"{jobs_block}"
