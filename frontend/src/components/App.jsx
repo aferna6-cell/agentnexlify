@@ -105,6 +105,7 @@ const AdminFunnelPage = lazy(() => import("../pages/AdminFunnelPage"));
 const AdminTenantHealthPage = lazy(
   () => import("../pages/AdminTenantHealthPage"),
 );
+const AdminReferralPage = lazy(() => import("../pages/AdminReferralPage"));
 const IntegrationsKeysPage = lazy(
   () => import("../pages/Settings/IntegrationsKeysPage"),
 );
@@ -145,6 +146,7 @@ const pages = {
   admin_promotions: AdminPromotionsPage,
   admin_funnel: AdminFunnelPage,
   admin_tenant_health: AdminTenantHealthPage,
+  admin_referral: AdminReferralPage,
   referral: ReferralPage,
 };
 
@@ -186,6 +188,7 @@ const PAGE_TO_PATH = {
   admin_promotions: "/admin/promotions",
   admin_funnel: "/admin/funnel",
   admin_tenant_health: "/admin/tenant-health",
+  admin_referral: "/admin/referral",
   referral: "/dashboard/referral",
 };
 
