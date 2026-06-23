@@ -1006,6 +1006,23 @@ async def global_error_handler(request: Request, exc: Exception):
         raise exc
 
     logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+
+    # Best-effort local error sink — runs regardless of Sentry configuration.
+    try:
+        from backend.services.error_events import record_error_event
+
+        record_error_event(
+            message=str(exc),
+            level="error",
+            source="api",
+            path=request.url.path,
+            status_code=500,
+            exc=exc,
+            context={"method": request.method},
+        )
+    except Exception:
+        logger.warning("error_events: record_error_event itself raised", exc_info=True)
+
     return JSONResponse(
         status_code=500,
         content={"detail": "An internal error occurred. Please try again."},
