@@ -48,5 +48,12 @@ Theme: launch is gated by the owner insurance call; engineering de-risks the bet
 - **G5 pricing alignment — DONE (2026-06-23).** `landing-page-v2/index.html` swept to chatbot $19.99 / agent_os $99.99. Audited `frontend/src`: live conversion surfaces ALREADY correct (`SignupPage.jsx`, `wizard/WizardStepPlan.jsx`, `TidioAlternative.jsx` all state $19.99/$99.99 + no free tier). Fixed gating copy in `MessagingSettingsCards.jsx`: "Professional plan" → "Agent OS plan" (Professional is retired-from-sale legacy; live-answering gate unlocks on agent_os). Competitor prices + widget JS untouched; invariants pass.
 - **OWNER DECISION NEEDED — trial UI vs the killed-trial decision.** `frontend/src/components/StripeTrialBanner.jsx` (`plan_status==="trialing"`, "card charged when trial ends") + the legacy free `TrialBanner` in `App.jsx` (`plan==="free"`) still render 7-day-trial messaging, but [[Decision Log]] has "Kill Trial Charge On Signup" — which itself was "reversed #299" once. Whether tenants still enter `trialing` is a Stripe-config + backend `plan_status` question; NOT safe to blind-edit. Decide: are paid trials live or dead? If dead, remove both banners + the `trialing` UI path.
 
+## Review 2026-06-23 (round 3) — owner-gated action pass
+Owner cleared #1 (insurance) + is setting env-var secrets (#2). I did the doable parts of 3/4/5/6:
+- **#4 prod migrations — DONE** (117+129 applied, drift=0; see #263 line above).
+- **#3 + #6 owner runbooks/drafts written** (turn owner-only items into copy-paste tasks): `docs/launch/owner-action-runbook-2026-06-23.md` (DNS repoint, the 4 secrets + which surface each lives on, log-sink + Railway log-drain for 4.5, Supabase restore drill 6.1), `outreach/templates/cold-outreach-templates.md` (9.5 — 3 verticals, $19.99, placeholders), `docs/launch/case-study-template.md` (8.5 — needs MTOptions consent + real numbers). All em-dash-clean, correctly priced, no fabricated metrics.
+- **#5 money-path safety — in progress** (`backend/routers/billing.py`): make a comped/`no_payment_required` checkout with no resolvable `plan` fail LOUD (logged/alerted), not silently no-op. Observability only, no activation-behavior change; billing → owner review before merge.
+- Still irreducibly owner-only: DNS repoint, secret values, log-sink account, case-study consent + numbers, outreach send config, the trials live/dead decision, convert-beta sales motion.
+
 ## Related
 - [[Paid Launch Readiness]] · [[Paid Launch Readiness Pack]] · [[Autonomous Dev Operation]]
