@@ -174,5 +174,12 @@ Every major product/GTM lever is now built + live in prod: funnel analytics+UI, 
 **Vertical expansion has reached diminishing returns at 13 — it covers the major service-business categories; further verticals (chiropractor, pest control, landscaping, accounting, optometry) are increasingly niche/low-marginal-value.**
 **No remaining engineering item is BOTH high-value AND buildable-without-owner-input.** What's left: (a) referral incentive/credit program — needs an owner decision on the incentive + Stripe credits; (b) measure-and-iterate the shipped conversion fixes — needs real post-deploy usage data that doesn't exist yet; (c) a deliberate net-new feature (new agent capability, new integration) — better as a planned fresh session than a loop iteration. Continuing the loop now would mean manufacturing low-value niche work, against the "highest value" intent.
 
+## Review 2026-06-23 (round 12) — referral signup attribution (channel now measurable end-to-end)
+Closed the referral loop: clicks were tracked (round 6); now signups are too.
+- **migration 159** `tenants.referred_by_widget_key TEXT` + partial index (kept SEPARATE from the migration-135 promo-code `referred_by` UUID FK). Applied to prod.
+- **Signup capture**: register endpoint stores `req.ref_code` (the existing field) as `referred_by_widget_key`, best-effort/non-blocking. Frontend captures `?ref=` via sessionStorage (survives nav, cleared post-signup, not localStorage) + sends `ref_code` on email AND Google register.
+- **Stats**: `GET /api/v1/referral/my-stats` now returns `referred_signups`; Referral page shows a "Signups referred" card.
+- 17 referral tests + auth-register regression green; build clean; widget untouched. The incentive/credit on top is still an owner decision — but the channel is now MEASURABLE (clicks→signups), which is what was missing.
+
 ## Related
 - [[Paid Launch Readiness]] · [[Paid Launch Readiness Pack]] · [[Autonomous Dev Operation]]
