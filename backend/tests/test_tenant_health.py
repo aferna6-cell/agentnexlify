@@ -17,6 +17,7 @@ Coverage:
   - last_activity_at is the max created_at across messages, leads, appointments
   - per-table DB failure degrades gracefully (tenants list still populated for successful ones)
   - tenants with zero activity are included as dormant
+  - internal/test tenants (AgentNexLiFy, Smoke Test) are excluded from the report
 """
 
 import asyncio
@@ -353,6 +354,70 @@ class TestComputeTenantHealthUnit:
         result = self._call(_make_db(tenant_rows=tenants, raise_appointments=True))
         assert len(result["tenants"]) == 1
         assert result["tenants"][0]["total_appointments"] == 0
+
+    # --- Internal-tenant exclusion ---
+
+    def test_internal_tenant_excluded_from_report(self):
+        """Internal/test tenants must not appear in the health report at all."""
+        tenants = [
+            {"id": "t1", "business_name": "Acme Corp", "plan": "chatbot", "plan_status": "active"},
+            {"id": "int-1", "business_name": "AgentNexLiFy Smoke Test", "plan": "agent_os", "plan_status": "active"},
+        ]
+        result = self._call(_make_db(tenant_rows=tenants))
+        tenant_ids = {e["tenant_id"] for e in result["tenants"]}
+        assert "t1" in tenant_ids
+        assert "int-1" not in tenant_ids
+        assert len(result["tenants"]) == 1
+
+    def test_agentnexlify_main_tenant_excluded(self):
+        """The primary 'AgentNexLiFy' tenant is excluded."""
+        tenants = [
+            {"id": "int-0", "business_name": "AgentNexLiFy", "plan": "agent_os", "plan_status": "active"},
+            {"id": "t1", "business_name": "Sunrise Salon", "plan": "free", "plan_status": ""},
+        ]
+        result = self._call(_make_db(tenant_rows=tenants))
+        assert len(result["tenants"]) == 1
+        assert result["tenants"][0]["tenant_id"] == "t1"
+
+    def test_internal_tenant_activity_does_not_pollute_real_tenant_counts(self):
+        """Chat messages and leads belonging to the internal tenant must not
+        count toward any real tenant's metrics."""
+        tenants = [
+            {"id": "t1", "business_name": "Real Biz", "plan": "free", "plan_status": ""},
+        ]
+        msgs = [
+            {"tenant_id": "t1", "created_at": _ts(2)},
+            {"tenant_id": "int-smoke", "created_at": _ts(1)},  # internal (not in tenant_rows)
+        ]
+        leads = [
+            {"client_id": "t1", "created_at": _ts(5)},
+            {"client_id": "int-smoke", "created_at": _ts(1)},
+        ]
+        result = self._call(_make_db(tenant_rows=tenants, chat_messages_data=msgs, leads_data=leads))
+        assert len(result["tenants"]) == 1
+        entry = result["tenants"][0]
+        # Only t1's messages and leads count
+        assert entry["total_messages"] == 1
+        assert entry["total_leads"] == 1
+
+    def test_all_internal_tenants_returns_empty_list(self):
+        """If the platform only has internal tenants, the report is empty."""
+        tenants = [
+            {"id": "i1", "business_name": "AgentNexLiFy", "plan": "agent_os", "plan_status": "active"},
+            {"id": "i2", "business_name": "AgentNexLiFy Smoke Test", "plan": "agent_os", "plan_status": "active"},
+        ]
+        result = self._call(_make_db(tenant_rows=tenants))
+        assert result["tenants"] == []
+
+    def test_real_customers_with_non_internal_names_included(self):
+        """Tenants whose business_name doesn't match the denylist are always included."""
+        tenants = [
+            {"id": "t1", "business_name": "Acme Plumbing", "plan": "chatbot", "plan_status": "active"},
+            {"id": "t2", "business_name": "Downtown Dental", "plan": "free", "plan_status": ""},
+            {"id": "t3", "business_name": "Sunrise Salon", "plan": "agent_os", "plan_status": "trialing"},
+        ]
+        result = self._call(_make_db(tenant_rows=tenants))
+        assert len(result["tenants"]) == 3
 
 
 # ---------------------------------------------------------------------------
