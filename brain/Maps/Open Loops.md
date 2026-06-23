@@ -83,8 +83,11 @@ Product is live + works (7 paid tenants, moat wired, retention loops running). T
 4. **Referral loop (I can build, cheap + compounding).** The widget "Powered by AgentNexLiFy" watermark sits on every tenant site = a free distribution surface. Make it a real referral/attribution link.
 Owner-only GTM: DNS repoint, send outreach, sales calls (convert-beta via MTOptions).
 
-## Prod data snapshot (2026-06-23, project pxserpybmajixqrmzaly)
-- 12 tenants (7 paid), **2,717 chat_messages**, **27 leads**, **9 appointments**, 16 kb_articles (all embedded).
+## Prod data snapshot (2026-06-23 round 6, project pxserpybmajixqrmzaly)
+- **12 tenants · 7 paid · 5 on `free` plan · 2,717 chat_messages · 27 leads · 9 appointments · 22 kb_articles (7 vertical packs) · referral_clicks: 0.**
+- **Owner said "all beta converted" but prod shows 5 on `free`.** Per CLAUDE.md `free` = internal lapsed/never-sold state → the 5 are most likely internal/test/lapsed, not active beta customers (reconciles with the owner's statement). FLAG: confirm none of the 5 are real customers; if any are, they're conversion/churn targets.
+- referral_clicks = 0 is expected — the click-POST shipped this round; no live widget traffic through the updated JS yet (Vercel serves `frontend/public/widget/`, picks up on deploy).
+- (superseded earlier line) 12 tenants (7 paid), 2,717 chat_messages, 27 leads, 9 appointments, 16 kb_articles.
 - Read: the product is LIVE and used, not pre-launch theory. The funnel `2717 messages → 27 leads → 9 appointments` is the value chain — improving chat→lead→booking conversion is now the highest-value product lever (it's literally the product's job).
 - **MOAT NOW LIVE END-TO-END (2026-06-23).** kb_articles went 16 → **19** (+3 vertical packs: salon-spa, plumber-hvac, dental, 52 Q&As, inserted directly to prod). FTS retrieval verified: "balayage"→salon, "burst pipe"→plumbing, "dental insurance"→dental. Combined with the widget wiring (#358) + migration 155, the widget now answers customers from the vertical KB in prod. G8 depth beyond these 3 verticals is the next content lever.
 - **Shipped to prod this session: #358 + #359 merged** (moat wiring, value digest, billing fixes, dependency reduction, status page, lead-capture dedup, voice plan-gate fix) + migrations 117/129/154/155/156 applied + 3 KB packs inserted. Backend live on Railway, frontend on Vercel.
