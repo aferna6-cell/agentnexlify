@@ -102,6 +102,7 @@ const SupportPage = lazy(() => import("../pages/SupportPage"));
 const AdminAnalyticsPage = lazy(() => import("../pages/AdminAnalyticsPage"));
 const AdminHealthPage = lazy(() => import("../pages/AdminHealthPage"));
 const AdminPromotionsPage = lazy(() => import("../pages/AdminPromotionsPage"));
+const AdminFunnelPage = lazy(() => import("../pages/AdminFunnelPage"));
 const IntegrationsKeysPage = lazy(
   () => import("../pages/Settings/IntegrationsKeysPage"),
 );
@@ -139,6 +140,7 @@ const pages = {
   admin_analytics: AdminAnalyticsPage,
   admin_health: AdminHealthPage,
   admin_promotions: AdminPromotionsPage,
+  admin_funnel: AdminFunnelPage,
 };
 
 // --------------------------------------------------------------------------
@@ -177,6 +179,7 @@ const PAGE_TO_PATH = {
   admin_analytics: "/admin/analytics",
   admin_health: "/admin/health",
   admin_promotions: "/admin/promotions",
+  admin_funnel: "/admin/funnel",
 };
 
 const PATH_TO_PAGE = Object.fromEntries(

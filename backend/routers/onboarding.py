@@ -38,6 +38,7 @@ from backend.dependencies import require_role
 from backend.services.business_profiles import get_widget_defaults
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.pay_gate import require_active_plan
+from backend.services.vertical_preset_loader import load_vertical_preset
 
 logger = logging.getLogger(__name__)
 
@@ -225,6 +226,44 @@ def _verify_tenant(claims: dict, tenant_id: str) -> None:
         raise HTTPException(status_code=403, detail="Not authorized")
 
 
+def _apply_vertical_preset_defaults(
+    widget_updates: dict[str, Any],
+    business_type: str | None,
+    explicit_greeting: str | None,
+    existing_greeting: str | None,
+) -> None:
+    """Apply vertical preset defaults to widget_updates in-place.
+
+    Priority chain for greeting_message (highest wins):
+      1. explicit_greeting  — value the tenant sent in the request body
+      2. existing_greeting  — value already stored in DB for this tenant
+      3. preset["greeting"] — vertical-specific preset from vertical_presets.yaml
+      4. widget_updates["greeting_message"] — business_profiles.py generic default
+
+    Only updates greeting_message when neither (1) nor (2) is present.
+    Never raises: missing YAML or unknown vertical fall back to generic ({}).
+    """
+    # Skip if tenant already specified or already has a value in DB.
+    if explicit_greeting or existing_greeting:
+        return
+
+    bt = (business_type or "").strip()
+    if not bt:
+        return
+
+    try:
+        preset = load_vertical_preset(bt)
+    except Exception:
+        logger.warning(
+            "_apply_vertical_preset_defaults: failed to load preset for %r", bt, exc_info=True
+        )
+        return
+
+    greeting = (preset.get("greeting") or "").strip()
+    if greeting:
+        widget_updates["greeting_message"] = greeting
+
+
 async def _generate_ai_content(
     business_name: str,
     business_type: str,
@@ -387,6 +426,14 @@ async def complete_onboarding(
         "greeting_message": req.widget_greeting_message or existing_widget.get("greeting_message") or widget_defaults["greeting_message"],
         "position": req.widget_position or existing_widget.get("position") or widget_defaults["position"],
     }
+    # Apply vertical preset greeting as an upgrade over the generic business_profiles
+    # default, but only when the tenant has not set an explicit value.
+    _apply_vertical_preset_defaults(
+        widget_updates=widget_updates,
+        business_type=req.business_type,
+        explicit_greeting=req.widget_greeting_message,
+        existing_greeting=existing_widget.get("greeting_message"),
+    )
     try:
         db.table("widget_configs").update(widget_updates).eq("tenant_id", tenant_id).execute()
     except Exception:
