@@ -36,7 +36,7 @@ export default function DemoBanner() {
       }}
     >
       <span style={{ color: "var(--text-secondary)" }}>
-        You&rsquo;re in the live demo &mdash; explore everything, data resets
+        You&rsquo;re in the live demo, explore everything, data resets
         nightly.
       </span>
       <a

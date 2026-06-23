@@ -44,7 +44,7 @@ export default function HelpPage() {
           <h2>Getting started</h2>
           <p>
             Log in and you land in a conversation with your AI staff. There is
-            no complicated dashboard to learn first &mdash; type what you need,
+            no complicated dashboard to learn first. Type what you need,
             the way you&rsquo;d ask an employee. Ask anything: &ldquo;follow up
             with the lead from yesterday,&rdquo; &ldquo;draft an invoice for
             the Hendersons,&rdquo; &ldquo;what came in through the website this
@@ -61,60 +61,60 @@ export default function HelpPage() {
           </p>
           <ul>
             <li>
-              <strong>Sales</strong> &mdash; follows up with leads, answers
+              <strong>Sales</strong>: follows up with leads, answers
               pricing questions, and moves prospects toward booked work.
             </li>
             <li>
-              <strong>Marketing</strong> &mdash; drafts campaigns, emails, and
+              <strong>Marketing</strong>: drafts campaigns, emails, and
               promotions to bring in new customers.
             </li>
             <li>
-              <strong>Customer Service</strong> &mdash; handles customer
+              <strong>Customer Service</strong>: handles customer
               questions, complaints, and follow-ups with a consistent voice.
             </li>
             <li>
-              <strong>Operations</strong> &mdash; keeps scheduling,
+              <strong>Operations</strong>: keeps scheduling,
               appointments, and day-to-day tasks moving.
             </li>
             <li>
-              <strong>Invoicing &amp; Collections</strong> &mdash; drafts
+              <strong>Invoicing &amp; Collections</strong>: drafts
               invoices, sends payment reminders, and chases overdue balances
               politely.
             </li>
             <li>
-              <strong>Accounting &amp; Finance</strong> &mdash; summarizes
+              <strong>Accounting &amp; Finance</strong>: summarizes
               money in and money out so you know where you stand.
             </li>
             <li>
-              <strong>Customer Data &amp; Admin</strong> &mdash; keeps your
+              <strong>Customer Data &amp; Admin</strong>: keeps your
               customer records organized, current, and easy to search.
             </li>
             <li>
-              <strong>People Management</strong> &mdash; helps with hiring
+              <strong>People Management</strong>: helps with hiring
               posts, schedules, and team communication.
             </li>
           </ul>
         </section>
 
         <section>
-          <h2>Approvals &mdash; nothing sends without your OK</h2>
+          <h2>Approvals: nothing sends without your OK</h2>
           <p>
             By default, your AI staff drafts the work and waits. Every email,
             text, and invoice sits in your approvals queue until you review it
             and say go. You stay in control of everything that reaches a
             customer. If you reach the point where you trust a department to
             send routine items on its own, you can turn on auto-send in
-            Settings &mdash; and turn it back off any time.
+            Settings, and turn it back off any time.
           </p>
         </section>
 
         <section>
-          <h2>Memory &mdash; the OS learns your business</h2>
+          <h2>Memory: the OS learns your business</h2>
           <p>
             As you work, the system remembers what matters: your customers,
             your prices, how you like things worded, which jobs you take. That
             means less repeating yourself over time. The Memory panel shows you
-            everything it has learned &mdash; every customer, fact, and
+            everything it has learned: every customer, fact, and
             preference is visible, nothing is hidden. If something is wrong or
             you want it gone, hit Forget and it&rsquo;s removed.
           </p>
@@ -129,7 +129,7 @@ export default function HelpPage() {
             appointment on the spot. Every widget conversation feeds your AI
             staff, so Sales already knows who asked about a quote and Customer
             Service already knows what was promised. Installing it is one small
-            piece of code on your site &mdash; the setup wizard walks you
+            piece of code on your site. The setup wizard walks you
             through it.
           </p>
         </section>
@@ -138,7 +138,7 @@ export default function HelpPage() {
           <h2>Billing &amp; plans</h2>
           <p>
             Manage your subscription from the Billing page in your dashboard:
-            upgrade, downgrade, or cancel &mdash; no phone call or email
+            upgrade, downgrade, or cancel, no phone call or email
             required. If you cancel, you keep full access until the end of the
             billing period you already paid for; we never cut you off early.
             Details on refunds and payment terms are in our{" "}
@@ -153,13 +153,13 @@ export default function HelpPage() {
             platform with hundreds of features, and plenty of agencies build
             their whole business on it. The trade-off is learning curve: it
             takes real time to set up and master. AgentNexLiFy is built around
-            one conversation with approval-gated AI staff &mdash; you describe
+            one conversation with approval-gated AI staff. You describe
             what you need in plain language and review the work before it
             sends, instead of configuring pipelines and funnels yourself.
           </p>
           <p>
             <strong>Podium and Birdeye.</strong> Both are strong at reviews and
-            customer messaging &mdash; if review management is your main need,
+            customer messaging, and if review management is your main need,
             they do it well. Our focus is the follow-through after the message:
             the same system that catches the lead also runs the sales
             follow-up, schedules the job, sends the invoice, and chases the
@@ -177,7 +177,7 @@ export default function HelpPage() {
             website questions, and for some businesses that&rsquo;s enough. For
             us, the widget is the data source rather than the whole product:
             what visitors say feeds your AI departments, which then act on it
-            &mdash; sales follow-up, scheduling, invoicing &mdash; with your
+            (sales follow-up, scheduling, invoicing) with your
             approval.
           </p>
         </section>
@@ -185,7 +185,7 @@ export default function HelpPage() {
         <section>
           <h2>Deleting your account</h2>
           <p>
-            You can delete your account yourself from Settings &mdash; no email
+            You can delete your account yourself from Settings, no email
             or support ticket needed. Deletion is a full erasure: it removes
             your business profile, customer records, leads, conversations,
             appointments, invoices, learned memory, and your billing record
