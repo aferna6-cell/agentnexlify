@@ -1,13 +1,21 @@
 """Referral attribution service.
 
-Validates ?ref=CODE at signup against the admin_promotions table (promotion_type='referral').
-Stores attribution on the new tenant row via tenants.referred_by (FK) and
-tenants.referral_discount_pct when a matching active referral promo exists.
+Two independent attribution paths:
 
-Security contract:
-- Invalid / expired code → silently ignored, signup proceeds normally.
-- Never log the code alongside any PII (email/business_name).
-- Validation is entirely server-side; client never receives discount details.
+1. apply_referral_attribution — promo-code path (existing).
+   Validates ?ref=CODE against admin_promotions (promotion_type='referral').
+   Stores referring tenant UUID in tenants.referred_by (UUID FK) and
+   discount in tenants.referral_discount_pct.
+
+2. apply_widget_referral_attribution — widget-watermark path (new).
+   Validates ?ref=<api_key> against widget_configs.api_key.
+   Stores the raw api_key in tenants.referred_by_widget_key (TEXT).
+   Used by the referral stats endpoint to count referred_signups.
+
+Security contract for both:
+- Invalid / expired / unknown code → silently ignored, signup proceeds.
+- Never log the raw code alongside PII (email/business_name).
+- Validation is entirely server-side.
 """
 
 import logging
@@ -110,6 +118,78 @@ def apply_referral_attribution(
         # Never block signup on referral lookup failure
         logger.warning(
             "referral: attribution lookup failed for new tenant %s — ignored",
+            new_tenant_id,
+            exc_info=True,
+        )
+
+
+def apply_widget_referral_attribution(
+    db,
+    *,
+    new_tenant_id: str,
+    ref: str | None,
+) -> None:
+    """Attribute a new tenant to the widget-watermark referral channel.
+
+    Args:
+        db: Supabase service client.
+        new_tenant_id: UUID string of the freshly-created tenant row.
+        ref: Raw value from the ?ref= query param (expected to be a
+             widget_configs.api_key), or None.
+
+    Side-effects on success:
+        - Sets tenants.referred_by_widget_key = ref  (the referrer's api_key)
+
+    Silently returns on any error so signup is never blocked.
+    This is intentionally lenient: an unrecognised ref is silently dropped.
+    """
+    if not ref:
+        return
+
+    # Sanitise: strip whitespace, enforce max length, reject empty
+    ref = ref.strip()[:_MAX_CODE_LEN]
+    if not ref:
+        return
+
+    try:
+        # Validate the ref is a real widget_configs.api_key
+        wc_result = (
+            db.table("widget_configs")
+            .select("tenant_id")
+            .eq("api_key", ref)
+            .limit(1)
+            .execute()
+        )
+        if not wc_result.data:
+            logger.debug(
+                "widget-referral: api_key not found in widget_configs — ignored"
+            )
+            return
+
+        referring_tenant_id = str(wc_result.data[0]["tenant_id"])
+
+        # Avoid self-referral (same tenant signing up with their own widget key)
+        if referring_tenant_id == new_tenant_id:
+            logger.warning(
+                "widget-referral: self-referral attempt blocked for tenant %s",
+                new_tenant_id,
+            )
+            return
+
+        db.table("tenants").update(
+            {"referred_by_widget_key": ref}
+        ).eq("id", new_tenant_id).execute()
+
+        logger.info(
+            "widget-referral: tenant %s attributed to referrer tenant %s via api_key",
+            new_tenant_id,
+            referring_tenant_id,
+        )
+
+    except Exception:
+        # Never block signup on referral lookup failure
+        logger.warning(
+            "widget-referral: attribution failed for new tenant %s — ignored",
             new_tenant_id,
             exc_info=True,
         )

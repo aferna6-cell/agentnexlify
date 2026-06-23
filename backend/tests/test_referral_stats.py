@@ -16,14 +16,23 @@ def _auth_headers(tenant_id=TENANT_ID):
     return {"Authorization": f"Bearer {token}"}
 
 
-def _mock_chain(mock_supabase, *, wc_data, total_count, last_7d_count, last_30d_count):
-    """Wire mock_supabase so the three DB call sites return predictable values.
+def _mock_chain(
+    mock_supabase,
+    *,
+    wc_data,
+    total_count,
+    last_7d_count,
+    last_30d_count,
+    signups_count=0,
+):
+    """Wire mock_supabase so the five DB call sites return predictable values.
 
     Call order inside get_my_referral_stats:
-      1. widget_configs SELECT → wc_data
-      2. referral_clicks total SELECT  → total_count
-      3. referral_clicks 7d SELECT     → last_7d_count
-      4. referral_clicks 30d SELECT    → last_30d_count
+      1. widget_configs SELECT          → wc_data
+      2. referral_clicks total SELECT   → total_count
+      3. referral_clicks 7d SELECT      → last_7d_count
+      4. referral_clicks 30d SELECT     → last_30d_count
+      5. tenants referred_signups COUNT → signups_count
     """
     def _make_result(data, count):
         r = MagicMock()
@@ -35,6 +44,7 @@ def _mock_chain(mock_supabase, *, wc_data, total_count, last_7d_count, last_30d_
     total_result = _make_result([], total_count)
     last_7d_result = _make_result([], last_7d_count)
     last_30d_result = _make_result([], last_30d_count)
+    signups_result = _make_result([], signups_count)
 
     # Each table().select().eq()...execute() call returns one of the results in order.
     # Use side_effect on the deepest .execute() to sequence the responses.
@@ -43,6 +53,7 @@ def _mock_chain(mock_supabase, *, wc_data, total_count, last_7d_count, last_30d_
         total_result,
         last_7d_result,
         last_30d_result,
+        signups_result,
     ])
 
     chain = MagicMock()
@@ -155,18 +166,51 @@ class TestGetMyReferralStats:
         assert resp.status_code == 500
 
     def test_response_schema_fields_present(self, client, mock_supabase):
-        """Response contains all five expected fields."""
+        """Response contains all six expected fields including referred_signups."""
         _mock_chain(
             mock_supabase,
             wc_data=[{"api_key": REF_CODE}],
             total_count=5,
             last_7d_count=2,
             last_30d_count=4,
+            signups_count=3,
         )
 
         resp = client.get(STATS_URL, headers=_auth_headers())
         assert resp.status_code == 200
         body = resp.json()
         assert set(body.keys()) == {
-            "ref_code", "share_link", "total_clicks", "clicks_last_7d", "clicks_last_30d"
+            "ref_code", "share_link", "total_clicks",
+            "clicks_last_7d", "clicks_last_30d", "referred_signups",
         }
+
+    def test_referred_signups_count_returned(self, client, mock_supabase):
+        """(c) my-stats returns referred_signups count from tenants table."""
+        _mock_chain(
+            mock_supabase,
+            wc_data=[{"api_key": REF_CODE}],
+            total_count=100,
+            last_7d_count=20,
+            last_30d_count=60,
+            signups_count=7,
+        )
+
+        resp = client.get(STATS_URL, headers=_auth_headers())
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["referred_signups"] == 7
+
+    def test_referred_signups_zero_when_none(self, client, mock_supabase):
+        """referred_signups is 0 when no tenants have referred_by_widget_key set."""
+        _mock_chain(
+            mock_supabase,
+            wc_data=[{"api_key": REF_CODE}],
+            total_count=10,
+            last_7d_count=3,
+            last_30d_count=8,
+            signups_count=0,
+        )
+
+        resp = client.get(STATS_URL, headers=_auth_headers())
+        assert resp.status_code == 200
+        assert resp.json()["referred_signups"] == 0
