@@ -75,5 +75,13 @@ Owner-only (unchanged): trials live/dead decision, env-var values, DNS, log-sink
 - **L4 Sentry-optional** — `migrations/156_error_events.sql` + `error_events.py` + wired into existing `global_error_handler` + 6 tests. **Follow-up:** apply 156 to prod (owner/approved).
 - **Net:** required external secrets 4 → 1 (RESEND only), and **`RESEND_API_KEY` is already configured — DONE (confirmed by owner 2026-06-23)**. So the core path needs ZERO new external keys; Voyage + Sentry are now optional enhancements only. Remaining (non-secret) follow-ups: apply prod migrations 155 + 156 (owner-approved), wire FTS into the widget hot path, and confirm the monitoring workflows can read `RESEND_API_KEY` + `OWNER_ALERT_EMAIL` as GitHub Actions secrets (app env already has the Resend key; Actions secret store is separate).
 
+## Product activation — highest-value next (analysis 2026-06-23)
+Launch-hardening is done; the bottleneck is now beta→paid conversion, which depends on the product visibly DELIVERING value. Highest-value buildable items:
+- **Activate the vertical-KB moat in the widget (the differentiator).** `_query_kb_articles` (semantic + FTS fallback, built in L2) exists in `widget_chat_helpers.py` but is NOT called from `backend/routers/widget_chat.py` — the widget answers customers without retrieving the tenant KB. Wire it into the chat path (behind a flag, feed into `_build_system_prompt`, graceful-empty), apply migration 155. This is the moat going live. The single highest-value product change.
+- **G7 proactive opportunities — verify + surface.** `backend/services/os_opportunities.py` + `os_insights.py` already exist (G7 is NOT greenfield). Check whether they are scheduled (nightly) + surfaced to tenants (dashboard card / value digest). If dormant, wire into the scheduler loop + the weekly digest. Proactive value lever.
+- **Value digest is LIVE** (`send_weekly_digest` in the 30-min loop, `main.py`). Follow-through: confirm it fires for beta tenants with real numbers + fold in KB/opportunity highlights once the moat is live.
+- **Apply migrations 155 + 156 to prod** (owner-approved) — activates the FTS path + error sink.
+- Bigger bets (gap analysis): G3 voice/phone live-answering (partly built — `voice_ai_enabled`, `calls.py`, `propose_appointment`), G8 vertical-pack depth beyond top-5 industries.
+
 ## Related
 - [[Paid Launch Readiness]] · [[Paid Launch Readiness Pack]] · [[Autonomous Dev Operation]]
