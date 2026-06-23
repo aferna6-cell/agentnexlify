@@ -934,7 +934,7 @@ async def widget_chat(
         system_prompt = system_prompt.replace("AI Assistant", widget["bot_name"], 1)
 
     # Booking nudge — if online booking is enabled, tell the AI to suggest it
-    if widget.get("booking_enabled") and bh_data:
+    if widget.get("booking_enabled"):
         system_prompt += (
             "\n\nBOOKING: This business has online booking enabled. "
             "When the visitor shows interest in scheduling, mention they can book an appointment "

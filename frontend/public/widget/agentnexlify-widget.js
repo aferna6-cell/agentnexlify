@@ -952,7 +952,7 @@
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           </button>
         </div>
-        <div id="anx-powered">${t('poweredBy')} <a href="https://agentnexlify.com" target="_blank" rel="noopener">AgentNexLiFy</a></div>
+        <div id="anx-powered">${t('poweredBy')} <a href="https://agentnexlify.com?ref=${encodeURIComponent(API_KEY)}&utm_source=widget" target="_blank" rel="noopener">AgentNexLiFy</a></div>
       </div>
     `;
 

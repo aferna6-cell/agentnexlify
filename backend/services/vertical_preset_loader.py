@@ -60,6 +60,33 @@ def _normalize(vertical: str) -> str:
     return vertical.strip().lower().replace("-", "_").replace(" ", "_")
 
 
+# Maps the business_type values used across onboarding / business_profiles
+# (e.g. "salon", "hvac", "dentist") onto the canonical preset keys in
+# vertical_presets.yaml. Without this, a real onboarding business_type silently
+# falls back to the generic preset and the vertical-specific defaults never apply.
+_VERTICAL_ALIASES: dict[str, str] = {
+    # salon_spa
+    "salon": "salon_spa",
+    "spa": "salon_spa",
+    "beauty": "salon_spa",
+    "barber": "salon_spa",
+    "barbershop": "salon_spa",
+    "nails": "salon_spa",
+    "hair": "salon_spa",
+    "hair_salon": "salon_spa",
+    "nail_salon": "salon_spa",
+    # plumber_hvac
+    "plumber": "plumber_hvac",
+    "plumbing": "plumber_hvac",
+    "hvac": "plumber_hvac",
+    "plumbing_hvac": "plumber_hvac",
+    # dental
+    "dentist": "dental",
+    "dentistry": "dental",
+    "dental_office": "dental",
+}
+
+
 def load_vertical_preset(vertical: str) -> dict:
     """Return the preset dict for *vertical*.
 
@@ -79,6 +106,9 @@ def load_vertical_preset(vertical: str) -> dict:
     """
     data = _load_yaml()
     key = _normalize(vertical)
+    # Direct key wins; otherwise try the business_type alias map.
+    if key not in data:
+        key = _VERTICAL_ALIASES.get(key, key)
     preset = data.get(key)
     if preset is None:
         logger.info(
