@@ -19,6 +19,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from backend.models.database import get_service_supabase
+from backend.services.internal_tenants import is_internal_tenant
 from backend.services.platform_mailer import send_platform_email
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,12 @@ async def run_churn_watch() -> int:
         logger.exception("churn_watch: failed to fetch paid tenants")
         return 0
 
+    if not tenant_rows:
+        return 0
+
+    # Exclude internal/test tenants — they should never trigger a churn alert.
+    # See backend/services/internal_tenants.py for the denylist.
+    tenant_rows = [row for row in tenant_rows if not is_internal_tenant(row)]
     if not tenant_rows:
         return 0
 

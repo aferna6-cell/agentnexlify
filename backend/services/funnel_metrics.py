@@ -18,12 +18,18 @@ Activated definition: tenant has >=1 chat_message OR widget_configs row with
   a message means the widget was actually used.
 
 This-week window: calendar week (Mon 00:00 UTC to now).
+
+Internal-tenant exclusion:
+  Tenants whose business_name matches known internal/test patterns
+  (see backend/services/internal_tenants.py) are excluded from ALL
+  metrics so counts reflect real customers only.
 """
 
 import logging
 from datetime import datetime, timedelta, timezone
 
 from backend.models.database import get_service_supabase
+from backend.services.internal_tenants import is_internal_tenant
 
 logger = logging.getLogger(__name__)
 
@@ -43,16 +49,20 @@ def _week_start() -> str:
 def compute_funnel() -> dict:
     """Return platform funnel counts. Best-effort — never raises.
 
+    Internal/test tenants are excluded from all counts.  This prevents
+    the "AgentNexLiFy Smoke Test" tenant (which holds ~49% of all
+    chat_messages as of 2026-06-23) from inflating every metric.
+
     Returns
     -------
     dict with keys:
-        total_tenants       int   — all rows in tenants table
-        activated           int   — tenants with >=1 chat_message
-        with_leads          int   — tenants that have >=1 lead
-        paid                int   — tenants on a paid plan with active/trialing status
-        new_signups_week    int   — tenants created this calendar week (Mon–now)
-        new_leads_week      int   — leads created this calendar week
-        new_appointments_week int — appointments created this calendar week
+        total_tenants       int   — real customers in tenants table
+        activated           int   — real tenants with >=1 chat_message
+        with_leads          int   — real tenants that have >=1 lead
+        paid                int   — real tenants on a paid plan with active/trialing status
+        new_signups_week    int   — real tenants created this calendar week (Mon–now)
+        new_leads_week      int   — leads from real tenants created this calendar week
+        new_appointments_week int — appointments from real tenants this calendar week
         errors              list  — names of metrics that failed (DB error)
         computed_at         str   — UTC ISO timestamp
     """
@@ -72,27 +82,72 @@ def compute_funnel() -> dict:
         "computed_at": datetime.now(timezone.utc).isoformat(),
     }
 
-    # 1. Total tenants
+    # --- Step 0: Fetch all tenants and build real-tenant ID set ---
+    # We fetch once and use it for all tenant-scoped metrics.  Internal
+    # tenants are filtered out here so every metric below only counts
+    # real customers.
+    real_tenant_ids: set[str] = set()
+    real_tenant_rows: list[dict] = []
     try:
-        resp = db.table("tenants").select("id", count="exact").execute()
-        result["total_tenants"] = resp.count or 0
+        resp = (
+            db.table("tenants")
+            .select("id, business_name, plan, plan_status, created_at")
+            .execute()
+        )
+        for row in resp.data or []:
+            if not is_internal_tenant(row):
+                real_tenant_rows.append(row)
+                tid = row.get("id") or ""
+                if tid:
+                    real_tenant_ids.add(tid)
     except Exception:
-        logger.exception("funnel_metrics: failed to count total_tenants")
+        logger.exception("funnel_metrics: failed to fetch tenants table")
         errors.append("total_tenants")
+        errors.append("paid")
+        errors.append("new_signups_week")
+        # Continue so the other three metrics (activated, with_leads, appts)
+        # can still be attempted.  Without real_tenant_ids they will return 0.
 
-    # 2. Activated — tenants with >=1 chat_message (widget actually used)
-    # We count distinct tenant_id values by fetching tenant_ids and deduping.
+    # 1. Total tenants — count of real customers
+    if "total_tenants" not in errors:
+        result["total_tenants"] = len(real_tenant_rows)
+
+    # 4. Paid tenants — plan not 'free' AND plan_status in active/trialing
+    if "paid" not in errors:
+        result["paid"] = sum(
+            1
+            for row in real_tenant_rows
+            if (
+                row.get("plan") not in (None, "free")
+                and row.get("plan") in _PAID_PLANS
+                and row.get("plan_status") in _PAID_STATUSES
+            )
+        )
+
+    # 5. New signups this week
+    if "new_signups_week" not in errors:
+        result["new_signups_week"] = sum(
+            1
+            for row in real_tenant_rows
+            if (row.get("created_at") or "") >= since
+        )
+
+    # 2. Activated — real tenants with >=1 chat_message (widget actually used)
     # Supabase Python client does not expose SELECT DISTINCT natively, so we
-    # use a count=exact on a group-by workaround: select tenant_id, limit high,
-    # then deduplicate in Python. Capped at 5000 rows to keep latency bounded.
+    # fetch tenant_id values and deduplicate in Python.  Capped at 50000 rows
+    # to keep latency bounded on large installations.
     try:
         resp = (
             db.table("chat_messages")
             .select("tenant_id")
-            .limit(5000)
+            .limit(50000)
             .execute()
         )
-        distinct_activated = {row["tenant_id"] for row in (resp.data or []) if row.get("tenant_id")}
+        distinct_activated = {
+            row["tenant_id"]
+            for row in (resp.data or [])
+            if row.get("tenant_id") and row["tenant_id"] in real_tenant_ids
+        }
         result["activated"] = len(distinct_activated)
     except Exception:
         logger.exception("funnel_metrics: failed to count activated")
@@ -103,51 +158,34 @@ def compute_funnel() -> dict:
         resp = (
             db.table("leads")
             .select("client_id")
-            .limit(5000)
+            .limit(50000)
             .execute()
         )
-        distinct_with_leads = {row["client_id"] for row in (resp.data or []) if row.get("client_id")}
+        distinct_with_leads = {
+            row["client_id"]
+            for row in (resp.data or [])
+            if row.get("client_id") and row["client_id"] in real_tenant_ids
+        }
         result["with_leads"] = len(distinct_with_leads)
     except Exception:
         logger.exception("funnel_metrics: failed to count with_leads")
         errors.append("with_leads")
 
-    # 4. Paid tenants — plan not 'free' AND plan_status in active/trialing
-    try:
-        resp = (
-            db.table("tenants")
-            .select("id", count="exact")
-            .neq("plan", "free")
-            .in_("plan_status", list(_PAID_STATUSES))
-            .execute()
-        )
-        result["paid"] = resp.count or 0
-    except Exception:
-        logger.exception("funnel_metrics: failed to count paid")
-        errors.append("paid")
-
-    # 5. New signups this week
-    try:
-        resp = (
-            db.table("tenants")
-            .select("id", count="exact")
-            .gte("created_at", since)
-            .execute()
-        )
-        result["new_signups_week"] = resp.count or 0
-    except Exception:
-        logger.exception("funnel_metrics: failed to count new_signups_week")
-        errors.append("new_signups_week")
-
     # 6. New leads this week (leads use client_id; created_at is standard)
+    # Fetch rows for the week and filter by real tenant IDs in Python.
     try:
         resp = (
             db.table("leads")
-            .select("id", count="exact")
+            .select("client_id, created_at")
             .gte("created_at", since)
+            .limit(50000)
             .execute()
         )
-        result["new_leads_week"] = resp.count or 0
+        result["new_leads_week"] = sum(
+            1
+            for row in (resp.data or [])
+            if row.get("client_id") and row["client_id"] in real_tenant_ids
+        )
     except Exception:
         logger.exception("funnel_metrics: failed to count new_leads_week")
         errors.append("new_leads_week")
@@ -156,11 +194,16 @@ def compute_funnel() -> dict:
     try:
         resp = (
             db.table("appointments")
-            .select("id", count="exact")
+            .select("tenant_id, created_at")
             .gte("created_at", since)
+            .limit(50000)
             .execute()
         )
-        result["new_appointments_week"] = resp.count or 0
+        result["new_appointments_week"] = sum(
+            1
+            for row in (resp.data or [])
+            if row.get("tenant_id") and row["tenant_id"] in real_tenant_ids
+        )
     except Exception:
         logger.exception("funnel_metrics: failed to count new_appointments_week")
         errors.append("new_appointments_week")

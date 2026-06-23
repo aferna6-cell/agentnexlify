@@ -226,6 +226,69 @@ def _verify_tenant(claims: dict, tenant_id: str) -> None:
         raise HTTPException(status_code=403, detail="Not authorized")
 
 
+def _seed_vertical_preset_faqs(db: Any, tenant_id: str, business_type: str | None) -> int:
+    """Seed preset FAQs from vertical_presets.yaml into faq_entries.
+
+    Only runs when the tenant has zero existing FAQ entries, so this is
+    always a safe no-op on re-runs or for tenants who already have FAQs
+    (from the wizard, auto-KB, or a previous onboarding call).
+
+    Returns the number of rows inserted (0 when skipped).
+    Never raises — a failure here must not break the onboarding response.
+    """
+    if not business_type:
+        return 0
+
+    try:
+        existing = (
+            db.table("faq_entries")
+            .select("id")
+            .eq("tenant_id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        if existing.data:
+            logger.info(
+                "_seed_vertical_preset_faqs: tenant=%s already has FAQs, skipping preset seed",
+                tenant_id,
+            )
+            return 0
+
+        preset = load_vertical_preset(business_type)
+        faqs = preset.get("faqs") or []
+        if not faqs:
+            return 0
+
+        rows = [
+            {
+                "tenant_id": tenant_id,
+                "question": item["question"],
+                "answer": item["answer"].strip(),
+                "category": "vertical_preset",
+                "is_active": True,
+            }
+            for item in faqs
+            if item.get("question") and item.get("answer")
+        ]
+        if not rows:
+            return 0
+
+        db.table("faq_entries").insert(rows).execute()
+        logger.info(
+            "_seed_vertical_preset_faqs: seeded %d FAQ(s) for tenant=%s vertical=%s",
+            len(rows), tenant_id, business_type,
+        )
+        return len(rows)
+
+    except Exception:
+        logger.warning(
+            "_seed_vertical_preset_faqs: failed to seed preset FAQs for tenant=%s",
+            tenant_id,
+            exc_info=True,
+        )
+        return 0
+
+
 def _apply_vertical_preset_defaults(
     widget_updates: dict[str, Any],
     business_type: str | None,
@@ -479,6 +542,13 @@ async def complete_onboarding(
         db.table("widget_configs").update(widget_updates).eq("tenant_id", tenant_id).execute()
     except Exception:
         logger.error("Failed to update widget_configs during onboarding for %s", tenant_id, exc_info=True)
+
+    # Seed vertical preset FAQs — only when tenant has no existing FAQs.
+    # Best-effort: failure logged but never propagates to the caller.
+    preset_faqs_created = _seed_vertical_preset_faqs(db, tenant_id, req.business_type)
+    if preset_faqs_created > 0:
+        faqs_created += preset_faqs_created
+        configured["faqs"] = True
 
     industry_pack_applied = False
     industry_pack_key = None

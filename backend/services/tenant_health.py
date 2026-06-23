@@ -14,6 +14,18 @@ Schema conventions (see schema-discipline.md):
 
 Paid definition: plan != 'free' AND plan_status IN ('active', 'trialing').
 
+Internal-tenant exclusion:
+  Tenants whose business_name matches known internal/test patterns
+  (see backend/services/internal_tenants.py) are excluded from the
+  health report so the per-tenant view only shows real customers.
+
+Row caps on full-table scans:
+  chat_messages, leads, and appointments are capped at 50 000 rows each
+  to prevent unbounded memory usage on large installations.  If a platform
+  grows past that threshold the per-tenant counts will be approximate,
+  but the health-status classification (active/at_risk/dormant) will
+  still be correct for the vast majority of tenants.
+
 Each per-tenant metric block uses its own try/except so a single tenant DB failure
 does not abort the whole report (mirrors funnel_metrics.py style).
 """
@@ -22,6 +34,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from backend.models.database import get_service_supabase
+from backend.services.internal_tenants import is_internal_tenant
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +44,10 @@ _PAID_STATUSES = {"active", "trialing"}
 # Thresholds for status classification
 _ACTIVE_DAYS = 7
 _AT_RISK_DAYS = 30
+
+# Row cap for full-table scans on activity tables.
+# Prevents unbounded memory on large installations.
+_ROW_CAP = 50_000
 
 
 def _now_utc() -> datetime:
@@ -78,10 +95,13 @@ def _is_paid(plan: str | None, plan_status: str | None) -> bool:
 def compute_tenant_health() -> dict:
     """Return per-tenant health report.  Never raises — errors degrade to empty tenants list.
 
+    Internal/test tenants (see backend/services/internal_tenants.py) are
+    excluded so the report only reflects real customer activity.
+
     Returns
     -------
     dict with keys:
-        tenants     list  — one entry per tenant (see _build_tenant_entry)
+        tenants     list  — one entry per real customer tenant
         computed_at str   — UTC ISO timestamp
     """
     db = get_service_supabase()
@@ -91,14 +111,17 @@ def compute_tenant_health() -> dict:
 
     tenants: list[dict] = []
 
-    # --- 1. Fetch all tenants ---
+    # --- 1. Fetch all tenants, excluding internal/test accounts ---
     try:
         resp = (
             db.table("tenants")
             .select("id, business_name, plan, plan_status")
             .execute()
         )
-        tenant_rows = resp.data or []
+        tenant_rows = [
+            row for row in (resp.data or [])
+            if not is_internal_tenant(row)
+        ]
     except Exception:
         logger.exception("tenant_health: failed to fetch tenants table")
         return {
@@ -107,13 +130,19 @@ def compute_tenant_health() -> dict:
         }
 
     # --- 2. Fetch aggregate counts across all tenants (bulk fetch, deduplicate in Python) ---
+    # Capped at _ROW_CAP rows per table to bound memory usage at scale.
 
     # chat_messages totals per tenant_id
     all_messages: dict[str, int] = {}
     all_messages_7d: dict[str, int] = {}
     all_messages_last: dict[str, str] = {}
     try:
-        resp = db.table("chat_messages").select("tenant_id, created_at").execute()
+        resp = (
+            db.table("chat_messages")
+            .select("tenant_id, created_at")
+            .limit(_ROW_CAP)
+            .execute()
+        )
         for row in resp.data or []:
             tid = row.get("tenant_id")
             cat = row.get("created_at", "")
@@ -133,7 +162,12 @@ def compute_tenant_health() -> dict:
     all_leads_7d: dict[str, int] = {}
     all_leads_last: dict[str, str] = {}
     try:
-        resp = db.table("leads").select("client_id, created_at").execute()
+        resp = (
+            db.table("leads")
+            .select("client_id, created_at")
+            .limit(_ROW_CAP)
+            .execute()
+        )
         for row in resp.data or []:
             cid = row.get("client_id")
             cat = row.get("created_at", "")
@@ -151,7 +185,12 @@ def compute_tenant_health() -> dict:
     all_appts: dict[str, int] = {}
     all_appts_last: dict[str, str] = {}
     try:
-        resp = db.table("appointments").select("tenant_id, created_at").execute()
+        resp = (
+            db.table("appointments")
+            .select("tenant_id, created_at")
+            .limit(_ROW_CAP)
+            .execute()
+        )
         for row in resp.data or []:
             tid = row.get("tenant_id")
             cat = row.get("created_at", "")

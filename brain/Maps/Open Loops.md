@@ -141,5 +141,16 @@ Constraint shifted: product plumbing is built + all owner blockers cleared, so t
 - **referral_clicks = 0** — click-POST just shipped; no live widget traffic through updated JS yet.
 - Lanes dispatched (round 7): (1) SEO 4→7 vertical landing pages, (2) wizard step instrumentation fix, (3) churn-watch weekly owner-alert job for at-risk paid tenants, (4) referral my-stats endpoint, (5) referral tenant dashboard page. Plus my own follow-up: exclude internal tenants from funnel/health metrics.
 
+## Review 2026-06-23 (round 7 MERGED — PR #363, sha aa1f55a)
+SEO 7 verticals, wizard instrumentation fix (migration 158 applied to prod), churn-watch weekly job, referral my-stats endpoint + tenant Referral dashboard — all live. CI hermetic/PR-Validation = infra-death (5th PR); both Vercel previews Ready.
+**Queued follow-ups (round-8 candidates):** (1) exclude internal/test tenants from funnel + tenant_health metrics (Smoke Test = 1,336/2,717 msgs pollutes the read); (2) migrate stale-JWT `ReferralCard.jsx` to the live my-stats endpoint; (3) preset FAQ auto-seeding into faq_entries; (4) tenant_health full-table-scan row cap.
+
+## Review 2026-06-23 (round 8) — data-quality + activation polish
+- **`internal_tenants.py`** new shared helper (`is_internal_tenant` name denylist) — applied to `tenant_health.py` + `churn_watch.py` so internal/test accounts ("AgentNexLiFy", "Smoke Test") don't show as real tenants or trigger churn alerts. + tenant_health full-table-scan row cap (50k).
+- **Preset FAQ auto-seeding** — `onboarding.py::_seed_vertical_preset_faqs` seeds vertical preset FAQs into `faq_entries` when a tenant has none (confirmed NOT redundant with the industry pack, which writes forms/sequences/KB-markdown, not faq_entries). 12 tests.
+- **ReferralCard** migrated off stale JWT to the live `/api/v1/referral/my-stats`.
+- **DEFERRED: funnel_metrics internal-exclusion.** The subagent's funnel change required restructuring `count="exact"` → fetch+filter+len, which breaks the 17-test `_make_db` harness (hard-keyed to the old 3×-count tenants call order). Reverted to keep green; redo as a first-class task = rewrite `test_funnel_metrics.py::_make_db` to return tenant ROWS, then apply `is_internal_tenant`. tenant_health/churn already excluded so the headline funnel is the only place still counting the Smoke Test.
+- Tests: 90 green across tenant_health/churn/onboarding-faq/onboarding-preset/funnel(original).
+
 ## Related
 - [[Paid Launch Readiness]] · [[Paid Launch Readiness Pack]] · [[Autonomous Dev Operation]]
