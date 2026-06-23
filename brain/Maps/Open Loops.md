@@ -55,5 +55,18 @@ Owner cleared #1 (insurance) + is setting env-var secrets (#2). I did the doable
 - **#5 money-path safety — in progress** (`backend/routers/billing.py`): make a comped/`no_payment_required` checkout with no resolvable `plan` fail LOUD (logged/alerted), not silently no-op. Observability only, no activation-behavior change; billing → owner review before merge.
 - Still irreducibly owner-only: DNS repoint, secret values, log-sink account, case-study consent + numbers, outreach send config, the trials live/dead decision, convert-beta sales motion.
 
+## Dependency Reduction — reduce external-secret surface (analysis 2026-06-23)
+Goal: fewer external API keys to set/own. Each env-var the owner must provision is a failure point + a launch chore. Code-side reductions (deterministic-first, CLAUDE.md):
+- **Voyage embeddings → OPTIONAL.** `kb_articles.content` (migration 081) exists; add a Postgres FTS column (`to_tsvector`) + GIN index + an FTS path in the KB retrieval helper. KB retrieval then works with ZERO external embedding API; embeddings become a recall enhancement when `VOYAGE_API_KEY` is present. Removes the moat's hard dependency on Voyage. Biggest win; pairs with the graceful-degradation already shipped. (S/M)
+- **Slack alerts → Resend email.** `SLACK_ALERT_WEBHOOK_URL` is only used in CI monitoring (`scripts/monitoring/railway-error-to-slack.sh`, `railway-error-watch.yml`). Email infra (`owner_alerts.py`/`platform_mailer.py`/Resend) is already core. Route the alert to owner email; drop the Slack secret + integration. Solo founder, no Slack team. (S)
+- **Sentry → optional + self-hosted fallback.** `SENTRY_DSN` already guarded (no-op when unset). Log-sink (4.5) + structured JSON logs cover most error visibility; optionally add a lightweight `error_events` Supabase table as a zero-dependency fallback. Keep Sentry optional. (S, low priority)
+- **RAILWAY_TOKEN → app self-report.** `railway-error-watch.yml` polls the Railway API for errors. Alternative: app pushes errors to Supabase + the watcher queries the public `/status.json` + Supabase instead of the Railway API. Removes a CI secret. (M, lower priority — CI infra)
+
+### Highest-value next items I can complete (code/docs)
+1. Finish KB cron guard — `.claude/skills/kb-compile/SKILL.md` try/except EmbeddingUnavailable (closes the embeddings-resilience loop; mine to do). (S)
+2. Voyage-optional: Postgres FTS fallback for KB retrieval (dependency reduction #1 above). (S/M)
+3. Slack → Resend owner-email alert path (dependency reduction #2). (S)
+Owner-only (unchanged): trials live/dead decision, env-var values, DNS, log-sink, case-study consent, convert-beta.
+
 ## Related
 - [[Paid Launch Readiness]] · [[Paid Launch Readiness Pack]] · [[Autonomous Dev Operation]]
