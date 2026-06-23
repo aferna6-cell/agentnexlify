@@ -16,7 +16,7 @@ The core wedge is white-label: agencies resell GHL under their own brand at $97�
 
 The "AI voice calls" headline number (7M+) reflects the shift GHL made in 2025 toward voice AI (likely Retell, Vapi, or in-house) as the entry-point product. Voice AI is the category most small businesses now expect from an automation vendor, which sets the floor for AgentNexLiFy's roadmap. Chat-only positioning is defensible only if it ties into booking and CRM with fewer clicks than GHL's workflow builder.
 
-Pricing starts around $97/mo (Starter), $297/mo (Unlimited, most common), $497/mo (Pro/SaaS for agencies reselling). AgentNexLiFy's Autopilot tier at $299/mo sits directly across from GHL Unlimited — the comparison will be made in every sales call. Differentiation has to live above the price line: better industry-specific knowledge bases, tighter conversation quality, faster onboarding, fewer dead-end workflow editors.
+Pricing starts around $97/mo (Starter), $297/mo (Unlimited, most common), $497/mo (Pro/SaaS for agencies reselling). AgentNexLiFy's `agent_os` plan ($99.99/mo; pricing updated 2026-06-15 — prior Autopilot $299/mo tier reference predates the repricing) sits well below GHL Unlimited in nominal price — the comparison will be made in every sales call. Differentiation has to live above the price line: better industry-specific knowledge bases, tighter conversation quality, faster onboarding, fewer dead-end workflow editors.
 
 Weaknesses routinely cited by former users: bloated UI, steep learning curve, support quality variance, agency-first framing confuses direct SMB buyers. See [[competitive-landscape-march-2026]] for the broader competitive matrix including Drillbit, Phonely, Podium, Birdeye, and Tidio.
 
