@@ -12,7 +12,7 @@ last_updated: 2026-06-22
 Unfinished work + blockers (business scope). Ordered by priority.
 
 ## High
-- [[Insurance Quote for Launch]] — the only HIGH-severity launch blocker (owner phone call). Confirmed 2026-06-23 as the single rubric zero that flips NO-GO → GO.
+- ~~[[Insurance Quote for Launch]]~~ — **DONE 2026-06-23 (owner).** The single HIGH rubric zero is cleared → launch verdict flips NO-GO → GO. Remaining launch items are MEDIUM/owner-content (log sink 4.5, case study 8.5, outreach 9.5).
 - [[Align Pricing Across Surfaces]] — owner decision + alignment pass (G5).
 - [[Convert Beta Tenants to Paid]] — revenue priority (led by [[MTOptions]]).
 - ~~[[Weekly Value Digest]]~~ — G2 retention lever. **Shipped 2026-06-23**: the Friday emailer already existed; added dollar-framed estimated pipeline `$`, configurable `avg_lead_value` (graceful when column absent, no migration), conversations count, + 23 tests. `backend/services/weekly_value.py` + `scheduled_jobs_ext.py`.
@@ -27,8 +27,8 @@ Unfinished work + blockers (business scope). Ordered by priority.
 - Untracked deps (no requirements.txt entries) — reproducibility risk. Source: [[eng-memory-blocked-items]]
 
 ## From GitHub (smoke pass 2026-06-22, corrected 2026-06-23)
-- **#263** — NOT 24 pending migrations. **2026-06-23 object-existence audit: real pending = 2**, both SAFE-IDEMPOTENT `ADD COLUMN IF NOT EXISTS` (`117_zapier_api_keys`, `129_chat_messages_os_mirror`). The bogus "24" came from `005`/`007` duplicate-numbered files breaking number-keyed diff tooling + the Supabase migration-history table only recording 112/157 files (rest applied out-of-band). Prod-apply owner-gated; downgrade from CRITICAL. Source: `audits/audit-schema-drift-2026-06-23.md`
-- **#329** — apply migration 154 (conversation sentiment + intent) to production.
+- **#263 — RESOLVED 2026-06-23. Prod schema drift = 0.** The "24 pending" was a false count (005/007 duplicate-numbered files + unreliable history table). Real pending was 2; both applied to prod via `apply_migration` (project pxserpybmajixqrmzaly): `117_zapier_api_keys` + `129_chat_messages_os_mirror`, all 6 objects verified live. Migration 154 was already applied. Source: `audits/audit-schema-drift-2026-06-23.md` + `docs/dev-knowledge/schema-log.md`.
+- **#329 — DONE.** Migration 154 (conversation sentiment + intent) confirmed already live in prod (`conversations.sentiment`/`intent` exist, verified 2026-06-23).
 - **#330** — human legal review of TermsOfService §4 (payment terms).
 - **#266** — finish integrations-secret encryption (backfill + sunset plaintext).
 - KB embeddings broken since ~2026-04-30: root cause = missing `VOYAGE_API_KEY` (owner-gated) **plus** no graceful degradation in `backend/services/embeddings.py:34,52,70` (hard 401 raise) + the cron compile path swallows the crash as success. Code patch drafted (not applied). Source: `audits/audit-kb-embeddings-2026-06-23.md`
