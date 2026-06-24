@@ -35,13 +35,13 @@ Dashboard (React/Vite) ─────────→ FastAPI /api/* ───�
 
 ### Key directories
 - `backend/` — FastAPI service (`main.py`, `routers/`, `services/`)
-- `frontend/` — React/Vite dashboard (`src/pages/`, `src/utils/api/`)
+- `frontend/` — React/Vite dashboard **+ the live agentnexlify.com marketing site** (`src/pages/`, `src/utils/api/`)
 - `widget/` + `frontend/public/widget/` — embeddable chat widget (**must stay byte-identical**)
 - `migrations/` — SQL migration files, numbered 001–154+
 - `docs/dev-knowledge/` — bug-patterns.md, schema-log.md, architecture-decisions.md
 - `knowledge-base/` — LLM-compiled wiki (`raw/`, `wiki/`, pgvector embeddings)
 - `.claude/` — config, rules, skills, agents, commands, hooks
-- `_archive/`, `public/` — **legacy, do not touch**. `landing-page-v2/` deploys via Vercel project `agentnexlify` — edit deliberately, content-only changes preferred. **WARNING (found 2026-06-12): agentnexlify.com + www are attached to the separate, stale `agentnexlify-site` Vercel project — landing-page-v2 edits do NOT reach the public domain until the domains are moved to the `agentnexlify` project in the Vercel dashboard (its prod URLs are also auth-protected + latest deploy BLOCKED — check spend limits/protection).**
+- `_archive/`, `public/`, `landing-page-v2/` — **legacy, do not touch** (confirmed 2026-06-23). The LIVE agentnexlify.com marketing site + dashboard is **`frontend/`** (React/Vite on Vercel) — proven by live `<title>` matching `frontend/index.html`. The live chat widget is the lead-capture widget embedded in `frontend/index.html` (support@ key `anx_4-H8…`); its **greeting lives in the DB** (`widget_configs.greeting_message`), not in code. Full map + how to change the greeting: `docs/dev-knowledge/website-surface-map.md`.
 
 ### Plan names + prices (repriced 2026-06-15)
 - **Current paid plans**: `chatbot` ($19.99/mo — widget/chat only) · `agent_os` ($99.99/mo — full platform). `free` = internal lapsed/no-subscription state, never sold. Canonical: `backend/services/stripe_service.py` + `ai_usage_guard.PLAN_BASELINE_TOKENS`.
