@@ -48,7 +48,8 @@
   }
 
   var GREETING =
-    "Hi, I'm Nexi, AgentNexLiFy's virtual assistant. How can I help you?";
+    "Hi! I'm the AgentNexLiFy support assistant. Ask me anything about the " +
+    "product, or report an issue and we'll follow up by email.";
 
   var started = false; // any message sent yet?
   var endSent = false;
