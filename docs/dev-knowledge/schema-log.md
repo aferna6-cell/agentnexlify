@@ -1387,3 +1387,16 @@ an unreliable migration-history table). Both pure idempotent `ADD COLUMN IF NOT 
   `chat_messages_os_message_id_uniq` on (tenant_id, os_message_id) WHERE os_message_id IS NOT NULL.
 Verified all 6 objects exist post-apply (information_schema + pg_indexes). 154 was already
 live. Prod schema drift = 0.
+
+## 158_allow_new_plan_names_in_tenants_check
+
+**APPLIED to prod 2026-06-23** via `apply_migration` (project pxserpybmajixqrmzaly).
+The `tenants_plan_check` constraint still only permitted the retired plan names
+(`free`/`growth`/`professional`/`autopilot`/`enterprise`) after the 2026-06-15
+reprice — so the live plans `chatbot` ($19.99) and `agent_os` ($99.99, "AI Workforce")
+could not be written: any Stripe checkout for a new plan would fail the constraint
+and admin SQL upgrades were blocked. DB-layer half of the repricing migration (code
+gates fixed via plan_catalog.PREMIUM_PLANS; see bug-patterns.md 2026-06-23).
+Dropped + re-added the constraint to allow `free, chatbot, agent_os` + the legacy
+names (grandfathered). Verified by setting the Agent Nexlify test account
+(aferna6@g.clemson.edu) to `agent_os` — previously rejected with 23514, now succeeds.
