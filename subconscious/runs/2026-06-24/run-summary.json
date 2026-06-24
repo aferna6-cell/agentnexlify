@@ -1,0 +1,37 @@
+{
+  "run": 65,
+  "date": "2026-06-24",
+  "winner": "Add localStorage detection to post-edit hook (CLAUDE.md invariant #6 gap closure)",
+  "winner_file": "subconscious/runs/2026-06-24/winning-concept.md",
+  "winner_category": "code_health",
+  "effort": "LOW (~8-10 lines bash, one file)",
+  "autonomous_executable": true,
+  "moratorium_active_before": true,
+  "moratorium_active_after": false,
+  "moratorium_exit": true,
+  "governance_corrections": [
+    "GH #308: status pending_approval → implemented (delete_key verified in idempotency.py:96 + stripe_webhooks.py:110)",
+    "GH #292/#293: status pending_approval → implemented (plan_catalog.py, billing_reconciliation.py, sms_rate_limiter.py all correct; api_key_auth.py chatbot exclusion intentional; migration 158 landed)"
+  ],
+  "ideas_evaluated": 5,
+  "ideas": [
+    "idea-1-localstorage-hook.md",
+    "idea-2-ai-human-handoff-prd.md",
+    "idea-3-referral-widget-prompt.md",
+    "idea-4-vercel-deploy-quota.md",
+    "idea-5-vertical-kb-seeding.md"
+  ],
+  "debate_candidates": ["idea-1", "idea-2", "idea-3"],
+  "improvement_backlog": "subconscious/runs/2026-06-24/improvement-backlog.md",
+  "run_66_mandate": "If localStorage hook still unimplemented: AI-to-human handoff PRD (specs/ai-human-handoff_spec.md) via /write-prd + /grill-me",
+  "key_evidence": [
+    "GH #308 IMPLEMENTED (delete_key in idempotency.py:96, stripe_webhooks.py:110)",
+    "GH #292/#293 IMPLEMENTED (plan_catalog.py PREMIUM_PLANS correct; billing_reconciliation.py chatbot:800k+agent_os:5M; sms_rate_limiter.py chatbot capped intentionally per product; migration 158 landed)",
+    "Brain buildable backlog exhausted after #367 (13 verticals)",
+    "3eaf702: post-edit hook covers invariants #1-#4; #6 localStorage uncovered",
+    "Referral pipeline complete through #371 (attribution, admin, notifications, weekly digest)",
+    "Vercel daily deploy quota exhausted per brain note in 5b62a9b"
+  ],
+  "moratorium_duration_runs": 50,
+  "moratorium_duration_note": "Runs 15-65 (50 consecutive moratorium runs)"
+}
