@@ -2041,7 +2041,7 @@
       .addEventListener("click", () => toggleWindow(false));
     document.getElementById("anx-send").addEventListener("click", handleSend);
 
-    // Referral click tracking — fire-and-forget, keepalive so it survives navigation
+    // Referral click tracking - fire-and-forget, keepalive so it survives navigation
     document
       .getElementById("anx-powered")
       .querySelector("a")
