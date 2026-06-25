@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { trackEvent } from "../utils/analytics";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://agentnexlify-production.up.railway.app";
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://agentnexlify-production.up.railway.app";
 // Two-plan model (as of 2026-06-15): chatbot ($19.99/mo) and agent_os ($99.99/mo)
 const PAID_PLANS = new Set(["chatbot", "agent_os"]);
 
@@ -17,7 +19,8 @@ const PLAN_OPTIONS = [
     key: "agent_os",
     name: "AI Workforce",
     price: "$99.99/mo",
-    description: "Everything in AI Front Desk + AI staff, marketing, automations",
+    description:
+      "Everything in AI Front Desk + AI staff, marketing, automations",
     highlight: true,
   },
 ];
@@ -37,14 +40,24 @@ export default function SignupPage() {
   const googleError = searchParams.get("google_error") || "";
   // Persist ref through internal navigation. The watermark link lands visitors
   // on the homepage (?ref=<api_key>), not /signup directly. sessionStorage
-  // (not localStorage — per project rule) bridges the gap for the session.
+  // (not localStorage - per project rule) bridges the gap for the session.
   const urlRef = (searchParams.get("ref") || "").trim().slice(0, 200);
   if (urlRef) {
-    try { sessionStorage.setItem("anx_ref", urlRef); } catch { /* storage unavailable */ }
+    try {
+      sessionStorage.setItem("anx_ref", urlRef);
+    } catch {
+      /* storage unavailable */
+    }
   }
-  const refCode = urlRef || (() => {
-    try { return (sessionStorage.getItem("anx_ref") || "").trim(); } catch { return ""; }
-  })();
+  const refCode =
+    urlRef ||
+    (() => {
+      try {
+        return (sessionStorage.getItem("anx_ref") || "").trim();
+      } catch {
+        return "";
+      }
+    })();
   const fromDemo = searchParams.get("from") === "demo";
   // Vertical toured in the demo - pre-selects the industry so onboarding
   // (FAQs, starters, widget defaults) matches what the visitor just saw.
@@ -148,8 +161,12 @@ export default function SignupPage() {
       const { token, tenant_id } = await res.json();
       localStorage.setItem("anx_token", token);
       localStorage.setItem("anx_tenant_id", tenant_id);
-      // Clear the persisted ref once signup succeeds — no longer needed.
-      try { sessionStorage.removeItem("anx_ref"); } catch { /* ignore */ }
+      // Clear the persisted ref once signup succeeds - no longer needed.
+      try {
+        sessionStorage.removeItem("anx_ref");
+      } catch {
+        /* ignore */
+      }
       trackEvent("sign_up", {
         method: isGoogleSignup ? "google" : "email",
         plan: checkoutPlan,
@@ -170,24 +187,31 @@ export default function SignupPage() {
       }
 
       // Always redirect to Stripe - there is no free tier.
-      const checkoutRes = await fetch(`${API_BASE}/api/v1/auth/billing/checkout`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const checkoutRes = await fetch(
+        `${API_BASE}/api/v1/auth/billing/checkout`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ plan: checkoutPlan }),
         },
-        body: JSON.stringify({ plan: checkoutPlan }),
-      });
+      );
 
       const checkoutData = await checkoutRes.json().catch(() => ({}));
       if (checkoutRes.ok && checkoutData.checkout_url) {
-        trackEvent("begin_checkout", { event_label: "signup_redirect", plan: checkoutPlan });
+        trackEvent("begin_checkout", {
+          event_label: "signup_redirect",
+          plan: checkoutPlan,
+        });
         window.location.href = checkoutData.checkout_url;
         return;
       }
       // Checkout failed - show error, never drop them into the app unpaid.
       throw new Error(
-        checkoutData.detail || "Checkout unavailable. Please try again or contact support."
+        checkoutData.detail ||
+          "Checkout unavailable. Please try again or contact support.",
       );
     } catch (err) {
       setError(err.message);
@@ -203,7 +227,9 @@ export default function SignupPage() {
       const params = new URLSearchParams({ mode: "signup" });
       if (checkoutPlan) params.set("plan", checkoutPlan);
 
-      const res = await fetch(`${API_BASE}/api/v1/auth/google/url?${params.toString()}`);
+      const res = await fetch(
+        `${API_BASE}/api/v1/auth/google/url?${params.toString()}`,
+      );
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.auth_url) {
         throw new Error(data.detail || "Google sign-up is not available yet");
@@ -235,7 +261,13 @@ export default function SignupPage() {
 
         {/* Plan chooser - required, shown before account details */}
         <div style={{ marginBottom: "1.5rem" }}>
-          <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "0.6rem" }}>
+          <p
+            style={{
+              fontSize: "0.8rem",
+              color: "var(--text-muted)",
+              marginBottom: "0.6rem",
+            }}
+          >
             Select a plan:
           </p>
           <div style={{ display: "flex", gap: 10 }}>
@@ -247,22 +279,43 @@ export default function SignupPage() {
                 style={{
                   flex: 1,
                   padding: "10px 12px",
-                  border: checkoutPlan === plan.key
-                    ? "2px solid #6366f1"
-                    : "1px solid rgba(255,255,255,0.15)",
+                  border:
+                    checkoutPlan === plan.key
+                      ? "2px solid #6366f1"
+                      : "1px solid rgba(255,255,255,0.15)",
                   borderRadius: 10,
-                  background: checkoutPlan === plan.key
-                    ? "rgba(99,102,241,0.15)"
-                    : "rgba(255,255,255,0.04)",
+                  background:
+                    checkoutPlan === plan.key
+                      ? "rgba(99,102,241,0.15)"
+                      : "rgba(255,255,255,0.04)",
                   color: "var(--text-primary, #e2e8f0)",
                   cursor: "pointer",
                   textAlign: "left",
                   transition: "border-color 0.15s",
                 }}
               >
-                <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>{plan.name}</div>
-                <div style={{ color: "#a5b4fc", fontWeight: 700, fontSize: "0.9rem", margin: "2px 0" }}>{plan.price}</div>
-                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", lineHeight: 1.3 }}>{plan.description}</div>
+                <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>
+                  {plan.name}
+                </div>
+                <div
+                  style={{
+                    color: "#a5b4fc",
+                    fontWeight: 700,
+                    fontSize: "0.9rem",
+                    margin: "2px 0",
+                  }}
+                >
+                  {plan.price}
+                </div>
+                <div
+                  style={{
+                    fontSize: "0.72rem",
+                    color: "var(--text-muted)",
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {plan.description}
+                </div>
               </button>
             ))}
           </div>
@@ -275,19 +328,60 @@ export default function SignupPage() {
               className="login-btn"
               onClick={handleGoogleSignup}
               disabled={loading || googleLoading}
-              style={{ marginBottom: "1rem", background: "#fff", color: "#111827", border: "1px solid rgba(255,255,255,0.18)" }}
+              style={{
+                marginBottom: "1rem",
+                background: "#fff",
+                color: "#111827",
+                border: "1px solid rgba(255,255,255,0.18)",
+              }}
             >
-              {googleLoading ? "Redirecting to Google..." : "Sign up with Google"}
+              {googleLoading
+                ? "Redirecting to Google..."
+                : "Sign up with Google"}
             </button>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem", color: "var(--text-muted)", fontSize: "0.85rem" }}>
-              <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                marginBottom: "1rem",
+                color: "var(--text-muted)",
+                fontSize: "0.85rem",
+              }}
+            >
+              <span
+                style={{
+                  flex: 1,
+                  height: 1,
+                  background: "rgba(255,255,255,0.08)",
+                }}
+              />
               <span>or continue with email</span>
-              <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+              <span
+                style={{
+                  flex: 1,
+                  height: 1,
+                  background: "rgba(255,255,255,0.08)",
+                }}
+              />
             </div>
           </>
         ) : (
-          <div style={{ marginBottom: "1rem", padding: "0.875rem 1rem", borderRadius: 12, background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.25)", color: "var(--text-secondary)" }}>
-            Using Google account <strong style={{ color: "var(--text-primary)" }}>{googleEmail}</strong>. One more field and you're in.
+          <div
+            style={{
+              marginBottom: "1rem",
+              padding: "0.875rem 1rem",
+              borderRadius: 12,
+              background: "rgba(59,130,246,0.12)",
+              border: "1px solid rgba(59,130,246,0.25)",
+              color: "var(--text-secondary)",
+            }}
+          >
+            Using Google account{" "}
+            <strong style={{ color: "var(--text-primary)" }}>
+              {googleEmail}
+            </strong>
+            . One more field and you're in.
           </div>
         )}
         <form onSubmit={handleSubmit}>
@@ -335,12 +429,18 @@ export default function SignupPage() {
                     placeholder="10+ characters"
                     minLength={10}
                     required
-                    style={{ paddingRight: "3.5rem", width: "100%", boxSizing: "border-box" }}
+                    style={{
+                      paddingRight: "3.5rem",
+                      width: "100%",
+                      boxSizing: "border-box",
+                    }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((s) => !s)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                     style={{
                       position: "absolute",
                       right: 10,
@@ -357,14 +457,25 @@ export default function SignupPage() {
                     {showPassword ? "Hide" : "Show"}
                   </button>
                 </div>
-                <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.35rem" }}>
-                  At least 10 characters with an uppercase letter, a lowercase letter, and a number.
+                <p
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--text-muted)",
+                    marginTop: "0.35rem",
+                  }}
+                >
+                  At least 10 characters with an uppercase letter, a lowercase
+                  letter, and a number.
                 </p>
               </div>
             </>
           )}
           {error && <div className="login-error">{error}</div>}
-          <button type="submit" className="login-btn" disabled={loading || googleLoading}>
+          <button
+            type="submit"
+            className="login-btn"
+            disabled={loading || googleLoading}
+          >
             {submitLabel}
           </button>
           <p className="login-legal-note">

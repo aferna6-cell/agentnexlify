@@ -3,7 +3,7 @@
  * migration 135). Sharing the link attributes the new signup via
  * backend/services/referral.py.
  *
- * Data comes from GET /api/v1/referral/my-stats (live) — never from
+ * Data comes from GET /api/v1/referral/my-stats (live) - never from
  * stale JWT claims. Architecture decision: JWT is auth identity only.
  */
 import { useState, useEffect } from "react";
@@ -32,7 +32,9 @@ export default function ReferralCard() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
   const copy = async () => {
@@ -57,10 +59,19 @@ export default function ReferralCard() {
           borderRadius: 12,
         }}
       >
-        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)", letterSpacing: 1.2 }}>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: "var(--accent)",
+            letterSpacing: 1.2,
+          }}
+        >
           REFER A BUSINESS
         </div>
-        <div style={{ marginTop: 12, color: "var(--text-muted)", fontSize: 13 }}>
+        <div
+          style={{ marginTop: 12, color: "var(--text-muted)", fontSize: 13 }}
+        >
           Loading referral link...
         </div>
       </div>
@@ -78,10 +89,19 @@ export default function ReferralCard() {
           borderRadius: 12,
         }}
       >
-        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)", letterSpacing: 1.2 }}>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: "var(--accent)",
+            letterSpacing: 1.2,
+          }}
+        >
           REFER A BUSINESS
         </div>
-        <div style={{ marginTop: 12, color: "var(--text-muted)", fontSize: 13 }}>
+        <div
+          style={{ marginTop: 12, color: "var(--text-muted)", fontSize: 13 }}
+        >
           Could not load referral link. Refresh to try again.
         </div>
       </div>
@@ -100,16 +120,43 @@ export default function ReferralCard() {
         borderRadius: 12,
       }}
     >
-      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)", letterSpacing: 1.2 }}>
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 600,
+          color: "var(--accent)",
+          letterSpacing: 1.2,
+        }}
+      >
         REFER A BUSINESS
       </div>
-      <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)", margin: "6px 0" }}>
+      <div
+        style={{
+          fontSize: 16,
+          fontWeight: 600,
+          color: "var(--text-primary)",
+          margin: "6px 0",
+        }}
+      >
         Know another business owner who could use an AI staff?
       </div>
-      <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 14 }}>
+      <div
+        style={{
+          fontSize: 13,
+          color: "var(--text-secondary)",
+          marginBottom: 14,
+        }}
+      >
         Share your link - signups through it are credited to your account.
       </div>
-      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
         <code
           style={{
             padding: "10px 14px",
@@ -124,7 +171,11 @@ export default function ReferralCard() {
         >
           {stats.share_link}
         </code>
-        <button className="btn-secondary" onClick={copy} style={{ padding: "10px 20px" }}>
+        <button
+          className="btn-secondary"
+          onClick={copy}
+          style={{ padding: "10px 20px" }}
+        >
           {copied ? "Copied" : "Copy link"}
         </button>
       </div>
