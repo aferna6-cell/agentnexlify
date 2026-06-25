@@ -39,6 +39,12 @@ Total: 30 em-dashes replaced with `-`, widget drift resolved.
 
 None found.
 
+## Deployment status
+
+Fix committed to orphaned branch `nightly-fix-2026-06-25` and pushed to origin.
+
+**Action required:** PR auto-creation blocked — pre-commit hook `require-tests-for-pr.sh` runs the full backend test suite, which requires Python deps (`slowapi`, `http-ece`, etc.) not installed in the remote execution environment. Our changes touch zero backend code; failures are environmental. **Merge the branch manually or create the PR at:** https://github.com/aferna6-cell/agentnexlify/compare/nightly-fix-2026-06-25
+
 ## Summary
 
-5 commits reviewed — all LOW risk (docs, state, revert). Pre-commit Check 13 was blocked since PRs #368-371 merged. Fix implemented and committed. All invariants green.
+5 commits reviewed — all LOW risk (docs, state, revert). Pre-commit Check 13 was blocked since PRs #368-371 merged. Fix implemented and pushed. All 6 invariants green. Manual PR merge needed.
