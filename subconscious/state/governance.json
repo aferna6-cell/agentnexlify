@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-06-24-pm",
-  "total_runs": 65,
+  "last_run": "2026-06-25",
+  "total_runs": 66,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -16,6 +16,16 @@
   },
   "active_directions": [
     {
+      "title": "Escalate run 65 delivery — add explicit nightly trigger instruction to nightly-commit-review SKILL.md (run 66 mandate)",
+      "date": "2026-06-25",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "autonomous_executable": true,
+      "category": "workflow",
+      "moratorium_override": false,
+      "note": "Run 66 winner. AUTONOMOUS-EXECUTABLE. Run 66 mandate fires: nightly 2026-06-24 (4a80f40) did NOT implement run 65 AUTONOMOUS-EXECUTABLE winner. Gap: nightly-commit-review SKILL.md lacks Step 9B — explicit instruction to check governance.json active_directions[0].autonomous_executable and execute pending autonomous items. Fix: add Step 9B block to .claude/skills/nightly-commit-review/SKILL.md. Nightly reads Step 9B, then immediately executes run 65 steps (cp widget/agentnexlify-widget.js landing-page-v2/widget/; replace 10 em-dash chars in ReferralCard.jsx:6/SignupPage.jsx:40/151/AdminFunnelPage.jsx:15/49/87/122/267/315/440). After both: check_project_invariants.py exits 0. 7/7 prior SKILL.md scope extensions delivered in 1 cycle. Precedent: runs 40/43/50 (all SKILL.md scope extensions, all autonomous). Bonus A: plan-name guard Check 7 (run 67 candidate, AUTONOMOUS-EXECUTABLE, sequenced after run 65 lands). Implementation sketch: subconscious/runs/2026-06-25/winning-concept.md. Run 67 mandate: if check still exits 1 after nightly 2026-06-25, escalate to interactive human execution of run 65 steps — no more meta-fix layers."
+    },
+    {
       "title": "Fix Widget Drift + Em-Dash Violations from referral sprint PRs #368-371 (AUTONOMOUS-EXECUTABLE, run 65 winner)",
       "date": "2026-06-24-pm",
       "confidence": "HIGH",
@@ -23,7 +33,7 @@
       "autonomous_executable": true,
       "category": "code_health",
       "moratorium_override": false,
-      "note": "Run 65 winner. AUTONOMOUS-EXECUTABLE. check_project_invariants.py exits 1 since PRs #368-371 (referral sprint, 2026-06-22/23). Two violation classes: (1) Widget drift: widget/agentnexlify-widget.js != landing-page-v2/widget/agentnexlify-widget.js — fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js. (2) Em-dash violations (10 instances): ReferralCard.jsx:6, SignupPage.jsx:40/151, AdminFunnelPage.jsx (~6 instances lines 15/49/87/122/267/315/440). Pre-commit Check 13 in FAIL+BLOCK mode — blocks all git commits. Same fix class as runs 49 (8db33df), 55 (3234597), 57 (3234597) — all delivered autonomously by nightly review within 1-2 days. Run 66 mandate: if not implemented by run 66, add explicit nightly trigger instruction. Bonus A: plan-name invariant guard Check 7 (AUTONOMOUS-EXECUTABLE, sequenced after this). Bonus B: AI-to-Human Handoff v1 (M-effort, human required, run 66-68 candidate). Implementation sketch: subconscious/runs/2026-06-24-pm/winning-concept.md."
+      "note": "Run 65 winner. AUTONOMOUS-EXECUTABLE. check_project_invariants.py exits 1 since PRs #368-371 (referral sprint, 2026-06-22/23). Two violation classes: (1) Widget drift: widget/agentnexlify-widget.js != landing-page-v2/widget/agentnexlify-widget.js — fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js. (2) Em-dash violations (10 instances): ReferralCard.jsx:6, SignupPage.jsx:40/151, AdminFunnelPage.jsx (~6 instances lines 15/49/87/122/267/315/440). Pre-commit Check 13 in FAIL+BLOCK mode — blocks all git commits. Run 66 mandate FIRED (2026-06-25): nightly 2026-06-24 did not implement → run 66 winner adds explicit nightly trigger instruction (Step 9B to SKILL.md). Implementation sketch: subconscious/runs/2026-06-24-pm/winning-concept.md. Bonus A: plan-name invariant guard Check 7 (AUTONOMOUS-EXECUTABLE, sequenced after this). Bonus B: AI-to-Human Handoff v1 (M-effort, human required)."
     },
     {
       "title": "Fix GH #292/#293 — Wire chatbot/agent_os into plan-name dicts (sms_rate_limiter + api_key_auth + billing_reconciliation, run 62 winner)",
@@ -485,6 +495,13 @@
   ],
   "ideas_explored": [
     {
+      "title": "Escalate run 65 delivery — add explicit nightly trigger instruction to nightly-commit-review SKILL.md (run 66 mandate)",
+      "date": "2026-06-25",
+      "status": "recommended",
+      "run": 66,
+      "note": "Run 66 winner. Run 66 mandate fires: nightly 2026-06-24 did not implement run 65 AUTONOMOUS-EXECUTABLE winner (widget drift + 10 em-dashes). Fix: add Step 9B to nightly-commit-review SKILL.md (explicit instruction to check governance.json autonomous_executable and execute). In same nightly run: nightly executes run 65 fix steps. 7/7 prior SKILL.md scope extensions delivered in 1 cycle. Confidence HIGH. check_project_invariants.py still exits 1, blocking all commits. Bonus A: plan-name guard Check 7 (run 67 candidate). Run 67 mandate: if still exits 1, escalate to interactive human execution."
+    },
+    {
       "title": "Fix Widget Drift + Em-Dash Violations from referral sprint PRs #368-371 (AUTONOMOUS-EXECUTABLE)",
       "date": "2026-06-24-pm",
       "status": "recommended",
@@ -925,13 +942,13 @@
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 17,
-    "runs_pending_approval_raw": 17,
-    "runs_pending_approval_note": "Run 65 (2026-06-24-pm): Both alternating mandate winners IMPLEMENTED 2026-06-23 — GH #308 (commit 3a958e5f) and GH #292/#293 (commits 57f2bb4d, 29ed1d43). Governance corrections applied: run 30 → moot, run 28 → superseded, run 35 → superseded. true_pending estimate drops from ~9 to ~5 (runs 4/20/21/29/38/41 + run 65 new winner). Moratorium still active (5 > max_pending_approvals:2). Run 65 winner: Fix Widget Drift + Em-Dash Violations (AUTONOMOUS-EXECUTABLE). Pre-commit Check 13 blocking all commits since PRs #368-371. True human-required pending: run 4/38 (AI-to-Human Handoff), run 41 (email_sequences split).",
+    "runs_pending_approval": 18,
+    "runs_pending_approval_raw": 18,
+    "runs_pending_approval_note": "Run 66 (2026-06-25): Run 66 mandate fired — nightly 2026-06-24 did not implement run 65 AUTONOMOUS-EXECUTABLE winner. Run 66 winner adds explicit nightly trigger Step 9B to SKILL.md + inline run 65 execution. true_pending estimate ~6 (runs 4/20/21/29/38/41/65/66 → both 65+66 are AUTONOMOUS-EXECUTABLE, nightly delivers together). Moratorium still active (6 > max_pending_approvals:2). True human-required pending: run 4/38 (AI-to-Human Handoff, day 70), run 41 (email_sequences split), runs 20/21/29/42/50 (cleanup sprint).",
     "runs_implemented": 21,
-    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 69 as of 2026-06-24)",
-    "governance_correction": "Run 65 (2026-06-24-pm): GH #308 IMPLEMENTED (commit 3a958e5f, 2026-06-23). GH #292/#293 IMPLEMENTED (commits 57f2bb4d, 29ed1d43, 2026-06-23). Alternating mandate mechanism (runs 59-64) dissolved. Run 30 (Billing Constants) → moot (2-plan repricing, test_plan_gating_new_plans.py supersedes). Run 28 (Invoke /moratorium-sprint) → superseded (all sprint items resolved individually). Run 35 (email_sequences first framing) → superseded by run 41. runs_implemented 19→21. true_pending estimate ~5 (was ~9). Run 65 winner: Fix Widget Drift + Em-Dash Violations (AUTONOMOUS-EXECUTABLE) — pre-commit Check 13 blocking all commits since referral sprint PRs #368-371. Moratorium remains active (true_pending 5 > threshold 2). Moratorium exit path: AI-to-Human Handoff (run 4/38, ~1 day human) + email_sequences split (run 41, ~2h human) drops to ~3; cleanup sprint (runs 20/21/29/42/50, ~1h) drops to ≤2.",
-    "note": "Moratorium exit path after run 65: true pending ~5 (runs 4/20/21/29/38/41 + run 65). Run 65 winner AUTONOMOUS-EXECUTABLE — nightly review delivers. Next milestones: (1) nightly implements run 65 → check_project_invariants exits 0; (2) add plan-name guard Check 7 (Bonus A, AUTONOMOUS-EXECUTABLE); (3) AI-to-Human Handoff v1 (run 4/38, human required, highest customer-value pending); (4) email_sequences split (run 41, human required); (5) cleanup sprint → moratorium exits.",
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 70 as of 2026-06-25)",
+    "governance_correction": "Run 66 (2026-06-25): No new governance corrections this run. Run 65 active_direction note updated to record run 66 mandate fired. Run 66 winner added to active_directions and ideas_explored.",
+    "note": "Moratorium exit path after run 66: (1) nightly 2026-06-25 implements run 66 SKILL.md edit + run 65 fix → check exits 0, commits unblocked; (2) run 67: add plan-name guard Check 7 (Bonus A, AUTONOMOUS-EXECUTABLE); (3) AI-to-Human Handoff v1 (run 4/38, human required, highest customer-value pending, day 70); (4) email_sequences split (run 41, human required); (5) cleanup sprint (runs 20/21/29/42/50, ~1h) → true pending ≤2 → moratorium exits. Run 67 mandate: if check still exits 1 after nightly 2026-06-25, escalate to interactive human execution of run 65 steps.",
     "escalate": true
   },
   "config": {
