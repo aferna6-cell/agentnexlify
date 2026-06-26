@@ -23,6 +23,7 @@ import re
 
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.os_actions.base import ActionContext, ActionResult, ActionSpec
+from backend.services import sms_compliance
 from backend.services.twilio_service import send_sms
 from backend.services.twilio_tenant import is_connected as twilio_is_connected
 from backend.services.twilio_tenant import send_sms_via_tenant
@@ -218,6 +219,21 @@ async def _run(ctx: ActionContext) -> ActionResult:
             status="failed",
             request_payload=payload,
             error_detail={"stage": "validate", "message": "empty sms body"},
+        )
+
+    # TCPA: never text a recipient who opted out (STOP). Gate every send path.
+    if sms_compliance.is_suppressed(ctx.db, ctx.client_id, to):
+        logger.info(
+            "os_action_sms: suppressed send to opted-out recipient client_id=%s",
+            ctx.client_id,
+        )
+        return ActionResult(
+            status="failed",
+            request_payload={"to": to},
+            error_detail={
+                "stage": "compliance",
+                "message": "recipient has opted out of SMS (STOP)",
+            },
         )
 
     provider = _pick_provider(ctx.client_id)

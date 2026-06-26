@@ -1400,3 +1400,13 @@ gates fixed via plan_catalog.PREMIUM_PLANS; see bug-patterns.md 2026-06-23).
 Dropped + re-added the constraint to allow `free, chatbot, agent_os` + the legacy
 names (grandfathered). Verified by setting the Agent Nexlify test account
 (aferna6@g.clemson.edu) to `agent_os` — previously rejected with 23514, now succeeds.
+
+## 160_sms_opt_outs
+
+**APPLIED to prod 2026-06-25** via `apply_migration` (project pxserpybmajixqrmzaly).
+Durable per-tenant SMS opt-out ledger for TCPA compliance. `client_id` +
+`phone_last10` (normalized last-10) with UNIQUE(client_id, phone_last10) and a
+lookup index. Checked by `sms_compliance.is_suppressed()` before every outbound
+SMS (AI Workforce sms.send + missed-call text-back). Inbound STOP now records
+here durably (os_inbound.py), beyond the existing leads.unsubscribed flag.
+See docs/dev-knowledge/council-fixes-register.md #1.

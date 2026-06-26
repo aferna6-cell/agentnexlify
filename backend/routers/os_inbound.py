@@ -35,6 +35,7 @@ from backend.services import (
     inbound_sms_verify,
     os_inbound_bridge,
     os_sms_approval,
+    sms_compliance,
 )
 
 logger = logging.getLogger(__name__)
@@ -349,6 +350,11 @@ async def inbound_sms_webhook(
 
     if is_stop and from_number:
         _flip_lead_unsubscribed(db, client_id, from_number)
+        # Durable opt-out so suppression is honored even for non-lead numbers.
+        sms_compliance.record_opt_out(db, client_id, from_number, source="sms_stop")
+    elif from_number and sms_compliance.classify_inbound(body_text) == "opt_in":
+        # START / UNSTOP — re-subscribe.
+        sms_compliance.record_opt_in(db, client_id, from_number)
 
     sender_metadata = {
         "from": from_number,

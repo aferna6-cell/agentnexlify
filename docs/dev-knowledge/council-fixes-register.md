@@ -6,7 +6,7 @@ Status legend: TODO / IN-PROGRESS / DONE / OPS (needs business/console action, n
 
 | # | Issue | Severity | Status | Where |
 |---|-------|----------|--------|-------|
-| 1 | **SMS compliance guardrails** — no STOP/opt-out, consent ledger, or quiet hours on the SMS path (TCPA $500–1500/text). | CRITICAL / legal | IN-PROGRESS | `os_actions/sms.py`, `twilio_webhooks.py`, `os_inbound.py`, new `sms_compliance.py`, migration 160 |
+| 1 | **SMS compliance guardrails** — no STOP/opt-out, consent ledger, or quiet hours on the SMS path (TCPA $500–1500/text). | CRITICAL / legal | DONE | `os_actions/sms.py`, `twilio_webhooks.py`, `os_inbound.py`, new `sms_compliance.py`, migration 160 |
 | 2 | **Missed-call text-back never run in prod** (0 sends); 10DLC/A2P registration dependency. | HIGH | OPS + verify | `voice_recovery.py`, Twilio console (10DLC) |
 | 3 | **Crawl-the-site onboarding wow + GBP/Facebook fallback** for no-website businesses. | HIGH (activation) | TODO | onboarding/crawl + new fallback |
 | 4 | **Money-language dashboard** — leads captured / pipeline $ / missed-calls recovered; conversation "score" → temperature (🔥/👀/spam). | HIGH (value perception) | TODO | `frontend/src/pages/Dashboard.jsx` + lead card |
