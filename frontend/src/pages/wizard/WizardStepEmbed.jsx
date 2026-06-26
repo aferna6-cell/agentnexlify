@@ -179,7 +179,7 @@ export default function WizardStepEmbed({ wizardData, token, tenantId }) {
       </div>
 
       <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.85rem", margin: 0 }}>
-        Your 8 AI department heads are ready - ask them anything about running {wizardData.business_name || "your business"}.
+        Your AI office manager is ready - ask it anything about running {wizardData.business_name || "your business"}.
       </p>
     </div>
   );

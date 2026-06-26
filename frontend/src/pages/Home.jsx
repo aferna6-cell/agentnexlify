@@ -713,18 +713,18 @@ export default function Home() {
             <div className="lp-compare-card lp-compare-card-accent reveal">
               <div className="lp-compare-card-label">AI Workforce</div>
               <p className="lp-compare-card-desc">
-                Eight AI agents. One manager. Everything your business needs
-                to run.
+                An AI office manager that runs the busywork for you, so you
+                can run the business.
               </p>
               <ul className="lp-compare-list">
-                <li>Sales Agent</li>
-                <li>Marketing Agent</li>
-                <li>Customer Support Agent</li>
-                <li>Operations Agent</li>
-                <li>Finance Agent</li>
-                <li>HR Agent</li>
-                <li>Knowledge Agent</li>
-                <li>Executive Assistant</li>
+                <li>Follows up with every lead</li>
+                <li>Runs your marketing &amp; social</li>
+                <li>Answers customer questions</li>
+                <li>Keeps your calendar booked</li>
+                <li>Chases unpaid invoices</li>
+                <li>Drafts quotes &amp; documents</li>
+                <li>Handles routine admin</li>
+                <li>You approve before anything sends</li>
               </ul>
               <div className="lp-compare-footer">Grow into it.</div>
             </div>
@@ -823,7 +823,7 @@ export default function Home() {
             <div className="lp-pricing-card popular reveal">
               <div className="lp-pricing-plan-name">AI Workforce</div>
               <div className="lp-pricing-tagline">
-                One orchestrator directing a team of 8 AI agents.
+                An AI office manager that runs the busywork for you.
               </div>
               <div className="lp-pricing-amount">
                 <span className="lp-pricing-dollar">$99.99</span>
