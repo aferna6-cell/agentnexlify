@@ -1,0 +1,95 @@
+{
+  "run": 68,
+  "date": "2026-06-26",
+  "session": "morning",
+  "duration_estimate": "45 min",
+  "winner": {
+    "title": "30-Second Terminal Fix — verbatim copy-paste commands for human",
+    "category": "code_health",
+    "impact": "HIGH",
+    "effort": "XS (30 seconds of human execution)",
+    "autonomous_executable": false,
+    "requires_human": true,
+    "mandate_source": "subconscious/runs/2026-06-25-pm/winning-concept.md lines 114-118"
+  },
+  "mandate_fired": true,
+  "mandate_description": "Run 67 set: if check_project_invariants.py still exits 1 in run 68, provide verbatim terminal commands for human, 30-second execution, last resort before calendar reminder",
+  "check_exits": 1,
+  "consecutive_failures": 4,
+  "check_failures": [
+    "widget/agentnexlify-widget.js != landing-page-v2/widget/agentnexlify-widget.js",
+    "10 em-dash (U+2014) violations: ReferralCard.jsx:6, SignupPage.jsx:40/151, AdminFunnelPage.jsx:15/49/87/122/267/315/440"
+  ],
+  "phases_completed": {
+    "phase_1_context": true,
+    "phase_2_evidence": true,
+    "phase_3_ideate": true,
+    "phase_4_debate": true,
+    "phase_5_synthesize": true,
+    "phase_6_persist": true,
+    "phase_7_commit": false,
+    "phase_8_notify": false
+  },
+  "ideas": [
+    {
+      "id": 1,
+      "title": "30-Second Terminal Fix (mandate)",
+      "verdict": "WINNER"
+    },
+    {
+      "id": 2,
+      "title": "Plan-name guard Check 7",
+      "verdict": "SURVIVES (parking lot, sequencing-blocked)"
+    },
+    {
+      "id": 3,
+      "title": "KB autopopulate fix",
+      "verdict": "PARKING LOT (not debated)"
+    },
+    {
+      "id": 4,
+      "title": "OPS council GH issues",
+      "verdict": "WEAKENED (scope reduced: OPS #2 only)"
+    },
+    {
+      "id": 5,
+      "title": "email_sequences.py split",
+      "verdict": "PARKING LOT (not debated)"
+    }
+  ],
+  "moratorium_active": true,
+  "true_pending_estimate": 6,
+  "council_sprint_evidence": {
+    "fixes_shipped": 9,
+    "period": "2026-06-25",
+    "key_additions": [
+      "TCPA SMS compliance (sms_compliance.py, migration 160)",
+      "Lead temperature badge",
+      "Integration health banner",
+      "Record audit trail",
+      "No-website onboarding",
+      "Outcome-focused copy"
+    ],
+    "ops_untracked": [
+      "10DLC/A2P registration (code ready)",
+      "Self-serve wizard GTM process"
+    ]
+  },
+  "governance_changes": {
+    "total_runs": 68,
+    "last_run": "2026-06-26",
+    "new_active_directions": 1,
+    "note": "Run 68 direction prepended to active_directions"
+  },
+  "artifacts": [
+    "subconscious/runs/2026-06-26/ideas/idea-01-30sec-terminal-fix.md",
+    "subconscious/runs/2026-06-26/ideas/idea-02-plan-name-guard.md",
+    "subconscious/runs/2026-06-26/ideas/idea-03-kb-autopopulate-fix.md",
+    "subconscious/runs/2026-06-26/ideas/idea-04-ops-council-gh-issues.md",
+    "subconscious/runs/2026-06-26/ideas/idea-05-email-sequences-split.md",
+    "subconscious/runs/2026-06-26/debate/debate-log.md",
+    "subconscious/runs/2026-06-26/winning-concept.md",
+    "subconscious/runs/2026-06-26/improvement-backlog.md",
+    "subconscious/runs/2026-06-26/run-summary.json"
+  ]
+}
