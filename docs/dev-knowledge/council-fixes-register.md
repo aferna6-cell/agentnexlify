@@ -10,7 +10,7 @@ Status legend: TODO / IN-PROGRESS / DONE / OPS (needs business/console action, n
 | 2 | **Missed-call text-back never run in prod** (0 sends); 10DLC/A2P registration dependency. | HIGH | OPS + verify | `voice_recovery.py`, Twilio console (10DLC) |
 | 3 | **Crawl-the-site onboarding wow + GBP/Facebook fallback** for no-website businesses. | HIGH (activation) | TODO | onboarding/crawl + new fallback |
 | 4 | **Money-language dashboard** — leads captured / pipeline $ / missed-calls recovered; conversation "score" → temperature (🔥/👀/spam). | HIGH (value perception) | TODO | `frontend/src/pages/Dashboard.jsx` + lead card |
-| 5 | **Per-recipient SMS frequency cap** (margin + anti-spam on $19.99 tier). | MED | TODO | `sms_compliance.py` / `sms_rate_limiter.py` |
+| 5 | **Per-recipient SMS frequency cap** (margin + anti-spam on $19.99 tier). | MED | DONE | `sms_compliance.recently_messaged` + `twilio_webhooks.py` |
 | 6 | **Integration health alerts** — OAuth lapse / widget-not-firing surfaced to owner, not swallowed. | MED | TODO | `tenant_health.py`, connection-status UI |
 | 7 | **Propose-only data cleaning** — never auto-merge/auto-edit customer or financial records; review queue + audit + rollback. | MED (trust) | TODO (design) | data-clean feature (not yet built) |
 | 8 | **Positioning: hide "8 agents", sell outcomes** — "Never Miss a Lead" (T1) / "AI Office Manager" (T2). | MED (GTM) | OPS + copy | frontend copy, marketing |
