@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-06-25-pm",
-  "total_runs": 67,
+  "last_run": "2026-06-26-pm",
+  "total_runs": 68,
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -15,6 +15,17 @@
     "note": "Run 9 correction: Lead Source Analytics (run 2) already implemented in AnalyticsPage.jsx — pending_approvals corrected 5→4. Moratorium still active. Run 10 (2026-04-30): same winner confirmed — JS Silent Catch still oldest pending. New finding: check_project_invariants.py (run 8 winner) fails on em-dash violations in WizardStepAutoKB.jsx:140/172/254 — wiring blocked until em-dash fixed first. Run 11 (2026-04-30-pm): GOVERNANCE CORRECTION — original MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a. New violation cluster AdminAnalyticsPage.jsx:117-122 (6 instances). Pre-commit Check 9 still never added. Golden eval harness added but not wired to CI. Run 12 (2026-05-01): CRITICAL FINDING — pre-commit has 9 existing checks, Check 9 = 'dropped conversations.messages queries'. JS Silent Catch guard is Check 10 (not 9 as cited in runs 9-11 — numbering error now corrected). Nightly review 2026-05-01 INCORRECTLY reported em-dash blocker as stale — direct check_project_invariants.py run shows 9 violations: WizardStepAutoKB.jsx:2/140/172/254 + AutomationActivityCard.jsx:156/172/188/251/389 (5 new from 90ba1c5). Em-dash check needs scoping fix (skip .jsx/.tsx) as prerequisite for run 8. Issues #109 (AdminAnalyticsPage) + #110 (eval harness CI) opened by nightly review. Run 13 (2026-05-04): Repo idle 48h. AdminAnalyticsPage.jsx:117-122 confirmed 6 violations on live check. Email sequences N+1 opened (GH #112/#113). California AI companion/chatbot laws (SB 243 + Perkins Coie) added to KB. Em-dash blocker still active. New parking lot: email N+1 (ROI 2.3), extract _process_pending_sends (ROI 1.8), CA companion disclosure audit (ROI 1.6). Run 14 (2026-05-05-pm): MORATORIUM LIFTED — 72f8204 implemented run 13 winner (JS silent catch guard + AdminAnalyticsPage fix). Em-dash blocker also cleared (8f680e8). SettingsPage.jsx split done (27e06f0, parking lot ROI 1.9). check_project_invariants.py passes all 6 checks. New winner: Wire golden eval harness to CI (ROI 2.5). Bonus: wire check_project_invariants.py (run 8 unblocked). Pending: 3 (runs 4, 7, 8)."
   },
   "active_directions": [
+    {
+      "title": "Deliver 30-Second Terminal Command Block to Unblock Pre-Commit (run 68 winner, mandate fires 4th consecutive run)",
+      "date": "2026-06-26-pm",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "autonomous_executable": false,
+      "requires_human": true,
+      "category": "code_health",
+      "moratorium_override": false,
+      "note": "Run 68 winner. HUMAN-REQUIRED. Mandate fires: check_project_invariants.py exits 1 for 4th consecutive subconscious run (65/66/67/68). Pre-commit Check 13 FAIL+BLOCK since 2026-06-23. Three prior delivery attempts exhausted: nightly run 65 (cp not in nightly scope), nightly run 66 (editing existing SKILL.md not in scope), interactive run 67 (human did not execute). Run 68 delivery: push notification + 30-second single-command-line paste. Terminal block: 'cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js && sed -i s/—/-/g frontend/src/components/billing/ReferralCard.jsx frontend/src/pages/SignupPage.jsx frontend/src/pages/AdminFunnelPage.jsx && python3 scripts/check_project_invariants.py && git add -A && git commit -m fix: widget drift + em-dash violations (run 65 mandate — pre-commit blocked since 2026-06-23)'. Run 69 mandate: if still exits 1, escalate to calendar reminder. Implementation sketch: subconscious/runs/2026-06-26-pm/winning-concept.md."
+    },
     {
       "title": "Execute Run 65 Steps + Step 9B in Interactive Human Session (run 67 winner, mandate fires)",
       "date": "2026-06-25-pm",
@@ -955,11 +966,11 @@
   "implementation_lag_warning": {
     "runs_pending_approval": 18,
     "runs_pending_approval_raw": 18,
-    "runs_pending_approval_note": "Run 66 (2026-06-25): Run 66 mandate fired — nightly 2026-06-24 did not implement run 65 AUTONOMOUS-EXECUTABLE winner. Run 66 winner adds explicit nightly trigger Step 9B to SKILL.md + inline run 65 execution. true_pending estimate ~6 (runs 4/20/21/29/38/41/65/66 → both 65+66 are AUTONOMOUS-EXECUTABLE, nightly delivers together). Moratorium still active (6 > max_pending_approvals:2). True human-required pending: run 4/38 (AI-to-Human Handoff, day 70), run 41 (email_sequences split), runs 20/21/29/42/50 (cleanup sprint).",
+    "runs_pending_approval_note": "Run 68 (2026-06-26-pm): Run 68 mandate fired — check_project_invariants.py exits 1 for 4th consecutive subconscious run. Delivery toolkit exhausted: nightly scope miss (runs 65/66), human non-execution (run 67). Run 68 escalates to push notification + 30-second command block. true_pending estimate ~6 (runs 4/20/21/29/38/41/65/66/67/68 with many superseded/implemented — true human-required: run 4/38 AI-to-Human Handoff day 71, run 41 email_sequences split, runs 20/21/29/42/50 cleanup sprint). Moratorium still active (6 > max_pending_approvals:2). Run 69 mandate: calendar reminder if still exits 1.",
     "runs_implemented": 21,
-    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 70 as of 2026-06-25)",
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 71 as of 2026-06-26)",
     "governance_correction": "Run 66 (2026-06-25): No new governance corrections this run. Run 65 active_direction note updated to record run 66 mandate fired. Run 66 winner added to active_directions and ideas_explored.",
-    "note": "Moratorium exit path after run 66: (1) nightly 2026-06-25 implements run 66 SKILL.md edit + run 65 fix → check exits 0, commits unblocked; (2) run 67: add plan-name guard Check 7 (Bonus A, AUTONOMOUS-EXECUTABLE); (3) AI-to-Human Handoff v1 (run 4/38, human required, highest customer-value pending, day 70); (4) email_sequences split (run 41, human required); (5) cleanup sprint (runs 20/21/29/42/50, ~1h) → true pending ≤2 → moratorium exits. Run 67 mandate: if check still exits 1 after nightly 2026-06-25, escalate to interactive human execution of run 65 steps.",
+    "note": "Moratorium exit path after run 68: (1) human pastes 30-second terminal block from run 68 winning-concept.md → check exits 0, pre-commit unblocked; (2) run 69: plan-name guard Check 7 (Bonus A, AUTONOMOUS-EXECUTABLE, nightly delivers); (3) AI-to-Human Handoff v1 (run 4/38, human required, highest customer-value pending, day 71); (4) email_sequences split (run 41, human required); (5) cleanup sprint (runs 20/21/29/42/50, ~1h) → true pending ≤2 → moratorium exits. Run 69 mandate: if check still exits 1, escalate to calendar reminder — subconscious loop has exhausted its delivery toolkit.",
     "escalate": true
   },
   "config": {
