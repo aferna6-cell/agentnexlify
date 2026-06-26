@@ -12,7 +12,7 @@ Status legend: TODO / IN-PROGRESS / DONE / OPS (needs business/console action, n
 | 4 | **Money-language dashboard** — leads captured / pipeline $ / missed-calls recovered; conversation "score" → temperature (🔥/👀/spam). | HIGH (value perception) | DONE | `frontend/src/utils/leadTemperature.js` + LeadsPage/ClientList/LeadDetailDrawer; OverviewCards already outcome-framed |
 | 5 | **Per-recipient SMS frequency cap** (margin + anti-spam on $19.99 tier). | MED | DONE | `sms_compliance.recently_messaged` + `twilio_webhooks.py` |
 | 6 | **Integration health alerts** — OAuth lapse / widget-not-firing surfaced to owner, not swallowed. | MED | DONE | `frontend/src/pages/Dashboard/IntegrationHealthBanner.jsx` consuming existing `/api/v1/integrations/health` |
-| 7 | **Propose-only data cleaning** — never auto-merge/auto-edit customer or financial records; review queue + audit + rollback. | MED (trust) | TODO (design) | data-clean feature (not yet built) |
+| 7 | **Propose-only data cleaning** — never auto-merge/auto-edit customer or financial records; review queue + audit + rollback. | MED (trust) | DONE | rule `propose-only-records.md` + `record_audit.py` snapshot wired into `/merge` |
 | 8 | **Positioning: hide "8 agents", sell outcomes** — "Never Miss a Lead" (T1) / "AI Office Manager" (T2). | MED (GTM) | DONE (copy) | `Home.jsx`, `WizardStepEmbed.jsx` reframed to outcomes |
 | 9 | **Concierge → self-serve guided wizard** (parallel build). | LOW now | OPS/TODO | onboarding wizard |
 
@@ -23,6 +23,7 @@ Status legend: TODO / IN-PROGRESS / DONE / OPS (needs business/console action, n
 - **#9:** business/onboarding-process decision; see ops checklist below.
 - **#4 (DONE):** new `leadTemperature(score)` util maps 0-10 or 0-100 numeric score to 🔥 Ready to book / 👀 Just looking / ❄️ Cold / New(null). Applied in LeadsPage table, ClientList table, LeadDetailDrawer qualifier + score panel. Emoji in these owner-facing badges is an intentional override of `frontend-patterns.md` anti-slop emoji ban — council asked for glanceable temperature for non-technical owners. Dashboard `OverviewCards` already used money/outcome language (Leads Captured, Missed Calls This Week + "auto text-back sent"); pipeline-$ deferred (needs backend deal-value field).
 - **#6 (DONE):** dashboard-level `IntegrationHealthBanner` calls the existing `/api/v1/integrations/health` aggregate and shows a red/amber alert ONLY for connections that were set up and lapsed (detail != "not configured"). Closes the "swallowed lapse" gap without nagging chatbot-tier owners about providers they never connected. Pure `actionableIntegrationAlerts()` filter unit-tested. The richer per-provider view already lived in `IntegrationHealthDashboard.jsx`; this surfaces it proactively.
-- **#3/#7:** real features.
+- **#7 (DONE):** new path-scoped rule `propose-only-records.md` codifies: AI-initiated changes to customer/financial records propose (the existing `/suggestions` approve/dismiss flow), never auto-apply; human-initiated destructive actions (lead `/merge`) are now audited + recoverable. New `backend/services/record_audit.py` snapshots the full deleted lead into `activity_log.metadata` before the delete (`find_deleted_snapshot` reads it back). Reuses existing `activity_log` — no migration. Unit-tested round-trip. Financial records (invoices/Stripe) stay human-edit-only.
+- **#3:** real feature (below).
 
 Updated as fixes land. See git log for commits referencing this register.
