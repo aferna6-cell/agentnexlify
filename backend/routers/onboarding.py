@@ -130,6 +130,18 @@ class AutoKbResponse(BaseModel):
     hours: dict[str, str] = {}
 
 
+class DescribeKbRequest(BaseModel):
+    """Request body for the no-website onboarding fallback.
+
+    The owner types a plain-text description of their business.  Optional
+    Google Business Profile / Facebook URLs are accepted for future enrichment
+    (live API pulling is a future ops step — see backend/services/kb_from_text.py).
+    """
+    description: str = Field(..., min_length=20, max_length=4000)
+    gbp_url: str | None = Field(None, max_length=500)
+    facebook_url: str | None = Field(None, max_length=500)
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -1099,6 +1111,142 @@ Use only information from the website content. Be concise and accurate."""
         custom_instructions=custom_instructions,
         faqs=faqs,
         pages_crawled=pages_crawled,
+        chars_extracted=chars_extracted,
+        services=services,
+        hours=hours,
+    )
+
+
+@router.post("/{tenant_id}/describe-kb", response_model=AutoKbResponse)
+@limiter.limit("5/hour")
+async def describe_kb(
+    request: Request,
+    tenant_id: str,
+    req: DescribeKbRequest,
+    claims: dict = Depends(require_role("owner", "admin")),
+):
+    """Generate KB + FAQs + custom instructions from owner-provided description.
+
+    No-website fallback for tenants (e.g. <$500k local businesses) who only
+    have a Google Business Profile or Facebook page — or nothing at all.
+
+    Live GBP / Facebook API enrichment is a future ops step; today the URLs
+    are captured as context text only and folded into the description fed to
+    Claude.
+    """
+    _verify_tenant(claims, tenant_id)
+
+    from backend.services.url_validation import is_safe_url
+
+    # Validate optional social URLs (SSRF prevention — same rule as auto-kb).
+    # If invalid, reject rather than silently drop so the caller knows.
+    for label, url in (("gbp_url", req.gbp_url), ("facebook_url", req.facebook_url)):
+        if url and not is_safe_url(url):
+            raise HTTPException(
+                status_code=400,
+                detail=f"{label} must be http/https and resolve to a public address",
+            )
+
+    # No JSONB/metadata column on tenants for these URLs today.
+    # Fold them into the description context fed to Claude instead of persisting.
+    extra_context_parts: list[str] = []
+    if req.gbp_url:
+        extra_context_parts.append(f"Google Business Profile: {req.gbp_url}")
+    if req.facebook_url:
+        extra_context_parts.append(f"Facebook Page: {req.facebook_url}")
+    extra_context = "\n".join(extra_context_parts)
+
+    chars_extracted = len(req.description)
+    logger.info(
+        "describe_kb: starting for tenant=%s chars=%d",
+        tenant_id,
+        chars_extracted,
+    )
+
+    # Fetch tenant info for context (same as auto-kb).
+    db = get_service_supabase()
+    tenant = (
+        db.table("tenants")
+        .select("business_name, business_type, city, phone")
+        .eq("id", tenant_id)
+        .single()
+        .execute()
+    )
+    t = tenant.data or {}
+
+    # Truncate description to 15000 chars — same ceiling as auto-kb crawl.
+    content_for_prompt = req.description[:15000]
+
+    # Call Claude via the shared helper.
+    from backend.services.kb_from_text import generate_kb_from_text
+
+    raw = await generate_kb_from_text(
+        tenant_id=tenant_id,
+        business_name=t.get("business_name", "Unknown"),
+        business_type=t.get("business_type", "business"),
+        city=t.get("city", "Unknown"),
+        phone=t.get("phone", "Not provided"),
+        content_for_prompt=content_for_prompt,
+        extra_context=extra_context,
+        operation="onboarding.describe_kb",
+    )
+
+    # Parse — identical logic as auto-kb.
+    knowledge_base, custom_instructions, faqs, services, hours = _parse_auto_kb_response(raw)
+
+    # Fill missing structured fields from vertical preset (same as auto-kb).
+    from backend.services.vertical_presets import get_vertical_preset, get_default_hours_for
+
+    preset = get_vertical_preset(t.get("business_type"))
+    if not services and preset:
+        services = list(preset["services"])
+    default_hours = get_default_hours_for(t.get("business_type"))
+    for day, val in default_hours.items():
+        hours.setdefault(day, val)
+
+    # Persist KB + custom instructions.
+    try:
+        db.table("widget_configs").update({
+            "knowledge_base": knowledge_base,
+            "custom_instructions": custom_instructions,
+        }).eq("tenant_id", tenant_id).execute()
+    except Exception:
+        logger.error(
+            "describe_kb: failed to persist KB for tenant %s", tenant_id, exc_info=True
+        )
+
+    # Persist FAQs.
+    if faqs:
+        try:
+            faq_rows = [
+                {
+                    "tenant_id": tenant_id,
+                    "question": f.question,
+                    "answer": f.answer,
+                    "category": f.category,
+                    "is_active": True,
+                }
+                for f in faqs
+            ]
+            db.table("faq_entries").insert(faq_rows).execute()
+        except Exception:
+            logger.error(
+                "describe_kb: failed to persist FAQs for tenant %s", tenant_id, exc_info=True
+            )
+
+    logger.info(
+        "describe_kb: completed for tenant=%s kb=%d chars, ci=%d chars, faqs=%d",
+        tenant_id,
+        len(knowledge_base),
+        len(custom_instructions),
+        len(faqs),
+    )
+
+    return AutoKbResponse(
+        knowledge_base=knowledge_base,
+        custom_instructions=custom_instructions,
+        faqs=faqs,
+        pages_crawled=0,
         chars_extracted=chars_extracted,
         services=services,
         hours=hours,
