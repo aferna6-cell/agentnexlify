@@ -383,6 +383,15 @@ async def handle_missed_call(request: Request):
         )
         return PlainTextResponse("OK")
 
+    # Frequency cap: one text-back per caller per 24h (margin + anti-spam).
+    if sms_compliance.recently_messaged(get_service_supabase(), tenant_id, caller):
+        logger.info(
+            "Text-back skipped — already texted %s within 24h (tenant %s)",
+            caller,
+            tenant_id,
+        )
+        return PlainTextResponse("OK")
+
     sent_result = await send_sms(to=caller, body=message)
 
     # send_sms returns bool (legacy) or (bool, sms_sid) tuple

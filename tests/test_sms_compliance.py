@@ -43,6 +43,7 @@ class _Chain:
     def select(self, *a, **k): return self
     def eq(self, *a, **k): return self
     def filter(self, *a, **k): return self
+    def gte(self, *a, **k): return self
     def limit(self, *a, **k): return self
 
     def execute(self):
@@ -53,16 +54,32 @@ class _Chain:
         return r
 
 
-def _db(opt_out_rows=None, leads_rows=None, opt_out_raises=False):
+def _db(opt_out_rows=None, leads_rows=None, opt_out_raises=False, mct_rows=None):
     def _table(name):
         if name == "sms_opt_outs":
             return _Chain(data=opt_out_rows, raise_on_execute=opt_out_raises)
         if name == "leads":
             return _Chain(data=leads_rows)
+        if name == "missed_call_texts":
+            return _Chain(data=mct_rows)
         return _Chain()
     db = MagicMock()
     db.table.side_effect = _table
     return db
+
+
+def test_recently_messaged_true_when_recent_row():
+    db = _db(mct_rows=[{"id": "x"}])
+    assert sc.recently_messaged(db, "t1", "+12035550148") is True
+
+
+def test_recently_messaged_false_when_none():
+    db = _db(mct_rows=[])
+    assert sc.recently_messaged(db, "t1", "+12035550148") is False
+
+
+def test_recently_messaged_blank_phone_false():
+    assert sc.recently_messaged(_db(), "t1", "") is False
 
 
 # --- is_suppressed ----------------------------------------------------------

@@ -86,6 +86,10 @@ def _default_not_opted_out(monkeypatch):
         "backend.routers.twilio_webhooks.sms_compliance.is_suppressed",
         lambda *a, **k: False,
     )
+    monkeypatch.setattr(
+        "backend.routers.twilio_webhooks.sms_compliance.recently_messaged",
+        lambda *a, **k: False,
+    )
 
 
 def _wire_tenant_lookup(mock_supabase, tenant: dict | None = TENANT_ROW):
@@ -260,6 +264,31 @@ class TestHandleMissedCallExtensions:
         _patch_sig_verify(monkeypatch)
         monkeypatch.setattr(
             "backend.routers.twilio_webhooks.sms_compliance.is_suppressed",
+            lambda *a, **k: True,
+        )
+        with patch("backend.routers.twilio_webhooks._find_tenant_by_phone") as mock_find, \
+             patch("backend.routers.twilio_webhooks._get_automation") as mock_auto, \
+             patch("backend.routers.twilio_webhooks.send_sms", new_callable=AsyncMock) as mock_sms:
+
+            mock_find.return_value = TENANT_ROW
+            mock_auto.return_value = AUTOMATION_ROW
+
+            resp = client.post(
+                "/api/v1/twilio/missed-call",
+                content=_make_form_body(),
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+
+        assert resp.status_code == 200
+        mock_sms.assert_not_called()
+
+    def test_handle_missed_call_frequency_cap_skips(
+        self, client, mock_supabase, monkeypatch
+    ):
+        """Already texted this caller within 24h → 200 OK, no second SMS."""
+        _patch_sig_verify(monkeypatch)
+        monkeypatch.setattr(
+            "backend.routers.twilio_webhooks.sms_compliance.recently_messaged",
             lambda *a, **k: True,
         )
         with patch("backend.routers.twilio_webhooks._find_tenant_by_phone") as mock_find, \

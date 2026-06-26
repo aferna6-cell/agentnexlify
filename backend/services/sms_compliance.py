@@ -20,6 +20,7 @@ client_id (not tenant_id) — matches the leads/conversations customer tables.
 """
 
 import logging
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -75,6 +76,39 @@ def record_opt_in(db: Any, client_id: str, phone: str) -> None:
         ).execute()
     except Exception:
         logger.warning("record_opt_in failed client=%s", client_id, exc_info=True)
+
+
+def recently_messaged(
+    db: Any, tenant_id: str, phone: str, within_hours: int = 24
+) -> bool:
+    """True if we already sent this caller a text-back within ``within_hours``.
+
+    Per-recipient frequency cap: someone who calls 5 times in an hour gets ONE
+    text-back, not five. Protects margin on the $19.99 tier and avoids looking
+    like a spammer. Fails OPEN (a lookup error allows the send) — this is a
+    quality/cost guard, not a legal one.
+    """
+    if not phone:
+        return False
+    try:
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=within_hours)).isoformat()
+        res = (
+            db.table("missed_call_texts")
+            .select("id")
+            .eq("tenant_id", tenant_id)
+            .eq("from_phone", phone)
+            .eq("status", "sent")
+            .gte("created_at", cutoff)
+            .limit(1)
+            .execute()
+        )
+        return bool(res.data)
+    except Exception:
+        logger.warning(
+            "recently_messaged lookup failed tenant=%s — allowing send", tenant_id,
+            exc_info=True,
+        )
+        return False
 
 
 def is_suppressed(db: Any, client_id: str, phone: str) -> bool:
