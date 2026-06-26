@@ -14,6 +14,7 @@ import { fetchLeadSuggestions, handleLeadSuggestion } from "../utils/api/leads";
 import { fetchTeamMembers } from "../utils/api/team";
 import LeadPipeline, { STAGES } from "./Dashboard/LeadPipeline";
 import LeadDetailDrawer from "./Dashboard/LeadDetailDrawer";
+import { leadTemperature } from "../utils/leadTemperature";
 
 function formatDate(dateStr) {
   if (!dateStr) return "";
@@ -168,8 +169,10 @@ function LeadTable({
               <td>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span className={`lead-tag ${scoreClass(lead.lead_score)}`}>
-                    {lead.lead_score ?? "N/A"} &middot;{" "}
-                    {scoreLabel(lead.lead_score)}
+                    {(() => {
+                      const t = leadTemperature(lead.lead_score);
+                      return t.emoji ? `${t.emoji} ${t.label}` : t.label;
+                    })()}
                   </span>
                   {lead.qualification_recommendation && (
                     <span

@@ -18,6 +18,7 @@ import {
   draftDocument,
   downloadDraftedDocument,
 } from "../../utils/api/managed-agents";
+import { leadTemperature } from "../../utils/leadTemperature";
 
 const STAGE_OPTIONS = [
   { value: "new", label: "New" },
@@ -213,7 +214,7 @@ function QualificationSection({ lead }) {
           <span>
             Intent:{" "}
             <strong style={{ color: "var(--text-primary)" }}>
-              {q.intent_score}/10
+              {(() => { const t = leadTemperature(q.intent_score); return t.emoji ? `${t.emoji} ${t.label}` : t.label; })()}
             </strong>
           </span>
         )}
@@ -221,7 +222,7 @@ function QualificationSection({ lead }) {
           <span>
             Fit:{" "}
             <strong style={{ color: "var(--text-primary)" }}>
-              {q.fit_score}/10
+              {(() => { const t = leadTemperature(q.fit_score); return t.emoji ? `${t.emoji} ${t.label}` : t.label; })()}
             </strong>
           </span>
         )}
@@ -817,12 +818,15 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
           {/* Score (read-only) */}
           <div className="lead-score-display">
             <div>
-              <div className="lead-score-label">Lead Score</div>
+              <div className="lead-score-label">Interest Level</div>
               <div
                 className="lead-score-value"
                 style={{ color: scoreColor(lead.lead_score) }}
               >
-                {lead.lead_score ?? "N/A"} / 100
+                {(() => {
+                  const t = leadTemperature(lead.lead_score);
+                  return t.emoji ? `${t.emoji} ${t.label}` : t.label;
+                })()}
               </div>
             </div>
             <div
@@ -834,12 +838,6 @@ export default function LeadDetailDrawer({ lead, onClose, onSave, onDelete }) {
               }}
             >
               {lead.lead_temperature && temperatureBadge(lead.lead_temperature)}
-              <span
-                className={`lead-tag ${scoreClass(lead.lead_score)}`}
-                style={{ fontSize: 13 }}
-              >
-                {scoreLabel(lead.lead_score)}
-              </span>
             </div>
           </div>
 

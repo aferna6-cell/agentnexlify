@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { fetchClients, changeClientStage } from "../../utils/api/crm";
 import SkeletonLoader from "../../components/SkeletonLoader";
+import { leadTemperature } from "../../utils/leadTemperature";
 
 const STAGES = ["new", "contacted", "appointment_booked", "closed", "lost"];
 
@@ -171,7 +172,7 @@ export default function ClientList({ onNavigate }) {
               <th onClick={() => handleSort("name")}>Name{sortIndicator("name")}</th>
               <th onClick={() => handleSort("email")}>Email{sortIndicator("email")}</th>
               <th onClick={() => handleSort("phone")}>Phone{sortIndicator("phone")}</th>
-              <th onClick={() => handleSort("lead_score")}>Score{sortIndicator("lead_score")}</th>
+              <th onClick={() => handleSort("lead_score")}>Interest{sortIndicator("lead_score")}</th>
               <th onClick={() => handleSort("status")}>Stage{sortIndicator("status")}</th>
               <th onClick={() => handleSort("created_at")}>Last Activity{sortIndicator("created_at")}</th>
             </tr>
@@ -194,7 +195,10 @@ export default function ClientList({ onNavigate }) {
                 <td>{c.phone || "-"}</td>
                 <td>
                   <span className={`score-badge ${scoreLabel(c.lead_score)}`}>
-                    {c.lead_score}
+                    {(() => {
+                      const t = leadTemperature(c.lead_score);
+                      return t.emoji ? `${t.emoji} ${t.label}` : t.label;
+                    })()}
                   </span>
                 </td>
                 <td>
