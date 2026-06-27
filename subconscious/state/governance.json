@@ -1,7 +1,8 @@
 {
   "version": 1,
-  "last_run": "2026-06-26-pm",
-  "total_runs": 68,
+  "last_run": "2026-06-27",
+  "total_runs": 69,
+  "run_70_mandate": "If check_project_invariants.py still exits 1 at run 70: write docs/reminders/widget-drift-URGENT.md, send URGENT push notification, and retire widget drift topic from subconscious permanently. Becomes human-only task. No extensions. No new ideas. No further debate.",
   "frozen_ideas": [],
   "moratorium_config": {
     "moratorium_active": true,
@@ -16,10 +17,24 @@
   },
   "active_directions": [
     {
+      "title": "Hybrid: Step 9B Widget Byte-Sync Exception + Hard Run 70 Deadline (run 69 winner)",
+      "date": "2026-06-27",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "autonomous_executable": false,
+      "requires_human": true,
+      "category": "workflow",
+      "moratorium_override": false,
+      "note": "Run 69 winner. HUMAN-APPROVAL-REQUIRED before nightly runs (before 2:37 AM 2026-06-28). New evidence: nightly 2026-06-27 (ffefe61) proved Step 9B delivers — 10 em-dash violations fixed autonomously. Only failure remaining: widget drift (1 cp command). Recommendation: Add AUTONOMOUS-EXECUTABLE widget byte-sync exception to .claude/skills/nightly-commit-review/SKILL.md Step 9B. Nightly then executes cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js tonight. Hard run 70 deadline: if check still exits 1 at run 70, calendar reminder fires, topic retired from subconscious permanently — no extensions. Alternatively: execute cp manually (30 seconds). Implementation sketch: subconscious/runs/2026-06-27/winning-concept.md. Debate: debate-log.md scored Idea 03 Hybrid 11/12 (vs Idea 01 Calendar 8/12, Idea 02 Step9B-alone 9/12). Mandate from run 68 deferred one run to use proven mechanism; hard stop at run 70 preserves accountability."
+    },
+    {
       "title": "Deliver 30-Second Terminal Command Block to Unblock Pre-Commit (run 68 winner, mandate fires 4th consecutive run)",
       "date": "2026-06-26-pm",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "partially_implemented",
+      "partially_implemented_date": "2026-06-27",
+      "partially_implemented_by": "nightly-commit-2026-06-27 (ffefe61)",
+      "partially_implemented_note": "Em-dash violations (10 instances across 7 files) fixed by ffefe61. Widget drift cp NOT executed — landing-page-v2/ on FORBIDDEN paths list. 1 invariant failure remains. Run 69 winner escalates to Step 9B scope expansion.",
       "autonomous_executable": false,
       "requires_human": true,
       "category": "code_health",
