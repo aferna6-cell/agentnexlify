@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { BASE } from "../utils/api/_client";
 
 // ---------------------------------------------------------------------------
-// Admin-secret pattern — identical to AdminFunnelPage + AdminTenantHealthPage.
+// Admin-secret pattern - identical to AdminFunnelPage + AdminTenantHealthPage.
 // Secret is entered at runtime via window.prompt; never baked into the bundle.
 // ---------------------------------------------------------------------------
 let _adminSecret = "";
@@ -36,7 +36,7 @@ async function apiFetch(path) {
 }
 
 // ---------------------------------------------------------------------------
-// Styling helpers — match existing admin pages
+// Styling helpers - match existing admin pages
 // ---------------------------------------------------------------------------
 const cardStyle = {
   background: "var(--bg-secondary, var(--card-bg))",
@@ -173,7 +173,7 @@ function ReferralTable({ tenants }) {
                 </td>
                 <td style={TD_STYLE}>
                   <span style={{ fontWeight: hasSignups ? 600 : 400 }}>
-                    {t.business_name || "—"}
+                    {t.business_name || "-"}
                   </span>
                 </td>
                 <td style={TD_STYLE}>
@@ -187,7 +187,7 @@ function ReferralTable({ tenants }) {
                       borderRadius: 4,
                     }}
                   >
-                    {t.ref_code || "—"}
+                    {t.ref_code || "-"}
                   </span>
                 </td>
                 <td style={NUM_TD}>{t.total_clicks ?? 0}</td>
@@ -421,7 +421,7 @@ export default function AdminReferralPage() {
                   letterSpacing: "0.05em",
                 }}
               >
-                Tenants — ranked by referred signups
+                Tenants - ranked by referred signups
               </h2>
               <span
                 style={{
