@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-06-27",
-  "total_runs": 69,
+  "last_run": "2026-06-27-pm",
+  "total_runs": 70,
   "run_70_mandate": "If check_project_invariants.py still exits 1 at run 70: write docs/reminders/widget-drift-URGENT.md, send URGENT push notification, and retire widget drift topic from subconscious permanently. Becomes human-only task. No extensions. No new ideas. No further debate.",
   "frozen_ideas": [],
   "moratorium_config": {
@@ -16,6 +16,17 @@
     "note": "Run 9 correction: Lead Source Analytics (run 2) already implemented in AnalyticsPage.jsx — pending_approvals corrected 5→4. Moratorium still active. Run 10 (2026-04-30): same winner confirmed — JS Silent Catch still oldest pending. New finding: check_project_invariants.py (run 8 winner) fails on em-dash violations in WizardStepAutoKB.jsx:140/172/254 — wiring blocked until em-dash fixed first. Run 11 (2026-04-30-pm): GOVERNANCE CORRECTION — original MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a. New violation cluster AdminAnalyticsPage.jsx:117-122 (6 instances). Pre-commit Check 9 still never added. Golden eval harness added but not wired to CI. Run 12 (2026-05-01): CRITICAL FINDING — pre-commit has 9 existing checks, Check 9 = 'dropped conversations.messages queries'. JS Silent Catch guard is Check 10 (not 9 as cited in runs 9-11 — numbering error now corrected). Nightly review 2026-05-01 INCORRECTLY reported em-dash blocker as stale — direct check_project_invariants.py run shows 9 violations: WizardStepAutoKB.jsx:2/140/172/254 + AutomationActivityCard.jsx:156/172/188/251/389 (5 new from 90ba1c5). Em-dash check needs scoping fix (skip .jsx/.tsx) as prerequisite for run 8. Issues #109 (AdminAnalyticsPage) + #110 (eval harness CI) opened by nightly review. Run 13 (2026-05-04): Repo idle 48h. AdminAnalyticsPage.jsx:117-122 confirmed 6 violations on live check. Email sequences N+1 opened (GH #112/#113). California AI companion/chatbot laws (SB 243 + Perkins Coie) added to KB. Em-dash blocker still active. New parking lot: email N+1 (ROI 2.3), extract _process_pending_sends (ROI 1.8), CA companion disclosure audit (ROI 1.6). Run 14 (2026-05-05-pm): MORATORIUM LIFTED — 72f8204 implemented run 13 winner (JS silent catch guard + AdminAnalyticsPage fix). Em-dash blocker also cleared (8f680e8). SettingsPage.jsx split done (27e06f0, parking lot ROI 1.9). check_project_invariants.py passes all 6 checks. New winner: Wire golden eval harness to CI (ROI 2.5). Bonus: wire check_project_invariants.py (run 8 unblocked). Pending: 3 (runs 4, 7, 8)."
   },
   "active_directions": [
+    {
+      "title": "AI-to-Human Handoff v1 — implement via os_outbound_mirror.py infrastructure (run 70 winner, references run 4/38)",
+      "date": "2026-06-27-pm",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "autonomous_executable": false,
+      "requires_human": true,
+      "category": "customer_value",
+      "moratorium_override": false,
+      "note": "Run 70 winner. References run 4 (2026-04-16, 72 days pending) and run 38. Widget drift topic RETIRED per run_70_mandate — first clean winner slot in 6 runs. os_outbound_mirror.py (PR #188, merged 2026-05-27, 152 tests) provides delivery layer for SMS + email. Scope: detect trigger phrases in widget_chat.py ('talk to a person', 'real person', 'human', etc.), write handoff_requests table (migration 155), notify owner via os_outbound_mirror.py SMS+email, acknowledge in chat, add handoff badge to ConversationsPage. Widget 'Request Human' button deferred to v2 (avoids byte-identical sync requirement). Estimated ~1 day (reduced from 1.5-2d by existing delivery layer). Critical gap all 7 industries. Implementation sketch: subconscious/runs/2026-06-27-pm/winning-concept.md. RUN 71 MANDATE: if still pending_approval in run 71, provide copy-paste code blocks for 3 core files."
+    },
     {
       "title": "Hybrid: Step 9B Widget Byte-Sync Exception + Hard Run 70 Deadline (run 69 winner)",
       "date": "2026-06-27",
@@ -532,6 +543,13 @@
   ],
   "ideas_explored": [
     {
+      "title": "AI-to-Human Handoff v1 — os_outbound_mirror.py sprint (run 70 winner)",
+      "date": "2026-06-27-pm",
+      "status": "recommended",
+      "run": 70,
+      "note": "Run 70 winner. Widget drift retired per run_70_mandate (6 consecutive failures). Oldest pending direction (run 4, 72 days). os_outbound_mirror.py (PR #188, 152 tests) ready. Scope ~1 day. Critical all 7 industries. Debate: Idea 01 AI-to-Human Handoff WINNER (72-day gap, infrastructure ready, Critical all industries). Idea 02 Zapier fix WEAKENED→issue-to-pr-loop (parking_lot routing from run 16 stands). Idea 03 Plan-name guard WEAKENED→Bonus A (sequencing-blocked until widget drift fixed). Idea 04 Email sequences split WEAKENED→parking lot (M-effort moratorium). Idea 05 SMS dashboard WEAKENED→Bonus B (nice-to-have vs 72-day Critical gap). RUN 71 MANDATE: if still pending_approval, provide copy-paste code blocks."
+    },
+    {
       "title": "Escalate run 65 delivery — add explicit nightly trigger instruction to nightly-commit-review SKILL.md (run 66 mandate)",
       "date": "2026-06-25",
       "status": "recommended",
@@ -781,6 +799,19 @@
       "note": "Run 20 — Run 19 governance condition fired (SKILL.md not updated confirmed by direct read). Winner: governance threshold reduction (3→2) + GH milestone 'Moratorium Exit Sprint' with 4 S-effort issues (runs 19/8/7/14). Debate: Idea 1 SURVIVES (binding mandate), Idea 4 WEAKENED (loop uncertainty), Idea 2 KILLED as winner (third consecutive meta-fix; mechanism unchanged; freeze threshold risk; subsumed as Bonus Step 0). ~32 min implementation."
     }
   ],
+  "retired_topics": [
+    {
+      "topic": "widget_drift_byte_sync",
+      "retired_run": 70,
+      "retired_date": "2026-06-27-pm",
+      "reason": "run_70_mandate fired: check_project_invariants.py still exits 1 at run 70 — 6th consecutive failure (runs 65-70). Topic retired from subconscious permanently. Fix is a 30-second manual cp command. Subconscious exhausted all delivery mechanisms: AUTONOMOUS-EXECUTABLE (run 65, nightly scope miss), SKILL.md Step 9B addition (run 66, nightly scope miss on existing file), interactive human execution (run 67, human did not execute), push notification + terminal block (run 68, human did not execute), Step 9B FORBIDDEN-paths exception (run 69, nightly fixed em-dashes but not widget cp). Human must execute the cp command manually. Subconscious will not recommend this again.",
+      "fix_command": "cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js && python3 scripts/check_project_invariants.py",
+      "reminder_file": "docs/reminders/widget-drift-URGENT.md",
+      "consecutive_failures": 6,
+      "first_failed_run": 65,
+      "last_failed_run": 70
+    }
+  ],
   "rejected_paths": [
     {
       "title": "GH #181 Fix AMOUNT_TO_PLAN as subconscious winner — recommendation loop exhausted at 5 consecutive runs",
@@ -979,13 +1010,13 @@
     }
   ],
   "implementation_lag_warning": {
-    "runs_pending_approval": 18,
-    "runs_pending_approval_raw": 18,
-    "runs_pending_approval_note": "Run 68 (2026-06-26-pm): Run 68 mandate fired — check_project_invariants.py exits 1 for 4th consecutive subconscious run. Delivery toolkit exhausted: nightly scope miss (runs 65/66), human non-execution (run 67). Run 68 escalates to push notification + 30-second command block. true_pending estimate ~6 (runs 4/20/21/29/38/41/65/66/67/68 with many superseded/implemented — true human-required: run 4/38 AI-to-Human Handoff day 71, run 41 email_sequences split, runs 20/21/29/42/50 cleanup sprint). Moratorium still active (6 > max_pending_approvals:2). Run 69 mandate: calendar reminder if still exits 1.",
+    "runs_pending_approval": 19,
+    "runs_pending_approval_raw": 19,
+    "runs_pending_approval_note": "Run 70 (2026-06-27-pm): run_70_mandate fired — check_project_invariants.py exits 1 for 6th consecutive subconscious run. Widget drift topic RETIRED from subconscious permanently. docs/reminders/widget-drift-URGENT.md written. URGENT push notification sent. Run 70 winner: AI-to-Human Handoff v1 (run 4, 72 days, Critical all industries, os_outbound_mirror.py infrastructure ready). true_pending estimate ~6 (run 4/38/41/65/66/67/68/69/70 with many superseded — true human-required: run 4/70 AI-to-Human Handoff day 72, run 41 email_sequences split, cleanup sprint). Moratorium still active (6 > max_pending_approvals:2).",
     "runs_implemented": 21,
-    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 71 as of 2026-06-26)",
-    "governance_correction": "Run 66 (2026-06-25): No new governance corrections this run. Run 65 active_direction note updated to record run 66 mandate fired. Run 66 winner added to active_directions and ideas_explored.",
-    "note": "Moratorium exit path after run 68: (1) human pastes 30-second terminal block from run 68 winning-concept.md → check exits 0, pre-commit unblocked; (2) run 69: plan-name guard Check 7 (Bonus A, AUTONOMOUS-EXECUTABLE, nightly delivers); (3) AI-to-Human Handoff v1 (run 4/38, human required, highest customer-value pending, day 71); (4) email_sequences split (run 41, human required); (5) cleanup sprint (runs 20/21/29/42/50, ~1h) → true pending ≤2 → moratorium exits. Run 69 mandate: if check still exits 1, escalate to calendar reminder — subconscious loop has exhausted its delivery toolkit.",
+    "oldest_pending": "2026-04-16 (AI-to-Human Handoff v1, run 4, day 72 as of 2026-06-27)",
+    "governance_correction": "Run 70 (2026-06-27-pm): Widget drift retired from subconscious. retired_topics[] added to governance.json. Run 70 winner (AI-to-Human Handoff v1) added to active_directions and ideas_explored.",
+    "note": "Moratorium exit path after run 70: (1) human runs 30-second cp command from docs/reminders/widget-drift-URGENT.md → check exits 0, pre-commit unblocked; (2) nightly: plan-name guard Check 7 (Bonus A, AUTONOMOUS-EXECUTABLE); (3) human: AI-to-Human Handoff v1 (run 70 winner, ~1 day, Critical all industries); (4) human: email_sequences split (run 41); (5) cleanup sprint (runs 20/21/29/42/50, ~1h) → true pending ≤2 → moratorium exits.",
     "escalate": true
   },
   "config": {

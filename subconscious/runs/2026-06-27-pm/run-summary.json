@@ -1,0 +1,53 @@
+{
+  "run": 70,
+  "date": "2026-06-27-pm",
+  "mandate_fired": true,
+  "mandate_source": "governance.json run_70_mandate",
+  "mandate_actions": [
+    "wrote docs/reminders/widget-drift-URGENT.md",
+    "sent URGENT push notification",
+    "retired widget_drift_byte_sync topic in governance.json retired_topics[]"
+  ],
+  "winner": "AI-to-Human Handoff v1 — implement via os_outbound_mirror.py infrastructure",
+  "winner_category": "customer_value",
+  "confidence": "HIGH",
+  "autonomous_executable": false,
+  "requires_human": true,
+  "ideas_count": 5,
+  "ideas": [
+    "AI-to-Human Handoff v1 (WINNER)",
+    "Zapier plan_status security fix (WEAKENED → issue-to-pr-loop)",
+    "Plan-name invariant guard Check 7 (WEAKENED → Bonus A)",
+    "Email sequences split (WEAKENED → parking lot)",
+    "SMS Compliance Dashboard (WEAKENED → Bonus B)"
+  ],
+  "debate_top3": ["Idea 01", "Idea 02", "Idea 03"],
+  "debate_winner": "Idea 01 — AI-to-Human Handoff v1 (72-day gap, infrastructure ready, Critical all industries)",
+  "bonus_a": "Plan-name invariant guard Check 7 (AUTONOMOUS-EXECUTABLE after widget drift fixed)",
+  "bonus_b": "SMS Compliance Dashboard (piggybacks on council TCPA work)",
+  "moratorium_active": true,
+  "true_pending_estimate": 6,
+  "consecutive_check_failures": 6,
+  "widget_drift_retired": true,
+  "governance_changes": [
+    "total_runs: 69 → 70",
+    "last_run: 2026-06-27 → 2026-06-27-pm",
+    "retired_topics[] added with widget_drift_byte_sync",
+    "active_directions: prepended run 70 winner (AI-to-Human Handoff v1)",
+    "ideas_explored: prepended run 70 entry",
+    "implementation_lag_warning updated: runs_pending_approval 18→19, oldest_pending day 71→72"
+  ],
+  "run_71_mandate": "If AI-to-Human Handoff v1 still pending_approval in run 71: provide copy-paste code blocks for handoff_service.py + migration 155 + widget_chat.py integration. Flag as 73+ days pending.",
+  "artifacts": [
+    "subconscious/runs/2026-06-27-pm/ideas/idea-01-ai-to-human-handoff-v1.md",
+    "subconscious/runs/2026-06-27-pm/ideas/idea-02-zapier-plan-status-security-fix.md",
+    "subconscious/runs/2026-06-27-pm/ideas/idea-03-plan-name-invariant-guard.md",
+    "subconscious/runs/2026-06-27-pm/ideas/idea-04-email-sequences-split.md",
+    "subconscious/runs/2026-06-27-pm/ideas/idea-05-sms-compliance-dashboard.md",
+    "subconscious/runs/2026-06-27-pm/debate/debate-log.md",
+    "subconscious/runs/2026-06-27-pm/winning-concept.md",
+    "subconscious/runs/2026-06-27-pm/improvement-backlog.md",
+    "subconscious/runs/2026-06-27-pm/run-summary.json",
+    "docs/reminders/widget-drift-URGENT.md"
+  ]
+}
