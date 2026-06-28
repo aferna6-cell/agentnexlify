@@ -1,0 +1,79 @@
+{
+  "run": 70,
+  "date": "2026-06-28",
+  "winner": {
+    "id": "SMS-COMPLIANCE-DASHBOARD",
+    "title": "SMS Compliance Dashboard",
+    "confidence": "HIGH",
+    "effort_days": 1,
+    "category": "customer_value",
+    "plan_gate": "agent_os",
+    "evidence": [
+      "council fix #1 (9ddfd0e) landed TCPA backend enforcement Jun 27",
+      "leads.sms_opted_out populated in DB",
+      "Recharts installed in frontend",
+      "no migration needed",
+      "GoHighLevel competitive gap documented",
+      "TCPA penalties $500-$1500/message"
+    ],
+    "backend_files": ["backend/routers/sms_compliance.py"],
+    "frontend_files": ["frontend/src/pages/SMSCompliance.jsx"],
+    "test_files": ["backend/tests/test_sms_compliance.py"],
+    "status": "pending_approval"
+  },
+  "bonus_a": {
+    "id": "ZAPIER-PLAN-STATUS",
+    "title": "Zapier plan_status enforcement (GH #107)",
+    "effort_hours": 2,
+    "files": [
+      "backend/services/zapier_auth.py",
+      "backend/tests/test_plan_gating_new_plans.py"
+    ],
+    "status": "pending_approval"
+  },
+  "candidates_debated": [
+    "idea-01-sms-compliance-dashboard",
+    "idea-02-zapier-plan-status-enforcement",
+    "idea-03-ai-human-handoff-v1"
+  ],
+  "candidates_dropped": [
+    "idea-04-plan-name-invariant-guard",
+    "idea-05-trial-to-member-conversion-tracking"
+  ],
+  "mandate_fired": {
+    "trigger": "check_project_invariants.py exits 1 at run 70",
+    "actions": [
+      "wrote docs/reminders/widget-drift-URGENT.md",
+      "sent URGENT push notification",
+      "retired widget drift from subconscious governance"
+    ],
+    "widget_drift_status": "RETIRED — human-only task"
+  },
+  "invariant_check": {
+    "exit_code": 1,
+    "failing": ["widget assets are byte-identical across mirrors"],
+    "passing": [
+      "FastAPI router files avoid future annotations",
+      "active backend code avoids retired live-schema fields",
+      "retired plan names do not appear in plan-related code",
+      "website source avoids em dashes",
+      "direct Anthropic SDK message creation stays behind the runtime wrapper"
+    ],
+    "consecutive_check_failures": 6
+  },
+  "council_sprint_context": {
+    "fixes_shipped": 6,
+    "dates": "2026-06-24 to 2026-06-27",
+    "commits": [
+      "9ddfd0e",
+      "bcdafc2",
+      "6a66c12",
+      "dcd6532",
+      "5b9ead8",
+      "13416b9"
+    ]
+  },
+  "parking_lot": {
+    "ai_human_handoff": "defer to run 72+, precondition: audit os_outbound_mirror.py"
+  }
+}
