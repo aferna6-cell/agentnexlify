@@ -1,18 +1,18 @@
 ---
 title: "Customer Gaps by Industry — Consolidated"
 category: verticals
-tags: ["salon", "plumber", "dental", "restaurant", "fitness", "lawyer", "real-estate", "product-market-fit", "gaps"]
+tags: ["salon", "plumber", "dental", "restaurant", "fitness", "lawyer", "real-estate", "roofing", "home-cleaning", "veterinary", "product-market-fit", "gaps"]
 sources: ["raw/verticals/customer-gaps-consolidated.md"]
 created: 2026-04-04
-updated: 2026-04-04
-summary: "Product-market fit scores across 7 verticals (Salon 9/10 to Real Estate 6/10) with 15 resolved gaps and prioritized cross-industry open gaps."
+updated: 2026-06-29
+summary: "Product-market fit scores across 10 verticals (Salon 9/10 to Real Estate 6/10) with 15 resolved gaps, prioritized cross-industry open gaps, and 3 new verticals (roofing, home cleaning, veterinary) added 2026-06-23."
 ---
 
 > ⚠️ Some sources are over 60 days old. Run /kb-health to check for updates.
 
 # Customer Gaps by Industry — Consolidated
 
-Findings from customer simulations across 7 industries. 15 gaps have been resolved through the build loop; remaining gaps are prioritized by cross-industry impact.
+Findings from customer simulations across 10 industries (7 original + 3 added 2026-06-23: roofing, home cleaning, veterinary). 15 gaps have been resolved through the build loop; remaining gaps are prioritized by cross-industry impact.
 
 ## Product-Market Fit Scores
 
@@ -25,6 +25,9 @@ Findings from customer simulations across 7 industries. 15 gaps have been resolv
 | Fitness | 7/10 | Waiver form + rebook + pipeline | Class scheduling |
 | Lawyer | 7/10 | Intake forms + documents + pipeline | Billable hours |
 | Real Estate | 6/10 | Pipeline + documents | Property tracking |
+| Roofing/Contractor | 7/10 | Emergency detect + insurance claim routing | Photo upload for estimates |
+| Home Cleaning | 7/10 | Recurring booking + service type selection | Before/after photo gallery |
+| Veterinary | 7/10 | Emergency routing + new-patient intake | Medical-record upload |
 
 ## Cross-Industry Open Gaps (High Priority)
 
@@ -88,4 +91,6 @@ Emergency/urgency detection, business hours in onboarding, service type booking,
 
 ## Relevance to AgentNexLiFy
 
-**Salon/Spa and Plumber/HVAC are the strongest verticals** (8-9/10 fit) and should be the primary go-to-market targets. Real estate (6/10) needs the most work — property tracking and buyer qualification are significant gaps. The 3 cross-industry gaps (AI-to-human handoff, lead source analytics, custom automation templates) should be prioritized over industry-specific gaps since they benefit all customers. See also [[competitive-landscape-march-2026]] for feature priorities from the competitor angle.
+**Salon/Spa and Plumber/HVAC are the strongest verticals** (8-9/10 fit) and should be the primary go-to-market targets. Real estate (6/10) needs the most work — property tracking and buyer qualification are significant gaps. Roofing, home cleaning, and veterinary (7/10 each) are newly added in June 2026 and have FAQ packs seeded but lack deeper feature coverage. The 3 cross-industry gaps (AI-to-human handoff, lead source analytics, custom automation templates) should be prioritized over industry-specific gaps since they benefit all customers. See also [[competitive-landscape-march-2026]] for feature priorities from the competitor angle.
+
+Updated 2026-06-29 due to #366, #367 (roofing, home cleaning, veterinary vertical expansion)

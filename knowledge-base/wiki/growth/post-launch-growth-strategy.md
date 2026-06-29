@@ -76,7 +76,7 @@ Research-backed feature recommendations for driving signup activation, viral gro
 **9. "Instant Website" AI-Generated Landing Page**
 - One-click professional landing page for businesses with no website
 - 30-40% of small businesses lack a good website
-- "Powered by" footer on free/chatbot plans for viral awareness
+- "Powered by" footer on chatbot plans for viral awareness
 
 ### P3 — Next Quarter (Large effort, enterprise value)
 
@@ -116,3 +116,5 @@ Research-backed feature recommendations for driving signup activation, viral gro
 ## Relevance to AgentNexLiFy
 
 The platform is feature-broad but needs to deepen value for retention. The P0 features (onboarding wizard, daily briefing, review requests) are all small-effort and compound: onboarding drives activation, briefing drives daily usage, reviews drive visible ROI. Together they transform the pitch from "we have a lot of features" to "your business runs on this." See also [[competitive-landscape-march-2026]] for how these features compare to competitors, and [[customer-gaps-by-industry]] for industry-specific priorities.
+
+Updated 2026-06-29 due to #344 (plan-catalog: free plan is internal-only, not sold; corrected viral-footer reference to chatbot plan only)
