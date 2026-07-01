@@ -61,3 +61,7 @@ the last recorded state.
 - Verified refresh graceful-skip; stamped state.last_refresh.
 - Finalized VALIDATION-REPORT + COMPLETION-AUDIT. All gates pass.
 - Vault complete: 57 canonical notes + 22 source traces + 5 maps + 8 tools.
+
+## 2026-07-01T10:50Z — refresh_connectors.py
+- github: error — HTTP Error 403: Forbidden
+- supabase: skipped — SUPABASE_ACCESS_TOKEN not set
