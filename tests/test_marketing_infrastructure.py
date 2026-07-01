@@ -21,7 +21,10 @@ async def _tenant_override_claims():
         "tenant_id": TEST_TENANT_ID,
         "email": "test@example.com",
         "role": "owner",
-        "plan": "growth",
+        # agent_os: marketing is gated to MARKETING_PLANS = {"agent_os"}
+        # (plan_gate.py); the legacy "growth" value 403'd on send_campaign's
+        # inline plan gate before the endpoint behavior under test was reached.
+        "plan": "agent_os",
         "is_team_member": False,
     }
 

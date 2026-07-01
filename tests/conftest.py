@@ -241,7 +241,11 @@ async def _allow_marketing_access_for_tests():
         "tenant_id": "test-tenant",
         "email": "test@example.com",
         "role": "owner",
-        "plan": "professional",
+        # agent_os: marketing narrowed to MARKETING_PLANS = {"agent_os"}
+        # (plan_gate.py); the old "professional" value stopped clearing the
+        # inline defense-in-depth gate in send_campaign and 403'd before the
+        # endpoint behavior under test was reached.
+        "plan": "agent_os",
         "is_team_member": False,
     }
 
