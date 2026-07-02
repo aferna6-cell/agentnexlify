@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "last_run": "2026-07-01-pm",
-  "total_runs": 76,
+  "last_run": "2026-07-02-pm",
+  "total_runs": 77,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
-  "frozen_ideas": [],
+  "frozen_ideas": ["ai_human_handoff"],
   "moratorium_config": {
     "moratorium_active": true,
     "triggered_run": 15,
@@ -19,10 +19,29 @@
   },
   "active_directions": [
     {
+      "title": "Wire Railway healthz monitoring alert \u2014 write ops/monitoring/healthz-alert.sh + SETUP.md (run 77 winner)",
+      "date": "2026-07-02-pm",
+      "confidence": "HIGH",
+      "status": "pending_autonomous",
+      "autonomous_executable": true,
+      "autonomous_condition": "Script write is AUTONOMOUS-EXECUTABLE via nightly. SLACK_ALERT_WEBHOOK_URL env var is HUMAN-REQUIRED (Railway dashboard, 2 min).",
+      "requires_human": true,
+      "requires_human_scope": "Set SLACK_ALERT_WEBHOOK_URL in Railway project Variables tab. 2 min. See ops/monitoring/SETUP.md (to be written).",
+      "category": "operational",
+      "moratorium_override": true,
+      "moratorium_override_reason": "CRITICAL operational gap \u2014 silent downtime with zero notification pathway. Script write has no human queue impact.",
+      "source_run": 77,
+      "effort": "S",
+      "evidence": "GH #388 CRITICAL: /healthz timed out at 10:27 UTC 2026-07-02. /version 200 = partial failure. SLACK_ALERT_WEBHOOK_URL not set = alert silently fails. 3+ days zero production commits = no human watching.",
+      "note": "Run 77 winner. AUTONOMOUS part: write ops/monitoring/healthz-alert.sh (curl probe + Slack webhook POST on non-200). Write ops/monitoring/SETUP.md (Railway env var + UptimeRobot free tier instructions). HUMAN part: set SLACK_ALERT_WEBHOOK_URL in Railway dashboard. Bonus: merge Dependabot PRs #381-383; diagnose /healthz handler hang \u2192 bug-patterns.md. Run 78 mandate: if script not created, add Step 9C to nightly-commit-review SKILL.md. See subconscious/runs/2026-07-02-pm/winning-concept.md."
+    },
+    {
       "title": "Zapier plan_status enforcement \u2014 DE-SCOPED (run 76 mandate, no test file) \u2014 run 76 winner",
       "date": "2026-07-01-pm",
       "confidence": "HIGH",
-      "status": "pending_autonomous",
+      "status": "implemented",
+      "implemented_date": "2026-06-13",
+      "implemented_by": "GH #107 closed 2026-06-13 \u2014 fix at backend/routers/zapier.py:121-128 (not zapier_auth.py, which does not exist). Test: backend/tests/test_zapier_auth.py:339 test_cancelled_subscription_blocked. Runs 75+76 tracked wrong file path. Corrected by nightly-2026-07-02 and run 77.",
       "autonomous_executable": true,
       "requires_human": false,
       "category": "code_health",
@@ -30,13 +49,15 @@
       "moratorium_override_reason": "Security/revenue bug, AUTONOMOUS-EXECUTABLE \u2014 zero human queue impact. Mandate fires: run 75 winner not implemented.",
       "source_run": 76,
       "effort": "XS",
-      "note": "Run 76 winner. De-scoped per run 75 mandate (fix not implemented after 2 recommendation cycles). Action: grep -r '_get_api_key_client' backend/ --include='*.py' to locate file (backend/services/zapier_auth.py NOT FOUND at expected path). After location: add plan_status IN ('active','trialing') check after API key resolves to client_id. Return 402 if not active/trialing. NO test file (de-scoped). Run 77 mandate: if still not implemented, escalate to CRITICAL + file GH issue directly + mark human_blocked. See subconscious/runs/2026-07-01-pm/winning-concept.md."
+      "note": "Run 76 winner. De-scoped per run 75 mandate (fix not implemented after 2 recommendation cycles). CORRECTION (run 77): fix WAS implemented at backend/routers/zapier.py:121-128. GH #107 closed 2026-06-13. Run 77 mandate (escalate CRITICAL) VOID. See nightly-2026-07-02 correction in memory.jsonl."
     },
     {
       "title": "Zapier plan_status enforcement in _get_api_key_client (GH #107) \u2014 run 75 winner",
       "date": "2026-07-01",
       "confidence": "HIGH",
-      "status": "pending_autonomous",
+      "status": "implemented",
+      "implemented_date": "2026-06-13",
+      "implemented_by": "GH #107 closed 2026-06-13 \u2014 fix at backend/routers/zapier.py:121-128. Corrected by nightly-2026-07-02 and run 77.",
       "autonomous_executable": true,
       "requires_human": false,
       "category": "code_health",
@@ -44,7 +65,7 @@
       "moratorium_override_reason": "Security/revenue bug, AUTONOMOUS-EXECUTABLE \u2014 zero human queue impact. Same class as GH #308 + GH #292/#293 overrides.",
       "source_run": 75,
       "effort": "S",
-      "note": "Run 75 winner. 62-day debt (bug-patterns.md entry 2026-04-30). Cancelled/past-due tenants continue receiving Zapier access after subscription ends. Fix: add plan_status IN ('active','trialing') check after API key resolves to client_id in backend/services/zapier_auth.py::_get_api_key_client. Return 402 if plan_status not active/trialing. New test file: backend/tests/test_zapier_plan_status.py (4 tests: cancelled \u2192 402, past-due \u2192 402, active \u2192 pass, trialing \u2192 pass). AUTONOMOUS-EXECUTABLE \u2014 same nightly class as Check 11/12, test creation. First clean window after SMS moved to pending_autonomous via nightly 2026-07-01 GH issue. Run 76 mandate: if not implemented, de-scope to API key resolver check only (skip test file). See subconscious/runs/2026-07-01/winning-concept.md."
+      "note": "Run 75 winner. CORRECTION (run 77): fix WAS implemented at backend/routers/zapier.py:121-128 (not backend/services/zapier_auth.py \u2014 that file does not exist). GH #107 closed 2026-06-13. Test: test_cancelled_subscription_blocked at backend/tests/test_zapier_auth.py:339. Runs 75+76 believed fix was missing due to wrong file path. Stale mandate chain resolved. B-001 COMPLETE."
     },
     {
       "title": "SMS Compliance Dashboard \u2014 Final Human Delivery with inline code blocks (run 74 escalation)",
