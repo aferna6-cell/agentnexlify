@@ -21,13 +21,13 @@ Gaps discovered across all customer simulations. Prioritized by cross-industry i
 | Birthday automation | Salon | 129 |
 | Legal intake form preset | Lawyer | 132 |
 | FAQ consistency (≥5 per type) | All | 132 |
+| Lead source analytics | All | Cycle 2 (run 2, AnalyticsPage.jsx BarChart by source) |
 
 ## Open Gaps — Cross-Industry (High Priority)
 
 | Gap | Simulations | Impact | Effort |
 |-----|-------------|--------|--------|
 | **AI-to-human handoff** | All | Critical for complex queries | Medium |
-| **Lead source analytics** | All | Source column exists, no dashboard visualization | Low |
 | **Custom automation templates** | All | Custom birthday messages, post-service follow-ups | Medium |
 
 ## Open Gaps — Industry-Specific

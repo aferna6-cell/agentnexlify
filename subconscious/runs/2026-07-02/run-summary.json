@@ -1,0 +1,52 @@
+{
+  "run": 77,
+  "date": "2026-07-02",
+  "phase": "complete",
+  "winner": {
+    "title": "Add file-location verification to subconscious SKILL.md Phase 2 evidence phase",
+    "target_file": ".claude/skills/subconscious/SKILL.md",
+    "category": "agent_performance",
+    "effort": "XS",
+    "confidence": "HIGH",
+    "autonomous_executable": true,
+    "requires_human": false,
+    "moratorium_override": false
+  },
+  "bonus_action": {
+    "title": "Move Lead source analytics from Open to Resolved in docs/dev-knowledge/customer-gaps.md",
+    "effort": "XS",
+    "autonomous_executable": true
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "moratorium_active": true,
+  "true_pending_after_corrections": 2,
+  "key_finding": "Runs 75+76 wasted due to stale file-path assumption (searched for backend/services/zapier_auth.py, not found, concluded unimplemented — fix was actually at backend/routers/zapier.py:121-128 since 2026-06-13). Same failure mode visible in run 41 (email_sequences.py not found). SKILL.md patch prevents recurrence.",
+  "governance_corrections_applied": [
+    "frozen_ideas: added ai_human_handoff (7 debate kills, freeze_threshold=3)",
+    "zapier run 76 active_direction: pending_autonomous → implemented (2026-06-13)",
+    "zapier run 75 active_direction: pending_autonomous → implemented (2026-06-13)",
+    "email_sequences run 41 active_direction: pending_approval → moot (file not found)",
+    "widget-drift run 67 active_direction: pending_approval → superseded",
+    "widget-drift run 66 active_direction: pending_approval → superseded",
+    "widget-drift run 65 active_direction: pending_approval → superseded",
+    "run 77 winner added as active_directions[0]"
+  ],
+  "run_78_questions": [
+    "Has the SKILL.md patch been applied?",
+    "Has SMS Dashboard shipped? (if yes: pending=1 < 2 → moratorium exits)",
+    "What is the actual path of email_sequences.py (or its split modules)?",
+    "Is Widget Sync Guard (run 7, check-widget-sync.sh) still not created?"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-07-02/ideas/idea-1-subconscious-skill-file-location-check.md",
+    "subconscious/runs/2026-07-02/ideas/idea-2-plan-name-guard-precommit.md",
+    "subconscious/runs/2026-07-02/ideas/idea-3-custom-automation-templates.md",
+    "subconscious/runs/2026-07-02/ideas/idea-4-trial-to-member-conversion-metric.md",
+    "subconscious/runs/2026-07-02/ideas/idea-5-customer-gaps-doc-cleanup.md",
+    "subconscious/runs/2026-07-02/debate/debate-log.md",
+    "subconscious/runs/2026-07-02/winning-concept.md",
+    "subconscious/runs/2026-07-02/improvement-backlog.md",
+    "subconscious/runs/2026-07-02/run-summary.json"
+  ]
+}

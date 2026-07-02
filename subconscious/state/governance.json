@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "last_run": "2026-07-01-pm",
-  "total_runs": 76,
+  "last_run": "2026-07-02",
+  "total_runs": 77,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
-  "frozen_ideas": [],
+  "frozen_ideas": ["ai_human_handoff"],
   "moratorium_config": {
     "moratorium_active": true,
     "triggered_run": 15,
@@ -19,10 +19,25 @@
   },
   "active_directions": [
     {
+      "title": "Add file-location verification to subconscious SKILL.md Phase 2 evidence phase (run 77 winner)",
+      "date": "2026-07-02",
+      "confidence": "HIGH",
+      "status": "pending_autonomous",
+      "autonomous_executable": true,
+      "requires_human": false,
+      "category": "agent_performance",
+      "moratorium_override": false,
+      "source_run": 77,
+      "effort": "XS",
+      "note": "Run 77 winner. Root cause: runs 75+76 each concluded Zapier plan_status fix was unimplemented because they searched for backend/services/zapier_auth.py (nonexistent path), found nothing, and stopped. Fix shipped 2026-06-13 at backend/routers/zapier.py:121-128 \u2014 two full debate cycles wasted. email_sequences.py also not found at assumed path (run 41 active_direction is stale). Pattern: 2 confirmed instances this cycle. SKILL.md patch: add Active Direction Status Verification block to Phase 2 (Gather Evidence). Content: (1) Do NOT trust file path in governance notes. (2) If path specified, verify: ls <expected_file_path>. (3) If NOT found, grep: grep -r '<function_name>' backend/ --include='*.py' -l. (4) Only mark unimplemented if grep returns zero results. (5) If grep finds alternate path, note it, mark governance entry stale, update in Phase 6. ~15 lines added to SKILL.md. Zero blast radius. AUTONOMOUS-EXECUTABLE \u2014 same nightly class as runs 40/43/50/66 (SKILL.md scope extensions). See subconscious/runs/2026-07-02/winning-concept.md."
+    },
+    {
       "title": "Zapier plan_status enforcement \u2014 DE-SCOPED (run 76 mandate, no test file) \u2014 run 76 winner",
       "date": "2026-07-01-pm",
       "confidence": "HIGH",
-      "status": "pending_autonomous",
+      "status": "implemented",
+      "implemented_date": "2026-06-13",
+      "implemented_by": "backend/routers/zapier.py:121-128 (GH #107, closed 2026-06-13)",
       "autonomous_executable": true,
       "requires_human": false,
       "category": "code_health",
@@ -30,13 +45,15 @@
       "moratorium_override_reason": "Security/revenue bug, AUTONOMOUS-EXECUTABLE \u2014 zero human queue impact. Mandate fires: run 75 winner not implemented.",
       "source_run": 76,
       "effort": "XS",
-      "note": "Run 76 winner. De-scoped per run 75 mandate (fix not implemented after 2 recommendation cycles). Action: grep -r '_get_api_key_client' backend/ --include='*.py' to locate file (backend/services/zapier_auth.py NOT FOUND at expected path). After location: add plan_status IN ('active','trialing') check after API key resolves to client_id. Return 402 if not active/trialing. NO test file (de-scoped). Run 77 mandate: if still not implemented, escalate to CRITICAL + file GH issue directly + mark human_blocked. See subconscious/runs/2026-07-01-pm/winning-concept.md."
+      "note": "Run 76 winner. IMPLEMENTED 2026-06-13. Nightly 2026-07-02 correction: fix is live at backend/routers/zapier.py:121-128 (plan_status IN active/trialing check). GH #107 closed. Runs 75+76 tracked this as unimplemented because they searched for nonexistent backend/services/zapier_auth.py \u2014 stale path caused false conclusion. Run 77 root cause analysis: file-path staleness failure mode \u2192 run 77 SKILL.md patch prevents recurrence. Run 77 mandate (escalate CRITICAL) is VOID \u2014 fix already shipped. See ops/routines/logs/nightly-commit-review-2026-07-02.md."
     },
     {
       "title": "Zapier plan_status enforcement in _get_api_key_client (GH #107) \u2014 run 75 winner",
       "date": "2026-07-01",
       "confidence": "HIGH",
-      "status": "pending_autonomous",
+      "status": "implemented",
+      "implemented_date": "2026-06-13",
+      "implemented_by": "backend/routers/zapier.py:121-128 (GH #107, closed 2026-06-13)",
       "autonomous_executable": true,
       "requires_human": false,
       "category": "code_health",
@@ -44,7 +61,7 @@
       "moratorium_override_reason": "Security/revenue bug, AUTONOMOUS-EXECUTABLE \u2014 zero human queue impact. Same class as GH #308 + GH #292/#293 overrides.",
       "source_run": 75,
       "effort": "S",
-      "note": "Run 75 winner. 62-day debt (bug-patterns.md entry 2026-04-30). Cancelled/past-due tenants continue receiving Zapier access after subscription ends. Fix: add plan_status IN ('active','trialing') check after API key resolves to client_id in backend/services/zapier_auth.py::_get_api_key_client. Return 402 if plan_status not active/trialing. New test file: backend/tests/test_zapier_plan_status.py (4 tests: cancelled \u2192 402, past-due \u2192 402, active \u2192 pass, trialing \u2192 pass). AUTONOMOUS-EXECUTABLE \u2014 same nightly class as Check 11/12, test creation. First clean window after SMS moved to pending_autonomous via nightly 2026-07-01 GH issue. Run 76 mandate: if not implemented, de-scope to API key resolver check only (skip test file). See subconscious/runs/2026-07-01/winning-concept.md."
+      "note": "Run 75 winner. IMPLEMENTED 2026-06-13. Nightly 2026-07-02 correction: fix is live at backend/routers/zapier.py:121-128. Test exists at backend/tests/test_zapier_auth.py:339-364 (test_cancelled_subscription_blocked). GH #107 closed. Run 75 searched for nonexistent backend/services/zapier_auth.py \u2014 path stale. Same root cause as run 76 false conclusion. Both corrected run 77. See ops/routines/logs/nightly-commit-review-2026-07-02.md."
     },
     {
       "title": "SMS Compliance Dashboard \u2014 Final Human Delivery with inline code blocks (run 74 escalation)",
@@ -133,32 +150,32 @@
       "title": "Execute Run 65 Steps + Step 9B in Interactive Human Session (run 67 winner, mandate fires)",
       "date": "2026-06-25-pm",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "superseded",
       "autonomous_executable": false,
       "requires_human": true,
       "category": "code_health",
       "moratorium_override": false,
-      "note": "Run 67 winner. HUMAN-REQUIRED. Mandate fires: check_project_invariants.py exits 1 for 3rd consecutive run (widget drift + 10 em-dashes). Nightly failed to deliver run 65 (scope mismatch: cp + text replacement not in nightly scope). Nightly failed to deliver run 66 (scope mismatch: editing EXISTING SKILL.md not in scope). Root cause confirmed: chicken-and-egg in autonomous delivery. Run 65 mandate fires explicitly (winning-concept.md lines 108-112): 'escalate to interactive human execution \u2014 no more meta-fix layers.' Steps: (1) cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js; (2) fix 10 em-dashes in ReferralCard.jsx:6/SignupPage.jsx:40/151/AdminFunnelPage.jsx:15/49/87/122/267/315/440; (3) add Step 9B block to .claude/skills/nightly-commit-review/SKILL.md; (4) verify check exits 0; (5) commit. ~10 min total. Implementation sketch: subconscious/runs/2026-06-25-pm/winning-concept.md. Run 68 mandate: if still exits 1, provide exact copy-paste terminal commands \u2014 30-second execution, last resort before calendar reminder."
+      "note": "Run 67 winner. SUPERSEDED — widget drift topic retired at run 70 (governance widget_drift_topic_retired: true). Run 70 mandate executed: docs/reminders/widget-drift-URGENT.md written, URGENT push notification sent. This entry is residual noise from the widget-drift chain (runs 65-70). No further subconscious tracking; human-only fix. Original note: Run 67 winner. HUMAN-REQUIRED. Mandate fires: check_project_invariants.py exits 1 for 3rd consecutive run (widget drift + 10 em-dashes). Nightly failed to deliver run 65 (scope mismatch: cp + text replacement not in nightly scope). Nightly failed to deliver run 66 (scope mismatch: editing EXISTING SKILL.md not in scope). Root cause confirmed: chicken-and-egg in autonomous delivery. Run 65 mandate fires explicitly (winning-concept.md lines 108-112): 'escalate to interactive human execution \u2014 no more meta-fix layers.' Steps: (1) cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js; (2) fix 10 em-dashes in ReferralCard.jsx:6/SignupPage.jsx:40/151/AdminFunnelPage.jsx:15/49/87/122/267/315/440; (3) add Step 9B block to .claude/skills/nightly-commit-review/SKILL.md; (4) verify check exits 0; (5) commit. ~10 min total. Implementation sketch: subconscious/runs/2026-06-25-pm/winning-concept.md. Run 68 mandate: if still exits 1, provide exact copy-paste terminal commands \u2014 30-second execution, last resort before calendar reminder."
     },
     {
       "title": "Escalate run 65 delivery \u2014 add explicit nightly trigger instruction to nightly-commit-review SKILL.md (run 66 mandate)",
       "date": "2026-06-25",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "superseded",
       "autonomous_executable": true,
       "category": "workflow",
       "moratorium_override": false,
-      "note": "Run 66 winner. AUTONOMOUS-EXECUTABLE. Run 66 mandate fires: nightly 2026-06-24 (4a80f40) did NOT implement run 65 AUTONOMOUS-EXECUTABLE winner. Gap: nightly-commit-review SKILL.md lacks Step 9B \u2014 explicit instruction to check governance.json active_directions[0].autonomous_executable and execute pending autonomous items. Fix: add Step 9B block to .claude/skills/nightly-commit-review/SKILL.md. Nightly reads Step 9B, then immediately executes run 65 steps (cp widget/agentnexlify-widget.js landing-page-v2/widget/; replace 10 em-dash chars in ReferralCard.jsx:6/SignupPage.jsx:40/151/AdminFunnelPage.jsx:15/49/87/122/267/315/440). After both: check_project_invariants.py exits 0. 7/7 prior SKILL.md scope extensions delivered in 1 cycle. Precedent: runs 40/43/50 (all SKILL.md scope extensions, all autonomous). Bonus A: plan-name guard Check 7 (run 67 candidate, AUTONOMOUS-EXECUTABLE, sequenced after run 65 lands). Implementation sketch: subconscious/runs/2026-06-25/winning-concept.md. Run 67 mandate: if check still exits 1 after nightly 2026-06-25, escalate to interactive human execution of run 65 steps \u2014 no more meta-fix layers."
+      "note": "Run 66 winner. SUPERSEDED \u2014 widget drift topic retired at run 70. This entry is residual noise from widget-drift chain. No further subconscious tracking. Original note: Run 66 winner. AUTONOMOUS-EXECUTABLE. Run 66 mandate fires: nightly 2026-06-24 (4a80f40) did NOT implement run 65 AUTONOMOUS-EXECUTABLE winner. Gap: nightly-commit-review SKILL.md lacks Step 9B \u2014 explicit instruction to check governance.json active_directions[0].autonomous_executable and execute pending autonomous items. Fix: add Step 9B block to .claude/skills/nightly-commit-review/SKILL.md. Nightly reads Step 9B, then immediately executes run 65 steps (cp widget/agentnexlify-widget.js landing-page-v2/widget/; replace 10 em-dash chars in ReferralCard.jsx:6/SignupPage.jsx:40/151/AdminFunnelPage.jsx:15/49/87/122/267/315/440). After both: check_project_invariants.py exits 0. 7/7 prior SKILL.md scope extensions delivered in 1 cycle. Precedent: runs 40/43/50 (all SKILL.md scope extensions, all autonomous). Bonus A: plan-name guard Check 7 (run 67 candidate, AUTONOMOUS-EXECUTABLE, sequenced after run 65 lands). Implementation sketch: subconscious/runs/2026-06-25/winning-concept.md. Run 67 mandate: if check still exits 1 after nightly 2026-06-25, escalate to interactive human execution of run 65 steps \u2014 no more meta-fix layers."
     },
     {
       "title": "Fix Widget Drift + Em-Dash Violations from referral sprint PRs #368-371 (AUTONOMOUS-EXECUTABLE, run 65 winner)",
       "date": "2026-06-24-pm",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "superseded",
       "autonomous_executable": true,
       "category": "code_health",
       "moratorium_override": false,
-      "note": "Run 65 winner. AUTONOMOUS-EXECUTABLE. check_project_invariants.py exits 1 since PRs #368-371 (referral sprint, 2026-06-22/23). Two violation classes: (1) Widget drift: widget/agentnexlify-widget.js != landing-page-v2/widget/agentnexlify-widget.js \u2014 fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js. (2) Em-dash violations (10 instances): ReferralCard.jsx:6, SignupPage.jsx:40/151, AdminFunnelPage.jsx (~6 instances lines 15/49/87/122/267/315/440). Pre-commit Check 13 in FAIL+BLOCK mode \u2014 blocks all git commits. Run 66 mandate FIRED (2026-06-25): nightly 2026-06-24 did not implement \u2192 run 66 winner adds explicit nightly trigger instruction (Step 9B to SKILL.md). Implementation sketch: subconscious/runs/2026-06-24-pm/winning-concept.md. Bonus A: plan-name invariant guard Check 7 (AUTONOMOUS-EXECUTABLE, sequenced after this). Bonus B: AI-to-Human Handoff v1 (M-effort, human required)."
+      "note": "Run 65 winner. SUPERSEDED — widget drift topic retired at run 70 (governance widget_drift_topic_retired: true). Em-dash violations were fixed by ffefe61 (nightly 2026-06-27). Widget cp still pending as human-only task (docs/reminders/widget-drift-URGENT.md). No further subconscious tracking of this item. Original note: Run 65 winner. AUTONOMOUS-EXECUTABLE. check_project_invariants.py exits 1 since PRs #368-371 (referral sprint, 2026-06-22/23). Two violation classes: (1) Widget drift: widget/agentnexlify-widget.js != landing-page-v2/widget/agentnexlify-widget.js \u2014 fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js. (2) Em-dash violations (10 instances): ReferralCard.jsx:6, SignupPage.jsx:40/151, AdminFunnelPage.jsx (~6 instances lines 15/49/87/122/267/315/440). Pre-commit Check 13 in FAIL+BLOCK mode \u2014 blocks all git commits. Run 66 mandate FIRED (2026-06-25): nightly 2026-06-24 did not implement \u2192 run 66 winner adds explicit nightly trigger instruction (Step 9B to SKILL.md). Implementation sketch: subconscious/runs/2026-06-24-pm/winning-concept.md. Bonus A: plan-name invariant guard Check 7 (AUTONOMOUS-EXECUTABLE, sequenced after this). Bonus B: AI-to-Human Handoff v1 (M-effort, human required)."
     },
     {
       "title": "Fix GH #292/#293 \u2014 Wire chatbot/agent_os into plan-name dicts (sms_rate_limiter + api_key_auth + billing_reconciliation, run 62 winner)",
@@ -351,9 +368,9 @@
       "title": "Invoke /god-class-splitter on email_sequences.py \u2014 split 1255L into email_crud + email_enrollment + email_processor (run 41 winner)",
       "date": "2026-05-30",
       "confidence": "MEDIUM",
-      "status": "pending_approval",
+      "status": "moot",
       "category": "code_health",
-      "note": "Run 41 winner. NEWLY UNBLOCKED: d481799 (nightly 2026-05-30) created post-split-test-repair SKILL.md \u2014 final prerequisite met for first time. Both run 39 (post-split-test-repair SKILL.md) and run 40 (fix nightly channel) implemented by d481799. email_sequences.py confirmed 1255L, 17 functions, 3 clean concerns (CRUD/enrollment/processor). god-class-splitter SKILL.md ready (e848b87). /post-split-test-repair ready (d481799). Existing active_direction run 35 \u2014 execution resolves pending item not adds new one. Critical standing action: GH #181 billing fix (~15 min, human required) before starting split. Debate: email_sequences split SURVIVES 3 rounds \u2192 WINNER. AUTONOMOUS-EXECUTABLE labels A+D WEAKENED \u2192 parking lot (governance grey area). AI-to-Human Handoff WEAKENED \u2192 standing action (no new evidence since run 38). See subconscious/runs/2026-05-30/winning-concept.md."
+      "note": "Run 41 winner. MOOT as of run 77 (2026-07-02). backend/services/email_sequences.py does NOT exist at the path cited in this entry. Original god-class may have already been split, renamed, or reorganized. Run 78 mandate: grep codebase to find correct path or confirm split already completed. Do not track as pending until correct path confirmed. Original note: Run 41 winner. NEWLY UNBLOCKED: d481799 (nightly 2026-05-30) created post-split-test-repair SKILL.md \u2014 final prerequisite met for first time. Both run 39 (post-split-test-repair SKILL.md) and run 40 (fix nightly channel) implemented by d481799. email_sequences.py confirmed 1255L, 17 functions, 3 clean concerns (CRUD/enrollment/processor). god-class-splitter SKILL.md ready (e848b87). /post-split-test-repair ready (d481799). Existing active_direction run 35 \u2014 execution resolves pending item not adds new one. Critical standing action: GH #181 billing fix (~15 min, human required) before starting split. Debate: email_sequences split SURVIVES 3 rounds \u2192 WINNER. AUTONOMOUS-EXECUTABLE labels A+D WEAKENED \u2192 parking lot (governance grey area). AI-to-Human Handoff WEAKENED \u2192 standing action (no new evidence since run 38). See subconscious/runs/2026-05-30/winning-concept.md."
     },
     {
       "title": "Fix nightly-commit-review SKILL.md \u2014 add .claude/skills/*/SKILL.md creation to LOW-risk autonomous scope when winning-concept.md has AUTONOMOUS-EXECUTABLE label (run 40 winner)",
