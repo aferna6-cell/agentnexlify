@@ -204,6 +204,17 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
          - None found: create issue via mcp__github__issue_write (per Moratorium Issue Template)
          - Found: add comment via mcp__github__add_issue_comment (pending count + ages)
       d. Add "## Moratorium Status" to report
+9B. (Healthz Monitor Maintenance) Check if `ops/monitoring/healthz-alert.sh` exists:
+    ```bash
+    ls ops/monitoring/healthz-alert.sh 2>/dev/null || echo "MISSING"
+    ```
+    If MISSING: write the file from the embedded content in the latest
+    `subconscious/runs/*/winning-concept.md` that contains "## Script Content".
+    Commit: `ops(monitoring): add healthz-alert.sh [auto-nightly-YYYY-MM-DD]`
+    Also check if `ops/monitoring/SETUP.md` exists; write it if missing.
+    After both files created: open GH issue "Set SLACK_ALERT_WEBHOOK_URL in Railway"
+    with label `human-action-required` and body from subconscious/runs/2026-07-03/winning-concept.md §Human Step.
+    If ALREADY EXISTS: log "healthz-alert.sh present — monitoring active" and skip.
 10. Commit report: `docs(nightly): review YYYY-MM-DD [auto-nightly]`
 11. Push to main
 12. If any guardrail tripped (forbidden path, >5 files, >50 LOC, test-check failed) — abort fixes, file issue only, still write report
