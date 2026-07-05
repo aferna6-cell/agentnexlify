@@ -1,0 +1,49 @@
+{
+  "run": 80,
+  "date": "2026-07-05-pm",
+  "winner": "Add Step 9C to nightly SKILL.md — brain connector health check",
+  "winner_category": "operational",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "requires_human": false,
+  "moratorium_override": true,
+  "moratorium_override_reason": "AUTONOMOUS-EXECUTABLE SKILL.md edit — zero human queue impact. Same class as Steps 9A+9B, both delivered in 1 nightly cycle.",
+  "mandate_fired": true,
+  "mandate_source": "subconscious/runs/2026-07-05/winning-concept.md §Run 80 Mandate",
+  "ideas_generated": 5,
+  "debate_top3": [
+    "Add Step 9C brain connector health check (SURVIVES → WINNER)",
+    "File SMS Dashboard GH issue for issue-to-pr-loop (WEAKENED → parking lot)",
+    "Plan-name guard Check 7 (KILLED — no urgency)"
+  ],
+  "killed": [
+    "Plan-name guard Check 7 (no urgency signal, no recent plan changes)"
+  ],
+  "parked": [
+    "SMS Compliance Dashboard GH issue (loop status uncertain, already pending_autonomous)",
+    "ops/monitoring/SETUP.md (Bonus A — AUTONOMOUS-EXECUTABLE)",
+    "Plan-name guard Check 7 (no urgency)",
+    "email_sequences.py split (M-effort, moratorium active)"
+  ],
+  "evidence": {
+    "brain_connector_github_403_days": 5,
+    "brain_connector_supabase_token_missing_days": 5,
+    "step_9b_added_run_79": true,
+    "production_commits_last_3_days": 0,
+    "moratorium_active": true,
+    "true_pending_estimate": 4
+  },
+  "key_finding": "5 consecutive brain connector failures (2026-07-01 to 2026-07-05). Run 80 mandate fires. Step 9C adds nightly automated detection — brain connector failures will no longer go undetected for days. Same AUTONOMOUS-EXECUTABLE class as Steps 9A+9B, both delivered in 1 nightly cycle.",
+  "run_81_mandate": "If brain/INGESTION-LOG.md still shows failures after run 81: verify Step 9C deployed (check nightly SKILL.md for Step 9C block). If Step 9C itself failed to deploy: escalate with explicit human instruction to add manually (2 min copy-paste into SKILL.md).",
+  "bonus_actions": [
+    "Create ops/monitoring/SETUP.md (Bonus A — AUTONOMOUS-EXECUTABLE, complements healthz-alert chain)",
+    "File SMS Compliance Dashboard GH issue for issue-to-pr-loop (Bonus B)"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-07-05-pm/ideas/ideas.md",
+    "subconscious/runs/2026-07-05-pm/debate/debate-log.md",
+    "subconscious/runs/2026-07-05-pm/winning-concept.md",
+    "subconscious/runs/2026-07-05-pm/improvement-backlog.md",
+    "subconscious/runs/2026-07-05-pm/run-summary.json"
+  ]
+}

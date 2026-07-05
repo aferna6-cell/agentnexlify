@@ -4,6 +4,7 @@ Running list of subconscious winners. Most recent first.
 
 | Cycle | Date | Winner | Category | Status |
 |-------|------|--------|----------|--------|
+| 80 | 2026-07-05-pm | Add Step 9C to nightly SKILL.md — brain connector health check | operational | pending_autonomous |
 | 79 | 2026-07-05 | Fix brain connector credentials (GitHub 403 + SUPABASE_ACCESS_TOKEN) | operational | pending_human |
 | 78 | 2026-07-03 | Add Step 9B to nightly SKILL.md — healthz monitor maintenance | operational | implemented |
 | 77 | 2026-07-02-pm | Wire Railway healthz monitoring alert (ops/monitoring/healthz-alert.sh) | operational | escalated_to_p0_gh_issue |
@@ -33,7 +34,7 @@ Running list of subconscious winners. Most recent first.
 
 | Idea | Parked | Reconsider |
 |------|--------|------------|
-| Brain connector health check Step 9C | Run 79 | After brain credentials fixed (run 80 mandate if still failing) |
+| Brain connector health check Step 9C | Run 80 winner | AUTONOMOUS-EXECUTABLE — nightly should deploy tonight |
 | Plan-name guard pre-commit Check 7 | Run 76 | Low urgency, AUTONOMOUS-EXECUTABLE |
 | email_sequences.py god-class split | Run 76 | M-effort, moratorium active |
 | Diagnose /healthz handler root cause | Run 78 | After 2+ incidents (not 1) |
