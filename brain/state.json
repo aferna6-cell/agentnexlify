@@ -116,7 +116,7 @@
     "no-always-on-daemon-possible (refresh runs on demand/cron, documented in Refresh The Brain)"
   ],
   "last_refresh": {
-    "at": "2026-07-04T09:32Z",
+    "at": "2026-07-05T09:47Z",
     "results": {
       "github": "error \u2014 HTTP Error 403: Forbidden",
       "supabase": "skipped \u2014 SUPABASE_ACCESS_TOKEN not set"
