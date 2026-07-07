@@ -215,6 +215,27 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
     After both files created: open GH issue "Set SLACK_ALERT_WEBHOOK_URL in Railway"
     with label `human-action-required` and body from subconscious/runs/2026-07-03/winning-concept.md §Human Step.
     If ALREADY EXISTS: log "healthz-alert.sh present — monitoring active" and skip.
+9C. (Brain Connector Health Check) Read last 20 lines of `brain/INGESTION-LOG.md`:
+    ```bash
+    tail -20 brain/INGESTION-LOG.md
+    ```
+    Count consecutive entries ending with `error —` or `skipped —` (from bottom up, stop on first
+    success or gap). If consecutive_failures >= 3:
+      a. Search for existing open GH issue with label `brain-connector-failure`:
+         Use mcp__github__search_issues with query "repo:aferna6-cell/agentnexlify label:brain-connector-failure state:open"
+      b. If NO labeled issue found — also search for open issues mentioning brain connector
+         (query: "repo:aferna6-cell/agentnexlify brain connector state:open").
+         If related open issues exist: add comment to the most recent human-action-required
+         issue with updated failure count and days-since-last-success. Log:
+         "brain connector failure escalated via comment on #N — skipping duplicate issue"
+         If no related issues exist at all: create GH issue via mcp__github__issue_write:
+           title: "Brain connector failing N consecutive days — credentials need rotation"
+           labels: ["human-action-required", "brain-connector-failure", "operational", "critical"]
+           body: document failure count, errors from INGESTION-LOG, fix steps (rotate GitHub PAT
+           + set SUPABASE_ACCESS_TOKEN in Railway), reference brain/_tools/refresh_connectors.py
+      c. If labeled issue FOUND: log "brain connector failure already escalated (issue #N open) — skipping duplicate"
+    If consecutive_failures < 3:
+      Log: "brain connector check PASS — last entry shows success or < 3 consecutive failures"
 10. Commit report: `docs(nightly): review YYYY-MM-DD [auto-nightly]`
 11. Push to main
 12. If any guardrail tripped (forbidden path, >5 files, >50 LOC, test-check failed) — abort fixes, file issue only, still write report
