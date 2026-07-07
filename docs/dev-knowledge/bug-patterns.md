@@ -18134,3 +18134,21 @@ stopping the second re-applied a leftover MagicMock — leaving
 **Prevention:** Never list the same patch target twice. If a test flakes only in full runs,
 suspect a leaked global patch; bisect test files to the polluter, then confirm by inspecting the
 global's identity after the suspect runs.
+
+---
+
+### ops: nightly-commit-review 2026-07-07
+
+- 4 commits reviewed (all LOW risk, ops/planning only)
+- Step 9B executed: wrote ops/monitoring/healthz-alert.sh + SETUP.md (4th consecutive miss)
+- Step 9C added to nightly SKILL.md (subconscious run 80 mandate): brain connector health check
+- Step 9C executed: brain connectors failing 7 consecutive days — day-7 comment added to #394
+- No bug fixes (no product code in last 24h commits)
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_014JDg39f7mk5EUzuZci7Afk
+**Date:** 2026-07-07
+**Commit:** 460ea68
+**Author:** Claude
+**Files Changed:** .claude/skills/nightly-commit-review/SKILL.md,ops/monitoring/SETUP.md,ops/monitoring/healthz-alert.sh,ops/routines/logs/nightly-commit-review-2026-07-07.md
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
