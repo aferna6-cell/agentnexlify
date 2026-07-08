@@ -8,8 +8,8 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 **Date:** 2026-04-30
 **Symptom:** `backend/services/zapier_auth.py::_get_api_key_client` resolves API keys without checking `tenants.plan_status`. Cancelled / past-due / unpaid tenants whose API keys were not revoked at cancellation time still authenticate against the Zapier endpoints, bypassing the tier gate. Found by nightly-commit-review on `8050912`.
 **Root Cause:** Plan-status enforcement lives in the billing/tier gate at the chat surface, not in the Zapier API key resolver. Skeleton — confirm exact path before remediation.
-**Files Changed:** GitHub issue #107 filed; no code fix yet. `docs/dev-knowledge/nightly-reviews/logs/nightly-commit-review-2026-04-30.md` has triage detail.
-**Fix:** TODO — backend-dev to add `plan_status IN ('active','trialing')` check inside `_get_api_key_client`, return 402/403 for cancelled tenants. Add regression test seeding cancelled tenant + valid key + asserting auth fails.
+**Files Changed:** `backend/routers/zapier.py:121-128` — plan_status check added. `backend/tests/test_zapier_auth.py:339` — `test_cancelled_subscription_blocked` added. GH #107 closed 2026-06-13.
+**Fix:** Added `plan_status IN ('active','trialing')` check inside `_get_api_key_client` at `backend/routers/zapier.py:121-128`. Returns 402 for cancelled/past-due tenants. Regression test at `backend/tests/test_zapier_auth.py:339` (`test_cancelled_subscription_blocked`) seeding cancelled tenant + valid key + asserting auth fails.
 **Prevention:** Any API-key auth resolver MUST short-circuit on cancelled / past-due / unpaid plans. Pattern: tier gate at billing UI is necessary but not sufficient — tenant-facing surfaces (Zapier, widget chat, dashboard endpoints) re-check plan_status on every request. Treat plan_status as the canonical access control, not as a UI flag.
 
 ---
