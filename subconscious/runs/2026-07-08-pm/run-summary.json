@@ -1,0 +1,56 @@
+{
+  "run": 83,
+  "date": "2026-07-08-pm",
+  "total_runs_after": 83,
+  "winner": {
+    "title": "Add Step 9D to nightly SKILL.md — issue-to-pr-loop health check",
+    "confidence": "MEDIUM-HIGH",
+    "category": "workflow",
+    "effort": "XS",
+    "autonomous_executable": true,
+    "requires_human": false
+  },
+  "evidence_sources_read": [
+    "brain/Maps/Home.md (via CLAUDE.md read-first mandate)",
+    "subconscious/briefs/agentnexlify-improvement.md",
+    "subconscious/state/governance.json",
+    "subconscious/state/memory.jsonl (last 5 entries, runs 78-82)",
+    "subconscious/runs/2026-07-07-pm/winning-concept.md",
+    "ops/routines/logs/morning-digest-2026-07-08.md",
+    "ops/routines/logs/nightly-commit-review-2026-07-08.md",
+    "docs/dev-knowledge/bug-patterns.md",
+    "docs/dev-knowledge/customer-gaps.md",
+    "knowledge-base/log.md",
+    "brain/INGESTION-LOG.md",
+    ".github/workflows/kb-autopopulate.yml"
+  ],
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "verdict": {
+    "idea_1": "SURVIVES → WINNER (issue-to-pr-loop Step 9D)",
+    "idea_2": "WEAKENED → Parking Lot (INGESTION-LOG.md in Phase 2)",
+    "idea_3": "WEAKENED → Parking Lot (lead source analytics dashboard)",
+    "idea_4": "Not debated — operational housekeeping, human-required",
+    "idea_5": "Not debated — strong run 84 candidate (kb-autopopulate.yml verification)"
+  },
+  "prior_winners_verified": {
+    "run_82": "IMPLEMENTED — .github/workflows/kb-autopopulate.yml created by nightly f958ab7",
+    "run_81": "IMPLEMENTED — ai-ready label added to GH #385 by nightly",
+    "run_80": "IMPLEMENTED — Step 9C added to nightly SKILL.md",
+    "run_79": "PENDING_HUMAN — brain connectors day 8, GH #394 still blocked"
+  },
+  "governance_changes": {
+    "last_run": "2026-07-07-pm → 2026-07-08-pm",
+    "total_runs": "82 → 83",
+    "active_directions_added": "run 83 winner (Step 9D) at index 0"
+  },
+  "moratorium_active": false,
+  "push_notification_sent": true,
+  "artifacts": [
+    "subconscious/runs/2026-07-08-pm/ideas/ideas.md",
+    "subconscious/runs/2026-07-08-pm/debate/debate-log.md",
+    "subconscious/runs/2026-07-08-pm/winning-concept.md",
+    "subconscious/runs/2026-07-08-pm/improvement-backlog.md",
+    "subconscious/runs/2026-07-08-pm/run-summary.json"
+  ]
+}
