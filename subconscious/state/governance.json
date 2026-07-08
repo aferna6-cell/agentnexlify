@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-07-07-pm",
-  "total_runs": 82,
+  "last_run": "2026-07-08",
+  "total_runs": 83,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -18,6 +18,22 @@
     "note": "Run 9 correction: Lead Source Analytics (run 2) already implemented in AnalyticsPage.jsx \u2014 pending_approvals corrected 5\u21924. Moratorium still active. Run 10 (2026-04-30): same winner confirmed \u2014 JS Silent Catch still oldest pending. New finding: check_project_invariants.py (run 8 winner) fails on em-dash violations in WizardStepAutoKB.jsx:140/172/254 \u2014 wiring blocked until em-dash fixed first. Run 11 (2026-04-30-pm): GOVERNANCE CORRECTION \u2014 original MarketingDashboardPage.jsx + LocalSEOPage.jsx violations FIXED by e68677a. New violation cluster AdminAnalyticsPage.jsx:117-122 (6 instances). Pre-commit Check 9 still never added. Golden eval harness added but not wired to CI. Run 12 (2026-05-01): CRITICAL FINDING \u2014 pre-commit has 9 existing checks, Check 9 = 'dropped conversations.messages queries'. JS Silent Catch guard is Check 10 (not 9 as cited in runs 9-11 \u2014 numbering error now corrected). Nightly review 2026-05-01 INCORRECTLY reported em-dash blocker as stale \u2014 direct check_project_invariants.py run shows 9 violations: WizardStepAutoKB.jsx:2/140/172/254 + AutomationActivityCard.jsx:156/172/188/251/389 (5 new from 90ba1c5). Em-dash check needs scoping fix (skip .jsx/.tsx) as prerequisite for run 8. Issues #109 (AdminAnalyticsPage) + #110 (eval harness CI) opened by nightly review. Run 13 (2026-05-04): Repo idle 48h. AdminAnalyticsPage.jsx:117-122 confirmed 6 violations on live check. Email sequences N+1 opened (GH #112/#113). California AI companion/chatbot laws (SB 243 + Perkins Coie) added to KB. Em-dash blocker still active. New parking lot: email N+1 (ROI 2.3), extract _process_pending_sends (ROI 1.8), CA companion disclosure audit (ROI 1.6). Run 14 (2026-05-05-pm): MORATORIUM LIFTED \u2014 72f8204 implemented run 13 winner (JS silent catch guard + AdminAnalyticsPage fix). Em-dash blocker also cleared (8f680e8). SettingsPage.jsx split done (27e06f0, parking lot ROI 1.9). check_project_invariants.py passes all 6 checks. New winner: Wire golden eval harness to CI (ROI 2.5). Bonus: wire check_project_invariants.py (run 8 unblocked). Pending: 3 (runs 4, 7, 8)."
   },
   "active_directions": [
+    {
+      "title": "Lead source analytics dashboard — wire leads.lead_source to Recharts chart on Leads page (run 83 winner)",
+      "date": "2026-07-08",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "autonomous_executable": false,
+      "requires_human": true,
+      "category": "customer_value",
+      "moratorium_override": false,
+      "source_run": 83,
+      "effort": "S",
+      "evidence": "customer-gaps.md: lead source analytics listed as open cross-industry gap (Low effort, all industries). leads.lead_source column confirmed in DB. Recharts already installed in frontend/package.json. AnalyticsPage.jsx provides direct mirror pattern. Moratorium safe: pending=2/max=2 at threshold, not over.",
+      "autonomous_bonus": "Nightly: add brain/INGESTION-LOG.md to Phase 2 'Also read:' block in .claude/skills/subconscious/SKILL.md (XS effort, autonomous-executable, does not consume pending slot).",
+      "run_84_mandate": "Verify: (1) LeadSourceChart component added to Leads page — check frontend/src/pages/LeadsPage.jsx; (2) Nightly applied INGESTION-LOG.md autonomous bonus — check .claude/skills/subconscious/SKILL.md Phase 2; (3) kb-autopopulate.yml first cron run — check knowledge-base/log.md for entries after 2026-07-08; (4) GH #394 brain connectors resolved; (5) issue-to-pr-loop opened PR for GH #385 SMS Dashboard. If run 83 winner + run 79 resolved: pending=0, run 84 can recommend Zapier #107 (idea 3 from run 82 backlog).",
+      "note": "Run 83 winner. Run 9 governance note said 'lead source analytics already implemented in AnalyticsPage.jsx' — this is the Leads page breakdown specifically, which customer-gaps.md (post-run-9) still lists as open. Debate confirmed the gap is distinct. Implementation: LeadSourceChart component, Recharts PieChart, COALESCE(lead_source, 'unknown') grouping query, client_id-scoped."
+    },
     {
       "title": "Create .github/workflows/kb-autopopulate.yml — migrate KB autopopulate from local cron to GitHub Actions (run 82 winner)",
       "date": "2026-07-07-pm",
