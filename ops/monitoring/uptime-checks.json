@@ -10,6 +10,14 @@
       "alert_after_failures": 2
     },
     {
+      "name": "AgentNexLiFy public domain (www)",
+      "url": "https://www.agentnexlify.com/",
+      "method": "GET",
+      "expected_status": 200,
+      "interval_seconds": 60,
+      "alert_after_failures": 2
+    },
+    {
       "name": "AgentNexLiFy dashboard app",
       "url": "https://app.agentnexlify.com/",
       "method": "GET",

@@ -1,4 +1,10 @@
--- 158_allow_new_plan_names_in_tenants_check.sql
+-- 161_allow_new_plan_names_in_tenants_check.sql
+--
+-- RENUMBERED 2026-07-09 (was 158_, duplicating 158_wizard_events_fix_step_range;
+-- see GH #373). No prod action needed: this migration is ALREADY APPLIED to prod
+-- (2026-06-24, migration-history name "allow_new_plan_names_in_tenants_check")
+-- and the live tenants_plan_check constraint was verified 2026-07-09 to include
+-- chatbot + agent_os. Rename is repo hygiene only.
 --
 -- The 2026-06-15 reprice introduced two live plans — chatbot ($19.99) and
 -- agent_os ($99.99, "AI Workforce") — but the tenants_plan_check constraint
