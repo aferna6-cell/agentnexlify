@@ -493,7 +493,10 @@ export function VoiceAICard({
   saved,
   plan,
 }) {
-  const planEligible = ["professional", "enterprise"].includes(plan || "");
+  // Must match backend _AI_VOICE_PLANS (backend/routers/calls.py) - omitting
+  // agent_os locked current-plan customers out of a toggle the backend allows
+  // (found in the 2026-07-09 G3 voice scope audit).
+  const planEligible = ["agent_os", "professional", "enterprise"].includes(plan || "");
   return (
     <div className="settings-card">
       <h3>AI Phone Answering</h3>
