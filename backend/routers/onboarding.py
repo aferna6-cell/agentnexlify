@@ -301,6 +301,38 @@ def _seed_vertical_preset_faqs(db: Any, tenant_id: str, business_type: str | Non
         return 0
 
 
+def _seed_default_business_hours(tenant_id: str) -> bool:
+    """Create a default business_hours row when the tenant has none.
+
+    Without a business_hours row, generate_available_slots returns [] for
+    every date — the widget booking calendar (on by default since migration
+    163) dead-ends on "no available times". Seed Mon-Fri 9-5 defaults
+    (booking.DEFAULT_HOURS) so a new tenant is bookable out of the box; the
+    tenant can adjust real hours in dashboard settings.
+
+    Best-effort: returns True when a row was created, False otherwise.
+    Never raises.
+    """
+    try:
+        from backend.services.booking import get_business_hours, upsert_business_hours
+
+        if get_business_hours(tenant_id) is not None:
+            return False
+        upsert_business_hours(tenant_id, {})
+        logger.info(
+            "_seed_default_business_hours: seeded default hours for tenant=%s",
+            tenant_id,
+        )
+        return True
+    except Exception:
+        logger.warning(
+            "_seed_default_business_hours: failed for tenant=%s",
+            tenant_id,
+            exc_info=True,
+        )
+        return False
+
+
 def _apply_vertical_preset_defaults(
     widget_updates: dict[str, Any],
     business_type: str | None,
@@ -561,6 +593,12 @@ async def complete_onboarding(
     if preset_faqs_created > 0:
         faqs_created += preset_faqs_created
         configured["faqs"] = True
+
+    # Seed default booking hours — only when tenant has no business_hours row.
+    # Booking is on by default (migration 163); without hours the calendar has
+    # zero slots. Best-effort, mirrors the FAQ preset seed above.
+    if _seed_default_business_hours(tenant_id):
+        configured["booking_hours"] = True
 
     industry_pack_applied = False
     industry_pack_key = None

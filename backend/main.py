@@ -341,6 +341,7 @@ async def _automation_loop():
         run_monthly_conversation_insights,
         run_churn_watch,
     )
+    from backend.services.weekly_funnel_report import send_weekly_funnel_report
     from backend.services.os_sync import run_due_syncs as _os_sync_tick
     from backend.services.os_opportunities import run_opportunity_scan as _run_opportunity_scan
     from backend.services.twilio_webhook_sync import sync_twilio_number_webhooks
@@ -434,6 +435,9 @@ async def _automation_loop():
                             run_monthly_conversation_insights,
                         ),
                         _safe_run("run_churn_watch", run_churn_watch),
+                        _safe_run(
+                            "send_weekly_funnel_report", send_weekly_funnel_report
+                        ),
                     ]
                 )
 
