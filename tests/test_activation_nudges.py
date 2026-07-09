@@ -462,9 +462,13 @@ class TestSendActivationNudges:
 class TestStageBoundaries:
     """Verify the _STAGES list defines sensible boundaries."""
 
-    def test_three_stages_defined(self):
+    def test_four_stages_defined(self):
+        # Was 3 (d1/d3/d7). 2026-07-09 added the open-ended d14 last-call
+        # stage: exact-day windows could never reach tenants who signed up
+        # before the nudge system shipped. See
+        # backend/tests/test_activation_nudges_lastcall.py for its behavior.
         from backend.services.activation_nudges import _STAGES
-        assert len(_STAGES) == 3
+        assert len(_STAGES) == 4
 
     def test_stage_activity_types(self):
         from backend.services.activation_nudges import _STAGES
@@ -472,6 +476,7 @@ class TestStageBoundaries:
         assert "activation_nudge_d1" in types
         assert "activation_nudge_d3" in types
         assert "activation_nudge_d7" in types
+        assert "activation_nudge_d14_lastcall" in types
 
     def test_d1_targets_day_1(self):
         from backend.services.activation_nudges import _STAGES

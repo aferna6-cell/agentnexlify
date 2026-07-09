@@ -25,6 +25,7 @@ from datetime import datetime, timedelta, timezone
 from backend.models.database import get_service_supabase
 from backend.services.email_sender import send_email
 from backend.services.activity import log_activity
+from backend.services.internal_tenants import is_internal_tenant
 from backend.config import settings
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,11 @@ _STAGES = [
     ("activation_nudge_d1", 1, 1),
     ("activation_nudge_d3", 3, 3),
     ("activation_nudge_d7", 7, 7),
+    # Last-call: OPEN-ENDED window (14+ days, max_age None). Catches tenants
+    # who aged out of the exact-day windows before this system shipped —
+    # 2026-07-09 audit found 2 abandoned signups (16+ days old) that no stage
+    # could ever reach. Dedup via activity_log makes it once-per-tenant, ever.
+    ("activation_nudge_d14_lastcall", 14, None),
 ]
 
 # How many tenants to process per run (prevents unbounded work per tick).
@@ -117,6 +123,31 @@ def _day7_html(owner_name: str, business_name: str, settings_url: str) -> str:
     )
 
 
+def _day14_lastcall_html(owner_name: str, business_name: str, settings_url: str) -> str:
+    safe_owner = _html.escape(owner_name)
+    safe_biz = _html.escape(business_name)
+    safe_url = _html.escape(settings_url)
+    return (
+        f"<div style='font-family:sans-serif;max-width:600px;margin:0 auto;'>"
+        f"<h2 style='color:#1e293b;'>Hi {safe_owner},</h2>"
+        f"<p style='color:#374151;'>A while back you created an AgentNexLiFy account for "
+        f"<strong>{safe_biz}</strong> and never got it live. Your account is still here, "
+        f"and finishing takes about 5 minutes.</p>"
+        f"<p style='color:#374151;'>Pick your plan, paste one embed code on your site, and "
+        f"your AI receptionist starts answering visitors, capturing leads, and booking "
+        f"appointments &mdash; nights and weekends included.</p>"
+        f"<p style='margin-top:24px;'>"
+        f"<a href='{safe_url}' "
+        f"style='background:#6366f1;color:#fff;padding:12px 24px;border-radius:6px;"
+        f"text-decoration:none;font-weight:600;display:inline-block;'>"
+        f"Finish setting up {safe_biz} &rarr;</a></p>"
+        f"<p style='color:#6b7280;margin-top:24px;font-size:14px;'>"
+        f"Stuck on anything? Reply to this email and a real person will walk you through it. "
+        f"This is the last automated email we'll send you about setup.</p>"
+        f"<p style='color:#6b7280;'>— The AgentNexLiFy Team</p></div>"
+    )
+
+
 def _build_email(
     stage: str,
     owner_name: str,
@@ -134,9 +165,12 @@ def _build_email(
     elif stage == "activation_nudge_d3":
         subject = f"Stuck on setup? We'll do it with you — {safe_biz_subject}"
         body = _day3_html(owner_name, business_name)
-    else:  # d7
+    elif stage == "activation_nudge_d7":
         subject = f"What owners catch in week one — {safe_biz_subject}"
         body = _day7_html(owner_name, business_name, settings_url)
+    else:  # d14 last call
+        subject = f"Your AI receptionist is still waiting — {safe_biz_subject}"
+        body = _day14_lastcall_html(owner_name, business_name, settings_url)
     return subject, body
 
 
@@ -153,22 +187,25 @@ async def send_activation_nudges() -> int:
     settings_url = (settings.frontend_url or "https://app.agentnexlify.com").rstrip("/") + "/dashboard/settings"
     total_sent = 0
 
-    for activity_type, target_day, _ in _STAGES:
-        # Time window: [target_day * 24h - window, target_day * 24h + window)
-        lower_bound = (now - timedelta(days=target_day, hours=_WINDOW_HOURS)).isoformat()
+    for activity_type, target_day, max_age_day in _STAGES:
+        # Exact-day stages: [target*24h - window, target*24h + window).
+        # Last-call stage (max_age_day None): everything older than target_day —
+        # open-ended so pre-existing drop-offs are caught; dedup keeps it one-shot.
         upper_bound = (now - timedelta(days=target_day) + timedelta(hours=_WINDOW_HOURS)).isoformat()
 
-        # Query tenants that signed up in this window, are not demo, and on a stuck plan.
+        # Query tenants in this window, not demo, on a stuck plan.
         try:
-            result = (
+            query = (
                 db.table("tenants")
                 .select("id, business_name, owner_email, owner_name, plan, is_demo")
-                .gte("created_at", lower_bound)
                 .lte("created_at", upper_bound)
                 .neq("is_demo", True)
                 .limit(_BATCH_LIMIT)
-                .execute()
             )
+            if max_age_day is not None:
+                lower_bound = (now - timedelta(days=max_age_day, hours=_WINDOW_HOURS)).isoformat()
+                query = query.gte("created_at", lower_bound)
+            result = query.execute()
         except Exception:
             logger.exception(
                 "send_activation_nudges: failed to query tenants for stage=%s", activity_type
@@ -185,6 +222,11 @@ async def send_activation_nudges() -> int:
 
             # Only nudge free / trialing tenants.
             if plan not in _STUCK_PLANS:
+                continue
+
+            # Internal/test/demo-named accounts never get nudges (matters most
+            # for the open-ended last-call stage, which sees ALL old tenants).
+            if is_internal_tenant(tenant):
                 continue
 
             # Per-tenant fault isolation — a crash here must not stop the rest.

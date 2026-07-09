@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /setup
+Disallow: /onboarding
+Disallow: /admin
+Disallow: /auth/
+Disallow: /reset-password
+Disallow: /invite/
+Disallow: /client/
+
+Sitemap: https://www.agentnexlify.com/sitemap.xml

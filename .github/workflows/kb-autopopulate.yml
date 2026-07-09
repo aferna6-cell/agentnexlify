@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: kb-autopopulate
@@ -28,19 +29,68 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
+      # 2026-07-09: the first two runs of this workflow reported SUCCESS while
+      # doing nothing — ANTHROPIC_API_KEY / VOYAGE_API_KEY / SUPABASE_ACCESS_TOKEN
+      # are not set as Actions secrets, the script died in 6 seconds, and
+      # `continue-on-error: true` masked it. A silent-green KB pipeline is how
+      # the KB went 63 days stale. This step makes the missing secret a visible
+      # owner task (deduped GitHub issue) and skips the compile honestly.
+      - name: Check required secrets
+        id: secrets
+        env:
+          HAS_ANTHROPIC: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+        run: |
+          if [ "$HAS_ANTHROPIC" = "true" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::ANTHROPIC_API_KEY is not set as an Actions secret — KB auto-populate cannot run. Filing/refreshing the owner issue."
+          fi
+
+      - name: File owner issue when secrets are missing
+        if: steps.secrets.outputs.ok != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = 'KB auto-populate blocked: set ANTHROPIC_API_KEY as an Actions secret [human-action-required]';
+            const body = [
+              'The scheduled KB Auto-Populate workflow cannot run: `ANTHROPIC_API_KEY` is not set in',
+              'GitHub Actions secrets (Settings -> Secrets and variables -> Actions).',
+              '',
+              'Optional but recommended at the same time: `VOYAGE_API_KEY` (embeddings) and',
+              '`SUPABASE_ACCESS_TOKEN` (kb_articles upsert + brain Supabase connector).',
+              '',
+              `Latest skipped run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            ].join('\n');
+            const open = await github.rest.issues.listForRepo({
+              ...context.repo, state: 'open', labels: 'human-action-required',
+            });
+            const existing = open.data.find(i => i.title === title);
+            if (!existing) {
+              await github.rest.issues.create({
+                ...context.repo, title, body, labels: ['human-action-required', 'ops'],
+              });
+            }
+
       - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ok == 'true'
         with:
           node-version: "20"
 
       - name: Install Claude Code CLI (pinned v2.1.98 per claude-version-pin.md)
+        if: steps.secrets.outputs.ok == 'true'
         run: npm install -g @anthropic-ai/claude-code@2.1.98
 
       - name: Configure git
+        if: steps.secrets.outputs.ok == 'true'
         run: |
           git config user.name "kb-autopopulate[bot]"
           git config user.email "kb-autopopulate@users.noreply.github.com"
 
+      # No continue-on-error: a real failure should show as a red run so the
+      # nightly review (Step 9D-style dormancy checks) can see it.
       - name: Run KB auto-populate script
+        if: steps.secrets.outputs.ok == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
@@ -48,4 +98,3 @@ jobs:
           # Point script to the globally-installed claude CLI
           AGENTNEXLIFY_CLAUDE_BIN: claude
         run: bash scripts/daily/kb-autopopulate.sh
-        continue-on-error: true
