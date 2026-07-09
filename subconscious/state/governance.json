@@ -5,7 +5,9 @@
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
-  "frozen_ideas": ["ai_human_handoff"],
+  "frozen_ideas": [
+    "ai_human_handoff"
+  ],
   "moratorium_config": {
     "moratorium_active": false,
     "triggered_run": 15,
@@ -19,44 +21,46 @@
   },
   "active_directions": [
     {
-      "title": "Add Step 9D to nightly SKILL.md — issue-to-pr-loop health check (run 83 winner)",
+      "title": "Add Step 9D to nightly SKILL.md \u2014 issue-to-pr-loop health check (run 83 winner)",
       "date": "2026-07-08-pm",
       "confidence": "MEDIUM-HIGH",
-      "status": "pending_autonomous",
+      "status": "implemented",
       "autonomous_executable": true,
       "requires_human": false,
       "category": "workflow",
       "moratorium_override": false,
       "source_run": 83,
       "effort": "XS",
-      "evidence": "ai-ready label applied to GH #385 (SMS Dashboard) during nightly-2026-07-08. Morning digest says 'issue-to-pr-loop should have triggered' — passive phrasing, no PR confirmed. 5+ hours elapsed (20+ poll cycles at 15-min interval) with no PR opened. Same silent-failure pattern as brain connectors (8-day gap caught by Step 9C) and KB autopopulate (63-day gap caught by run 82). Step 9D closes the third monitoring gap in the autonomous pipeline.",
-      "run_84_mandate": "Verify Step 9D was added to .claude/skills/nightly-commit-review/SKILL.md by nightly-2026-07-09. Confirm whether issue-to-pr-loop opened a draft PR for #385. If no PR by run 84, issue-to-pr-loop is confirmed stalled — escalate to human-action-required. Also: check knowledge-base/log.md for kb-autopopulate.yml first-run entry (next 6am/6pm UTC). Revisit lead source analytics dashboard if pipeline confirmed healthy.",
-      "note": "Run 83 winner. Step 9D spec in subconscious/runs/2026-07-08-pm/winning-concept.md. After nightly executes: (1) check for ai-ready issues open >24h with no linked PR, (2) check autopilot-issue-loop.yml last successful run timestamp, (3) if stalled >4h add diagnostic comment to issue + create human-action-required GH issue, (4) log result to nightly commit log."
+      "evidence": "ai-ready label applied to GH #385 (SMS Dashboard) during nightly-2026-07-08. Morning digest says 'issue-to-pr-loop should have triggered' \u2014 passive phrasing, no PR confirmed. 5+ hours elapsed (20+ poll cycles at 15-min interval) with no PR opened. Same silent-failure pattern as brain connectors (8-day gap caught by Step 9C) and KB autopopulate (63-day gap caught by run 82). Step 9D closes the third monitoring gap in the autonomous pipeline.",
+      "run_84_mandate": "Verify Step 9D was added to .claude/skills/nightly-commit-review/SKILL.md by nightly-2026-07-09. Confirm whether issue-to-pr-loop opened a draft PR for #385. If no PR by run 84, issue-to-pr-loop is confirmed stalled \u2014 escalate to human-action-required. Also: check knowledge-base/log.md for kb-autopopulate.yml first-run entry (next 6am/6pm UTC). Revisit lead source analytics dashboard if pipeline confirmed healthy.",
+      "note": "Run 83 winner. Step 9D spec in subconscious/runs/2026-07-08-pm/winning-concept.md. After nightly executes: (1) check for ai-ready issues open >24h with no linked PR, (2) check autopilot-issue-loop.yml last successful run timestamp, (3) if stalled >4h add diagnostic comment to issue + create human-action-required GH issue, (4) log result to nightly commit log.",
+      "implemented_date": "2026-07-09",
+      "implemented_by": "nightly-commit-review 2026-07-09 \u2014 Step 9D added to .claude/skills/nightly-commit-review/SKILL.md. Step 9D executed this run: #385 open >24h with no PR, autopilot-issue-loop has 30 consecutive failures since 2026-07-04 (AUTOPILOT_GH_TOKEN expired). Comment added to #385. GH issue #399 filed (human-action-required). Brain connector day-8+ comment added to #394."
     },
     {
-      "title": "Create .github/workflows/kb-autopopulate.yml — migrate KB autopopulate from local cron to GitHub Actions (run 82 winner)",
+      "title": "Create .github/workflows/kb-autopopulate.yml \u2014 migrate KB autopopulate from local cron to GitHub Actions (run 82 winner)",
       "date": "2026-07-07-pm",
       "confidence": "HIGH",
       "status": "implemented",
       "implemented_date": "2026-07-08",
-      "implemented_by": "nightly-commit-review 2026-07-08 — .github/workflows/kb-autopopulate.yml created. Calls existing scripts/daily/kb-autopopulate.sh via AGENTNEXLIFY_CLAUDE_BIN=claude override. Schedule: 0 6,18 * * * UTC. Secrets: ANTHROPIC_API_KEY (required), VOYAGE_API_KEY + SUPABASE_ACCESS_TOKEN (optional). bug-patterns.md Zapier #107 stale entry corrected as additive improvement.",
+      "implemented_by": "nightly-commit-review 2026-07-08 \u2014 .github/workflows/kb-autopopulate.yml created. Calls existing scripts/daily/kb-autopopulate.sh via AGENTNEXLIFY_CLAUDE_BIN=claude override. Schedule: 0 6,18 * * * UTC. Secrets: ANTHROPIC_API_KEY (required), VOYAGE_API_KEY + SUPABASE_ACCESS_TOKEN (optional). bug-patterns.md Zapier #107 stale entry corrected as additive improvement.",
       "autonomous_executable": true,
       "requires_human": false,
       "category": "operational",
       "moratorium_override": false,
       "source_run": 82,
       "effort": "S",
-      "evidence": "knowledge-base/log.md last entry 2026-05-05 (63-day gap). scripts/daily/kb-autopopulate.sh is local cron requiring claude CLI at /home/aidan/... path — unavailable in CI/remote. No .github/workflows/kb-autopopulate.yml exists. refresh-brain.yml proves GH Actions pattern viable. Mandate: run_82_mandate PRIMARY.",
-      "run_83_mandate": "Verify .github/workflows/kb-autopopulate.yml was merged and first run succeeded. Check knowledge-base/log.md for entries after 2026-07-07. If GH #394 (brain connector credentials) was resolved, confirm SUPABASE_ACCESS_TOKEN + VOYAGE_API_KEY are in repo secrets. Also: verify ai-ready label on GH #385 (tonight's nightly). Verify issue-to-pr-loop opened a draft PR for SMS Compliance Dashboard. Secondary: revisit lead source analytics dashboard (idea 5) + INGESTION-LOG.md in Phase 2 (idea 2) — both parking lot from run 82.",
-      "note": "Run 82 winner. Implementation sketch in subconscious/runs/2026-07-07-pm/winning-concept.md. Key steps: (1) checkout action, (2) setup-node@v4, (3) npm install -g @anthropic-ai/claude-code@2.1.98, (4) claude --print with headless DISCOVER_PROMPT, (5) claude --print with COMPILE_PROMPT, (6) git commit + push. Secrets: ANTHROPIC_API_KEY (required), VOYAGE_API_KEY + SUPABASE_ACCESS_TOKEN (optional, graceful-skip). Also note: bug-patterns.md Zapier #107 entry is stale — GH #107 was closed 2026-06-13 (per governance run 75/76/77 correction). Update bug-patterns.md as additive improvement."
+      "evidence": "knowledge-base/log.md last entry 2026-05-05 (63-day gap). scripts/daily/kb-autopopulate.sh is local cron requiring claude CLI at /home/aidan/... path \u2014 unavailable in CI/remote. No .github/workflows/kb-autopopulate.yml exists. refresh-brain.yml proves GH Actions pattern viable. Mandate: run_82_mandate PRIMARY.",
+      "run_83_mandate": "Verify .github/workflows/kb-autopopulate.yml was merged and first run succeeded. Check knowledge-base/log.md for entries after 2026-07-07. If GH #394 (brain connector credentials) was resolved, confirm SUPABASE_ACCESS_TOKEN + VOYAGE_API_KEY are in repo secrets. Also: verify ai-ready label on GH #385 (tonight's nightly). Verify issue-to-pr-loop opened a draft PR for SMS Compliance Dashboard. Secondary: revisit lead source analytics dashboard (idea 5) + INGESTION-LOG.md in Phase 2 (idea 2) \u2014 both parking lot from run 82.",
+      "note": "Run 82 winner. Implementation sketch in subconscious/runs/2026-07-07-pm/winning-concept.md. Key steps: (1) checkout action, (2) setup-node@v4, (3) npm install -g @anthropic-ai/claude-code@2.1.98, (4) claude --print with headless DISCOVER_PROMPT, (5) claude --print with COMPILE_PROMPT, (6) git commit + push. Secrets: ANTHROPIC_API_KEY (required), VOYAGE_API_KEY + SUPABASE_ACCESS_TOKEN (optional, graceful-skip). Also note: bug-patterns.md Zapier #107 entry is stale \u2014 GH #107 was closed 2026-06-13 (per governance run 75/76/77 correction). Update bug-patterns.md as additive improvement."
     },
     {
-      "title": "Add ai-ready label to GH #385 — activate issue-to-pr-loop for SMS Compliance Dashboard (run 81 winner)",
+      "title": "Add ai-ready label to GH #385 \u2014 activate issue-to-pr-loop for SMS Compliance Dashboard (run 81 winner)",
       "date": "2026-07-07",
       "confidence": "HIGH",
       "status": "implemented",
       "implemented_date": "2026-07-08",
-      "implemented_by": "nightly-commit-review 2026-07-08 — ai-ready label added to GH #385 via mcp__github__issue_write. Issue now has labels: nightly-review, backend, medium-risk, frontend, ai-ready. Issue-to-pr-loop will now poll and pick up #385.",
+      "implemented_by": "nightly-commit-review 2026-07-08 \u2014 ai-ready label added to GH #385 via mcp__github__issue_write. Issue now has labels: nightly-review, backend, medium-risk, frontend, ai-ready. Issue-to-pr-loop will now poll and pick up #385.",
       "autonomous_executable": true,
       "requires_human": false,
       "category": "customer_value",
@@ -68,25 +72,25 @@
       "note": "Run 81 winner. Run 80 mandate (verify GH issue + ai-ready label) executed: issue found, label absent, gap fixed. Implementation: mcp__github__issue_write or add_label on issue #385."
     },
     {
-      "title": "Add Step 9C to nightly SKILL.md — brain connector health check (run 80 winner)",
+      "title": "Add Step 9C to nightly SKILL.md \u2014 brain connector health check (run 80 winner)",
       "date": "2026-07-06",
       "confidence": "HIGH",
       "status": "implemented",
       "implemented_date": "2026-07-07",
-      "implemented_by": "nightly-commit-review 460ea68 (2026-07-07) — Step 9C block added to .claude/skills/nightly-commit-review/SKILL.md. Day-7 comment added to GH #394. Deduplication: #392 and #394 found open, no new brain-connector-failure issue created.",
+      "implemented_by": "nightly-commit-review 460ea68 (2026-07-07) \u2014 Step 9C block added to .claude/skills/nightly-commit-review/SKILL.md. Day-7 comment added to GH #394. Deduplication: #392 and #394 found open, no new brain-connector-failure issue created.",
       "autonomous_executable": true,
       "requires_human": false,
       "category": "operational",
       "moratorium_override": true,
-      "moratorium_override_reason": "AUTONOMOUS-EXECUTABLE SKILL.md edit — zero human queue impact. Same class as Step 9B (run 78 winner, implemented run 79). Mandate fires unconditionally.",
+      "moratorium_override_reason": "AUTONOMOUS-EXECUTABLE SKILL.md edit \u2014 zero human queue impact. Same class as Step 9B (run 78 winner, implemented run 79). Mandate fires unconditionally.",
       "source_run": 80,
       "effort": "XS",
-      "evidence": "brain/INGESTION-LOG.md shows 6 consecutive failure days (Jul 1–6, 2026). GitHub 403 + SUPABASE_ACCESS_TOKEN missing. All autonomous agents on stale brain data since 2026-06-22.",
+      "evidence": "brain/INGESTION-LOG.md shows 6 consecutive failure days (Jul 1\u20136, 2026). GitHub 403 + SUPABASE_ACCESS_TOKEN missing. All autonomous agents on stale brain data since 2026-06-22.",
       "run_81_mandate": "Verify Step 9C present in .claude/skills/nightly-commit-review/SKILL.md. If brain connectors still failing after 2 more runs: escalate via P0 GH issue.",
-      "note": "Run 80 winner. Step 9C block spec in subconscious/runs/2026-07-06/winning-concept.md §Implementation Sketch. Deduplication: creates GH issue ONLY IF no open issue with label brain-connector-failure exists."
+      "note": "Run 80 winner. Step 9C block spec in subconscious/runs/2026-07-06/winning-concept.md \u00a7Implementation Sketch. Deduplication: creates GH issue ONLY IF no open issue with label brain-connector-failure exists."
     },
     {
-      "title": "Fix brain connector credentials — GitHub 403 + SUPABASE_ACCESS_TOKEN missing (run 79 winner)",
+      "title": "Fix brain connector credentials \u2014 GitHub 403 + SUPABASE_ACCESS_TOKEN missing (run 79 winner)",
       "date": "2026-07-05",
       "confidence": "HIGH",
       "status": "pending_human",
@@ -99,7 +103,7 @@
       "effort": "XS",
       "evidence": "brain/INGESTION-LOG.md shows GitHub 403 Forbidden x 4 consecutive days (2026-07-01 to 2026-07-04). SUPABASE_ACCESS_TOKEN not set x 4 consecutive days. All autonomous agents operating on stale brain data. First detection by subconscious.",
       "run_80_mandate": "If brain connectors still failing after next run: add Step 9C to nightly SKILL.md for automated detection (INGESTION-LOG.md check, auto-GH-issue on 3+ consecutive failures).",
-      "note": "Run 79 winner. New evidence — not detected by runs 77 or 78. Brain connector failure went unnoticed 4 days. Fix: token rotation + env var set (7 min total). See subconscious/runs/2026-07-05/winning-concept.md."
+      "note": "Run 79 winner. New evidence \u2014 not detected by runs 77 or 78. Brain connector failure went unnoticed 4 days. Fix: token rotation + env var set (7 min total). See subconscious/runs/2026-07-05/winning-concept.md."
     },
     {
       "title": "Add Step 9B to nightly SKILL.md \u2014 healthz monitor maintenance (run 78 winner)",
@@ -107,7 +111,7 @@
       "confidence": "HIGH",
       "status": "implemented",
       "implemented_date": "2026-07-05",
-      "implemented_by": "subconscious-run-79 (AUTONOMOUS-EXECUTABLE — Step 9B added to .claude/skills/nightly-commit-review/SKILL.md)",
+      "implemented_by": "subconscious-run-79 (AUTONOMOUS-EXECUTABLE \u2014 Step 9B added to .claude/skills/nightly-commit-review/SKILL.md)",
       "autonomous_executable": true,
       "autonomous_condition": "SKILL.md edit is LOW-risk doc change. Nightly reads winning-concept.md + writes ops/monitoring/healthz-alert.sh + ops/monitoring/SETUP.md. Script content embedded in subconscious/runs/2026-07-03/winning-concept.md.",
       "requires_human": true,
@@ -127,7 +131,7 @@
       "confidence": "HIGH",
       "status": "implemented",
       "implemented_date": "2026-07-07",
-      "implemented_by": "nightly-commit-review 460ea68 (2026-07-07) — ops/monitoring/healthz-alert.sh WRITTEN + ops/monitoring/SETUP.md WRITTEN. SLACK_ALERT_WEBHOOK_URL still requires human action (GH #391).",
+      "implemented_by": "nightly-commit-review 460ea68 (2026-07-07) \u2014 ops/monitoring/healthz-alert.sh WRITTEN + ops/monitoring/SETUP.md WRITTEN. SLACK_ALERT_WEBHOOK_URL still requires human action (GH #391).",
       "escalated_date": "2026-07-05",
       "escalation_note": "Run 79 mandate executed. P0 GH issue filed with critical+blocker labels. Script subsequently written by nightly 460ea68 on 2026-07-07.",
       "autonomous_executable": true,
