@@ -204,6 +204,64 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
          - None found: create issue via mcp__github__issue_write (per Moratorium Issue Template)
          - Found: add comment via mcp__github__add_issue_comment (pending count + ages)
       d. Add "## Moratorium Status" to report
+9B. (Healthz Monitor Maintenance) Check if `ops/monitoring/healthz-alert.sh` exists:
+    ```bash
+    ls ops/monitoring/healthz-alert.sh 2>/dev/null || echo "MISSING"
+    ```
+    If MISSING: write the file from the embedded content in the latest
+    `subconscious/runs/*/winning-concept.md` that contains "## Script Content".
+    Commit: `ops(monitoring): add healthz-alert.sh [auto-nightly-YYYY-MM-DD]`
+    Also check if `ops/monitoring/SETUP.md` exists; write it if missing.
+    After both files created: open GH issue "Set SLACK_ALERT_WEBHOOK_URL in Railway"
+    with label `human-action-required` and body from subconscious/runs/2026-07-03/winning-concept.md §Human Step.
+    If ALREADY EXISTS: log "healthz-alert.sh present — monitoring active" and skip.
+9C. (Brain Connector Health Check) Read last 20 lines of `brain/INGESTION-LOG.md`:
+    ```bash
+    tail -20 brain/INGESTION-LOG.md
+    ```
+    Count consecutive entries ending with `error —` or `skipped —` (from bottom up, stop on first
+    success or gap). If consecutive_failures >= 3:
+      a. Search for existing open GH issue with label `brain-connector-failure`:
+         Use mcp__github__search_issues with query "repo:aferna6-cell/agentnexlify label:brain-connector-failure state:open"
+      b. If NO labeled issue found — also search for open issues mentioning brain connector
+         (query: "repo:aferna6-cell/agentnexlify brain connector state:open").
+         If related open issues exist: add comment to the most recent human-action-required
+         issue with updated failure count and days-since-last-success. Log:
+         "brain connector failure escalated via comment on #N — skipping duplicate issue"
+         If no related issues exist at all: create GH issue via mcp__github__issue_write:
+           title: "Brain connector failing N consecutive days — credentials need rotation"
+           labels: ["human-action-required", "brain-connector-failure", "operational", "critical"]
+           body: document failure count, errors from INGESTION-LOG, fix steps (rotate GitHub PAT
+           + set SUPABASE_ACCESS_TOKEN in Railway), reference brain/_tools/refresh_connectors.py
+      c. If labeled issue FOUND: log "brain connector failure already escalated (issue #N open) — skipping duplicate"
+    If consecutive_failures < 3:
+      Log: "brain connector check PASS — last entry shows success or < 3 consecutive failures"
+9D. (Issue-to-PR Loop Health Check) Check for stalled ai-ready issues and loop health:
+    1. **Check for stalled ai-ready issues:**
+       List open ai-ready issues: `mcp__github__list_issues` with `labels: ["ai-ready"], state: OPEN`
+       For each open ai-ready issue, search for linked PR:
+         `mcp__github__search_pull_requests` query: `repo:aferna6-cell/agentnexlify is:pr <issue_number>`
+       Flag any ai-ready issue that has been open >24h with no linked PR as stalled.
+    2. **Check loop execution health:**
+       List recent runs: `mcp__github__actions_list` method=list_workflow_runs,
+         resource_id=autopilot-issue-loop.yml, per_page=5
+       If last successful run > 4h ago OR all 5 recent runs = failure → flag as dormant/erroring.
+    3. **If stalled issue + loop failure found:**
+       a. Add comment to the stalled GH issue via `mcp__github__add_issue_comment`:
+          "Step 9D health check: ai-ready issue open >24h with no linked PR.
+           Loop last ran: {timestamp}. Loop status: STALLED — {N} consecutive failures.
+           Possible causes: AUTOPILOT_GH_TOKEN expired, workflow disabled, ANTHROPIC_API_KEY missing."
+       b. Search for existing open issue about loop dormancy:
+          `mcp__github__search_issues` query: "repo:aferna6-cell/agentnexlify autopilot-issue-loop state:open"
+          If NONE found: create GH issue via `mcp__github__issue_write`:
+            title: "autopilot-issue-loop GitHub Actions failing N days — <likely cause> [CRITICAL]"
+            labels: ["human-action-required", "nightly-review", "operational"]
+            body: consecutive failure count, first/last failure timestamps, failing step,
+                  likely root cause, fix steps (rotate AUTOPILOT_GH_TOKEN), affected ai-ready issues
+          If FOUND: add comment with updated failure count + latest failure timestamp
+    4. **If no stalled issues and loop healthy:**
+       Log: "Step 9D PASS — {N} ai-ready issues, all have linked PRs or <24h old, loop ran {timestamp}"
+    Log result: "Step 9D: {N} ai-ready issues, {M} stalled, loop last ran {timestamp}, status: {PASS|STALLED}"
 10. Commit report: `docs(nightly): review YYYY-MM-DD [auto-nightly]`
 11. Push to main
 12. If any guardrail tripped (forbidden path, >5 files, >50 LOC, test-check failed) — abort fixes, file issue only, still write report

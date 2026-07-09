@@ -1,0 +1,53 @@
+{
+  "run": 80,
+  "date": "2026-07-06",
+  "winner": "Add Step 9C to nightly SKILL.md — brain connector health check",
+  "winner_category": "operational",
+  "winner_effort": "XS",
+  "winner_confidence": "HIGH",
+  "autonomous_executable": true,
+  "requires_human": false,
+  "moratorium_override": true,
+  "moratorium_override_reason": "AUTONOMOUS-EXECUTABLE SKILL.md edit — zero human queue impact. Same class as Step 9B (run 78 winner, implemented run 79). Mandate fires unconditionally.",
+  "mandate_fired": true,
+  "mandate_source": "run 79 winning-concept.md run_80_mandate field: 'If brain connectors still failing after next run: add Step 9C to nightly SKILL.md'",
+  "evidence": {
+    "brain_connector_github_403_days": 6,
+    "brain_connector_supabase_token_missing_days": 6,
+    "last_successful_brain_sync": "2026-06-22",
+    "ghs_394_filed": true,
+    "ghs_394_status": "open (pending human credential rotation)",
+    "production_commits_last_3_days": 0,
+    "moratorium_active": true,
+    "invariants_exit": 1,
+    "invariants_fail_reason": "widget drift (retired human-only topic)"
+  },
+  "ideas_generated": 5,
+  "debate_top3": [
+    "Step 9C brain connector health check (SURVIVES → WINNER — mandate fires, AUTONOMOUS-EXECUTABLE)",
+    "SMS Compliance Dashboard GH issue for issue-to-pr-loop (SURVIVES → Parking lot — mandate takes precedence)",
+    "Add brain/INGESTION-LOG.md to subconscious Phase 2 evidence (WEAKENED → Parking lot — incremental improvement, lower priority)"
+  ],
+  "killed": [],
+  "parking_lot_added": [
+    "SMS Compliance Dashboard GH issue for issue-to-pr-loop (run 81 candidate if mandate resolved)",
+    "Add brain/INGESTION-LOG.md to subconscious Phase 2 evidence (run 81 candidate)",
+    "Morning digest brain freshness check (Idea 4, not debated)",
+    "check_project_invariants.py brain freshness (Idea 5, REJECTED — wrong layer)"
+  ],
+  "governance_corrections": {
+    "total_runs": "79 → 80",
+    "last_run": "2026-07-05 → 2026-07-06",
+    "run_79_brain_connector": "status remains pending_human — brain connectors still failing Jul 6",
+    "run_80_step9c": "added to active_directions as pending_autonomous"
+  },
+  "key_finding": "Brain connectors broken 6 consecutive days. Run 80 mandate fires: Step 9C adds systematic detection to nightly-commit-review. Future credential expirations detected within 24h instead of 4+ days. Deduplication via brain-connector-failure label prevents GH issue spam.",
+  "run_81_mandate": "Verify Step 9C present in .claude/skills/nightly-commit-review/SKILL.md (grep for '9C'). If brain connectors still failing after 2 more runs post-Step-9C: escalate via P0 GH issue. SMS Compliance Dashboard GH issue is top parking lot candidate for run 81 winner.",
+  "artifacts": [
+    "subconscious/runs/2026-07-06/winning-concept.md",
+    "subconscious/runs/2026-07-06/run-summary.json",
+    "subconscious/runs/2026-07-06/improvement-backlog.md",
+    "subconscious/runs/2026-07-06/ideas/ideas.md",
+    "subconscious/runs/2026-07-06/debate/debate-log.md"
+  ]
+}

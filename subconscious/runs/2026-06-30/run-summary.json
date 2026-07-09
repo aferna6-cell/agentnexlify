@@ -1,0 +1,64 @@
+{
+  "run": 73,
+  "date": "2026-06-30",
+  "winner": {
+    "title": "SMS Compliance Dashboard",
+    "effort": "S",
+    "risk": "LOW",
+    "source_run": 70,
+    "council_score": "12/12",
+    "autonomous_executable": false,
+    "requires_human_session": true
+  },
+  "ideas_explored": [
+    "SMS Compliance Dashboard",
+    "Plan-Name Guard Check 7",
+    "AI-to-Human Handoff v1",
+    "Verify/Trigger KB Cron",
+    "email_sequences.py Split"
+  ],
+  "debate_survivors": ["SMS Compliance Dashboard"],
+  "debate_eliminated": [
+    "Plan-Name Guard Check 7 (parking lot)",
+    "AI-to-Human Handoff v1 (parking lot)",
+    "Verify/Trigger KB Cron (bonus note)",
+    "email_sequences.py Split (parking lot)"
+  ],
+  "governance_corrections": {
+    "run_71": {
+      "old_status": "in_progress",
+      "new_status": "implemented",
+      "implemented_by": "65284cc",
+      "implemented_date": "2026-06-30"
+    },
+    "run_72": {
+      "old_status": "pending_approval",
+      "new_status": "implemented",
+      "implemented_by": "65284cc",
+      "implemented_date": "2026-06-30"
+    }
+  },
+  "kb_fix_status": {
+    "script_fixed": true,
+    "commit": "65284cc",
+    "log_updated": false,
+    "note": "knowledge-base/log.md still at 2026-05-05 — cron not yet fired post-fix. Manual trigger may be required."
+  },
+  "moratorium": {
+    "active": true,
+    "true_pending_before_run": 6,
+    "true_pending_after_corrections": 4,
+    "true_pending_after_execution": 3
+  },
+  "output_files": [
+    "subconscious/runs/2026-06-30/ideas/idea-1-sms-compliance-dashboard.md",
+    "subconscious/runs/2026-06-30/ideas/idea-2-plan-name-guard-check7.md",
+    "subconscious/runs/2026-06-30/ideas/idea-3-ai-human-handoff.md",
+    "subconscious/runs/2026-06-30/ideas/idea-4-kb-verify-cron.md",
+    "subconscious/runs/2026-06-30/ideas/idea-5-email-sequences-split.md",
+    "subconscious/runs/2026-06-30/debate/debate-log.md",
+    "subconscious/runs/2026-06-30/winning-concept.md",
+    "subconscious/runs/2026-06-30/improvement-backlog.md",
+    "subconscious/runs/2026-06-30/run-summary.json"
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "date": "2026-06-28-pm",
+  "run": 70,
+  "winner": "SMS Compliance Dashboard",
+  "winner_score": "12/12",
+  "winner_effort": "S",
+  "confidence": "HIGH",
+  "autonomous_executable": false,
+  "requires_human": true,
+  "moratorium_active": true,
+  "true_pending_estimate": 6,
+  "category": "customer_value",
+  "mandate_fired": true,
+  "mandate_type": "run_70_mandate",
+  "mandate_actions": [
+    "docs/reminders/widget-drift-URGENT.md written",
+    "URGENT push notification sent",
+    "widget drift topic retired from subconscious permanently in governance.json"
+  ],
+  "consecutive_delivery_failures": 6,
+  "consecutive_check_failures": 6,
+  "widget_drift_status": "RETIRED — human-only task from run 70 forward",
+  "evidence_summary": "check_project_invariants.py exits 1 for 6th consecutive run (sole failure: widget drift in landing-page-v2/). Council sprint complete: all 9 council fixes landed or have runbooks (TCPA sms_compliance.py + migration 160, KB fallback, lead temperature, SMS frequency cap, integration health banner, propose-only records, outcomes copy). SMS compliance backend ready with no visibility page. KB 53 days stale (autopopulate.sh broken). email_sequences.py 1143L with split prerequisites met.",
+  "ideas_considered": [
+    "SMS Compliance Dashboard (WINNER — 12/12)",
+    "AI-to-Human Handoff v1 (parking lot — 10/12, M-effort)",
+    "Fix KB Autopopulate (parking lot — 8/12, unknown failure mode)",
+    "Email Sequences Split (parking lot — moratorium-constrained)",
+    "Record Audit Dashboard (parking lot — no urgency)"
+  ],
+  "rejected": [],
+  "parking_lot": [
+    "KB autopopulate fix (run 71 candidate)",
+    "AI-to-Human Handoff v1 (run 71-72 candidate)",
+    "Record Audit Dashboard (run 72 candidate)",
+    "Email sequences split (post-moratorium)",
+    "Plan-name guard Check 7 (after pre-commit unblocked)"
+  ],
+  "run_71_forecast": "Evaluate SMS Dashboard implementation status. If complete: KB autopopulate fix as primary. If not: SMS Dashboard re-recommended. Widget drift: track as human-maintained item only.",
+  "key_finding": "Run 70 mandate fires unconditionally. 6-run delivery failure chain resolved by permanent retirement and human escalation. Council sprint has cleared the code-health backlog — codebase in best shape since run 57. Natural next sprint: customer-facing features. SMS Compliance Dashboard is the highest-evidence, lowest-friction choice: backend ready, legal value clear, S-effort.",
+  "governance_changes": [
+    "total_runs: 69 → 70",
+    "last_run: 2026-06-27 → 2026-06-28",
+    "widget_drift_topic_retired: true (added)",
+    "active_directions: SMS Compliance Dashboard added as pending_approval",
+    "run_70_mandate: executed and noted"
+  ]
+}

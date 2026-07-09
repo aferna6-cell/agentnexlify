@@ -1,0 +1,30 @@
+# Council Fixes — Issue Register (2026-06-25)
+
+Tracked fixes from the LLM Council audit + owner synthesis
+(`docs/dev-knowledge/council-onboarding-integration-2026-06-25.md`).
+Status legend: TODO / IN-PROGRESS / DONE / OPS (needs business/console action, not code).
+
+| # | Issue | Severity | Status | Where |
+|---|-------|----------|--------|-------|
+| 1 | **SMS compliance guardrails** — no STOP/opt-out, consent ledger, or quiet hours on the SMS path (TCPA $500–1500/text). | CRITICAL / legal | DONE | `os_actions/sms.py`, `twilio_webhooks.py`, `os_inbound.py`, new `sms_compliance.py`, migration 160 |
+| 2 | **Missed-call text-back never run in prod** (0 sends); 10DLC/A2P registration dependency. | HIGH | OPS (runbook ready) | `twilio_webhooks.py`; runbook in `council-ops-checklists.md` |
+| 3 | **Crawl-the-site onboarding wow + GBP/Facebook fallback** for no-website businesses. | HIGH (activation) | DONE | crawl exists; new `POST /onboarding/{id}/describe-kb` + `kb_from_text.py` for no-website |
+| 4 | **Money-language dashboard** — leads captured / pipeline $ / missed-calls recovered; conversation "score" → temperature (🔥/👀/spam). | HIGH (value perception) | DONE | `frontend/src/utils/leadTemperature.js` + LeadsPage/ClientList/LeadDetailDrawer; OverviewCards already outcome-framed |
+| 5 | **Per-recipient SMS frequency cap** (margin + anti-spam on $19.99 tier). | MED | DONE | `sms_compliance.recently_messaged` + `twilio_webhooks.py` |
+| 6 | **Integration health alerts** — OAuth lapse / widget-not-firing surfaced to owner, not swallowed. | MED | DONE | `frontend/src/pages/Dashboard/IntegrationHealthBanner.jsx` consuming existing `/api/v1/integrations/health` |
+| 7 | **Propose-only data cleaning** — never auto-merge/auto-edit customer or financial records; review queue + audit + rollback. | MED (trust) | DONE | rule `propose-only-records.md` + `record_audit.py` snapshot wired into `/merge` |
+| 8 | **Positioning: hide "8 agents", sell outcomes** — "Never Miss a Lead" (T1) / "AI Office Manager" (T2). | MED (GTM) | DONE (copy) | `Home.jsx`, `WizardStepEmbed.jsx` reframed to outcomes |
+| 9 | **Concierge → self-serve guided wizard** (parallel build). | LOW now | OPS (runbook ready) | wizard exists (`OnboardingWizardPage.jsx`); runbook in `council-ops-checklists.md` |
+
+## Fix notes
+- **#1 (this pass):** new `sms_compliance.py` (opt-out check + inbound STOP/START classify + quiet-hours), migration `160_sms_opt_outs`, gate every tenant-aware send path, inbound STOP handler in `os_inbound.py`, tests. Reuses existing `tenants.textback_quiet_start/end` columns and `sms_rate_limiter` daily cap.
+- **#2 (runbook ready):** code path complete (incl. opt-out + frequency cap + quiet hours). Needs A2P 10DLC registration + one real missed-call dry run. Step-by-step runbook in `council-ops-checklists.md`.
+- **#9 (runbook ready):** self-serve wizard already shipped; remaining work is the GTM process (concierge first cohort → fold friction back into wizard → flip default). Runbook in `council-ops-checklists.md`.
+- **#8 (DONE, copy):** landing-page + wizard no longer count agents ("Eight AI agents. One manager." / "team of 8 AI agents" / "8 AI department heads"). Now sells the outcome — "An AI office manager that runs the busywork for you" + per-capability outcomes (follows up with every lead, chases unpaid invoices, you approve before anything sends). Brand names "AI Front Desk" / "AI Workforce" kept; renaming the tiers to "Never Miss a Lead" / "AI Office Manager" remains an owner marketing call.
+- **#9:** business/onboarding-process decision; see ops checklist below.
+- **#4 (DONE):** new `leadTemperature(score)` util maps 0-10 or 0-100 numeric score to 🔥 Ready to book / 👀 Just looking / ❄️ Cold / New(null). Applied in LeadsPage table, ClientList table, LeadDetailDrawer qualifier + score panel. Emoji in these owner-facing badges is an intentional override of `frontend-patterns.md` anti-slop emoji ban — council asked for glanceable temperature for non-technical owners. Dashboard `OverviewCards` already used money/outcome language (Leads Captured, Missed Calls This Week + "auto text-back sent"); pipeline-$ deferred (needs backend deal-value field).
+- **#6 (DONE):** dashboard-level `IntegrationHealthBanner` calls the existing `/api/v1/integrations/health` aggregate and shows a red/amber alert ONLY for connections that were set up and lapsed (detail != "not configured"). Closes the "swallowed lapse" gap without nagging chatbot-tier owners about providers they never connected. Pure `actionableIntegrationAlerts()` filter unit-tested. The richer per-provider view already lived in `IntegrationHealthDashboard.jsx`; this surfaces it proactively.
+- **#7 (DONE):** new path-scoped rule `propose-only-records.md` codifies: AI-initiated changes to customer/financial records propose (the existing `/suggestions` approve/dismiss flow), never auto-apply; human-initiated destructive actions (lead `/merge`) are now audited + recoverable. New `backend/services/record_audit.py` snapshots the full deleted lead into `activity_log.metadata` before the delete (`find_deleted_snapshot` reads it back). Reuses existing `activity_log` — no migration. Unit-tested round-trip. Financial records (invoices/Stripe) stay human-edit-only.
+- **#3 (DONE):** the crawl "wow" already existed (`auto-kb`: crawl homepage + linked pages → Claude → KB/FAQs, with HTTP-fetch + vertical-preset fallbacks). Added the no-website path: new `POST /api/v1/onboarding/{id}/describe-kb` takes an owner-typed business description (+ optional GBP/Facebook URLs, captured as context) and runs the SAME Claude KB generator via a factored `backend/services/kb_from_text.py` helper. No external API, no migration. Behavioral test in `tests/test_describe_kb.py`. Live GBP/Facebook API pull (needs OAuth creds) is a future ops step, noted in code + the ops checklist; the frontend wizard can call describe-kb from a "no website" branch.
+
+Updated as fixes land. See git log for commits referencing this register.

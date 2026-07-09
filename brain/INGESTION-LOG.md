@@ -61,3 +61,39 @@ the last recorded state.
 - Verified refresh graceful-skip; stamped state.last_refresh.
 - Finalized VALIDATION-REPORT + COMPLETION-AUDIT. All gates pass.
 - Vault complete: 57 canonical notes + 22 source traces + 5 maps + 8 tools.
+
+## 2026-07-01T10:50Z — refresh_connectors.py
+- github: error — HTTP Error 403: Forbidden
+- supabase: skipped — SUPABASE_ACCESS_TOKEN not set
+
+## 2026-07-02T10:15Z — refresh_connectors.py
+- github: error — HTTP Error 403: Forbidden
+- supabase: skipped — SUPABASE_ACCESS_TOKEN not set
+
+## 2026-07-03T10:11Z — refresh_connectors.py
+- github: error — HTTP Error 403: Forbidden
+- supabase: skipped — SUPABASE_ACCESS_TOKEN not set
+
+## 2026-07-04T09:32Z — refresh_connectors.py
+- github: error — HTTP Error 403: Forbidden
+- supabase: skipped — SUPABASE_ACCESS_TOKEN not set
+
+## 2026-07-05T09:47Z — refresh_connectors.py
+- github: error — HTTP Error 403: Forbidden
+- supabase: skipped — SUPABASE_ACCESS_TOKEN not set
+
+## 2026-07-06T11:44Z — refresh_connectors.py
+- github: error — HTTP Error 403: Forbidden
+- supabase: skipped — SUPABASE_ACCESS_TOKEN not set
+
+## 2026-07-07T10:33Z — refresh_connectors.py
+- github: error — HTTP Error 403: Forbidden
+- supabase: skipped — SUPABASE_ACCESS_TOKEN not set
+
+## 2026-07-08T09:39Z — refresh_connectors.py
+- github: error — HTTP Error 403: Forbidden
+- supabase: skipped — SUPABASE_ACCESS_TOKEN not set
+
+## 2026-07-09T10:32Z — refresh_connectors.py
+- github: error — HTTP Error 403: Forbidden
+- supabase: skipped — SUPABASE_ACCESS_TOKEN not set

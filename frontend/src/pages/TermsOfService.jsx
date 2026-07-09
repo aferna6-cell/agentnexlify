@@ -37,7 +37,7 @@ export default function TermsOfService() {
             software-as-a-service (SaaS) platform that provides AI-powered chat
             widgets for business websites. Our widget lets your website visitors
             ask questions, get instant AI-generated answers, and submit their
-            contact information &mdash; all without you lifting a finger.
+            contact information, all without you lifting a finger.
           </p>
           <p>
             By creating an account or using any part of our service, you

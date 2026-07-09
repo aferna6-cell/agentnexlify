@@ -12,7 +12,7 @@ import {
 } from "recharts";
 
 // ---------------------------------------------------------------------------
-// Admin-secret pattern — identical to AdminAnalyticsPage + AdminHealthPage.
+// Admin-secret pattern - identical to AdminAnalyticsPage + AdminHealthPage.
 // Secret is entered at runtime via window.prompt; never baked into the bundle.
 // ---------------------------------------------------------------------------
 let _adminSecret = "";
@@ -46,7 +46,7 @@ async function apiFetch(path) {
 }
 
 // ---------------------------------------------------------------------------
-// Styling helpers — match existing admin pages
+// Styling helpers - match existing admin pages
 // ---------------------------------------------------------------------------
 const cardStyle = {
   background: "var(--bg-secondary, var(--card-bg))",
@@ -84,7 +84,7 @@ function StatCard({ label, value, sub }) {
           lineHeight: 1,
         }}
       >
-        {value ?? "—"}
+        {value ?? "-"}
       </div>
       {sub && (
         <div
@@ -119,7 +119,7 @@ function ErrorList({ errors }) {
           marginBottom: 10,
         }}
       >
-        Partial data — {errors.length} metric{errors.length > 1 ? "s" : ""} failed
+        Partial data - {errors.length} metric{errors.length > 1 ? "s" : ""} failed
       </div>
       <ul style={{ margin: 0, paddingLeft: 16 }}>
         {errors.map((e, i) => (
@@ -264,7 +264,7 @@ function WeeklyCard({ label, value, color }) {
           lineHeight: 1,
         }}
       >
-        {value ?? "—"}
+        {value ?? "-"}
       </div>
       <div
         style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 6 }}
@@ -312,7 +312,7 @@ export default function AdminFunnelPage() {
 
   // Derived conversion rates (only when data present)
   function convRate(num, denom) {
-    if (!denom) return "—";
+    if (!denom) return "-";
     return `${((num / denom) * 100).toFixed(1)}%`;
   }
 
@@ -437,7 +437,7 @@ export default function AdminFunnelPage() {
         </div>
       )}
 
-      {/* Empty state — backend returned zeros across the board */}
+      {/* Empty state - backend returned zeros across the board */}
       {!loading && data && data.total_tenants === 0 && (
         <div
           style={{
@@ -459,7 +459,7 @@ export default function AdminFunnelPage() {
           </div>
           <p style={{ fontSize: "0.85rem", margin: 0, maxWidth: 400, marginInline: "auto" }}>
             The funnel will populate once tenants start signing up. Data is
-            best-effort — check the errors list if metrics look incorrect.
+            best-effort - check the errors list if metrics look incorrect.
           </p>
         </div>
       )}

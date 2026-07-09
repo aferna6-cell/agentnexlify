@@ -49,7 +49,7 @@ DISCOVER_PROMPT='HEADLESS CRON RUN — no user to answer questions. Execute with
 
 TASK: Auto-populate the knowledge base from knowledge-base/sources.yaml.
 
-TOOLS: Use agent-browser via Bash (per CLAUDE.md rule: NEVER use WebFetch/WebSearch). Command: `agent-browser fetch <url>` and `agent-browser search <query>`. If agent-browser unavailable, use `curl -sL` to fetch URLs directly.
+TOOLS: Use agent-browser via Bash if available (`agent-browser fetch <url>` and `agent-browser search <query>`). If agent-browser unavailable, use WebFetch tool as the primary fallback. curl -sL is a last resort only.
 
 SCOPE (locked — do not ask, do not override):
 - Process ALL 7 categories in sources.yaml
@@ -78,7 +78,7 @@ OUTPUT: single summary block at end:
 DO NOT ask clarifying questions. DO NOT run Playwright (not allowed here). DO NOT touch knowledge-base/wiki/ — that is compile`\''s job. Use confidence >=80% to proceed; if genuinely blocked, print BLOCKED: <reason> and exit.'
 
 "$CLAUDE_BIN" -p "$DISCOVER_PROMPT" \
-  --allowedTools Bash,Read,Write,Edit,Glob,Grep \
+  --allowedTools Bash,Read,Write,Edit,Glob,Grep,WebFetch \
   --permission-mode bypassPermissions \
   >> "$LOG_FILE" 2>&1 || log_line "$LOG_FILE" "kb-discover step failed (non-fatal)"
 

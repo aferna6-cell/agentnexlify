@@ -15,6 +15,7 @@ from backend.models.schemas import LeadScoreResponse, LeadUpdateRequest, ScoreAl
 from backend.services.llm_runtime import call_claude_messages
 from backend.dependencies import _get_current_tenant
 from backend.services.activity import log_activity
+from backend.services import record_audit
 from backend.services.email_sender import send_email
 from backend.limiter import limiter
 from backend.services.lead_scoring import score_all_leads, score_lead
@@ -511,6 +512,13 @@ async def merge_leads(
     except Exception:
         logger.warning("Failed to reassign client_notes during merge", exc_info=True)
 
+    # Snapshot the merged lead BEFORE deleting so the merge is recoverable
+    # (council #7: destructive changes to customer records must be auditable
+    # and reversible, not silent).
+    snapshot = record_audit.destructive_snapshot(
+        "leads", merge, action="lead_merged", related_id=req.keep_id
+    )
+
     # Delete the merged lead
     tenant_delete(db, "leads", tenant_id).eq("id", req.merge_id).execute()
 
@@ -519,6 +527,7 @@ async def merge_leads(
         activity_type="lead_merged",
         description=f"Merged lead {merge.get('name', merge.get('email', req.merge_id))} into {keep.get('name', keep.get('email', req.keep_id))}",
         lead_id=req.keep_id,
+        metadata=snapshot,
     )
 
     return {"success": True, "kept_id": req.keep_id, "merged_id": req.merge_id, "fields_updated": list(updates.keys())}

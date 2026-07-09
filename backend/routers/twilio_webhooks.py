@@ -16,6 +16,7 @@ from fastapi.responses import PlainTextResponse
 from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
+from backend.services import sms_compliance
 from backend.services.activity import log_activity
 from backend.services.twilio_service import format_textback_message, send_sms
 
@@ -374,6 +375,22 @@ async def handle_missed_call(request: Request):
         message = format_textback_message(custom_msg, business_name)
     else:
         message = format_textback_message(DEFAULT_TEXTBACK, business_name)
+
+    # TCPA: never text a caller who opted out (STOP) for this tenant.
+    if sms_compliance.is_suppressed(get_service_supabase(), tenant_id, caller):
+        logger.info(
+            "Text-back suppressed — caller %s opted out for tenant %s", caller, tenant_id
+        )
+        return PlainTextResponse("OK")
+
+    # Frequency cap: one text-back per caller per 24h (margin + anti-spam).
+    if sms_compliance.recently_messaged(get_service_supabase(), tenant_id, caller):
+        logger.info(
+            "Text-back skipped — already texted %s within 24h (tenant %s)",
+            caller,
+            tenant_id,
+        )
+        return PlainTextResponse("OK")
 
     sent_result = await send_sms(to=caller, body=message)
 

@@ -18,6 +18,7 @@ import secrets
 import bcrypt
 
 from backend.models.database import get_service_supabase
+from backend.services.plan_catalog import PREMIUM_PLANS
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +26,12 @@ _BCRYPT_ROUNDS = 12
 _KEY_PREFIX_LEN = 8
 _KEY_PREFIX = "zap_"
 
-# Tiers allowed to use Zapier integration.
-# agent_os ($99.99 full platform) included; chatbot ($19.99 widget-only) is not.
-# Legacy plan names kept for grandfathered tenants on old contracts.
-_ALLOWED_PLANS = {"agent_os", "growth", "autopilot", "professional", "enterprise"}
+# Tiers allowed to use Zapier integration. Single source of truth is
+# plan_catalog.PREMIUM_PLANS (agent_os + grandfathered legacy plans); chatbot
+# ($19.99 widget-only) is entry tier and excluded. Importing the canonical set
+# keeps this gate in lockstep with every other premium gate so a repricing can't
+# drift it (test_plan_catalog_coverage.py enforces).
+_ALLOWED_PLANS = PREMIUM_PLANS
 
 
 def generate_api_key() -> tuple[str, str, str]:

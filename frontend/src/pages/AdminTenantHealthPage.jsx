@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { BASE } from "../utils/api/_client";
 
 // ---------------------------------------------------------------------------
-// Admin-secret pattern — identical to AdminFunnelPage + AdminAnalyticsPage.
+// Admin-secret pattern - identical to AdminFunnelPage + AdminAnalyticsPage.
 // Secret is entered at runtime via window.prompt; never baked into the bundle.
 // ---------------------------------------------------------------------------
 let _adminSecret = "";
@@ -36,7 +36,7 @@ async function apiFetch(path) {
 }
 
 // ---------------------------------------------------------------------------
-// Styling helpers — match existing admin pages
+// Styling helpers - match existing admin pages
 // ---------------------------------------------------------------------------
 const cardStyle = {
   background: "var(--bg-secondary, var(--card-bg))",
@@ -68,7 +68,7 @@ function sortTenants(tenants) {
 }
 
 function formatDate(iso) {
-  if (!iso) return "—";
+  if (!iso) return "-";
   try {
     return new Date(iso).toLocaleDateString(undefined, {
       month: "short",
@@ -76,7 +76,7 @@ function formatDate(iso) {
       year: "numeric",
     });
   } catch {
-    return "—";
+    return "-";
   }
 }
 
@@ -279,7 +279,7 @@ function TenantTable({ tenants }) {
             >
               <td style={TD_STYLE}>
                 <span style={{ fontWeight: 600 }}>
-                  {t.business_name || "—"}
+                  {t.business_name || "-"}
                 </span>
               </td>
               <td style={TD_STYLE}>
@@ -290,7 +290,7 @@ function TenantTable({ tenants }) {
                     fontFamily: "monospace",
                   }}
                 >
-                  {t.plan || "—"}
+                  {t.plan || "-"}
                 </span>
               </td>
               <td style={TD_STYLE}>
@@ -299,9 +299,9 @@ function TenantTable({ tenants }) {
               <td style={TD_STYLE}>
                 <StatusPill status={t.status} />
               </td>
-              <td style={NUM_TD}>{t.total_messages ?? "—"}</td>
-              <td style={NUM_TD}>{t.total_leads ?? "—"}</td>
-              <td style={NUM_TD}>{t.total_appointments ?? "—"}</td>
+              <td style={NUM_TD}>{t.total_messages ?? "-"}</td>
+              <td style={NUM_TD}>{t.total_leads ?? "-"}</td>
+              <td style={NUM_TD}>{t.total_appointments ?? "-"}</td>
               <td
                 style={{
                   ...NUM_TD,
@@ -312,7 +312,7 @@ function TenantTable({ tenants }) {
                   fontWeight: t.messages_last_7d > 0 ? 600 : 400,
                 }}
               >
-                {t.messages_last_7d ?? "—"}
+                {t.messages_last_7d ?? "-"}
               </td>
               <td
                 style={{
@@ -324,7 +324,7 @@ function TenantTable({ tenants }) {
                   fontWeight: t.leads_last_7d > 0 ? 600 : 400,
                 }}
               >
-                {t.leads_last_7d ?? "—"}
+                {t.leads_last_7d ?? "-"}
               </td>
               <td
                 style={{
@@ -657,7 +657,7 @@ export default function AdminTenantHealthPage() {
                     marginLeft: 8,
                   }}
                 >
-                  — these surface first in the table below. Call or email before
+                  - these surface first in the table below. Call or email before
                   they churn.
                 </span>
               </div>

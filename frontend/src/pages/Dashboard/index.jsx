@@ -15,6 +15,7 @@ import {
 import { fetchCrmDashboardWidgets } from "../../utils/api/crm";
 import AutomationActivityCard from "./AutomationActivityCard";
 import OverviewCards from "./OverviewCards";
+import IntegrationHealthBanner from "./IntegrationHealthBanner";
 import LeadPipeline from "./LeadPipeline";
 import ActivityFeed from "./ActivityFeed";
 import WidgetEmbed from "./WidgetEmbed";
@@ -211,6 +212,8 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
               : ""}
         </p>
       </div>
+
+      <IntegrationHealthBanner onNavigate={onNavigate} />
 
       {businessProfile && (
         <div

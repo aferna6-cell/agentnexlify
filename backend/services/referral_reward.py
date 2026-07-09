@@ -29,6 +29,7 @@ Do NOT add 'from __future__ import annotations' — breaks Pydantic on FastAPI.
 
 import asyncio
 import logging
+import os
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,16 @@ logger = logging.getLogger(__name__)
 # Flat reward, in cents. Negative when applied to a Stripe balance.
 REFERRAL_REWARD_CENTS = 2000  # $20.00
 REFERRAL_REWARD_CURRENCY = "usd"
+
+
+def reward_enabled() -> bool:
+    """Kill-switch for the reward grant. Default OFF: granting real Stripe
+    credits is an owner decision — set REFERRAL_REWARD_ENABLED=1 in Railway to
+    launch the program. Tracking/attribution stays on either way; only the
+    money grant is gated."""
+    return os.environ.get("REFERRAL_REWARD_ENABLED", "0").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
 
 
 def _resolve_referrer(db, referred_tenant_id):
@@ -259,6 +270,12 @@ async def grant_referral_reward_for_signup(*, referred_tenant_id):
     doesn't stall the webhook event loop. Mirrors owner_alerts.notify_* shape.
     """
     if not referred_tenant_id:
+        return
+    if not reward_enabled():
+        logger.info(
+            "referral_reward: REFERRAL_REWARD_ENABLED is off — skipping grant for %s",
+            referred_tenant_id,
+        )
         return
     try:
         await asyncio.to_thread(_grant_sync, str(referred_tenant_id))

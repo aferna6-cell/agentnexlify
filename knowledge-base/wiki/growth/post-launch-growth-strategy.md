@@ -76,7 +76,7 @@ Research-backed feature recommendations for driving signup activation, viral gro
 **9. "Instant Website" AI-Generated Landing Page**
 - One-click professional landing page for businesses with no website
 - 30-40% of small businesses lack a good website
-- "Powered by" footer on free/growth plans for viral awareness
+- "Powered by" footer on free/chatbot plans for viral awareness
 
 ### P3 — Next Quarter (Large effort, enterprise value)
 

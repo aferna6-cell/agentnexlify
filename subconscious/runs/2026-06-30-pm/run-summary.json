@@ -1,0 +1,53 @@
+{
+  "run": 74,
+  "date": "2026-06-30-pm",
+  "winner": {
+    "id": "idea-1-sms-dashboard-final",
+    "title": "SMS Compliance Dashboard — Final Human Delivery",
+    "category": "Customer Value / Operational",
+    "effort": "S",
+    "moratorium_impact": "none",
+    "escalation_type": "inline_code_delivery",
+    "activation_energy_before": "2-4 hours (architecture only)",
+    "activation_energy_after": "30 minutes (paste-ready code blocks)",
+    "requires_human": true,
+    "autonomous_executable": false
+  },
+  "bonus_action": {
+    "id": "idea-2-kb-cron-trigger",
+    "title": "KB autopopulate cron diagnostic + manual trigger",
+    "effort": "XS",
+    "autonomous_executable": true,
+    "command": "crontab -l && bash scripts/daily/kb-autopopulate.sh"
+  },
+  "killed": [
+    {
+      "id": "idea-3-zapier-plan-status",
+      "reason": "moratorium_blocked"
+    }
+  ],
+  "parked": [
+    {
+      "id": "idea-4-ai-human-handoff",
+      "reason": "moratorium + M effort"
+    },
+    {
+      "id": "idea-5-home-jsx-split",
+      "reason": "post-SMS-ships"
+    }
+  ],
+  "evidence": {
+    "sms_compliance_router_missing": true,
+    "sms_compliance_page_missing": true,
+    "days_since_run73_winner": 10,
+    "kb_log_staleness_days": 56,
+    "moratorium_active": true,
+    "true_pending_approvals": 4,
+    "max_pending_approvals": 2,
+    "production_commits_last_3_days": 0,
+    "check_invariants_exit_code": 1,
+    "invariant_failure": "widget_drift_human_only_retired"
+  },
+  "run_75_mandate": "If SMS Dashboard still not shipped: de-scope to backend endpoint only. Drop frontend page.",
+  "run_76_mandate": "If still not shipped: file GH issue for issue-to-pr-loop autonomous execution."
+}

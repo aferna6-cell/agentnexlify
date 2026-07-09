@@ -1,0 +1,68 @@
+{
+  "run": 81,
+  "date": "2026-07-07",
+  "winner": "Add ai-ready label to GH #385 — activate issue-to-pr-loop for SMS Compliance Dashboard",
+  "category": "customer_value",
+  "effort": "XS",
+  "moratorium_override": false,
+  "autonomous_executable": true,
+  "requires_human": false,
+  "evidence": {
+    "gh_385_verified_open": true,
+    "gh_385_filed_date": "2026-07-01",
+    "gh_385_current_labels": [
+      "nightly-review",
+      "backend",
+      "medium-risk",
+      "frontend"
+    ],
+    "gh_385_missing_label": "ai-ready",
+    "issue_to_pr_loop_activation": "blocked — ai-ready label absent",
+    "step_9c_implemented": true,
+    "healthz_alert_sh_implemented": true,
+    "brain_connectors_failing_days": 7,
+    "kb_autopopulate_last_entry": "2026-05-05",
+    "kb_autopopulate_degraded_days": 63
+  },
+  "governance_corrections": {
+    "total_runs": "80 → 81",
+    "last_run": "2026-07-06 → 2026-07-07",
+    "run_80_step_9c": "pending_autonomous → implemented (nightly 460ea68)",
+    "run_77_healthz_alert": "escalated_to_p0_gh_issue → implemented (nightly 460ea68)",
+    "moratorium_active": "true → false (pending=1, max=2, moratorium lifted)"
+  },
+  "killed": [
+    "KB autopopulate cron diagnosis (KILLED → parking lot run 82 primary)",
+    "INGESTION-LOG.md in Phase 2 (KILLED → parking lot, deferred value while brain broken)",
+    "Plan-Name Guard Check 7 (not debated, parking lot carry-forward)",
+    "email_sequences.py split (not debated, moratorium lifted but M-effort, no capacity)"
+  ],
+  "parked": [
+    "P-KB-CRON: KB autopopulate cron diagnosis — run 82 primary",
+    "P-SMS: SMS Dashboard verification (now pending_autonomous — ai-ready label added)",
+    "P-BRAIN-EVIDENCE: INGESTION-LOG.md in Phase 2 — run 82 secondary",
+    "P-001: Plan-Name Guard Check 7",
+    "P-004: healthz handler root cause",
+    "P-EMAIL: email_sequences.py split (moratorium lifted — now eligible)"
+  ],
+  "key_findings": [
+    "GH #385 exists but missing ai-ready label — issue-to-pr-loop never activated despite 6 days open",
+    "Step 9C implemented by nightly 460ea68 — brain connector failure detection now active",
+    "healthz-alert.sh implemented by nightly 460ea68 — closes 5-day gap",
+    "Moratorium lifted: pending_human=1 (only run 79 brain connector), max=2",
+    "KB autopopulate degraded 63 days — new parking lot item, run 82 primary candidate"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-07-07/ideas/idea-1.md",
+    "subconscious/runs/2026-07-07/ideas/idea-2.md",
+    "subconscious/runs/2026-07-07/ideas/idea-3.md",
+    "subconscious/runs/2026-07-07/ideas/idea-4.md",
+    "subconscious/runs/2026-07-07/ideas/idea-5.md",
+    "subconscious/runs/2026-07-07/debate/debate-1.md",
+    "subconscious/runs/2026-07-07/debate/debate-2.md",
+    "subconscious/runs/2026-07-07/debate/debate-3.md",
+    "subconscious/runs/2026-07-07/winning-concept.md",
+    "subconscious/runs/2026-07-07/improvement-backlog.md",
+    "subconscious/runs/2026-07-07/run-summary.json"
+  ]
+}

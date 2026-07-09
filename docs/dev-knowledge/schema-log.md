@@ -1388,11 +1388,35 @@ an unreliable migration-history table). Both pure idempotent `ADD COLUMN IF NOT 
 Verified all 6 objects exist post-apply (information_schema + pg_indexes). 154 was already
 live. Prod schema drift = 0.
 
-## 160_referral_rewards (PENDING apply)
+## 158_allow_new_plan_names_in_tenants_check
 
-**Created 2026-06-23** — NOT yet applied to prod (ships with the referral-reward
-feature branch `claude/agent-nexlify-testing-28d597`; apply via `apply_migration`
-when the branch deploys).
+**APPLIED to prod 2026-06-23** via `apply_migration` (project pxserpybmajixqrmzaly).
+The `tenants_plan_check` constraint still only permitted the retired plan names
+(`free`/`growth`/`professional`/`autopilot`/`enterprise`) after the 2026-06-15
+reprice — so the live plans `chatbot` ($19.99) and `agent_os` ($99.99, "AI Workforce")
+could not be written: any Stripe checkout for a new plan would fail the constraint
+and admin SQL upgrades were blocked. DB-layer half of the repricing migration (code
+gates fixed via plan_catalog.PREMIUM_PLANS; see bug-patterns.md 2026-06-23).
+Dropped + re-added the constraint to allow `free, chatbot, agent_os` + the legacy
+names (grandfathered). Verified by setting the Agent Nexlify test account
+(aferna6@g.clemson.edu) to `agent_os` — previously rejected with 23514, now succeeds.
+
+## 160_sms_opt_outs
+
+**APPLIED to prod 2026-06-25** via `apply_migration` (project pxserpybmajixqrmzaly).
+Durable per-tenant SMS opt-out ledger for TCPA compliance. `client_id` +
+`phone_last10` (normalized last-10) with UNIQUE(client_id, phone_last10) and a
+lookup index. Checked by `sms_compliance.is_suppressed()` before every outbound
+SMS (AI Workforce sms.send + missed-call text-back). Inbound STOP now records
+here durably (os_inbound.py), beyond the existing leads.unsubscribed flag.
+See docs/dev-knowledge/council-fixes-register.md #1.
+
+## 162_referral_rewards (PENDING apply — renumbered from 160, 2026-07-09)
+
+**Created 2026-06-23** as 160; renumbered to 162 on 2026-07-09 because 160 was taken
+by `160_sms_opt_outs` (applied to prod 2026-06-25) and 161 by the renumbered
+`161_allow_new_plan_names_in_tenants_check`. NOT yet applied to prod (apply via
+`apply_migration` when the referral-reward feature is enabled).
 
 New table `referral_rewards` records the flat $20 (2000-cent) Stripe customer-balance
 credit granted to a referrer when a tenant they referred pays their FIRST invoice.
@@ -1402,5 +1426,6 @@ credit granted to a referrer when a tenant they referred pays their FIRST invoic
 - `attribution_channel`: 'promo_code' (tenants.referred_by UUID) or 'widget_watermark'
   (tenants.referred_by_widget_key → widget_configs.api_key → tenant).
 - `status`: pending → granted | failed. Pure additive `CREATE TABLE IF NOT EXISTS`.
-Consumed by `backend/services/referral_reward.py` and surfaced (earned credit) on
-`GET /api/v1/referral/my-stats`.
+Consumed by `backend/services/referral_reward.py` (gated on REFERRAL_REWARD_ENABLED,
+default OFF) and surfaced (earned credit) on `GET /api/v1/referral/my-stats`.
+

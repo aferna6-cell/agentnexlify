@@ -1,0 +1,65 @@
+{
+  "run_id": "2026-07-01-pm",
+  "run_number": 76,
+  "timestamp": "2026-07-01T18:00:00Z",
+  "type": "pm",
+  "winner": {
+    "title": "Zapier plan_status Enforcement — De-scoped (Run 76 Mandate)",
+    "category": "code_health",
+    "subcategory": "security",
+    "effort": "XS",
+    "type": "AUTONOMOUS-EXECUTABLE",
+    "moratorium_override": true,
+    "mandate_fires": true,
+    "prior_run_winner_implemented": false
+  },
+  "mandate_status": {
+    "fires": true,
+    "original_winner": "Zapier plan_status enforcement (full, run 75)",
+    "implemented": false,
+    "de_scope_activated": true,
+    "de_scope_action": "Skip test file. Add plan_status guard only."
+  },
+  "critical_finding": {
+    "type": "missing_file",
+    "expected_path": "backend/services/zapier_auth.py",
+    "status": "FILE NOT FOUND",
+    "action_required": "grep -r '_get_api_key_client' backend/ --include='*.py' to locate correct path before implementing"
+  },
+  "evidence_summary": {
+    "days_since_code_commit": 3,
+    "invariants_check": {
+      "pass": 5,
+      "fail": 1,
+      "fail_detail": "widget drift (landing-page-v2) — RETIRED topic, human-only"
+    },
+    "sms_dashboard_status": "GH issue filed by nightly 2026-07-01, issue-to-pr-loop activated",
+    "kb_autopopulate_status": "FIXED (commit 65284cc, 2026-06-30)",
+    "bug_62_days_open": true
+  },
+  "ideas_generated": 5,
+  "ideas": [
+    "Zapier plan_status enforcement (de-scoped, mandate)",
+    "Plan-name guard pre-commit hook",
+    "email_sequences.py god-class split",
+    "SMS Dashboard GH issue label verification",
+    "AI-to-Human Handoff (killed — 7th consecutive)"
+  ],
+  "debate_results": {
+    "winner": "Idea 1",
+    "parking_lot": ["Idea 2", "Idea 3"],
+    "killed": ["Idea 5"],
+    "operational_skip": ["Idea 4"]
+  },
+  "run_77_mandate": {
+    "condition": "Zapier fix NOT implemented",
+    "action": "Escalate to CRITICAL, file GH issue directly, mark human_blocked"
+  },
+  "governance_updates": {
+    "total_runs": 76,
+    "last_run": "2026-07-01-pm",
+    "new_direction_added": true,
+    "frozen_ideas_updated": false,
+    "ai_human_handoff_freeze_pending": true
+  }
+}

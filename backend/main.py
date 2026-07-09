@@ -513,26 +513,51 @@ async def _process_scheduled_posts():
         if not due_posts.data:
             return 0
 
-        published = 0
-        for post in due_posts.data:
-            try:
-                db.table("social_posts").update(
-                    {
-                        "status": "published",
-                        "published_at": now_iso,
-                    }
-                ).eq("id", post["id"]).execute()
-                published += 1
+        # Batch-update all due posts in a single query — avoids the N+1 pattern
+        # (up to 100 individual UPDATEs every 5 min). Fall back to per-post
+        # updates only if the batch fails (e.g. a constraint trips on one row).
+        post_ids = [post["id"] for post in due_posts.data]
+        try:
+            db.table("social_posts").update(
+                {
+                    "status": "published",
+                    "published_at": now_iso,
+                }
+            ).in_("id", post_ids).execute()
+            for post in due_posts.data:
                 logger.info(
                     "Auto-published scheduled social post %s (%s) for tenant %s",
                     post["id"],
                     post["platform"],
                     post["tenant_id"],
                 )
-            except Exception:
-                logger.exception("Failed to auto-publish social post %s", post["id"])
-
-        return published
+            return len(post_ids)
+        except Exception:
+            logger.warning(
+                "Batch publish of %d scheduled posts failed; retrying individually",
+                len(post_ids),
+            )
+            published = 0
+            for post in due_posts.data:
+                try:
+                    db.table("social_posts").update(
+                        {
+                            "status": "published",
+                            "published_at": now_iso,
+                        }
+                    ).eq("id", post["id"]).execute()
+                    published += 1
+                    logger.info(
+                        "Auto-published scheduled social post %s (%s) for tenant %s",
+                        post["id"],
+                        post["platform"],
+                        post["tenant_id"],
+                    )
+                except Exception:
+                    logger.exception(
+                        "Failed to auto-publish social post %s", post["id"]
+                    )
+            return published
     except Exception:
         logger.exception("_process_scheduled_posts failed")
         return 0

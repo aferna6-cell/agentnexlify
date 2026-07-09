@@ -1,0 +1,51 @@
+name: KB Auto-Populate
+
+# Keeps knowledge-base/ current by running kb-discover + kb-compile twice daily.
+# Migrates the local cron (scripts/daily/kb-autopopulate.sh) to GitHub Actions
+# so it runs in CI regardless of whether the local machine is on.
+# Subconscious run 82 winner (2026-07-07-pm) — autonomous_executable: true.
+
+on:
+  schedule:
+    - cron: "0 6,18 * * *" # 6 AM + 6 PM UTC (matches local cron intent)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kb-autopopulate
+  cancel-in-progress: false
+
+jobs:
+  kb-autopopulate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Claude Code CLI (pinned v2.1.98 per claude-version-pin.md)
+        run: npm install -g @anthropic-ai/claude-code@2.1.98
+
+      - name: Configure git
+        run: |
+          git config user.name "kb-autopopulate[bot]"
+          git config user.email "kb-autopopulate@users.noreply.github.com"
+
+      - name: Run KB auto-populate script
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          # Point script to the globally-installed claude CLI
+          AGENTNEXLIFY_CLAUDE_BIN: claude
+        run: bash scripts/daily/kb-autopopulate.sh
+        continue-on-error: true

@@ -8,8 +8,8 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 **Date:** 2026-04-30
 **Symptom:** `backend/services/zapier_auth.py::_get_api_key_client` resolves API keys without checking `tenants.plan_status`. Cancelled / past-due / unpaid tenants whose API keys were not revoked at cancellation time still authenticate against the Zapier endpoints, bypassing the tier gate. Found by nightly-commit-review on `8050912`.
 **Root Cause:** Plan-status enforcement lives in the billing/tier gate at the chat surface, not in the Zapier API key resolver. Skeleton — confirm exact path before remediation.
-**Files Changed:** GitHub issue #107 filed; no code fix yet. `docs/dev-knowledge/nightly-reviews/logs/nightly-commit-review-2026-04-30.md` has triage detail.
-**Fix:** TODO — backend-dev to add `plan_status IN ('active','trialing')` check inside `_get_api_key_client`, return 402/403 for cancelled tenants. Add regression test seeding cancelled tenant + valid key + asserting auth fails.
+**Files Changed:** `backend/routers/zapier.py:121-128` — plan_status check added. `backend/tests/test_zapier_auth.py:339` — `test_cancelled_subscription_blocked` added. GH #107 closed 2026-06-13.
+**Fix:** Added `plan_status IN ('active','trialing')` check inside `_get_api_key_client` at `backend/routers/zapier.py:121-128`. Returns 402 for cancelled/past-due tenants. Regression test at `backend/tests/test_zapier_auth.py:339` (`test_cancelled_subscription_blocked`) seeding cancelled tenant + valid key + asserting auth fails.
 **Prevention:** Any API-key auth resolver MUST short-circuit on cancelled / past-due / unpaid plans. Pattern: tier gate at billing UI is necessary but not sufficient — tenant-facing surfaces (Zapier, widget chat, dashboard endpoints) re-check plan_status on every request. Treat plan_status as the canonical access control, not as a UI flag.
 
 ---
@@ -18082,4 +18082,73 @@ The rewritten FAQ answer used a real em dash; replaced with a period.
 **Commit:** 8af5e94
 **Author:** Claude
 **Files Changed:** frontend/src/pages/TidioAlternative.jsx
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Repricing half-migration: feature gates kept retired plan names (#292/#293)
+
+**Date:** 2026-06-23
+**Commits:** 57f2bb4d, 29ed1d43
+**Symptom:** Paying `agent_os` ($99.99 "full platform") tenants were locked out of every premium
+feature after the 2026-06-15 reprice — Zapier API keys (402), SMS capped at 50/day, document
+drafting blocked, lead qualification blocked, automation emails unbranded, no white-label.
+**Root cause:** The reprice updated billing (`stripe_service.py PLAN_PRICES`, `ai_usage_guard`)
+but left 6 feature gates hard-coding old plan names — `api_key_auth._ALLOWED_PLANS`,
+`sms_rate_limiter._UNLIMITED_PLANS`, `document_drafting._ELIGIBLE_PLANS`,
+`lead_qualification._ELIGIBLE_PLANS`, `automation/orchestrator.py` branded-email tuples,
+`branding_helpers._BRANDING_PLAN_FIELDS`. Classic half-migration (user-rules Rule 8).
+**Fix:** Added `agent_os` to all premium gates; `chatbot` stays widget/chat-only (documented
+intent). `billing_reconciliation` baselines mirrored to `ai_usage_guard`.
+**Prevention:** Plan names live in many gates. When adding/renaming a plan, grep ALL of
+`_ALLOWED_PLANS|_UNLIMITED_PLANS|_ELIGIBLE_PLANS|_BRANDING_PLAN_FIELDS|PLAN_PRICE|PLAN_BASELINE`
+plus `in ("professional", "enterprise")`-style tuples. New gates → assert in
+`backend/tests/test_plan_gating_new_plans.py`.
+
+### Webhook idempotency early-write drops events on handler failure (#308)
+
+**Date:** 2026-06-23
+**Commit:** 3a958e5f
+**Symptom:** A Stripe handler exception left the event permanently dropped; for
+`invoice.payment_succeeded` a recovered card never un-paused the tenant.
+**Root cause:** `check_and_record` writes the idempotency row BEFORE the handler runs (so
+concurrent redeliveries dedup). On handler exception the row persisted with `response_body=NULL`;
+every Stripe retry saw it as an "in-flight duplicate", got acked 200 without reprocessing, and
+Stripe stopped retrying.
+**Fix:** Added `idempotency.delete_key()` and call it in the except block of both webhook
+endpoints (`billing.py`, `stripe_webhooks.py`) before raising 500, so the retry reprocesses.
+**Prevention:** Any "write marker before doing work, then dedup on the marker" pattern MUST
+release the marker on failure, or failed work becomes permanently invisible to retries.
+
+### Test pollution: duplicate mock.patch leaks a global mock across the suite
+
+**Date:** 2026-06-23
+**Commit:** b3279b07
+**Symptom:** `test_widget_chat` invalid-key tests passed alone but failed in the full suite (500
+instead of 404).
+**Root cause:** `tests/test_widget_api.py` listed the same `patch(...)` target twice; teardown
+stopped patchers in forward list order, so stopping the first restored the real function and
+stopping the second re-applied a leftover MagicMock — leaving
+`widget_chat_helpers.get_service_supabase` permanently patched for the rest of the run.
+**Fix:** Removed the duplicate patch line so start/stop is balanced.
+**Prevention:** Never list the same patch target twice. If a test flakes only in full runs,
+suspect a leaked global patch; bisect test files to the polluter, then confirm by inspecting the
+global's identity after the suspect runs.
+
+---
+
+### ops: nightly-commit-review 2026-07-07
+
+- 4 commits reviewed (all LOW risk, ops/planning only)
+- Step 9B executed: wrote ops/monitoring/healthz-alert.sh + SETUP.md (4th consecutive miss)
+- Step 9C added to nightly SKILL.md (subconscious run 80 mandate): brain connector health check
+- Step 9C executed: brain connectors failing 7 consecutive days — day-7 comment added to #394
+- No bug fixes (no product code in last 24h commits)
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_014JDg39f7mk5EUzuZci7Afk
+**Date:** 2026-07-07
+**Commit:** 460ea68
+**Author:** Claude
+**Files Changed:** .claude/skills/nightly-commit-review/SKILL.md,ops/monitoring/SETUP.md,ops/monitoring/healthz-alert.sh,ops/routines/logs/nightly-commit-review-2026-07-07.md
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.

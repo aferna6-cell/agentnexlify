@@ -11,11 +11,20 @@ from backend.limiter import limiter
 from backend.dependencies import get_business_context, verify_tenant
 from backend.models.database import get_service_supabase
 from backend.dependencies import _get_current_tenant
-from backend.services.plan_gate import require_marketing_access
+from backend.services.plan_gate import require_marketing_access, MARKETING_PLANS
 from backend.services.campaign_service import _send_campaign_background
 from backend.services.llm_runtime import call_claude_messages
 
 logger = logging.getLogger(__name__)
+
+# Plans allowed to SEND campaigns. Marketing is an agent_os-only feature — the
+# router already gates the whole /api/v1/campaigns surface via
+# require_marketing_access (plan_gate.MARKETING_PLANS = {agent_os}; legacy plans
+# get 402, enforced by test_plan_gate.py). This inline check is defense-in-depth
+# and MUST share that single source of truth so the two gates can't drift.
+# (agent_os included fixes the earlier bug where the $99.99 plan was blocked;
+# chatbot/free/legacy are excluded, matching the router.)
+_CAMPAIGN_SEND_PLANS = MARKETING_PLANS
 
 router = APIRouter(
     prefix="/api/v1/campaigns",
@@ -363,10 +372,9 @@ async def send_campaign(
     """
     verify_tenant(claims, tenant_id)
 
-    # Plan gate: free plan cannot send campaigns
-    _PAID_PLANS = {"growth", "professional", "autopilot", "enterprise"}
+    # Plan gate: campaign sending is a premium feature (see _CAMPAIGN_SEND_PLANS)
     tenant_plan = claims.get("plan", "free")
-    if tenant_plan not in _PAID_PLANS:
+    if tenant_plan not in _CAMPAIGN_SEND_PLANS:
         raise HTTPException(status_code=403, detail="Campaign sending requires a paid plan")
 
     try:

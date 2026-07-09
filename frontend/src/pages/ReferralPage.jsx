@@ -146,7 +146,7 @@ export default function ReferralPage() {
           }}
         >
           When someone signs up through this link, their account is attributed
-          to you. Share it anywhere — email, social media, or your website.
+          to you. Share it anywhere - email, social media, or your website.
         </div>
         <div
           style={{

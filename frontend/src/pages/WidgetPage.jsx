@@ -495,8 +495,8 @@ export default function WidgetPage() {
               }}
             >
               Uses a managed AI agent to fill in name, email, phone, and
-              interest fields the basic parser missed. Runs in the background
-              &mdash; zero latency impact. Adds ~$0.002 per chat message.
+              interest fields the basic parser missed. Runs in the background.
+              Zero latency impact. Adds ~$0.002 per chat message.
             </p>
           </div>
           <div className="settings-field">

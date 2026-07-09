@@ -201,12 +201,34 @@ def test_referrer_missing_email_marks_failed(fake_db):
     fake_db._bal_mock.assert_not_called()
 
 
-def test_async_wrapper_runs(fake_db):
+def test_async_wrapper_runs(fake_db, monkeypatch):
+    # Flag added 2026-07-09: the grant is opt-in (REFERRAL_REWARD_ENABLED,
+    # default off) so merging the feature commits no money until the owner
+    # flips the env var. This test exercises the enabled path.
+    monkeypatch.setenv("REFERRAL_REWARD_ENABLED", "1")
     _seed_promo(fake_db)
     asyncio.run(grant_referral_reward_for_signup(referred_tenant_id=REFERRED))
 
     assert len(_rewards(fake_db)) == 1
     fake_db._bal_mock.assert_called_once()
+
+
+def test_async_wrapper_disabled_by_default_is_noop(fake_db, monkeypatch):
+    monkeypatch.delenv("REFERRAL_REWARD_ENABLED", raising=False)
+    _seed_promo(fake_db)
+    asyncio.run(grant_referral_reward_for_signup(referred_tenant_id=REFERRED))
+
+    assert _rewards(fake_db) == []
+    fake_db._bal_mock.assert_not_called()
+
+
+def test_async_wrapper_explicit_zero_is_noop(fake_db, monkeypatch):
+    monkeypatch.setenv("REFERRAL_REWARD_ENABLED", "0")
+    _seed_promo(fake_db)
+    asyncio.run(grant_referral_reward_for_signup(referred_tenant_id=REFERRED))
+
+    assert _rewards(fake_db) == []
+    fake_db._bal_mock.assert_not_called()
 
 
 def test_async_wrapper_empty_id_noop(fake_db):
