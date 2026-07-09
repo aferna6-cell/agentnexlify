@@ -1,0 +1,48 @@
+{
+  "run": 84,
+  "date": "2026-07-09",
+  "session_id": "2026-07-09",
+  "winner": {
+    "title": "Step 9E — Proactive Credential Rotation Tracking",
+    "category": "operational",
+    "effort": "XS",
+    "confidence": "HIGH",
+    "autonomous_executable": true,
+    "files": [
+      ".claude/skills/nightly-commit-review/SKILL.md",
+      "ops/credential-rotation-schedule.md"
+    ]
+  },
+  "mandate_checks": {
+    "step_9d_verified": true,
+    "step_9d_note": "Added by nightly e8b2ddc. Executed first time this run. Found 30 consecutive autopilot-issue-loop failures since 2026-07-04.",
+    "issue_385_pr_status": "STALLED — no PR. AUTOPILOT_GH_TOKEN expired 2026-07-04. GH #399 filed (human-action-required).",
+    "kb_autopopulate_first_run": "CONFIRMED — 2026-07-08T19:02:13Z. 63-day gap closed.",
+    "lead_analytics_status": "DEFERRED — mandate condition unmet (pipeline not healthy)"
+  },
+  "human_actions_required": [
+    {
+      "issue": "GH #399",
+      "action": "Rotate AUTOPILOT_GH_TOKEN in GitHub Secrets",
+      "time": "5 min",
+      "urgency": "CRITICAL",
+      "unblocks": "All 30 stalled ai-ready issues including #385"
+    },
+    {
+      "issue": "GH #394",
+      "action": "Rotate GitHub PAT + set SUPABASE_ACCESS_TOKEN in Railway Variables",
+      "time": "7 min",
+      "urgency": "HIGH",
+      "unblocks": "Brain connector (9+ days stalled)"
+    }
+  ],
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "ideas_killed": 1,
+  "ideas_weakened": 1,
+  "key_finding": "2026-07-04 credential event: AUTOPILOT_GH_TOKEN + brain connector GitHub PAT both expired same day. Steps 9B/9C/9D are reactive. Step 9E is the first proactive nightly monitor — prevents next simultaneous expiry event with 14-day advance warning.",
+  "parking_lot_promotions": [],
+  "parking_lot_deferrals": ["lead_source_analytics", "ingestion_log_phase2"],
+  "governance_corrections": [],
+  "run_85_mandate": "Verify Step 9E added to SKILL.md + ops/credential-rotation-schedule.md created. If GH #399 resolved and loop confirmed healthy: promote lead source analytics to winner."
+}
