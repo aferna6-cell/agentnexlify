@@ -33,6 +33,9 @@ INTERNAL_TENANT_NAME_PATTERNS: tuple[str, ...] = (
     "agent nexlify",  # spaced variant used in older seeds: "Agent Nexlify"
     "smoke test",     # belt-and-suspenders for any "Smoke Test" account
     "test account",   # generic internal test accounts
+    "(demo)",         # sales-demo seeds ("Luxe & Co. Salon (DEMO)") —
+                      # 2026-07-09 audit: all 9 prod appointments were
+                      # demo-seeded, inflating the booking-conversion read
 )
 
 
@@ -57,6 +60,11 @@ def is_internal_tenant(tenant: dict) -> bool:
         True  → internal / test account; exclude from metrics.
         False → real customer; include in metrics.
     """
+    # tenants.is_demo (migration tenant_is_demo) is authoritative when the
+    # caller's query selects it; name matching below covers callers that don't.
+    if tenant.get("is_demo"):
+        return True
+
     raw_name: str | None = tenant.get("business_name")
     if not raw_name:
         return False

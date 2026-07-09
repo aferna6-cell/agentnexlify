@@ -152,3 +152,28 @@ class TestIsInternalTenant:
             "plan_status": "active",
         }
         assert is_internal_tenant(tenant) is False
+
+
+class TestDemoTenantExclusion:
+    """Demo tenants are internal (2026-07-09 audit: all 9 prod appointments
+    were demo-seeded, corrupting the booking-conversion read)."""
+
+    def test_demo_suffix_name_is_internal(self):
+        assert is_internal_tenant({"business_name": "Luxe & Co. Salon (DEMO)"}) is True
+
+    def test_demo_suffix_case_insensitive(self):
+        assert is_internal_tenant({"business_name": "Reliable Plumbing Co. (demo)"}) is True
+
+    def test_is_demo_flag_true_is_internal(self):
+        assert is_internal_tenant({"business_name": "Any Real Name", "is_demo": True}) is True
+
+    def test_is_demo_flag_false_is_not_internal(self):
+        assert is_internal_tenant({"business_name": "Sunrise Auto Shop", "is_demo": False}) is False
+
+    def test_is_demo_flag_none_falls_back_to_name(self):
+        assert is_internal_tenant({"business_name": "Sunrise Auto Shop", "is_demo": None}) is False
+
+    def test_word_demo_inside_name_without_parens_not_internal(self):
+        # Only the "(demo)" marker matches — a business legitimately named
+        # with the word Demo should not be hidden.
+        assert is_internal_tenant({"business_name": "Demolition Pros LLC"}) is False

@@ -1388,7 +1388,13 @@ an unreliable migration-history table). Both pure idempotent `ADD COLUMN IF NOT 
 Verified all 6 objects exist post-apply (information_schema + pg_indexes). 154 was already
 live. Prod schema drift = 0.
 
-## 158_allow_new_plan_names_in_tenants_check
+## 161_allow_new_plan_names_in_tenants_check (renumbered from 158, 2026-07-09)
+
+File renumbered 158→161 on 2026-07-09 because two migration files shared number 158
+(the other: `158_wizard_events_fix_step_range`, GH #373). Both are applied to prod —
+verified 2026-07-09 against live pg_constraint: `wizard_events_step_check` is 0–7 with
+`demo_referral` allowed, and `tenants_plan_check` includes chatbot + agent_os. Rename
+is repo hygiene only; no prod action taken.
 
 **APPLIED to prod 2026-06-23** via `apply_migration` (project pxserpybmajixqrmzaly).
 The `tenants_plan_check` constraint still only permitted the retired plan names

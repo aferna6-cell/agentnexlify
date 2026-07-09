@@ -12,6 +12,11 @@ on:
 
 permissions:
   contents: write
+  # refresh_connectors.py lists issues + PRs; a scoped permissions block sets
+  # unlisted scopes to `none`, which made github.token 403 on the issues API
+  # for 8+ days (issues #392/#394). These two read grants are the fix.
+  issues: read
+  pull-requests: read
 
 concurrency:
   group: refresh-brain

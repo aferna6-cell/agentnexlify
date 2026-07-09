@@ -19,11 +19,27 @@ jobs:
       pull-requests: write
 
     steps:
+      # Same PAT-expiry guard as autopilot-issue-loop.yml (#399): validate
+      # AUTOPILOT_GH_TOKEN, fall back to github.token so an expired PAT can
+      # never silently kill review handling.
+      - name: Resolve GitHub token (PAT with fallback)
+        env:
+          PAT: ${{ secrets.AUTOPILOT_GH_TOKEN }}
+          FALLBACK: ${{ github.token }}
+        run: |
+          if [ -n "$PAT" ] && curl -sf -H "Authorization: Bearer $PAT" https://api.github.com/rate_limit > /dev/null; then
+            echo "EFFECTIVE_GH_TOKEN=$PAT" >> "$GITHUB_ENV"
+            echo "Using AUTOPILOT_GH_TOKEN"
+          else
+            echo "EFFECTIVE_GH_TOKEN=$FALLBACK" >> "$GITHUB_ENV"
+            echo "::warning::AUTOPILOT_GH_TOKEN missing or expired — falling back to github.token. Rotate the PAT to restore CI triggering (#399)."
+          fi
+
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
-          token: ${{ secrets.AUTOPILOT_GH_TOKEN }}
+          token: ${{ env.EFFECTIVE_GH_TOKEN }}
 
       - uses: actions/setup-python@v5
         with:
@@ -37,6 +53,6 @@ jobs:
       - name: Implement review comment
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GH_TOKEN: ${{ secrets.AUTOPILOT_GH_TOKEN }}
+          GH_TOKEN: ${{ env.EFFECTIVE_GH_TOKEN }}
           AUTOPILOT_MAX_TOKENS_PER_RUN: ${{ vars.AUTOPILOT_MAX_TOKENS_PER_RUN || '200000' }}
         run: python scripts/autopilot/implement_review_comment.py
