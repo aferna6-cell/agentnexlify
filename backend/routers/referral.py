@@ -142,6 +142,8 @@ class ReferralStatsResponse(BaseModel):
     clicks_last_7d: int
     clicks_last_30d: int
     referred_signups: int
+    rewards_count: int
+    rewards_earned_cents: int
 
 
 # NOTE: static route /my-stats MUST appear before any /{param} route.
@@ -231,6 +233,28 @@ async def get_my_referral_stats(
         )
         raise HTTPException(status_code=500, detail="Failed to fetch referral stats")
 
+    # Step 4: sum the credit this tenant has earned as a referrer.
+    # referral_rewards.referrer_tenant_id == this tenant's UUID; only 'granted'
+    # rows count toward earned credit (pending/failed are not money in hand).
+    rewards_count = 0
+    rewards_earned_cents = 0
+    try:
+        rewards_result = (
+            db.table("referral_rewards")
+            .select("amount_cents")
+            .eq("referrer_tenant_id", tenant_id)
+            .eq("status", "granted")
+            .execute()
+        )
+        for row in rewards_result.data or []:
+            rewards_count += 1
+            rewards_earned_cents += int(row.get("amount_cents") or 0)
+    except Exception:
+        # Non-fatal: rewards panel shows zero rather than failing the whole page.
+        logger.exception(
+            "Failed to aggregate referral_rewards for tenant_id=%s", tenant_id
+        )
+
     # Supabase count= returns count on the result object; data length as fallback
     def _count(result) -> int:
         if result.count is not None:
@@ -244,6 +268,8 @@ async def get_my_referral_stats(
         clicks_last_7d=_count(last_7d_result),
         clicks_last_30d=_count(last_30d_result),
         referred_signups=_count(signups_result),
+        rewards_count=rewards_count,
+        rewards_earned_cents=rewards_earned_cents,
     )
 
 

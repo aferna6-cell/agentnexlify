@@ -1410,3 +1410,22 @@ lookup index. Checked by `sms_compliance.is_suppressed()` before every outbound
 SMS (AI Workforce sms.send + missed-call text-back). Inbound STOP now records
 here durably (os_inbound.py), beyond the existing leads.unsubscribed flag.
 See docs/dev-knowledge/council-fixes-register.md #1.
+
+## 162_referral_rewards (PENDING apply — renumbered from 160, 2026-07-09)
+
+**Created 2026-06-23** as 160; renumbered to 162 on 2026-07-09 because 160 was taken
+by `160_sms_opt_outs` (applied to prod 2026-06-25) and 161 by the renumbered
+`161_allow_new_plan_names_in_tenants_check`. NOT yet applied to prod (apply via
+`apply_migration` when the referral-reward feature is enabled).
+
+New table `referral_rewards` records the flat $20 (2000-cent) Stripe customer-balance
+credit granted to a referrer when a tenant they referred pays their FIRST invoice.
+- `referred_tenant_id` is UNIQUE → idempotency: one reward per referee, ever. This
+  enforces "first paid invoice only" and is safe against Stripe webhook redeliveries
+  and the two parallel webhook endpoints (billing.py + stripe_webhooks.py).
+- `attribution_channel`: 'promo_code' (tenants.referred_by UUID) or 'widget_watermark'
+  (tenants.referred_by_widget_key → widget_configs.api_key → tenant).
+- `status`: pending → granted | failed. Pure additive `CREATE TABLE IF NOT EXISTS`.
+Consumed by `backend/services/referral_reward.py` (gated on REFERRAL_REWARD_ENABLED,
+default OFF) and surfaced (earned credit) on `GET /api/v1/referral/my-stats`.
+

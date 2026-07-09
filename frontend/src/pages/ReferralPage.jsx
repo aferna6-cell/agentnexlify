@@ -210,6 +210,25 @@ export default function ReferralPage() {
         <StatCard label="Last 7 days" value={stats?.clicks_last_7d ?? 0} />
         <StatCard label="Last 30 days" value={stats?.clicks_last_30d ?? 0} />
         <StatCard label="Signups referred" value={stats?.referred_signups ?? 0} />
+        <StatCard
+          label="Credit earned"
+          value={`$${((stats?.rewards_earned_cents ?? 0) / 100).toFixed(2)}`}
+        />
+      </div>
+
+      {/* How the reward works */}
+      <div className="settings-card" style={{ marginBottom: "1.5rem" }}>
+        <div
+          style={{
+            fontSize: "0.875rem",
+            color: "var(--text-secondary)",
+          }}
+        >
+          Earn <strong style={{ color: "var(--text-primary)" }}>$20 in
+          account credit</strong> for every business you refer, the moment they
+          pay their first invoice. Credit is applied automatically to your next
+          AgentNexLiFy bill.
+        </div>
       </div>
 
       {/* Empty / encouraging state */}

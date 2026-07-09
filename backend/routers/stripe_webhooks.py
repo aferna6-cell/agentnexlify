@@ -86,6 +86,14 @@ async def stripe_webhook(request: Request):
                         tenant_id=activation["tenant_id"],
                         customer_email=activation.get("customer_email"),
                     )
+                    # First paid invoice → reward whoever referred this tenant.
+                    # Idempotent (UNIQUE referred_tenant_id) + never raises.
+                    from backend.services.referral_reward import (
+                        grant_referral_reward_for_signup,
+                    )
+                    await grant_referral_reward_for_signup(
+                        referred_tenant_id=activation["tenant_id"],
+                    )
         elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
             if _is_legacy_marketing_addon(data):
                 logger.info("Ignoring legacy marketing add-on subscription event (add-on retired 2026-06-10)")
