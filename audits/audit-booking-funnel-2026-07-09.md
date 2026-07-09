@@ -48,3 +48,16 @@ Tenants can still disable booking in dashboard settings; only the default change
   migration 163 applied via `apply_migration` — success.
 - Live probe of the booking flow with real traffic is pending real visitors; the config
   gate (the blocker) is confirmed removed.
+
+## Addendum — live E2E verification (2026-07-09, later same day)
+
+Drove the real prod booking data path end-to-end after the gate fix:
+
+- **Public config**: `GET /api/v1/widget/config/{key}` serves `booking_enabled: true` (verified on the smoke tenant) — widget renders the calendar button.
+- **MTOptions**: 20 live slots for tomorrow. Fully bookable.
+- **914 Exterior**: had a REAL DATA BUG — business_hours stored `start 06:00, end 05:00` on all 7 days (a "5:00 PM" entered without PM conversion), making every day generate zero slots. Fixed in prod (`end` 05:00 → 17:00): now 22 slots/day. The impossible-hours shape is now guarded by a test (`test_onboarding_default_hours.py::TestDefaultHoursShape`).
+- **Keys Koffee**: no business_hours row at all → zero slots. NOT auto-seeded — inventing a real café's hours risks bookings at closed times. Owner/tenant sets real hours in dashboard settings (surface in next tenant check-in).
+- **New tenants**: onboarding now seeds default Mon–Fri 9–5 business hours when none exist (`_seed_default_business_hours`), so booking works out of the box; service_types turned out irrelevant to slot generation.
+- Browser-render check was blocked by the sandbox's TLS-intercepting proxy (Chromium connection reset on the widget script); the data path above is the deterministic input to the widget UI, which is verified by widget-code reading (booking panel gates purely on `booking_enabled` + slots).
+
+Net: 2 of 3 paying tenants fully bookable in prod today; the third needs one dashboard entry from the tenant.
