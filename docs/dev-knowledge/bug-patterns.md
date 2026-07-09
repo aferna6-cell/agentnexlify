@@ -18152,3 +18152,45 @@ Claude-Session: https://claude.ai/code/session_014JDg39f7mk5EUzuZci7Afk
 **Author:** Claude
 **Files Changed:** .claude/skills/nightly-commit-review/SKILL.md,ops/monitoring/SETUP.md,ops/monitoring/healthz-alert.sh,ops/routines/logs/nightly-commit-review-2026-07-07.md
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### ops: revive dead automation, fix demo-data metric pollution, post-deploy measurement (#401)
+
+Fixes from the 2026-07-09 ops-revival pass:
+
+- healthz-alert.sh: Slack webhook -> Resend email per the 2026-06-23
+  dependency-reduction decision. Closes #393 and obviates #391 (no
+  SLACK_ALERT_WEBHOOK_URL secret needed).
+- refresh-brain.yml: grant issues:read + pull-requests:read — the scoped
+  permissions block zeroed unlisted scopes, which is why github.token 403'd
+  on the issues API for 8+ days (#392, GitHub half of #394). Supabase half
+  already degrades gracefully and stays owner-gated (SUPABASE_ACCESS_TOKEN).
+- autopilot-issue-loop.yml + autopilot-pr-review.yml: validate
+  AUTOPILOT_GH_TOKEN preflight and fall back to github.token, so an expired
+  PAT can never silently kill the loop again (#399). Permissions blocks
+  already grant what the loop needs.
+- migrations: renumber 158_allow_new_plan_names -> 161 (duplicate number with
+  158_wizard_events_fix_step_range, #373). Both verified applied to prod via
+  live pg_constraint 2026-07-09; rename is repo hygiene only. schema-log
+  updated.
+- internal_tenants.py: exclude (DEMO) tenants by name and honor
+  tenants.is_demo — the 2026-07-09 measurement pass found ALL 9 prod
+  appointments are demo-seeded, so booking-conversion reads were fiction.
+  +6 tests (112 green across internal/funnel/tenant-health/churn suites).
+- uptime-checks.json: add www.agentnexlify.com check (probes previously only
+  hit the .vercel.app URL, blind to custom-domain/DNS failures).
+- audits/audit-post-deploy-measurement-2026-07-09.md: 16-day post-deploy
+  measurement — lead conversion up ~2.5x (validated), real booking
+  conversion is 0 (not 33%), zero signups in 16 days (distribution is the
+  constraint), referral clicks 3.
+
+
+Claude-Session: https://claude.ai/code/session_012D1T8XVy26gDH4AtjgFDbb
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-07-09
+**Commit:** dfa8201
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/autopilot-issue-loop.yml,.github/workflows/autopilot-pr-review.yml,.github/workflows/refresh-brain.yml,audits/audit-post-deploy-measurement-2026-07-09.md,backend/services/internal_tenants.py,backend/tests/test_internal_tenants.py,docs/dev-knowledge/schema-log.md,migrations/158_allow_new_plan_names_in_tenants_check.sql,migrations/161_allow_new_plan_names_in_tenants_check.sql,ops/monitoring/healthz-alert.sh,ops/monitoring/uptime-checks.json
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
