@@ -4,12 +4,31 @@ name: "Open Loops"
 tags:
   - map
   - moc
-last_updated: 2026-06-23
+last_updated: 2026-07-01
 ---
 
 # Open Loops
 
 Unfinished work + blockers (business scope). Ordered by priority.
+
+## In progress / pending autonomous (added 2026-07-01)
+- **SMS Compliance Dashboard** — subconscious winner for 10+ days (runs 70/73/74/75, 12/12
+  council score, S effort). Backend LIVE (`backend/services/sms_compliance.py` + migration 160);
+  **frontend page never started**. Run 75 mandate: ship or de-scope to backend-only. GH issue
+  filed by nightly-review 2026-07-01. Source: commits e225b53, c3298be, 8a3b071.
+- **Zapier plan_status enforcement (GH #107)** — cancelled tenants keep Zapier API access after
+  subscription ends. Security/revenue fix, approved AUTONOMOUS-EXECUTABLE run 75 (~30 min).
+  Source: commit 8a3b071.
+- **Brain connector refresh degraded** — 2026-07-01 runs: GitHub `HTTP 403`, Supabase skipped
+  (`SUPABASE_ACCESS_TOKEN` missing from Actions secrets). Connector sources last good
+  2026-06-22. Also: the refresh only rewrites `Sources/` + `graph.json` — Maps are manual.
+- ~~Widget drift `landing-page-v2/`~~ — **SYNCED 2026-07-01** (this session, per
+  `docs/reminders/widget-drift-URGENT.md` 30-second fix); pre-commit Check 13 green again after
+  ~8 days of FAIL+BLOCK. Subconscious topic already retired (run 70).
+- **KB autopopulate** — fixed 2026-06-30 (WebFetch allowedTools + DISCOVER_PROMPT, commit
+  65284cc) after a ~58-day silent gap (`knowledge-base/log.md` last entry 2026-05-05). No
+  alerting exists to catch the next silent failure; embeddings upsert still skips when cron
+  lacks Supabase auth.
 
 ## High
 - ~~[[Insurance Quote for Launch]]~~ — **DONE 2026-06-23 (owner).** The single HIGH rubric zero is cleared → launch verdict flips NO-GO → GO. Remaining launch items are MEDIUM/owner-content (log sink 4.5, case study 8.5, outreach 9.5).
@@ -19,7 +38,9 @@ Unfinished work + blockers (business scope). Ordered by priority.
 
 ## Medium
 - ~~[[Connect Public Domain]]~~ — **DONE 2026-06-23 (owner): agentnexlify.com connected to the live Vercel project.** The per-vertical SEO landing pages (`/ai-front-desk/{salons,plumbers,dentists}`) + marketing site now reach the public.
-- [[Proactive AI Opportunities Job]] — nightly proactive suggestions (G7).
+- ~~[[Proactive AI Opportunities Job]] — nightly proactive suggestions (G7).~~ **DONE — already
+  live (verified 2026-06-23, see G7 note below):** `run_opportunity_scan` every 30 min,
+  `GET /api/v1/os/insights`, `OsInsightsCard` on dashboard.
 
 ## Infra / hygiene (from sources, not yet broken out)
 - Log retention/sink, uptime monitor, status page, Sentry OAuth (rubric). Source: [[planning-launch-readiness-rubric]]
@@ -31,7 +52,7 @@ Unfinished work + blockers (business scope). Ordered by priority.
 - **#329 — DONE.** Migration 154 (conversation sentiment + intent) confirmed already live in prod (`conversations.sentiment`/`intent` exist, verified 2026-06-23).
 - **#330** — human legal review of TermsOfService §4 (payment terms).
 - **#266** — finish integrations-secret encryption (backfill + sunset plaintext).
-- KB embeddings broken since ~2026-04-30: root cause = missing `VOYAGE_API_KEY` (owner-gated) **plus** no graceful degradation in `backend/services/embeddings.py:34,52,70` (hard 401 raise) + the cron compile path swallows the crash as success. Code patch drafted (not applied). Source: `audits/audit-kb-embeddings-2026-06-23.md`
+- ~~KB embeddings broken since ~2026-04-30~~ — **RESOLVED in code (2026-06-23 lanes + 2026-06-30 fix):** typed `EmbeddingUnavailable` + cron guard + Postgres FTS fallback live in the widget path (migration 155), so retrieval works with ZERO external embedding API. Voyage embeddings remain an optional enhancement (`VOYAGE_API_KEY` owner-gated); cron embedding upserts still skip when Supabase auth is missing from the cron env. Original: `audits/audit-kb-embeddings-2026-06-23.md`
 - Recently fixed overnight: #308 (webhook idempotency), #292/#293 (stale plan names).
 
 ## Review 2026-06-23 — 4-lane foundation/launch pass

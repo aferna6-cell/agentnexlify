@@ -952,7 +952,7 @@
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           </button>
         </div>
-        <div id="anx-powered">${t('poweredBy')} <a href="https://agentnexlify.com" target="_blank" rel="noopener">AgentNexLiFy</a></div>
+        <div id="anx-powered">${t('poweredBy')} <a href="https://agentnexlify.com?ref=${encodeURIComponent(API_KEY)}&utm_source=widget" target="_blank" rel="noopener">AgentNexLiFy</a></div>
       </div>
     `;
 
@@ -2040,6 +2040,27 @@
       .getElementById("anx-close")
       .addEventListener("click", () => toggleWindow(false));
     document.getElementById("anx-send").addEventListener("click", handleSend);
+
+    // Referral click tracking - fire-and-forget, keepalive so it survives navigation
+    document
+      .getElementById("anx-powered")
+      .querySelector("a")
+      .addEventListener("click", function () {
+        try {
+          fetch(API_BASE + "/api/v1/referral/click", {
+            method: "POST",
+            keepalive: true,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ref: API_KEY,
+              path: window.location.pathname,
+              referrer: document.referrer,
+            }),
+          });
+        } catch (_) {
+          // tracking failure must never break the widget
+        }
+      });
 
     // File attachment
     document
