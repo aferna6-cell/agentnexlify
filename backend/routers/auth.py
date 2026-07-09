@@ -205,6 +205,11 @@ def _provision_tenant_account(
                     "greeting_message": widget_defaults["greeting_message"],
                     "position": widget_defaults["position"],
                     "show_watermark": True,
+                    # Booking ON by default — the product's pitch is appointment
+                    # booking, but migration 005 defaulted the column to false and
+                    # no insert path ever set it, so every tenant since launch had
+                    # booking silently off (2026-07-09 audit: 0 real bookings ever).
+                    "booking_enabled": True,
                 }
             )
             .execute()
@@ -600,6 +605,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
                 "greeting_message": widget_defaults["greeting_message"],
                 "position": widget_defaults["position"],
                 "show_watermark": True,
+                "booking_enabled": True,
             }
         ).execute()
         widget_config = WidgetConfigDetail(

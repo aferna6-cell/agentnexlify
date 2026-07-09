@@ -966,6 +966,47 @@ export default function Home() {
               </ul>
             </div>
             <div className="lp-footer-col">
+              <h4>Industries</h4>
+              <ul>
+                <li>
+                  <Link to="/ai-front-desk/salons">Salons &amp; Spas</Link>
+                </li>
+                <li>
+                  <Link to="/ai-front-desk/plumbers">Plumbing &amp; HVAC</Link>
+                </li>
+                <li>
+                  <Link to="/ai-front-desk/dentists">Dental Offices</Link>
+                </li>
+                <li>
+                  <Link to="/ai-front-desk/med-spas">Med Spas</Link>
+                </li>
+                <li>
+                  <Link to="/ai-front-desk/auto-repair">Auto Repair</Link>
+                </li>
+                <li>
+                  <Link to="/ai-front-desk/real-estate">Real Estate</Link>
+                </li>
+                <li>
+                  <Link to="/ai-front-desk/law-firms">Law Firms</Link>
+                </li>
+                <li>
+                  <Link to="/ai-front-desk/restaurants">Restaurants</Link>
+                </li>
+                <li>
+                  <Link to="/ai-front-desk/fitness">Fitness Studios</Link>
+                </li>
+                <li>
+                  <Link to="/ai-front-desk/roofing">Roofing</Link>
+                </li>
+                <li>
+                  <Link to="/ai-front-desk/cleaning-services">Cleaning Services</Link>
+                </li>
+                <li>
+                  <Link to="/ai-front-desk/veterinary">Veterinary Clinics</Link>
+                </li>
+              </ul>
+            </div>
+            <div className="lp-footer-col">
               <h4>Legal</h4>
               <ul>
                 <li>
