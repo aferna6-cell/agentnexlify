@@ -89,6 +89,23 @@ export const VERTICAL_DATA = {
         q: "Does it work with my existing booking system?",
         a: "AgentNexLiFy has its own booking system with Google Calendar sync. If you use another platform, the AI can capture the request and notify you to schedule it there.",
       },
+      {
+        q: "How does it answer pricing questions for color or balayage?",
+        a: "You set your price ranges during setup. The AI explains that color pricing depends on hair length, stylist level, and how many sessions the look needs, gives your range, and offers to book a consultation for an exact quote. It never states a fixed price for a service that needs a consultation first.",
+      },
+      {
+        q: "Can it handle walk-in and same-day questions?",
+        a: "Yes. When a visitor asks whether they can get in today, the AI explains that shorter services are easier to fit on short notice and shows the soonest opening for the service they want. Popular slots like Friday afternoon and Saturday fill first, so turning walk-in questions into bookings keeps your calendar predictable.",
+      },
+      {
+        q: "How does it reduce no-shows and late cancellations?",
+        a: "You set your cancellation window, often 24 to 48 hours, and any late fee during setup. The AI explains the policy when clients book, and automated reminders before each appointment let clients confirm or reschedule by text instead of simply not showing up.",
+      },
+    ],
+    related: [
+      { slug: "med-spas", label: "Med Spas" },
+      { slug: "fitness", label: "Fitness Studios" },
+      { slug: "cleaning-services", label: "Cleaning Services" },
     ],
   },
 
@@ -171,6 +188,23 @@ export const VERTICAL_DATA = {
         q: "Does it integrate with my dispatch software?",
         a: "AgentNexLiFy syncs with Google Calendar. For other dispatch systems, outbound webhooks connect to Zapier and 5,000 plus apps so lead data flows to wherever you manage jobs.",
       },
+      {
+        q: "How does it answer pricing questions without committing me to a number?",
+        a: "The AI explains your service-call or diagnostic fee, notes when it is applied toward the repair, and tells the customer the technician quotes the job on site. For big jobs like a water heater or full system replacement, it books an estimate visit instead of guessing a price.",
+      },
+      {
+        q: "Can it check whether a customer is in my service area?",
+        a: "Yes. Set your coverage by towns or radius during setup. The AI asks for the customer's city or zip code before booking and only schedules jobs inside your area, so your techs stop driving to addresses you never should have booked.",
+      },
+      {
+        q: "What does it do when someone reports a gas smell?",
+        a: "Safety first. The AI tells the visitor to leave the building, avoid switches and flames, and call the gas utility or emergency services from outside. Once the customer is safe, it captures the lead so you can schedule the inspection and repair.",
+      },
+    ],
+    related: [
+      { slug: "roofing", label: "Roofing Contractors" },
+      { slug: "auto-repair", label: "Auto Repair Shops" },
+      { slug: "cleaning-services", label: "Cleaning Services" },
     ],
   },
 
@@ -257,6 +291,19 @@ export const VERTICAL_DATA = {
         q: "Will this replace my front desk team?",
         a: "No. It handles repetitive tasks, appointment confirmations, basic questions, and review requests so your team can focus on patients in the office.",
       },
+      {
+        q: "How does it handle patients with a toothache who need to be seen today?",
+        a: "Severe pain, swelling, and a broken or knocked-out tooth are flagged as urgent. The AI routes those patients toward your soonest available slot and notes the symptoms for the dentist. Swelling that affects breathing or swallowing gets directed to emergency medical care instead of a booking.",
+      },
+      {
+        q: "What does it tell patients who do not have insurance?",
+        a: "You add your self-pay pricing and any membership or discount plan during setup. The AI explains those options and books the visit, so uninsured patients become appointments instead of hang-ups.",
+      },
+    ],
+    related: [
+      { slug: "med-spas", label: "Med Spas" },
+      { slug: "veterinary", label: "Veterinary Clinics" },
+      { slug: "fitness", label: "Fitness Studios" },
     ],
   },
 
@@ -343,6 +390,19 @@ export const VERTICAL_DATA = {
         q: "Does it handle downtime and safety questions?",
         a: "Yes. You add the typical downtime for each treatment during setup and the AI gives visitors accurate expectations. For anything that needs a clinical answer, it routes them to book a consultation rather than guessing.",
       },
+      {
+        q: "Can it answer how long Botox or filler results last?",
+        a: "Yes, with the general guidance you approve during setup. Botox results commonly last around three to four months, and filler often lasts from several months to over a year depending on the product and the area. For a person-specific answer, it books the consultation.",
+      },
+      {
+        q: "Does it surface my packages and memberships?",
+        a: "Yes. Add your memberships, treatment packages, and financing options during setup and the AI brings them up when visitors ask about cost. Bundled pricing on treatments like laser hair removal moves a price-checking visitor toward a booked consultation.",
+      },
+    ],
+    related: [
+      { slug: "salons", label: "Salons" },
+      { slug: "dentists", label: "Dental Offices" },
+      { slug: "fitness", label: "Fitness Studios" },
     ],
   },
 
@@ -429,6 +489,19 @@ export const VERTICAL_DATA = {
         q: "How does it integrate with my existing workflow?",
         a: "AgentNexLiFy syncs with Google Calendar. Bookings land on your calendar with the vehicle details and job description. Outbound webhooks connect to Zapier and 5,000 plus apps so lead data flows to whatever you use to manage jobs.",
       },
+      {
+        q: "What does it say when a driver asks about a check engine light?",
+        a: "The AI explains that the light can mean anything from a loose gas cap to an engine issue, and that a diagnostic scan reads the actual code. If the driver says the light is flashing or the car runs rough, it treats the request as urgent and books the car in sooner.",
+      },
+      {
+        q: "Can it answer loaner car and shuttle questions?",
+        a: "Yes. Set what you offer during setup, whether that is loaners, a shuttle, or neither, and the AI gives drivers a straight answer. For longer repairs this question decides whether the customer books, so answering it up front wins jobs.",
+      },
+    ],
+    related: [
+      { slug: "plumbers", label: "Plumbers and HVAC" },
+      { slug: "roofing", label: "Roofing Contractors" },
+      { slug: "cleaning-services", label: "Cleaning Services" },
     ],
   },
 
@@ -515,6 +588,19 @@ export const VERTICAL_DATA = {
         q: "Will this work for a solo practitioner?",
         a: "Yes. Solo practitioners benefit most because there is no receptionist to answer calls after hours. The AI handles intake, books consultations, and sends reminders so you can focus on client work during the day.",
       },
+      {
+        q: "How does it answer fee questions?",
+        a: "The AI explains how your firm bills by case type, flat fee, hourly, or contingency, without quoting a number for a matter no attorney has reviewed. Contingency questions get a plain explanation that the fee is a percentage of the recovery with nothing up front, when that applies to your practice.",
+      },
+      {
+        q: "What does it say when someone asks about filing deadlines?",
+        a: "It never states a deadline as fact. It explains that legal deadlines vary by case type and location, that some are strict, and that speaking with an attorney soon is the safe move. That creates urgency toward a booked consultation without giving advice.",
+      },
+    ],
+    related: [
+      { slug: "real-estate", label: "Real Estate" },
+      { slug: "dentists", label: "Dental Offices" },
+      { slug: "veterinary", label: "Veterinary Clinics" },
     ],
   },
 
@@ -601,6 +687,19 @@ export const VERTICAL_DATA = {
         q: "How long does setup take?",
         a: "Most restaurants are live within an hour. Add your hours, menu highlights, reservation process, and common questions. The AI starts answering guest questions the same day.",
       },
+      {
+        q: "How does it handle catering and private event inquiries?",
+        a: "Catering and private dining are the biggest tickets a chat can capture. The AI collects the date, headcount, event type, and contact details, then passes the inquiry to your events contact for follow-up. Nothing gets lost in a voicemail during service.",
+      },
+      {
+        q: "Can it answer walk-in and wait time questions?",
+        a: "Yes. The AI explains your walk-in policy, notes that weekend dinners are busiest, and offers a reservation where you take them. Guests who know what to expect show up instead of picking the next place on the list.",
+      },
+    ],
+    related: [
+      { slug: "salons", label: "Salons" },
+      { slug: "fitness", label: "Fitness Studios" },
+      { slug: "cleaning-services", label: "Cleaning Services" },
     ],
   },
 
@@ -687,6 +786,19 @@ export const VERTICAL_DATA = {
         q: "How long does setup take?",
         a: "Most gyms and studios are live within an hour. Add your membership options, class schedule, and common questions. The AI starts answering prospective member questions the same day.",
       },
+      {
+        q: "Can it explain contracts, freezes, and cancellation terms?",
+        a: "Yes. Add your plan terms during setup: sign-up fees, month-to-month versus annual pricing, notice windows, and freeze rules for travel or injury. Prospects ask these questions before they commit, and a clear answer in chat removes the hesitation that kills sign-ups.",
+      },
+      {
+        q: "Does it handle drop-in and day pass questions?",
+        a: "Yes. The AI shares your drop-in rate or day pass option and reserves the spot. A single visit is the strongest path to a membership, so every drop-in question gets steered toward a booked first session.",
+      },
+    ],
+    related: [
+      { slug: "salons", label: "Salons" },
+      { slug: "med-spas", label: "Med Spas" },
+      { slug: "restaurants", label: "Restaurants" },
     ],
   },
 
@@ -773,6 +885,19 @@ export const VERTICAL_DATA = {
         q: "Can it qualify leads by roof type or damage extent?",
         a: "Yes. Add qualifying questions to the intake flow. The AI can ask about the roof material, approximate age, and the type of damage before booking an inspection, so your team arrives prepared.",
       },
+      {
+        q: "Can it explain repair versus replacement to homeowners?",
+        a: "The AI walks through the factors: roof age, how widespread the damage is, and how many layers are already up there. It explains that an inspector makes the call after seeing the roof and books the inspection rather than promising an answer sight unseen.",
+      },
+      {
+        q: "Does it answer warranty and financing questions?",
+        a: "Yes. It explains the difference between your workmanship warranty on labor and the manufacturer warranty on materials, using the terms you set. Homeowners who ask about financing get your options noted on the lead so your estimator can walk them through it.",
+      },
+    ],
+    related: [
+      { slug: "plumbers", label: "Plumbers and HVAC" },
+      { slug: "auto-repair", label: "Auto Repair Shops" },
+      { slug: "real-estate", label: "Real Estate" },
     ],
   },
 
@@ -859,6 +984,19 @@ export const VERTICAL_DATA = {
         q: "How long does setup take?",
         a: "Most cleaning companies are live within an hour. Add your service types, pricing ranges, and coverage area. The AI starts answering client questions and capturing booking requests the same day.",
       },
+      {
+        q: "Can it explain the difference between a standard clean and a deep clean?",
+        a: "Yes. The AI explains that a standard clean covers regular upkeep while a deep clean reaches buildup like baseboards and inside appliances, and that new recurring clients usually start with a deep clean. That sets the right price expectation before your quote goes out.",
+      },
+      {
+        q: "How does it answer clients who ask if they need to be home?",
+        a: "The AI explains the access options you support, such as a key, a lockbox, or a door code, and records the client's preference on the booking. Removing the need to be home removes the most common booking objection for working clients.",
+      },
+    ],
+    related: [
+      { slug: "plumbers", label: "Plumbers and HVAC" },
+      { slug: "real-estate", label: "Real Estate" },
+      { slug: "salons", label: "Salons" },
     ],
   },
 
@@ -945,6 +1083,19 @@ export const VERTICAL_DATA = {
         q: "Will this work for a multi-doctor clinic?",
         a: "Yes. The AI captures the appointment request and the reason for the visit. Your front desk team assigns the doctor from the dashboard. Doctor-specific booking is on the roadmap.",
       },
+      {
+        q: "Can it handle prescription refill requests?",
+        a: "Yes. The AI collects the pet's name and the medication or food needed and passes the refill request to your team, who confirm whether a recent exam is required before filling it. Refill requests stop tying up your phone line.",
+      },
+      {
+        q: "How does it answer pet insurance questions?",
+        a: "It explains that pet insurance usually works as reimbursement, where the owner pays the clinic and files with their insurer, and that coverage depends on the specific policy. It notes on the lead that the client has insurance so your team can prepare the claim paperwork.",
+      },
+    ],
+    related: [
+      { slug: "dentists", label: "Dental Offices" },
+      { slug: "med-spas", label: "Med Spas" },
+      { slug: "fitness", label: "Fitness Studios" },
     ],
   },
 
@@ -1031,6 +1182,19 @@ export const VERTICAL_DATA = {
         q: "How does it handle pricing and availability questions?",
         a: "The AI confirms availability against your current listings and points visitors to the listing for the exact rent or sale price. It does not quote a specific price as a fact across many properties, which keeps your responses accurate as listings change.",
       },
+      {
+        q: "Can it explain application and screening requirements?",
+        a: "Yes. Add your criteria per property during setup and the AI shares them before someone applies. Many companies ask for income around two to three times the rent plus a credit and rental-history check, and stating that up front cuts the unqualified applications your team has to process.",
+      },
+      {
+        q: "Can it answer rent payment and lease questions from residents?",
+        a: "Yes. The AI points residents to the payment portal and to their lease for due dates, grace periods, and late fees, and routes deposit-return and early move-out questions to the right contact. Your team stops fielding the same lease questions by phone.",
+      },
+    ],
+    related: [
+      { slug: "law-firms", label: "Law Firms" },
+      { slug: "cleaning-services", label: "Cleaning Services" },
+      { slug: "roofing", label: "Roofing Contractors" },
     ],
   },
 };

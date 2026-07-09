@@ -47,6 +47,15 @@
       },
       "interval_seconds": 300,
       "alert_after_failures": 2
+    },
+    {
+      "name": "Booking slots generate (MTOptions, next weekday)",
+      "url": "https://agentnexlify-production.up.railway.app/api/v1/appointments/slots/6d76f24b-dd71-470c-9b86-03ee35b7e887?date={next_weekday}&api_key=anx_zc2Gfxz5n1oZgrYbM1biHWRI1oV1rMSIBFuIDtaCK3k",
+      "method": "GET",
+      "expected_status": 200,
+      "expect_nonempty_key": "slots",
+      "interval_seconds": 300,
+      "alert_after_failures": 2
     }
   ],
   "recommended_alert_channels": [

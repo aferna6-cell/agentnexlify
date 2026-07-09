@@ -51,9 +51,26 @@ def _expected_json_matches(payload: Any, expected: dict[str, Any]) -> bool:
     return True
 
 
+def _render_url(url: str) -> str:
+    """Expand the {next_weekday} placeholder to the next Mon-Fri date (UTC).
+
+    Booking-slot checks need a rolling date: a hardcoded date goes stale, and
+    weekend dates legitimately return zero slots for Mon-Fri businesses, which
+    would false-alarm every Friday/Saturday night.
+    """
+    if "{next_weekday}" in url:
+        from datetime import datetime, timedelta, timezone
+
+        d = datetime.now(timezone.utc).date() + timedelta(days=1)
+        while d.weekday() >= 5:  # 5=Sat, 6=Sun
+            d += timedelta(days=1)
+        url = url.replace("{next_weekday}", d.isoformat())
+    return url
+
+
 def _probe(check: dict[str, Any], timeout: float) -> ProbeResult:
     name = str(check["name"])
-    url = str(check["url"])
+    url = _render_url(str(check["url"]))
     method = str(check.get("method", "GET")).upper()
     expected_status = int(check.get("expected_status", 200))
 
@@ -83,6 +100,21 @@ def _probe(check: dict[str, Any], timeout: float) -> ProbeResult:
             )
         if not _expected_json_matches(payload, expected_json):
             return ProbeResult(name, False, f"{url} JSON did not include {expected_json!r}")
+
+    # Optional: assert a JSON key holds a NON-EMPTY list. Catches the booking
+    # regression class where the endpoint is 200 but every slot silently
+    # vanished (e.g. broken business-hours data — see 914 Exterior 2026-07-09).
+    nonempty_key = check.get("expect_nonempty_key")
+    if nonempty_key:
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except Exception as exc:
+            return ProbeResult(name, False, f"{url} unparseable JSON for nonempty check: {exc}")
+        value = payload.get(nonempty_key)
+        if not isinstance(value, list) or len(value) == 0:
+            return ProbeResult(
+                name, False, f"{url} key {nonempty_key!r} is empty or missing (got {value!r})"
+            )
 
     return ProbeResult(name, True, f"{url} returned {status}")
 

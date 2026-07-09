@@ -165,6 +165,46 @@ const pricingStyles = `
   color: var(--text-muted);
   margin-top: 1.5rem;
 }
+
+/* Related verticals cross-links */
+
+.vl-related {
+  padding: 3rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.vl-related__heading {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.vl-related__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.vl-related__link {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.vl-related__link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 `;
 
 export default function VerticalLanding() {
@@ -243,6 +283,26 @@ export default function VerticalLanding() {
             <p className="vl-pricing__note">No setup fees. No contracts. Cancel anytime.</p>
           </div>
         </section>
+
+        {/* Cross-links to sibling vertical pages. Optional field; renders nothing when absent. */}
+        {Array.isArray(data.related) && data.related.length > 0 && (
+          <section className="vl-related">
+            <div className="vp-container">
+              <h2 className="vl-related__heading">AI Front Desk for other industries</h2>
+              <div className="vl-related__links">
+                {data.related.map((r) => (
+                  <a
+                    key={r.slug}
+                    href={`/ai-front-desk/${r.slug}`}
+                    className="vl-related__link"
+                  >
+                    {r.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
       </VerticalPage>
     </>
   );
