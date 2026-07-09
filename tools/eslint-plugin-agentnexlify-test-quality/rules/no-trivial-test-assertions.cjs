@@ -48,7 +48,12 @@ function getExpectDetails(callExpression) {
 }
 
 function sameSourceText(context, left, right) {
-  const sourceCode = context.getSourceCode();
+  // ESLint 10 removed context.getSourceCode(); context.sourceCode is the
+  // replacement (available since v8.40). Keep the old call as a fallback so
+  // the rule still works if anything pins ESLint <8.40.
+  const sourceCode =
+    context.sourceCode ||
+    (typeof context.getSourceCode === "function" && context.getSourceCode());
   return sourceCode.getText(left) === sourceCode.getText(right);
 }
 
