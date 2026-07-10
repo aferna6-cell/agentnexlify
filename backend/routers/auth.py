@@ -216,17 +216,27 @@ def _provision_tenant_account(
         )
         if not wc_result.data:
             raise RuntimeError("widget_configs insert returned no data")
+        _seed_industry_faqs(tenant_id, industry, business_name, city)
     except Exception:
+        # Compensating rollback: the tenants row was inserted above. If
+        # widget_configs or FAQ seeding fails, delete the orphan — otherwise the
+        # email is permanently locked (the dedup check at the top 409s every
+        # retry) and the tenant has no api_key/widget and no way in.
         logger.error(
-            "Failed to create widget_configs for tenant %s - rolling back",
+            "Signup provisioning failed for tenant %s - rolling back tenant row",
             tenant_id,
             exc_info=True,
         )
+        try:
+            db.table("tenants").delete().eq("id", tenant_id).execute()
+        except Exception:
+            logger.error(
+                "Rollback delete failed for orphan tenant %s", tenant_id, exc_info=True
+            )
         raise HTTPException(
-            status_code=500, detail="Failed to initialize widget configuration"
+            status_code=500, detail="Failed to initialize account. Please try again."
         )
 
-    _seed_industry_faqs(tenant_id, industry, business_name, city)
     return tenant_id, api_key
 
 

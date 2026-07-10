@@ -1437,3 +1437,6 @@ credit granted to a referrer when a tenant they referred pays their FIRST invoic
 Consumed by `backend/services/referral_reward.py` (gated on REFERRAL_REWARD_ENABLED,
 default OFF) and surfaced (earned credit) on `GET /api/v1/referral/my-stats`.
 
+
+## 164_leads_client_email_unique (2026-07-10)
+Added `UNIQUE (client_id, email)` on `leads` (constraint `leads_client_email_uniq`) to close the duplicate-lead check-then-insert race (launch audit H1). NULLs stay distinct so phone-only leads are unaffected. Applied to prod. Insert sites switched to upsert-ignore-duplicates.

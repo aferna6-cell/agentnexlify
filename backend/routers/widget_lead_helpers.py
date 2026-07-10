@@ -554,6 +554,22 @@ async def _capture_leads_from_session(
         try:
             result = tenant_insert(db, "leads", tenant_id, lead_fields).execute()
         except Exception as insert_err:
+            # Unique (client_id, email) violation (migration 164) = a concurrent
+            # capture already created this lead. This is the check-then-insert
+            # race we WANT to lose: the winner already fired the owner alert,
+            # sequences, scoring, and webhook, so we skip quietly instead of
+            # duplicating the row and double-firing all of it.
+            err_text = str(insert_err).lower()
+            if (
+                "leads_client_email_uniq" in err_text
+                or "duplicate key" in err_text
+                or "23505" in err_text
+            ):
+                logger.info(
+                    "lead_capture: duplicate-lead race for client_id=%s email=%s — already captured, skipping",
+                    tenant_id, combined.get("email"),
+                )
+                return
             logger.error(
                 "lead_capture: INSERT FAILED: %s — fields were %s",
                 insert_err, lead_fields, exc_info=True,

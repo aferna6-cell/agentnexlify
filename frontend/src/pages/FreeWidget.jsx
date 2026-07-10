@@ -75,7 +75,7 @@ export default function FreeWidget() {
     offers: [
       {
         "@type": "Offer",
-        name: "Chatbot",
+        name: "AI Front Desk",
         price: "19.99",
         priceCurrency: "USD",
         priceSpecification: {
@@ -89,7 +89,7 @@ export default function FreeWidget() {
       },
       {
         "@type": "Offer",
-        name: "Agent OS",
+        name: "AI Workforce",
         price: "99.99",
         priceCurrency: "USD",
         priceSpecification: {
