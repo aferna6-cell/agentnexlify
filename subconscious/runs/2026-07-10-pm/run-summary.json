@@ -1,0 +1,81 @@
+{
+  "date": "2026-07-10-pm",
+  "run": 87,
+  "winner": "Booking Enabled Audit for Real Tenants",
+  "winner_slug": "booking-enabled-audit",
+  "category": "customer_value",
+  "effort": "XS",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "requires_human": false,
+  "execution_path": "Supabase MCP (mcp__supabase__execute_sql) — unblocked by GitHub Actions credential crisis",
+  "mandate_status": "EXECUTED_EARLY",
+  "mandate_executed_by": "morning-digest-2026-07-10",
+  "mandate_items": {
+    "ops/credential-rotation-schedule.md created": "CONFIRMED — created by morning-digest-2026-07-10",
+    "Step 9E added to .claude/skills/nightly-commit-review/SKILL.md": "CONFIRMED — lines 265-288 present",
+    "Lead Source Analytics GH issue created with ai-ready label": "CONFIRMED — created by morning-digest-2026-07-10 (run 85 promotion)"
+  },
+  "mandate_note": "All three run_87_mandate items confirmed met by morning-digest-2026-07-10 before this subconscious run started. Run proceeded with free-choice winner.",
+  "ideas_count": 5,
+  "ideas": [
+    {
+      "title": "Booking Enabled Audit for Real Tenants",
+      "category": "customer_value",
+      "effort": "XS",
+      "verdict": "WINNER",
+      "autonomous_executable": true
+    },
+    {
+      "title": "Draft PR Triage",
+      "category": "workflow",
+      "effort": "XS",
+      "verdict": "KILLED",
+      "reason": "Root cause is automation outage, not process"
+    },
+    {
+      "title": "Referral Reward Pre-Gate Diagnostic",
+      "category": "operational",
+      "effort": "XS",
+      "verdict": "WEAKENED — parking lot",
+      "reason": "Wrong timing; credential crisis blocks reliable pipeline checks"
+    },
+    {
+      "title": "landing-page-v2 Widget Retirement Decision",
+      "category": "code_health",
+      "effort": "XS",
+      "verdict": "Parking lot",
+      "reason": "Not debated in top 3; low urgency"
+    },
+    {
+      "title": "ANTHROPIC_API_KEY Blockage Escalation",
+      "category": "operational",
+      "effort": "XS",
+      "verdict": "Parking lot",
+      "reason": "Valid but not debated in top 3; merged into P2 backlog"
+    }
+  ],
+  "key_evidence": [
+    "0 real bookings despite 7 leads and booking feature shipped 2026-06-23 (17 days)",
+    "0e0ee00 (2026-07-09) set booking_enabled=true as default — NEW onboarding only, not retroactive",
+    "MTOptions, 914 Exterior, Keys Koffee all onboarded before 0e0ee00 — retain original booking_enabled value",
+    "AUTOPILOT_GH_TOKEN expired (GH #399 CRITICAL) + ANTHROPIC_API_KEY missing (GH #403 CRITICAL)",
+    "Supabase MCP queries unblocked by credential crisis — uses DB directly, not GitHub Actions"
+  ],
+  "run_88_mandate": {
+    "items": [
+      "Verify nightly ran Booking Enabled Audit (check nightly log for 'Booking Enabled Audit:' line)",
+      "Report result: how many real tenants have booking_enabled=false?",
+      "If booking_enabled=false found: verify GH issue filed with revenue + human-action-required labels",
+      "If all tenants have booking_enabled=true: next question is booking availability setup — check tenant_availability table for business hours",
+      "Secondary: verify Lead Source Analytics GH issue has draft PR (once GH #399 fixed by human)"
+    ]
+  },
+  "artifacts": [
+    "subconscious/runs/2026-07-10-pm/ideas/ideas.md",
+    "subconscious/runs/2026-07-10-pm/debate/debate-log.md",
+    "subconscious/runs/2026-07-10-pm/winning-concept.md",
+    "subconscious/runs/2026-07-10-pm/improvement-backlog.md",
+    "subconscious/runs/2026-07-10-pm/run-summary.json"
+  ]
+}
