@@ -796,10 +796,6 @@
     },
     {
       "source": "GitHub Activity",
-      "target": "connector-github-issues"
-    },
-    {
-      "source": "GitHub Activity",
       "target": "Open Loops"
     },
     {
@@ -977,6 +973,10 @@
     {
       "source": "Home",
       "target": "README"
+    },
+    {
+      "source": "Decision Log",
+      "target": "Open Loops"
     },
     {
       "source": "Decision Log",
@@ -1441,10 +1441,6 @@
     {
       "source": "connector-supabase-schema",
       "target": "AgentNexLiFy Platform"
-    },
-    {
-      "source": "connector-github-issues",
-      "target": "SOURCE-MANIFEST"
     },
     {
       "source": "kb-index",

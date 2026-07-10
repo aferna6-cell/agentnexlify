@@ -5,25 +5,39 @@ origin: connector
 connector: GitHub
 account: aferna6-cell
 repo: aferna6-cell/agentnexlify
-accessed: 2026-06-22
+accessed: 2026-07-10
+last_refresh: 2026-07-10T10:30Z
 sensitivity: normal
 tags: [source, connector]
 ---
 
-# Source: GitHub issues/PRs (smoke pass)
+# Source: GitHub issues/PRs (auto-refreshed)
 
 ## What this is
-Read-only smoke pass over `aferna6-cell/agentnexlify` open issues (84 open) + open PRs,
-2026-06-22. See [[SOURCE-MANIFEST]] for connector verification.
+Live snapshot from `refresh_connectors.py` of `aferna6-cell/agentnexlify`.
 
-## What it proves
-- **Autonomous dev operation**: daily `morning-digest`, `nightly-commit-review`, and a
-  `subconscious` improvement loop (numbered runs) auto-file issues and land fixes.
-- **Plan display names**: `chatbot` = "AI Front Desk" ($19.99), `agent_os` = "AI Workforce"
-  ($99.99). Confirmed in ToS rewrite (#330) + repricing PRs (#288, #291).
-- **Live open loops** (2026-06-22): #263 (24 pending migrations, CRITICAL), #329 (apply
-  migration 154 to prod), #330 (legal ToS review), #266 (secret encryption backfill), #325/
-  #327/#328 (checkout/billing/retention), #286 (Agent OS alerts), PR #333 (51-commit
-  main-pending batch, stale).
-- **Recently fixed**: #308 webhook idempotency (revenue bug), #292/#293 stale plan names.
-- **KB embeddings broken** since ~2026-04-30 (missing `VOYAGE_API_KEY` + Supabase MCP auth in cron).
+## Counts (as of 2026-07-10T10:30Z)
+- Open issues: 105
+- Open PRs: 30
+- Recent closed issues sampled: 6
+
+## Top open issues (non-digest)
+  - #408 nightly-review [MEDIUM]: landing-page-v2/widget modified — violates CLAUDE.md "do not touch" rule
+  - #407 nightly-review [HIGH]: Referral reward Stripe webhook — verify before enabling REFERRAL_REWARD_ENABLED
+  - #406 KB auto-populate blocked: set ANTHROPIC_API_KEY as an Actions secret [human-action-required]
+  - #403 Set ANTHROPIC_API_KEY in GitHub Actions secrets — blocks autopilot loop AND KB autopopulate [human-action-required]
+  - #399 autopilot-issue-loop GitHub Actions failing 5+ days — AUTOPILOT_GH_TOKEN expired [CRITICAL]
+  - #394 Fix brain-refresh[bot] credentials — GitHub 403 + SUPABASE_ACCESS_TOKEN missing [MEDIUM]
+  - #392 Brain refresh connectors failing for 4+ consecutive days (GitHub 403, Supabase token missing)
+  - #385 Add SMS Compliance Dashboard (backend router + frontend page)
+  - #330 Human legal review: TermsOfService section 4 rewritten (payment terms + failed-payment clause)
+  - #329 Apply migration 154 (conversation sentiment + intent) to production
+  - #293 MEDIUM: orchestrator + billing_reconciliation use stale plan names after repricing
+  - #292 MEDIUM: sms_rate_limiter + api_key_auth missing new plan names (chatbot/agent_os)
+  - #266 security: finish integrations-secret encryption — backfill + sunset plaintext columns
+  - #265 deps: re-raise the fastapi <0.136 cap once starlette is bumped to a 0.50-compatible release
+  - #263 Schema Sync [CRITICAL]: 24 pending migrations -- 2026-06-14
+
+## Notes
+- Autonomous-dev cadence: morning-digest / nightly-commit-review / subconscious loop.
+- Regenerated automatically; edits here will be overwritten on next refresh.

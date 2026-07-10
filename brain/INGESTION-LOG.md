@@ -97,3 +97,7 @@ the last recorded state.
 ## 2026-07-09T10:32Z — refresh_connectors.py
 - github: error — HTTP Error 403: Forbidden
 - supabase: skipped — SUPABASE_ACCESS_TOKEN not set
+
+## 2026-07-10T10:30Z — refresh_connectors.py
+- github: ok — 105 open issues, 30 open PRs
+- supabase: skipped — SUPABASE_ACCESS_TOKEN not set
