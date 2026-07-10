@@ -1,0 +1,94 @@
+# Nightly Commit Review — 2026-07-10
+
+**Run time:** 2026-07-10 (UTC)
+**Commits reviewed:** 19 (last 24 hours)
+**Issues opened:** 2 (HIGH #407, MEDIUM #408)
+**AUTO-FIXES:** none (no LOW-risk bugs found requiring a fix)
+
+---
+
+## Triage Summary
+
+| SHA | Description | Risk | Action |
+|-----|-------------|------|--------|
+| `a12a825` | subconscious: run 2026-07-09-pm (ideas/planning docs) | LOW | No action |
+| `3b30505` | G3 voice gate fix + vertical pages + booking uptime (#405) | MEDIUM | No issues |
+| `3596009` | Bookable-by-default hours + weekly funnel report (#404) | MEDIUM | No issues |
+| `b7d97ab` | dep bump @typescript-eslint/parser | LOW | No action |
+| `0e0ee00` | Booking on by default + SEO + last-call recovery email (#402) | MEDIUM | No issues |
+| `b6c1d86` | docs: auto-log bug fix | LOW | No action |
+| `dfa8201` | ops: revive dead automation + demo-data metric fix (#401) | MEDIUM | No issues |
+| `6218adf` | dep bump react-router-dom | LOW | No action |
+| `acf8bea` | dep bump jsdom | LOW | No action |
+| `78b3c52` | dep bump @playwright/test | LOW | No action |
+| `45be1bf` | dep bump eslint | LOW | No action |
+| `0b5918f` | dep bump @vitest/coverage-v8 | LOW | No action |
+| `b4f657a` | dep bump vitest | LOW | No action |
+| `8b1e44b` | brain sync + landing-page-v2 widget drift fix (#387) | MEDIUM | Issue #408 opened |
+| `913f8ca` | Referral reward: $20 Stripe credit (#372) | HIGH | Issue #407 opened |
+| `adbc682` | ops: morning-digest | LOW | No action |
+| `17714e3` | brain: scheduled refresh | LOW | No action |
+| `5f841e6` | subconscious: run 2026-07-09 | LOW | No action |
+| `e8b2ddc` | ops: nightly-commit-review 2026-07-09 | LOW | No action |
+
+---
+
+## HIGH — Issue #407: Referral reward Stripe webhook
+
+**Commit:** `913f8ca` (PR #372)
+
+Adds `grant_referral_reward_for_signup()` to the `invoice.paid` webhook handler. Awards referrer a -$20 Stripe customer balance credit. Currently gated OFF (`REFERRAL_REWARD_ENABLED` not set).
+
+**Implementation quality:** solid — kill-switch, idempotency via UNIQUE constraint, never raises, runs in thread pool, 20 tests green.
+
+**Before flipping `REFERRAL_REWARD_ENABLED=1`:**
+1. Verify migration 162 applied in prod (referral_rewards table + UNIQUE constraint)
+2. Test with a Stripe test customer in staging
+3. Confirm `get_or_create_customer` avoids duplicate Stripe customer creation
+4. Smoke `/api/v1/referral/my-stats` — new rewards fields should return zero
+
+No code change needed. Human gate required. See issue #407.
+
+---
+
+## MEDIUM — Issue #408: landing-page-v2 widget modification
+
+**Commit:** `8b1e44b` (PR #387)
+
+`landing-page-v2/widget/agentnexlify-widget.js` was updated with referral click tracking and a UTM-tagged watermark link — matching changes in the canonical widget copies.
+
+CLAUDE.md explicitly marks `landing-page-v2/` as legacy, do not touch (confirmed 2026-06-23). The change was likely intentional to keep the legacy copy in sync with the referral tracking feature, but the policy needs to be clarified.
+
+**Decision needed:** Is `landing-page-v2/widget/` still served anywhere? If not, delete it. If yes, update CLAUDE.md and add it to the byte-identical pre-push check. See issue #408.
+
+---
+
+## MEDIUM commits — no issues
+
+### `3b30505` — Voice gate fix + vertical pages
+
+`MessagingSettingsCards.jsx` now includes `agent_os` in `planEligible` for the VoiceAICard. This matches the backend's `_AI_VOICE_PLANS` in `backend/routers/calls.py`. The omission locked current-plan `agent_os` customers out of the Voice AI toggle. Correct fix, no follow-up needed.
+
+### `3596009` — Bookable-by-default hours seeding
+
+`_seed_default_business_hours()` in `onboarding.py` creates a default Mon-Fri 9-5 business hours row if none exists, preventing the booking calendar from showing zero slots. Best-effort (never raises), runs only during `complete_onboarding`. Looks correct.
+
+### `0e0ee00` — Booking on by default + last-call nudge
+
+- `auth.py`: both tenant provision paths now set `booking_enabled: True`. Both covered (initial `_provision_tenant_account` + lazy dashboard provision). Correct.
+- `activation_nudges.py`: new `d14_lastcall` stage uses open-ended window (no lower bound) to catch pre-existing abandoned signups. Dedup via `activity_log` ensures one-shot-per-tenant. Internal tenant filter (`is_internal_tenant`) guards the open-ended query from hitting demo/internal accounts. Correct.
+- Migration 163: only changes `DEFAULT` on `widget_configs.booking_enabled` from false → true. Safe.
+
+### `dfa8201` — Internal tenant denylist + migration 161
+
+`internal_tenants.py`: added `(demo)` name pattern and fast `is_demo` field check. Migration 161 relaxes the plan-name CHECK constraint to allow new plan names. Both look correct.
+
+---
+
+## Dependency bumps (all LOW, no action)
+
+All Dependabot bumps are patch/minor dev-dependency updates. No API-breaking changes. No action needed.
+
+---
+
+_Generated by nightly-commit-review skill. No auto-fixes applied this run._
