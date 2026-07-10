@@ -121,6 +121,8 @@ export default function ConversationsPage({ pageData }) {
   const { user, token } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null); // distinct from "no conversations yet"
+  const [replyError, setReplyError] = useState(null); // surface failed sends (audit C4)
   const [selected, setSelected] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -222,8 +224,14 @@ export default function ConversationsPage({ pageData }) {
         }
       });
       setTeamMemberMap(map);
+      setLoadError(null);
     } catch (err) {
       console.error("Failed to load conversations", err);
+      // Distinguish a real load failure from a genuinely empty inbox so the
+      // owner doesn't read an API outage as "no leads" (audit C4).
+      setLoadError(
+        err?.message || "Couldn't load conversations. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -392,6 +400,7 @@ export default function ConversationsPage({ pageData }) {
     const content = replyInput.trim();
     if (!content || !selected) return;
     setSendingReply(true);
+    setReplyError(null);
     try {
       await replyToConversation(user.tenantId, token, selected, content);
       // Append the reply to the local messages list
@@ -407,6 +416,9 @@ export default function ConversationsPage({ pageData }) {
       setReplyInput("");
     } catch (err) {
       console.error("Failed to send reply", err);
+      // Surface the failure + keep the draft so a failed reply to a real
+      // customer isn't silently lost with a false success (audit C4).
+      setReplyError(err?.message || "Reply failed to send. Please try again.");
     } finally {
       setSendingReply(false);
     }
@@ -802,7 +814,7 @@ export default function ConversationsPage({ pageData }) {
               marginBottom: 8,
             }}
           >
-            No conversations yet
+            {loadError ? "Couldn't load conversations" : "No conversations yet"}
           </div>
           <div
             style={{
@@ -812,10 +824,19 @@ export default function ConversationsPage({ pageData }) {
               margin: "0 auto",
             }}
           >
-            Conversations from your chat widget will appear here in real time.
-            Once a visitor starts chatting, you'll see their messages, lead
-            info, and AI responses.
+            {loadError
+              ? loadError
+              : "Conversations from your chat widget will appear here in real time. Once a visitor starts chatting, you'll see their messages, lead info, and AI responses."}
           </div>
+          {loadError && (
+            <button
+              className="btn-primary"
+              onClick={load}
+              style={{ marginTop: 12, padding: "6px 16px", fontSize: "0.8rem" }}
+            >
+              Retry
+            </button>
+          )}
         </div>
       ) : (
         <div className="conversations-layout">
@@ -1676,6 +1697,17 @@ export default function ConversationsPage({ pageData }) {
                     position: "relative",
                   }}
                 >
+                  {replyError && (
+                    <div
+                      style={{
+                        color: "var(--red)",
+                        fontSize: "0.75rem",
+                        marginBottom: 8,
+                      }}
+                    >
+                      {replyError}
+                    </div>
+                  )}
                   {/* Channel indicator for outbound reply */}
                   {(() => {
                     const convChannel = selectedConv?.channel || "widget";

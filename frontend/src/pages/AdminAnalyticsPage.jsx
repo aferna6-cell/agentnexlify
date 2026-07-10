@@ -488,7 +488,7 @@ export default function AdminAnalyticsPage() {
               </div>
             ))}
           </div>
-          {weeklyGrowth.daily_data.length > 0 && (
+          {weeklyGrowth.daily_data?.length > 0 && (
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={weeklyGrowth.daily_data}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />

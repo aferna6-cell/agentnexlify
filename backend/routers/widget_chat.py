@@ -1027,6 +1027,11 @@ async def widget_chat(
             system=system_prompt,
             messages=llm_messages,
             timeout=30.0,
+            # Retry transient Anthropic 429/overload once or twice with backoff
+            # (runs in the executor thread) so a single blip doesn't dead-end a
+            # visitor on the revenue path (audit H3). Retry logic lives in
+            # llm_runtime; it defaults to 0 and must be opted into here.
+            max_retries=2,
             metadata={
                 "tenant_id": tenant["id"],
                 "session_id": req.session_id,
