@@ -147,40 +147,48 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
             lead_fields["conversation_id"] = conversation_id
         except (ValueError, AttributeError):
             logger.debug("lead_submit: conversation_id %r is not a UUID, omitting", conversation_id)
-        # Upsert (not insert) closes the check-then-insert race backstopped by
-        # the unique (client_id, email) constraint (migration 164). On conflict
-        # the insert is skipped rather than duplicating the lead + its automations.
-        result = (
-            db.table("leads")
-            .upsert(lead_fields, on_conflict="client_id,email", ignore_duplicates=True)
-            .execute()
-        )
-        if result.data:
-            lead_id = result.data[0]["id"]
-            is_new = True
-        elif fields.get("email"):
-            # Lost the race: a concurrent request already created this lead and
-            # the unique constraint skipped ours. Fetch the existing row so the
-            # caller still gets a lead_id instead of a false failure.
-            existing_again = (
-                db.table("leads")
-                .select("id")
-                .eq("client_id", tenant["id"])
-                .eq("email", fields["email"])
-                .limit(1)
-                .execute()
-            )
-            if existing_again.data:
-                lead_id = existing_again.data[0]["id"]
-        if not lead_id:
-            # Genuine write failure (RLS block / no email to re-select). Do NOT
-            # report success with a null lead_id — fail loudly so the caller retries.
-            logger.error(
-                "submit_lead: leads upsert returned no data for client_id=%s email=%r — lead NOT saved",
-                tenant["id"],
-                fields.get("email"),
-            )
-            raise HTTPException(status_code=500, detail="Lead could not be saved. Please try again.")
+        # Insert, backstopped by the unique (client_id, email) constraint
+        # (migration 164) which closes the check-then-insert race.
+        try:
+            result = db.table("leads").insert(lead_fields).execute()
+        except Exception as insert_err:
+            # Unique-violation = a concurrent request already created this lead.
+            # Fetch the existing row so the caller gets a lead_id, not a failure.
+            err_text = str(insert_err).lower()
+            if (
+                "leads_client_email_uniq" in err_text
+                or "duplicate key" in err_text
+                or "23505" in err_text
+            ) and fields.get("email"):
+                existing_again = (
+                    db.table("leads")
+                    .select("id")
+                    .eq("client_id", tenant["id"])
+                    .eq("email", fields["email"])
+                    .limit(1)
+                    .execute()
+                )
+                if existing_again.data:
+                    lead_id = existing_again.data[0]["id"]
+            if not lead_id:
+                logger.error(
+                    "submit_lead: leads insert FAILED for client_id=%s email=%r: %s",
+                    tenant["id"], fields.get("email"), insert_err, exc_info=True,
+                )
+                raise HTTPException(status_code=500, detail="Lead could not be saved. Please try again.")
+        else:
+            if result.data:
+                lead_id = result.data[0]["id"]
+                is_new = True
+            else:
+                # Insert returned no rows (RLS block / silent write failure). Do NOT
+                # report success with a null lead_id — fail loudly so the caller retries.
+                logger.error(
+                    "submit_lead: leads insert returned no data for client_id=%s email=%r — lead NOT saved",
+                    tenant["id"],
+                    fields.get("email"),
+                )
+                raise HTTPException(status_code=500, detail="Lead could not be saved. Please try again.")
 
     if lead_id:
         background_tasks.add_task(score_lead_background, lead_id)
