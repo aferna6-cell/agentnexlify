@@ -147,48 +147,23 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
             lead_fields["conversation_id"] = conversation_id
         except (ValueError, AttributeError):
             logger.debug("lead_submit: conversation_id %r is not a UUID, omitting", conversation_id)
-        # Insert, backstopped by the unique (client_id, email) constraint
-        # (migration 164) which closes the check-then-insert race.
-        try:
-            result = db.table("leads").insert(lead_fields).execute()
-        except Exception as insert_err:
-            # Unique-violation = a concurrent request already created this lead.
-            # Fetch the existing row so the caller gets a lead_id, not a failure.
-            err_text = str(insert_err).lower()
-            if (
-                "leads_client_email_uniq" in err_text
-                or "duplicate key" in err_text
-                or "23505" in err_text
-            ) and fields.get("email"):
-                existing_again = (
-                    db.table("leads")
-                    .select("id")
-                    .eq("client_id", tenant["id"])
-                    .eq("email", fields["email"])
-                    .limit(1)
-                    .execute()
-                )
-                if existing_again.data:
-                    lead_id = existing_again.data[0]["id"]
-            if not lead_id:
-                logger.error(
-                    "submit_lead: leads insert FAILED for client_id=%s email=%r: %s",
-                    tenant["id"], fields.get("email"), insert_err, exc_info=True,
-                )
-                raise HTTPException(status_code=500, detail="Lead could not be saved. Please try again.")
+        # The unique (client_id, email) constraint (migration 164) is the
+        # backstop that closes the check-then-insert race; the background
+        # capture path (widget_lead_helpers) handles a lost race gracefully.
+        result = db.table("leads").insert(lead_fields).execute()
+        if result.data:
+            lead_id = result.data[0]["id"]
+            is_new = True
         else:
-            if result.data:
-                lead_id = result.data[0]["id"]
-                is_new = True
-            else:
-                # Insert returned no rows (RLS block / silent write failure). Do NOT
-                # report success with a null lead_id — fail loudly so the caller retries.
-                logger.error(
-                    "submit_lead: leads insert returned no data for client_id=%s email=%r — lead NOT saved",
-                    tenant["id"],
-                    fields.get("email"),
-                )
-                raise HTTPException(status_code=500, detail="Lead could not be saved. Please try again.")
+            # Insert returned no rows (RLS block / silent write failure). Do NOT
+            # report success with a null lead_id — that loses the lead on the
+            # primary capture path with no signal. Fail loudly so the caller retries.
+            logger.error(
+                "submit_lead: leads insert returned no data for client_id=%s email=%r — lead NOT saved",
+                tenant["id"],
+                fields.get("email"),
+            )
+            raise HTTPException(status_code=500, detail="Lead could not be saved. Please try again.")
 
     if lead_id:
         background_tasks.add_task(score_lead_background, lead_id)

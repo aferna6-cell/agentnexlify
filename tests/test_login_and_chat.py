@@ -442,6 +442,24 @@ class TestLeadCaptureEdgeCases:
         assert "name" not in data.get("updated_fields", [])
         assert "email" in data.get("updated_fields", [])
 
+    def test_lead_insert_returns_no_data_raises_500(self, test_client):
+        """C3 (audit): if the leads insert silently returns no rows, the endpoint
+        must fail loudly with 500 — never report success with lead_id=null."""
+        client, db_mock = test_client
+
+        tables = self._widget_and_tenant_tables()
+        # dedup lookup empty, then the insert ALSO returns empty (silent write
+        # failure / RLS block) — the C3 branch must raise 500, not return 200.
+        tables["leads"] = [[], []]
+        _setup_table_mock(db_mock, tables)
+
+        response = client.post("/api/v1/widget/lead", json={
+            "api_key": "anx_lead_test_key",
+            "session_id": "sess-noinsert",
+            "email": "lost@example.com",
+        })
+        assert response.status_code == 500
+
     def test_new_lead_followups_are_background_tasks(self, test_client, monkeypatch):
         """New-lead notifications and automations must not block the response path."""
         client, db_mock = test_client
