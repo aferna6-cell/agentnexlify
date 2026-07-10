@@ -262,6 +262,30 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
     4. **If no stalled issues and loop healthy:**
        Log: "Step 9D PASS — {N} ai-ready issues, all have linked PRs or <24h old, loop ran {timestamp}"
     Log result: "Step 9D: {N} ai-ready issues, {M} stalled, loop last ran {timestamp}, status: {PASS|STALLED}"
+9E. (Proactive Credential Rotation Tracking) Check credential rotation schedule for approaching expiries:
+    1. **Check if schedule file exists:**
+       ```bash
+       ls ops/credential-rotation-schedule.md 2>/dev/null || echo "MISSING"
+       ```
+       If MISSING: log "Step 9E: ops/credential-rotation-schedule.md not found — skipping" and continue to step 10.
+    2. **Read schedule and compute days since last rotation:**
+       Read `ops/credential-rotation-schedule.md` line by line.
+       For each credential row: parse "Last rotated" date field.
+       Compute days_since_rotation = (today - last_rotated_date).
+       Flag as approaching_expiry if days_since_rotation >= 76 (= 90 days - 14-day warning window).
+       If last_rotated is "unknown" or "not yet set": flag as unknown_state, log separately.
+    3. **If any credential approaching expiry (days_since_rotation >= 76):**
+       a. Search open GH issues with label `credential-rotation`:
+          `mcp__github__list_issues` with labels: ["credential-rotation"], state: OPEN
+       b. If NO open credential-rotation issue exists:
+          Create GH issue via `mcp__github__issue_write`:
+            title: "Credential rotation due in ≤14 days: [credential name(s)]"
+            body: credential name, last_rotated date, days_since_rotation, expected expiry, rotation steps
+            labels: ["credential-rotation", "human-action-required"]
+       c. If open credential-rotation issue FOUND:
+          Add comment via `mcp__github__add_issue_comment` with updated days_since_rotation.
+    4. **Log result:**
+       Add to nightly commit log: "Step 9E: {N} credentials checked, {M} approaching expiry (>=76 days), {K} unknown state"
 10. Commit report: `docs(nightly): review YYYY-MM-DD [auto-nightly]`
 11. Push to main
 12. If any guardrail tripped (forbidden path, >5 files, >50 LOC, test-check failed) — abort fixes, file issue only, still write report
