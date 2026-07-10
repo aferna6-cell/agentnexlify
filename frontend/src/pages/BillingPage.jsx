@@ -23,7 +23,7 @@ const PLANS = [
     price: "$99.99",
     period: "/mo",
     popular: true,
-    description: "Full platform — AI staff, marketing, CRM, and everything.",
+    description: "Full platform - AI staff, marketing, CRM, and everything.",
   },
 ];
 

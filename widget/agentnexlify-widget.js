@@ -1061,7 +1061,7 @@
   }
 
   // Must exceed the backend's Claude-call ceiling (30s in widget_chat.py) so a
-  // slow-but-successful reply isn't aborted client-side — otherwise the visitor
+  // slow-but-successful reply isn't aborted client-side, otherwise the visitor
   // sees an error while the backend succeeds, bills the call, and stores an
   // assistant message they never saw.
   const FETCH_TIMEOUT_MS = 35000; // 35 seconds

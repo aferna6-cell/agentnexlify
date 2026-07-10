@@ -40,6 +40,7 @@
       typicallyReplies: "Typically replies instantly",
       minimizeTitle: "Minimize",
       closeTitle: "Close",
+      openChat: "Open chat",
       viewMenuTitle: "View Menu",
       bookTitle: "Book Appointment",
       contentModeTitle: "Content Mode",
@@ -112,6 +113,7 @@
       typicallyReplies: "Normalmente responde al instante",
       minimizeTitle: "Minimizar",
       closeTitle: "Cerrar",
+      openChat: "Abrir chat",
       viewMenuTitle: "Ver menú",
       bookTitle: "Agendar una cita",
       contentModeTitle: "Modo contenido",
@@ -258,6 +260,10 @@
         height: 60px !important;
         border-radius: 50% !important;
         background: ${BRAND_COLOR} !important;
+        border: none !important;
+        padding: 0 !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
         cursor: pointer !important;
         display: flex !important;
         align-items: center !important;
@@ -918,10 +924,10 @@
         <button id="anx-teaser-close" style="position:absolute;top:4px;right:6px;background:none;border:none;cursor:pointer;font-size:16px;color:#999;line-height:1;" title="Dismiss">&times;</button>
         <p id="anx-teaser-text" style="margin:0;padding-right:12px;color:#333;"></p>
       </div>
-      <div id="anx-bubble">
-        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/></svg>
+      <button type="button" id="anx-bubble" aria-label="${t('openChat')}" aria-expanded="false" aria-controls="anx-window" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/></svg>
         <div id="anx-badge">1</div>
-      </div>
+      </button>
       <div id="anx-window">
         <div id="anx-header">
           <div id="anx-header-info">
@@ -941,7 +947,7 @@
         </div>
         <div id="anx-menu-panel" style="display:none;"></div>
         <div id="anx-booking"></div>
-        <div id="anx-messages"></div>
+        <div id="anx-messages" role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false"></div>
         <div id="anx-input-area">
           <button id="anx-attach" title="${t('attachTitle')}">
             <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -1054,7 +1060,11 @@
     }
   }
 
-  const FETCH_TIMEOUT_MS = 15000; // 15 seconds
+  // Must exceed the backend's Claude-call ceiling (30s in widget_chat.py) so a
+  // slow-but-successful reply isn't aborted client-side, otherwise the visitor
+  // sees an error while the backend succeeds, bills the call, and stores an
+  // assistant message they never saw.
+  const FETCH_TIMEOUT_MS = 35000; // 35 seconds
 
   async function fetchWithTimeout(
     url,
@@ -1376,6 +1386,7 @@
     const win = document.getElementById("anx-window");
     const bubble = document.getElementById("anx-bubble");
     isOpen = open;
+    if (bubble) bubble.setAttribute("aria-expanded", open ? "true" : "false");
 
     if (open) {
       win.classList.add("open");
