@@ -18194,3 +18194,19 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** .github/workflows/autopilot-issue-loop.yml,.github/workflows/autopilot-pr-review.yml,.github/workflows/refresh-brain.yml,audits/audit-post-deploy-measurement-2026-07-09.md,backend/services/internal_tenants.py,backend/tests/test_internal_tenants.py,docs/dev-knowledge/schema-log.md,migrations/158_allow_new_plan_names_in_tenants_check.sql,migrations/161_allow_new_plan_names_in_tenants_check.sql,ops/monitoring/healthz-alert.sh,ops/monitoring/uptime-checks.json
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(subconscious): correct memory.jsonl run 88 newline separation
+
+Run 88 entry was concatenated to run 87 on the same line due to missing
+trailing newline in the file before append. Split into two properly
+separated JSONL entries. All 84 lines now parse as valid JSON.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01272bpNUuc83u9yNwpWzT3F
+**Date:** 2026-07-11
+**Commit:** 077e893
+**Author:** Claude
+**Files Changed:** subconscious/state/memory.jsonl
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
