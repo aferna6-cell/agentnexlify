@@ -101,3 +101,7 @@ the last recorded state.
 ## 2026-07-10T10:30Z — refresh_connectors.py
 - github: ok — 105 open issues, 30 open PRs
 - supabase: skipped — SUPABASE_ACCESS_TOKEN not set
+
+## 2026-07-11T09:00Z — refresh_connectors.py
+- github: ok — 107 open issues, 31 open PRs
+- supabase: skipped — SUPABASE_ACCESS_TOKEN not set

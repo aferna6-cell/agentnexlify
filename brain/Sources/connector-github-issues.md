@@ -5,8 +5,8 @@ origin: connector
 connector: GitHub
 account: aferna6-cell
 repo: aferna6-cell/agentnexlify
-accessed: 2026-07-10
-last_refresh: 2026-07-10T10:30Z
+accessed: 2026-07-11
+last_refresh: 2026-07-11T09:00Z
 sensitivity: normal
 tags: [source, connector]
 ---
@@ -16,12 +16,13 @@ tags: [source, connector]
 ## What this is
 Live snapshot from `refresh_connectors.py` of `aferna6-cell/agentnexlify`.
 
-## Counts (as of 2026-07-10T10:30Z)
-- Open issues: 105
-- Open PRs: 30
+## Counts (as of 2026-07-11T09:00Z)
+- Open issues: 107
+- Open PRs: 31
 - Recent closed issues sampled: 6
 
 ## Top open issues (non-digest)
+  - #409 feat(analytics): add lead source breakdown chart to analytics page
   - #408 nightly-review [MEDIUM]: landing-page-v2/widget modified — violates CLAUDE.md "do not touch" rule
   - #407 nightly-review [HIGH]: Referral reward Stripe webhook — verify before enabling REFERRAL_REWARD_ENABLED
   - #406 KB auto-populate blocked: set ANTHROPIC_API_KEY as an Actions secret [human-action-required]
@@ -36,7 +37,6 @@ Live snapshot from `refresh_connectors.py` of `aferna6-cell/agentnexlify`.
   - #292 MEDIUM: sms_rate_limiter + api_key_auth missing new plan names (chatbot/agent_os)
   - #266 security: finish integrations-secret encryption — backfill + sunset plaintext columns
   - #265 deps: re-raise the fastapi <0.136 cap once starlette is bumped to a 0.50-compatible release
-  - #263 Schema Sync [CRITICAL]: 24 pending migrations -- 2026-06-14
 
 ## Notes
 - Autonomous-dev cadence: morning-digest / nightly-commit-review / subconscious loop.
