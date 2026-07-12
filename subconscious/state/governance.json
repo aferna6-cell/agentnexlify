@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-07-11-pm",
-  "total_runs": 89,
+  "last_run": "2026-07-12",
+  "total_runs": 90,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -44,8 +44,35 @@
     "total_runs": "88 → 89",
     "last_run": "2026-07-11 → 2026-07-11-pm"
   },
-  "run_90_mandate": "1. Verify Referral Reward GH issue filed (check for open issue with revenue + human-action-required labels, title containing 'referral reward'). 2. Has REFERRAL_REWARD_ENABLED=1 been set in Railway? Check for first referral_rewards table row or Railway deploy event. 3. If not activated: which pre-activation checklist items are blocking? 4. Verify GH #412 comment posted with PR #404 booking findings (MTOptions 20 slots, 914 Exterior 22 slots, Keys Koffee pending). 5. Verify GH #403 Day-2 escalation comment posted. 6. GH #399 + #403 resolution status — if resolved, confirm issue-to-pr-loop resumed and Lead Source Analytics GH #409 has a draft PR. 7. Keys Koffee business hours — confirmed or still pending?",
+  "run_90_mandate": "EXECUTED 2026-07-12. Items verified: (1) GH #413 referral reward issue CONFIRMED open. (2) REFERRAL_REWARD_ENABLED=1 NOT SET in Railway. (3) GH #412 comment POSTED. (4) GH #403 Day-2 escalation POSTED. (5) GH #399 OPEN, GH #403 OPEN — pipeline stalled Day 8, 40 ai-ready issues blocked. (6) Keys Koffee hours UNKNOWN. Bonus action: Keys Koffee business hours GH #414 filed.",
+  "run_90_governance_corrections": {
+    "total_runs": "89 → 90",
+    "last_run": "2026-07-11-pm → 2026-07-12",
+    "self_referential_monitoring_gap": "confirmed — Step 9E requires ANTHROPIC_API_KEY to detect missing ANTHROPIC_API_KEY; GH Actions GITHUB_TOKEN-based workflow closes this gap",
+    "pipeline_stall_day": 8,
+    "ai_ready_issues_queued": 40,
+    "gh_399_status": "OPEN — Day 8",
+    "gh_403_status": "OPEN — Day 8",
+    "keys_koffee_gh_issue": "GH #414 filed 2026-07-12 — ACTION REQUIRED: Collect Keys Koffee business hours"
+  },
+  "run_91_mandate": "1. Verify secrets-health-check.yml was created (repo Actions tab). 2. Did first run detect ANTHROPIC_API_KEY gap (GH issue with secrets-health-check-alert label)? 3. Has owner set ANTHROPIC_API_KEY in GH Actions (#403)? Has AUTOPILOT_GH_TOKEN been rotated (#399)? 4. If pipeline restored: confirm issue-to-pr-loop picked up queued ai-ready issues — Lead Source Analytics GH #409 draft PR opened? 5. Keys Koffee hours GH issue filed? Any tenant response? 6. REFERRAL_REWARD_ENABLED=1 set in Railway? Any activity on GH #413? 7. Parking lot: Step 9F booking conversion tracker — file as run 91 winner if #403/#399 resolved.",
   "active_directions": [
+    {
+      "title": "Secrets Health-Check GH Actions Workflow \u2014 zero-dependency weekly check for ANTHROPIC_API_KEY + AUTOPILOT_GH_TOKEN (run 90 winner)",
+      "date": "2026-07-12",
+      "confidence": "HIGH",
+      "status": "pending_human_merge",
+      "autonomous_executable": true,
+      "requires_human": true,
+      "requires_human_scope": "Review and merge secrets-health-check.yml PR. Then rotate secrets: ANTHROPIC_API_KEY (#403) + AUTOPILOT_GH_TOKEN (#399). 5-7 min total.",
+      "category": "operational",
+      "moratorium_override": false,
+      "source_run": 90,
+      "effort": "S",
+      "evidence": "Pipeline stalled Day 8 \u2014 ANTHROPIC_API_KEY (#403) + AUTOPILOT_GH_TOKEN (#399) both expired/missing in GH Actions. 40 ai-ready issues queued. Self-referential monitoring gap confirmed: Step 9E requires ANTHROPIC_API_KEY to detect missing ANTHROPIC_API_KEY. GH Actions GITHUB_TOKEN mechanism operates entirely outside Claude stack.",
+      "action": "Merge secrets-health-check.yml PR. Rotate secrets in GH Actions Settings \u2192 Secrets and variables \u2192 Actions.",
+      "note": "Run 90 winner. Workflow created at .github/workflows/secrets-health-check.yml. Runs weekly Monday 9am UTC + workflow_dispatch. Files GH issue with human-action-required + secrets-health-check-alert labels if any secret missing or invalid. Closes self-referential monitoring gap in Step 9E."
+    },
     {
       "title": "Referral Reward Activation Pre-Gate Diagnostic \u2014 file GH issue with human-action checklist for REFERRAL_REWARD_ENABLED=1 activation (run 89 winner)",
       "date": "2026-07-11-pm",
