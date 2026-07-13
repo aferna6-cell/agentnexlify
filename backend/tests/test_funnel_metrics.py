@@ -654,3 +654,70 @@ class TestFunnelRoute:
         data = resp.json()
         assert data["total_tenants"] == 1  # only the real tenant
         assert data["errors"] == []
+
+
+# ---------------------------------------------------------------------------
+# New funnel stages (2026-07-13): with_appointments + retained_30d
+# ---------------------------------------------------------------------------
+
+_OLD_SIGNUP = "2020-01-01T00:00:00+00:00"  # far older than any 30-day cutoff
+
+
+class TestWithAppointments:
+    def _call(self, db):
+        from backend.services.funnel_metrics import compute_funnel
+
+        with patch(
+            "backend.services.funnel_metrics.get_service_supabase", return_value=db
+        ):
+            return compute_funnel()
+
+    def test_counts_distinct_real_tenants_with_appointments(self):
+        rows = [_real_tenant("t1"), _real_tenant("t2"), _real_tenant("t3")]
+        appts = [
+            {"tenant_id": "t1", "created_at": _THIS_WEEK},
+            {"tenant_id": "t1", "created_at": _THIS_WEEK},  # duplicate tenant
+            {"tenant_id": "t2", "created_at": _THIS_WEEK},
+        ]
+        data = self._call(_make_db(tenant_rows=rows, new_appts_data=appts))
+        assert data["with_appointments"] == 2
+
+    def test_excludes_non_real_tenants(self):
+        rows = [_real_tenant("t1")]
+        appts = [
+            {"tenant_id": "t1", "created_at": _THIS_WEEK},
+            {"tenant_id": "ghost-tenant", "created_at": _THIS_WEEK},
+        ]
+        data = self._call(_make_db(tenant_rows=rows, new_appts_data=appts))
+        assert data["with_appointments"] == 1
+
+    def test_zero_when_query_fails(self):
+        rows = [_real_tenant("t1")]
+        data = self._call(_make_db(tenant_rows=rows, raise_new_appts=True))
+        assert data["with_appointments"] == 0
+        assert "with_appointments" in data["errors"]
+
+
+class TestRetained30d:
+    def _call(self, db):
+        from backend.services.funnel_metrics import compute_funnel
+
+        with patch(
+            "backend.services.funnel_metrics.get_service_supabase", return_value=db
+        ):
+            return compute_funnel()
+
+    def test_counts_paid_tenants_older_than_30_days(self):
+        rows = [
+            _real_tenant("t1", created_at=_OLD_SIGNUP),                      # retained
+            _real_tenant("t2", created_at=_THIS_WEEK),                       # too new
+            _real_tenant("t3", plan="free", created_at=_OLD_SIGNUP),         # never paid
+            _real_tenant("t4", plan_status="canceled", created_at=_OLD_SIGNUP),  # churned
+        ]
+        data = self._call(_make_db(tenant_rows=rows))
+        assert data["retained_30d"] == 1
+
+    def test_zero_when_no_old_paid_tenants(self):
+        rows = [_real_tenant("t1", created_at=_THIS_WEEK)]
+        data = self._call(_make_db(tenant_rows=rows))
+        assert data["retained_30d"] == 0

@@ -128,6 +128,10 @@ class CallStatsResponse(BaseModel):
     missed_calls: int = 0
     avg_duration_seconds: float = 0.0
     calls_today: int = 0
+    # G3 Phase 3 metering — minutes used this calendar month vs the included
+    # live-AI allowance (included_minutes <= 0 means unmetered).
+    minutes_this_month: float = 0.0
+    included_minutes: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -135,35 +139,63 @@ class CallStatsResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _find_tenant_by_phone(phone: str) -> dict | None:
-    """Look up tenant by their configured notification_phone or Twilio number.
+_TENANT_PHONE_SELECT = (
+    "id, business_name, business_type, owner_email, notification_phone, "
+    "twilio_number, sms_notifications_enabled, plan, voice_ai_enabled"
+)
 
-    Same pattern as twilio_webhooks.py._find_tenant_by_phone.
+
+def _find_tenant_by_phone(phone: str) -> dict | None:
+    """Look up the tenant whose line was called.
+
+    Primary path: exact indexed match on tenants.twilio_number - the dedicated
+    provisioned-AI-line column (migration 164). Twilio delivers E.164 and the
+    provisioning flow stores E.164, so equality holds.
+
+    Fallback: the legacy suffix scan against notification_phone for tenants
+    configured before twilio_number existed. The scan is capped defensively
+    but only runs when the indexed lookup missed. (G3 Phase 2 - replaces the
+    unconditional limit(50) scan that silently broke at tenant #51.)
     """
     db = get_service_supabase()
+
+    try:
+        exact = (
+            db.table("tenants")
+            .select(_TENANT_PHONE_SELECT)
+            .eq("twilio_number", phone)
+            .limit(1)
+            .execute()
+        )
+        if exact.data:
+            return exact.data[0]
+    except Exception:
+        logger.warning(
+            "twilio_number exact lookup failed for %s - falling back to scan",
+            phone,
+            exc_info=True,
+        )
+
     try:
         result = (
             db.table("tenants")
-            .select(
-                "id, business_name, business_type, owner_email, notification_phone, "
-                "sms_notifications_enabled, plan, voice_ai_enabled"
-            )
-            .limit(50)
+            .select(_TENANT_PHONE_SELECT)
+            .limit(200)
             .execute()
         )
     except Exception:
         logger.exception("Failed to query tenants for phone lookup: %s", phone)
         return None
 
+    norm_phone = phone.replace(" ", "").replace("-", "")
     for tenant in result.data or []:
-        tenant_phone = tenant.get("notification_phone")
-        if not tenant_phone:
-            continue
-        # Normalize for comparison (strip spaces, dashes)
-        norm_tenant = tenant_phone.replace(" ", "").replace("-", "")
-        norm_phone = phone.replace(" ", "").replace("-", "")
-        if norm_tenant.endswith(norm_phone[-10:]) or norm_phone.endswith(norm_tenant[-10:]):
-            return tenant
+        for tenant_phone in (tenant.get("twilio_number"), tenant.get("notification_phone")):
+            if not tenant_phone:
+                continue
+            # Normalize for comparison (strip spaces, dashes)
+            norm_tenant = tenant_phone.replace(" ", "").replace("-", "")
+            if norm_tenant.endswith(norm_phone[-10:]) or norm_phone.endswith(norm_tenant[-10:]):
+                return tenant
     return None
 
 
@@ -255,7 +287,23 @@ async def handle_incoming_call(request: Request, _sig: None = Depends(verify_twi
     # Voice mode switch (G3): live AI answering is opt-in AND plan-gated;
     # everyone else gets voicemail mode, which feeds the missed-call
     # recovery pipeline (record -> transcribe -> summarize -> OS draft).
-    if not _ai_voice_mode(tenant):
+    # Live AI answering requires plan+flag AND remaining included minutes
+    # (G3 Phase 3). Over-cap degrades to voicemail — never a dropped call.
+    ai_mode = _ai_voice_mode(tenant)
+    if ai_mode:
+        try:
+            from backend.services.voice_usage import voice_minutes_exhausted
+
+            if voice_minutes_exhausted(tenant["id"]):
+                ai_mode = False
+        except Exception:
+            logger.warning(
+                "voice minutes check failed for tenant %s — allowing AI mode",
+                tenant["id"],
+                exc_info=True,
+            )
+
+    if not ai_mode:
         recording_callback_url = f"{base_url}/api/v1/calls/voice/recording-complete"
         return Response(
             content=_build_twiml_greeting(business_name, recording_callback_url),
@@ -439,6 +487,25 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
         })
     conversation_messages = compact_voice_history
 
+    # Booking (G3 Phase 1): when any caller turn shows booking intent and the
+    # tenant has booking on, inject live slots + the BOOK_JSON marker contract
+    # into the system prompt. History carries the flow across rounds/workers.
+    booking_context = ""
+    try:
+        from backend.services.voice_booking import booking_prompt_context, wants_booking
+
+        caller_turns = [
+            m.get("content", "")
+            for m in conversation_messages
+            if m.get("role") == "user"
+        ]
+        if wants_booking(caller_turns):
+            booking_context = booking_prompt_context(tenant_id) or ""
+    except Exception:
+        logger.warning(
+            "voice_respond: booking context failed for call %s", call_sid, exc_info=True
+        )
+
     # Load business info for system prompt context
     business_info = ""
     try:
@@ -475,6 +542,22 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
     except Exception:
         logger.warning("Failed to load FAQ for voice AI, tenant %s", tenant_id)
 
+    # Ground on the vertical knowledge base like the widget does (the moat —
+    # voice answers were FAQ-only and shallower than widget answers for the
+    # same tenant, audit-voice-g3-scope-2026-07-09 gap #8).
+    kb_text = ""
+    try:
+        from backend.routers.widget_chat_helpers import _query_kb_articles
+
+        kb_refs = await _query_kb_articles(speech_result, match_count=3)
+        if kb_refs:
+            kb_text = "Knowledge base:\n" + "\n".join(
+                f"- {(a.get('title') or '')[:80]}: {(a.get('summary') or '')[:280]}"
+                for a in kb_refs
+            )
+    except Exception:
+        logger.warning("Failed to load KB articles for voice AI", exc_info=True)
+
     # Vertical operating guidance (same pack the Agent OS staff uses — e.g.
     # financial_services carries the no-personalized-advice compliance entry)
     guidance_text = ""
@@ -498,8 +581,12 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
         "If the caller wants an appointment or a quote, collect their name and "
         "the best time to reach them, and say someone will confirm shortly."
     )
+    if booking_context:
+        system_prompt += f"\n\n{booking_context}"
     if guidance_text:
         system_prompt += f"\n\n{guidance_text}"
+    if kb_text:
+        system_prompt += f"\n\n{kb_text}"
     if faq_text:
         system_prompt += f"\n\n{faq_text}"
 
@@ -537,6 +624,25 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
             "Let me have someone call you back as soon as possible."
         )
 
+    # Booking (G3 Phase 1): strip the BOOK_JSON marker (caller must never hear
+    # it) and create the appointment it describes. Never raises.
+    if booking_context:
+        try:
+            from backend.services.voice_booking import handle_booking_marker
+
+            ai_response, booked_appointment = handle_booking_marker(
+                tenant_id, caller, ai_response
+            )
+            if booked_appointment:
+                ai_response = (
+                    f"{ai_response} You're all set - your appointment is "
+                    "booked and confirmed."
+                ).strip()
+        except Exception:
+            logger.exception(
+                "voice_respond: booking marker handling failed for call %s", call_sid
+            )
+
     # Save the AI response
     try:
         db.table("chat_messages").insert({
@@ -548,8 +654,13 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
     except Exception:
         logger.exception("Failed to save AI voice response for call %s", call_sid)
 
-    # Check if we should continue or end the conversation
-    if round_num >= _MAX_VOICE_ROUNDS:
+    # Check if we should continue or end the conversation. Cap is a runtime
+    # setting (G3 Phase 1) — the fixed 3-round cap ended calls mid-booking
+    # (intent -> pick a time -> give name needs the full budget).
+    max_rounds = resolve_int_setting("voice_max_rounds", _MAX_VOICE_ROUNDS)
+    if booking_context and max_rounds < 5:
+        max_rounds = 5
+    if round_num >= max_rounds:
         goodbye_text = (
             f"{ai_response} "
             f"Thank you for calling {_xml_escape(business_name)}! "
@@ -1018,6 +1129,15 @@ async def get_call_stats(
         stats.calls_today = today_result.count if today_result.count is not None else 0
     except Exception:
         logger.warning("Failed to count today's calls for tenant %s", tenant_id, exc_info=True)
+
+    # Minutes metering (G3 Phase 3)
+    try:
+        from backend.services.voice_usage import included_voice_minutes, monthly_voice_seconds
+
+        stats.minutes_this_month = round(monthly_voice_seconds(tenant_id) / 60, 1)
+        stats.included_minutes = included_voice_minutes()
+    except Exception:
+        logger.warning("Failed to compute voice usage for tenant %s", tenant_id, exc_info=True)
 
     return stats
 

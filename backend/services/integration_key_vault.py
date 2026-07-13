@@ -240,3 +240,75 @@ def rotate_key(
         new_key_version,
     )
     return {"provider": provider, "enc_key_version": new_key_version}
+
+
+# ---------------------------------------------------------------------------
+# OAuth-token helpers (GH #266 step 2 — migrate the OAuth readers/writers)
+#
+# The paste-a-key providers (Stripe/Twilio/Resend) go through
+# save_integration_key/load_integration_key above and never touch plaintext.
+# The OAuth providers (google_calendar, m365_calendar, hubspot) manage full
+# integration rows with token refresh; these helpers give them the same
+# at-rest encryption without breaking prod while INTEGRATIONS_ENC_KEY is
+# still unprovisioned (issue step 1):
+#   - writes dual-write ciphertext ONLY when a key is configured
+#   - reads prefer ciphertext, falling back to plaintext columns
+# After backfill is verified and the sunset migration drops the plaintext
+# columns, these same helpers keep working unchanged.
+# ---------------------------------------------------------------------------
+
+_OAUTH_TOKEN_COLUMNS = (
+    ("access_token", "access_token_enc"),
+    ("refresh_token", "refresh_token_enc"),
+)
+
+
+def encryption_configured() -> bool:
+    """True when at least one Fernet key is available to the vault."""
+    return bool(_key_map())
+
+
+def encrypt_oauth_tokens(payload: dict) -> dict:
+    """Return *payload* with ciphertext columns added for any plaintext tokens.
+
+    No-op (original payload returned) when no encryption key is configured, so
+    OAuth flows keep working in environments where INTEGRATIONS_ENC_KEY has
+    not been provisioned yet. Never logs token values.
+    """
+    if not encryption_configured():
+        return payload
+    out = dict(payload)
+    for plain_col, enc_col in _OAUTH_TOKEN_COLUMNS:
+        value = payload.get(plain_col)
+        if value:
+            out[enc_col] = _to_bytea(encrypt_key(value))
+    return out
+
+
+def decrypt_integration_row(row: dict | None) -> dict | None:
+    """Overlay decrypted token values onto an ``integrations`` row.
+
+    Prefers the ciphertext columns when present and a key is configured; the
+    plaintext columns are left as fallback until the sunset migration drops
+    them. Decryption failures (wrong key, tampered token) log a warning and
+    fall back to whatever plaintext the row still carries — an unreadable
+    ciphertext must not take a working integration offline pre-sunset.
+    """
+    if not row or not encryption_configured():
+        return row
+    out = dict(row)
+    version = (row.get("metadata") or {}).get("enc_key_version", DEFAULT_KEY_VERSION)
+    for plain_col, enc_col in _OAUTH_TOKEN_COLUMNS:
+        try:
+            enc = _from_bytea(row.get(enc_col))
+            if enc is None:
+                continue
+            out[plain_col] = decrypt_key(enc, version)
+        except IntegrationKeyVaultError:
+            logger.warning(
+                "integration %s decrypt failed tenant=%s provider=%s — using plaintext fallback",
+                enc_col,
+                row.get("tenant_id"),
+                row.get("provider"),
+            )
+    return out

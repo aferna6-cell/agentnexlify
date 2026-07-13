@@ -98,6 +98,8 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     google_redirect_uri: str = ""
+    # Drive KB sync (specs/drive-kb-onboarding_spec.md) — separate callback path
+    google_drive_redirect_uri: str = ""
 
     # Microsoft 365 / Azure AD OAuth — calendar + mail send scopes.
     # `m365_tenant_id` is the Azure AD tenant ("common" for multi-tenant +

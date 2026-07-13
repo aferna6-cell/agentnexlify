@@ -94,19 +94,28 @@ def _make_client() -> SyncASGITestClient:
 def _wire_tenant_lookup(mock_supabase, tenant_row: dict | None) -> None:
     """Wire mock_supabase so _find_tenant_by_phone returns the given row (or nothing).
 
-    _find_tenant_by_phone chains:
-        db.table("tenants").select(...).limit(50).execute()
-    It iterates result.data and matches on notification_phone.
+    _find_tenant_by_phone (G3 Phase 2) runs two queries:
+        exact:    db.table("tenants").select(...).eq("twilio_number", ...).limit(1).execute()
+        fallback: db.table("tenants").select(...).limit(200).execute()
+    These tenants have no twilio_number, so the exact path returns empty and
+    the suffix scan matches on notification_phone - same contract as before.
     """
-    result = MagicMock()
-    result.data = [tenant_row] if tenant_row else []
+    exact_result = MagicMock()
+    exact_result.data = []
+    scan_result = MagicMock()
+    scan_result.data = [tenant_row] if tenant_row else []
+    select_chain = mock_supabase.table.return_value.select.return_value
     (
-        mock_supabase
-        .table.return_value
-        .select.return_value
+        select_chain
+        .eq.return_value
         .limit.return_value
         .execute.return_value
-    ) = result
+    ) = exact_result
+    (
+        select_chain
+        .limit.return_value
+        .execute.return_value
+    ) = scan_result
 
 
 # ---------------------------------------------------------------------------
@@ -272,17 +281,22 @@ class TestAIMode:
         # We use a counter-based side_effect so calls arrive in the order
         # the endpoint actually makes them.
 
+        exact_empty = MagicMock()
+        exact_empty.data = []  # twilio_number exact match misses (no provisioned number)
+
         call_count = {"n": 0}
         results_by_order = [
-            # 1st table() call — tenants lookup in _find_tenant_by_phone
+            # 1st table() call — tenants exact twilio_number lookup (G3 Phase 2)
+            exact_empty,
+            # 2nd — tenants suffix-scan fallback in _find_tenant_by_phone
             tenant_result,
-            # 2nd — leads select in _find_or_create_lead
+            # 3rd — leads select in _find_or_create_lead
             lead_select_result,
-            # 3rd — leads insert in _find_or_create_lead
+            # 4th — leads insert in _find_or_create_lead
             lead_insert_result,
-            # 4th — calls insert
+            # 5th — calls insert
             call_insert_result,
-            # 5th — chat_messages insert
+            # 6th — chat_messages insert
             chat_insert_result,
         ]
 
@@ -298,6 +312,7 @@ class TestAIMode:
                 target.data = []
             # Wire all common chains to the result
             mock_chain.select.return_value.limit.return_value.execute.return_value = target
+            mock_chain.select.return_value.eq.return_value.limit.return_value.execute.return_value = target
             mock_chain.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute.return_value = target
             mock_chain.insert.return_value.execute.return_value = target
             return mock_chain
@@ -383,11 +398,19 @@ class TestAIModeDBFailure:
 
         call_count = {"n": 0}
 
+        exact_empty = MagicMock()
+        exact_empty.data = []
+
         def _table_side_effect(name):
             idx = call_count["n"]
             call_count["n"] += 1
             if idx == 0:
-                # First call — tenant lookup, must succeed
+                # First call — exact twilio_number lookup misses (G3 Phase 2)
+                mock_chain = MagicMock()
+                mock_chain.select.return_value.eq.return_value.limit.return_value.execute.return_value = exact_empty
+                return mock_chain
+            elif idx == 1:
+                # Second call — suffix-scan tenant lookup, must succeed
                 mock_chain = MagicMock()
                 mock_chain.select.return_value.limit.return_value.execute.return_value = tenant_result
                 return mock_chain
