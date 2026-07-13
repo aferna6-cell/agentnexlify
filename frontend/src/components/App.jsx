@@ -110,6 +110,7 @@ const IntegrationsKeysPage = lazy(
   () => import("../pages/Settings/IntegrationsKeysPage"),
 );
 const ReferralPage = lazy(() => import("../pages/ReferralPage"));
+const CallsPage = lazy(() => import("../pages/CallsPage"));
 
 const pages = {
   dashboard: Dashboard,
@@ -121,6 +122,7 @@ const pages = {
   calendar: Calendar,
   availability: Availability,
   conversations: ConversationsPage,
+  calls: CallsPage,
   widget: WidgetPage,
   faq: FaqManagerPage,
   team: TeamPage,
@@ -164,6 +166,7 @@ const PAGE_TO_PATH = {
   calendar: "/dashboard/calendar",
   availability: "/dashboard/availability",
   conversations: "/dashboard/conversations",
+  calls: "/dashboard/calls",
   widget: "/dashboard/widget",
   faq: "/dashboard/faq",
   team: "/dashboard/team",

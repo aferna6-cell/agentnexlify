@@ -21,6 +21,7 @@ export * from "./invoices";
 export * from "./leads";
 export * from "./misc";
 export * from "./phone";
+export * from "./calls";
 export * from "./pipeline";
 export * from "./portal";
 export * from "./seo";
