@@ -116,9 +116,9 @@
     "no-always-on-daemon-possible (refresh runs on demand/cron, documented in Refresh The Brain)"
   ],
   "last_refresh": {
-    "at": "2026-07-12T09:18Z",
+    "at": "2026-07-13T10:35Z",
     "results": {
-      "github": "ok \u2014 109 open issues, 31 open PRs",
+      "github": "ok \u2014 111 open issues, 31 open PRs",
       "supabase": "skipped \u2014 SUPABASE_ACCESS_TOKEN not set"
     }
   },
