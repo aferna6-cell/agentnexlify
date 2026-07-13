@@ -139,7 +139,9 @@ def _format_hours(hours_row: dict[str, Any] | None) -> str:
         return "(not configured)"
 
     timezone = hours_row.get("timezone") or "unspecified timezone"
-    hours = hours_row.get("hours")
+    from backend.services.booking import coerce_hours
+
+    hours = coerce_hours(hours_row.get("hours"))
     if not isinstance(hours, dict):
         return f"Timezone: {timezone}"
 
