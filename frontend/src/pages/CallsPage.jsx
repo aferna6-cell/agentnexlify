@@ -76,7 +76,7 @@ function StatusBadge({ status }) {
 }
 
 function formatDate(d) {
-  if (!d) return "—";
+  if (!d) return "\u2014";
   return new Date(d).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -87,7 +87,7 @@ function formatDate(d) {
 }
 
 function formatDuration(seconds) {
-  if (!seconds || seconds <= 0) return "—";
+  if (!seconds || seconds <= 0) return "\u2014";
   const m = Math.floor(seconds / 60);
   const s = Math.round(seconds % 60);
   return m > 0 ? `${m}m ${s}s` : `${s}s`;
@@ -292,13 +292,13 @@ export default function CallsPage() {
       </div>
 
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 20 }}>
-        <StatCard label="Total calls" value={stats ? stats.total_calls : "—"} />
-        <StatCard label="Missed calls" value={stats ? stats.missed_calls : "—"} />
+        <StatCard label="Total calls" value={stats ? stats.total_calls : "\u2014"} />
+        <StatCard label="Missed calls" value={stats ? stats.missed_calls : "\u2014"} />
         <StatCard
           label="Avg duration"
-          value={stats ? formatDuration(stats.avg_duration_seconds) : "—"}
+          value={stats ? formatDuration(stats.avg_duration_seconds) : "\u2014"}
         />
-        <StatCard label="Calls today" value={stats ? stats.calls_today : "—"} />
+        <StatCard label="Calls today" value={stats ? stats.calls_today : "\u2014"} />
       </div>
 
       <div style={cardStyle}>
@@ -424,7 +424,7 @@ export default function CallsPage() {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {call.summary || "—"}
+                        {call.summary || "\u2014"}
                       </td>
                       <td
                         style={{

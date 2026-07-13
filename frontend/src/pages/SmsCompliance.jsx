@@ -155,10 +155,10 @@ export default function SmsCompliance() {
                         {row.phone_masked}
                       </td>
                       <td style={{ padding: "10px 12px", color: "var(--text-muted)" }}>
-                        {row.source || "—"}
+                        {row.source || "\u2014"}
                       </td>
                       <td style={{ padding: "10px 12px", color: "var(--text-muted)" }}>
-                        {row.created_at ? new Date(row.created_at).toLocaleDateString() : "—"}
+                        {row.created_at ? new Date(row.created_at).toLocaleDateString() : "\u2014"}
                       </td>
                     </tr>
                   ))
