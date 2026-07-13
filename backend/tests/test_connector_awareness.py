@@ -195,7 +195,10 @@ class TestAlreadyPrompted:
 class _RunnerDB:
     """Routes table() calls; records inserts into os_messages."""
 
-    def __init__(self, thread_source=None, prior_messages=None):
+    def __init__(self, thread_source="chat", prior_messages=None):
+        # 'chat' is the real dashboard default (os_threads.source NOT NULL
+        # DEFAULT 'chat', migration 124) - modelling None here hid a prod bug
+        # where every dashboard thread was mistaken for an inbound channel.
         self.inserts: list = []
         self._thread = {"id": "th-1", "source": thread_source}
         self._prior = prior_messages or []
@@ -228,6 +231,21 @@ async def test_runner_posts_connect_prompt_and_returns_followup(monkeypatch):
     assert message and message["role"] == "assistant"
     assert "/dashboard/integrations" in message["content"]
     assert db.inserts and db.inserts[0]["thread_id"] == "th-1"
+
+
+@pytest.mark.asyncio
+async def test_runner_posts_for_default_chat_source():
+    """Dashboard threads carry source='chat' (the column default) - the
+    prompt must post for them. Regression: the first guard skipped ANY
+    truthy source, silencing the feature everywhere in prod."""
+    from backend.services import os_thread_runner
+
+    db = _RunnerDB(thread_source="chat")
+    missing = [
+        {"key": "hubspot", "label": "HubSpot", "path": "/dashboard/integrations"}
+    ]
+    message = await os_thread_runner._post_connect_prompt(db, "t1", "th-1", missing)
+    assert message and "/dashboard/integrations" in message["content"]
 
 
 @pytest.mark.asyncio
