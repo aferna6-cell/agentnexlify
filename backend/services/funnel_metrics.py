@@ -74,7 +74,9 @@ def compute_funnel() -> dict:
         "total_tenants": 0,
         "activated": 0,
         "with_leads": 0,
+        "with_appointments": 0,
         "paid": 0,
+        "retained_30d": 0,
         "new_signups_week": 0,
         "new_leads_week": 0,
         "new_appointments_week": 0,
@@ -124,6 +126,25 @@ def compute_funnel() -> dict:
             )
         )
 
+    # 4b. Retained — paid tenants that signed up 30+ days ago and are still
+    # paying (plan_status active). The GTM funnel is signup -> activate ->
+    # first-lead -> paid -> RETAINED; this is the deterministic stand-in until
+    # per-tenant churn events exist.
+    if "paid" not in errors:
+        retained_cutoff = (
+            datetime.now(timezone.utc) - timedelta(days=30)
+        ).isoformat()
+        result["retained_30d"] = sum(
+            1
+            for row in real_tenant_rows
+            if (
+                row.get("plan") not in (None, "free")
+                and row.get("plan") in _PAID_PLANS
+                and row.get("plan_status") in _PAID_STATUSES
+                and (row.get("created_at") or "") <= retained_cutoff
+            )
+        )
+
     # 5. New signups this week
     if "new_signups_week" not in errors:
         result["new_signups_week"] = sum(
@@ -170,6 +191,26 @@ def compute_funnel() -> dict:
     except Exception:
         logger.exception("funnel_metrics: failed to count with_leads")
         errors.append("with_leads")
+
+    # 3b. Tenants with >=1 appointment (appointments use tenant_id). Bookings
+    # are the funnel stage under active watch (GH #412 re-measure) - a weekly
+    # delta alone can't show whether ANY tenant has ever converted a booking.
+    try:
+        resp = (
+            db.table("appointments")
+            .select("tenant_id")
+            .limit(50000)
+            .execute()
+        )
+        distinct_with_appts = {
+            row["tenant_id"]
+            for row in (resp.data or [])
+            if row.get("tenant_id") and row["tenant_id"] in real_tenant_ids
+        }
+        result["with_appointments"] = len(distinct_with_appts)
+    except Exception:
+        logger.exception("funnel_metrics: failed to count with_appointments")
+        errors.append("with_appointments")
 
     # 6. New leads this week (leads use client_id; created_at is standard)
     # Fetch rows for the week and filter by real tenant IDs in Python.
