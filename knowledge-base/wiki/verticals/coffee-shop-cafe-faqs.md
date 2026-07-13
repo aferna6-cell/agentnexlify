@@ -61,3 +61,21 @@ Yes, most cafes handle group orders well if you order a little ahead, especially
 
 **Do you offer wholesale coffee for offices or restaurants?**
 Some cafes that roast their own beans supply offices, restaurants, and retailers at wholesale pricing. If this location roasts, we can connect you for pricing and minimums. Share your expected monthly volume and we can follow up.
+
+## Key Concepts
+
+- **Frequency business**: Cafe customers return daily, so the first-turn answer quality compounds; a bad answer loses a repeat visitor, not one ticket.
+- **Catering as the outlier lead**: One catering or standing office order is worth many counter sales, so those answers push toward capturing date, headcount, and contact.
+- **Laptop and wifi policy**: Cafe-specific and absent from the restaurant pack; a common question that decides whether a remote worker walks in.
+- **Allergy honesty line**: Dietary answers stay at "options exist, confirm allergens in store" because a widget must never promise cross-contamination safety.
+- **Bean retail and wholesale**: Roasting cafes have a second revenue line; the wholesale answer routes volume buyers to a human follow-up.
+
+## Related Articles
+
+- [[restaurant-faqs]], sibling food-service pack; covers reservations, large parties, and menu questions that overlap for cafes with full kitchens.
+- [[customer-gaps-by-industry]], the product-market-fit map this pack's vertical coverage extends.
+- [[salon-spa-faqs]], sibling vertical FAQ pack with the same structure in the strongest PMF vertical.
+
+## Relevance to AgentNexLiFy
+
+Keys Koffee is a live paying cafe tenant whose widget retrieved nothing cafe-specific before this pack: the knowledge base covered salons, plumbers, dental, and the 2026-06-23 wave, but a visitor asking about oat milk, laptop seating, or catering got generic replies. This pack closes that gap for the one cafe already paying and for every cafe the outreach wave targets next. The catering and private-event answers map to the lead-capture and booking flows the platform already supports, and after voice KB grounding shipped, the same content now backs phone answers too. Full-text retrieval verified in prod: "do you have oat milk" returns this pack.
