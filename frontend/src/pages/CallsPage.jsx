@@ -299,6 +299,12 @@ export default function CallsPage() {
           value={stats ? formatDuration(stats.avg_duration_seconds) : "\u2014"}
         />
         <StatCard label="Calls today" value={stats ? stats.calls_today : "\u2014"} />
+        {stats && stats.included_minutes > 0 && (
+          <StatCard
+            label="AI minutes this month"
+            value={`${stats.minutes_this_month} / ${stats.included_minutes}`}
+          />
+        )}
       </div>
 
       <div style={cardStyle}>

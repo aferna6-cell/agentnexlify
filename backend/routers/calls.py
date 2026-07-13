@@ -128,6 +128,10 @@ class CallStatsResponse(BaseModel):
     missed_calls: int = 0
     avg_duration_seconds: float = 0.0
     calls_today: int = 0
+    # G3 Phase 3 metering — minutes used this calendar month vs the included
+    # live-AI allowance (included_minutes <= 0 means unmetered).
+    minutes_this_month: float = 0.0
+    included_minutes: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -283,7 +287,23 @@ async def handle_incoming_call(request: Request, _sig: None = Depends(verify_twi
     # Voice mode switch (G3): live AI answering is opt-in AND plan-gated;
     # everyone else gets voicemail mode, which feeds the missed-call
     # recovery pipeline (record -> transcribe -> summarize -> OS draft).
-    if not _ai_voice_mode(tenant):
+    # Live AI answering requires plan+flag AND remaining included minutes
+    # (G3 Phase 3). Over-cap degrades to voicemail — never a dropped call.
+    ai_mode = _ai_voice_mode(tenant)
+    if ai_mode:
+        try:
+            from backend.services.voice_usage import voice_minutes_exhausted
+
+            if voice_minutes_exhausted(tenant["id"]):
+                ai_mode = False
+        except Exception:
+            logger.warning(
+                "voice minutes check failed for tenant %s — allowing AI mode",
+                tenant["id"],
+                exc_info=True,
+            )
+
+    if not ai_mode:
         recording_callback_url = f"{base_url}/api/v1/calls/voice/recording-complete"
         return Response(
             content=_build_twiml_greeting(business_name, recording_callback_url),
@@ -1109,6 +1129,15 @@ async def get_call_stats(
         stats.calls_today = today_result.count if today_result.count is not None else 0
     except Exception:
         logger.warning("Failed to count today's calls for tenant %s", tenant_id, exc_info=True)
+
+    # Minutes metering (G3 Phase 3)
+    try:
+        from backend.services.voice_usage import included_voice_minutes, monthly_voice_seconds
+
+        stats.minutes_this_month = round(monthly_voice_seconds(tenant_id) / 60, 1)
+        stats.included_minutes = included_voice_minutes()
+    except Exception:
+        logger.warning("Failed to compute voice usage for tenant %s", tenant_id, exc_info=True)
 
     return stats
 
