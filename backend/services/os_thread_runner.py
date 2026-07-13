@@ -39,6 +39,10 @@ from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
 
+# Threads originating from these channels are customer-facing - the person
+# typing cannot connect the owner's integrations (os_inbound_bridge sources).
+_INBOUND_THREAD_SOURCES = {"widget", "email", "sms", "facebook", "instagram"}
+
 ENGINE_OFFLINE_REPLY = (
     "Your message is saved, but the agent engine is temporarily unavailable. "
     "We'll pick this up as soon as it's back — no need to resend."
@@ -208,8 +212,10 @@ async def _post_connect_prompt(
     """Post the "connect X to do this for real" follow-up message.
 
     Only for owner-facing threads: inbound-channel threads (widget / email /
-    SMS / Facebook) carry a ``source`` and the person chatting there is the
-    END CUSTOMER, who cannot connect the owner's integrations. One nudge per
+    SMS / Facebook) belong to the END CUSTOMER, who cannot connect the
+    owner's integrations. Dashboard threads carry the DEFAULT source 'chat'
+    (os_threads.source is NOT NULL DEFAULT 'chat', migration 124) - so the
+    check is an inbound denylist, not "any source set". One nudge per
     connector per thread (dedup on the connect path in prior assistant
     messages). Best-effort - never raises into the turn.
     """
@@ -223,7 +229,10 @@ async def _post_connect_prompt(
             .limit(1)
             .execute()
         ).data or []
-        if not thread_rows or thread_rows[0].get("source"):
+        if not thread_rows:
+            return None
+        source = thread_rows[0].get("source") or "chat"
+        if source in _INBOUND_THREAD_SOURCES:
             return None
 
         prior = (
