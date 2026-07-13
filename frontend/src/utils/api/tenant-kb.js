@@ -32,6 +32,14 @@ export async function uploadKbDocuments(tenantId, token, files) {
   return res.json();
 }
 
+// Long-lived (180d) scoped token for the local folder-sync CLI.
+export function createKbSyncToken(tenantId, token) {
+  return request(`/api/v1/kb/${tenantId}/sync-token`, {
+    method: "POST",
+    token,
+  });
+}
+
 export function getDriveStatus(token) {
   return request("/api/v1/kb/integrations/drive/status", { token });
 }

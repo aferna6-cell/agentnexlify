@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import {
+  createKbSyncToken,
   deleteKbDocument,
   disconnectDrive,
   driveSyncNow,
@@ -66,6 +67,8 @@ export default function KnowledgeSourcesPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [syncCmd, setSyncCmd] = useState(null);
+  const [copied, setCopied] = useState(false);
   const fileInputRef = useRef(null);
 
   const load = useCallback(async () => {
@@ -187,6 +190,30 @@ export default function KnowledgeSourcesPage() {
       setMessage(e.message || "Disconnect failed");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function generateSyncCommand() {
+    setBusy(true);
+    try {
+      const res = await createKbSyncToken(tenantId, token);
+      setSyncCmd(
+        `python anx_kb_sync.py YOUR_FOLDER --tenant-id ${res.tenant_id} --token "${res.token}" --watch`,
+      );
+      setCopied(false);
+    } catch (e) {
+      setMessage(e.message || "Could not create a sync token");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copySyncCommand() {
+    try {
+      await navigator.clipboard.writeText(syncCmd);
+      setCopied(true);
+    } catch {
+      setCopied(false);
     }
   }
 
@@ -336,6 +363,62 @@ export default function KnowledgeSourcesPage() {
                 {row.error ? ` \u2014 ${row.error}` : ""}
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Local folder sync (CLI) card */}
+      <div style={{ ...cardStyle, marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: "1rem" }}>Computer folder sync</h3>
+            <p style={{ margin: "4px 0 0", fontSize: "0.83rem", color: "var(--text-muted)" }}>
+              Keep a folder on your computer synced automatically - a tiny script
+              watches it and uploads new or changed documents. Needs only Python.
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <a
+              href="/local-sync/anx_kb_sync.py"
+              download
+              style={{ ...btnQuiet, textDecoration: "none", display: "inline-block" }}
+            >
+              Download script
+            </a>
+            <button onClick={generateSyncCommand} disabled={busy} style={btnStyle}>
+              Get sync command
+            </button>
+          </div>
+        </div>
+
+        {syncCmd && (
+          <div style={{ marginTop: 14 }}>
+            <p style={{ margin: "0 0 8px", fontSize: "0.83rem", color: "var(--text-muted)" }}>
+              Run this next to the downloaded script (replace YOUR_FOLDER with the
+              folder to sync). The token works for 180 days and only for knowledge
+              sync - generate a new one here anytime.
+            </p>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <pre
+                style={{
+                  flex: 1,
+                  margin: 0,
+                  padding: "10px 12px",
+                  fontSize: "0.75rem",
+                  overflowX: "auto",
+                  background: "var(--bg-primary)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-all",
+                }}
+              >
+                {syncCmd}
+              </pre>
+              <button onClick={copySyncCommand} style={btnQuiet}>
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -348,3 +348,14 @@ class TestMain:
         cli.save_state(tmp_path / cli.STATE_FILENAME, {"a.md": {"sha256": "x"}})
         raw = (tmp_path / cli.STATE_FILENAME).read_text()
         assert json.loads(raw)["version"] == 1
+
+
+class TestPublicCopyIdentity:
+    def test_dashboard_download_is_byte_identical(self):
+        """The Knowledge page serves /local-sync/anx_kb_sync.py from
+        frontend/public - like the widget, the two copies must never drift."""
+        public = (
+            Path(__file__).resolve().parents[2]
+            / "frontend" / "public" / "local-sync" / "anx_kb_sync.py"
+        )
+        assert public.read_bytes() == _CLI_PATH.read_bytes()

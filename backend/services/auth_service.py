@@ -29,7 +29,16 @@ def _decode_token(token: str) -> dict:
 
 
 async def get_current_tenant(authorization: str = Header(...)) -> dict:
-    """FastAPI dependency: extract tenant claims from Bearer token."""
+    """FastAPI dependency: extract tenant claims from Bearer token.
+
+    Purpose-scoped tokens (e.g. the long-lived ``kb_sync`` token minted for
+    the folder-sync CLI, or OAuth state JWTs) are NOT dashboard sessions —
+    reject them here so a leaked scoped token can't reach general endpoints.
+    Endpoints that accept a scoped token use their own dependency
+    (backend/routers/tenant_kb.py::_get_kb_claims)."""
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing Bearer token")
-    return _decode_token(authorization.removeprefix("Bearer ").strip())
+    claims = _decode_token(authorization.removeprefix("Bearer ").strip())
+    if claims.get("purpose"):
+        raise HTTPException(status_code=401, detail="Token not valid for this endpoint")
+    return claims

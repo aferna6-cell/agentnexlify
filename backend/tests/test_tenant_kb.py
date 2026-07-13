@@ -304,3 +304,115 @@ class TestListAndDelete:
         resp = client.delete(f"{BASE}/documents/d1", headers=_auth_headers())
         assert resp.status_code == 200
         assert resp.json()["deleted"] is True
+
+
+# ---------------------------------------------------------------------------
+# Sync token — long-lived scoped auth for the folder-sync CLI
+# ---------------------------------------------------------------------------
+
+from datetime import datetime, timedelta, timezone  # noqa: E402
+
+from jose import jwt as jose_jwt  # noqa: E402
+
+from backend.config import settings  # noqa: E402
+
+DRIVE_STATUS = "/api/v1/kb/integrations/drive/status"
+
+
+def _sync_token(tenant_id=TENANT_ID, purpose="kb_sync", days=180):
+    return jose_jwt.encode(
+        {
+            "tenant_id": tenant_id,
+            "purpose": purpose,
+            "exp": datetime.now(timezone.utc) + timedelta(days=days),
+        },
+        settings.api_secret_key,
+        algorithm="HS256",
+    )
+
+
+def _tables(mapping):
+    """table.side_effect router: table name -> chain (default empty)."""
+
+    def route(name):
+        return mapping.get(name) or _chain([])
+
+    return route
+
+
+class TestSyncToken:
+    def test_mint_returns_scoped_long_lived_token(self, client, mock_supabase):
+        resp = client.post(f"{BASE}/sync-token", headers=_auth_headers())
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        claims = jose_jwt.decode(
+            body["token"], settings.api_secret_key, algorithms=["HS256"]
+        )
+        assert claims["purpose"] == "kb_sync"
+        assert claims["tenant_id"] == TENANT_ID
+        assert "plan" not in claims  # plan resolved live, never baked in
+        remaining = datetime.fromtimestamp(claims["exp"], tz=timezone.utc) - datetime.now(
+            timezone.utc
+        )
+        assert remaining > timedelta(days=170)
+        assert body["expires_in_days"] == 180
+
+    def test_mint_requires_matching_tenant(self, client, mock_supabase):
+        other = "00000000-0000-0000-0000-000000000002"
+        resp = client.post(
+            f"/api/v1/kb/{other}/sync-token", headers=_auth_headers()
+        )
+        assert resp.status_code == 403
+
+    def test_sync_token_lists_documents_with_live_plan(self, client, mock_supabase):
+        mock_supabase.table.side_effect = _tables(
+            {"tenants": _chain([{"plan": "free"}])}
+        )
+        try:
+            resp = client.get(
+                f"{BASE}/documents",
+                headers={"Authorization": f"Bearer {_sync_token()}"},
+            )
+        finally:
+            mock_supabase.table.side_effect = None
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["limit"] == 10  # free-plan limit came from the DB
+
+    def test_sync_token_uploads(self, client, mock_supabase):
+        mock_supabase.table.return_value = _chain([])
+        resp = client.post(
+            f"{BASE}/documents",
+            headers={"Authorization": f"Bearer {_sync_token()}"},
+            files={"files": ("faq.md", b"# Hours")},
+            data={"source": "local_sync"},
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["results"][0]["status"] == "added"
+
+    def test_sync_token_rejected_outside_kb_router(self, client, mock_supabase):
+        # A leaked 180-day token must not open the rest of the dashboard
+        resp = client.get(
+            DRIVE_STATUS, headers={"Authorization": f"Bearer {_sync_token()}"}
+        )
+        assert resp.status_code == 401
+
+    def test_sync_token_cannot_mint_another(self, client, mock_supabase):
+        resp = client.post(
+            f"{BASE}/sync-token",
+            headers={"Authorization": f"Bearer {_sync_token()}"},
+        )
+        assert resp.status_code == 401
+
+    def test_wrong_purpose_token_rejected_on_kb_endpoints(self, client, mock_supabase):
+        token = _sync_token(purpose="drive_kb_oauth")
+        resp = client.get(
+            f"{BASE}/documents", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert resp.status_code == 401
+
+    def test_cross_tenant_sync_token_forbidden(self, client, mock_supabase):
+        token = _sync_token(tenant_id="00000000-0000-0000-0000-000000000002")
+        resp = client.get(
+            f"{BASE}/documents", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert resp.status_code == 403

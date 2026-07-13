@@ -11,8 +11,15 @@ python.org). Zero packages to install — the script is standard library only.
 
 ## Setup
 
-1. Download `anx_kb_sync.py` from this folder.
-2. Get your tenant ID and API token from the dashboard (Settings).
+The easy way: open the dashboard **Knowledge** page, click **Download
+script**, then **Get sync command** — it hands you a ready-to-paste command
+with a sync token baked in. The token lasts 180 days and only works for
+knowledge sync (it can't touch anything else in your account).
+
+Manual equivalent:
+
+1. Download `anx_kb_sync.py` (from the Knowledge page or this folder).
+2. Generate a sync token on the Knowledge page ("Get sync command").
 3. Run it:
 
 ```bash
