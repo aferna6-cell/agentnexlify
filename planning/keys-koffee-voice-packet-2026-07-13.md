@@ -65,6 +65,6 @@ with the live prod state verified today.
 - Voice booking is TestClient/CI-verified; no real call has exercised it in
   prod yet. First provisioned number should get a founder test call before
   the customer demo (script step 2 doubles as this).
-- Demo-tenant widget chat 500s (#422) — unrelated to Keys Koffee (real-tenant
-  path verified live today), but fix before sending prospects to the public
-  demo.
+- ~~Demo-tenant widget chat 500s (#422)~~ FIXED same day (double-encoded
+  demo business hours; data repaired + code hardened, live demo verified
+  answering). The public demo is safe for prospects.
