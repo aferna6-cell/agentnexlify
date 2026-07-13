@@ -494,6 +494,22 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
     except Exception:
         logger.warning("Failed to load FAQ for voice AI, tenant %s", tenant_id)
 
+    # Ground on the vertical knowledge base like the widget does (the moat —
+    # voice answers were FAQ-only and shallower than widget answers for the
+    # same tenant, audit-voice-g3-scope-2026-07-09 gap #8).
+    kb_text = ""
+    try:
+        from backend.routers.widget_chat_helpers import _query_kb_articles
+
+        kb_refs = await _query_kb_articles(speech_result, match_count=3)
+        if kb_refs:
+            kb_text = "Knowledge base:\n" + "\n".join(
+                f"- {(a.get('title') or '')[:80]}: {(a.get('summary') or '')[:280]}"
+                for a in kb_refs
+            )
+    except Exception:
+        logger.warning("Failed to load KB articles for voice AI", exc_info=True)
+
     # Vertical operating guidance (same pack the Agent OS staff uses — e.g.
     # financial_services carries the no-personalized-advice compliance entry)
     guidance_text = ""
@@ -521,6 +537,8 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
         system_prompt += f"\n\n{booking_context}"
     if guidance_text:
         system_prompt += f"\n\n{guidance_text}"
+    if kb_text:
+        system_prompt += f"\n\n{kb_text}"
     if faq_text:
         system_prompt += f"\n\n{faq_text}"
 
