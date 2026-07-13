@@ -176,3 +176,103 @@ class TestLeadBackfill:
     def test_never_raises_on_db_failure(self):
         with patch.object(vb, "get_service_supabase", side_effect=RuntimeError("db down")):
             vb._backfill_lead_name("t1", "+1914", "Jane", {})
+
+
+class TestBookingEnabledGate:
+    def _db(self, rows):
+        result = MagicMock()
+        result.data = rows
+        chain = MagicMock()
+        chain.select.return_value = chain
+        chain.eq.return_value = chain
+        chain.limit.return_value = chain
+        chain.execute.return_value = result
+        db = MagicMock()
+        db.table.return_value = chain
+        return db
+
+    def test_enabled_row(self):
+        with patch.object(vb, "get_service_supabase", return_value=self._db([{"booking_enabled": True}])):
+            assert vb._booking_enabled("t1") is True
+
+    def test_disabled_row_and_missing_row(self):
+        with patch.object(vb, "get_service_supabase", return_value=self._db([{"booking_enabled": False}])):
+            assert vb._booking_enabled("t1") is False
+        with patch.object(vb, "get_service_supabase", return_value=self._db([])):
+            assert vb._booking_enabled("t1") is False
+
+    def test_lookup_failure_fails_closed(self):
+        with patch.object(vb, "get_service_supabase", side_effect=RuntimeError("db down")):
+            assert vb._booking_enabled("t1") is False
+
+
+class TestNextOpenSlots:
+    def test_skips_empty_days_until_slots(self):
+        # Day 0 empty, day 1 has slots
+        with patch.object(vb, "generate_available_slots", side_effect=[[], [_slot("10:00")]]):
+            found = vb._next_open_slots("t1")
+        assert found is not None
+        day_iso, slots = found
+        assert slots[0]["start"] == "10:00"
+
+    def test_none_when_window_exhausted(self):
+        with patch.object(vb, "generate_available_slots", return_value=[]):
+            assert vb._next_open_slots("t1") is None
+
+    def test_none_on_slot_generation_error(self):
+        with patch.object(vb, "generate_available_slots", side_effect=RuntimeError("boom")):
+            assert vb._next_open_slots("t1") is None
+
+
+class TestMarkerEdgeCases:
+    def test_marker_with_no_json_payload(self):
+        out, data = vb._extract_marker(f"Sure thing. {vb.BOOKING_MARKER}")
+        assert data is None
+        assert out == "Sure thing."
+
+    def test_generic_booking_failure_degrades_to_callback(self):
+        reply = (
+            'Done. '
+            f'{vb.BOOKING_MARKER} {{"name": "Jane", "date": "2026-07-14", "start": "09:00"}}'
+        )
+        with patch.object(
+            vb, "generate_available_slots", return_value=[_slot("09:00")]
+        ), patch.object(
+            vb, "create_appointment", side_effect=RuntimeError("stripe of bad luck")
+        ):
+            out, appt = vb.handle_booking_marker("t1", "+1914", reply)
+        assert appt is None
+        assert "call you back" in out
+
+    def test_revalidation_fetch_failure_degrades_to_callback(self):
+        reply = (
+            'Done. '
+            f'{vb.BOOKING_MARKER} {{"name": "Jane", "date": "2026-07-14", "start": "09:00"}}'
+        )
+        with patch.object(
+            vb, "generate_available_slots", side_effect=RuntimeError("db down")
+        ), patch.object(vb, "create_appointment") as create:
+            out, appt = vb.handle_booking_marker("t1", "+1914", reply)
+        assert appt is None
+        create.assert_not_called()
+
+
+class TestBackfillGuards:
+    def test_no_phone_is_noop(self):
+        with patch.object(vb, "get_service_supabase") as db:
+            vb._backfill_lead_name("t1", "", "Jane", {})
+        db.assert_not_called()
+
+    def test_no_lead_row_is_noop(self):
+        result = MagicMock()
+        result.data = []
+        chain = MagicMock()
+        chain.select.return_value = chain
+        chain.eq.return_value = chain
+        chain.limit.return_value = chain
+        chain.execute.return_value = result
+        db = MagicMock()
+        db.table.return_value = chain
+        with patch.object(vb, "get_service_supabase", return_value=db):
+            vb._backfill_lead_name("t1", "+1914", "Jane", {"id": "a"})
+        chain.update.assert_not_called()
