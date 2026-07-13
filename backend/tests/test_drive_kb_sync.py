@@ -314,3 +314,179 @@ class TestDriveRouter:
 
     def test_requires_auth(self, client):
         assert client.get(f"{DRIVE_BASE}/status").status_code in (401, 422)
+
+
+# ---------------------------------------------------------------------------
+# Router flows — callback, folders, folder pick, sync-now, log, disconnect
+# ---------------------------------------------------------------------------
+
+from backend.routers import kb_integrations as kbi  # noqa: E402
+
+
+class TestDriveRouterFlows:
+    def test_callback_saves_tokens_and_redirects(self, client, mock_supabase):
+        state = kbi._encode_state(TENANT_ID)
+        with patch(
+            "backend.routers.kb_integrations.exchange_code",
+            return_value={"access_token": "at", "refresh_token": "rt"},
+        ), patch("backend.routers.kb_integrations.save_tokens") as save, patch.object(
+            kbi.settings, "frontend_url", "https://app.example.com"
+        ):
+            resp = client.get(
+                f"{DRIVE_BASE}/callback", params={"code": "c0de", "state": state}
+            )
+        assert resp.status_code in (302, 307)
+        assert "/dashboard/knowledge?drive=connected" in resp.headers["location"]
+        assert save.call_args.args[0] == TENANT_ID
+
+    def test_callback_html_fallback_without_frontend_url(self, client, mock_supabase):
+        state = kbi._encode_state(TENANT_ID)
+        with patch(
+            "backend.routers.kb_integrations.exchange_code",
+            return_value={"access_token": "at"},
+        ), patch("backend.routers.kb_integrations.save_tokens"), patch.object(
+            kbi.settings, "frontend_url", ""
+        ):
+            resp = client.get(
+                f"{DRIVE_BASE}/callback", params={"code": "c0de", "state": state}
+            )
+        assert resp.status_code == 200
+        assert "Connected!" in resp.text
+
+    def test_callback_rejects_bad_state(self, client, mock_supabase):
+        resp = client.get(
+            f"{DRIVE_BASE}/callback", params={"code": "c0de", "state": "garbage"}
+        )
+        assert resp.status_code == 400
+
+    def test_callback_rejects_wrong_purpose_state(self, client, mock_supabase):
+        from jose import jwt as jose_jwt
+        from datetime import datetime, timedelta, timezone
+
+        state = jose_jwt.encode(
+            {
+                "tenant_id": TENANT_ID,
+                "purpose": "something_else",
+                "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+            },
+            kbi._jwt_secret(),
+            algorithm="HS256",
+        )
+        resp = client.get(
+            f"{DRIVE_BASE}/callback", params={"code": "c0de", "state": state}
+        )
+        assert resp.status_code == 400
+
+    def test_callback_503_when_encryption_missing(self, client, mock_supabase):
+        state = kbi._encode_state(TENANT_ID)
+        with patch(
+            "backend.routers.kb_integrations.exchange_code",
+            side_effect=dks.EncryptionRequired("no key"),
+        ):
+            resp = client.get(
+                f"{DRIVE_BASE}/callback", params={"code": "c0de", "state": state}
+            )
+        assert resp.status_code == 503
+
+    def test_callback_400_when_exchange_fails(self, client, mock_supabase):
+        state = kbi._encode_state(TENANT_ID)
+        with patch(
+            "backend.routers.kb_integrations.exchange_code",
+            side_effect=RuntimeError("google says no"),
+        ):
+            resp = client.get(
+                f"{DRIVE_BASE}/callback", params={"code": "c0de", "state": state}
+            )
+        assert resp.status_code == 400
+
+    def test_folders_listed(self, client, mock_supabase):
+        with patch(
+            "backend.routers.kb_integrations.list_folders",
+            return_value=[{"id": "f1", "name": "KB Docs"}],
+        ):
+            resp = client.get(f"{DRIVE_BASE}/folders", headers=_auth_headers())
+        assert resp.status_code == 200
+        assert resp.json()["folders"][0]["name"] == "KB Docs"
+
+    def test_folders_409_when_not_connected(self, client, mock_supabase):
+        with patch(
+            "backend.routers.kb_integrations.list_folders",
+            side_effect=ValueError("drive not connected"),
+        ):
+            resp = client.get(f"{DRIVE_BASE}/folders", headers=_auth_headers())
+        assert resp.status_code == 409
+
+    def test_folders_502_on_google_failure(self, client, mock_supabase):
+        with patch(
+            "backend.routers.kb_integrations.list_folders",
+            side_effect=RuntimeError("api down"),
+        ):
+            resp = client.get(f"{DRIVE_BASE}/folders", headers=_auth_headers())
+        assert resp.status_code == 502
+
+    def test_set_folder_triggers_first_sync(self, client, mock_supabase):
+        with patch("backend.routers.kb_integrations.set_folder") as setf, patch(
+            "backend.routers.kb_integrations.sync_tenant_drive",
+            return_value={"added": 3, "updated": 0},
+        ):
+            resp = client.post(
+                f"{DRIVE_BASE}/folder",
+                headers=_auth_headers(),
+                json={"folder_id": "f1", "folder_name": "KB Docs"},
+            )
+        assert resp.status_code == 200
+        assert resp.json()["folder_set"] is True
+        assert resp.json()["sync"]["added"] == 3
+        assert setf.call_args.args == (TENANT_ID, "f1", "KB Docs")
+
+    def test_set_folder_409_when_not_connected(self, client, mock_supabase):
+        with patch(
+            "backend.routers.kb_integrations.set_folder",
+            side_effect=ValueError("drive not connected"),
+        ):
+            resp = client.post(
+                f"{DRIVE_BASE}/folder",
+                headers=_auth_headers(),
+                json={"folder_id": "f1", "folder_name": "KB Docs"},
+            )
+        assert resp.status_code == 409
+
+    def test_sync_now_returns_summary(self, client, mock_supabase):
+        with patch(
+            "backend.routers.kb_integrations.sync_tenant_drive",
+            return_value={"added": 1, "updated": 2, "skipped": 0},
+        ):
+            resp = client.post(f"{DRIVE_BASE}/sync-now", headers=_auth_headers())
+        assert resp.status_code == 200
+        assert resp.json()["sync"]["updated"] == 2
+
+    def test_sync_log_returns_tenant_rows(self, client, mock_supabase):
+        rows = [
+            {"synced_at": "2026-07-13T07:00:00+00:00", "files_added": 2,
+             "files_updated": 0, "files_skipped": 1, "files_pii_flagged": 0,
+             "error": None},
+        ]
+        chain = MagicMock()
+        for m in ("select", "eq", "order", "limit"):
+            getattr(chain, m).return_value = chain
+        chain.execute.return_value = MagicMock(data=rows)
+        mock_supabase.table.return_value = chain
+        resp = client.get(f"{DRIVE_BASE}/sync-log", headers=_auth_headers())
+        assert resp.status_code == 200
+        assert resp.json()["log"][0]["files_added"] == 2
+        mock_supabase.table.assert_called_with("integration_sync_log")
+
+    def test_disconnect_removes_connection(self, client, mock_supabase):
+        with patch(
+            "backend.routers.kb_integrations.disconnect", return_value=True
+        ):
+            resp = client.delete(f"{DRIVE_BASE}/", headers=_auth_headers())
+        assert resp.status_code == 200
+        assert resp.json()["disconnected"] is True
+
+    def test_disconnect_404_when_not_connected(self, client, mock_supabase):
+        with patch(
+            "backend.routers.kb_integrations.disconnect", return_value=False
+        ):
+            resp = client.delete(f"{DRIVE_BASE}/", headers=_auth_headers())
+        assert resp.status_code == 404

@@ -4,6 +4,19 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 165_tenant_kb_sources.sql (2026-07-13)
+
+**What:** Three new tables for the tenant knowledge-base sources build:
+- `tenant_integrations` — one row per (client_id, provider); Drive OAuth tokens vault-encrypted in `oauth_token_enc` / `oauth_refresh_token_enc` (bytea, Fernet via integration_key_vault — spec's pgcrypto approach superseded), `config` jsonb (folder_id/folder_name), `last_synced_at`, `last_sync_status`.
+- `integration_sync_log` — per-sync history (files added/updated/skipped/pii_flagged, error).
+- `tenant_kb_documents` — per-document provenance: `source` ('upload' | 'drive' | 'local_sync'), `external_id`, `content_md`, `content_sha256` (per-doc diffing instead of the spec's kb_section_hashes), `pii_flags`, `status` ('active' | 'skipped' | 'deleted'), UNIQUE(client_id, source, external_id).
+
+**Why:** Goal build — dashboard bulk upload + Google Drive KB sync + local folder-sync CLI (specs/drive-kb-onboarding_spec.md). All three tables use `client_id` (NOT tenant_id) per schema discipline. Compiled output still lands in `widget_configs.knowledge_base` (migration 077) so widget + voice pick it up unchanged.
+
+**Applied:** prod (`pxserpybmajixqrmzaly`) via apply_migration, 2026-07-13.
+
+---
+
 ## 164_tenants_twilio_number.sql (2026-07-13)
 
 **What:** `twilio_number TEXT` added to `tenants` (nullable) + partial unique index `tenants_twilio_number_uniq` (`WHERE twilio_number IS NOT NULL`).
