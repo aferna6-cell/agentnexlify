@@ -18251,3 +18251,41 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** .github/workflows/pr-check.yml,backend/routers/widget_chat_helpers.py,backend/services/booking.py,backend/services/demo_seed.py,backend/services/support_agent.py,backend/tests/test_widget_chat.py,scripts/demos/seed_powerwash_demo.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(os): connect prompt fired for no one — dashboard threads have source='chat' (#427)
+
+* fix(os): connect prompt fired for no one - dashboard threads have source='chat'
+
+Prod verification of the connector feature caught it silent: the
+owner-thread guard skipped any thread with a truthy source, but
+os_threads.source is NOT NULL DEFAULT 'chat' (migration 124), so every
+dashboard thread was mistaken for an inbound channel and the connect
+prompt never posted. The test harness modelled source=None, which prod
+never has.
+
+Guard is now an inbound denylist ({widget,email,sms,facebook,instagram}
+per os_inbound_bridge); 'chat' and anything unknown counts as
+owner-facing. Harness default flipped to 'chat' to model prod truth +
+regression test pinning the chat-source path.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Ya7tfAw1FiVqejtNXU8BnV
+
+* test(os): cover the missing-thread early return in _post_connect_prompt
+
+The changed-lines gate flagged line 233 (thread-not-found return)
+uncovered - 1 uncovered line in a 5-line diff reads as 80%.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Ya7tfAw1FiVqejtNXU8BnV
+
+---------
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-07-13
+**Commit:** 7a9047f
+**Author:** aferna6-cell
+**Files Changed:** backend/services/os_thread_runner.py,backend/tests/test_connector_awareness.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
