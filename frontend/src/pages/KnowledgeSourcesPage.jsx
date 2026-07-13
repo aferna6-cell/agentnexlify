@@ -44,7 +44,7 @@ const SOURCE_LABELS = {
 };
 
 function formatDate(d) {
-  if (!d) return "—";
+  if (!d) return "\u2014";
   return new Date(d).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -333,7 +333,7 @@ export default function KnowledgeSourcesPage() {
                 {formatDate(row.synced_at)}: {row.files_added} added, {row.files_updated} updated,{" "}
                 {row.files_skipped} skipped
                 {row.files_pii_flagged > 0 ? `, ${row.files_pii_flagged} PII-flagged` : ""}
-                {row.error ? ` — ${row.error}` : ""}
+                {row.error ? ` \u2014 ${row.error}` : ""}
               </div>
             ))}
           </div>
