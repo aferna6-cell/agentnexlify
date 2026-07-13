@@ -11,7 +11,7 @@ Do NOT add 'from __future__ import annotations' — breaks Pydantic on FastAPI.
 
 import logging
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from backend.dependencies import _get_current_tenant
@@ -93,11 +93,18 @@ async def list_documents(
 async def upload_documents(
     tenant_id: str,
     files: list[UploadFile] = File(...),
+    source: str = Form("upload"),
     claims: dict = Depends(_get_current_tenant),
 ):
     """Bulk-ingest documents (PDF/DOCX/TXT/MD). One bad file never fails the
-    batch — each gets a per-file result. Compiles the KB once at the end."""
+    batch — each gets a per-file result. Compiles the KB once at the end.
+
+    source: 'upload' (dashboard drag-drop, default) or 'local_sync' (the
+    folder-sync CLI in local-sync/anx_kb_sync.py) — kept separate so the
+    provenance table shows where each document came from."""
     _require_tenant(claims, tenant_id)
+    if source not in ("upload", "local_sync"):
+        raise HTTPException(status_code=400, detail="Invalid source")
     if not files:
         raise HTTPException(status_code=400, detail="No files provided")
     if len(files) > 100:
@@ -121,7 +128,7 @@ async def upload_documents(
         data = await upload.read()
         outcome = ingest_file(
             tenant_id,
-            source="upload",
+            source=source,
             external_id=filename,
             filename=filename,
             data=data,

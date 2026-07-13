@@ -223,6 +223,32 @@ class TestUploadEndpoint:
         assert by_name["photo.png"]["status"] == "skipped"
         assert "compiled" in body
 
+    def test_local_sync_source_recorded(self, client, mock_supabase):
+        # The folder-sync CLI posts source=local_sync so provenance is honest
+        mock_supabase.table.return_value = _chain([])
+        with patch(
+            "backend.routers.tenant_kb.ingest_file",
+            return_value={"filename": "a.md", "status": "added"},
+        ) as ingest:
+            resp = client.post(
+                f"{BASE}/documents",
+                headers=_auth_headers(),
+                files={"files": ("a.md", b"hi")},
+                data={"source": "local_sync"},
+            )
+        assert resp.status_code == 200, resp.text
+        assert ingest.call_args.kwargs["source"] == "local_sync"
+
+    def test_invalid_source_rejected(self, client, mock_supabase):
+        mock_supabase.table.return_value = _chain([])
+        resp = client.post(
+            f"{BASE}/documents",
+            headers=_auth_headers(),
+            files={"files": ("a.md", b"hi")},
+            data={"source": "dropbox"},
+        )
+        assert resp.status_code == 400
+
     def test_plan_doc_limit_enforced(self, client, mock_supabase):
         # Free-plan token; tenant already at the 10-doc limit
         from jose import jwt as jose_jwt
