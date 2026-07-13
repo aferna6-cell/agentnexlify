@@ -439,6 +439,25 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
         })
     conversation_messages = compact_voice_history
 
+    # Booking (G3 Phase 1): when any caller turn shows booking intent and the
+    # tenant has booking on, inject live slots + the BOOK_JSON marker contract
+    # into the system prompt. History carries the flow across rounds/workers.
+    booking_context = ""
+    try:
+        from backend.services.voice_booking import booking_prompt_context, wants_booking
+
+        caller_turns = [
+            m.get("content", "")
+            for m in conversation_messages
+            if m.get("role") == "user"
+        ]
+        if wants_booking(caller_turns):
+            booking_context = booking_prompt_context(tenant_id) or ""
+    except Exception:
+        logger.warning(
+            "voice_respond: booking context failed for call %s", call_sid, exc_info=True
+        )
+
     # Load business info for system prompt context
     business_info = ""
     try:
@@ -498,6 +517,8 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
         "If the caller wants an appointment or a quote, collect their name and "
         "the best time to reach them, and say someone will confirm shortly."
     )
+    if booking_context:
+        system_prompt += f"\n\n{booking_context}"
     if guidance_text:
         system_prompt += f"\n\n{guidance_text}"
     if faq_text:
@@ -537,6 +558,25 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
             "Let me have someone call you back as soon as possible."
         )
 
+    # Booking (G3 Phase 1): strip the BOOK_JSON marker (caller must never hear
+    # it) and create the appointment it describes. Never raises.
+    if booking_context:
+        try:
+            from backend.services.voice_booking import handle_booking_marker
+
+            ai_response, booked_appointment = handle_booking_marker(
+                tenant_id, caller, ai_response
+            )
+            if booked_appointment:
+                ai_response = (
+                    f"{ai_response} You're all set - your appointment is "
+                    "booked and confirmed."
+                ).strip()
+        except Exception:
+            logger.exception(
+                "voice_respond: booking marker handling failed for call %s", call_sid
+            )
+
     # Save the AI response
     try:
         db.table("chat_messages").insert({
@@ -548,8 +588,13 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
     except Exception:
         logger.exception("Failed to save AI voice response for call %s", call_sid)
 
-    # Check if we should continue or end the conversation
-    if round_num >= _MAX_VOICE_ROUNDS:
+    # Check if we should continue or end the conversation. Cap is a runtime
+    # setting (G3 Phase 1) — the fixed 3-round cap ended calls mid-booking
+    # (intent -> pick a time -> give name needs the full budget).
+    max_rounds = resolve_int_setting("voice_max_rounds", _MAX_VOICE_ROUNDS)
+    if booking_context and max_rounds < 5:
+        max_rounds = 5
+    if round_num >= max_rounds:
         goodbye_text = (
             f"{ai_response} "
             f"Thank you for calling {_xml_escape(business_name)}! "
