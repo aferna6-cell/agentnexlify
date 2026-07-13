@@ -135,35 +135,63 @@ class CallStatsResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _find_tenant_by_phone(phone: str) -> dict | None:
-    """Look up tenant by their configured notification_phone or Twilio number.
+_TENANT_PHONE_SELECT = (
+    "id, business_name, business_type, owner_email, notification_phone, "
+    "twilio_number, sms_notifications_enabled, plan, voice_ai_enabled"
+)
 
-    Same pattern as twilio_webhooks.py._find_tenant_by_phone.
+
+def _find_tenant_by_phone(phone: str) -> dict | None:
+    """Look up the tenant whose line was called.
+
+    Primary path: exact indexed match on tenants.twilio_number - the dedicated
+    provisioned-AI-line column (migration 164). Twilio delivers E.164 and the
+    provisioning flow stores E.164, so equality holds.
+
+    Fallback: the legacy suffix scan against notification_phone for tenants
+    configured before twilio_number existed. The scan is capped defensively
+    but only runs when the indexed lookup missed. (G3 Phase 2 - replaces the
+    unconditional limit(50) scan that silently broke at tenant #51.)
     """
     db = get_service_supabase()
+
+    try:
+        exact = (
+            db.table("tenants")
+            .select(_TENANT_PHONE_SELECT)
+            .eq("twilio_number", phone)
+            .limit(1)
+            .execute()
+        )
+        if exact.data:
+            return exact.data[0]
+    except Exception:
+        logger.warning(
+            "twilio_number exact lookup failed for %s - falling back to scan",
+            phone,
+            exc_info=True,
+        )
+
     try:
         result = (
             db.table("tenants")
-            .select(
-                "id, business_name, business_type, owner_email, notification_phone, "
-                "sms_notifications_enabled, plan, voice_ai_enabled"
-            )
-            .limit(50)
+            .select(_TENANT_PHONE_SELECT)
+            .limit(200)
             .execute()
         )
     except Exception:
         logger.exception("Failed to query tenants for phone lookup: %s", phone)
         return None
 
+    norm_phone = phone.replace(" ", "").replace("-", "")
     for tenant in result.data or []:
-        tenant_phone = tenant.get("notification_phone")
-        if not tenant_phone:
-            continue
-        # Normalize for comparison (strip spaces, dashes)
-        norm_tenant = tenant_phone.replace(" ", "").replace("-", "")
-        norm_phone = phone.replace(" ", "").replace("-", "")
-        if norm_tenant.endswith(norm_phone[-10:]) or norm_phone.endswith(norm_tenant[-10:]):
-            return tenant
+        for tenant_phone in (tenant.get("twilio_number"), tenant.get("notification_phone")):
+            if not tenant_phone:
+                continue
+            # Normalize for comparison (strip spaces, dashes)
+            norm_tenant = tenant_phone.replace(" ", "").replace("-", "")
+            if norm_tenant.endswith(norm_phone[-10:]) or norm_phone.endswith(norm_tenant[-10:]):
+                return tenant
     return None
 
 

@@ -4,6 +4,16 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 164_tenants_twilio_number.sql (2026-07-13)
+
+**What:** `twilio_number TEXT` added to `tenants` (nullable) + partial unique index `tenants_twilio_number_uniq` (`WHERE twilio_number IS NOT NULL`).
+
+**Why:** Voice G3 Phase 2. The number-provisioning flow stored purchased Twilio numbers in `notification_phone` — which is also the OWNER's alert phone (missed-call SMS notify), and whose presence 409'd `/provision` for every real tenant. `twilio_number` is the dedicated inbound-AI-line column; the unique index doubles as the exact-match routing lookup replacing the `limit(50)` suffix scan in `calls.py`.
+
+**Applied:** prod (`pxserpybmajixqrmzaly`) via apply_migration, 2026-07-13.
+
+---
+
 ## 153_stripe_trial_end.sql (2026-06-16)
 
 **What:** `stripe_trial_end timestamptz` added to `tenants` table (nullable, no default).
