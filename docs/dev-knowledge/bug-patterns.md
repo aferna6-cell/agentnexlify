@@ -18210,3 +18210,44 @@ Claude-Session: https://claude.ai/code/session_01272bpNUuc83u9yNwpWzT3F
 **Author:** Claude
 **Files Changed:** subconscious/state/memory.jsonl
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(widget): tolerate double-encoded business hours (GH #422) (#425)
+
+Root cause (from the prod error_events sink): the demo seeder wrote
+hours via json.dumps into a jsonb column, so business_hours.hours held
+a JSON STRING. _format_hours_block called hours.get(day) on it ->
+AttributeError -> 500 on every widget chat for tenants seeded that way
+(all three demo tenants; the public live demo showed prospects an
+error). Slot generation and the support-agent fallback read the same
+shape and were equally exposed.
+
+- booking.coerce_hours (new): dict passthrough, JSON-string parse,
+  anything else degrades to {} ('no hours') instead of raising;
+  get_business_hours normalises so slot generation + availability API
+  are covered.
+- widget_chat_helpers._format_hours_block + support_agent hours read
+  now coerce.
+- demo_seed.py + seed_powerwash_demo.py: drop the json.dumps (the
+  actual bug).
+- Prod data repaired separately: the 3 string rows rewritten to
+  objects; live demo chat verified answering (with correct hours!)
+  post-repair.
+- Regression: TestWidgetChatStringHours drives the exact prod data
+  shape through the real router - verified 500 on pre-fix code, 200
+  post-fix. TestCoerceHours unit-covers the helper. Plus the
+  full-fidelity demo-tenant characterization test from the
+  investigation (test_widget_chat.py in the CI coverage list now).
+
+Closes #422.
+
+
+Claude-Session: https://claude.ai/code/session_01Ya7tfAw1FiVqejtNXU8BnV
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-07-13
+**Commit:** f19c21c
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/pr-check.yml,backend/routers/widget_chat_helpers.py,backend/services/booking.py,backend/services/demo_seed.py,backend/services/support_agent.py,backend/tests/test_widget_chat.py,scripts/demos/seed_powerwash_demo.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
