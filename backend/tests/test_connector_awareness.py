@@ -234,6 +234,25 @@ async def test_runner_posts_connect_prompt_and_returns_followup(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_runner_skips_when_thread_missing():
+    from backend.services import os_thread_runner
+
+    class _NoThreadDB(_RunnerDB):
+        # os_threads lookup returns no rows
+        def table(self, name):
+            if name == "os_threads":
+                return _chain([])
+            return super().table(name)
+
+    db = _NoThreadDB()
+    missing = [
+        {"key": "hubspot", "label": "HubSpot", "path": "/dashboard/integrations"}
+    ]
+    assert await os_thread_runner._post_connect_prompt(db, "t1", "th-1", missing) is None
+    assert db.inserts == []
+
+
+@pytest.mark.asyncio
 async def test_runner_posts_for_default_chat_source():
     """Dashboard threads carry source='chat' (the column default) - the
     prompt must post for them. Regression: the first guard skipped ANY
