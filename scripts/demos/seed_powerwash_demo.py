@@ -277,7 +277,7 @@ def main() -> None:
             .insert({
                 "tenant_id": tenant_id,
                 "timezone": "America/New_York",
-                "hours": json.dumps(BUSINESS_HOURS),
+                "hours": BUSINESS_HOURS,  # dict straight into jsonb - json.dumps double-encoded it (GH #422)
                 "slot_duration_minutes": 60,
                 "buffer_minutes": 15,
                 "max_advance_days": 14,

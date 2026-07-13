@@ -1406,7 +1406,7 @@ def _seed_demo_tenant(db: Any, vertical: str) -> str | None:
         db.table("business_hours").insert({
             "tenant_id": tenant_id,
             "timezone": "America/Chicago" if vertical == "financial_services" else "America/Los_Angeles",
-            "hours": json.dumps(cfg["hours"]),
+            "hours": cfg["hours"],  # dict straight into jsonb - json.dumps double-encoded it (GH #422)
             "slot_duration_minutes": 30 if vertical == "financial_services" else 60,
             "buffer_minutes": 15,
             "max_advance_days": 14,
