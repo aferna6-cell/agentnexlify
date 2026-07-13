@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-07-12-pm",
-  "total_runs": 90,
+  "last_run": "2026-07-13",
+  "total_runs": 91,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -57,8 +57,37 @@
     "total_runs": "89 → 90",
     "last_run": "2026-07-11-pm → 2026-07-12-pm"
   },
-  "run_91_mandate": "1. GH #413: did human respond after run 90 comment? 2. REFERRAL_REWARD_ENABLED=1 set in Railway? 3. GH #399 resolved — Loop resumed, Lead Source Analytics GH #409 has a draft PR? 4. GH #403 resolved — KB autopopulate ran (check knowledge-base/log.md)? 5. Keys Koffee hours — if 21+ days without action, escalate as separate Keys Koffee-specific GH issue. 6. Days since last real booking (currently 19, counting from 2026-06-23).",
+  "run_91_mandate": "EXECUTED 2026-07-13. All 6 items checked: (1) GH #413 — 0 human responses after run 90 comment. (2) REFERRAL_REWARD_ENABLED=1 — NOT set (human has not actioned #413). (3) GH #399 — OPEN Day 9, loop stalled. (4) GH #403 — OPEN Day 9, KB autopopulate still dark. (5) Keys Koffee hours — Day 20 (approaching 21-day mandate; Keys Koffee-specific GH issue filed as Bonus A). (6) Days since last booking — 20 days, still 0 real bookings. Run 91 winner: pre-answer GH #413 referral checklist items 3/5/8 from referral_reward.py code audit.",
+  "run_91_governance_corrections": {
+    "gh_413_human_response": "NONE — 0 comments after run 90 auto-comment (2d elapsed)",
+    "referral_reward_enabled_set": false,
+    "gh_399_status": "OPEN Day 9 — autopilot-issue-loop stalled, 40 ai-ready issues blocked",
+    "gh_403_status": "OPEN Day 9 — KB autopopulate stalled 70+ days, blocks 5 systems",
+    "keys_koffee_booking_hours": "UNKNOWN — Day 20, Keys Koffee-specific GH issue filed (Bonus A)",
+    "real_bookings": 0,
+    "days_since_booking_launch": 20,
+    "referral_reward_py_audit_findings": "Stripe credit mechanism (amount=-2000), self-referral prevention built into _resolve_referrer(), qualification = first paid invoice",
+    "total_runs": "90 → 91",
+    "last_run": "2026-07-12-pm → 2026-07-13"
+  },
+  "run_92_mandate": "1. GH #413: did human respond to run 91 code-verified comment? 2. REFERRAL_REWARD_ENABLED=1 set in Railway (items 3/5/8 now answered — only items 9 and 10 remain)? 3. Keys Koffee GH issue actioned — booking hours configured? 4. GH #399 resolved — loop resumed? 5. GH #403 resolved — KB autopopulate ran? 6. Days since last real booking (Day 21 threshold — escalate if still 0).",
   "active_directions": [
+    {
+      "title": "Pre-answer GH #413 referral UX checklist items 3/5/8 from referral_reward.py code audit (run 91 winner)",
+      "date": "2026-07-13",
+      "confidence": "HIGH",
+      "status": "pending_human_action",
+      "autonomous_executable": true,
+      "requires_human": true,
+      "requires_human_scope": "Verify remaining items 9 (user-facing copy/marketing) and 10 (referral confirmation email to referrer) then set REFERRAL_REWARD_ENABLED=1 in Railway Variables.",
+      "category": "customer_value",
+      "moratorium_override": false,
+      "source_run": 91,
+      "effort": "XS",
+      "evidence": "referral_reward.py audit: item 3 answered (Stripe $20 balance credit, amount=-2000, fires on first paid invoice); item 5 answered (self-referral prevention built into _resolve_referrer() — returns None for both channels); item 8 answered (first paid invoice = qualification trigger, idempotency via UNIQUE referred_tenant_id). Reduces open checklist from 5 items to 2. GH #413 open 2d with 0 human responses.",
+      "action": "Comment posted on GH #413 via mcp__github__add_issue_comment with code-verified answers to items 3, 5, 8. Marks those items as verified — human only needs to action items 9 and 10.",
+      "note": "Run 91 winner. Code-derived answers eliminate 60% of remaining human research burden. Items 9 (user-facing referral copy) and 10 (referral grant email notification) remain human-required decisions."
+    },
     {
       "title": "Comment on GH #413 confirming referral UI fully built — pre-check UX checklist items 1-2 (run 90 winner)",
       "date": "2026-07-12-pm",
