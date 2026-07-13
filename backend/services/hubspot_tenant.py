@@ -38,6 +38,10 @@ import httpx
 
 from backend.config import settings
 from backend.models.database import get_service_supabase
+from backend.services.integration_key_vault import (
+    decrypt_integration_row,
+    encrypt_oauth_tokens,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +76,7 @@ def get_integration(tenant_id: str) -> dict | None:
     if not result.data:
         return None
     row = result.data[0]
-    return row if isinstance(row, dict) else None
+    return decrypt_integration_row(row) if isinstance(row, dict) else None
 
 
 def save_integration(
@@ -93,6 +97,8 @@ def save_integration(
     }
     if metadata is not None:
         payload["metadata"] = metadata
+
+    payload = encrypt_oauth_tokens(payload)
 
     existing = get_integration(tenant_id)
     if existing:

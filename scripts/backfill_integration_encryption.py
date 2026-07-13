@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""One-shot backfill: encrypt existing plaintext integration secrets (GH #131).
+"""One-shot backfill: encrypt existing plaintext integration secrets (GH #131/#266).
 
-Reads every ``integrations`` row that has a plaintext ``access_token`` but no
-``access_token_enc`` yet, encrypts the plaintext with the current key version,
-and writes ``access_token_enc``. The plaintext column is left intact — a
-separate sunset migration drops it after this backfill is verified
-(user-rules Rule 8: no half-migrations).
+Reads every ``integrations`` row that has a plaintext ``access_token`` or
+``refresh_token`` without the corresponding ``*_enc`` ciphertext yet, encrypts
+the plaintext with the current key version, and writes the ciphertext columns.
+The plaintext columns are left intact — a separate sunset migration drops them
+after this backfill is verified (user-rules Rule 8: no half-migrations).
 
-Idempotent: rows that already have ``access_token_enc`` are skipped, so re-runs
-are safe.
+Idempotent: rows whose ciphertext columns are already populated are skipped,
+so re-runs are safe.
 
 Usage:
     INTEGRATIONS_ENC_KEY=<fernet-key> python scripts/backfill_integration_encryption.py [--dry-run]
@@ -34,10 +34,18 @@ def run(dry_run: bool = False) -> dict:
     db = get_service_supabase()
     res = (
         db.table("integrations")
-        .select("id, tenant_id, provider, access_token, access_token_enc")
+        .select(
+            "id, tenant_id, provider, metadata, "
+            "access_token, access_token_enc, refresh_token, refresh_token_enc"
+        )
         .execute()
     )
     rows = res.data or []
+
+    token_columns = (
+        ("access_token", "access_token_enc"),
+        ("refresh_token", "refresh_token_enc"),
+    )
 
     scanned = 0
     encrypted = 0
@@ -46,22 +54,32 @@ def run(dry_run: bool = False) -> dict:
 
     for row in rows:
         scanned += 1
-        if row.get("access_token_enc") is not None:
-            skipped += 1
-            continue
-        plaintext = row.get("access_token")
-        if not plaintext:
-            skipped += 1
-            continue
-        try:
-            token = encrypt_key(plaintext, DEFAULT_KEY_VERSION)
-        except IntegrationKeyVaultError:
-            logger.exception("encrypt failed for integration id=%s", row.get("id"))
+        update: dict = {}
+        row_failed = False
+        for plain_col, enc_col in token_columns:
+            if row.get(enc_col) is not None:
+                continue
+            plaintext = row.get(plain_col)
+            if not plaintext:
+                continue
+            try:
+                update[enc_col] = _to_bytea(encrypt_key(plaintext, DEFAULT_KEY_VERSION))
+            except IntegrationKeyVaultError:
+                logger.exception(
+                    "encrypt %s failed for integration id=%s", enc_col, row.get("id")
+                )
+                row_failed = True
+
+        if row_failed:
             failed += 1
+            continue
+        if not update:
+            skipped += 1
             continue
         if dry_run:
             logger.info(
-                "[dry-run] would encrypt id=%s tenant=%s provider=%s",
+                "[dry-run] would encrypt %s id=%s tenant=%s provider=%s",
+                ",".join(update.keys()),
                 row.get("id"),
                 row.get("tenant_id"),
                 row.get("provider"),
@@ -70,12 +88,12 @@ def run(dry_run: bool = False) -> dict:
             continue
         meta = dict(row.get("metadata") or {})
         meta["enc_key_version"] = DEFAULT_KEY_VERSION
-        db.table("integrations").update(
-            {"access_token_enc": _to_bytea(token), "metadata": meta}
-        ).eq("id", row["id"]).execute()
+        update["metadata"] = meta
+        db.table("integrations").update(update).eq("id", row["id"]).execute()
         encrypted += 1
         logger.info(
-            "encrypted id=%s tenant=%s provider=%s",
+            "encrypted %s id=%s tenant=%s provider=%s",
+            ",".join(k for k in update if k != "metadata"),
             row.get("id"),
             row.get("tenant_id"),
             row.get("provider"),
