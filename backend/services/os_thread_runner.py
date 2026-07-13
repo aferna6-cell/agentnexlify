@@ -27,6 +27,7 @@ from fastapi.concurrency import run_in_threadpool
 from backend.services import (
     agent_os_bridge,
     agent_sdk_client,
+    connector_awareness,
     os_approval_notify,
     os_failure_notify,
     os_graph_memory,
@@ -68,6 +69,20 @@ async def process_user_turn(
     """
     user_content = user_message_row["content"]
 
+    # Connector-need inference (deterministic regex + status lookups on hit
+    # only). When the ask needs an unconnected integration, the engine gets
+    # told so its reply is grounded, and a follow-up connect prompt is posted
+    # after the turn. Best-effort: never blocks or breaks the turn.
+    missing_connectors: list[dict] = []
+    try:
+        missing_connectors = connector_awareness.missing_for_message(
+            db, client_id, user_content
+        )
+    except Exception:
+        logger.warning(
+            "connector_awareness failed client_id=%s", client_id, exc_info=True
+        )
+
     out = None
     business_name = ""
     if agent_sdk_client.is_configured():
@@ -81,6 +96,15 @@ async def process_user_turn(
         context["kb"] = os_kb_feed.tenant_kb_entries(
             db, client_id, profile.get("businessType")
         ) + await os_graph_memory.graph_kb_entries(db, client_id, user_content)
+        if missing_connectors:
+            context["integrations"] = {
+                "missing_for_this_request": [m["key"] for m in missing_connectors],
+                "note": (
+                    "These integrations are NOT connected yet, so do not claim "
+                    "to have done anything through them. A connect prompt with "
+                    "the setup link is shown to the owner after your reply."
+                ),
+            }
         out = await run_in_threadpool(
             agent_sdk_client.orchestrate_sync,
             client_id,
@@ -96,6 +120,10 @@ async def process_user_turn(
     assistant_message = persisted.get("assistant_message")
     if assistant_message:
         await _mirror_to_channel(db, client_id, thread_id, assistant_message)
+
+    connect_message = await _post_connect_prompt(
+        db, client_id, thread_id, missing_connectors
+    )
 
     agent_run = persisted.get("agent_run")
     await _dispatch_auto_send(db, client_id, agent_run, background_tasks)
@@ -170,7 +198,66 @@ async def process_user_turn(
         "assistant_message": assistant_message,
         "action": "delegate" if agent_run else "answer",
         "agent_runs": [agent_run] if agent_run else [],
+        "followup_messages": [connect_message] if connect_message else [],
     }
+
+
+async def _post_connect_prompt(
+    db, client_id: str, thread_id: str, missing_connectors: list[dict]
+) -> dict | None:
+    """Post the "connect X to do this for real" follow-up message.
+
+    Only for owner-facing threads: inbound-channel threads (widget / email /
+    SMS / Facebook) carry a ``source`` and the person chatting there is the
+    END CUSTOMER, who cannot connect the owner's integrations. One nudge per
+    connector per thread (dedup on the connect path in prior assistant
+    messages). Best-effort - never raises into the turn.
+    """
+    if not missing_connectors:
+        return None
+    try:
+        thread_rows = (
+            tenant_table(db, "os_threads", client_id)
+            .select("id, source")
+            .eq("id", thread_id)
+            .limit(1)
+            .execute()
+        ).data or []
+        if not thread_rows or thread_rows[0].get("source"):
+            return None
+
+        prior = (
+            tenant_table(db, "os_messages", client_id)
+            .select("role, content")
+            .eq("thread_id", thread_id)
+            .order("created_at", desc=True)
+            .limit(100)
+            .execute()
+        ).data or []
+        fresh = connector_awareness.already_prompted(prior, missing_connectors)
+        if not fresh:
+            return None
+
+        return (
+            tenant_table(db, "os_messages", client_id)
+            .insert(
+                {
+                    "thread_id": thread_id,
+                    "role": "assistant",
+                    "content": connector_awareness.connect_prompt(fresh),
+                }
+            )
+            .execute()
+            .data[0]
+        )
+    except Exception:
+        logger.warning(
+            "connect prompt failed client_id=%s thread=%s",
+            client_id,
+            thread_id,
+            exc_info=True,
+        )
+        return None
 
 
 async def _degrade_offline(
