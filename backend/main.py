@@ -82,6 +82,7 @@ from backend.routers import (
     sequences,
     smart_lists,
     sms,
+    sms_compliance,
     snippets,
     social_media,
     stripe_webhooks,
@@ -879,6 +880,7 @@ app.include_router(integrations.router)
 app.include_router(webhook_deliveries.router)
 app.include_router(webhooks.router)
 app.include_router(sms.router)
+app.include_router(sms_compliance.router)
 app.include_router(team.router)
 app.include_router(twilio_webhooks.router)
 app.include_router(widget_chat.router)

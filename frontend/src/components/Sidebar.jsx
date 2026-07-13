@@ -391,6 +391,14 @@ const allNavItems = [
     ),
     label: "Support",
   },
+  {
+    key: "sms_compliance",
+    icon: (
+      <Icon d="M8 21h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2zM12 18h.01" />
+    ),
+    label: "SMS Compliance",
+    roles: ["owner", "admin"],
+  },
   // Platform-admin pages (admin_analytics, admin_promotions) are deliberately
   // NOT in the sidebar - every tenant saw the ADMIN section even though the
   // data behind it is admin-secret-gated. Reach them by direct URL:
@@ -411,7 +419,7 @@ const NAV_GROUPS = [
   {
     key: "communications",
     label: "COMMUNICATIONS",
-    items: ["conversations", "widget", "faq"],
+    items: ["conversations", "calls", "widget", "faq"],
   },
   {
     key: "settings",
@@ -424,6 +432,7 @@ const NAV_GROUPS = [
       "integrations",
       "integration_keys",
       "mcp_setup",
+      "sms_compliance",
       "settings",
       "inbound_channels",
       "support",
