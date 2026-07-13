@@ -11,6 +11,9 @@ last_updated: 2026-07-01
 
 Source-backed decisions, newest first.
 
+- 2026-07-13 — Cold outreach sourcing goes through **Google Places + site enrichment**, not listicle scraping or Instantly Lead Finder. Places gives real US SMB coverage + real published emails (~50% verify) vs guessed `info@` (~20%); Instantly Lead Finder is on the free tier (unusable). Source: [[Cold Outreach Engine]], this session.
+- 2026-07-13 — **Verify-before-send is mandatory** on all cold outreach. `instantly_lead_engine.py` verifies every email and deletes invalids before they can send — kept bounces at 0 across 371 loads. Never blast unverified `info@` guesses (would be ~50% bounce → domain suspension). Source: [[Cold Outreach Engine]].
+- 2026-07-13 — Do **not** override Instantly's per-inbox 20/day send cap. It's server-enforced ("AirMail dynamically manages higher limits") and protects warmup; accelerating it risks the 9 sending domains. Source: Instantly API 400 response, this session.
 - 2026-07-01 — Zapier plan_status enforcement (GH #107) approved AUTONOMOUS-EXECUTABLE — cancelled tenants currently retain Zapier API access after subscription ends; security/revenue fix, S effort. Source: commit 8a3b071 (subconscious run 75).
 - 2026-07-01 — SMS Compliance Dashboard de-scope rule — run 75 mandate: if the React page isn't shipped, de-scope to backend-only. Backend (`sms_compliance.py` + migration 160) is live; frontend page never started after 10+ days as subconscious winner. Source: commits e225b53, c3298be, 8a3b071.
 - 2026-06-28 — Widget-drift topic retired from subconscious permanently (run 70 mandate) — loop stops re-nominating it; `landing-page-v2/` sync stays human-owned because that path is forbidden to the autonomous stack. Drift itself synced 2026-07-01. Source: commit 86890cb + `docs/reminders/widget-drift-URGENT.md`.
