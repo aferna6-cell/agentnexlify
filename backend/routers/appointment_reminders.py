@@ -3,12 +3,20 @@
 Reminder scheduling happens inside ``backend.services.booking.create_appointment``
 (fired right after a booking confirms). This router exposes the two
 operational surfaces on top of that:
-  - ``POST /run`` — admin-secret-protected. Called by the scheduled job /
-    cron to send everything currently due. Same auth pattern as
-    ``backend/routers/admin_health.py`` (X-Api-Secret header,
-    ``hmac.compare_digest``).
+  - ``POST /run`` — admin-secret-protected. Sends everything currently due.
+    Same auth pattern as ``backend/routers/admin_health.py`` (X-Api-Secret
+    header, ``hmac.compare_digest``). MANUAL / not cron-wired: the live
+    reminder sender in prod is the legacy scheduler job
+    ``backend.services.automation.scheduled.appointment_jobs.send_appointment_reminders``
+    (wired in ``main.py`` startup, sends 24h + 1h email+SMS). Wiring this
+    ``/run`` to cron alongside that would double-text every customer. This
+    table-backed path is the cleaner future replacement; activate it only
+    after the legacy job is removed from the scheduler. The legacy job now
+    honors the same ``tenants.appointment_reminders_enabled`` toggle
+    (migration 165) that this router's settings endpoint controls.
   - ``GET/PUT /settings/{tenant_id}`` — JWT-protected dashboard toggle for
-    ``tenants.appointment_reminders_enabled`` (migration 165).
+    ``tenants.appointment_reminders_enabled`` (migration 165). Applies to the
+    live legacy sender today.
 """
 
 import hmac
