@@ -365,6 +365,10 @@ class WidgetChatRequest(BaseModel):
     message: str = Field(..., max_length=10000)
     content_mode: bool = False
     visitor_info: dict[str, Any] | None = None
+    # First-touch attribution captured by the widget at page load (utm_*,
+    # referrer, landing_path, source). Sanitized + stored on the lead when
+    # this session first produces one. See services/attribution.py.
+    attribution: dict[str, Any] | None = None
 
 
 class WidgetChatResponse(BaseModel):
@@ -413,6 +417,7 @@ class WidgetLeadRequest(BaseModel):
     email: str | None = Field(None, max_length=320)
     phone: str | None = Field(None, max_length=30)
     service: str | None = Field(None, max_length=500)
+    attribution: dict | None = None
 
 
 class WidgetLeadResponse(BaseModel):

@@ -292,35 +292,26 @@ def _should_retry(exc: Exception) -> bool:
     return any(token in name for token in ("ratelimit", "overloaded", "timeout", "apiconnection", "internalserver"))
 
 
-def call_claude_messages_sync(
+def _call_single_model(
     *,
+    call_id: str,
     operation: str,
     model: str,
     max_tokens: int,
     messages: list[dict[str, Any]],
-    temperature: float | None = 0.0,
-    output_config: dict[str, Any] | None = None,
-    system: str | None = None,
-    timeout: float = 30.0,
-    metadata: dict[str, Any] | None = None,
-    max_retries: int = 0,
-    retry_delay_seconds: float = 0.75,
+    temperature: float | None,
+    output_config: dict[str, Any] | None,
+    system: str | None,
+    timeout: float,
+    metadata: dict[str, Any] | None,
+    max_retries: int,
+    retry_delay_seconds: float,
+    started: float,
 ) -> ClaudeCallResult:
-    """Run a Claude messages.create call with timing and structured logs."""
-    call_id = uuid.uuid4().hex[:12]
+    """Run the retry loop for a single model. Raises the last exception on
+    exhausted retries so the caller (fallback loop or direct caller) decides
+    what to do next."""
     request_temperature = None if _requires_sampling_omission(model) else temperature
-    _log_start(
-        call_id,
-        operation,
-        model,
-        max_tokens,
-        request_temperature,
-        output_config,
-        system,
-        messages,
-        metadata,
-    )
-    started = time.perf_counter()
     attempts = 0
 
     while True:
@@ -347,9 +338,10 @@ def call_claude_messages_sync(
             duration_ms = int((time.perf_counter() - started) * 1000)
             retryable = _should_retry(exc) and attempts <= max_retries
             logger.warning(
-                "llm.call.retry_decision id=%s op=%s attempt=%d max_retries=%d retryable=%s error_type=%s",
+                "llm.call.retry_decision id=%s op=%s model=%s attempt=%d max_retries=%d retryable=%s error_type=%s",
                 call_id,
                 operation,
+                model,
                 attempts,
                 max_retries,
                 retryable,
@@ -377,6 +369,100 @@ def call_claude_messages_sync(
     return result
 
 
+def call_claude_messages_sync(
+    *,
+    operation: str,
+    model: str,
+    max_tokens: int,
+    messages: list[dict[str, Any]],
+    temperature: float | None = 0.0,
+    output_config: dict[str, Any] | None = None,
+    system: str | None = None,
+    timeout: float = 30.0,
+    metadata: dict[str, Any] | None = None,
+    max_retries: int = 0,
+    retry_delay_seconds: float = 0.75,
+    fallback_models: list[str] | None = None,
+    graceful_reply: str | None = None,
+) -> ClaudeCallResult:
+    """Run a Claude messages.create call with timing and structured logs.
+
+    `fallback_models` (optional) — when the primary `model` fails after its
+    own `max_retries`, try each fallback model in order with the same
+    messages/system/max_tokens before giving up. Existing callers that don't
+    pass `fallback_models` see zero behavior change: single model, raise on
+    failure.
+
+    `graceful_reply` (optional) — if every model (primary + fallbacks) fails,
+    return a canned `ClaudeCallResult` instead of raising. Leave unset to
+    keep today's behavior (raise the last exception).
+    """
+    call_id = uuid.uuid4().hex[:12]
+    request_temperature = None if _requires_sampling_omission(model) else temperature
+    _log_start(
+        call_id,
+        operation,
+        model,
+        max_tokens,
+        request_temperature,
+        output_config,
+        system,
+        messages,
+        metadata,
+    )
+    started = time.perf_counter()
+
+    models_to_try = [model, *(fallback_models or [])]
+    last_exc: Exception | None = None
+
+    for attempt_index, candidate_model in enumerate(models_to_try):
+        if attempt_index > 0:
+            logger.warning(
+                "llm.call.fallback id=%s op=%s model=%s from=%s",
+                call_id,
+                operation,
+                candidate_model,
+                model,
+            )
+        try:
+            return _call_single_model(
+                call_id=call_id,
+                operation=operation,
+                model=candidate_model,
+                max_tokens=max_tokens,
+                messages=messages,
+                temperature=temperature,
+                output_config=output_config,
+                system=system,
+                timeout=timeout,
+                metadata=metadata,
+                max_retries=max_retries,
+                retry_delay_seconds=retry_delay_seconds,
+                started=started,
+            )
+        except Exception as exc:  # noqa: BLE001 - deliberately broad: try next model
+            last_exc = exc
+            continue
+
+    if graceful_reply is not None:
+        duration_ms = int((time.perf_counter() - started) * 1000)
+        logger.warning(
+            "llm.call.graceful_fallback id=%s op=%s models_tried=%s error_type=%s",
+            call_id,
+            operation,
+            models_to_try,
+            type(last_exc).__name__ if last_exc else None,
+        )
+        return ClaudeCallResult(
+            text=graceful_reply,
+            duration_ms=duration_ms,
+            stop_reason="fallback_graceful",
+        )
+
+    assert last_exc is not None  # models_to_try always has >=1 entry
+    raise last_exc
+
+
 async def call_claude_messages(
     *,
     operation: str,
@@ -390,11 +476,14 @@ async def call_claude_messages(
     metadata: dict[str, Any] | None = None,
     max_retries: int = 0,
     retry_delay_seconds: float = 0.75,
+    fallback_models: list[str] | None = None,
+    graceful_reply: str | None = None,
 ) -> ClaudeCallResult:
     """Async wrapper for Claude messages.create that avoids blocking the event loop.
 
     Retries (and their backoff sleeps) run inside the executor thread, so the
-    event loop stays free even when max_retries > 0.
+    event loop stays free even when max_retries > 0. `fallback_models` and
+    `graceful_reply` pass straight through to `call_claude_messages_sync`.
     """
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(
@@ -412,5 +501,7 @@ async def call_claude_messages(
             metadata=metadata,
             max_retries=max_retries,
             retry_delay_seconds=retry_delay_seconds,
+            fallback_models=fallback_models,
+            graceful_reply=graceful_reply,
         ),
     )

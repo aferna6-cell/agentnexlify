@@ -286,6 +286,116 @@ def test_call_claude_messages_sync_retries_transient_failures():
         mock_sleep.assert_called_once()
 
 
+def test_call_claude_messages_sync_falls_back_to_next_model_on_primary_failure():
+    """(a) primary fails -> first fallback succeeds -> returns fallback text.
+
+    Also covers "respect _requires_sampling_omission per fallback model":
+    primary is a plain model (temperature sent), fallback is a reasoning-tier
+    model (temperature must be omitted on the fallback request)."""
+    fake_response = SimpleNamespace(
+        content=[SimpleNamespace(text="Fallback answered")],
+        usage=SimpleNamespace(
+            input_tokens=10, output_tokens=5,
+            cache_creation_input_tokens=0, cache_read_input_tokens=0,
+        ),
+        stop_reason="end_turn",
+    )
+
+    with patch("backend.services.llm_runtime.anthropic.Anthropic") as mock_client_cls, \
+         patch("backend.services.llm_runtime.logger") as mock_logger:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.messages.create.side_effect = [RuntimeError("primary down"), fake_response]
+
+        result = call_claude_messages_sync(
+            operation="unit.fallback",
+            model="claude-sonnet-4-6",
+            max_tokens=64,
+            temperature=0.4,
+            messages=[{"role": "user", "content": "hello"}],
+            fallback_models=["claude-opus-4-7"],
+        )
+
+    assert result.text == "Fallback answered"
+    assert result.stop_reason == "end_turn"
+    assert mock_client.messages.create.call_count == 2
+
+    first_kwargs = mock_client.messages.create.call_args_list[0].kwargs
+    second_kwargs = mock_client.messages.create.call_args_list[1].kwargs
+    assert first_kwargs["model"] == "claude-sonnet-4-6"
+    assert first_kwargs["temperature"] == 0.4
+    assert second_kwargs["model"] == "claude-opus-4-7"
+    assert "temperature" not in second_kwargs  # reasoning-tier fallback omits sampling params
+
+    fallback_logs = " ".join(str(call.args) for call in mock_logger.warning.call_args_list)
+    assert "llm.call.fallback" in fallback_logs
+    assert "claude-opus-4-7" in fallback_logs
+
+
+def test_call_claude_messages_sync_returns_graceful_reply_when_all_models_fail():
+    """(b) all fail + graceful_reply set -> canned text, stop_reason fallback_graceful."""
+    with patch("backend.services.llm_runtime.anthropic.Anthropic") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.messages.create.side_effect = [
+            RuntimeError("primary down"),
+            RuntimeError("fallback down"),
+        ]
+
+        result = call_claude_messages_sync(
+            operation="unit.graceful",
+            model="claude-sonnet-4-6",
+            max_tokens=64,
+            messages=[{"role": "user", "content": "hello"}],
+            fallback_models=["claude-haiku-4-5-20251001"],
+            graceful_reply="We're experiencing a temporary issue, please try again shortly.",
+        )
+
+    assert result.text == "We're experiencing a temporary issue, please try again shortly."
+    assert result.stop_reason == "fallback_graceful"
+    assert mock_client.messages.create.call_count == 2
+
+
+def test_call_claude_messages_sync_raises_when_all_models_fail_and_no_graceful_reply():
+    """(c) all fail + no graceful_reply -> still raises (backward compat)."""
+    with patch("backend.services.llm_runtime.anthropic.Anthropic") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.messages.create.side_effect = [
+            RuntimeError("primary down"),
+            RuntimeError("fallback down too"),
+        ]
+
+        with pytest.raises(RuntimeError, match="fallback down too"):
+            call_claude_messages_sync(
+                operation="unit.no_graceful",
+                model="claude-sonnet-4-6",
+                max_tokens=64,
+                messages=[{"role": "user", "content": "hello"}],
+                fallback_models=["claude-haiku-4-5-20251001"],
+            )
+
+    assert mock_client.messages.create.call_count == 2
+
+
+def test_call_claude_messages_sync_no_fallback_args_unchanged_behavior():
+    """(d) no fallback args -> unchanged behavior: single model, raises on failure."""
+    with patch("backend.services.llm_runtime.anthropic.Anthropic") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.messages.create.side_effect = RuntimeError("boom")
+
+        with pytest.raises(RuntimeError, match="boom"):
+            call_claude_messages_sync(
+                operation="unit.no_fallback",
+                model="claude-sonnet-4-6",
+                max_tokens=64,
+                messages=[{"role": "user", "content": "hello"}],
+            )
+
+    assert mock_client.messages.create.call_count == 1
+
+
 @pytest.mark.asyncio
 async def test_call_claude_messages_async_accepts_and_passes_retry_params():
     """Regression: async wrapper must accept max_retries/retry_delay_seconds.

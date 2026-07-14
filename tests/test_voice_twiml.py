@@ -48,3 +48,12 @@ def test_gather_and_goodbye_escape_ai_reply_text():
     for twiml in (gather, goodbye):
         assert "<Redirect>" not in twiml
         assert "&lt;Redirect&gt;" in twiml
+
+
+def test_voicemail_greeting_discloses_recording():
+    """CR4 — the caller must be told the call is recorded before the beep.
+
+    Compliance-gating (call-recording consent). Guard against silent removal.
+    """
+    twiml = _build_twiml_greeting("Acme Plumbing", "https://x/cb")
+    assert "recorded" in twiml.lower()

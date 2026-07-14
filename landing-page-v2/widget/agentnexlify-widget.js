@@ -212,6 +212,40 @@
     return sid;
   }
 
+  // First-touch attribution: capture utm_*/referrer/landing_path on the very
+  // first visit and persist it, so a lead created later in the session (or on a
+  // return visit) is credited to the channel that originally drove the visitor.
+  const ATTRIBUTION_KEY = "anx_attribution";
+  function getAttribution() {
+    try {
+      const stored = localStorage.getItem(ATTRIBUTION_KEY);
+      if (stored) return JSON.parse(stored);
+    } catch (e) {
+      /* corrupt/blocked storage - fall through and recompute */
+    }
+    const attr = {};
+    try {
+      const params = new URLSearchParams(window.location.search);
+      ["utm_source", "utm_medium", "utm_campaign"].forEach((k) => {
+        const v = params.get(k);
+        if (v) attr[k] = v.slice(0, 300);
+      });
+      if (document.referrer) attr.referrer = String(document.referrer).slice(0, 300);
+      if (window.location && window.location.pathname)
+        attr.landing_path = String(window.location.pathname).slice(0, 300);
+      attr.source = attr.utm_source || (document.referrer ? "referral" : "direct");
+    } catch (e) {
+      /* URL/referrer unavailable - return whatever we have */
+    }
+    if (Object.keys(attr).length === 0) return null;
+    try {
+      localStorage.setItem(ATTRIBUTION_KEY, JSON.stringify(attr));
+    } catch (e) {
+      /* storage blocked - attribution still sent this session, just not persisted */
+    }
+    return attr;
+  }
+
   function resetSession() {
     const sid = _newSessionId();
     localStorage.setItem(SESSION_KEY, sid);
@@ -1116,6 +1150,7 @@
         session_id: getSessionId(),
         message: text,
         content_mode: contentMode,
+        attribution: getAttribution(),
       }),
     });
     if (!resp.ok) {
