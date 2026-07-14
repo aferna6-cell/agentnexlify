@@ -6,7 +6,7 @@ approval-gated shape of `backend/services/os_sms_approval.py` — the AI only
 proposes (see `.claude/rules/propose-only-records.md`), a human approves,
 and posting to the external platform is a separate, not-yet-implemented step.
 
-Schema: migrations/166_review_responses.sql — `review_responses` table,
+Schema: migrations/168_review_responses.sql — `review_responses` table,
 `tenant_id` scoped (standard column, not the leads-table `client_id` pattern).
 
 Invariant: there is NO code path in this module that posts a response

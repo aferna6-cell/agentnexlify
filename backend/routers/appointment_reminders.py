@@ -13,9 +13,9 @@ operational surfaces on top of that:
     table-backed path is the cleaner future replacement; activate it only
     after the legacy job is removed from the scheduler. The legacy job now
     honors the same ``tenants.appointment_reminders_enabled`` toggle
-    (migration 165) that this router's settings endpoint controls.
+    (migration 167) that this router's settings endpoint controls.
   - ``GET/PUT /settings/{tenant_id}`` — JWT-protected dashboard toggle for
-    ``tenants.appointment_reminders_enabled`` (migration 165). Applies to the
+    ``tenants.appointment_reminders_enabled`` (migration 167). Applies to the
     live legacy sender today.
 """
 

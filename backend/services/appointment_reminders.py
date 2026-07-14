@@ -22,7 +22,7 @@ leads/conversations, which use client_id. See schema-discipline.md.
 
 Idempotency:
   - Scheduling: ``appointment_reminders`` has a UNIQUE (appointment_id,
-    reminder_type) constraint (migration 165) + upsert with
+    reminder_type) constraint (migration 167) + upsert with
     ``ignore_duplicates=True`` — re-scheduling the same appointment is a
     no-op for windows already scheduled.
   - Sending: every reminder row is claimed (status pending -> sending, gated

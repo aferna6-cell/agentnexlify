@@ -4,7 +4,7 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
-## 167_widget_proactive.sql (2026-07-14)
+## 169_widget_proactive.sql (2026-07-14)
 
 **What:** `proactive jsonb` (nullable) added to `widget_configs`.
 
@@ -14,7 +14,7 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
-## 166_review_responses.sql (2026-07-14)
+## 168_review_responses.sql (2026-07-14)
 
 **What:** New `review_responses` table — approval-gated AI review replies.
 
@@ -24,7 +24,7 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
-## 165_appointment_reminders.sql (2026-07-14)
+## 167_appointment_reminders.sql (2026-07-14)
 
 **What:** New `appointment_reminders` table + `tenants.appointment_reminders_enabled boolean NOT NULL DEFAULT true`.
 
@@ -1490,5 +1490,5 @@ Consumed by `backend/services/referral_reward.py` (gated on REFERRAL_REWARD_ENAB
 default OFF) and surfaced (earned credit) on `GET /api/v1/referral/my-stats`.
 
 
-## 164_leads_client_email_unique (2026-07-10)
+## 166_leads_client_email_unique (2026-07-10)
 Added `UNIQUE (client_id, email)` on `leads` (constraint `leads_client_email_uniq`) to close the duplicate-lead check-then-insert race (launch audit H1). NULLs stay distinct so phone-only leads are unaffected. Applied to prod. Insert sites switched to upsert-ignore-duplicates.

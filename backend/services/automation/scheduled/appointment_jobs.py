@@ -95,7 +95,7 @@ async def send_appointment_reminders() -> int:
                 if not tenant.data:
                     continue
                 tenant_data = tenant.data[0]
-                # Per-tenant opt-out (migration 165). Column defaults true, so
+                # Per-tenant opt-out (migration 167). Column defaults true, so
                 # this changes nothing until a tenant disables reminders.
                 if tenant_data.get("appointment_reminders_enabled") is False:
                     continue

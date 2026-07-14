@@ -10,7 +10,7 @@ path) — matches the approve-by-dashboard shape of the existing os_* approval
 routes rather than the `/api/v1/reviews/{tenant_id}/...` shape used by the
 older Reputation Manager router (backend/routers/reviews.py). The two
 routers are independent: this one owns `review_responses`
-(migrations/166_review_responses.sql), that one owns `reviews`.
+(migrations/168_review_responses.sql), that one owns `reviews`.
 """
 
 import logging
