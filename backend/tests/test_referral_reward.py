@@ -234,3 +234,103 @@ def test_async_wrapper_explicit_zero_is_noop(fake_db, monkeypatch):
 def test_async_wrapper_empty_id_noop(fake_db):
     asyncio.run(grant_referral_reward_for_signup(referred_tenant_id=None))
     assert _rewards(fake_db) == []
+
+
+# ---------------------------------------------------------------------------
+# Reward-granted email (GH #413 item 10)
+# ---------------------------------------------------------------------------
+
+
+def test_grant_sends_referrer_email(fake_db):
+    _seed_promo(fake_db)
+    with patch(
+        "backend.services.referral_reward_email.notify_reward_granted_sync"
+    ) as notify:
+        _grant_sync(REFERRED)
+
+    assert _rewards(fake_db)[0]["status"] == "granted"
+    notify.assert_called_once()
+    kwargs = notify.call_args.kwargs
+    assert kwargs["amount_cents"] == REFERRAL_REWARD_CENTS
+    assert kwargs["recipient"]  # referrer owner_email from the seed
+
+
+def test_email_failure_never_fails_the_grant(fake_db):
+    _seed_promo(fake_db)
+    with patch(
+        "backend.services.referral_reward_email.notify_reward_granted_sync",
+        side_effect=RuntimeError("resend down"),
+    ):
+        _grant_sync(REFERRED)  # must not raise
+
+    # The grant row stays granted even though the email exploded — the email
+    # path has its own try/except so it can never flip the row to failed.
+    rows = _rewards(fake_db)
+    assert rows and rows[0]["status"] == "granted"
+
+
+def test_no_email_when_grant_skipped(fake_db):
+    # No referrer seeded -> no grant -> no email
+    with patch(
+        "backend.services.referral_reward_email.notify_reward_granted_sync"
+    ) as notify:
+        _grant_sync(REFERRED)
+    notify.assert_not_called()
+
+
+class TestNotifyRewardGrantedSync:
+    def test_skips_without_api_key(self):
+        from backend.services import referral_reward_email as rre
+
+        with patch.object(rre, "logger"), patch(
+            "backend.config.settings.resend_api_key", ""
+        ):
+            ok = rre.notify_reward_granted_sync(
+                recipient="o@t.co", referrer_name="A", referred_name="B",
+                amount_cents=2000,
+            )
+        assert ok is False
+
+    def test_sends_via_resend_when_configured(self):
+        import resend
+
+        from backend.services import referral_reward_email as rre
+
+        with patch.object(resend.Emails, "send") as send, patch(
+            "backend.config.settings.resend_api_key", "re_test_key"
+        ):
+            ok = rre.notify_reward_granted_sync(
+                recipient="owner@biz.co", referrer_name="Biz A",
+                referred_name="Biz B", amount_cents=2000,
+            )
+        assert ok is True
+        params = send.call_args.args[0]
+        assert params["to"] == ["owner@biz.co"]
+        assert "$20" in params["subject"]
+        assert "Biz B" in params["html"]
+        assert "applied automatically" in params["html"]
+
+    def test_send_failure_returns_false_never_raises(self):
+        import resend
+
+        from backend.services import referral_reward_email as rre
+
+        with patch.object(
+            resend.Emails, "send", side_effect=RuntimeError("api down")
+        ), patch("backend.config.settings.resend_api_key", "re_test_key"):
+            ok = rre.notify_reward_granted_sync(
+                recipient="owner@biz.co", referrer_name="A",
+                referred_name="B", amount_cents=2000,
+            )
+        assert ok is False
+
+    def test_no_recipient_skips(self):
+        from backend.services import referral_reward_email as rre
+
+        assert (
+            rre.notify_reward_granted_sync(
+                recipient="", referrer_name="A", referred_name="B",
+                amount_cents=2000,
+            )
+            is False
+        )

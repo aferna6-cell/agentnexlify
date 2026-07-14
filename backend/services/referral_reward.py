@@ -241,6 +241,36 @@ def _grant_sync(referred_tenant_id):
             channel,
             txn.id,
         )
+
+        # GH #413: tell the referrer their credit landed. Own try/except so
+        # NOTHING in the email path can reach the outer handler and flip the
+        # already-granted row to failed.
+        try:
+            referred_name = ""
+            referred_result = (
+                db.table("tenants")
+                .select("business_name")
+                .eq("id", referred_tenant_id)
+                .limit(1)
+                .execute()
+            )
+            if referred_result.data:
+                referred_name = referred_result.data[0].get("business_name") or ""
+            from backend.services.referral_reward_email import (
+                notify_reward_granted_sync,
+            )
+
+            notify_reward_granted_sync(
+                recipient=owner_email,
+                referrer_name=referrer.get("business_name") or "",
+                referred_name=referred_name,
+                amount_cents=REFERRAL_REWARD_CENTS,
+            )
+        except Exception:
+            logger.warning(
+                "referral_reward: reward email failed — credit stays granted",
+                exc_info=True,
+            )
     except Exception as exc:
         _mark_failed(db, reward_id, f"{type(exc).__name__}: {exc}")
         logger.warning(
