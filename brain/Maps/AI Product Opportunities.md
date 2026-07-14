@@ -88,6 +88,16 @@ Round-2/frontier items built in one pass:
 - **#R1+#R2 photo-triage + quoting** — `photo_triage.py` (vision) + `quote_builder.py` (catalog-grounded, hard "never invent prices") + migration 171 + endpoints + widget triage-on-upload.
 Deferred (flagged): re-baseline `PLAN_BASELINE_TOKENS` for Sonnet 5's tokenizer; cron-wire the Bot-Health sweep; dashboards for both.
 
+## Shipped 2026-07-14 (PR #431, round-3 items — merged to main, live in prod)
+Compliance + ops items built + merged:
+- **CR1/CR4 voice disclosure** — AI-identification + recording notice in the AI-call greeting (before first prompt) + recording notice in the voicemail greeting. Non-disableable, regression-tested.
+- **CR5 chatbot disclosure** — already shipped in the widget greeting; verified, no change.
+- **#T2 attribution** — migration 172 (`leads.attribution jsonb`, applied prod); widget captures first-touch utm/referrer/landing_path/source; stored via the LIVE chat capture path (`_capture_leads_from_session`) + explicit form; first-touch only; `attribution.py` sanitizer.
+- **#T3 injection guard** — `widget_guard.py` (Haiku screen, fail-open) + per-session turn budget, wired into `widget_chat` before the Sonnet call.
+- **#T4 LLM fallback** — opt-in `fallback_models` + `graceful_reply` in `llm_runtime`; default behavior unchanged.
+- **#T1 auto-onboarding** — already ships as `instant_kb.py` (`/api/v1/instant-kb/{tenant_id}/draft` + `/confirm`, SSRF-checked); no duplicate built.
+Still deferred (need external creds): CR2/CR3 A2P status (Twilio Messaging Service), #T5 FSM OAuth (Jobber/QuickBooks/ServiceTitan), #T6 Stripe usage metering.
+
 ## Frontier update 2026-07-14 (model stack is ~2 generations stale)
 **Critical:** CLAUDE.md / `.claude/rules` still pin `claude-opus-4-7` + `claude-sonnet-4-6` as newest.
 Anthropic shipped **Opus 4.8** and **Sonnet 5** on 2026-06-30. The whole model-routing surface is stale
