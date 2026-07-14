@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-07-13-pm",
-  "total_runs": 92,
+  "last_run": "2026-07-14",
+  "total_runs": 93,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -89,8 +89,40 @@
     "total_runs": "91 → 92",
     "last_run": "2026-07-13 → 2026-07-13-pm"
   },
-  "run_93_mandate": "1. Keys Koffee: did human email/call for business hours? GH #415 actioned (comment or close)? 2. First real booking — did funnel move from 0 to 1? AdminFunnelPage Booked stage is now live (PR #417). 3. GH #413 referral: did run 92 'activate now' reframe get a human response? REFERRAL_REWARD_ENABLED=1 set in Railway? 4. GH #399 resolved (Day 10+, autopilot loop running)? 5. GH #403 resolved (Day 10+, KB autopopulate resumed)? 6. Low-priority: close GH #414 as duplicate of GH #415.",
+  "run_93_mandate": "EXECUTED 2026-07-14. All 6 items checked: (1) GH #415 Keys Koffee — 0 human responses after Day-21 mandate (run 92). Day 22. (2) First real booking — 0. AdminFunnelPage 0/3. (3) GH #413 referral — 0 human responses after 4 autonomous runs (89-92). REFERRAL_REWARD_ENABLED not set. (4) GH #399 — OPEN Day 10, loop dead, 40 ai-ready issues stalled. (5) GH #403 — OPEN Day 10, KB autopopulate 69 days dark. (6) GH #414 — CLOSED as duplicate of #415 (run 93 action complete). Run 93 winner: connector_awareness.py cross-tenant isolation test (code_health, XS, AUTONOMOUS-EXECUTABLE).",
+  "run_93_governance_corrections": {
+    "mandate_check_1_gh415_human_response": "NONE — 0 human responses after Day-21 mandate. Day 22.",
+    "mandate_check_2_real_bookings": 0,
+    "mandate_check_3_gh413_human_response": "NONE — 0 human responses after 4 autonomous runs (89-92). REFERRAL_REWARD_ENABLED not set.",
+    "mandate_check_4_gh399_resolved": "OPEN Day 10 — 40 ai-ready issues stalled, loop dead",
+    "mandate_check_5_gh403_resolved": "OPEN Day 10 — KB autopopulate stalled 69 days",
+    "mandate_check_6_gh414_closed": "CLOSED as duplicate of GH #415 via mcp__github__issue_write",
+    "pattern_note": "Runs 88-92 = 5 consecutive customer_value winners, 0 human action on any. Run 93 switches to code_health (autonomous). Parking lot note: Idea 1 (referral email build) triggers at run 95 if GH #413 still 0 action.",
+    "connector_awareness_bug_found": "7a9047f — same-day fix for source='chat' thread filter gap. 370 unit tests cover behavior, zero cover isolation.",
+    "gh_414_closed_at": "2026-07-14",
+    "days_since_real_booking": 22,
+    "kb_autopopulate_stale_days": 69,
+    "ai_ready_issues_queued": 40,
+    "total_runs": "92 -> 93",
+    "last_run": "2026-07-13-pm -> 2026-07-14"
+  },
+  "run_94_mandate": "1. Did nightly-commit-review implement backend/tests/test_connector_awareness_isolation.py? Check git log. 2. GH #415 Keys Koffee: human acted? First real booking (funnel 0 -> 1)? 3. GH #413: REFERRAL_REWARD_ENABLED set? If STILL 0 human action at run 94 mandate check: run 95 winner MUST be Idea 1 (build referral email — code approach after comment approach exhausted at 5 runs). 4. GH #399 resolved? GH #403 resolved? 5. Lead Source Analytics GH issue: draft PR opened by autopilot loop?",
   "active_directions": [
+    {
+      "title": "connector_awareness.py cross-tenant isolation test — backend/tests/test_connector_awareness_isolation.py (run 93 winner)",
+      "date": "2026-07-14",
+      "confidence": "HIGH",
+      "status": "pending_nightly_implementation",
+      "autonomous_executable": true,
+      "requires_human": false,
+      "category": "code_health",
+      "moratorium_override": false,
+      "source_run": 93,
+      "effort": "XS",
+      "evidence": "commit 45401ec (2026-07-11): connector_awareness.py — 208L service, 370 tests. commit 7a9047f (2026-07-11, same day): bug — connect prompt fired for source='chat' dashboard threads (wrong-dimension filter). 370 tests cover behavior, zero cover isolation. Connector prompts include tenant-specific connector data. Cross-tenant leak = trust breach. Run 53 precedent: same pattern caught in os_action_dispatch.py — isolation test implemented by nightly, caught real regression.",
+      "action": "nightly-commit-review writes backend/tests/test_connector_awareness_isolation.py with: (1) two-tenant isolation test (Tenant A's prompt has no Tenant B data), (2) source='chat' regression guard for 7a9047f.",
+      "note": "Run 93 winner. Pattern break: runs 88-92 all customer_value with zero human action. Run 93 switches to code_health — autonomous. Parking lot: Idea 1 (referral email build) triggers at run 95 if GH #413 still 0 human action."
+    },
     {
       "title": "Day-21 Keys Koffee booking escalation — GH #415 comment with confirmed diagnostic + GH #413 activate-now reframe (run 92 winner)",
       "date": "2026-07-13-pm",
