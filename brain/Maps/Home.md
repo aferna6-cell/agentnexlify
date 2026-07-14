@@ -27,6 +27,7 @@ business, **[[AgentNexLiFy]]**. Scope: business/builder only (personal/student e
 - [[Product Map]] — how the product fits together
 - [[Decision Log]] — decisions with rationale
 - [[Open Loops]] — what's unfinished
+- [[AI Product Opportunities]] — AI innovations mapped to product moves
 - [[GitHub Activity]] — repo snapshot + history
 - [[Database Schema]] — the production DB
 
