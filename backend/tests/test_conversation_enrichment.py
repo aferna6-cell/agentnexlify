@@ -282,3 +282,200 @@ async def test_run_pending_enrichment_one_row_failure_continues():
 
     # one failed, one classified
     assert "classified 1/2" in status
+
+
+# ---------------------------------------------------------------------------
+# Batch job (#F11 -- Anthropic Message Batches variant)
+# ---------------------------------------------------------------------------
+
+
+def _job_db_with_transcript(pending_rows, transcript_rows):
+    """Same as _job_db, but the chat_messages select chain (used by
+    _load_transcript) returns transcript_rows regardless of session_id."""
+    db = MagicMock()
+
+    pending_chain = MagicMock()
+    pending_chain.is_.return_value = pending_chain
+    pending_chain.lte.return_value = pending_chain
+    pending_chain.gte.return_value = pending_chain
+    pending_chain.order.return_value = pending_chain
+    pending_chain.limit.return_value = pending_chain
+    pending_chain.execute.return_value = SimpleNamespace(data=pending_rows)
+
+    transcript_chain = MagicMock()
+    transcript_chain.eq.return_value = transcript_chain
+    transcript_chain.order.return_value = transcript_chain
+    transcript_chain.limit.return_value = transcript_chain
+    transcript_chain.execute.return_value = SimpleNamespace(data=transcript_rows)
+
+    def _select(cols):
+        if "chat_messages" not in str(cols) and "role" in cols:
+            return transcript_chain
+        return pending_chain
+
+    conversations_table = MagicMock()
+    conversations_table.select.return_value = pending_chain
+
+    chat_messages_table = MagicMock()
+    chat_messages_table.select.return_value = transcript_chain
+
+    persisted: dict[str, dict] = {}
+
+    def _update(values):
+        chain = MagicMock()
+        chain.eq.return_value = chain
+        chain.execute.return_value = SimpleNamespace(data=[{}])
+        persisted.setdefault("last", {}).update(values)
+        return chain
+
+    conversations_table.update.side_effect = _update
+
+    def _table(name):
+        return chat_messages_table if name == "chat_messages" else conversations_table
+
+    db.table.side_effect = _table
+    return db, persisted
+
+
+async def test_run_pending_enrichment_batch_submits_one_batch_and_persists():
+    pending = [
+        {"client_id": "t1", "session_id": "s1", "last_message_at": "2026-06-01T00:00:00Z"},
+    ]
+    transcript_rows = [{"role": "user", "content": "Do you do brakes?"}]
+    db, persisted = _job_db_with_transcript(pending, transcript_rows)
+
+    ended_status = SimpleNamespace(ended=True)
+    result_item = SimpleNamespace(
+        status="succeeded", text='{"sentiment": "positive", "intent": "pricing question"}'
+    )
+
+    with patch.object(cej, "get_service_supabase", return_value=db), patch.object(
+        cej.batch_runtime, "submit_batch", return_value="batch_1"
+    ) as mock_submit, patch.object(
+        cej.batch_runtime, "poll_batch", return_value=ended_status
+    ) as mock_poll, patch.object(
+        cej.batch_runtime, "get_batch_results", return_value={"enrich-0-s1": result_item}
+    ) as mock_results:
+        status = await cej.run_pending_enrichment_batch(poll_interval_seconds=0)
+
+    mock_submit.assert_called_once()
+    submitted_requests = mock_submit.call_args.args[0]
+    assert len(submitted_requests) == 1
+    assert submitted_requests[0]["custom_id"] == "enrich-0-s1"
+    assert submitted_requests[0]["params"]["model"] == cej.CLASSIFY_MODEL
+    assert submitted_requests[0]["params"]["max_tokens"] == cej._MAX_OUTPUT_TOKENS
+    assert submitted_requests[0]["params"]["messages"][0]["role"] == "user"
+
+    mock_poll.assert_called_once_with("batch_1")
+    mock_results.assert_called_once_with("batch_1")
+    assert "classified 1/1" in status
+    assert persisted["last"] == {"sentiment": "positive", "intent": "pricing question"}
+
+
+async def test_run_pending_enrichment_batch_nothing_pending():
+    db = _job_db([])
+    with patch.object(cej, "get_service_supabase", return_value=db):
+        status = await cej.run_pending_enrichment_batch()
+    assert "nothing pending" in status
+
+
+async def test_run_pending_enrichment_batch_lookup_failure_returns_status():
+    db = MagicMock()
+    db.table.side_effect = RuntimeError("query blew up")
+    with patch.object(cej, "get_service_supabase", return_value=db):
+        status = await cej.run_pending_enrichment_batch()
+    assert "lookup failed" in status
+
+
+async def test_run_pending_enrichment_batch_submit_failure_returns_status():
+    pending = [
+        {"client_id": "t1", "session_id": "s1", "last_message_at": "2026-06-01T00:00:00Z"},
+    ]
+    transcript_rows = [{"role": "user", "content": "hi"}]
+    db, _ = _job_db_with_transcript(pending, transcript_rows)
+
+    with patch.object(cej, "get_service_supabase", return_value=db), patch.object(
+        cej.batch_runtime, "submit_batch", return_value=None
+    ):
+        status = await cej.run_pending_enrichment_batch()
+
+    assert "submit failed" in status
+
+
+async def test_run_pending_enrichment_batch_gives_up_gracefully_when_not_ended():
+    pending = [
+        {"client_id": "t1", "session_id": "s1", "last_message_at": "2026-06-01T00:00:00Z"},
+    ]
+    transcript_rows = [{"role": "user", "content": "hi"}]
+    db, persisted = _job_db_with_transcript(pending, transcript_rows)
+
+    still_processing = SimpleNamespace(ended=False)
+
+    with patch.object(cej, "get_service_supabase", return_value=db), patch.object(
+        cej.batch_runtime, "submit_batch", return_value="batch_1"
+    ), patch.object(
+        cej.batch_runtime, "poll_batch", return_value=still_processing
+    ) as mock_poll, patch.object(
+        cej.batch_runtime, "get_batch_results"
+    ) as mock_results:
+        status = await cej.run_pending_enrichment_batch(
+            max_poll_attempts=2, poll_interval_seconds=0
+        )
+
+    assert mock_poll.call_count == 2
+    mock_results.assert_not_called()
+    assert "still processing" in status
+    assert "batch_1" in status
+    assert persisted == {}
+
+
+async def test_run_pending_enrichment_batch_poll_failure_returns_status():
+    pending = [
+        {"client_id": "t1", "session_id": "s1", "last_message_at": "2026-06-01T00:00:00Z"},
+    ]
+    transcript_rows = [{"role": "user", "content": "hi"}]
+    db, _ = _job_db_with_transcript(pending, transcript_rows)
+
+    with patch.object(cej, "get_service_supabase", return_value=db), patch.object(
+        cej.batch_runtime, "submit_batch", return_value="batch_1"
+    ), patch.object(cej.batch_runtime, "poll_batch", return_value=None):
+        status = await cej.run_pending_enrichment_batch()
+
+    assert "poll failed" in status
+
+
+async def test_run_pending_enrichment_batch_errored_result_not_persisted():
+    pending = [
+        {"client_id": "t1", "session_id": "s1", "last_message_at": "2026-06-01T00:00:00Z"},
+    ]
+    transcript_rows = [{"role": "user", "content": "hi"}]
+    db, persisted = _job_db_with_transcript(pending, transcript_rows)
+
+    ended_status = SimpleNamespace(ended=True)
+    errored_item = SimpleNamespace(status="errored", text=None)
+
+    with patch.object(cej, "get_service_supabase", return_value=db), patch.object(
+        cej.batch_runtime, "submit_batch", return_value="batch_1"
+    ), patch.object(
+        cej.batch_runtime, "poll_batch", return_value=ended_status
+    ), patch.object(
+        cej.batch_runtime, "get_batch_results", return_value={"enrich-0-s1": errored_item}
+    ):
+        status = await cej.run_pending_enrichment_batch()
+
+    assert "classified 0/1" in status
+    assert persisted == {}
+
+
+async def test_run_pending_enrichment_batch_skips_rows_missing_ids_or_empty_transcript():
+    pending = [
+        {"client_id": None, "session_id": "s1", "last_message_at": "2026-06-01T00:00:00Z"},
+        {"client_id": "t1", "session_id": "s2", "last_message_at": "2026-06-01T00:00:00Z"},
+    ]
+    # empty transcript for the surviving row -> _load_transcript returns ""
+    db, _ = _job_db_with_transcript(pending, [])
+
+    with patch.object(cej, "get_service_supabase", return_value=db):
+        status = await cej.run_pending_enrichment_batch()
+
+    assert "nothing to classify" in status
