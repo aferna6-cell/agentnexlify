@@ -43,6 +43,34 @@ ai_llm:
     - https://www.anthropic.com/engineering
     - https://www.anthropic.com/research
 
+frontier_ai:
+  # Broad frontier AI across ALL labs (not just Claude). Purpose: stay ahead —
+  # (a) spot new capabilities AgentNexLiFy can adopt in the widget / agent /
+  # voice, and (b) detect moat threats early (a competitor or platform shipping
+  # what we sell). Score for "can we use this" or "does this threaten us".
+  search_queries:
+    - "frontier AI model release 2026"
+    - "GPT-5 capabilities benchmark 2026"
+    - "Google Gemini 3 release capabilities"
+    - "Claude Opus 5 release 2026"
+    - "open source LLM frontier DeepSeek Llama Qwen 2026"
+    - "AI agent SWE-bench state of the art 2026"
+    - "computer-use agent capability 2026"
+    - "realtime AI voice agent breakthrough 2026"
+    - "LLM cost per token drop 2026"
+    - "autonomous AI coding agent 2026"
+    - "AI long-context memory breakthrough 2026"
+    - "small business AI adoption trend 2026"
+    - "AI receptionist voice frontier model"
+    - "multimodal AI agent tool use 2026"
+  blogs:
+    - https://openai.com/news
+    - https://deepmind.google/discover/blog
+    - https://ai.meta.com/blog
+    - https://www.anthropic.com/news
+    - https://simonwillison.net
+    - https://www.latent.space
+
 small_biz_saas:
   search_queries:
     - "small business SaaS churn benchmark 2026"
