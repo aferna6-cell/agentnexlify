@@ -18289,3 +18289,14 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** backend/services/os_thread_runner.py,backend/tests/test_connector_awareness.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Merge PR #430: voice KB dedupe hotfix + brain frontier update (rounds 1-2)
+
+Voice KB dedupe hotfix (fixes red CI on main) + brain frontier update
+**Date:** 2026-07-14
+**Commit:** 82283ea
+**Author:** aferna6-cell
+**Files Changed:** 
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
