@@ -1148,6 +1148,47 @@
     return resp.json();
   }
 
+  // --- Photo triage (#R1) ---
+  // For image uploads only: read the file as base64 and ask the vision
+  // endpoint for an urgency + scope assessment. Purely additive and
+  // non-blocking - any failure returns null and the normal upload flow is
+  // unaffected. Returns {urgency, category, scope_summary, recommended_action}
+  // or null.
+  async function triagePhotoIfImage(file) {
+    if (!API_KEY || !API_BASE || !file || !/^image\//.test(file.type || "")) {
+      return null;
+    }
+    try {
+      const dataUrl = await new Promise(function (resolve, reject) {
+        const reader = new FileReader();
+        reader.onload = function () {
+          resolve(String(reader.result || ""));
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const comma = dataUrl.indexOf(",");
+      if (comma < 0) return null;
+      const base64 = dataUrl.slice(comma + 1);
+      const resp = await fetchWithTimeout(`${API_BASE}/api/v1/photo-triage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          api_key: API_KEY,
+          images: [{ media_type: file.type, data: base64 }],
+          session_id: getSessionId(),
+        }),
+      });
+      if (!resp.ok) return null;
+      const data = await resp.json();
+      if (data && data.status === "ok" && data.urgency) return data;
+      return null;
+    } catch (e) {
+      console.error("AgentNexLiFy: photo triage failed", e);
+      return null;
+    }
+  }
+
   // --- Menu panel ---
   function toggleMenuPanel() {
     const panel = document.getElementById("anx-menu-panel");
@@ -1599,6 +1640,22 @@
       );
       hideTyping();
       addMessage("assistant", data.response);
+
+      // #R1 photo triage - additive vision assessment for image uploads.
+      // Never blocks or breaks the upload flow: on any failure it is a no-op.
+      try {
+        const triage = await triagePhotoIfImage(file);
+        if (triage && triage.urgency) {
+          const label =
+            triage.urgency.charAt(0).toUpperCase() + triage.urgency.slice(1);
+          const action = triage.recommended_action
+            ? " " + triage.recommended_action
+            : "";
+          addMessage("assistant", `Assessment: ${label} priority.${action}`);
+        }
+      } catch (e) {
+        console.error("AgentNexLiFy: photo triage step failed", e);
+      }
 
       if (data.trial_expired) {
         disableWidgetInput("Your free trial has expired.");
