@@ -129,13 +129,65 @@ and should be re-audited (this session's own runner is Opus 4.8). Web research 2
 - **Drillbit (YC S24)** — AI receptionist + **LLM quoting engine** (job request → detailed quote in seconds)
   for residential trades. Vertical quoting is a capability we lack. Source: https://www.ycombinator.com/companies/drillbit
 
-## Priority read
-Fastest ROI with least build: **#F1 Sonnet 5 swap** (S effort, smarter+cheaper, de-risks everything) then
-**#F3 structured outputs** (kills a live bug class). Highest strategic value: **#F2 contextual retrieval +
-reranker** (the moat upgrade the old #4 pointed at). Cost lever at scale: **#F4 prompt caching + Batch**.
-Trust/retention: **#F6 grounding guardrails**. Bigger bet / watch item: **#F7 streaming voice** (where
-GHL/Podium/Phonely are ahead). First housekeeping step: re-audit the model IDs in `.claude/rules/model-routing.md`
-and CLAUDE.md against Opus 4.8 / Sonnet 5.
+## Frontier round 2 — 2026-07-14 (new angles: vision, quoting, GEO, evals, compounding)
+Second research pass into surfaces round 1 didn't cover. New revenue/retention SKUs, not just runtime tweaks.
+
+- **#R1 — Photo-triage in the widget (vision → damage/scope).** Caller uploads 1–3 photos (burst pipe, roof,
+  dent); Claude vision triages urgency + scope → routes to urgency-scored booking, attaches photo to the lead.
+  Production-viable now (Tractable: 90% of auto estimates touchless, 98% <15 min). Surfaces: widget flow +
+  multimodal `/api/chat` + `leads` photo/triage fields. Gate behind `agent_os` / a Vision add-on. Effort M / Impact High.
+  Source: https://tractable.ai/ · https://myquoteiq.com/ai-estimator/
+- **#R2 — AI instant-quoting engine (the Drillbit wedge).** Job request (text or #R1 photo) → itemized
+  Good/Better/Best quote grounded in the *tenant's own price list/catalog* — a natural extension of our KB moat.
+  Drillbit/Handoff/QuoteIQ do this standalone; we already own the multi-channel front door (widget + voice) they
+  bolt onto. New "Quote Builder" surface; premium/metered tier. Effort L / Impact High.
+  Source: https://www.handoff.ai/instant-ai-estimates · https://app.drillbit.com/
+- **#R3 — GEO add-on SKU (get tenants cited in AI answers).** Distinct from our SEO addon: SEO ranks pages, GEO
+  wins ChatGPT/Perplexity/Google-AI citations. AI search ≈12–18% of informational queries; agencies already sell
+  this at **$500–2k/mo/client**. Ship citation-tracking dashboard + AI-citable content generator. Strongest new
+  *margin* story. Effort M / Impact High.
+  Source: https://www.enrichlabs.ai/blog/generative-engine-optimization-geo-complete-guide-2026
+- **#R4 — Per-tenant Bot-Health evals (the retention layer).** LLM-as-judge on ~100% of tenant traffic —
+  resolution rate, hallucination flags, unresolved-intent clusters, sentiment trend — with a "your bot is
+  degrading / KB gap detected" alert. Turns silent churn into a dashboard signal + upsell. Cheap to run
+  continuously via #F4/#R7. Ties to the `churn-prevention` skill. Effort M / Impact High.
+  Source: https://www.confident-ai.com/knowledge-base/compare/best-ai-agent-observability-tools-2026
+- **#R5 — GEPA per-tenant prompt compounding (no fine-tuning).** Reflective prompt evolution (ICLR 2026 Oral):
+  optimize each tenant's system prompt from its own resolved/escalated conversations + the #R4 eval scores —
+  beats RL by ~20% at ~35x fewer rollouts, weights frozen, no per-tenant GPU. This is "each tenant's agent gets
+  smarter for free" (Phonely's moat, prompt-side). Offline job → `widget_configs`. Depends on #R4. Effort L–M / Impact High.
+  Source: https://arxiv.org/pdf/2507.19457 · https://github.com/gepa-ai/gepa
+- **#R6 — Reactivation / no-show win-back (outbound).** Dormant-contact detector → AI-personalized SMS/email →
+  booking, on the `leads`/`appointments` data we already hold. A headline GHL/agency feature we can match
+  natively. `agent_os`-tier expansion. Effort M / Impact High (figures vendor-reported, directional).
+  Source: https://octavius.ai/ai-sms-for-database-reactivation/
+- **#R7 — Cost floor that makes #R4/#R5/#R6 margin-safe.** Haiku 4.5 $1/$5 per M, cached reads 0.1x, Batch 50% off,
+  and they stack. Route all always-on eval/optimization/outbound through Haiku + cache + Batch; centralize in
+  `llm_runtime.py`. Not a feature — the economic enabler for the round-2 bets. Effort S / Impact Med.
+  Source: https://www.finout.io/blog/anthropic-api-pricing
+- **#R8 — Vertical-as-Agent-Skill + MCP vertical data.** Model each vertical (plumber/dentist/roofer) as an
+  Agent Skill (progressive-disclosure folder: KB + quoting rules + booking flow + tone) → deep vertical expertise
+  without bloating every request. MCP connectors can feed authoritative pricing (Verisk-in-Claude pattern, ~May
+  2026) to ground #R2. Operationalizes the moat as a reusable unit. Effort M / Impact Med–High.
+  Source: https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills
+
+## Competitor signals round 2 (2026-07-14)
+- **[[GoHighLevel]] "Summer of AI" (July):** Voice AI moved to **GPT-5 Mini**, sub-600ms, **20+ accents +
+  multilingual**, direct model selection. Our voice product should expose model/voice/language choice for parity.
+  Source: https://netpartners.marketing/gohighlevel-voice-ai-promo-july-2026/
+- **Twilio RCS GA:** branded messaging auto-upgrades SMS→RCS on capable devices at no extra cost; 20+ countries.
+  Low-friction to add via our existing Twilio dependency (the RCS gap noted in round 1). Source: https://www.twilio.com/en-us/press/releases/rcs-general-availability
+- **Verisk-in-Claude (~May):** vertical data vendors now ship MCP connectors into Claude — validates the
+  "ground the agent in authoritative vertical data" thesis behind #R8/#R2.
+
+## Priority read (unified, both rounds)
+**Do first / cheap + high:** #F1 Sonnet 5 swap → #F3 structured outputs (kills a live bug class) → #R7 cost-floor
+plumbing. **Highest strategic value (the moat):** #F2 contextual retrieval + reranker, then #R5 GEPA per-tenant
+compounding. **Biggest new revenue:** #R1+#R2 photo-triage + instant quoting (attacks Drillbit on our own front
+door). **Best new margin SKU:** #R3 GEO add-on. **Strongest retention lever:** #R4 Bot-Health evals (also the
+prerequisite for #R5). **Match-competitor:** #R6 reactivation outbound + expose voice model/language selection
+(GHL parity) + RCS via Twilio. **Bigger bet / watch:** #F7 streaming voice. **First housekeeping step:** re-audit
+model IDs in `.claude/rules/model-routing.md` + CLAUDE.md against Opus 4.8 / Sonnet 5 (this session runs on Opus 4.8).
 
 ## Related
 - [[Chat Widget]] · [[Agent Service]] · [[Knowledge Base Wiki]] · [[Vertical Knowledge-Base Moat]] · [[GoHighLevel]] · [[G3 voice live-answering]] · [[Cold Outreach Engine]]
