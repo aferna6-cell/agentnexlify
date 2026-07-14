@@ -366,3 +366,5 @@ URLs kept in known-urls.json to prevent retry.
 ## [2026-05-05 18:28] discover+compile | cron 18:00 | commits=15 raw=6 wiki=7
 
 ## [2026-07-09 14:00] backfill | 2026-05-05 cron-gap resolved — 4 pending articles upserted to prod kb_articles via Supabase MCP (birdeye-multi-location-reputation-platforms-2026, anthropic-economic-index-learning-curves-march-2026, anthropic-finance-agents-may-2026, supabase-us-east-2-bpa-incident-feb-2026). kb_articles 28→32. FTS verified. Embeddings still deferred (VOYAGE_API_KEY owner-gated) — retrieval works via content_tsv fallback. Root cause of the 63-day staleness: kb-autopopulate.yml ran with EMPTY ANTHROPIC_API_KEY/VOYAGE_API_KEY/SUPABASE_ACCESS_TOKEN secrets and continue-on-error:true masked the failure as success; workflow now files a human-action-required issue instead.
+
+## [2026-07-13 20:00] discover (frontier_ai) | manual proof run | wiki=2 (frontier-model-landscape-2026-h2, ai-voice-agents-sub-300ms-2026) | new category frontier_ai live
