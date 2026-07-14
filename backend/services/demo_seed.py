@@ -1379,15 +1379,19 @@ def _seed_demo_tenant(db: Any, vertical: str) -> str | None:
 
     # 2. Widget config
     try:
+        import secrets as _secrets
+
         db.table("widget_configs").insert({
             "tenant_id": tenant_id,
+            # api_key is NOT NULL - omitting it also made this insert fail
+            "api_key": f"anx_{_secrets.token_urlsafe(32)}",
             "bot_name": cfg["bot_name"],
             "primary_color": cfg["primary_color"],
             "greeting_message": cfg["greeting_message"],
             "position": "bottom-right",
-            "collect_name": True,
-            "collect_email": True,
-            "collect_phone": True,
+            # collect_name/email/phone columns never existed on widget_configs
+            # - they made this insert fail silently for every vertical (found
+            # 2026-07-14: salon + financial demos had NO widget at all).
             "show_watermark": False,
             "booking_enabled": True,
             "knowledge_base": cfg["knowledge_base"],

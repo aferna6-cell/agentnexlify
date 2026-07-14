@@ -45,7 +45,8 @@ You are running the automated morning routine for AgentNexLiFy. You are in headl
 
 ## Step 1: Health Check
 Run these checks and record the results:
-1. Run `bash scripts/daily/health-check.sh` and capture its results first (dangerous router imports, bare except count, silent frontend catch count, widget sync, .env gitignore status)
+1. Run `bash scripts/daily/health-check.sh` and capture its results first (dangerous router imports, bare except count, silent frontend catch count, widget sync, .env gitignore status, and the error_events_* lines - the prod 500 report)
+1b. Surface the error_events_* lines VERBATIM in the digest under a "Prod errors (24h)" heading. If error_events_24h > 0, treat it as Priority 1: include the top paths + latest message and add an investigation task.
 2. Check for hardcoded API keys/tokens in code files (sk_live_, sk_test_, sk-ant-)
 3. Scan for TODO/FIXME comments in backend/ and frontend/src/ and count them
 

@@ -220,14 +220,49 @@ export default function ReferralPage() {
       <div className="settings-card" style={{ marginBottom: "1.5rem" }}>
         <div
           style={{
+            fontSize: "0.75rem",
+            fontWeight: 600,
+            color: "var(--accent)",
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            marginBottom: "0.75rem",
+          }}
+        >
+          How the reward works
+        </div>
+        <ol
+          style={{
             fontSize: "0.875rem",
+            color: "var(--text-secondary)",
+            margin: 0,
+            paddingLeft: "1.25rem",
+            display: "grid",
+            gap: "0.4rem",
+          }}
+        >
+          <li>Share your link with another business owner.</li>
+          <li>
+            They sign up through it and pay their first invoice - that&apos;s
+            the moment your reward qualifies.
+          </li>
+          <li>
+            <strong style={{ color: "var(--text-primary)" }}>
+              $20 in account credit
+            </strong>{" "}
+            lands on your account automatically (applied to your next
+            AgentNexLiFy bill) and we email you a confirmation. No forms, no
+            claiming.
+          </li>
+        </ol>
+        <div
+          style={{
+            marginTop: "0.75rem",
+            fontSize: "0.8rem",
             color: "var(--text-secondary)",
           }}
         >
-          Earn <strong style={{ color: "var(--text-primary)" }}>$20 in
-          account credit</strong> for every business you refer, the moment they
-          pay their first invoice. Credit is applied automatically to your next
-          AgentNexLiFy bill.
+          There&apos;s no cap - every business you refer earns another $20.
+          Self-referrals don&apos;t qualify.
         </div>
       </div>
 
