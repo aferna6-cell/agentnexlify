@@ -173,6 +173,51 @@ def _requires_sampling_omission(model: str) -> bool:
     return model in _SAMPLING_OMISSION_MODELS
 
 
+# Beta header required ONLY for the 1-hour cache TTL opt-in (`cache_ttl="1h"`).
+# The default 5-minute ephemeral cache (`cache_control: {"type": "ephemeral"}`
+# with no `ttl` field, i.e. `cache_ttl=None`) needs no beta header on current
+# Anthropic API versions — the `system` block's `cache_control` marker alone
+# is enough. Verified against the pinned `anthropic` SDK (0.116.0):
+# `anthropic.types.anthropic_beta_param.AnthropicBetaParam` is a `Literal`
+# that includes `"extended-cache-ttl-2025-04-11"` alongside other real betas
+# already in use in this codebase (e.g. `managed-agents-2026-04-01` in
+# backend/services/managed_agents.py). `anthropic.types.cache_control_
+# ephemeral_param.CacheControlEphemeralParam` confirms `ttl: Literal["5m",
+# "1h"]`, default `"5m"`.
+EXTENDED_CACHE_TTL_BETA = "extended-cache-ttl-2025-04-11"
+
+
+def _build_cached_system(
+    system: str | list[dict[str, Any]] | None,
+    cache_system: bool,
+    cache_ttl: str | None,
+) -> str | list[dict[str, Any]] | None:
+    """Wrap a plain-string system prompt in Anthropic's cached content-block
+    form — like this: `[{"type": "text", "text": <prompt>, "cache_control":
+    {"type": "ephemeral"}}]`. Repeated calls with the same block re-use the
+    cached prefix; cache reads bill at 0.1x normal input tokens.
+
+    OPT-IN ONLY. `cache_system=False` (the default) returns `system`
+    untouched — every existing caller keeps today's plain-string behavior
+    byte-for-byte. When `system` is already a list (a caller building the
+    block form itself), it is returned unchanged too — this function never
+    double-wraps.
+
+    TENANT ISOLATION: Anthropic caches on the exact hash of the block's text.
+    Two tenants with different KB/persona text produce different cache
+    entries automatically. There is no shared/global cache key here, and none
+    should ever be added — that would be a cross-tenant leak vector.
+    """
+    if not cache_system or not system:
+        return system
+    if isinstance(system, list):
+        return system
+    cache_control: dict[str, Any] = {"type": "ephemeral"}
+    if cache_ttl:
+        cache_control["ttl"] = cache_ttl
+    return [{"type": "text", "text": system, "cache_control": cache_control}]
+
+
 def _log_start(
     call_id: str,
     operation: str,
@@ -301,12 +346,14 @@ def _call_single_model(
     messages: list[dict[str, Any]],
     temperature: float | None,
     output_config: dict[str, Any] | None,
-    system: str | None,
+    system: str | list[dict[str, Any]] | None,
     timeout: float,
     metadata: dict[str, Any] | None,
     max_retries: int,
     retry_delay_seconds: float,
     started: float,
+    cache_system: bool = False,
+    cache_ttl: str | None = None,
 ) -> ClaudeCallResult:
     """Run the retry loop for a single model. Raises the last exception on
     exhausted retries so the caller (fallback loop or direct caller) decides
@@ -327,8 +374,14 @@ def _call_single_model(
                 request_kwargs["temperature"] = request_temperature
             if output_config:
                 request_kwargs["extra_body"] = {"output_config": output_config}
-            if system is not None:
-                request_kwargs["system"] = system
+            cached_system = _build_cached_system(system, cache_system, cache_ttl)
+            if cached_system is not None:
+                request_kwargs["system"] = cached_system
+            if cache_system and cache_ttl == "1h":
+                # Only the extended (1h) TTL needs a beta header; default 5-min
+                # ephemeral caching works with no extra header on this SDK/API
+                # version — see EXTENDED_CACHE_TTL_BETA comment above.
+                request_kwargs["extra_headers"] = {"anthropic-beta": EXTENDED_CACHE_TTL_BETA}
 
             response = client.messages.create(
                 **request_kwargs,
@@ -377,13 +430,15 @@ def call_claude_messages_sync(
     messages: list[dict[str, Any]],
     temperature: float | None = 0.0,
     output_config: dict[str, Any] | None = None,
-    system: str | None = None,
+    system: str | list[dict[str, Any]] | None = None,
     timeout: float = 30.0,
     metadata: dict[str, Any] | None = None,
     max_retries: int = 0,
     retry_delay_seconds: float = 0.75,
     fallback_models: list[str] | None = None,
     graceful_reply: str | None = None,
+    cache_system: bool = False,
+    cache_ttl: str | None = None,
 ) -> ClaudeCallResult:
     """Run a Claude messages.create call with timing and structured logs.
 
@@ -396,6 +451,20 @@ def call_claude_messages_sync(
     `graceful_reply` (optional) — if every model (primary + fallbacks) fails,
     return a canned `ClaudeCallResult` instead of raising. Leave unset to
     keep today's behavior (raise the last exception).
+
+    `cache_system` (optional, default False) — OPT-IN Anthropic prompt
+    caching for the `system` prompt. False (default): `system` is sent
+    exactly as passed — zero behavior change for every existing caller. True:
+    a plain-string `system` is wrapped as a cached content block (see
+    `_build_cached_system`) so repeated calls with the identical prefix reuse
+    the cache — cache reads bill at 0.1x normal input tokens. A `system`
+    already passed as a list is left untouched either way.
+
+    `cache_ttl` (optional) — `None`/omitted uses Anthropic's default 5-minute
+    ephemeral TTL with no extra header. `"1h"` requests the extended 1-hour
+    TTL and requires (and automatically sends) the
+    `anthropic-beta: extended-cache-ttl-2025-04-11` header. Only meaningful
+    when `cache_system=True`.
     """
     call_id = uuid.uuid4().hex[:12]
     request_temperature = None if _requires_sampling_omission(model) else temperature
@@ -439,6 +508,8 @@ def call_claude_messages_sync(
                 max_retries=max_retries,
                 retry_delay_seconds=retry_delay_seconds,
                 started=started,
+                cache_system=cache_system,
+                cache_ttl=cache_ttl,
             )
         except Exception as exc:  # noqa: BLE001 - deliberately broad: try next model
             last_exc = exc
@@ -471,19 +542,23 @@ async def call_claude_messages(
     messages: list[dict[str, Any]],
     temperature: float | None = 0.0,
     output_config: dict[str, Any] | None = None,
-    system: str | None = None,
+    system: str | list[dict[str, Any]] | None = None,
     timeout: float = 30.0,
     metadata: dict[str, Any] | None = None,
     max_retries: int = 0,
     retry_delay_seconds: float = 0.75,
     fallback_models: list[str] | None = None,
     graceful_reply: str | None = None,
+    cache_system: bool = False,
+    cache_ttl: str | None = None,
 ) -> ClaudeCallResult:
     """Async wrapper for Claude messages.create that avoids blocking the event loop.
 
     Retries (and their backoff sleeps) run inside the executor thread, so the
-    event loop stays free even when max_retries > 0. `fallback_models` and
-    `graceful_reply` pass straight through to `call_claude_messages_sync`.
+    event loop stays free even when max_retries > 0. `fallback_models`,
+    `graceful_reply`, `cache_system`, and `cache_ttl` pass straight through to
+    `call_claude_messages_sync` — see that function's docstring for the
+    caching opt-in contract.
     """
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(
@@ -503,5 +578,7 @@ async def call_claude_messages(
             retry_delay_seconds=retry_delay_seconds,
             fallback_models=fallback_models,
             graceful_reply=graceful_reply,
+            cache_system=cache_system,
+            cache_ttl=cache_ttl,
         ),
     )

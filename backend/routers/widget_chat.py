@@ -1100,6 +1100,13 @@ async def widget_chat(
             # visitor on the revenue path (audit H3). Retry logic lives in
             # llm_runtime; it defaults to 0 and must be opted into here.
             max_retries=2,
+            # Opt-in Anthropic prompt caching (cost lever F4): the tenant KB +
+            # persona block above is the stable prefix repeated on every turn
+            # of a conversation. Default 5-min ephemeral TTL matches this
+            # always-on FastAPI process's turn cadence. Anthropic caches on
+            # the exact text hash, so each tenant's distinct system_prompt
+            # gets its own cache entry — no cross-tenant leak, no shared key.
+            cache_system=True,
             metadata={
                 "tenant_id": tenant["id"],
                 "session_id": req.session_id,
