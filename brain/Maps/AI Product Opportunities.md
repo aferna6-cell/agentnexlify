@@ -208,9 +208,12 @@ The voice + SMS surfaces carry real, dated legal exposure. Ranked by urgency:
   prior express consent + an AI-identification preamble at the START of every call. TX SB 140 (30-sec disclosure)
   + TX TRAIGA (Jan 1 2026) live. $500+/call; 2025-26 class actions settled $5-20M. **Hardcode a non-disableable
   AI-disclosure preamble on the Twilio voice line; log per call.** Source: https://www.fcc.gov/document/fcc-confirms-tcpa-applies-ai-technologies-generate-human-voices · https://www.retellai.com/blog/tcpa-compliance-playbook-voice-ai-outbound
-- **CR2 — SMS one-to-one consent (LIVE Jan 27 2026).** Consent must name the specific tenant brand; no blanket
-  "and partners." $500-1,500/msg uncapped + T-Mobile $10k/violation. **Capture per-consumer, per-tenant named
-  consent + audit trail; block outbound for unregistered brands.** Source: https://www.apten.ai/blog/a2p-dlc-compliance-2026
+- **CR2 — SMS consent. ⚠️ CORRECTED 2026-07-14 (round-4 research): the FCC "one-to-one consent" rule is DEAD, not live.**
+  11th Circuit vacated it Jan 2025; FCC issued a final rule eliminating it Sept 2025. Standard reverted to the
+  pre-2023 **prior express written consent** (signature + clear disclosures) with NO one-to-one requirement. The
+  consent-revocation-all rule is delayed to **Jan 31 2027**. Prior "LIVE Jan 27 2026" claim was stale vendor-blog
+  misinfo — do NOT build consent UX around a one-to-one requirement. Real gate = written consent + A2P 10DLC (CR3).
+  $500-1,500/msg TCPA exposure still applies. Source: https://compliancehub.wiki/tcpa-2026-consent-revocation-one-to-one-rule-vacated-compliance/ · https://www.mofo.com/resources/insights/250130-eleventh-circuit-vacates-fcc-s-tcpa-one-to-one-consent-rule
 - **CR3 — A2P 10DLC brand+campaign registration.** Carriers block 100% of unregistered traffic since Feb 2025.
   **Gate all outbound SMS on registration status.** (Turn registration into a paid, sticky onboarding step.)
 - **CR4 — Call-recording all-party consent.** 12 all-party states; stricter-law-wins across state lines. **Default
@@ -274,11 +277,59 @@ cost-floor + injection gate (same Haiku-probe pattern).
 **Trades purchase gate:** #T5 calendar + FSM + QuickBooks sync.
 **Bigger bet:** #F7 streaming speech-to-speech voice.
 
+## Frontier round 4 — 2026-07-14 (cost/reliability infra + pricing pressure)
+Two research passes (frontier API + competitive/GTM). Full source URLs in the session; key finds:
+
+### Frontier API (cost + reliability, mostly S-effort)
+- **#F8 — Prompt caching on the tenant KB+persona prefix (SHIPPING THIS ROUND as #F4).** Widget re-sends the full
+  tenant system prompt every turn; `cache_control` on that stable block bills cache reads ~0.1x. Opus 4.8 dropped
+  the cache floor to 1,024 tokens so even small tenant prompts qualify. Single biggest cost lever. Effort S / Impact High.
+- **#F9 — Structured Outputs GA (`output_config.format`, no beta header).** Guaranteed schema conformance on
+  Sonnet/Opus/Haiku. Replaces hand-rolled JSON parse + retry in `lead-extractor`, `lead-qualifier-prod`,
+  `widget-support`, and the `ai-feature-pattern` JSON-repair path. Reliability win. Effort S–M / Impact High.
+- **#F10 — Reranker on top of pgvector (Voyage rerank-2.5 / Cohere Rerank 4 / Zerank-2).** 2026 standard =
+  hybrid retrieve top-50 → cross-encoder rerank → top-5. +15–30% answer quality, one API call, no infra change.
+  Direct upgrade to the cosine-only KB retrieval — deepens the vertical-KB moat. Effort S / Impact High.
+- **#F11 — Batch API (50% off, <1hr).** Move all non-realtime Claude calls here: nightly email/sequence
+  generation, KB auto-populate compile, eval runs, lead re-scoring. Halves offline spend, zero product change. Effort S / Impact Med–High.
+- **#F12 — Hybrid retrieval in one fused SQL (pgvector + tsvector/pg_trgm BM25, RRF) + contextual chunk prefixes.**
+  Pairs with #F10. `reindex_contextual.py` already scaffolded. Effort M / Impact High.
+- **Free wins:** no-charge refusals (June 2), `response_inclusion` to drop consumed web-fetch blocks, native
+  Advisor tool (replaces hand-rolled `advisor_executor.py` two-call flow). Effort S each.
+- **Migration landmines before any model bump:** Sonnet 5 / Opus 4.7-4.8 reject non-default `temperature`/`top_p`/`top_k`
+  with a 400 (grep runtime first — already guarded by `_requires_sampling_omission`); Sonnet 5 tokenizer ~+30% tokens
+  (recompute cache/batch/`max_tokens` math + re-baseline `PLAN_BASELINE_TOKENS`).
+
+### Competitive / GTM (pricing is the pressure)
+- **GoHighLevel "Summer of AI" (Jun 1–Aug 31 2026):** 5 AI tools free for every paid sub-account + 30-day free
+  Conversation/Voice AI + $100K contest. $97/mo *unlimited* omnichannel AI Receptionist straddles both our tiers.
+  **Active trial-poaching window through Aug 31.** Wedge = widget-first + zero-setup + per-tenant vertical KB.
+- **Jobber AI Receptionist:** $29/mo (30 convos, then $0.79/convo), 200K+ convos, bundled in the trades CRM.
+  **Housecall Pro:** CSR AI free in Essentials/MAX. FSM incumbents now bundle AI receptionist → undercut our trades ICP.
+  Our lane = businesses NOT on a vertical FSM platform (salons, dentists, local services).
+- **Pricing direction = hybrid + outcome.** Intercom Fin $0.99/resolution, Zendesk $1.50–2.00/resolution;
+  43%→61% of SaaS going hybrid (base + usage). Our flat $19.99/$99.99 sits at the bottom band ("lite" signal, money
+  left on table). **#T6 refined:** keep the $19.99 hook, add a conversation/booking metered overage + an
+  outcome-metered agent_os option (per booked appointment / qualified lead) — strongest differentiator vs GHL flat + Jobber per-convo.
+- **EU AI Act Art. 50 chatbot disclosure binding Aug 2 2026** (EU-facing traffic) — we ALREADY ship CR5 in the
+  widget greeting ✅, so we're ahead. **A2P 10DLC** blocks 100% of unregistered traffic + AI SMS must match approved
+  templates → gate SMS activation on registration. **AI-voice disclosure** (CA AB2905 + TX TRAIGA live) — CR1/CR4 shipped ✅.
+- **⚠️ Correction:** FCC SMS one-to-one consent rule is DEAD (vacated 2025) — see CR2 above, corrected this round.
+
+### Priority read (round 4 — refreshed)
+**Ship now, cheap + high (cost/reliability infra):** #F4 prompt caching (this round) → #F10 reranker → #F9 structured
+outputs → #F11 Batch API. All S-effort, compounding cost/quality wins, no external creds.
+**The moat, deepened:** #F10 reranker + #F12 hybrid/contextual retrieval → #R5 GEPA per-tenant prompt compounding (uses the shipped #R4 eval scores).
+**Revenue/packaging (competitive response to GHL/Jobber):** #T6 hybrid metered overage + outcome-metered agent_os tier — needs Stripe metering (buy-not-build via Stripe Billing meters).
+**Growth:** #T1 auto-onboarding already ships (`instant_kb`); surface it in the signup wizard as the time-to-value hook.
+**Deferred (external creds):** #T5 FSM/calendar OAuth, CR2/CR3 A2P status surfacing, #T6 Stripe meter setup.
+
 ## Related
 - [[Chat Widget]] · [[Agent Service]] · [[Knowledge Base Wiki]] · [[Vertical Knowledge-Base Moat]] · [[GoHighLevel]] · [[G3 voice live-answering]] · [[Cold Outreach Engine]]
 
 ## Provenance
-- Web research across 3 passes (2026-07-13/14): round 1 model capabilities, round 2 new-angle product moves,
-  round 3 operations/GTM/compliance. Source URLs inline per item. Vendor/blog figures are directional — validate
-  against our own funnel before quoting to customers. **Round-3 legal items are NOT legal advice — verify with
-  counsel before shipping voice/SMS.**
+- Web research across 4 passes (2026-07-13/14): round 1 model capabilities, round 2 new-angle product moves,
+  round 3 operations/GTM/compliance, round 4 cost/reliability infra + pricing pressure. Source URLs inline per
+  item. Vendor/blog figures are directional — validate against our own funnel before quoting to customers.
+  **Legal items are NOT legal advice — verify with counsel before shipping voice/SMS. CR2 one-to-one consent
+  claim was corrected in round 4 (rule is vacated, not live).**
