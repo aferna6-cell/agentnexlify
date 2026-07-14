@@ -232,6 +232,9 @@ export default function AgentOS({ onNavigate }) {
         ...prev,
         result.user_message,
         result.assistant_message,
+        // Connector nudges ("connect HubSpot to do this for real") arrive as
+        // extra assistant messages; tolerate their absence.
+        ...(result.followup_messages || []),
       ]);
       // The engine runs one agent per turn (agent_run, singular); tolerate the
       // legacy agent_runs array shape too.

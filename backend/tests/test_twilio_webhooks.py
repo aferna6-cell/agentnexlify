@@ -452,12 +452,15 @@ class TestFindTenantByPhoneCache:
     """Phone->tenant lookup is cached per-worker and no longer caps at 50 rows."""
 
     def _wire(self, mock_supabase, rows):
+        # Index refresh filter is .or_("sms_notifications_enabled.eq.true,
+        # twilio_number.not.is.null") since migration 164 (voice-only tenants
+        # with a provisioned number must still route).
         result = MagicMock()
         result.data = rows
         (
             mock_supabase.table.return_value
             .select.return_value
-            .eq.return_value
+            .or_.return_value
             .execute.return_value
         ) = result
 

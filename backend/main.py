@@ -83,7 +83,10 @@ from backend.routers import (
     scoring_config,
     sequences,
     smart_lists,
+    kb_integrations,
+    tenant_kb,
     sms,
+    sms_compliance,
     snippets,
     social_media,
     stripe_webhooks,
@@ -346,6 +349,11 @@ async def _automation_loop():
     from backend.services.weekly_funnel_report import send_weekly_funnel_report
     from backend.services.os_sync import run_due_syncs as _os_sync_tick
     from backend.services.os_opportunities import run_opportunity_scan as _run_opportunity_scan
+    from backend.services.drive_kb_sync import run_drive_kb_sync_due as _run_drive_sync_due
+
+    async def _drive_kb_sync_due():
+        # Sync path is blocking (httpx + DB); keep the loop's event loop free.
+        return await asyncio.to_thread(_run_drive_sync_due)
     from backend.services.twilio_webhook_sync import sync_twilio_number_webhooks
     from backend.services.demo_reset_job import reset_demo_tenants
     from backend.services.activation_nudges import send_activation_nudges
@@ -427,6 +435,9 @@ async def _automation_loop():
                         _safe_run("send_birthday_greetings", send_birthday_greetings),
                         _safe_run("send_daily_briefings", send_daily_briefings),
                         _safe_run("run_opportunity_scan", _run_opportunity_scan),
+                        _safe_run(
+                            "drive_kb_sync_due", _drive_kb_sync_due, timeout=300.0
+                        ),
                         _safe_run("reset_demo_tenants", reset_demo_tenants),
                         _safe_run("send_activation_nudges", send_activation_nudges),
                         _safe_run(
@@ -882,6 +893,11 @@ app.include_router(integrations.router)
 app.include_router(webhook_deliveries.router)
 app.include_router(webhooks.router)
 app.include_router(sms.router)
+app.include_router(sms_compliance.router)
+# kb_integrations (static /kb/integrations/drive/*) BEFORE tenant_kb's
+# param routes (/kb/{tenant_id}/*) — FastAPI matches in registration order.
+app.include_router(kb_integrations.router)
+app.include_router(tenant_kb.router)
 app.include_router(team.router)
 app.include_router(twilio_webhooks.router)
 app.include_router(widget_chat.router)

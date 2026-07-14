@@ -12,6 +12,10 @@ from googleapiclient.errors import HttpError
 
 from backend.config import settings
 from backend.models.database import get_service_supabase
+from backend.services.integration_key_vault import (
+    decrypt_integration_row,
+    encrypt_oauth_tokens,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +41,7 @@ def get_integration(tenant_id: str) -> dict | None:
         .limit(1)
         .execute()
     )
-    return result.data[0] if result.data else None
+    return decrypt_integration_row(result.data[0]) if result.data else None
 
 
 def save_integration(
@@ -61,6 +65,8 @@ def save_integration(
     }
     if metadata is not None:
         payload["metadata"] = metadata
+
+    payload = encrypt_oauth_tokens(payload)
 
     existing = get_integration(tenant_id)
     if existing:

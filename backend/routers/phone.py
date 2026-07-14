@@ -180,16 +180,19 @@ async def provision_number(
     1. Search for available local numbers
     2. Buy the first available number
     3. Configure voice and SMS webhooks
-    4. Store on tenant as notification_phone
+    4. Store on tenant as twilio_number (dedicated AI-line column)
     """
     _verify_tenant(claims, tenant_id)
     auth = _twilio_auth()
     db = get_service_supabase()
 
-    # Check if tenant already has a provisioned number
+    # Check if tenant already has a provisioned number. twilio_number is the
+    # dedicated column for the purchased AI line (migration 164) - checking
+    # notification_phone here 409'd every tenant that had their own contact
+    # number set, and storing there pointed owner alerts at the AI line.
     tenant_result = (
         db.table("tenants")
-        .select("id, notification_phone")
+        .select("id, twilio_number")
         .eq("id", tenant_id)
         .limit(1)
         .execute()
@@ -197,7 +200,7 @@ async def provision_number(
     if not tenant_result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
-    if tenant_result.data[0].get("notification_phone"):
+    if tenant_result.data[0].get("twilio_number"):
         raise HTTPException(
             status_code=409,
             detail="Tenant already has a provisioned number. Release it first.",
@@ -283,10 +286,10 @@ async def provision_number(
     number_sid = bought.get("sid", "")
     friendly_name = bought.get("friendly_name", purchased_number)
 
-    # Step 3: Store the number on the tenant
+    # Step 3: Store the number on the tenant (dedicated column - see above)
     try:
         db.table("tenants").update({
-            "notification_phone": purchased_number,
+            "twilio_number": purchased_number,
             "sms_notifications_enabled": True,
         }).eq("id", tenant_id).execute()
     except Exception:
@@ -331,10 +334,10 @@ async def release_number(
 ):
     """Release a provisioned phone number.
 
-    1. Look up the tenant's notification_phone
+    1. Look up the tenant's twilio_number
     2. Find the number SID via Twilio API
     3. Release the number
-    4. Clear notification_phone on tenant
+    4. Clear twilio_number on tenant
     """
     _verify_tenant(claims, tenant_id)
     auth = _twilio_auth()
@@ -343,7 +346,7 @@ async def release_number(
     # Get tenant's current number
     tenant_result = (
         db.table("tenants")
-        .select("id, notification_phone")
+        .select("id, twilio_number")
         .eq("id", tenant_id)
         .limit(1)
         .execute()
@@ -351,7 +354,7 @@ async def release_number(
     if not tenant_result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
-    current_number = tenant_result.data[0].get("notification_phone")
+    current_number = tenant_result.data[0].get("twilio_number")
     if not current_number:
         raise HTTPException(
             status_code=404,
@@ -390,10 +393,10 @@ async def release_number(
         )
         try:
             db.table("tenants").update({
-                "notification_phone": None,
+                "twilio_number": None,
             }).eq("id", tenant_id).execute()
         except Exception:
-            logger.exception("Failed to clear notification_phone for tenant %s", tenant_id)
+            logger.exception("Failed to clear twilio_number for tenant %s", tenant_id)
         return ReleaseResponse(
             released=True,
             phone_number=current_number,
@@ -429,7 +432,7 @@ async def release_number(
     # Clear the number from the tenant
     try:
         db.table("tenants").update({
-            "notification_phone": None,
+            "twilio_number": None,
         }).eq("id", tenant_id).execute()
     except Exception:
         logger.exception(

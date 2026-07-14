@@ -30,8 +30,36 @@ DEFAULT_HOURS = {
 }
 
 
+def coerce_hours(value) -> dict:
+    """Normalise a business_hours ``hours`` value into a dict.
+
+    The demo seeder double-encoded hours (json.dumps into a jsonb column), so
+    prod rows can hold a JSON *string* instead of an object - that shape
+    crashed widget chat with AttributeError (GH #422) and would break slot
+    generation the same way. Accept dict as-is, parse a JSON string, and
+    return {} for anything else so consumers degrade to "no hours" instead
+    of 500ing.
+    """
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        try:
+            import json
+
+            parsed = json.loads(value)
+            if isinstance(parsed, dict):
+                return parsed
+        except (ValueError, TypeError):
+            pass
+        logger.warning("business_hours: unparseable string hours value")
+    return {}
+
+
 def get_business_hours(tenant_id: str) -> dict | None:
-    """Fetch business hours config for a tenant. Returns None if not configured."""
+    """Fetch business hours config for a tenant. Returns None if not configured.
+
+    ``hours`` is normalised via ``coerce_hours`` so every consumer
+    (slot generation, appointments availability API) sees a dict."""
     db = get_service_supabase()
     result = (
         tenant_table(db, "business_hours", tenant_id)
@@ -39,7 +67,11 @@ def get_business_hours(tenant_id: str) -> dict | None:
         .limit(1)
         .execute()
     )
-    return result.data[0] if result.data else None
+    if not result.data:
+        return None
+    config = result.data[0]
+    config["hours"] = coerce_hours(config.get("hours"))
+    return config
 
 
 def upsert_business_hours(tenant_id: str, data: dict) -> dict:

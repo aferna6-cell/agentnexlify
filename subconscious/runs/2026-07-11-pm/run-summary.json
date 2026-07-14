@@ -1,0 +1,68 @@
+{
+  "run": 89,
+  "date": "2026-07-11-pm",
+  "winner": "Referral Reward Activation Pre-Gate Diagnostic — file GH issue with human-action checklist for REFERRAL_REWARD_ENABLED=1 activation",
+  "category": "customer_value",
+  "effort": "XS",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "execution_path": "GitHub MCP (mcp__github__issue_write)",
+  "requires_human": true,
+  "requires_human_scope": "Verify UX checklist (referral link, reward redemption, fraud prevention), then set REFERRAL_REWARD_ENABLED=1 in Railway Variables",
+  "mandate_status": "VERIFIED",
+  "mandate_items": {
+    "gh_412_filed": "CONFIRMED — filed 2026-07-11T10:15:52Z, labels: revenue, human-action-required, diagnostic",
+    "human_ran_queries": "NOT YET — 0 comments on GH #412",
+    "booking_enabled_status": "LARGELY_RESOLVED — PR #404: MTOptions 20 slots live, 914 Exterior 22 slots post-prod-bug-fix. Keys Koffee still needs hours from tenant.",
+    "availability_rows": "RESOLVED_FOR_2_OF_3 — MTOptions and 914 Exterior confirmed bookable end-to-end",
+    "gh_399_resolved": "NOT FIXED — OPEN, 3 comments, loop stalled Day 7+",
+    "gh_403_resolved": "NOT FIXED — OPEN, 0 comments",
+    "referral_reward": "NEW EVIDENCE — Migration 162 confirmed in prod by PR #404 commit 3596009"
+  },
+  "ideas_count": 5,
+  "ideas": [
+    "Post Day-2 Escalation Comment on GH #403",
+    "Referral Reward Activation Pre-Gate Diagnostic",
+    "Update GH #412 with PR #404 Booking Findings",
+    "Booking Conversion Rate metric in weekly funnel report",
+    "G3 Voice Scope Completion Roadmap GH issue"
+  ],
+  "debate_top3": [
+    "Idea 2 — Referral Reward Pre-Gate (SURVIVES → WINNER)",
+    "Idea 1 — Day-2 GH #403 Comment (WEAKENED → Bonus Action)",
+    "Idea 3 — Update GH #412 (WEAKENED → Bonus Action)"
+  ],
+  "killed": [
+    "Booking Conversion Rate metric GH issue (loop stalled, would queue not execute)",
+    "G3 Voice Scope GH issue (not revenue-immediate)"
+  ],
+  "bonus_actions": [
+    "Comment on GH #412 with PR #404 booking findings (MTOptions + 914 Exterior confirmed bookable)",
+    "Comment on GH #403 Day-2 escalation with impact quantification"
+  ],
+  "key_evidence": [
+    "Migration 162 (referral_rewards) confirmed in prod by PR #404 commit 3596009",
+    "REFERRAL_REWARD_ENABLED=1 is a single Railway env-var flip — zero engineering",
+    "PR #404: MTOptions 20 live slots, 914 Exterior impossible-hours prod bug corrected (17:00, now 22 slots/day)",
+    "PR #404: Keys Koffee still needs real business hours from tenant",
+    "GH #412 has 0 comments — human has not run diagnostic SQL yet",
+    "GH #399 OPEN (AUTOPILOT_GH_TOKEN not rotated), GH #403 OPEN (ANTHROPIC_API_KEY not set) — pipeline stalled Day 7+",
+    "40 ai-ready issues queued, kb-autopopulate last ran 2026-05-05 (67 days)",
+    "Brain connectors RECOVERED (4fc15f0 2026-07-11)"
+  ],
+  "governance_corrections": {
+    "total_runs": "88 → 89",
+    "last_run": "2026-07-11 → 2026-07-11-pm",
+    "run_88_booking_funnel": "pending_human_action — GH #412 filed, human not yet acted",
+    "booking_funnel_status": "2/3 tenants confirmed bookable (PR #404). Keys Koffee pending tenant action.",
+    "referral_reward_unblocked": "Migration 162 in prod confirmed by PR #404"
+  },
+  "run_90_mandate": "1. Verify referral reward GH issue filed (revenue + human-action-required labels). 2. Has REFERRAL_REWARD_ENABLED=1 been set? Check Railway or first referral_rewards table row. 3. If not activated: which checklist items blocked? 4. Confirm GH #412 comment posted (PR #404 findings). 5. Confirm GH #403 Day-2 comment posted. 6. GH #399 + #403 resolution? If fixed: Lead Source Analytics GH #409 draft PR? 7. Keys Koffee hours status.",
+  "artifacts": [
+    "subconscious/runs/2026-07-11-pm/winning-concept.md",
+    "subconscious/runs/2026-07-11-pm/improvement-backlog.md",
+    "subconscious/runs/2026-07-11-pm/run-summary.json",
+    "subconscious/runs/2026-07-11-pm/ideas/ideas.md",
+    "subconscious/runs/2026-07-11-pm/debate/debate-log.md"
+  ]
+}

@@ -306,7 +306,9 @@ export default function AdminFunnelPage() {
         { name: "Signed Up", value: data.total_tenants ?? 0 },
         { name: "Activated", value: data.activated ?? 0 },
         { name: "Has Leads", value: data.with_leads ?? 0 },
+        { name: "Booked", value: data.with_appointments ?? 0 },
         { name: "Paid", value: data.paid ?? 0 },
+        { name: "Retained 30d+", value: data.retained_30d ?? 0 },
       ]
     : [];
 
@@ -504,9 +506,19 @@ export default function AdminFunnelPage() {
               sub={convRate(data.with_leads, data.activated) + " of activated"}
             />
             <StatCard
+              label="Booked"
+              value={data.with_appointments ?? 0}
+              sub={convRate(data.with_appointments ?? 0, data.with_leads) + " of has-leads"}
+            />
+            <StatCard
               label="Paid"
               value={data.paid}
               sub={convRate(data.paid, data.total_tenants) + " of signups"}
+            />
+            <StatCard
+              label="Retained 30d+"
+              value={data.retained_30d ?? 0}
+              sub={convRate(data.retained_30d ?? 0, data.paid) + " of paid"}
             />
           </div>
 

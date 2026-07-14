@@ -28,9 +28,9 @@ Unfinished work + blockers (business scope). Ordered by priority.
   council score, S effort). Backend LIVE (`backend/services/sms_compliance.py` + migration 160);
   **frontend page never started**. Run 75 mandate: ship or de-scope to backend-only. GH issue
   filed by nightly-review 2026-07-01. Source: commits e225b53, c3298be, 8a3b071.
-- **Zapier plan_status enforcement (GH #107)** — cancelled tenants keep Zapier API access after
-  subscription ends. Security/revenue fix, approved AUTONOMOUS-EXECUTABLE run 75 (~30 min).
-  Source: commit 8a3b071.
+- ~~Zapier plan_status enforcement (GH #107)~~ — **ALREADY SHIPPED (verified 2026-07-13):**
+  issue closed 2026-06-13; gate live at `backend/routers/zapier.py:122-128` with regression
+  test `test_zapier_auth.py::test_cancelled_subscription_blocked`. This entry was stale.
 - **Brain connector refresh degraded** — 2026-07-01 runs: GitHub `HTTP 403`, Supabase skipped
   (`SUPABASE_ACCESS_TOKEN` missing from Actions secrets). Connector sources last good
   2026-06-22. Also: the refresh only rewrites `Sources/` + `graph.json` — Maps are manual.

@@ -110,6 +110,9 @@ const IntegrationsKeysPage = lazy(
   () => import("../pages/Settings/IntegrationsKeysPage"),
 );
 const ReferralPage = lazy(() => import("../pages/ReferralPage"));
+const CallsPage = lazy(() => import("../pages/CallsPage"));
+const SmsCompliancePage = lazy(() => import("../pages/SmsCompliance"));
+const KnowledgeSourcesPage = lazy(() => import("../pages/KnowledgeSourcesPage"));
 
 const pages = {
   dashboard: Dashboard,
@@ -121,6 +124,7 @@ const pages = {
   calendar: Calendar,
   availability: Availability,
   conversations: ConversationsPage,
+  calls: CallsPage,
   widget: WidgetPage,
   faq: FaqManagerPage,
   team: TeamPage,
@@ -148,6 +152,8 @@ const pages = {
   admin_tenant_health: AdminTenantHealthPage,
   admin_referral: AdminReferralPage,
   referral: ReferralPage,
+  sms_compliance: SmsCompliancePage,
+  knowledge: KnowledgeSourcesPage,
 };
 
 // --------------------------------------------------------------------------
@@ -164,6 +170,7 @@ const PAGE_TO_PATH = {
   calendar: "/dashboard/calendar",
   availability: "/dashboard/availability",
   conversations: "/dashboard/conversations",
+  calls: "/dashboard/calls",
   widget: "/dashboard/widget",
   faq: "/dashboard/faq",
   team: "/dashboard/team",
@@ -190,6 +197,8 @@ const PAGE_TO_PATH = {
   admin_tenant_health: "/admin/tenant-health",
   admin_referral: "/admin/referral",
   referral: "/dashboard/referral",
+  sms_compliance: "/dashboard/sms-compliance",
+  knowledge: "/dashboard/knowledge",
 };
 
 const PATH_TO_PAGE = Object.fromEntries(

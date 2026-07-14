@@ -18194,3 +18194,98 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** .github/workflows/autopilot-issue-loop.yml,.github/workflows/autopilot-pr-review.yml,.github/workflows/refresh-brain.yml,audits/audit-post-deploy-measurement-2026-07-09.md,backend/services/internal_tenants.py,backend/tests/test_internal_tenants.py,docs/dev-knowledge/schema-log.md,migrations/158_allow_new_plan_names_in_tenants_check.sql,migrations/161_allow_new_plan_names_in_tenants_check.sql,ops/monitoring/healthz-alert.sh,ops/monitoring/uptime-checks.json
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(subconscious): correct memory.jsonl run 88 newline separation
+
+Run 88 entry was concatenated to run 87 on the same line due to missing
+trailing newline in the file before append. Split into two properly
+separated JSONL entries. All 84 lines now parse as valid JSON.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01272bpNUuc83u9yNwpWzT3F
+**Date:** 2026-07-11
+**Commit:** 077e893
+**Author:** Claude
+**Files Changed:** subconscious/state/memory.jsonl
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(widget): tolerate double-encoded business hours (GH #422) (#425)
+
+Root cause (from the prod error_events sink): the demo seeder wrote
+hours via json.dumps into a jsonb column, so business_hours.hours held
+a JSON STRING. _format_hours_block called hours.get(day) on it ->
+AttributeError -> 500 on every widget chat for tenants seeded that way
+(all three demo tenants; the public live demo showed prospects an
+error). Slot generation and the support-agent fallback read the same
+shape and were equally exposed.
+
+- booking.coerce_hours (new): dict passthrough, JSON-string parse,
+  anything else degrades to {} ('no hours') instead of raising;
+  get_business_hours normalises so slot generation + availability API
+  are covered.
+- widget_chat_helpers._format_hours_block + support_agent hours read
+  now coerce.
+- demo_seed.py + seed_powerwash_demo.py: drop the json.dumps (the
+  actual bug).
+- Prod data repaired separately: the 3 string rows rewritten to
+  objects; live demo chat verified answering (with correct hours!)
+  post-repair.
+- Regression: TestWidgetChatStringHours drives the exact prod data
+  shape through the real router - verified 500 on pre-fix code, 200
+  post-fix. TestCoerceHours unit-covers the helper. Plus the
+  full-fidelity demo-tenant characterization test from the
+  investigation (test_widget_chat.py in the CI coverage list now).
+
+Closes #422.
+
+
+Claude-Session: https://claude.ai/code/session_01Ya7tfAw1FiVqejtNXU8BnV
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-07-13
+**Commit:** f19c21c
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/pr-check.yml,backend/routers/widget_chat_helpers.py,backend/services/booking.py,backend/services/demo_seed.py,backend/services/support_agent.py,backend/tests/test_widget_chat.py,scripts/demos/seed_powerwash_demo.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(os): connect prompt fired for no one — dashboard threads have source='chat' (#427)
+
+* fix(os): connect prompt fired for no one - dashboard threads have source='chat'
+
+Prod verification of the connector feature caught it silent: the
+owner-thread guard skipped any thread with a truthy source, but
+os_threads.source is NOT NULL DEFAULT 'chat' (migration 124), so every
+dashboard thread was mistaken for an inbound channel and the connect
+prompt never posted. The test harness modelled source=None, which prod
+never has.
+
+Guard is now an inbound denylist ({widget,email,sms,facebook,instagram}
+per os_inbound_bridge); 'chat' and anything unknown counts as
+owner-facing. Harness default flipped to 'chat' to model prod truth +
+regression test pinning the chat-source path.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Ya7tfAw1FiVqejtNXU8BnV
+
+* test(os): cover the missing-thread early return in _post_connect_prompt
+
+The changed-lines gate flagged line 233 (thread-not-found return)
+uncovered - 1 uncovered line in a 5-line diff reads as 80%.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Ya7tfAw1FiVqejtNXU8BnV
+
+---------
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-07-13
+**Commit:** 7a9047f
+**Author:** aferna6-cell
+**Files Changed:** backend/services/os_thread_runner.py,backend/tests/test_connector_awareness.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.

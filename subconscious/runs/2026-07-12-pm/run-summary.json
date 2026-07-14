@@ -1,0 +1,46 @@
+{
+  "run": 90,
+  "date": "2026-07-12-pm",
+  "winner": {
+    "title": "Comment on GH #413 confirming referral UI fully built — pre-check UX checklist items 1-2",
+    "category": "customer_value",
+    "effort": "XS",
+    "confidence": "HIGH",
+    "status": "AUTONOMOUS-EXECUTABLE",
+    "mechanism": "mcp__github__add_issue_comment on #413"
+  },
+  "bonus_actions": [
+    {
+      "title": "Day-8 escalation on GH #403 (ANTHROPIC_API_KEY)",
+      "mechanism": "mcp__github__add_issue_comment on #403"
+    },
+    {
+      "title": "Day-8 escalation on GH #399 (AUTOPILOT_GH_TOKEN)",
+      "mechanism": "mcp__github__add_issue_comment on #399"
+    }
+  ],
+  "mandate_verification": {
+    "1_gh413_filed": "CONFIRMED — GH #413 OPEN, created 2026-07-11T22:14:56Z",
+    "2_referral_reward_enabled": "NOT SET — GH #413 has 0 human comments",
+    "3_checklist_blockers": "Unknown (human hasn't started checklist). Run 90 comment pre-checks items 1-2.",
+    "4_gh412_comment_posted": "CONFIRMED — 1 comment on GH #412 (run 89 bonus action, PR #404 booking findings)",
+    "5_gh403_day2_comment": "CONFIRMED — 1 comment on GH #403 (run 89 bonus action)",
+    "6_gh399_403_resolution": "BOTH OPEN — Day 8. Loop stalled. 40 ai-ready issues queued.",
+    "7_keys_koffee_hours": "UNKNOWN — no human SQL results on GH #412"
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "parking_lot_additions": [
+    "Keys Koffee booking escalation GH issue",
+    "Booking health watchdog feature"
+  ],
+  "key_evidence": [
+    "Referral UI fully confirmed: 4 frontend files, 5 backend services, 5 test files, migration 162 in prod",
+    "GH #413 has 0 human responses after 24+ hours",
+    "GH #399 + #403 both open Day 8 — 40 ai-ready issues stalled",
+    "KB autopopulate: 68 days stale (blocked by #403)",
+    "0 real bookings 19 days since launch",
+    "Keys Koffee: 0 availability slots, no tenant-provided hours"
+  ],
+  "run_91_mandate": "1. Check GH #413 for human response. 2. REFERRAL_REWARD_ENABLED=1 set? 3. GH #399 resolved? Lead Source Analytics PR? 4. GH #403 resolved? KB autopopulate ran? 5. Keys Koffee hours (21+ day escalation if still pending). 6. Total days since last real booking."
+}

@@ -530,7 +530,9 @@ def _format_hours_block(bh: dict) -> str:
     day_name = now.strftime("%A").lower()
     current_time = now.strftime("%I:%M %p").lstrip("0")
 
-    hours = bh.get("hours", {})
+    from backend.services.booking import coerce_hours
+
+    hours = coerce_hours(bh.get("hours"))
     day_config = hours.get(day_name, {})
     is_open = day_config.get("enabled", False)
 

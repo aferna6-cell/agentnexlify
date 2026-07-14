@@ -65,3 +65,10 @@ if grep -q '^\.env$' .gitignore 2>/dev/null; then
 else
     echo "gitignore_env=NO"
 fi
+
+# Prod error sink (error_events table, migration 156) - deterministic 24h
+# report. Best-effort: prints error_events=UNAVAILABLE when creds/deps are
+# missing on this machine, never fails the health check.
+python scripts/daily/error_events_report.py 2>/dev/null \
+    || python3 scripts/daily/error_events_report.py 2>/dev/null \
+    || echo "error_events=UNAVAILABLE (python missing)"

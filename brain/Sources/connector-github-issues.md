@@ -5,25 +5,39 @@ origin: connector
 connector: GitHub
 account: aferna6-cell
 repo: aferna6-cell/agentnexlify
-accessed: 2026-06-22
+accessed: 2026-07-14
+last_refresh: 2026-07-14T09:18Z
 sensitivity: normal
 tags: [source, connector]
 ---
 
-# Source: GitHub issues/PRs (smoke pass)
+# Source: GitHub issues/PRs (auto-refreshed)
 
 ## What this is
-Read-only smoke pass over `aferna6-cell/agentnexlify` open issues (84 open) + open PRs,
-2026-06-22. See [[SOURCE-MANIFEST]] for connector verification.
+Live snapshot from `refresh_connectors.py` of `aferna6-cell/agentnexlify`.
 
-## What it proves
-- **Autonomous dev operation**: daily `morning-digest`, `nightly-commit-review`, and a
-  `subconscious` improvement loop (numbered runs) auto-file issues and land fixes.
-- **Plan display names**: `chatbot` = "AI Front Desk" ($19.99), `agent_os` = "AI Workforce"
-  ($99.99). Confirmed in ToS rewrite (#330) + repricing PRs (#288, #291).
-- **Live open loops** (2026-06-22): #263 (24 pending migrations, CRITICAL), #329 (apply
-  migration 154 to prod), #330 (legal ToS review), #266 (secret encryption backfill), #325/
-  #327/#328 (checkout/billing/retention), #286 (Agent OS alerts), PR #333 (51-commit
-  main-pending batch, stale).
-- **Recently fixed**: #308 webhook idempotency (revenue bug), #292/#293 stale plan names.
-- **KB embeddings broken** since ~2026-04-30 (missing `VOYAGE_API_KEY` + Supabase MCP auth in cron).
+## Counts (as of 2026-07-14T09:18Z)
+- Open issues: 109
+- Open PRs: 31
+- Recent closed issues sampled: 10
+
+## Top open issues (non-digest)
+  - #415 ACTION REQUIRED: Keys Koffee — add business hours to enable bookings (Day 20, 0 bookings since launch)
+  - #414 ACTION REQUIRED: Collect Keys Koffee business hours — 3rd tenant blocked on booking
+  - #413 ACTION REQUIRED: Activate referral reward — Migration 162 in prod, one env-var flip
+  - #412 ACTION REQUIRED: Booking funnel diagnostic — 0 real bookings 18 days after launch
+  - #407 nightly-review [HIGH]: Referral reward Stripe webhook — verify before enabling REFERRAL_REWARD_ENABLED
+  - #406 KB auto-populate blocked: set ANTHROPIC_API_KEY as an Actions secret [human-action-required]
+  - #403 Set ANTHROPIC_API_KEY in GitHub Actions secrets — blocks autopilot loop AND KB autopopulate [human-action-required]
+  - #399 autopilot-issue-loop GitHub Actions failing 5+ days — AUTOPILOT_GH_TOKEN expired [CRITICAL]
+  - #394 Fix brain-refresh[bot] credentials — GitHub 403 + SUPABASE_ACCESS_TOKEN missing [MEDIUM]
+  - #392 Brain refresh connectors failing for 4+ consecutive days (GitHub 403, Supabase token missing)
+  - #330 Human legal review: TermsOfService section 4 rewritten (payment terms + failed-payment clause)
+  - #329 Apply migration 154 (conversation sentiment + intent) to production
+  - #293 MEDIUM: orchestrator + billing_reconciliation use stale plan names after repricing
+  - #292 MEDIUM: sms_rate_limiter + api_key_auth missing new plan names (chatbot/agent_os)
+  - #266 security: finish integrations-secret encryption — backfill + sunset plaintext columns
+
+## Notes
+- Autonomous-dev cadence: morning-digest / nightly-commit-review / subconscious loop.
+- Regenerated automatically; edits here will be overwritten on next refresh.

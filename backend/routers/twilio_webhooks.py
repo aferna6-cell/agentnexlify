@@ -74,7 +74,8 @@ def _verify_twilio_signature(request: Request, body: bytes) -> bool:
 # routing while turning the former O(N) per-webhook scan into an O(1) lookup,
 # and removes the limit(50) that silently dropped tenants past the 50th. (GH #98)
 _TENANT_PHONE_SELECT = (
-    "id, business_name, notification_phone, sms_notifications_enabled, plan, "
+    "id, business_name, notification_phone, twilio_number, "
+    "sms_notifications_enabled, plan, "
     "textback_enabled, textback_message, textback_quiet_start, textback_quiet_end"
 )
 _TENANT_PHONE_INDEX: dict[str, dict] = {}
@@ -92,20 +93,27 @@ def _phone_key(phone: str | None) -> str:
 
 
 def _refresh_tenant_phone_index() -> None:
-    """Rebuild the phone->tenant index from all SMS-enabled tenants (no cap)."""
+    """Rebuild the phone->tenant index (no cap).
+
+    Covers SMS-enabled tenants AND any tenant with a provisioned twilio_number
+    (migration 164) - a voice-only tenant with SMS notifications off must still
+    route inbound webhooks on their purchased AI line. A provisioned
+    twilio_number keys the index alongside notification_phone.
+    """
     global _TENANT_PHONE_INDEX, _TENANT_PHONE_INDEX_AT
     db = get_service_supabase()
     result = (
         db.table("tenants")
         .select(_TENANT_PHONE_SELECT)
-        .eq("sms_notifications_enabled", True)
+        .or_("sms_notifications_enabled.eq.true,twilio_number.not.is.null")
         .execute()
     )
     index: dict[str, dict] = {}
     for tenant in result.data or []:
-        key = _phone_key(tenant.get("notification_phone"))
-        if key:
-            index[key] = tenant
+        for phone_col in ("notification_phone", "twilio_number"):
+            key = _phone_key(tenant.get(phone_col))
+            if key:
+                index[key] = tenant
     _TENANT_PHONE_INDEX = index
     _TENANT_PHONE_INDEX_AT = time.monotonic()
 
