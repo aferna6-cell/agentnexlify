@@ -129,6 +129,10 @@ def test_opus_4_7_omits_sampling_params_and_sends_effort_config():
     assert result.text == "Advisor brief"
     assert _requires_sampling_omission("claude-opus-4-7") is True
     assert _requires_sampling_omission("claude-sonnet-4-6") is False
+    # Sonnet 5 + Opus 4.8 (2026-06-30) are reasoning-tier and reject sampling
+    # params too — the widget defaults to Sonnet 5, so this guards the live path.
+    assert _requires_sampling_omission("claude-sonnet-5") is True
+    assert _requires_sampling_omission("claude-opus-4-8") is True
     kwargs = mock_client.messages.create.call_args.kwargs
     assert "temperature" not in kwargs
     assert "top_p" not in kwargs

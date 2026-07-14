@@ -125,9 +125,20 @@ def _message_role_counts(messages: list[dict[str, str]]) -> dict[str, int]:
     return counts
 
 
+# Reasoning-tier models (adaptive thinking) reject non-default sampling params
+# (temperature/top_p/top_k) — sending them returns a 400. Opus 4.7 was the
+# first; Opus 4.8 and Sonnet 5 (2026-06-30) follow the same contract. Omitting
+# a sampling param is always safe (the API falls back to its default), so when
+# in doubt about a new reasoning model, add it here rather than risk a 400 on
+# the live widget path.
+_SAMPLING_OMISSION_MODELS = frozenset(
+    {"claude-opus-4-7", "claude-opus-4-8", "claude-sonnet-5"}
+)
+
+
 def _requires_sampling_omission(model: str) -> bool:
-    """Claude Opus 4.7 rejects non-default sampling params; omit them entirely."""
-    return model == "claude-opus-4-7"
+    """Reasoning models reject non-default sampling params; omit them entirely."""
+    return model in _SAMPLING_OMISSION_MODELS
 
 
 def _log_start(
