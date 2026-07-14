@@ -324,6 +324,13 @@ outputs → #F11 Batch API. All S-effort, compounding cost/quality wins, no exte
 **Growth:** #T1 auto-onboarding already ships (`instant_kb`); surface it in the signup wizard as the time-to-value hook.
 **Deferred (external creds):** #T5 FSM/calendar OAuth, CR2/CR3 A2P status surfacing, #T6 Stripe meter setup.
 
+## Shipped 2026-07-14 (PR #433 — rounds 4+5, cost/reliability infra)
+- **#F4 prompt caching** ✅ — opt-in `cache_control` on the tenant KB+persona prefix in `llm_runtime` (5-min ephemeral), wired into widget + voice replies. Tenant-isolated by content hash.
+- **#F9 Structured Outputs** ✅ — opt-in `response_schema` → `output_config.format` strict JSON in `llm_runtime`; bot_health judge opted in (JSON-repair fallback kept).
+- **#F10 reranker + #F12 hybrid retrieval** ✅ — `kb_reranker.py` (Haiku, fail-open) + `kb_hybrid_retrieval.py` (existing FTS RPC, no new migration); both opt-in per tenant (`widget_kb_rerank_enabled` / `widget_kb_hybrid_enabled`, default off), wired into `_query_kb_articles` (base → hybrid → rerank).
+- **#F11 Batch API** ✅ — `batch_runtime.py` (submit/poll/results, 50% off) + a batch variant on the nightly conversation-enrichment job.
+All opt-in + default-off + fail-open — zero behavior change until a tenant/flag turns them on. Next: enable rerank/hybrid on a pilot tenant + measure; move more offline jobs (email/sequence gen, KB compile) to Batch; #T6 hybrid/outcome pricing (needs Stripe metering).
+
 ## Related
 - [[Chat Widget]] · [[Agent Service]] · [[Knowledge Base Wiki]] · [[Vertical Knowledge-Base Moat]] · [[GoHighLevel]] · [[G3 voice live-answering]] · [[Cold Outreach Engine]]
 
