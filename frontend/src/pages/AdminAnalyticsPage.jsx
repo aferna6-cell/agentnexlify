@@ -25,8 +25,13 @@ const cardStyle = {
   padding: 24,
 };
 
+// The two plans actually sold (repriced 2026-06-15) plus legacy/grandfathered
+// keys. Without chatbot/agent_os here, most real paying tenants render with the
+// raw key + a default color in the plan-distribution chart (audit UI H3).
 const PLAN_LABELS = {
   free: "Free",
+  chatbot: "AI Front Desk",
+  agent_os: "AI Workforce",
   growth: "Growth",
   professional: "Professional",
   autopilot: "Autopilot",
@@ -35,10 +40,12 @@ const PLAN_LABELS = {
 
 const PLAN_COLORS = {
   free: "var(--green)",
+  chatbot: "var(--accent)",
+  agent_os: "var(--purple, #8b5cf6)",
   growth: "var(--accent)",
   professional: "var(--purple, #8b5cf6)",
   autopilot: "var(--yellow, #f59e0b)",
-  enterprise: "#f87171",
+  enterprise: "var(--red, #ff4444)",
 };
 
 const PIE_COLORS = [
@@ -481,7 +488,7 @@ export default function AdminAnalyticsPage() {
               </div>
             ))}
           </div>
-          {weeklyGrowth.daily_data.length > 0 && (
+          {weeklyGrowth.daily_data?.length > 0 && (
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={weeklyGrowth.daily_data}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />

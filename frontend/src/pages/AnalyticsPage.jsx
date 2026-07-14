@@ -369,15 +369,15 @@ export default function AnalyticsPage() {
         fetchLeadSources(user.tenantId, token),
       ]);
       if (ov.status === "fulfilled") setOverview(ov.value);
-      if (conv.status === "fulfilled") setConvoTrend(conv.value.data || []);
+      if (conv.status === "fulfilled") setConvoTrend(conv.value?.data || []);
       if (leads.status === "fulfilled") setLeadsData(leads.value);
       if (resp.status === "fulfilled") setResponseTimes(resp.value);
       if (wid.status === "fulfilled") setWidgetData(wid.value);
-      if (sources.status === "fulfilled") setLeadSources(sources.value.breakdown || []);
+      if (sources.status === "fulfilled") setLeadSources(sources.value?.breakdown || []);
 
       // Build tag distribution from conversations + tag definitions
       if (convos.status === "fulfilled") {
-        const conversations = convos.value.conversations || [];
+        const conversations = convos.value?.conversations || [];
         const tagCounts = {};
         for (const c of conversations) {
           for (const tag of (c.tags || [])) {
@@ -388,7 +388,7 @@ export default function AnalyticsPage() {
         // Build color map from tag definitions
         const colorMap = {};
         if (tagDefs.status === "fulfilled") {
-          for (const td of (tagDefs.value.tags || [])) {
+          for (const td of (tagDefs.value?.tags || [])) {
             colorMap[td.tag_name] = td.tag_color;
           }
         }
@@ -553,7 +553,7 @@ export default function AnalyticsPage() {
                   dataKey="date"
                   stroke={chartTheme.text}
                   fontSize={11}
-                  tickFormatter={d => d.slice(5)}
+                  tickFormatter={d => (d ? String(d).slice(5) : "")}
                 />
                 <YAxis stroke={chartTheme.text} fontSize={11} allowDecimals={false} />
                 <Tooltip content={<CustomTooltip />} />
@@ -641,7 +641,7 @@ export default function AnalyticsPage() {
                   dataKey="date"
                   stroke={chartTheme.text}
                   fontSize={11}
-                  tickFormatter={d => d.slice(5)}
+                  tickFormatter={d => (d ? String(d).slice(5) : "")}
                 />
                 <YAxis stroke={chartTheme.text} fontSize={11} unit="s" />
                 <Tooltip content={<CustomTooltip valueSuffix="s" />} />
@@ -699,7 +699,7 @@ export default function AnalyticsPage() {
           <div className="analytics-chart-subtitle">
             When conversations happen (UTC)
           </div>
-          {widgetData?.peak_hours ? (
+          {widgetData?.peak_hours?.length ? (
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={widgetData.peak_hours}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
@@ -784,7 +784,7 @@ export default function AnalyticsPage() {
                     dataKey="date"
                     stroke={chartTheme.text}
                     fontSize={11}
-                    tickFormatter={d => d.slice(5)}
+                    tickFormatter={d => (d ? String(d).slice(5) : "")}
                   />
                   <YAxis stroke={chartTheme.text} fontSize={11} allowDecimals={false} />
                   <Tooltip content={<CustomTooltip />} />
@@ -896,7 +896,7 @@ export default function AnalyticsPage() {
             </div>
             <div className="analytics-insight-item">
               <span className="analytics-insight-icon" style={{ color: chartTheme.purple }}>&#9679;</span>
-              <span>Avg conversation duration: {widgetData ? Math.round(widgetData.avg_duration_seconds / 60) : 0} min</span>
+              <span>Avg conversation duration: {widgetData ? Math.round((widgetData.avg_duration_seconds || 0) / 60) : 0} min</span>
             </div>
             <div className="analytics-insight-item">
               <span className="analytics-insight-icon" style={{ color: chartTheme.red }}>&#9679;</span>

@@ -10,6 +10,13 @@
         "--access-token",
         "${SUPABASE_ACCESS_TOKEN}"
       ]
+    },
+    "instantly": {
+      "command": "uv",
+      "args": ["run", "--directory", "mcp-servers/instantly", "python", "server.py"],
+      "env": {
+        "INSTANTLY_API_KEY": "${INSTANTLY_API_KEY}"
+      }
     }
   }
 }

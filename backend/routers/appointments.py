@@ -627,9 +627,16 @@ async def ical_feed(
     cutoff_past = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
     cutoff_future = (datetime.now(timezone.utc) + timedelta(days=90)).isoformat()
 
+    # SECURITY: this feed is authenticated only by the widget API key, which is
+    # PUBLIC (embedded in every tenant page's source). It therefore MUST NOT
+    # return customer PII (name/email/phone/notes) — anyone who reads a tenant's
+    # page could otherwise export their whole customer contact list. The feed
+    # exposes only appointment time-blocks + status ("busy" calendar view).
+    # Follow-up for full-detail sync: a private, revocable per-tenant feed token
+    # distinct from the public embed key.
     appts = (
         db.table("appointments")
-        .select("id, customer_name, customer_email, customer_phone, start_time, end_time, status, notes")
+        .select("id, start_time, end_time, status")
         .eq("tenant_id", tenant_id)
         .neq("status", "cancelled")
         .gte("start_time", cutoff_past)
@@ -651,17 +658,9 @@ async def ical_feed(
 
     for appt in (appts.data or []):
         uid = appt["id"]
-        summary = f"Appointment: {appt.get('customer_name', 'Customer')}"
-        description_parts = []
-        if appt.get("customer_email"):
-            description_parts.append(f"Email: {appt['customer_email']}")
-        if appt.get("customer_phone"):
-            description_parts.append(f"Phone: {appt['customer_phone']}")
-        if appt.get("notes"):
-            description_parts.append(f"Notes: {appt['notes']}")
-        if appt.get("status"):
-            description_parts.append(f"Status: {appt['status']}")
-        description = "\\n".join(description_parts)
+        # No customer PII — public-key feed. Generic busy-block only.
+        summary = "Appointment"
+        description = f"Status: {appt['status']}" if appt.get("status") else ""
 
         # Format timestamps for iCal (YYYYMMDDTHHMMSSZ)
         def _to_ical_dt(dt_str):

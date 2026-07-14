@@ -147,13 +147,39 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
             lead_fields["conversation_id"] = conversation_id
         except (ValueError, AttributeError):
             logger.debug("lead_submit: conversation_id %r is not a UUID, omitting", conversation_id)
+        # The unique (client_id, email) constraint (migration 164) is the
+        # backstop that closes the check-then-insert race; the background
+        # capture path (widget_lead_helpers) handles a lost race gracefully.
         result = db.table("leads").insert(lead_fields).execute()
         if result.data:
             lead_id = result.data[0]["id"]
             is_new = True
+        else:
+            # Insert returned no rows (RLS block / silent write failure). Do NOT
+            # report success with a null lead_id — that loses the lead on the
+            # primary capture path with no signal. Fail loudly so the caller retries.
+            logger.error(
+                "submit_lead: leads insert returned no data for client_id=%s email=%r — lead NOT saved",
+                tenant["id"],
+                fields.get("email"),
+            )
+            raise HTTPException(status_code=500, detail="Lead could not be saved. Please try again.")
 
     if lead_id:
-        background_tasks.add_task(score_lead_background, lead_id)
+        # Score synchronously (rubric-based, no LLM call — see lead_scoring.py)
+        # so lead_score + lead_temperature are on the row before the response
+        # returns. Tenant dashboard shows prioritized leads immediately on
+        # capture instead of waiting for a background task to catch up.
+        # score_lead_background() already logs + swallows its own exceptions;
+        # this try/except is a second, call-site-owned guarantee that a
+        # scoring failure can never break lead capture.
+        try:
+            score_lead_background(lead_id)
+        except Exception:
+            logger.warning(
+                "Synchronous lead scoring failed for lead %s — lead capture unaffected",
+                lead_id, exc_info=True,
+            )
 
     # AI qualification only fires for NEW leads on eligible plans — the
     # service itself gates on plan, so we unconditionally enqueue here

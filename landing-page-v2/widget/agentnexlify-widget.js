@@ -40,6 +40,7 @@
       typicallyReplies: "Typically replies instantly",
       minimizeTitle: "Minimize",
       closeTitle: "Close",
+      openChat: "Open chat",
       viewMenuTitle: "View Menu",
       bookTitle: "Book Appointment",
       contentModeTitle: "Content Mode",
@@ -112,6 +113,7 @@
       typicallyReplies: "Normalmente responde al instante",
       minimizeTitle: "Minimizar",
       closeTitle: "Cerrar",
+      openChat: "Abrir chat",
       viewMenuTitle: "Ver menú",
       bookTitle: "Agendar una cita",
       contentModeTitle: "Modo contenido",
@@ -258,6 +260,10 @@
         height: 60px !important;
         border-radius: 50% !important;
         background: ${BRAND_COLOR} !important;
+        border: none !important;
+        padding: 0 !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
         cursor: pointer !important;
         display: flex !important;
         align-items: center !important;
@@ -918,10 +924,10 @@
         <button id="anx-teaser-close" style="position:absolute;top:4px;right:6px;background:none;border:none;cursor:pointer;font-size:16px;color:#999;line-height:1;" title="Dismiss">&times;</button>
         <p id="anx-teaser-text" style="margin:0;padding-right:12px;color:#333;"></p>
       </div>
-      <div id="anx-bubble">
-        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/></svg>
+      <button type="button" id="anx-bubble" aria-label="${t('openChat')}" aria-expanded="false" aria-controls="anx-window" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/></svg>
         <div id="anx-badge">1</div>
-      </div>
+      </button>
       <div id="anx-window">
         <div id="anx-header">
           <div id="anx-header-info">
@@ -941,7 +947,7 @@
         </div>
         <div id="anx-menu-panel" style="display:none;"></div>
         <div id="anx-booking"></div>
-        <div id="anx-messages"></div>
+        <div id="anx-messages" role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false"></div>
         <div id="anx-input-area">
           <button id="anx-attach" title="${t('attachTitle')}">
             <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -979,6 +985,17 @@
   let teaserTimer = null;
   let teaserDelaySeconds = 3;
   let teaserEnabled = true;
+
+  // Proactive behavior-triggered chat state (default OFF, config-driven)
+  let proactiveEnabled = false;
+  let proactiveDelaySeconds = 20;
+  let proactiveExitIntent = true;
+  let proactiveMessage = null;
+  let proactiveOncePerSession = true;
+  let proactiveTimer = null;
+  let proactiveExitIntentBound = false;
+  // In-memory only (no localStorage/sessionStorage) - resets on full page load.
+  let proactiveTriggered = false;
 
   // Menu state
   let menuItems = null; // Array of {name, description, price, category} or null
@@ -1019,6 +1036,17 @@
         teaserDelaySeconds = data.teaser_delay_seconds;
       if (data.teaser_enabled !== undefined)
         teaserEnabled = data.teaser_enabled;
+      if (data.proactive && typeof data.proactive === "object") {
+        if (data.proactive.enabled !== undefined)
+          proactiveEnabled = !!data.proactive.enabled;
+        if (data.proactive.delay_seconds !== undefined)
+          proactiveDelaySeconds = data.proactive.delay_seconds;
+        if (data.proactive.exit_intent !== undefined)
+          proactiveExitIntent = !!data.proactive.exit_intent;
+        if (data.proactive.message) proactiveMessage = data.proactive.message;
+        if (data.proactive.once_per_session !== undefined)
+          proactiveOncePerSession = !!data.proactive.once_per_session;
+      }
       if (data.plan) tenantPlan = data.plan;
       if (data.menu_items && data.menu_items.length > 0) {
         menuItems = data.menu_items;
@@ -1054,7 +1082,11 @@
     }
   }
 
-  const FETCH_TIMEOUT_MS = 15000; // 15 seconds
+  // Must exceed the backend's Claude-call ceiling (30s in widget_chat.py) so a
+  // slow-but-successful reply isn't aborted client-side, otherwise the visitor
+  // sees an error while the backend succeeds, bills the call, and stores an
+  // assistant message they never saw.
+  const FETCH_TIMEOUT_MS = 35000; // 35 seconds
 
   async function fetchWithTimeout(
     url,
@@ -1376,6 +1408,7 @@
     const win = document.getElementById("anx-window");
     const bubble = document.getElementById("anx-bubble");
     isOpen = open;
+    if (bubble) bubble.setAttribute("aria-expanded", open ? "true" : "false");
 
     if (open) {
       win.classList.add("open");
@@ -1393,10 +1426,12 @@
         clearTimeout(teaserTimer);
         teaserTimer = null;
       }
+      disarmProactiveTriggers();
     } else {
       win.classList.remove("open");
       bubble.classList.remove("hidden");
       localStorage.setItem(STATE_KEY, "closed");
+      armProactiveTriggers();
     }
   }
 
@@ -1427,6 +1462,51 @@
   function hideTeaser() {
     const teaser = document.getElementById("anx-teaser");
     if (teaser) teaser.style.display = "none";
+  }
+
+  // --- Proactive behavior-triggered chat ---
+  // Fires when the cursor leaves toward the top of the viewport with no
+  // related target inside the page - the classic "heading for the tab bar
+  // to close this tab" signal.
+  function handleProactiveExitIntent(e) {
+    if (e.clientY > 10) return;
+    if (e.relatedTarget || e.toElement) return;
+    triggerProactiveOpen();
+  }
+
+  function armProactiveTriggers() {
+    if (!proactiveEnabled || isOpen) return;
+    if (proactiveOncePerSession && proactiveTriggered) return;
+    if (!proactiveTimer) {
+      proactiveTimer = setTimeout(
+        triggerProactiveOpen,
+        Math.max(0, proactiveDelaySeconds) * 1000,
+      );
+    }
+    if (proactiveExitIntent && !proactiveExitIntentBound) {
+      document.addEventListener("mouseout", handleProactiveExitIntent);
+      proactiveExitIntentBound = true;
+    }
+  }
+
+  function disarmProactiveTriggers() {
+    if (proactiveTimer) {
+      clearTimeout(proactiveTimer);
+      proactiveTimer = null;
+    }
+    if (proactiveExitIntentBound) {
+      document.removeEventListener("mouseout", handleProactiveExitIntent);
+      proactiveExitIntentBound = false;
+    }
+  }
+
+  function triggerProactiveOpen() {
+    if (!proactiveEnabled || isOpen) return;
+    if (proactiveOncePerSession && proactiveTriggered) return;
+    proactiveTriggered = true;
+    disarmProactiveTriggers();
+    triggerGreeting(proactiveMessage);
+    toggleWindow(true);
   }
 
   async function handleSend() {
@@ -2103,6 +2183,10 @@
     ) {
       teaserTimer = setTimeout(showTeaser, teaserDelaySeconds * 1000);
     }
+
+    // Proactive behavior-triggered chat: no-op unless a tenant configures
+    // proactive.enabled = true (default OFF, fully backward compatible).
+    armProactiveTriggers();
   }
 
   function showPreChatForm() {
@@ -2206,11 +2290,11 @@
     return true;
   }
 
-  function triggerGreeting() {
+  function triggerGreeting(overrideMessage) {
     const msgs = document.getElementById("anx-messages");
     if (!msgs || msgs.children.length > 0) return;
     const rawGreeting =
-      greetingMessage || "How can I help you today?";
+      overrideMessage || greetingMessage || "How can I help you today?";
     const greetingWithDisclosure = /\bAI\b/i.test(rawGreeting)
       ? rawGreeting
       : `Hi! I'm the AI assistant for this business. ${rawGreeting}`;

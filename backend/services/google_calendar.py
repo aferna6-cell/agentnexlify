@@ -332,16 +332,19 @@ def get_busy_times(
     tenant_id: str,
     time_min: datetime,
     time_max: datetime,
-) -> list[tuple[datetime, datetime]]:
+) -> list[tuple[datetime, datetime]] | None:
     """Query the Google Calendar freebusy API for busy periods.
 
-    Returns a list of ``(start, end)`` datetime tuples in UTC.  On any failure
-    an empty list is returned so that the local availability logic still works.
+    Returns a list of ``(start, end)`` UTC tuples on success (possibly empty when
+    the calendar is genuinely free). Returns ``None`` when the calendar could NOT
+    be verified — no service/token or an API error — so callers can distinguish
+    "verified free" from "unknown" and avoid offering slots that may already be
+    booked in the tenant's Google Calendar (external double-booking, audit C5).
     """
     try:
         service = _build_service(tenant_id)
         if not service:
-            return []
+            return None
 
         body = {
             "timeMin": time_min.isoformat(),
@@ -370,4 +373,6 @@ def get_busy_times(
             tenant_id,
             exc_info=True,
         )
-        return []
+        # Could-not-verify — signal None so callers fail closed instead of
+        # treating an API error as "calendar is free" (audit C5).
+        return None

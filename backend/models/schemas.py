@@ -401,6 +401,9 @@ class WidgetConfigResponse(BaseModel):
     teaser_enabled: bool = True
     plan: str = "free"
     pre_chat_form: list[dict] | None = None
+    # Behavior-triggered proactive open (time-on-page / exit-intent). Passed
+    # through to the widget; when null or {enabled:false} the widget does nothing.
+    proactive: dict | None = None
 
 
 class WidgetLeadRequest(BaseModel):

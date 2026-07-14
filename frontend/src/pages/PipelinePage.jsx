@@ -47,7 +47,7 @@ function PipelineCard({ lead, onMove, onSelect, movingId, stages }) {
   const dealValue = formatCurrency(lead.deal_value);
   const isMoving = movingId === lead.id;
 
-  const otherStages = (stages || []).filter((s) => s.name.toLowerCase() !== (lead.status || "").toLowerCase());
+  const otherStages = (stages || []).filter((s) => (s.name || "").toLowerCase() !== (lead.status || "").toLowerCase());
 
   return (
     <div
@@ -458,8 +458,8 @@ export default function PipelinePage() {
   // Compute stats from all leads
   const wonStages = stages.filter((s) => s.is_won);
   const lostStages = stages.filter((s) => s.is_lost);
-  const wonNames = new Set(wonStages.map((s) => s.name.toLowerCase()));
-  const lostNames = new Set(lostStages.map((s) => s.name.toLowerCase()));
+  const wonNames = new Set(wonStages.map((s) => (s.name || "").toLowerCase()));
+  const lostNames = new Set(lostStages.map((s) => (s.name || "").toLowerCase()));
 
   const totalPipelineValue = allLeads.reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
   const wonLeads = allLeads.filter((l) => wonNames.has((l.status || "").toLowerCase()));

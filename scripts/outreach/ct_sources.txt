@@ -1,0 +1,28 @@
+# CT small-business listicle / directory sources for the lead engine.
+# One URL per line. The scheduled driver fetches these, extracts
+# "company | website-domain" pairs, and pipes them into
+# instantly_lead_engine.py as candidates.
+#
+# These aggregator pages list many businesses with real website domains
+# in one page (much higher yield than per-business search). Rotate / extend
+# with more CT cities and verticals to keep finding fresh leads.
+#
+# inven.ai "top N <vertical> companies in connecticut" lists:
+https://www.inven.ai/company-lists/top-24-hvac-companies-in-connecticut
+https://www.inven.ai/company-lists/top-25-commercial-plumbing-companies-in-connecticut
+https://www.inven.ai/company-lists/top-20-smart-home-companies-in-connecticut
+#
+# expertise.com "best <vertical> in <CT city>" lists (pattern:
+#   /home-improvement/<vertical>/connecticut/<city>):
+https://www.expertise.com/home-improvement/roofing/connecticut/hartford
+https://www.expertise.com/home-improvement/roofing/connecticut/new-haven
+https://www.expertise.com/home-improvement/roofing/connecticut/stamford
+https://www.expertise.com/home-improvement/electricians/connecticut/hartford
+https://www.expertise.com/home-improvement/plumbing/connecticut/new-haven
+https://www.expertise.com/home-improvement/pest-control/connecticut/waterbury
+#
+# Cities to rotate through: hartford, new-haven, stamford, bridgeport,
+# waterbury, norwalk, danbury, new-britain, west-hartford, greenwich,
+# norwich, middletown, meriden, bristol, milford.
+# Verticals: roofing, electricians, plumbing, pest-control, hvac,
+# landscaping, dentists, auto-repair, salons, cleaning, painting.

@@ -84,7 +84,10 @@ async def send_appointment_reminders() -> int:
             try:
                 tenant = (
                     db.table("tenants")
-                    .select("business_name, owner_email, plan, business_type")
+                    .select(
+                        "business_name, owner_email, plan, business_type, "
+                        "appointment_reminders_enabled"
+                    )
                     .eq("id", tenant_id)
                     .limit(1)
                     .execute()
@@ -92,6 +95,10 @@ async def send_appointment_reminders() -> int:
                 if not tenant.data:
                     continue
                 tenant_data = tenant.data[0]
+                # Per-tenant opt-out (migration 167). Column defaults true, so
+                # this changes nothing until a tenant disables reminders.
+                if tenant_data.get("appointment_reminders_enabled") is False:
+                    continue
                 business_name = html.escape(
                     tenant_data.get("business_name") or "Our Team"
                 )

@@ -52,9 +52,9 @@ TASK: Auto-populate the knowledge base from knowledge-base/sources.yaml.
 TOOLS: Use agent-browser via Bash if available (`agent-browser fetch <url>` and `agent-browser search <query>`). If agent-browser unavailable, use WebFetch tool as the primary fallback. curl -sL is a last resort only.
 
 SCOPE (locked — do not ask, do not override):
-- Process ALL 7 categories in sources.yaml
+- Process EVERY category in sources.yaml (currently 8, including frontier_ai — do not hardcode a count)
 - Per category: run top 3 search queries from the file, pick top 2 NEW articles by relevance
-- Max 14 new articles total this run (2 per category × 7 categories)
+- Max ~16 new articles total this run (2 per category across all categories in the file)
 - Dedup against knowledge-base/known-urls.json before writing anything
 - Skip categories that have no new unique URLs — do not retry
 

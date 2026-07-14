@@ -219,12 +219,25 @@ def generate_available_slots(
         b_end = datetime.fromisoformat(appt["end_time"])
         booked_ranges.append((b_start, b_end))
 
-    # Fetch Google Calendar busy times (best-effort)
+    # Fetch Google Calendar busy times. If the tenant has a Google integration
+    # but we CANNOT verify it (API error / bad token — get_busy_times returns
+    # None), fail closed: hide this day's slots rather than offer a time that may
+    # already be booked in Google (external double-booking, audit C5). A brief
+    # empty-availability window during a Google outage is recoverable; a
+    # double-booked customer is not. To prefer availability over this safety
+    # (still show slots + confirm manually), change the `return []` below.
     try:
         from backend.services.google_calendar import get_busy_times, get_integration
 
         if get_integration(tenant_id):
             gcal_busy = get_busy_times(tenant_id, day_start_utc, day_end_utc)
+            if gcal_busy is None:
+                logger.warning(
+                    "generate_available_slots: Google Calendar busy times unverifiable "
+                    "for tenant %s — hiding this day's slots to avoid double-booking",
+                    tenant_id,
+                )
+                return []
             booked_ranges.extend(gcal_busy)
     except Exception:
         logger.warning("Failed to fetch Google Calendar busy times for tenant %s", tenant_id, exc_info=True)
@@ -322,6 +335,14 @@ def create_appointment(
                 appointment["google_event_id"] = google_event_id
     except Exception:
         logger.warning("Failed to sync appointment %s to Google Calendar", appointment["id"], exc_info=True)
+
+    # Schedule 24h/2h SMS reminders (best-effort). See appointment_reminders.py.
+    try:
+        from backend.services.appointment_reminders import schedule_reminders_for_appointment
+
+        schedule_reminders_for_appointment(appointment)
+    except Exception:
+        logger.warning("Failed to schedule reminders for appointment %s", appointment["id"], exc_info=True)
 
     # Send confirmation to customer (best-effort, background)
     try:

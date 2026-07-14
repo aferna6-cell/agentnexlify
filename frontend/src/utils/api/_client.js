@@ -59,6 +59,11 @@ function responseHeader(res, name) {
   return null;
 }
 
+// A backend that accepts the connection then stalls would otherwise never
+// settle this promise, leaving pages spinning forever (audit H11). Abort after
+// this ceiling so callers get a real error and their `finally` clears the spinner.
+const REQUEST_TIMEOUT_MS = 30000;
+
 export async function request(path, { method = "GET", body, token } = {}) {
   const headers = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -69,11 +74,20 @@ export async function request(path, { method = "GET", body, token } = {}) {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
-    reportError(error, { source: "api-client", path, method, phase: "network" });
+    const timedOut = error && error.name === "TimeoutError";
+    reportError(error, {
+      source: "api-client",
+      path,
+      method,
+      phase: timedOut ? "timeout" : "network",
+    });
     throw new ApiError(0, {
-      detail: "Network error. Check your connection and try again.",
+      detail: timedOut
+        ? "The request timed out. Please try again."
+        : "Network error. Check your connection and try again.",
     });
   }
 

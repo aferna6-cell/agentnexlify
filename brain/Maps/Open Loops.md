@@ -11,6 +11,18 @@ last_updated: 2026-07-01
 
 Unfinished work + blockers (business scope). Ordered by priority.
 
+## Cold Outreach Engine (added 2026-07-13)
+- **`GOOGLE_PLACES_API_KEY` not persisted** — the key works this session but lives only in an
+  ephemeral `.env`/scratchpad; it vanishes on container recycle. **Add it in Railway → backend
+  service → Variables** so scheduled/prod runs authenticate. Until then, Places sourcing is
+  session-only. Source: [[Cold Outreach Engine]].
+- **Durable outreach schedule not armed** — `scripts/outreach/instantly_lead_engine.py` is
+  committed + tested, but the recurring Routine that runs Places→verify→load was blocked on
+  interactive approval in an automated session. Arm it (and confirm the env key) to make lead
+  top-up hands-off. Source: [[Cold Outreach Engine]].
+- **"Small Business CT 7/10" mid-send** — 371 verified leads, ~197 sent, rest draining at the
+  20/inbox/day cap over ~1–2 days. 0 bounces, 1 reply (System4 IPS). Monitor pings on completion.
+
 ## In progress / pending autonomous (added 2026-07-01)
 - **SMS Compliance Dashboard** — subconscious winner for 10+ days (runs 70/73/74/75, 12/12
   council score, S effort). Backend LIVE (`backend/services/sms_compliance.py` + migration 160);

@@ -4,25 +4,26 @@ import { fetchDashboard, billingCheckout, billingPortal, fetchTrialStatus, chang
 import SkeletonLoader from "../components/SkeletonLoader";
 import ReferralCard from "../components/billing/ReferralCard";
 import { notify } from "../utils/notify";
+import { PLAN_DISPLAY } from "../utils/planDisplay";
 
 // Two purchasable plans. Keys must match the backend PLAN_PRICES keys.
-// Chatbot: $19.99/mo - widget/chatbot features only.
-// Agent OS: $99.99/mo - full platform.
+// Display names come from PLAN_DISPLAY so Billing matches marketing + signup
+// ("AI Front Desk" / "AI Workforce"), not the internal keys (audit UI H2).
 const PLANS = [
   {
     key: "chatbot",
-    name: "Chatbot",
+    name: PLAN_DISPLAY.chatbot,
     price: "$19.99",
     period: "/mo",
     description: "AI chat widget + lead capture for your website.",
   },
   {
     key: "agent_os",
-    name: "Agent OS",
+    name: PLAN_DISPLAY.agent_os,
     price: "$99.99",
     period: "/mo",
     popular: true,
-    description: "Full platform - Agent OS, marketing, CRM, and everything.",
+    description: "Full platform - AI staff, marketing, CRM, and everything.",
   },
 ];
 

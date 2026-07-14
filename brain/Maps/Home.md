@@ -19,14 +19,15 @@ business, **[[AgentNexLiFy]]**. Scope: business/builder only (personal/student e
 
 ## Core entities
 - People: [[Aidan Fernandes]]
-- Companies: [[AgentNexLiFy]] · [[VoltOps]] · [[GoHighLevel]] · [[Anthropic]] · [[MTOptions]]
+- Companies: [[AgentNexLiFy]] · [[VoltOps]] · [[GoHighLevel]] · [[Anthropic]] · [[MTOptions]] · [[Instantly]]
 - Products: [[AgentNexLiFy Platform]] · [[Agent OS]] · [[Claude Managed Agents]] · [[Knowledge Base Wiki]] · [[BetBrain]]
-- Projects: [[Chat Widget]] · [[Dashboard]] · [[Agent Service]] · [[Paid Launch Readiness]] · [[Vertical Packs]] · [[Autonomous Dev Operation]]
+- Projects: [[Chat Widget]] · [[Dashboard]] · [[Agent Service]] · [[Paid Launch Readiness]] · [[Vertical Packs]] · [[Autonomous Dev Operation]] · [[Cold Outreach Engine]]
 
 ## Maps
 - [[Product Map]] — how the product fits together
 - [[Decision Log]] — decisions with rationale
 - [[Open Loops]] — what's unfinished
+- [[AI Product Opportunities]] — AI innovations mapped to product moves
 - [[GitHub Activity]] — repo snapshot + history
 - [[Database Schema]] — the production DB
 

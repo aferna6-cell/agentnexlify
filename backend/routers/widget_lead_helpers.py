@@ -554,6 +554,10 @@ async def _capture_leads_from_session(
         try:
             result = tenant_insert(db, "leads", tenant_id, lead_fields).execute()
         except Exception as insert_err:
+            # A unique (client_id, email) violation (migration 164) lands here
+            # too: a concurrent capture already created this lead, so this insert
+            # is correctly dropped — no duplicate row, no double-fired alerts /
+            # sequences / scoring / webhook. The DB constraint is the race fix.
             logger.error(
                 "lead_capture: INSERT FAILED: %s — fields were %s",
                 insert_err, lead_fields, exc_info=True,
