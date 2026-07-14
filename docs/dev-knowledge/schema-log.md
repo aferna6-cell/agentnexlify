@@ -4,6 +4,16 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 170_bot_health_scores.sql (2026-07-14)
+
+**What:** New `bot_health_scores` table — per-tenant bot-quality time series.
+
+**Why:** Bot-Health evals (#R4). An LLM-as-judge (Haiku) scores each tenant's chat-widget conversations over a window and stores `resolution_rate`, `hallucination_flag_count`, `unresolved_intent_count`, `avg_sentiment`, and a composite `health_score` (0-100: resolution 50% / low-hallucination 25% / low-unresolved 15% / sentiment 10%). Time series (not upserted) so the dashboard shows a trend + degradation alert. Uses `tenant_id` (per-tenant aggregate; source `chat_messages` is tenant_id-keyed). Index `idx_bot_health_scores_tenant_computed` on `(tenant_id, computed_at DESC)`. Endpoints: `GET /api/v1/bot-health/{tenant_id}` (JWT), `POST /api/v1/bot-health/run` (admin secret, not yet cron-wired).
+
+**Applied:** 2026-07-14 via `mcp__supabase__apply_migration` (prod `pxserpybmajixqrmzaly`).
+
+---
+
 ## 169_widget_proactive.sql (2026-07-14)
 
 **What:** `proactive jsonb` (nullable) added to `widget_configs`.
