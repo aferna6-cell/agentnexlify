@@ -4,6 +4,38 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 167_widget_proactive.sql (2026-07-14)
+
+**What:** `proactive jsonb` (nullable) added to `widget_configs`.
+
+**Why:** Behavior-triggered widget auto-open (time-on-page / scroll-depth / exit-intent). Config passed through to the embedded widget by `GET /api/v1/widget/config`. Shape: `{"enabled":bool,"delay_seconds":int,"exit_intent":bool,"message":text|null,"once_per_session":bool}`. NULL default = feature off, fully backward compatible.
+
+**Applied:** 2026-07-14 via `mcp__supabase__apply_migration` (prod `pxserpybmajixqrmzaly`).
+
+---
+
+## 166_review_responses.sql (2026-07-14)
+
+**What:** New `review_responses` table — approval-gated AI review replies.
+
+**Why:** Reviews AI (GoHighLevel AI Employee parity). Drafts an AI reply to a customer review and holds it for human approval before posting. `draft -> approved -> posted/rejected` state machine + `approved_by`/`approved_at`. Separate from the `reviews` table's inline `ai_draft_response` (no lifecycle). `review_id` is an FK-less pointer to `reviews.id`; `external_ref` holds a platform review id when unknown. Index `review_responses_tenant_status_idx` on `(tenant_id, status)`.
+
+**Applied:** 2026-07-14 via `mcp__supabase__apply_migration` (prod `pxserpybmajixqrmzaly`).
+
+---
+
+## 165_appointment_reminders.sql (2026-07-14)
+
+**What:** New `appointment_reminders` table + `tenants.appointment_reminders_enabled boolean NOT NULL DEFAULT true`.
+
+**Why:** Automated SMS reminders (24h + 2h) before booked appointments to cut no-shows. Scheduled at booking time; sent by a polling job (`POST /api/v1/appointments/reminders/run`). `UNIQUE (appointment_id, reminder_type)` makes scheduling idempotent. `pending -> sending -> sent|failed|skipped` claim dance lets the 4 Uvicorn workers avoid double-sending. Uses `tenant_id` (appointments differ from leads/conversations). Index `idx_appointment_reminders_due` on `(scheduled_for, status)`. Per-tenant opt-out toggle defaults enabled.
+
+**Note:** The `/run` endpoint is manual (not cron-wired) to avoid double-sending with the legacy `backend/services/automation/scheduled/appointment_jobs.py::send_appointment_reminders()` path. Wire one or the other, not both.
+
+**Applied:** 2026-07-14 via `mcp__supabase__apply_migration` (prod `pxserpybmajixqrmzaly`).
+
+---
+
 ## 153_stripe_trial_end.sql (2026-06-16)
 
 **What:** `stripe_trial_end timestamptz` added to `tenants` table (nullable, no default).
