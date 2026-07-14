@@ -10,8 +10,10 @@ paths:
 | Model | ID | Use for |
 |-------|-----|---------|
 | **Haiku** | `claude-haiku-4-5-20251001` | grammar, formatting, lookups, bullet lists, renames, translations, quick classification, hook scanners |
-| **Sonnet** | `claude-sonnet-4-6` | code, debug, API calls, multi-file edits, most Agent executions, default implementation |
-| **Opus 4.7** | `claude-opus-4-7` | **NEW DEFAULT FOR OPUS** - planning, architecture, security design, critical review, ambiguous decomposition, advisor passes. Self-verifies outputs. Default effort: `xhigh` in Claude Code. See `rules/opus-4-7.md`. |
+| **Sonnet 5** | `claude-sonnet-5` | **NEW DEFAULT FOR SONNET** (2026-06-30) - code, debug, API calls, multi-file edits, most Agent executions, default implementation, widget chat runtime. Near-Opus reasoning at Sonnet cost. New tokenizer = ~1.0-1.35x tokens vs 4.6. |
+| **Opus 4.8** | `claude-opus-4-8` | **NEW DEFAULT FOR OPUS** (2026-06-30) - planning, architecture, security design, critical review, ambiguous decomposition, advisor passes. Self-verifies outputs. Default effort: `xhigh` in Claude Code. |
+
+Legacy-but-valid (many background call sites still use these; no need to churn them all at once): `claude-sonnet-4-6`, `claude-opus-4-7`. See `rules/opus-4-7.md` for 4.7-era feature notes (self-verification, ultrareview, task-budgets carry forward to 4.8).
 
 ## Opus 4.7 feature invoke-regularly rules
 - **Self-verification** required on every task completion (`rules/self-verification.md`)

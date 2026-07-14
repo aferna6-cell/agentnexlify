@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # AI model constants
 # ---------------------------------------------------------------------------
 
-MODEL = "claude-sonnet-4-6"
+MODEL = "claude-sonnet-5"
 MAX_TOKENS = 700
 TEMPERATURE = 0.7
 

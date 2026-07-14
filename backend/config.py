@@ -14,9 +14,15 @@ _WEAK_SECRET_MIN_LEN = 32
 
 class Settings(BaseSettings):
     anthropic_api_key: str = ""
-    widget_chat_model: str = "claude-sonnet-4-6"
+    # Widget + voice chat default to Sonnet 5 (2026-06-30): near-Opus reasoning
+    # at Sonnet cost, better lead-capture/booking conversations. Per-tenant DB
+    # override via resolve_string_setting("widget_chat_model", ...) still wins.
+    # NOTE: Sonnet 5's tokenizer maps text to ~1.0-1.35x more tokens than 4.6 —
+    # ai_usage_guard.PLAN_BASELINE_TOKENS is NOT re-baselined here; it needs
+    # real Sonnet-5 usage data before adjusting (left conservative on purpose).
+    widget_chat_model: str = "claude-sonnet-5"
     widget_chat_max_tokens: int = 320
-    voice_chat_model: str = "claude-sonnet-4-6"
+    voice_chat_model: str = "claude-sonnet-5"
     voice_chat_max_tokens: int = 160
     widget_prompt_faq_limit: int = 6
     widget_prompt_corrections_limit: int = 8

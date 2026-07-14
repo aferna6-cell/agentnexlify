@@ -117,7 +117,7 @@ def _safe_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
     return safe
 
 
-def _message_role_counts(messages: list[dict[str, str]]) -> dict[str, int]:
+def _message_role_counts(messages: list[dict[str, Any]]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for msg in messages:
         role = str(msg.get("role") or "unknown")
@@ -125,9 +125,52 @@ def _message_role_counts(messages: list[dict[str, str]]) -> dict[str, int]:
     return counts
 
 
+def _content_length(content: Any) -> int:
+    """Best-effort text length for a message `content` payload.
+
+    `content` is a plain string for text-only calls (the common case), or a
+    list of multimodal blocks for vision calls — like this:
+    `[{"type": "text", "text": "..."}, {"type": "image", "source": {...}}]`.
+    Image blocks count as a fixed small marker rather than their (large,
+    base64) payload, so logs stay cheap and this never crashes on non-string
+    content. Anything else (None, unexpected shape) contributes 0.
+    """
+    if isinstance(content, str):
+        return len(content)
+    if isinstance(content, list):
+        total = 0
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            block_type = block.get("type")
+            if block_type == "text":
+                total += len(block.get("text") or "")
+            elif block_type == "image":
+                total += len("[image]")
+            else:
+                total += len(str(block_type or "block"))
+        return total
+    return 0
+
+
+def _message_chars(messages: list[dict[str, Any]]) -> int:
+    return sum(_content_length(msg.get("content")) for msg in messages)
+
+
+# Reasoning-tier models (adaptive thinking) reject non-default sampling params
+# (temperature/top_p/top_k) — sending them returns a 400. Opus 4.7 was the
+# first; Opus 4.8 and Sonnet 5 (2026-06-30) follow the same contract. Omitting
+# a sampling param is always safe (the API falls back to its default), so when
+# in doubt about a new reasoning model, add it here rather than risk a 400 on
+# the live widget path.
+_SAMPLING_OMISSION_MODELS = frozenset(
+    {"claude-opus-4-7", "claude-opus-4-8", "claude-sonnet-5"}
+)
+
+
 def _requires_sampling_omission(model: str) -> bool:
-    """Claude Opus 4.7 rejects non-default sampling params; omit them entirely."""
-    return model == "claude-opus-4-7"
+    """Reasoning models reject non-default sampling params; omit them entirely."""
+    return model in _SAMPLING_OMISSION_MODELS
 
 
 def _log_start(
@@ -138,11 +181,11 @@ def _log_start(
     temperature: float | None,
     output_config: dict[str, Any] | None,
     system: str | None,
-    messages: list[dict[str, str]],
+    messages: list[dict[str, Any]],
     metadata: dict[str, Any] | None,
 ) -> None:
     system_chars = len(system or "")
-    message_chars = sum(len(msg.get("content") or "") for msg in messages)
+    message_chars = _message_chars(messages)
     temperature_label = "omitted" if temperature is None else f"{temperature:.2f}"
     logger.info(
         "llm.call.start id=%s op=%s model=%s max_tokens=%d temperature=%s "
@@ -206,7 +249,7 @@ def _log_error(
     operation: str,
     model: str,
     duration_ms: int,
-    messages: list[dict[str, str]],
+    messages: list[dict[str, Any]],
     system: str | None,
     metadata: dict[str, Any] | None,
     exc: Exception,
@@ -221,7 +264,7 @@ def _log_error(
         len(messages),
         _message_role_counts(messages),
         len(system or ""),
-        sum(len(msg.get("content") or "") for msg in messages),
+        _message_chars(messages),
         type(exc).__name__,
         str(exc)[:300],
         _safe_metadata(metadata),
@@ -239,7 +282,7 @@ def _log_error(
         "message_count": len(messages),
         "role_counts": _message_role_counts(messages),
         "system_chars": len(system or ""),
-        "message_chars": sum(len(msg.get("content") or "") for msg in messages),
+        "message_chars": _message_chars(messages),
         "metadata": _safe_metadata(metadata),
     })
 
@@ -249,35 +292,26 @@ def _should_retry(exc: Exception) -> bool:
     return any(token in name for token in ("ratelimit", "overloaded", "timeout", "apiconnection", "internalserver"))
 
 
-def call_claude_messages_sync(
+def _call_single_model(
     *,
+    call_id: str,
     operation: str,
     model: str,
     max_tokens: int,
-    messages: list[dict[str, str]],
-    temperature: float | None = 0.0,
-    output_config: dict[str, Any] | None = None,
-    system: str | None = None,
-    timeout: float = 30.0,
-    metadata: dict[str, Any] | None = None,
-    max_retries: int = 0,
-    retry_delay_seconds: float = 0.75,
+    messages: list[dict[str, Any]],
+    temperature: float | None,
+    output_config: dict[str, Any] | None,
+    system: str | None,
+    timeout: float,
+    metadata: dict[str, Any] | None,
+    max_retries: int,
+    retry_delay_seconds: float,
+    started: float,
 ) -> ClaudeCallResult:
-    """Run a Claude messages.create call with timing and structured logs."""
-    call_id = uuid.uuid4().hex[:12]
+    """Run the retry loop for a single model. Raises the last exception on
+    exhausted retries so the caller (fallback loop or direct caller) decides
+    what to do next."""
     request_temperature = None if _requires_sampling_omission(model) else temperature
-    _log_start(
-        call_id,
-        operation,
-        model,
-        max_tokens,
-        request_temperature,
-        output_config,
-        system,
-        messages,
-        metadata,
-    )
-    started = time.perf_counter()
     attempts = 0
 
     while True:
@@ -304,9 +338,10 @@ def call_claude_messages_sync(
             duration_ms = int((time.perf_counter() - started) * 1000)
             retryable = _should_retry(exc) and attempts <= max_retries
             logger.warning(
-                "llm.call.retry_decision id=%s op=%s attempt=%d max_retries=%d retryable=%s error_type=%s",
+                "llm.call.retry_decision id=%s op=%s model=%s attempt=%d max_retries=%d retryable=%s error_type=%s",
                 call_id,
                 operation,
+                model,
                 attempts,
                 max_retries,
                 retryable,
@@ -334,12 +369,12 @@ def call_claude_messages_sync(
     return result
 
 
-async def call_claude_messages(
+def call_claude_messages_sync(
     *,
     operation: str,
     model: str,
     max_tokens: int,
-    messages: list[dict[str, str]],
+    messages: list[dict[str, Any]],
     temperature: float | None = 0.0,
     output_config: dict[str, Any] | None = None,
     system: str | None = None,
@@ -347,11 +382,108 @@ async def call_claude_messages(
     metadata: dict[str, Any] | None = None,
     max_retries: int = 0,
     retry_delay_seconds: float = 0.75,
+    fallback_models: list[str] | None = None,
+    graceful_reply: str | None = None,
+) -> ClaudeCallResult:
+    """Run a Claude messages.create call with timing and structured logs.
+
+    `fallback_models` (optional) — when the primary `model` fails after its
+    own `max_retries`, try each fallback model in order with the same
+    messages/system/max_tokens before giving up. Existing callers that don't
+    pass `fallback_models` see zero behavior change: single model, raise on
+    failure.
+
+    `graceful_reply` (optional) — if every model (primary + fallbacks) fails,
+    return a canned `ClaudeCallResult` instead of raising. Leave unset to
+    keep today's behavior (raise the last exception).
+    """
+    call_id = uuid.uuid4().hex[:12]
+    request_temperature = None if _requires_sampling_omission(model) else temperature
+    _log_start(
+        call_id,
+        operation,
+        model,
+        max_tokens,
+        request_temperature,
+        output_config,
+        system,
+        messages,
+        metadata,
+    )
+    started = time.perf_counter()
+
+    models_to_try = [model, *(fallback_models or [])]
+    last_exc: Exception | None = None
+
+    for attempt_index, candidate_model in enumerate(models_to_try):
+        if attempt_index > 0:
+            logger.warning(
+                "llm.call.fallback id=%s op=%s model=%s from=%s",
+                call_id,
+                operation,
+                candidate_model,
+                model,
+            )
+        try:
+            return _call_single_model(
+                call_id=call_id,
+                operation=operation,
+                model=candidate_model,
+                max_tokens=max_tokens,
+                messages=messages,
+                temperature=temperature,
+                output_config=output_config,
+                system=system,
+                timeout=timeout,
+                metadata=metadata,
+                max_retries=max_retries,
+                retry_delay_seconds=retry_delay_seconds,
+                started=started,
+            )
+        except Exception as exc:  # noqa: BLE001 - deliberately broad: try next model
+            last_exc = exc
+            continue
+
+    if graceful_reply is not None:
+        duration_ms = int((time.perf_counter() - started) * 1000)
+        logger.warning(
+            "llm.call.graceful_fallback id=%s op=%s models_tried=%s error_type=%s",
+            call_id,
+            operation,
+            models_to_try,
+            type(last_exc).__name__ if last_exc else None,
+        )
+        return ClaudeCallResult(
+            text=graceful_reply,
+            duration_ms=duration_ms,
+            stop_reason="fallback_graceful",
+        )
+
+    assert last_exc is not None  # models_to_try always has >=1 entry
+    raise last_exc
+
+
+async def call_claude_messages(
+    *,
+    operation: str,
+    model: str,
+    max_tokens: int,
+    messages: list[dict[str, Any]],
+    temperature: float | None = 0.0,
+    output_config: dict[str, Any] | None = None,
+    system: str | None = None,
+    timeout: float = 30.0,
+    metadata: dict[str, Any] | None = None,
+    max_retries: int = 0,
+    retry_delay_seconds: float = 0.75,
+    fallback_models: list[str] | None = None,
+    graceful_reply: str | None = None,
 ) -> ClaudeCallResult:
     """Async wrapper for Claude messages.create that avoids blocking the event loop.
 
     Retries (and their backoff sleeps) run inside the executor thread, so the
-    event loop stays free even when max_retries > 0.
+    event loop stays free even when max_retries > 0. `fallback_models` and
+    `graceful_reply` pass straight through to `call_claude_messages_sync`.
     """
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(
@@ -369,5 +501,7 @@ async def call_claude_messages(
             metadata=metadata,
             max_retries=max_retries,
             retry_delay_seconds=retry_delay_seconds,
+            fallback_models=fallback_models,
+            graceful_reply=graceful_reply,
         ),
     )

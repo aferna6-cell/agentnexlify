@@ -14,6 +14,7 @@ from backend.limiter import limiter
 from backend.models.database import get_service_supabase as _get_service_supabase
 from backend.models.schemas import WidgetLeadRequest, WidgetLeadResponse, WidgetOfflineContactRequest
 from backend.services.activity import log_activity
+from backend.services.attribution import _sanitize_attribution
 from backend.services.lead_qualification import qualify_lead_background
 from backend.services.lead_scoring import score_lead_background
 from backend.services.webhook_dispatcher import fire_event_background
@@ -141,6 +142,13 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
             "status": "new",
             **fields,
         }
+        try:
+            clean_attribution = _sanitize_attribution(req.attribution)
+        except Exception:
+            logger.warning("submit_lead: attribution sanitize failed, dropping", exc_info=True)
+            clean_attribution = None
+        if clean_attribution is not None:
+            lead_fields["attribution"] = clean_attribution
         try:
             from uuid import UUID
             UUID(conversation_id)

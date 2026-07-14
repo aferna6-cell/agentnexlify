@@ -9,6 +9,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from backend.services.llm_runtime import (
+    _content_length,
+    _message_chars,
     _message_role_counts,
     _requires_sampling_omission,
     _safe_metadata,
@@ -38,6 +40,76 @@ def test_safe_metadata_redacts_sensitive_contentish_fields():
     assert "api_key" not in safe
     assert "token" not in safe
     assert "content_preview" not in safe
+
+
+def test_content_length_handles_string_and_multimodal_list():
+    assert _content_length("hello") == 5
+    assert _content_length(None) == 0
+    assert _content_length(
+        [
+            {"type": "text", "text": "describe this"},
+            {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": "a" * 5000}},
+        ]
+    ) == len("describe this") + len("[image]")
+
+
+def test_message_chars_sums_across_mixed_string_and_list_content():
+    messages = [
+        {"role": "system", "content": "sys"},
+        {"role": "user", "content": [{"type": "text", "text": "hi"}, {"type": "image", "source": {}}]},
+    ]
+    assert _message_chars(messages) == len("sys") + len("hi") + len("[image]")
+
+
+def test_call_claude_messages_sync_logs_list_content_without_crashing():
+    """Regression: a vision call's `content` is a list of blocks, not a str.
+    Before _content_length existed, _log_start/_log_error did
+    `len(msg.get("content") or "")` — TypeError on a list — which would have
+    crashed logging (and the call) for every photo-triage request."""
+    fake_usage = SimpleNamespace(
+        input_tokens=50, output_tokens=10,
+        cache_creation_input_tokens=0, cache_read_input_tokens=0,
+    )
+    fake_response = SimpleNamespace(
+        content=[SimpleNamespace(text="I see a broken pipe")],
+        usage=fake_usage,
+        stop_reason="end_turn",
+    )
+    multimodal_messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "Assess this photo"},
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "image/jpeg",
+                        "data": "ZmFrZWJhc2U2NGRhdGE=",
+                    },
+                },
+            ],
+        }
+    ]
+
+    with patch("backend.services.llm_runtime.anthropic.Anthropic") as mock_client_cls, \
+         patch("backend.services.llm_runtime.logger") as mock_logger:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.messages.create.return_value = fake_response
+
+        result = call_claude_messages_sync(
+            operation="unit.vision",
+            model="claude-sonnet-5",
+            max_tokens=256,
+            messages=multimodal_messages,
+        )
+
+    assert result.text == "I see a broken pipe"
+    start_call = mock_logger.info.call_args_list[0]
+    finish_call = mock_logger.info.call_args_list[-1]
+    assert start_call[0][0].startswith("llm.call.start")
+    assert finish_call[0][0].startswith("llm.call.finish")
 
 
 def test_message_role_counts_summarizes_roles():
@@ -129,6 +201,10 @@ def test_opus_4_7_omits_sampling_params_and_sends_effort_config():
     assert result.text == "Advisor brief"
     assert _requires_sampling_omission("claude-opus-4-7") is True
     assert _requires_sampling_omission("claude-sonnet-4-6") is False
+    # Sonnet 5 + Opus 4.8 (2026-06-30) are reasoning-tier and reject sampling
+    # params too — the widget defaults to Sonnet 5, so this guards the live path.
+    assert _requires_sampling_omission("claude-sonnet-5") is True
+    assert _requires_sampling_omission("claude-opus-4-8") is True
     kwargs = mock_client.messages.create.call_args.kwargs
     assert "temperature" not in kwargs
     assert "top_p" not in kwargs
@@ -208,6 +284,116 @@ def test_call_claude_messages_sync_retries_transient_failures():
         assert result.text == "Recovered"
         assert mock_client.messages.create.call_count == 2
         mock_sleep.assert_called_once()
+
+
+def test_call_claude_messages_sync_falls_back_to_next_model_on_primary_failure():
+    """(a) primary fails -> first fallback succeeds -> returns fallback text.
+
+    Also covers "respect _requires_sampling_omission per fallback model":
+    primary is a plain model (temperature sent), fallback is a reasoning-tier
+    model (temperature must be omitted on the fallback request)."""
+    fake_response = SimpleNamespace(
+        content=[SimpleNamespace(text="Fallback answered")],
+        usage=SimpleNamespace(
+            input_tokens=10, output_tokens=5,
+            cache_creation_input_tokens=0, cache_read_input_tokens=0,
+        ),
+        stop_reason="end_turn",
+    )
+
+    with patch("backend.services.llm_runtime.anthropic.Anthropic") as mock_client_cls, \
+         patch("backend.services.llm_runtime.logger") as mock_logger:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.messages.create.side_effect = [RuntimeError("primary down"), fake_response]
+
+        result = call_claude_messages_sync(
+            operation="unit.fallback",
+            model="claude-sonnet-4-6",
+            max_tokens=64,
+            temperature=0.4,
+            messages=[{"role": "user", "content": "hello"}],
+            fallback_models=["claude-opus-4-7"],
+        )
+
+    assert result.text == "Fallback answered"
+    assert result.stop_reason == "end_turn"
+    assert mock_client.messages.create.call_count == 2
+
+    first_kwargs = mock_client.messages.create.call_args_list[0].kwargs
+    second_kwargs = mock_client.messages.create.call_args_list[1].kwargs
+    assert first_kwargs["model"] == "claude-sonnet-4-6"
+    assert first_kwargs["temperature"] == 0.4
+    assert second_kwargs["model"] == "claude-opus-4-7"
+    assert "temperature" not in second_kwargs  # reasoning-tier fallback omits sampling params
+
+    fallback_logs = " ".join(str(call.args) for call in mock_logger.warning.call_args_list)
+    assert "llm.call.fallback" in fallback_logs
+    assert "claude-opus-4-7" in fallback_logs
+
+
+def test_call_claude_messages_sync_returns_graceful_reply_when_all_models_fail():
+    """(b) all fail + graceful_reply set -> canned text, stop_reason fallback_graceful."""
+    with patch("backend.services.llm_runtime.anthropic.Anthropic") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.messages.create.side_effect = [
+            RuntimeError("primary down"),
+            RuntimeError("fallback down"),
+        ]
+
+        result = call_claude_messages_sync(
+            operation="unit.graceful",
+            model="claude-sonnet-4-6",
+            max_tokens=64,
+            messages=[{"role": "user", "content": "hello"}],
+            fallback_models=["claude-haiku-4-5-20251001"],
+            graceful_reply="We're experiencing a temporary issue, please try again shortly.",
+        )
+
+    assert result.text == "We're experiencing a temporary issue, please try again shortly."
+    assert result.stop_reason == "fallback_graceful"
+    assert mock_client.messages.create.call_count == 2
+
+
+def test_call_claude_messages_sync_raises_when_all_models_fail_and_no_graceful_reply():
+    """(c) all fail + no graceful_reply -> still raises (backward compat)."""
+    with patch("backend.services.llm_runtime.anthropic.Anthropic") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.messages.create.side_effect = [
+            RuntimeError("primary down"),
+            RuntimeError("fallback down too"),
+        ]
+
+        with pytest.raises(RuntimeError, match="fallback down too"):
+            call_claude_messages_sync(
+                operation="unit.no_graceful",
+                model="claude-sonnet-4-6",
+                max_tokens=64,
+                messages=[{"role": "user", "content": "hello"}],
+                fallback_models=["claude-haiku-4-5-20251001"],
+            )
+
+    assert mock_client.messages.create.call_count == 2
+
+
+def test_call_claude_messages_sync_no_fallback_args_unchanged_behavior():
+    """(d) no fallback args -> unchanged behavior: single model, raises on failure."""
+    with patch("backend.services.llm_runtime.anthropic.Anthropic") as mock_client_cls:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.messages.create.side_effect = RuntimeError("boom")
+
+        with pytest.raises(RuntimeError, match="boom"):
+            call_claude_messages_sync(
+                operation="unit.no_fallback",
+                model="claude-sonnet-4-6",
+                max_tokens=64,
+                messages=[{"role": "user", "content": "hello"}],
+            )
+
+    assert mock_client.messages.create.call_count == 1
 
 
 @pytest.mark.asyncio

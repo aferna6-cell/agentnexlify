@@ -212,6 +212,40 @@
     return sid;
   }
 
+  // First-touch attribution: capture utm_*/referrer/landing_path on the very
+  // first visit and persist it, so a lead created later in the session (or on a
+  // return visit) is credited to the channel that originally drove the visitor.
+  const ATTRIBUTION_KEY = "anx_attribution";
+  function getAttribution() {
+    try {
+      const stored = localStorage.getItem(ATTRIBUTION_KEY);
+      if (stored) return JSON.parse(stored);
+    } catch (e) {
+      /* corrupt/blocked storage - fall through and recompute */
+    }
+    const attr = {};
+    try {
+      const params = new URLSearchParams(window.location.search);
+      ["utm_source", "utm_medium", "utm_campaign"].forEach((k) => {
+        const v = params.get(k);
+        if (v) attr[k] = v.slice(0, 300);
+      });
+      if (document.referrer) attr.referrer = String(document.referrer).slice(0, 300);
+      if (window.location && window.location.pathname)
+        attr.landing_path = String(window.location.pathname).slice(0, 300);
+      attr.source = attr.utm_source || (document.referrer ? "referral" : "direct");
+    } catch (e) {
+      /* URL/referrer unavailable - return whatever we have */
+    }
+    if (Object.keys(attr).length === 0) return null;
+    try {
+      localStorage.setItem(ATTRIBUTION_KEY, JSON.stringify(attr));
+    } catch (e) {
+      /* storage blocked - attribution still sent this session, just not persisted */
+    }
+    return attr;
+  }
+
   function resetSession() {
     const sid = _newSessionId();
     localStorage.setItem(SESSION_KEY, sid);
@@ -1116,6 +1150,7 @@
         session_id: getSessionId(),
         message: text,
         content_mode: contentMode,
+        attribution: getAttribution(),
       }),
     });
     if (!resp.ok) {
@@ -1146,6 +1181,47 @@
       throw new Error(`Upload failed: ${err}`);
     }
     return resp.json();
+  }
+
+  // --- Photo triage (#R1) ---
+  // For image uploads only: read the file as base64 and ask the vision
+  // endpoint for an urgency + scope assessment. Purely additive and
+  // non-blocking - any failure returns null and the normal upload flow is
+  // unaffected. Returns {urgency, category, scope_summary, recommended_action}
+  // or null.
+  async function triagePhotoIfImage(file) {
+    if (!API_KEY || !API_BASE || !file || !/^image\//.test(file.type || "")) {
+      return null;
+    }
+    try {
+      const dataUrl = await new Promise(function (resolve, reject) {
+        const reader = new FileReader();
+        reader.onload = function () {
+          resolve(String(reader.result || ""));
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const comma = dataUrl.indexOf(",");
+      if (comma < 0) return null;
+      const base64 = dataUrl.slice(comma + 1);
+      const resp = await fetchWithTimeout(`${API_BASE}/api/v1/photo-triage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          api_key: API_KEY,
+          images: [{ media_type: file.type, data: base64 }],
+          session_id: getSessionId(),
+        }),
+      });
+      if (!resp.ok) return null;
+      const data = await resp.json();
+      if (data && data.status === "ok" && data.urgency) return data;
+      return null;
+    } catch (e) {
+      console.error("AgentNexLiFy: photo triage failed", e);
+      return null;
+    }
   }
 
   // --- Menu panel ---
@@ -1599,6 +1675,22 @@
       );
       hideTyping();
       addMessage("assistant", data.response);
+
+      // #R1 photo triage - additive vision assessment for image uploads.
+      // Never blocks or breaks the upload flow: on any failure it is a no-op.
+      try {
+        const triage = await triagePhotoIfImage(file);
+        if (triage && triage.urgency) {
+          const label =
+            triage.urgency.charAt(0).toUpperCase() + triage.urgency.slice(1);
+          const action = triage.recommended_action
+            ? " " + triage.recommended_action
+            : "";
+          addMessage("assistant", `Assessment: ${label} priority.${action}`);
+        }
+      } catch (e) {
+        console.error("AgentNexLiFy: photo triage step failed", e);
+      }
 
       if (data.trial_expired) {
         disableWidgetInput("Your free trial has expired.");

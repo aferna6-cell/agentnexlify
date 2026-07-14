@@ -336,8 +336,12 @@ async def handle_incoming_call(request: Request, _sig: None = Depends(verify_twi
 
     respond_url = f"{base_url}/api/v1/calls/voice/respond"
 
+    # AI-identification + recording disclosure (CR1/CR4) — spoken before the
+    # first prompt, non-disableable. Voice AI consent (TCPA) + call-recording
+    # consent must be given at the start of the call.
     greeting = (
         f"Thanks for calling {_xml_escape(business_name)}! "
+        "You're speaking with an AI virtual assistant, and this call may be recorded. "
         "How can I help you today?"
     )
     # Use raw XML since greeting is already escaped where needed
@@ -361,7 +365,11 @@ async def handle_incoming_call(request: Request, _sig: None = Depends(verify_twi
             "tenant_id": tenant["id"],
             "session_id": session_id,
             "role": "assistant",
-            "content": f"Thanks for calling {business_name}! How can I help you today?",
+            "content": (
+                f"Thanks for calling {business_name}! You're speaking with an "
+                "AI virtual assistant, and this call may be recorded. "
+                "How can I help you today?"
+            ),
         }).execute()
     except Exception:
         logger.exception("Failed to save greeting message for call %s", call_sid)

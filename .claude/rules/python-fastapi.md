@@ -13,10 +13,10 @@ paths:
 - All new pip packages need `--break-system-packages` flag
 
 ## Claude API Model IDs
-Valid model IDs (April 2026): `claude-sonnet-4-6`, `claude-opus-4-7`, `claude-haiku-4-5-20251001`. NEVER use a model ID not on this list.
+Valid model IDs (July 2026): `claude-sonnet-5`, `claude-opus-4-8`, `claude-haiku-4-5-20251001`. Legacy-but-still-valid: `claude-sonnet-4-6`, `claude-opus-4-7` (many background call sites still use these; fine to keep). NEVER use a model ID not on this list. See `.claude/rules/model-routing.md` for the canonical routing table.
 
 ## Model Selection for AI Features
-- Widget chat responses: `claude-sonnet-4-6` (fast, 1M context), `stream=True`
-- Complex tasks (documents, quotes, analysis): `claude-opus-4-7` or an `AdvisorExecutorRunner` with Opus 4.7 planning and Sonnet/Haiku execution
-- Opus 4.7 Messages API calls: omit `temperature`, `top_p`, and `top_k`; use `thinking: {"type": "adaptive"}` plus `output_config.effort` when deeper reasoning is needed
+- Widget chat responses: `claude-sonnet-5` (near-Opus reasoning at Sonnet cost, 2026-06-30), `stream=True`. Resolved via `resolve_string_setting("widget_chat_model", MODEL)` — per-tenant DB override wins. NOTE: Sonnet 5's tokenizer maps text to ~1.0-1.35x more tokens than 4.6; `ai_usage_guard.PLAN_BASELINE_TOKENS` still needs re-baselining against real Sonnet-5 usage.
+- Complex tasks (documents, quotes, analysis): `claude-opus-4-8` or an `AdvisorExecutorRunner` with Opus planning and Sonnet/Haiku execution
+- Opus/Sonnet Messages API calls: omit `temperature`, `top_p`, and `top_k`; use `thinking: {"type": "adaptive"}` plus `output_config.effort` when deeper reasoning is needed
 - Streaming thinking: set `thinking.display: "omitted"` unless the UI explicitly renders summarized thinking

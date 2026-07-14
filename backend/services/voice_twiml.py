@@ -50,6 +50,7 @@ def _build_twiml_greeting(
         "<Say voice=\"alice\">"
         f"Thanks for calling {safe_name}! "
         "We're not available right now, but your call is important to us. "
+        "This call will be recorded. "
         "Please leave a message after the beep and we'll get back to you as soon as possible."
         "</Say>"
         "<Record"

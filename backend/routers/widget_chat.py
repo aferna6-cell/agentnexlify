@@ -31,6 +31,7 @@ from backend.services.llm_runtime import (
 )
 from backend.services.os_inbound_bridge import bridge_widget, is_bridge_enabled
 from backend.services.webhook_dispatcher import fire_event_background
+from backend.services.widget_guard import check_turn_budget, screen_widget_input
 from backend.routers.widget_chat_helpers import (
     MODEL,
     MAX_TOKENS,
@@ -676,6 +677,70 @@ async def widget_chat(
                 handoff=False,
             )
 
+    # 5d. Turn budget + prompt-injection/abuse guard — runs right before the
+    # expensive context build + Sonnet call so short-circuited turns above
+    # (junk, greetings, content mode, null-state) never pay for it. Both
+    # checks fail open on error so a broken guard never blocks a real
+    # customer (see backend/services/widget_guard.py).
+    try:
+        turn_budget_ok = check_turn_budget(req.session_id)
+    except Exception:
+        logger.warning(
+            "widget_chat: turn budget check failed session=%s — proceeding normally",
+            req.session_id,
+            exc_info=True,
+        )
+        turn_budget_ok = True
+
+    if not turn_budget_ok:
+        turn_budget_text = (
+            "Let me connect you with our team — this conversation has been "
+            "going a while and they can help you directly."
+        )
+        _save_chat_messages(tenant["id"], req.session_id, req.message, turn_budget_text)
+        logger.info(
+            "widget_chat: turn_budget_exceeded session=%s (skipped Claude API)",
+            req.session_id,
+        )
+        return WidgetChatResponse(
+            response=turn_budget_text,
+            session_id=req.session_id,
+            lead_captured=False,
+            show_watermark=_watermark,
+            handoff=True,
+        )
+
+    try:
+        guard_result = await screen_widget_input(req.message)
+    except Exception:
+        logger.warning(
+            "widget_chat: input guard raised unexpectedly session=%s — "
+            "proceeding normally",
+            req.session_id,
+            exc_info=True,
+        )
+        guard_result = {"allow": True, "reason": "guard_exception"}
+
+    if not guard_result.get("allow", True):
+        _biz_name = tenant.get("business_name") or "us"
+        guard_blocked_text = (
+            f"I can only help with questions about {_biz_name}. Could you "
+            "rephrase that?"
+        )
+        _save_chat_messages(tenant["id"], req.session_id, req.message, guard_blocked_text)
+        logger.info(
+            "widget_chat: input_guard_blocked session=%s reason=%s (skipped Claude API)",
+            req.session_id,
+            guard_result.get("reason"),
+        )
+        return WidgetChatResponse(
+            response=guard_blocked_text,
+            session_id=req.session_id,
+            lead_captured=False,
+            show_watermark=_watermark,
+            handoff=False,
+        )
+
     # 6. Build system prompt with compact, intent-aware context.
     tid = tenant["id"]
     db = get_service_supabase()
@@ -1291,6 +1356,7 @@ async def widget_chat(
         tenant["id"],
         req.session_id,
         conversation_id,
+        req.attribution,
     )
 
     # 11b. Structured-extractor lead enrichment (opt-in per tenant).

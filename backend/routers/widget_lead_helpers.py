@@ -340,10 +340,16 @@ def _extract_action_items(tenant_id: str, session_id: str, messages: list[dict])
 
 
 async def _capture_leads_from_session(
-    tenant_id: str, session_id: str, conversation_id: str
+    tenant_id: str, session_id: str, conversation_id: str,
+    attribution: dict | None = None,
 ) -> None:
     """Background task: scan all user messages in session for contact info,
     create or update a lead.  Deduplicates by email + client_id.
+
+    `attribution` is the widget's first-touch attribution dict (utm_*,
+    referrer, landing_path, source). It's sanitized and stored on the lead
+    only when this session first *creates* a lead (first-touch semantics);
+    the dedup/update path leaves an existing lead's attribution untouched.
 
     NOTE: Live Supabase leads table uses the archive schema:
       client_id (not tenant_id), status (not lead_stage), no source column.
@@ -542,6 +548,17 @@ async def _capture_leads_from_session(
         summary = _build_conversation_summary(messages)
         if summary:
             lead_fields["conversation_summary"] = summary
+
+        # First-touch attribution (utm_*, referrer, landing_path, source).
+        # Reuse the same sanitizer as the explicit /widget/lead form path so
+        # both entry points store an identical, bounded shape.
+        try:
+            from backend.services.attribution import _sanitize_attribution
+            clean_attribution = _sanitize_attribution(attribution)
+            if clean_attribution is not None:
+                lead_fields["attribution"] = clean_attribution
+        except Exception:
+            logger.warning("lead_capture: attribution sanitize failed, dropping", exc_info=True)
 
         try:
             from uuid import UUID

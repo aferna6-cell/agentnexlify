@@ -81,6 +81,13 @@ Items 1, 2, 3, 5, 6 above went from opportunity to production in one pass:
 - **#6 reviews AI** — approval-gated `review_responses` drafting (migration 168); drafts only, posting stub pending per-platform integration.
 Still open from the original list: **#4 graph/better retrieval** (the moat upgrade) — now sharpened by frontier #F2 below.
 
+## Shipped 2026-07-14 (PR #431)
+Round-2/frontier items built in one pass:
+- **#F1 Sonnet 5 swap** — widget + voice default to `claude-sonnet-5`; `_requires_sampling_omission` extended to the reasoning-tier models so the swap doesn't 400 the widget. Model-ID docs refreshed to Opus 4.8 / Sonnet 5.
+- **#R4 Bot-Health evals** — `bot_health_scores` table (migration 170) + Haiku LLM-as-judge service + `GET /api/v1/bot-health/{tenant_id}` + admin `/run`.
+- **#R1+#R2 photo-triage + quoting** — `photo_triage.py` (vision) + `quote_builder.py` (catalog-grounded, hard "never invent prices") + migration 171 + endpoints + widget triage-on-upload.
+Deferred (flagged): re-baseline `PLAN_BASELINE_TOKENS` for Sonnet 5's tokenizer; cron-wire the Bot-Health sweep; dashboards for both.
+
 ## Frontier update 2026-07-14 (model stack is ~2 generations stale)
 **Critical:** CLAUDE.md / `.claude/rules` still pin `claude-opus-4-7` + `claude-sonnet-4-6` as newest.
 Anthropic shipped **Opus 4.8** and **Sonnet 5** on 2026-06-30. The whole model-routing surface is stale
@@ -180,18 +187,88 @@ Second research pass into surfaces round 1 didn't cover. New revenue/retention S
 - **Verisk-in-Claude (~May):** vertical data vendors now ship MCP connectors into Claude — validates the
   "ground the agent in authoritative vertical data" thesis behind #R8/#R2.
 
-## Priority read (unified, both rounds)
-**Do first / cheap + high:** #F1 Sonnet 5 swap → #F3 structured outputs (kills a live bug class) → #R7 cost-floor
-plumbing. **Highest strategic value (the moat):** #F2 contextual retrieval + reranker, then #R5 GEPA per-tenant
-compounding. **Biggest new revenue:** #R1+#R2 photo-triage + instant quoting (attacks Drillbit on our own front
-door). **Best new margin SKU:** #R3 GEO add-on. **Strongest retention lever:** #R4 Bot-Health evals (also the
-prerequisite for #R5). **Match-competitor:** #R6 reactivation outbound + expose voice model/language selection
-(GHL parity) + RCS via Twilio. **Bigger bet / watch:** #F7 streaming voice. **First housekeeping step:** re-audit
-model IDs in `.claude/rules/model-routing.md` + CLAUDE.md against Opus 4.8 / Sonnet 5 (this session runs on Opus 4.8).
+## Frontier round 3 — 2026-07-14 (operations, GTM, compliance risk)
+Rounds 1-2 were model capabilities. Round 3 = the operational/legal/GTM factors that decide whether the AI
+features convert to revenue and don't cause legal/trust blowups. **All legal items: not legal advice — verify
+with counsel.** Sources inline.
+
+### ⚠️ Compliance risk register (launch-gating for voice + SMS — do FIRST)
+The voice + SMS surfaces carry real, dated legal exposure. Ranked by urgency:
+- **CR1 — AI voice consent + at-open disclosure.** FCC (Feb 2024) treats AI voices as "artificial" under TCPA →
+  prior express consent + an AI-identification preamble at the START of every call. TX SB 140 (30-sec disclosure)
+  + TX TRAIGA (Jan 1 2026) live. $500+/call; 2025-26 class actions settled $5-20M. **Hardcode a non-disableable
+  AI-disclosure preamble on the Twilio voice line; log per call.** Source: https://www.fcc.gov/document/fcc-confirms-tcpa-applies-ai-technologies-generate-human-voices · https://www.retellai.com/blog/tcpa-compliance-playbook-voice-ai-outbound
+- **CR2 — SMS one-to-one consent (LIVE Jan 27 2026).** Consent must name the specific tenant brand; no blanket
+  "and partners." $500-1,500/msg uncapped + T-Mobile $10k/violation. **Capture per-consumer, per-tenant named
+  consent + audit trail; block outbound for unregistered brands.** Source: https://www.apten.ai/blog/a2p-dlc-compliance-2026
+- **CR3 — A2P 10DLC brand+campaign registration.** Carriers block 100% of unregistered traffic since Feb 2025.
+  **Gate all outbound SMS on registration status.** (Turn registration into a paid, sticky onboarding step.)
+- **CR4 — Call-recording all-party consent.** 12 all-party states; stricter-law-wins across state lines. **Default
+  the strict-state recording notice on every recorded call** (caller state unknown at pickup). Source: https://www.getnextphone.com/blog/call-recording-laws-by-state
+- **CR5 — Chatbot "you're talking to AI" disclosure.** EU AI Act Art. 50 (Aug 2 2026, EU visitors only) + growing
+  US state patchwork. Greeting lives in DB (`widget_configs.greeting_message`) — **enforce a non-removable AI
+  disclosure at render, not via tenant-edited text.** Source: https://artificialintelligenceact.eu/transparency-rules-article-50/
+- **CR6 — Prompt-injection / cross-tenant leak** (see #T3 below). A cross-tenant KB leak is trust-fatal.
+- **Fastest wins (S effort):** CR4 recording notice + CR5 chatbot disclosure — both are hardcoded opening lines.
+
+### Other round-3 findings
+- **#T1 — Auto-onboarding: URL + Google Business Profile → grounded KB in minutes.** Now table-stakes (Oscar Chat,
+  SiteGPT, Wonderchat auto-crawl in 5-15 min + auto-resync). Time-to-value is the #1 SMB churn driver. Build a
+  self-serve: tenant enters URL + GBP → crawler + Claude compile the per-tenant KB + draft FAQ (fits our
+  `knowledge-base/` + pgvector) → tenant reviews, not authors. Highest-leverage GROWTH item. Effort L / Impact High.
+  Source: https://www.oscarchat.ai/blog/knowledge-base-ai-chatbot-2026/
+- **#T2 — Closed-loop attribution + ROI dashboard.** Capture source/UTM/tracked-DID per session + voice call;
+  Claude writes a structured per-conversation outcome (fit, urgency, booked y/n, objection) to the record; surface
+  "which campaign booked the appointment." The renewal/upsell justification lever AND the clean measurement
+  substrate any outcome pricing needs. Effort M / Impact High. Source: https://thoughtly.com/blog/best-ai-voice-agent-platforms-pipeline-analytics-2026
+- **#T3 — Prompt-injection defense-in-depth on the public widget.** OWASP #1 LLM threat. Haiku cheap-probe gate →
+  Sonnet answer; strict output-schema validation; per-IP/session rate + token caps; treat KB content as DATA not
+  instructions (defends indirect injection via poisoned crawled pages from #T1). Protects tenant isolation
+  (`client_id`), brand safety, and margin at once. Effort M / Impact High. Source: https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html · https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/mitigate-jailbreaks
+- **#T4 — Multi-provider LLM fallback gateway.** Anthropic logged 114 incidents / 90 days, and a June 12 2026
+  Commerce order suspended two models for all customers. A dead widget/voice line on the TENANT's site/phone is
+  worse than a normal outage. Put LiteLLM in front of `llm_runtime.py`: ordered fallback (Sonnet 5 → secondary
+  provider → cached canned reply); tightest on voice (dead air is unrecoverable). Incident path, not routine, so
+  it doesn't violate the mid-session cache-hygiene rule. Effort M / Impact High. Source: https://www.deepinspect.ai/blog/llm-fallback-routing
+- **#T5 — FSM integrations = purchase gate for trades.** Table-stakes: two-way Google/Outlook Calendar, then one
+  FSM (Jobber is the SMB-friendly entry) + QuickBooks; Zapier as interim bridge. NOTE: Jobber + Housecall Pro now
+  ship their OWN AI receptionists → compete by being cross-platform (works for tenants not on one FSM). Effort L /
+  Impact High. Source: https://www.pinkcallers.com/blog/servicetitan-vs-jobber-vs-housecall-pro-for-call-center-integration
+- **#T6 — Hybrid / outcome pricing.** Flat $19.99/$99.99 leaves value on the table. Market split: bundle basic
+  widget chat free (Birdeye-style), METER the expensive surfaces — voice minutes, per-booked-appointment outcomes
+  (Intercom Fin $0.99/resolution, Zendesk $1.50, 11x per-meeting; hybrid = 43%→61% of SaaS, +38% growth). Needs
+  clean measurement (#T2) as the billing substrate; Stripe's Metronome buy means metering is buy-not-build. Effort
+  M (packaging) + L (metering) / Impact High. Source: https://www.getmonetizely.com/blogs/the-2026-guide-to-saas-ai-and-agentic-pricing-models
+
+### Competitor signals round 3
+- **[[GoHighLevel]]** unbundled ALL AI into paid add-ons: "AI Employee" $97/mo/sub-account (unlimited) OR
+  ~$0.02-0.05/min usage; Voice AI per-minute; Conversation AI token-based. Direct comp for our `agent_os` ($99.99)
+  — match the "unlimited" framing or win on lower friction (widget-first, #T1 onboarding). Source: https://help.gohighlevel.com/support/solutions/articles/155000006652-ai-product-pricing
+- **Birdeye** bundles BirdAI free into every tier → sets a floor that basic chat AI shouldn't be a line item
+  (supports keeping widget chat in the base `chatbot` plan, metering only voice/outcomes).
+- **Jobber + Housecall Pro** shipped their own AI receptionists → the FSM incumbents are now competitors; our wedge
+  is cross-platform + widget-first.
+
+## Priority read (unified, all three rounds)
+**⚠️ Do BEFORE any voice/SMS launch (legal):** the CR1-CR5 compliance gate — AI-voice disclosure preamble,
+all-party recording notice, named-brand SMS consent + 10DLC gate, non-removable chatbot AI disclosure. Cheapest
++ most urgent: CR4 + CR5 (hardcoded opening lines). *Verify with counsel.*
+**Do first / cheap + high (already partly shipped):** ~~#F1 Sonnet 5~~ ✅ → #F3 structured outputs → #R7/#T3
+cost-floor + injection gate (same Haiku-probe pattern).
+**Highest-leverage growth:** #T1 auto-onboarding (URL+GBP → KB) — collapses time-to-value, the #1 churn driver.
+**Strongest retention/upsell:** #T2 attribution ROI dashboard (also the substrate for #T6 outcome pricing) +
+~~#R4 Bot-Health~~ ✅.
+**The moat, deepened:** #F2 contextual retrieval + reranker → #R5 GEPA per-tenant compounding.
+**Reliability gate for voice:** #T4 multi-provider fallback.
+**Revenue/packaging:** #T6 hybrid (bundle chat, meter voice/outcomes) + #R3 GEO add-on.
+**Trades purchase gate:** #T5 calendar + FSM + QuickBooks sync.
+**Bigger bet:** #F7 streaming speech-to-speech voice.
 
 ## Related
 - [[Chat Widget]] · [[Agent Service]] · [[Knowledge Base Wiki]] · [[Vertical Knowledge-Base Moat]] · [[GoHighLevel]] · [[G3 voice live-answering]] · [[Cold Outreach Engine]]
 
 ## Provenance
-- Web research this session (2026-07-13). Source URLs inline per item. Claims are vendor/blog
-  reported figures — treat directional, validate against our own funnel before quoting to customers.
+- Web research across 3 passes (2026-07-13/14): round 1 model capabilities, round 2 new-angle product moves,
+  round 3 operations/GTM/compliance. Source URLs inline per item. Vendor/blog figures are directional — validate
+  against our own funnel before quoting to customers. **Round-3 legal items are NOT legal advice — verify with
+  counsel before shipping voice/SMS.**
