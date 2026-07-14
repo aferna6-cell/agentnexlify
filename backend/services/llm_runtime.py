@@ -187,6 +187,34 @@ def _requires_sampling_omission(model: str) -> bool:
 EXTENDED_CACHE_TTL_BETA = "extended-cache-ttl-2025-04-11"
 
 
+def _merge_structured_output_config(
+    output_config: dict[str, Any] | None,
+    response_schema: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Merge an opt-in JSON-schema `format` into `output_config` without
+    clobbering any `effort` (or other) key the caller already set.
+
+    `response_schema` is the raw JSON Schema for the expected response body
+    (e.g. `{"type": "object", "properties": {...}}`) — this wraps it in the
+    Anthropic Structured Outputs envelope: `output_config.format = {"type":
+    "json_schema", "schema": <response_schema>}`. Confirmed shape against the
+    installed `anthropic` SDK (0.116.0): `anthropic.types.output_config_
+    param.OutputConfigParam.format` is `Optional[JSONOutputFormatParam]`, and
+    `anthropic.types.json_output_format_param.JSONOutputFormatParam` requires
+    `type: Literal["json_schema"]` + `schema: Dict[str, object]`. This is a
+    top-level (non-beta) Messages API param — no `anthropic-beta` header
+    needed, unlike the 1-hour cache TTL opt-in elsewhere in this file.
+
+    `response_schema=None` (the default for every existing caller) returns
+    `output_config` untouched — zero behavior change unless a caller opts in.
+    """
+    if response_schema is None:
+        return output_config
+    merged = dict(output_config or {})
+    merged["format"] = {"type": "json_schema", "schema": response_schema}
+    return merged
+
+
 def _build_cached_system(
     system: str | list[dict[str, Any]] | None,
     cache_system: bool,
@@ -439,6 +467,7 @@ def call_claude_messages_sync(
     graceful_reply: str | None = None,
     cache_system: bool = False,
     cache_ttl: str | None = None,
+    response_schema: dict[str, Any] | None = None,
 ) -> ClaudeCallResult:
     """Run a Claude messages.create call with timing and structured logs.
 
@@ -465,16 +494,25 @@ def call_claude_messages_sync(
     TTL and requires (and automatically sends) the
     `anthropic-beta: extended-cache-ttl-2025-04-11` header. Only meaningful
     when `cache_system=True`.
+
+    `response_schema` (optional, default None) — OPT-IN Anthropic Structured
+    Outputs. `None` (the default): zero behavior change, `output_config` is
+    used exactly as passed. A JSON Schema dict: the model is constrained to
+    emit output matching that schema (schema-guaranteed JSON, no markdown
+    fences, no prose) — see `_merge_structured_output_config` for the exact
+    envelope and SDK verification. Composes with `output_config={"effort":
+    ...}` — effort is preserved, only `format` is added/overwritten.
     """
     call_id = uuid.uuid4().hex[:12]
     request_temperature = None if _requires_sampling_omission(model) else temperature
+    merged_output_config = _merge_structured_output_config(output_config, response_schema)
     _log_start(
         call_id,
         operation,
         model,
         max_tokens,
         request_temperature,
-        output_config,
+        merged_output_config,
         system,
         messages,
         metadata,
@@ -501,7 +539,7 @@ def call_claude_messages_sync(
                 max_tokens=max_tokens,
                 messages=messages,
                 temperature=temperature,
-                output_config=output_config,
+                output_config=merged_output_config,
                 system=system,
                 timeout=timeout,
                 metadata=metadata,
@@ -551,14 +589,15 @@ async def call_claude_messages(
     graceful_reply: str | None = None,
     cache_system: bool = False,
     cache_ttl: str | None = None,
+    response_schema: dict[str, Any] | None = None,
 ) -> ClaudeCallResult:
     """Async wrapper for Claude messages.create that avoids blocking the event loop.
 
     Retries (and their backoff sleeps) run inside the executor thread, so the
     event loop stays free even when max_retries > 0. `fallback_models`,
-    `graceful_reply`, `cache_system`, and `cache_ttl` pass straight through to
-    `call_claude_messages_sync` — see that function's docstring for the
-    caching opt-in contract.
+    `graceful_reply`, `cache_system`, `cache_ttl`, and `response_schema` pass
+    straight through to `call_claude_messages_sync` — see that function's
+    docstring for the caching + Structured Outputs opt-in contracts.
     """
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(
@@ -580,5 +619,6 @@ async def call_claude_messages(
             graceful_reply=graceful_reply,
             cache_system=cache_system,
             cache_ttl=cache_ttl,
+            response_schema=response_schema,
         ),
     )
