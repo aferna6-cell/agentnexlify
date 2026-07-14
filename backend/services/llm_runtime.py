@@ -117,12 +117,44 @@ def _safe_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
     return safe
 
 
-def _message_role_counts(messages: list[dict[str, str]]) -> dict[str, int]:
+def _message_role_counts(messages: list[dict[str, Any]]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for msg in messages:
         role = str(msg.get("role") or "unknown")
         counts[role] = counts.get(role, 0) + 1
     return counts
+
+
+def _content_length(content: Any) -> int:
+    """Best-effort text length for a message `content` payload.
+
+    `content` is a plain string for text-only calls (the common case), or a
+    list of multimodal blocks for vision calls — like this:
+    `[{"type": "text", "text": "..."}, {"type": "image", "source": {...}}]`.
+    Image blocks count as a fixed small marker rather than their (large,
+    base64) payload, so logs stay cheap and this never crashes on non-string
+    content. Anything else (None, unexpected shape) contributes 0.
+    """
+    if isinstance(content, str):
+        return len(content)
+    if isinstance(content, list):
+        total = 0
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            block_type = block.get("type")
+            if block_type == "text":
+                total += len(block.get("text") or "")
+            elif block_type == "image":
+                total += len("[image]")
+            else:
+                total += len(str(block_type or "block"))
+        return total
+    return 0
+
+
+def _message_chars(messages: list[dict[str, Any]]) -> int:
+    return sum(_content_length(msg.get("content")) for msg in messages)
 
 
 # Reasoning-tier models (adaptive thinking) reject non-default sampling params
@@ -149,11 +181,11 @@ def _log_start(
     temperature: float | None,
     output_config: dict[str, Any] | None,
     system: str | None,
-    messages: list[dict[str, str]],
+    messages: list[dict[str, Any]],
     metadata: dict[str, Any] | None,
 ) -> None:
     system_chars = len(system or "")
-    message_chars = sum(len(msg.get("content") or "") for msg in messages)
+    message_chars = _message_chars(messages)
     temperature_label = "omitted" if temperature is None else f"{temperature:.2f}"
     logger.info(
         "llm.call.start id=%s op=%s model=%s max_tokens=%d temperature=%s "
@@ -217,7 +249,7 @@ def _log_error(
     operation: str,
     model: str,
     duration_ms: int,
-    messages: list[dict[str, str]],
+    messages: list[dict[str, Any]],
     system: str | None,
     metadata: dict[str, Any] | None,
     exc: Exception,
@@ -232,7 +264,7 @@ def _log_error(
         len(messages),
         _message_role_counts(messages),
         len(system or ""),
-        sum(len(msg.get("content") or "") for msg in messages),
+        _message_chars(messages),
         type(exc).__name__,
         str(exc)[:300],
         _safe_metadata(metadata),
@@ -250,7 +282,7 @@ def _log_error(
         "message_count": len(messages),
         "role_counts": _message_role_counts(messages),
         "system_chars": len(system or ""),
-        "message_chars": sum(len(msg.get("content") or "") for msg in messages),
+        "message_chars": _message_chars(messages),
         "metadata": _safe_metadata(metadata),
     })
 
@@ -265,7 +297,7 @@ def call_claude_messages_sync(
     operation: str,
     model: str,
     max_tokens: int,
-    messages: list[dict[str, str]],
+    messages: list[dict[str, Any]],
     temperature: float | None = 0.0,
     output_config: dict[str, Any] | None = None,
     system: str | None = None,
@@ -350,7 +382,7 @@ async def call_claude_messages(
     operation: str,
     model: str,
     max_tokens: int,
-    messages: list[dict[str, str]],
+    messages: list[dict[str, Any]],
     temperature: float | None = 0.0,
     output_config: dict[str, Any] | None = None,
     system: str | None = None,

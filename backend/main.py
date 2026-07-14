@@ -130,6 +130,7 @@ from backend.routers import (
     integration_keys,
     status_page,
     bot_health,
+    intake_ai,
 )
 
 # --- JSON logging ---
@@ -978,6 +979,7 @@ app.include_router(integration_keys.router)
 app.include_router(status_page.router)
 app.include_router(review_responder.router)
 app.include_router(bot_health.router)
+app.include_router(intake_ai.router)
 
 
 # --- Static files (widget) ---

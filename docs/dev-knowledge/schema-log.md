@@ -4,6 +4,16 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 171_photo_triage_and_quotes.sql (2026-07-14)
+
+**What:** `leads.photo_urls jsonb` + `leads.ai_triage jsonb` (both nullable). New `quotes` table.
+
+**Why:** Photo-triage + instant quoting (#R1 + #R2). `photo_urls`/`ai_triage` live on `leads` (which uses `client_id`, NOT `tenant_id`) — `photo_urls` holds Supabase Storage public URLs for widget photo uploads (same pattern as the existing "Widget file upload: Supabase Storage, no new migration" ADR), `ai_triage` holds the Claude-vision assessment `{urgency, category, scope_summary, recommended_action}` from `backend/services/photo_triage.py`. `quotes` is a per-tenant aggregate table (`tenant_id`, standard column) storing Good/Better/Best itemized quotes drafted by `backend/services/quote_builder.py`, grounded in the tenant's own `service_types` catalog (migration 063) — never invented prices. `lead_id` is an FK-less pointer to `leads.id` (matches `review_responses.review_id` convention, migration 168). `status` CHECK `draft|sent|accepted|rejected`. Index `idx_quotes_tenant_created` on `(tenant_id, created_at DESC)`. No RLS (service-role client only, matches 167/168/170). Endpoints: `POST /api/v1/photo-triage` (widget-key auth), `POST /api/v1/quotes/build` (JWT).
+
+**Applied:** Not yet applied — flagged for schema-guardian / apply via `mcp__supabase__apply_migration`.
+
+---
+
 ## 170_bot_health_scores.sql (2026-07-14)
 
 **What:** New `bot_health_scores` table — per-tenant bot-quality time series.

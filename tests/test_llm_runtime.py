@@ -9,6 +9,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from backend.services.llm_runtime import (
+    _content_length,
+    _message_chars,
     _message_role_counts,
     _requires_sampling_omission,
     _safe_metadata,
@@ -38,6 +40,76 @@ def test_safe_metadata_redacts_sensitive_contentish_fields():
     assert "api_key" not in safe
     assert "token" not in safe
     assert "content_preview" not in safe
+
+
+def test_content_length_handles_string_and_multimodal_list():
+    assert _content_length("hello") == 5
+    assert _content_length(None) == 0
+    assert _content_length(
+        [
+            {"type": "text", "text": "describe this"},
+            {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": "a" * 5000}},
+        ]
+    ) == len("describe this") + len("[image]")
+
+
+def test_message_chars_sums_across_mixed_string_and_list_content():
+    messages = [
+        {"role": "system", "content": "sys"},
+        {"role": "user", "content": [{"type": "text", "text": "hi"}, {"type": "image", "source": {}}]},
+    ]
+    assert _message_chars(messages) == len("sys") + len("hi") + len("[image]")
+
+
+def test_call_claude_messages_sync_logs_list_content_without_crashing():
+    """Regression: a vision call's `content` is a list of blocks, not a str.
+    Before _content_length existed, _log_start/_log_error did
+    `len(msg.get("content") or "")` — TypeError on a list — which would have
+    crashed logging (and the call) for every photo-triage request."""
+    fake_usage = SimpleNamespace(
+        input_tokens=50, output_tokens=10,
+        cache_creation_input_tokens=0, cache_read_input_tokens=0,
+    )
+    fake_response = SimpleNamespace(
+        content=[SimpleNamespace(text="I see a broken pipe")],
+        usage=fake_usage,
+        stop_reason="end_turn",
+    )
+    multimodal_messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "Assess this photo"},
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "image/jpeg",
+                        "data": "ZmFrZWJhc2U2NGRhdGE=",
+                    },
+                },
+            ],
+        }
+    ]
+
+    with patch("backend.services.llm_runtime.anthropic.Anthropic") as mock_client_cls, \
+         patch("backend.services.llm_runtime.logger") as mock_logger:
+        mock_client = MagicMock()
+        mock_client_cls.return_value = mock_client
+        mock_client.messages.create.return_value = fake_response
+
+        result = call_claude_messages_sync(
+            operation="unit.vision",
+            model="claude-sonnet-5",
+            max_tokens=256,
+            messages=multimodal_messages,
+        )
+
+    assert result.text == "I see a broken pipe"
+    start_call = mock_logger.info.call_args_list[0]
+    finish_call = mock_logger.info.call_args_list[-1]
+    assert start_call[0][0].startswith("llm.call.start")
+    assert finish_call[0][0].startswith("llm.call.finish")
 
 
 def test_message_role_counts_summarizes_roles():
