@@ -1120,3 +1120,146 @@ async def _query_kb_articles(
             exc_info=True,
         )
         return []
+
+
+# ---------------------------------------------------------------------------
+# Confidence-gated retrieval — avoid answering on thin/irrelevant KB context
+# ---------------------------------------------------------------------------
+#
+# Goal: when the per-message KB article search (_query_kb_articles above)
+# comes back thin AND the model's own answer already reads uncertain, treat
+# this turn as low-confidence and hand off to a human instead of returning a
+# possibly-hallucinated answer. widget_chat.py step 9bb calls
+# is_low_confidence_turn() and, on True, swaps in LOW_CONFIDENCE_FALLBACK_TEXT
+# — which ends in the existing HANDOFF_REQUESTED marker, so the turn flows
+# through the same tag-conversation / notify-team / fire-webhook pipeline
+# used for an explicit human request (step 9c). No new escalation plumbing.
+#
+# Two signals, BOTH required — conservative by design, rarely false-triggers:
+#
+#   1. Retrieval is thin. _query_kb_articles has two paths with different
+#      score scales, both surfaced under the same "similarity" key: the
+#      semantic path (match_kb_articles RPC) returns pgvector cosine
+#      similarity (~0-1, higher = closer match); the FTS fallback
+#      (match_kb_articles_fts, migration 155) returns ts_rank_cd, an
+#      unbounded rank score that is usually much smaller than cosine
+#      similarity for the same query. KB_CONFIDENCE_THRESHOLD is set low on
+#      purpose — it is tuned to catch "no meaningful match on either scale,"
+#      not to precisely rank match quality on one scale.
+#   2. The model's own answer reads uncertain — it contains a hedge/non-answer
+#      phrase like "I don't know" or "I'm not sure". This is the "light
+#      check" that keeps a genuinely confident answer (e.g. one grounded in
+#      FAQ/knowledge_base/custom_instructions, none of which factor into the
+#      KB article search score) from being overridden just because this
+#      turn's KB article match happened to be thin.
+#
+# The gate only evaluates messages that read like real informational
+# questions — chit-chat ("thanks", "ok", "sounds good") is skipped so it
+# never gets misrouted to a human-handoff reply just because it has no
+# relevant KB article match (that's expected, not a confidence problem).
+
+KB_CONFIDENCE_THRESHOLD = 0.12
+
+_QUESTION_LEAD_WORDS = (
+    "what",
+    "who",
+    "when",
+    "where",
+    "why",
+    "how",
+    "which",
+    "is",
+    "are",
+    "do",
+    "does",
+    "did",
+    "can",
+    "could",
+    "will",
+    "would",
+)
+
+_LOW_CONFIDENCE_ANSWER_PHRASES = (
+    "i don't know",
+    "i do not know",
+    "i'm not sure",
+    "i am not sure",
+    "not sure about that",
+    "i don't have that information",
+    "i do not have that information",
+    "i don't have information",
+    "i don't have access to",
+    "unable to confirm",
+    "can't confirm",
+    "cannot confirm",
+    "not certain",
+    "i'm not certain",
+    "no information on",
+)
+
+# Reuses the existing HANDOFF_REQUESTED marker pipeline (widget_chat.py step
+# 9c) — tag conversation as handoff, notify the team by SMS/email, fire the
+# conversation.handoff webhook.
+LOW_CONFIDENCE_FALLBACK_TEXT = (
+    "That's a great question — I want to make sure you get an accurate "
+    "answer, so let me connect you with our team to follow up directly.\n"
+    "HANDOFF_REQUESTED"
+)
+
+
+def _looks_like_informational_question(message: str) -> bool:
+    """True when *message* reads like a real question needing factual grounding.
+
+    Used only to SKIP the confidence gate on chit-chat ("thanks", "ok",
+    "sounds good") — a thin KB article match there is expected, not a sign
+    of thin business knowledge.
+    """
+    stripped = (message or "").strip()
+    if not stripped:
+        return False
+    if "?" in stripped:
+        return True
+    first_word = re.split(r"\s+", stripped.lower(), maxsplit=1)[0].strip(".,!")
+    return first_word in _QUESTION_LEAD_WORDS
+
+
+def _kb_retrieval_top_score(kb_article_refs: list[dict] | None) -> float:
+    """Best similarity/rank score across kb_article_refs, or 0.0 when empty."""
+    if not kb_article_refs:
+        return 0.0
+    scores = [
+        r.get("similarity")
+        for r in kb_article_refs
+        if isinstance(r.get("similarity"), (int, float))
+    ]
+    return max(scores) if scores else 0.0
+
+
+def _looks_like_generic_non_answer(text: str) -> bool:
+    """True when *text* hedges rather than commits to a factual answer."""
+    lowered = (text or "").lower()
+    return any(phrase in lowered for phrase in _LOW_CONFIDENCE_ANSWER_PHRASES)
+
+
+def is_low_confidence_turn(
+    *,
+    message: str,
+    kb_article_refs: list[dict] | None,
+    kb_retrieval_attempted: bool,
+    assistant_text: str,
+) -> bool:
+    """True when this turn should be routed to human handoff instead of the
+    model's answer.
+
+    Requires BOTH thin KB article retrieval and a hedging model answer —
+    see module docstring above for the full rationale. Callers MUST wrap
+    this in try/except and fall back to the model's answer unchanged on any
+    error (see widget_chat.py step 9bb).
+    """
+    if not kb_retrieval_attempted:
+        return False
+    if not _looks_like_informational_question(message):
+        return False
+    if _kb_retrieval_top_score(kb_article_refs) >= KB_CONFIDENCE_THRESHOLD:
+        return False
+    return _looks_like_generic_non_answer(assistant_text)

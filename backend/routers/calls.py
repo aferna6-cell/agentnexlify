@@ -489,6 +489,22 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
     except Exception:
         logger.warning("Failed to load vertical guidance for voice AI", exc_info=True)
 
+    # Tenant knowledge base -- reuse the SAME KB-article retrieval the widget chat
+    # grounds on, so voice answers are as deep as chat answers for the same tenant
+    # (closes audit-voice-g3-scope-2026-07-09 item 8: KB moat not used in voice).
+    kb_text = ""
+    try:
+        from backend.routers.widget_chat_helpers import _query_kb_articles
+
+        kb_articles = await _query_kb_articles(speech_result, match_count=3)
+        if kb_articles:
+            kb_text = "Relevant knowledge:\n" + "\n".join(
+                f"- {(a.get('title') or '')[:120]}: {(a.get('summary') or '')[:280]}"
+                for a in kb_articles
+            )
+    except Exception:
+        logger.warning("Failed to load KB articles for voice AI, tenant %s", tenant_id)
+
     system_prompt = (
         f"You are a helpful phone assistant for {business_name}. {business_info}"
         "You are speaking with a caller on the phone. Keep your responses concise "
@@ -502,6 +518,8 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
         system_prompt += f"\n\n{guidance_text}"
     if faq_text:
         system_prompt += f"\n\n{faq_text}"
+    if kb_text:
+        system_prompt += f"\n\n{kb_text}"
 
     # Call Claude for AI response
     ai_response = ""

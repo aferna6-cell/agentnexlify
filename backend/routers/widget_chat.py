@@ -52,6 +52,8 @@ from backend.routers.widget_chat_helpers import (
     _record_response_metric,
     _save_chat_messages,
     _set_cache,
+    is_low_confidence_turn,
+    LOW_CONFIDENCE_FALLBACK_TEXT,
 )
 from backend.routers.widget_lead_helpers import (
     _capture_leads_from_session,
@@ -856,7 +858,8 @@ async def widget_chat(
     # Postgres FTS). Acceptable for this path; can be disabled per-deployment
     # by setting widget_kb_articles_enabled=0 in llm_runtime settings.
     kb_article_refs = []
-    if resolve_int_setting("widget_kb_articles_enabled", 1):
+    _kb_retrieval_enabled = bool(resolve_int_setting("widget_kb_articles_enabled", 1))
+    if _kb_retrieval_enabled:
         try:
             kb_article_refs = await _query_kb_articles(req.message)
         except Exception:
@@ -1128,6 +1131,36 @@ async def widget_chat(
         session_id=req.session_id,
         customer_message=req.message,
     )
+
+    # 9bb. Confidence-gated retrieval — when this turn's per-message KB
+    # article search came back thin AND the model's own answer already
+    # reads uncertain, hand off to a human instead of risking a
+    # hallucinated answer. Skipped when the managed-agent fallback (9ba)
+    # already replaced this turn, or when the model already asked for a
+    # human itself. Non-fatal: any error here falls back to the model's
+    # answer unchanged. See widget_chat_helpers.is_low_confidence_turn for
+    # the full signal rationale.
+    if not ai_fallback_fired and "HANDOFF_REQUESTED" not in assistant_text:
+        try:
+            if is_low_confidence_turn(
+                message=req.message,
+                kb_article_refs=kb_article_refs,
+                kb_retrieval_attempted=_kb_retrieval_enabled,
+                assistant_text=assistant_text,
+            ):
+                logger.info(
+                    "widget_chat: confidence_gate LOW_CONFIDENCE session=%s — "
+                    "routing to human handoff instead of model answer",
+                    req.session_id,
+                )
+                assistant_text = LOW_CONFIDENCE_FALLBACK_TEXT
+        except Exception:
+            logger.warning(
+                "widget_chat: confidence gate check failed for session=%s — "
+                "falling back to model answer unchanged",
+                req.session_id,
+                exc_info=True,
+            )
 
     # 9c. Detect handoff request from AI response
     handoff_triggered = False

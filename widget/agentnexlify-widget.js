@@ -986,6 +986,17 @@
   let teaserDelaySeconds = 3;
   let teaserEnabled = true;
 
+  // Proactive behavior-triggered chat state (default OFF, config-driven)
+  let proactiveEnabled = false;
+  let proactiveDelaySeconds = 20;
+  let proactiveExitIntent = true;
+  let proactiveMessage = null;
+  let proactiveOncePerSession = true;
+  let proactiveTimer = null;
+  let proactiveExitIntentBound = false;
+  // In-memory only (no localStorage/sessionStorage) - resets on full page load.
+  let proactiveTriggered = false;
+
   // Menu state
   let menuItems = null; // Array of {name, description, price, category} or null
   let businessType = ""; // e.g. "legal", "restaurant", "dental"
@@ -1025,6 +1036,17 @@
         teaserDelaySeconds = data.teaser_delay_seconds;
       if (data.teaser_enabled !== undefined)
         teaserEnabled = data.teaser_enabled;
+      if (data.proactive && typeof data.proactive === "object") {
+        if (data.proactive.enabled !== undefined)
+          proactiveEnabled = !!data.proactive.enabled;
+        if (data.proactive.delay_seconds !== undefined)
+          proactiveDelaySeconds = data.proactive.delay_seconds;
+        if (data.proactive.exit_intent !== undefined)
+          proactiveExitIntent = !!data.proactive.exit_intent;
+        if (data.proactive.message) proactiveMessage = data.proactive.message;
+        if (data.proactive.once_per_session !== undefined)
+          proactiveOncePerSession = !!data.proactive.once_per_session;
+      }
       if (data.plan) tenantPlan = data.plan;
       if (data.menu_items && data.menu_items.length > 0) {
         menuItems = data.menu_items;
@@ -1404,10 +1426,12 @@
         clearTimeout(teaserTimer);
         teaserTimer = null;
       }
+      disarmProactiveTriggers();
     } else {
       win.classList.remove("open");
       bubble.classList.remove("hidden");
       localStorage.setItem(STATE_KEY, "closed");
+      armProactiveTriggers();
     }
   }
 
@@ -1438,6 +1462,51 @@
   function hideTeaser() {
     const teaser = document.getElementById("anx-teaser");
     if (teaser) teaser.style.display = "none";
+  }
+
+  // --- Proactive behavior-triggered chat ---
+  // Fires when the cursor leaves toward the top of the viewport with no
+  // related target inside the page - the classic "heading for the tab bar
+  // to close this tab" signal.
+  function handleProactiveExitIntent(e) {
+    if (e.clientY > 10) return;
+    if (e.relatedTarget || e.toElement) return;
+    triggerProactiveOpen();
+  }
+
+  function armProactiveTriggers() {
+    if (!proactiveEnabled || isOpen) return;
+    if (proactiveOncePerSession && proactiveTriggered) return;
+    if (!proactiveTimer) {
+      proactiveTimer = setTimeout(
+        triggerProactiveOpen,
+        Math.max(0, proactiveDelaySeconds) * 1000,
+      );
+    }
+    if (proactiveExitIntent && !proactiveExitIntentBound) {
+      document.addEventListener("mouseout", handleProactiveExitIntent);
+      proactiveExitIntentBound = true;
+    }
+  }
+
+  function disarmProactiveTriggers() {
+    if (proactiveTimer) {
+      clearTimeout(proactiveTimer);
+      proactiveTimer = null;
+    }
+    if (proactiveExitIntentBound) {
+      document.removeEventListener("mouseout", handleProactiveExitIntent);
+      proactiveExitIntentBound = false;
+    }
+  }
+
+  function triggerProactiveOpen() {
+    if (!proactiveEnabled || isOpen) return;
+    if (proactiveOncePerSession && proactiveTriggered) return;
+    proactiveTriggered = true;
+    disarmProactiveTriggers();
+    triggerGreeting(proactiveMessage);
+    toggleWindow(true);
   }
 
   async function handleSend() {
@@ -2114,6 +2183,10 @@
     ) {
       teaserTimer = setTimeout(showTeaser, teaserDelaySeconds * 1000);
     }
+
+    // Proactive behavior-triggered chat: no-op unless a tenant configures
+    // proactive.enabled = true (default OFF, fully backward compatible).
+    armProactiveTriggers();
   }
 
   function showPreChatForm() {
@@ -2217,11 +2290,11 @@
     return true;
   }
 
-  function triggerGreeting() {
+  function triggerGreeting(overrideMessage) {
     const msgs = document.getElementById("anx-messages");
     if (!msgs || msgs.children.length > 0) return;
     const rawGreeting =
-      greetingMessage || "How can I help you today?";
+      overrideMessage || greetingMessage || "How can I help you today?";
     const greetingWithDisclosure = /\bAI\b/i.test(rawGreeting)
       ? rawGreeting
       : `Hi! I'm the AI assistant for this business. ${rawGreeting}`;

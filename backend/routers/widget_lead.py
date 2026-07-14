@@ -166,7 +166,20 @@ async def submit_lead(request: Request, req: WidgetLeadRequest, background_tasks
             raise HTTPException(status_code=500, detail="Lead could not be saved. Please try again.")
 
     if lead_id:
-        background_tasks.add_task(score_lead_background, lead_id)
+        # Score synchronously (rubric-based, no LLM call — see lead_scoring.py)
+        # so lead_score + lead_temperature are on the row before the response
+        # returns. Tenant dashboard shows prioritized leads immediately on
+        # capture instead of waiting for a background task to catch up.
+        # score_lead_background() already logs + swallows its own exceptions;
+        # this try/except is a second, call-site-owned guarantee that a
+        # scoring failure can never break lead capture.
+        try:
+            score_lead_background(lead_id)
+        except Exception:
+            logger.warning(
+                "Synchronous lead scoring failed for lead %s — lead capture unaffected",
+                lead_id, exc_info=True,
+            )
 
     # AI qualification only fires for NEW leads on eligible plans — the
     # service itself gates on plan, so we unconditionally enqueue here

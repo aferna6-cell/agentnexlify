@@ -25,6 +25,7 @@ from backend.routers import (
     action_items,
     analytics,
     appointments,
+    appointment_reminders,
     auth,
     auth_billing,
     auth_google,
@@ -77,6 +78,7 @@ from backend.routers import (
     resend_webhooks,
     revenue,
     reviews,
+    review_responder,
     qualifier_config,
     scoring_config,
     sequences,
@@ -853,6 +855,7 @@ app.add_middleware(RequestContextMiddleware)
 # --- Routers ---
 app.include_router(analytics.router)
 app.include_router(appointments.router)
+app.include_router(appointment_reminders.router)
 app.include_router(auth.router)
 app.include_router(auth_billing.router)
 app.include_router(auth_google.router)
@@ -956,6 +959,7 @@ app.include_router(pricing_experiment.router)
 app.include_router(widget_health.router)
 app.include_router(integration_keys.router)
 app.include_router(status_page.router)
+app.include_router(review_responder.router)
 
 
 # --- Static files (widget) ---

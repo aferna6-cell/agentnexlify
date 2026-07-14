@@ -304,6 +304,14 @@ def create_appointment(
     except Exception:
         logger.warning("Failed to sync appointment %s to Google Calendar", appointment["id"], exc_info=True)
 
+    # Schedule 24h/2h SMS reminders (best-effort). See appointment_reminders.py.
+    try:
+        from backend.services.appointment_reminders import schedule_reminders_for_appointment
+
+        schedule_reminders_for_appointment(appointment)
+    except Exception:
+        logger.warning("Failed to schedule reminders for appointment %s", appointment["id"], exc_info=True)
+
     # Send confirmation to customer (best-effort, background)
     try:
         confirmation = _send_appointment_confirmation(tenant_id, appointment)

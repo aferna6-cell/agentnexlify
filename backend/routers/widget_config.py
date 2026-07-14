@@ -191,6 +191,7 @@ async def get_config(request: Request, api_key: str):
         teaser_enabled=widget.get("teaser_enabled", True),
         plan=tenant_plan,
         pre_chat_form=widget.get("pre_chat_form"),
+        proactive=widget.get("proactive"),
     )
 
 
