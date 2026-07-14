@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "timestamp": "2026-05-26T23:45:05.684Z",
+  "timestamp": "2026-07-14T16:32:10.894Z",
   "score": {
     "grade": "C",
     "numericScore": 60,
@@ -287,6 +287,15 @@
       "file": "scripts/claude-hooks/kb-viewer-sync.sh",
       "evidence": "> /dev/null 2>&1",
       "fingerprint": "hooks-logging-disabled-905::scripts/claude-hooks/kb-viewer-sync.sh::> /dev/null 2>&1"
+    },
+    {
+      "id": "hooks-logging-disabled-3419",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: >/dev/null 2>&1",
+      "file": "scripts/claude-hooks/post-edit-check.sh",
+      "evidence": ">/dev/null 2>&1",
+      "fingerprint": "hooks-logging-disabled-3419::scripts/claude-hooks/post-edit-check.sh::>/dev/null 2>&1"
     },
     {
       "id": "hooks-logging-disabled-508",
