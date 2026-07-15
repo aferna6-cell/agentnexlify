@@ -18416,3 +18416,82 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** .github/workflows/pr-check.yml,backend/services/automation/rule_engine.py,backend/services/automation/scheduled/appointment_jobs.py,backend/tests/test_appointment_reminders.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(booking): reschedule re-arms reminders + cancel notifies the owner (#442)
+
+* fix(booking): reschedule now resets reminder markers so the new slot re-reminds
+
+Following the booking lifecycle one more step: reschedule_submit updated
+start_time/end_time but left reminder_24h_sent_at / reminder_1h_sent_at (and
+the reminder_*_sent note tags) set from the ORIGINAL time. The reminder job
+dedups on exactly those, so a customer who reschedules AFTER the first reminder
+fired got NO reminder for the new slot → no-show. This compounds the
+just-shipped reminder-status fix (reminders only started firing recently, so
+this leak was previously masked by reminders never firing at all).
+
+- booking_page.py reschedule_submit: null reminder_24h_sent_at +
+  reminder_1h_sent_at on reschedule, and strip stale reminder_*_sent note tags
+  via new _strip_reminder_tags helper.
+- backend/tests/test_reschedule_reminders.py (NEW, 4 tests): _strip_reminder_tags
+  unit cases + reschedule_submit nulls both reminder columns and strips the
+  stale tag while keeping real notes. Added to the CI list.
+
+Also investigated (deferred, not a bug): appointments only reach status
+'completed' via a manual dashboard action, so the completion-gated flows
+(review requests, rebook, aftercare, portal invites) never auto-fire for public
+bookings. Auto-flipping appointment status is a product decision with no-show
+risk (propose-only-records) — surfaced for owner sign-off, not auto-changed.
+Prod currently has 0 stuck past-confirmed appointments, so it is latent.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Ya7tfAw1FiVqejtNXU8BnV
+
+* feat(booking): notify the owner when a customer cancels an appointment
+
+Completes the booking-lifecycle notification story. reschedule_cancel set
+status='cancelled', logged activity, and fired an appointment.cancelled webhook
+— but the OWNER got nothing unless they'd wired a webhook. A cancellation
+reopens a slot the owner should know about (they may backfill it or follow up),
+so this is the exact parallel to the booking-alert gap.
+
+- booking_alerts.py: add send_cancellation_alert + cancel email/SMS builders,
+  mirroring send_new_booking_alert (best-effort, demo-safe, never raises).
+  Dedup keys are now namespaced (appointment_id:booked vs :cancelled) so a
+  booking alert can't dedup out a later cancellation for the same appointment.
+- booking_page.py reschedule_cancel: select customer_name/start/end and fire
+  send_cancellation_alert after marking cancelled. Best-effort try/except.
+- test_booking_alerts.py: +7 cancellation tests (both channels, booking/cancel
+  dedup independence, cancel repeat-dedup, config-failure resilience, HTML
+  escaping + 'slot open again' copy, missing-slot-fields).
+
+Slot freeing already works (the availability checks exclude status='cancelled').
+Widget JS untouched — backend change only.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Ya7tfAw1FiVqejtNXU8BnV
+
+* test(booking): cover cancel send helpers + reschedule_cancel wiring
+
+CI changed-lines coverage failed: origin/main advanced past the branch base
+(auto-log commit), enlarging the diff so the cancel send-helper bodies and the
+reschedule_cancel wiring counted as uncovered changed lines. Add direct tests:
+- booking_alerts: _send_cancel_email_alert/_send_cancel_sms_alert call-through
+  + failure-swallow, plus send_cancellation_alert no-channel + empty-config skips.
+- reschedule_cancel handler: marks cancelled + awaits send_cancellation_alert
+  with the customer/slot info; already-cancelled is a no-op that skips the alert.
+
+No production code change — tests only.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Ya7tfAw1FiVqejtNXU8BnV
+
+---------
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-07-15
+**Commit:** 9a48ef3
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/pr-check.yml,backend/routers/booking_page.py,backend/services/booking_alerts.py,backend/tests/test_booking_alerts.py,backend/tests/test_reschedule_reminders.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
