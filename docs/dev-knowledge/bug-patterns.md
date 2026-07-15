@@ -18495,3 +18495,34 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** .github/workflows/pr-check.yml,backend/routers/booking_page.py,backend/services/booking_alerts.py,backend/tests/test_booking_alerts.py,backend/tests/test_reschedule_reminders.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### feat(booking): voice/phone bookings now alert the owner too (#443)
+
+The owner booking alert (send_new_booking_alert) was wired only into the public
+booking page. But voice/phone bookings go through booking.create_appointment,
+which fired the CUSTOMER confirmation but not the owner alert — so a customer
+who booked by phone created an appointment the owner never heard about (same
+gap as the original booking-alert finding, voice channel).
+
+Fix at the shared seam: create_appointment now schedules send_new_booking_alert
+via loop.create_task right after the customer confirmation, with the same
+graceful no-running-loop fallback. This covers EVERY create_appointment caller
+(voice today + any future path) in one place. The public booking page uses its
+own insert + explicit alert, and the alert dedups per appointment, so there is
+no double-send. Best-effort — a failing alert never breaks the booking.
+
+- backend/tests/test_create_appointment_owner_alert.py (NEW, 2 tests): the
+  owner alert is scheduled with the right customer/slot/appointment info; an
+  alert failure never breaks create_appointment. Added to the CI list.
+
+
+Claude-Session: https://claude.ai/code/session_01Ya7tfAw1FiVqejtNXU8BnV
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-07-15
+**Commit:** f45b05b
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/pr-check.yml,backend/services/booking.py,backend/tests/test_create_appointment_owner_alert.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
