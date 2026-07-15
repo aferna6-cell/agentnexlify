@@ -18336,3 +18336,47 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** .github/workflows/daily-business-digest.yml,.github/workflows/pr-check.yml,backend/tests/test_internal_tenants.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(widget): inject real booking URL into the AI prompt — unblocks bookings (#439)
+
+Root-cause bug on the money path (found 2026-07-15 via prod data): the widget
+AI's booking nudge told it to 'offer the booking link' but the booking URL was
+NEVER injected into the system prompt. The only way to book is the public page
+/api/v1/book/{business_slug} (widget_booking.py handles restaurant orders +
+contractor bids, NOT appointments — there is no inline appointment flow). So a
+fully-configured customer's AI was instructed to share a link it never had.
+
+Prod evidence: MTOptions (enterprise, booking_enabled + hours + slug all set)
+captured 21 leads and booked 0 appointments; 914 Exterior 8 leads / 0 appts.
+
+- backend/services/booking_prompt.py (NEW, pure helper): builds the BOOKING
+  prompt suffix. When business_slug is set it embeds the exact URL and tells
+  the AI to share it verbatim (never invent one). When no slug is configured
+  it steers the AI to capture contact info instead of promising a dead link.
+  Extracted as its own module rather than growing the 1332-line widget_chat
+  god file (user-rules Rule 9/12).
+- widget_chat.py: replace the inline booking block with booking_prompt_suffix.
+- widget_chat_helpers.py: _get_tenant now selects business_slug.
+- backend/tests/test_booking_prompt.py (NEW, 9 tests): URL injected verbatim,
+  trailing-slash normalised, default base URL, no fabricated link when slug
+  absent. Added to the CI list.
+- daily-business-digest.yml: new booking-readiness scan — surfaces real
+  customers blocked from bookings (no hours / no slug / configured-but-0-appts)
+  as a founder issue. Mutates nothing (customer records are propose-only), so
+  914 Exterior's missing slug + Keys Koffee's missing hours are reported for
+  the owner to fix rather than auto-changed.
+
+Widget JS untouched (byte-identical check passes — this is backend prompt
+construction, not the embedded widget).
+
+
+Claude-Session: https://claude.ai/code/session_01Ya7tfAw1FiVqejtNXU8BnV
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-07-15
+**Commit:** 6cc3419
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/daily-business-digest.yml,.github/workflows/pr-check.yml,backend/routers/widget_chat.py,backend/routers/widget_chat_helpers.py,backend/services/booking_prompt.py,backend/tests/test_booking_prompt.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
