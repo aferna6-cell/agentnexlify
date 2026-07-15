@@ -12,6 +12,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from jose import JWTError, jwt
 from pydantic import BaseModel
@@ -141,7 +142,7 @@ async def drive_folders(claims: dict = Depends(_get_current_tenant)):
     """Folders the tenant can choose as the KB source."""
     tenant_id = claims["tenant_id"]
     try:
-        return {"folders": list_folders(tenant_id)}
+        return {"folders": await run_in_threadpool(list_folders, tenant_id)}
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
     except Exception:
@@ -160,7 +161,9 @@ async def drive_set_folder(
         set_folder(tenant_id, choice.folder_id, choice.folder_name)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
-    summary = sync_tenant_drive(tenant_id)
+    # Threadpool: first sync of a large folder makes per-file httpx fetches
+    # (up to 60s timeouts each) — must not sit on the event loop (audit H1).
+    summary = await run_in_threadpool(sync_tenant_drive, tenant_id)
     return {"folder_set": True, "sync": summary}
 
 
@@ -168,7 +171,7 @@ async def drive_set_folder(
 async def drive_sync_now(claims: dict = Depends(_get_current_tenant)):
     """Manual sync trigger (spec: dashboard 'sync now' button)."""
     tenant_id = claims["tenant_id"]
-    summary = sync_tenant_drive(tenant_id)
+    summary = await run_in_threadpool(sync_tenant_drive, tenant_id)
     if summary.get("error") in ("drive not connected or disabled", "no folder selected"):
         raise HTTPException(status_code=409, detail=summary["error"])
     return {"sync": summary}

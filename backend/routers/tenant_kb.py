@@ -13,6 +13,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from jose import jwt
 from pydantic import BaseModel
 
@@ -163,7 +164,11 @@ async def upload_documents(
             )
             continue
         data = await upload.read()
-        outcome = ingest_file(
+        # Threadpool: extract (PDF/DOCX parse) + per-file DB round-trips must
+        # not run on the event loop — a 100-file batch would starve every
+        # other request on this worker (audit 2026-07-14 H2).
+        outcome = await run_in_threadpool(
+            ingest_file,
             tenant_id,
             source=source,
             external_id=filename,
@@ -174,7 +179,7 @@ async def upload_documents(
             active += 1
         results.append(outcome)
 
-    compiled = compile_tenant_kb(tenant_id)
+    compiled = await run_in_threadpool(compile_tenant_kb, tenant_id)
     return UploadResponse(results=results, compiled=compiled)
 
 
@@ -196,7 +201,7 @@ async def delete_document(
     )
     if not result.data:
         raise HTTPException(status_code=404, detail="Document not found")
-    compiled = compile_tenant_kb(tenant_id)
+    compiled = await run_in_threadpool(compile_tenant_kb, tenant_id)
     return {"deleted": True, "compiled": compiled}
 
 
@@ -207,7 +212,7 @@ async def recompile(
 ):
     """Rebuild widget_configs.knowledge_base from the active documents."""
     _require_tenant(claims, tenant_id)
-    return {"compiled": compile_tenant_kb(tenant_id)}
+    return {"compiled": await run_in_threadpool(compile_tenant_kb, tenant_id)}
 
 
 @router.post("/{tenant_id}/sync-token")

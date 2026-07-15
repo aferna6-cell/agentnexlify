@@ -1522,3 +1522,41 @@ default OFF) and surfaced (earned credit) on `GET /api/v1/referral/my-stats`.
 
 ## 166_leads_client_email_unique (2026-07-10)
 Added `UNIQUE (client_id, email)` on `leads` (constraint `leads_client_email_uniq`) to close the duplicate-lead check-then-insert race (launch audit H1). NULLs stay distinct so phone-only leads are unaffected. Applied to prod. Insert sites switched to upsert-ignore-duplicates.
+
+## Backfill 2026-07-15 — migrations 154-159 + 163 (audit 2026-07-14 M3)
+
+All seven below were applied to prod before this backfill (verified via
+Supabase `list_migrations` 2026-07-15); this section restores the missing
+log entries so the log is complete from 154 onward.
+
+### 154_conversation_sentiment_intent (applied 2026-06-18)
+Adds nullable `sentiment` + `intent` classification columns to `conversations`
+(client_id-scoped). Populated off the hot path by
+`backend/services/conversation_enrichment.py` (Haiku). Closes GH #329.
+
+### 155_kb_articles_fts (applied 2026-06-23)
+Postgres FTS on `kb_articles`: generated tsvector column + GIN index +
+`match_kb_articles_fts` fallback for when VOYAGE_API_KEY/embeddings are absent.
+Semantic search stays primary.
+
+### 156_error_events (applied 2026-06-23)
+`error_events` table — zero-dependency sink for unhandled 500s written by
+main.py's global handler via `backend/services/error_events.py`. Root-caused
+GH #422; feeds the morning digest via `scripts/daily/error_events_report.py`.
+
+### 157_referral_clicks (applied 2026-06-23)
+`referral_clicks` table tracking widget watermark clicks; `ref_tenant_id`
+stores the widget's api_key. Feeds `GET /api/v1/referral/my-stats`.
+
+### 158_wizard_events_fix_step_range (applied 2026-06-23)
+Widens `wizard_events` CHECK from steps 1-6 to 0-7 (0 = express-setup chooser,
+7 = embed). DB was silently rejecting step-0 rows the backend already sent.
+
+### 159_tenant_referred_by_widget_key (applied 2026-06-23)
+Adds `tenants.referred_by_widget_key` (widget watermark attribution) —
+separate from `tenants.referred_by` (promo-code UUID FK).
+
+### 163_booking_enabled_default_true (applied 2026-07-09)
+Flips `widget_configs.booking_enabled` DEFAULT false→true and repairs existing
+rows — migration 005's false default had left online booking silently disabled
+for every tenant since launch (0 real bookings finding, GH #412).

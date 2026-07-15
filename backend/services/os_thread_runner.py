@@ -79,8 +79,10 @@ async def process_user_turn(
     # after the turn. Best-effort: never blocks or breaks the turn.
     missing_connectors: list[dict] = []
     try:
-        missing_connectors = connector_awareness.missing_for_message(
-            db, client_id, user_content
+        # Threadpool: on an inference hit this runs up to 4 sequential
+        # Supabase queries — off the event loop (audit 2026-07-14 M1).
+        missing_connectors = await run_in_threadpool(
+            connector_awareness.missing_for_message, db, client_id, user_content
         )
     except Exception:
         logger.warning(
