@@ -322,9 +322,9 @@ async def reject_response(
 
 
 def post_response_stub(*_args: Any, **_kwargs: Any) -> None:
-    """TODO — NOT IMPLEMENTED. Extension point for posting an approved
-    response to the external review platform (Google Business Profile,
-    Yelp, etc.).
+    """TODO — NOT IMPLEMENTED (tracked: GH #451). Extension point for posting
+    an approved response to the external review platform (Google Business
+    Profile, Yelp, etc.).
 
     This project already has an OAuth scaffold for Google Business Profile
     ("GBP OAuth: scaffold built, awaiting credentials" — see

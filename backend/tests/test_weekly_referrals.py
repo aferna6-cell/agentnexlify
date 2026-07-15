@@ -179,7 +179,7 @@ class TestTenantIsolation:
 # ---------------------------------------------------------------------------
 
 def _run_async(coro):
-    return asyncio.get_event_loop().run_until_complete(coro)
+    return asyncio.run(coro)
 
 
 def _make_digest_db_with_referrals(api_key, clicks_count, signups_count):

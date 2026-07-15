@@ -60,7 +60,7 @@ class TestMissingKeyRaisesEmbeddingUnavailable:
     EmbeddingUnavailable *before* opening any HTTP connection."""
 
     def _run(self, coro):
-        return asyncio.get_event_loop().run_until_complete(coro)
+        return asyncio.run(coro)
 
     @patch.object(emb_module, "settings")
     def test_embed_text_no_http_call(self, mock_settings):
@@ -140,7 +140,7 @@ class TestEmbeddingUnavailableIsCatchable:
 
         embedding = None
         try:
-            embedding = asyncio.get_event_loop().run_until_complete(
+            embedding = asyncio.run(
                 embed_text("some content")
             )
         except Exception:
@@ -157,7 +157,7 @@ class TestHappyPathWithPresentKey:
     """When the key is set, HTTP is called once and the vector is returned."""
 
     def _run(self, coro):
-        return asyncio.get_event_loop().run_until_complete(coro)
+        return asyncio.run(coro)
 
     @patch.object(emb_module, "settings")
     def test_embed_text_returns_vector(self, mock_settings):
@@ -236,6 +236,6 @@ class TestHappyPathWithPresentKey:
 
         with patch("httpx.AsyncClient") as mock_cls:
             with pytest.raises(EmbeddingUnavailable):
-                asyncio.get_event_loop().run_until_complete(embed_text("hi"))
+                asyncio.run(embed_text("hi"))
 
         mock_cls.assert_not_called()

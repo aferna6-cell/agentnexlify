@@ -18,6 +18,7 @@ No live DB calls — all Supabase access is mocked via unittest.mock.
 import asyncio
 import os
 import sys
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch, call
 
 import pytest
@@ -127,10 +128,13 @@ class TestAggregationCorrectness:
         assert result["conversations_handled"] == 3
 
     def test_invoice_sent_total(self):
-        since = "2026-01-01T00:00:00+00:00"
+        # compute_weekly_value uses a trailing 7-day window from now — fixture
+        # dates must be relative. (The originals were absolute June dates that
+        # were in-window when written and silently drifted out: a time-bomb.)
+        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
         invoices = [
-            {"total": "100.00", "status": "sent", "sent_at": "2026-06-20", "paid_at": None},
-            {"total": "250.50", "status": "sent", "sent_at": "2026-06-21", "paid_at": None},
+            {"total": "100.00", "status": "sent", "sent_at": yesterday, "paid_at": None},
+            {"total": "250.50", "status": "sent", "sent_at": yesterday, "paid_at": None},
         ]
         db = _build_db(invoices=invoices)
         result = compute_weekly_value(db, "tenant-1")
@@ -138,14 +142,19 @@ class TestAggregationCorrectness:
         assert abs(result["invoices_sent_total"] - 350.50) < 0.01
 
     def test_invoice_paid_total(self):
-        since = "2026-01-01"
+        # Relative dates for the same reason as test_invoice_sent_total.
+        # sent_at is outside the 7-day window, paid_at inside — only the paid
+        # counters may move.
+        old = (datetime.now(timezone.utc) - timedelta(days=30)).date().isoformat()
+        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
         invoices = [
-            {"total": "500.00", "status": "paid", "sent_at": "2026-06-18", "paid_at": "2026-06-20"},
+            {"total": "500.00", "status": "paid", "sent_at": old, "paid_at": yesterday},
         ]
         db = _build_db(invoices=invoices)
         result = compute_weekly_value(db, "tenant-1")
         assert result["invoices_paid"] == 1
         assert abs(result["invoices_paid_total"] - 500.0) < 0.01
+        assert result["invoices_sent"] == 0
 
     def test_agent_runs_counted(self):
         db = _build_db(agent_runs_count=7)
@@ -484,7 +493,7 @@ def _make_digest_db(
 
 def _run_async(coro):
     """Run an async coroutine in tests (avoids pytest-asyncio requirement)."""
-    return asyncio.get_event_loop().run_until_complete(coro)
+    return asyncio.run(coro)
 
 
 # ---------------------------------------------------------------------------
