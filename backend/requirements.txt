@@ -16,7 +16,7 @@ python-dotenv==1.2.2
 httpx==0.28.1
 python-multipart==0.0.27
 slowapi==0.1.9
-stripe>=11.0.0,<12
+stripe>=15.3.0,<16
 # twilio SDK removed 2026-04-16 (audit item was wrong).
 # Commit 344df51 upgraded to twilio>=10.0.0,<11 but that version does NOT exist on PyPI (max is 9.10.5).
 # Broke Railway build. backend/services/twilio_service.py uses raw httpx, zero SDK imports anywhere.
