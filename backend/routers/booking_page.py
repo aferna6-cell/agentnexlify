@@ -49,6 +49,22 @@ class BookingSubmitRequest(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
+# Note tags the reminder job writes as its fallback dedup marker (used only
+# when the reminder_*_sent_at column update failed). Stripped on reschedule so
+# a rescheduled appointment isn't skipped by the tag left from its old time.
+_REMINDER_TAGS = ("reminder_24h_sent", "reminder_1h_sent")
+
+
+def _strip_reminder_tags(notes: str) -> str:
+    """Remove reminder-sent marker lines/tokens from an appointment's notes."""
+    if not notes:
+        return ""
+    kept = [
+        line for line in notes.splitlines()
+        if line.strip() not in _REMINDER_TAGS
+    ]
+    return "\n".join(kept).strip()
+
 
 def _lookup_tenant_by_slug(slug: str) -> dict:
     """Return tenant row for the given business_slug. Raises 404 on miss."""
@@ -1003,14 +1019,21 @@ async def reschedule_submit(request: Request, appointment_id: str, body: _Resche
     if existing.data:
         raise HTTPException(status_code=409, detail="That time slot is no longer available")
 
-    # Update the appointment
+    # Update the appointment. Reset the reminder markers so the NEW time gets
+    # fresh 24h/1h reminders — the reminder job dedups on these columns (and the
+    # reminder_*_sent note tags), so a reschedule after the original reminder
+    # already fired would otherwise get NO reminder for the new slot → no-show.
+    # (2026-07-15, compounds the reminder-status fix.)
+    prior_notes = _strip_reminder_tags(appointment.get("notes") or "")
     try:
         result = (
             tenant_table(db, "appointments", tenant_id)
             .update({
                 "start_time": body.new_start,
                 "end_time": body.new_end,
-                "notes": f"{appointment.get('notes', '') or ''}\n[Rescheduled by customer]".strip(),
+                "notes": f"{prior_notes}\n[Rescheduled by customer]".strip(),
+                "reminder_24h_sent_at": None,
+                "reminder_1h_sent_at": None,
             })
             .eq("id", appointment_id)
             .execute()
