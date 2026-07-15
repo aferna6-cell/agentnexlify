@@ -83,6 +83,23 @@ export function fetchOsPendingDeliverables(token) {
   return request("/api/v1/os/deliverables/pending", { token });
 }
 
+// Poll one action run to learn whether the real send (SMS/email/widget)
+// actually succeeded. Approval schedules the send as a background task, so
+// deliverable_status flips to "approved" before the send resolves; the true
+// outcome lives on os_action_runs.status (queued|running|succeeded|failed).
+export function getOsActionRun(token, actionRunId) {
+  return request(`/api/v1/os/action-runs/${actionRunId}`, { token });
+}
+
+// Owner-only: retry a failed action run. Creates a fresh os_action_runs row
+// and returns it (status "queued") so the caller can resume polling.
+export function retryOsActionRun(token, actionRunId) {
+  return request(`/api/v1/os/action-runs/${actionRunId}/retry`, {
+    method: "POST",
+    token,
+  });
+}
+
 // --- Memory ---
 
 export function listOsMemory(token) {

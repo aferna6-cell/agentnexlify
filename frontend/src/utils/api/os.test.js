@@ -16,6 +16,8 @@ import {
   editOsDeliverable,
   approveOsDeliverable,
   rejectOsDeliverable,
+  getOsActionRun,
+  retryOsActionRun,
   listOsMemory,
   createOsMemory,
   rememberOsFact,
@@ -154,6 +156,23 @@ describe("os deliverables api", () => {
   it("rejectOsDeliverable posts to the reject path", async () => {
     const result = await rejectOsDeliverable(TOKEN, "r1");
     expect(request).toHaveBeenCalledWith("/api/v1/os/deliverables/r1/reject", {
+      method: "POST",
+      token: TOKEN,
+    });
+    expect(result).toBe(API_RESPONSE);
+  });
+
+  it("getOsActionRun issues a GET to the action-run path", async () => {
+    const result = await getOsActionRun(TOKEN, "act1");
+    expect(request).toHaveBeenCalledWith("/api/v1/os/action-runs/act1", {
+      token: TOKEN,
+    });
+    expect(result).toBe(API_RESPONSE);
+  });
+
+  it("retryOsActionRun posts to the retry path", async () => {
+    const result = await retryOsActionRun(TOKEN, "act1");
+    expect(request).toHaveBeenCalledWith("/api/v1/os/action-runs/act1/retry", {
       method: "POST",
       token: TOKEN,
     });
