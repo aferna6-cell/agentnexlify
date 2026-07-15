@@ -1084,7 +1084,13 @@ async def reschedule_cancel(request: Request, appointment_id: str, body: _Cancel
         raise HTTPException(status_code=403, detail="Invalid or expired link")
 
     db = get_service_supabase()
-    appt = db.table("appointments").select("id, tenant_id, lead_id, status").eq("id", appointment_id).limit(1).execute()
+    appt = (
+        db.table("appointments")
+        .select("id, tenant_id, lead_id, status, customer_name, start_time, end_time")
+        .eq("id", appointment_id)
+        .limit(1)
+        .execute()
+    )
     if not appt.data:
         raise HTTPException(status_code=404, detail="Appointment not found")
 
@@ -1094,6 +1100,27 @@ async def reschedule_cancel(request: Request, appointment_id: str, body: _Cancel
         return {"success": True, "message": "Already cancelled"}
 
     tenant_table(db, "appointments", tenant_id).update({"status": "cancelled"}).eq("id", appointment_id).execute()
+
+    # Notify the owner — a cancellation reopens a slot they should know about.
+    # Best-effort + demo-safe; never blocks the cancel response.
+    try:
+        from backend.services.booking_alerts import send_cancellation_alert
+
+        _start = appointment.get("start_time") or ""
+        await send_cancellation_alert(
+            tenant_id=tenant_id,
+            customer_name=appointment.get("customer_name") or "A customer",
+            booking_info={
+                "date": _start[:10] if _start else None,
+                "start_time": _start[11:16] if len(_start) >= 16 else None,
+                "end_time": (appointment.get("end_time") or "")[11:16] or None,
+            },
+            appointment_id=appointment_id,
+        )
+    except Exception:
+        logger.warning(
+            "Could not send owner cancellation alert for appointment %s", appointment_id, exc_info=True
+        )
 
     try:
         from backend.services.activity import log_activity

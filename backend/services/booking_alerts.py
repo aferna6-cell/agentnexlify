@@ -176,7 +176,9 @@ async def send_new_booking_alert(
             alert still fires but is not deduped.
     """
     try:
-        if _already_alerted(tenant_id, appointment_id):
+        # Namespaced key so a booking alert and a later cancellation alert for
+        # the SAME appointment don't dedup each other out.
+        if _already_alerted(tenant_id, f"{appointment_id}:booked"):
             logger.info(
                 "booking_alert: already alerted tenant=%s appt=%s, skipping",
                 tenant_id, appointment_id,
@@ -212,5 +214,115 @@ async def send_new_booking_alert(
     except Exception:
         logger.error(
             "booking_alert: send_new_booking_alert FAILED tenant=%s customer=%s",
+            tenant_id, customer_name, exc_info=True,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Cancellation alerts — a cancelled appointment reopens a slot the owner should
+# know about. reschedule_cancel previously only fired a webhook + logged, so
+# the owner learned nothing unless they'd wired a webhook (parallel gap to the
+# original booking-alert gap). (2026-07-15)
+# ---------------------------------------------------------------------------
+
+
+def _build_cancel_email_html(business_name: str, customer_name: str, booking_info: dict) -> str:
+    safe_business = html_mod.escape(business_name)
+    safe_name = html_mod.escape(customer_name)
+    safe_when = html_mod.escape(_when(booking_info))
+    return (
+        f"<h2>Appointment cancelled — {safe_business}</h2>"
+        f"<p><strong>{safe_name}</strong> cancelled their appointment"
+        f"{f' ({safe_when})' if booking_info.get('date') else ''}.</p>"
+        f"<p>That time slot is open again — you may want to follow up or offer it to someone else.</p>"
+        f"<p>The AgentNexLiFy Team</p>"
+    )
+
+
+def _build_cancel_sms_body(business_name: str, customer_name: str, booking_info: dict) -> str:
+    when = _when(booking_info)
+    tail = f" ({when})" if booking_info.get("date") else ""
+    return f"Cancelled — {business_name}: {customer_name} cancelled their appointment{tail}. The slot is open again."
+
+
+async def _send_cancel_email_alert(
+    tenant_id: str, business_name: str, owner_email: str, customer_name: str, booking_info: dict
+) -> None:
+    from backend.services.email_sender import send_email
+
+    try:
+        await send_email(
+            to=owner_email,
+            subject=f"Appointment cancelled — {business_name}: {customer_name}",
+            body_html=_build_cancel_email_html(business_name, customer_name, booking_info),
+            tenant_id=tenant_id,
+        )
+    except Exception:
+        logger.error(
+            "booking_alert: cancel email send FAILED tenant=%s customer=%s",
+            tenant_id, customer_name, exc_info=True,
+        )
+
+
+async def _send_cancel_sms_alert(
+    tenant_id: str, business_name: str, phone: str, customer_name: str, booking_info: dict
+) -> None:
+    from backend.services.twilio_service import send_sms
+
+    try:
+        await send_sms(
+            to=phone,
+            body=_build_cancel_sms_body(business_name, customer_name, booking_info),
+            tenant_id=tenant_id,
+        )
+    except Exception:
+        logger.error(
+            "booking_alert: cancel SMS send FAILED tenant=%s customer=%s",
+            tenant_id, customer_name, exc_info=True,
+        )
+
+
+async def send_cancellation_alert(
+    tenant_id: str,
+    customer_name: str,
+    booking_info: dict,
+    appointment_id: str = "",
+) -> None:
+    """Fire owner alerts (email + SMS) when an appointment is cancelled.
+
+    Same contract as send_new_booking_alert: best-effort, demo-safe, idempotent
+    per (tenant, appointment) with a cancellation-specific dedup namespace, and
+    NEVER raises. ``booking_info`` may be sparse (id/name only) — the slot
+    fields are optional.
+    """
+    try:
+        if _already_alerted(tenant_id, f"{appointment_id}:cancelled"):
+            logger.info(
+                "booking_alert: cancel already alerted tenant=%s appt=%s, skipping",
+                tenant_id, appointment_id,
+            )
+            return
+
+        config = _fetch_tenant_alert_config(tenant_id)
+        if not config:
+            logger.warning("booking_alert: no tenant config for %s, skipping cancel", tenant_id)
+            return
+
+        business_name = config.get("business_name") or "your business"
+        owner_email = config.get("owner_email")
+        phone = config.get("notification_phone")
+        sms_enabled = config.get("sms_notifications_enabled")
+
+        if owner_email:
+            await _send_cancel_email_alert(
+                tenant_id, business_name, owner_email, customer_name, booking_info
+            )
+        if sms_enabled and phone:
+            await _send_cancel_sms_alert(
+                tenant_id, business_name, phone, customer_name, booking_info
+            )
+    except Exception:
+        logger.error(
+            "booking_alert: send_cancellation_alert FAILED tenant=%s customer=%s",
             tenant_id, customer_name, exc_info=True,
         )

@@ -10,7 +10,10 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from backend.services import booking_alerts
-from backend.services.booking_alerts import send_new_booking_alert
+from backend.services.booking_alerts import (
+    send_cancellation_alert,
+    send_new_booking_alert,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -173,3 +176,56 @@ class TestSendHelpers:
     async def test_sms_helper_swallows_failure(self):
         with patch("backend.services.twilio_service.send_sms", AsyncMock(side_effect=RuntimeError("boom"))):
             await booking_alerts._send_sms_alert("t1", "Acme", "+15550001111", "Jane", BOOKING)  # no raise
+
+
+class TestCancellationAlert:
+    @pytest.mark.asyncio
+    async def test_cancel_emails_and_smses_owner(self):
+        with patch.object(booking_alerts, "_fetch_tenant_alert_config", return_value=_config()), \
+             patch.object(booking_alerts, "_send_cancel_email_alert", new=AsyncMock()) as em, \
+             patch.object(booking_alerts, "_send_cancel_sms_alert", new=AsyncMock()) as sm:
+            await send_cancellation_alert("t1", "Jane", BOOKING, appointment_id="a1")
+        em.assert_awaited_once()
+        sm.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_cancel_dedup_independent_of_booking(self):
+        # A booking alert must NOT dedup out a later cancellation for the same
+        # appointment (namespaced dedup keys).
+        with patch.object(booking_alerts, "_fetch_tenant_alert_config", return_value=_config()), \
+             patch.object(booking_alerts, "_send_email_alert", new=AsyncMock()) as booked_em, \
+             patch.object(booking_alerts, "_send_sms_alert", new=AsyncMock()), \
+             patch.object(booking_alerts, "_send_cancel_email_alert", new=AsyncMock()) as cancel_em, \
+             patch.object(booking_alerts, "_send_cancel_sms_alert", new=AsyncMock()):
+            await send_new_booking_alert("t1", "Jane", BOOKING, appointment_id="a1")
+            await send_cancellation_alert("t1", "Jane", BOOKING, appointment_id="a1")
+        booked_em.assert_awaited_once()
+        cancel_em.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_cancel_deduped_on_repeat(self):
+        with patch.object(booking_alerts, "_fetch_tenant_alert_config", return_value=_config()), \
+             patch.object(booking_alerts, "_send_cancel_email_alert", new=AsyncMock()) as em, \
+             patch.object(booking_alerts, "_send_cancel_sms_alert", new=AsyncMock()):
+            await send_cancellation_alert("t1", "Jane", BOOKING, appointment_id="a1")
+            await send_cancellation_alert("t1", "Jane", BOOKING, appointment_id="a1")
+        assert em.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_cancel_never_raises_on_config_failure(self):
+        with patch.object(booking_alerts, "_fetch_tenant_alert_config", side_effect=RuntimeError("db down")):
+            await send_cancellation_alert("t1", "Jane", BOOKING, appointment_id="a1")
+
+    def test_cancel_email_html_escapes_and_notes_slot_open(self):
+        html = booking_alerts._build_cancel_email_html("Acme <b>", "Jane <script>", BOOKING)
+        assert "cancelled" in html.lower()
+        assert "open again" in html.lower()
+        assert "<script>" not in html
+
+    def test_cancel_sms_mentions_open_slot(self):
+        body = booking_alerts._build_cancel_sms_body("Acme", "Jane", BOOKING)
+        assert "Jane" in body and "open again" in body.lower()
+
+    def test_cancel_email_handles_missing_slot_fields(self):
+        html = booking_alerts._build_cancel_email_html("Acme", "Jane", {})
+        assert "cancelled" in html.lower()  # no slot info, still valid
