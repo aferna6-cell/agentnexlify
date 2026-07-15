@@ -726,6 +726,29 @@ async def booking_submit(
             "Could not send confirmation email for appointment %s", appointment_id, exc_info=True
         )
 
+    # Notify the business OWNER (email + SMS) — a booking is the highest-value
+    # event and previously fired NO owner alert, only a customer confirmation +
+    # webhook. Best-effort + demo-safe; never blocks the booking response.
+    try:
+        from backend.services.booking_alerts import send_new_booking_alert
+
+        await send_new_booking_alert(
+            tenant_id=tenant_id,
+            customer_name=body.name.strip(),
+            booking_info={
+                "email": body.email.strip(),
+                "phone": body.phone.strip() if body.phone else None,
+                "date": body.date,
+                "start_time": body.start_time,
+                "end_time": body.end_time,
+            },
+            appointment_id=appointment_id,
+        )
+    except Exception:
+        logger.warning(
+            "Could not send owner booking alert for appointment %s", appointment_id, exc_info=True
+        )
+
     # Fire webhook event (best-effort, non-blocking)
     try:
         fire_event_background(
