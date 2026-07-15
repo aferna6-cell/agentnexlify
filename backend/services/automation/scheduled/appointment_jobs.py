@@ -61,7 +61,13 @@ async def send_appointment_reminders() -> int:
                 )
                 .gte("start_time", window_start.isoformat())
                 .lte("start_time", window_end.isoformat())
-                .eq("status", "booked")
+                # Every appointment-creation path sets status "confirmed"
+                # (booking_page, appointments router, booking service; prod has
+                # only confirmed/completed, never "booked"). Filtering on
+                # "booked" meant reminders were sent to ZERO appointments, ever
+                # — customers never got a 24h/1h reminder → no-shows. Accept the
+                # real value plus "booked" for any legacy/custom row. (2026-07-15)
+                .in_("status", ["confirmed", "booked"])
                 .execute()
             )
         except Exception:

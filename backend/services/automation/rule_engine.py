@@ -75,10 +75,14 @@ async def evaluate_trigger(
             if not appt_result.data:
                 return False, None
             appt = appt_result.data[0]
-            expected_status = (
-                "booked" if trigger_type == "appointment_created" else "completed"
-            )
-            return appt.get("status") == expected_status, lead_data
+            # Appointments are created with status "confirmed" (never "booked" —
+            # prod has only confirmed/completed). Matching on "booked" meant
+            # appointment_created automations never fired. Accept "confirmed"
+            # plus legacy "booked". (2026-07-15)
+            status = appt.get("status")
+            if trigger_type == "appointment_created":
+                return status in ("confirmed", "booked"), lead_data
+            return status == "completed", lead_data
         except Exception:
             return False, None
 
