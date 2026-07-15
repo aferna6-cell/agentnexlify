@@ -1560,3 +1560,21 @@ separate from `tenants.referred_by` (promo-code UUID FK).
 Flips `widget_configs.booking_enabled` DEFAULT false→true and repairs existing
 rows — migration 005's false default had left online booking silently disabled
 for every tenant since launch (0 real bookings finding, GH #412).
+
+## 173_rls_lockdown_anon_grants (APPLIED to prod 2026-07-15)
+Security-advisor sweep (get_advisors) found the publishable anon key had full
+cross-tenant access: `conversations_anon_access` (anon, ALL, USING true) plus
+18 "service role" always-true policies created without `TO service_role` (so
+they applied to PUBLIC — clients, leads, messages, documents, integrations,
+email_events, reviews, team_members, etc.), plus EXECUTE on 8 SECURITY DEFINER
+functions (AI-token budget reserve/record/release, automation locks, email
+quota, purge job, rls_auto_enable) granted to anon+authenticated via
+PostgREST /rpc. Nothing in the codebase uses the anon key (verified: no
+supabase-js anywhere; all traffic goes FastAPI -> service key).
+Fix: dropped the anon policy, recreated the 18 policies `TO service_role`,
+revoked EXECUTE from PUBLIC/anon/authenticated (kept service_role), pinned
+search_path=public on the 3 flagged-mutable functions. Post-apply verification:
+0 PUBLIC/anon always-true policies remain; advisors show only INFO
+rls_enabled_no_policy (deny-by-default, intentional) + 2 extension_in_public
+WARNs (btree_gist, vector — deferred, moving extensions with dependent columns
+is riskier than the lint).

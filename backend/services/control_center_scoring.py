@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from backend.routers.analytics._common import (
+from backend.services.analytics_common import (
     _BOOKING_KEYWORDS,
     _PRICING_KEYWORDS,
     _URGENT_KEYWORDS,

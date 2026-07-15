@@ -3,7 +3,7 @@
 import logging
 from collections import defaultdict
 
-from backend.routers.analytics._common import _QUERY_LIMIT
+from backend.services.analytics_common import _QUERY_LIMIT
 from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
