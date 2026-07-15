@@ -210,8 +210,9 @@ def resolve_deliverable_status(
     A draft may only auto-approve when ALL hold:
     1. the engine itself says it needs no approval,
     2. the tenant opted in — a per-agent rule in
-       ``tenants.os_auto_send_rules`` (e.g. {"booking": true}) wins over the
-       global ``os_auto_send_enabled`` flag (both default to off),
+       ``tenants.os_auto_send_rules`` keyed by the engine's department id
+       (e.g. {"sales": true}) wins over the global ``os_auto_send_enabled``
+       flag (both default to off),
     3. the agent is not in the never-auto-send set (rules cannot override it).
 
     Any read failure resolves to pending_approval — the safe side.
