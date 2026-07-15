@@ -1578,3 +1578,18 @@ search_path=public on the 3 flagged-mutable functions. Post-apply verification:
 rls_enabled_no_policy (deny-by-default, intentional) + 2 extension_in_public
 WARNs (btree_gist, vector — deferred, moving extensions with dependent columns
 is riskier than the lint).
+
+## 174_index_hygiene_fk_covering_and_dedupe (APPLIED to prod 2026-07-15)
+Supabase performance advisors flagged 47 unindexed foreign keys + duplicate
+indexes. Postgres doesn't auto-index FKs, so every lead_id/conversation_id/
+thread_id child table was seq-scanned on lead delete/merge and FK joins.
+Part A (self-detecting DO loop) created a covering index on every single-column
+public FK lacking one; Part B dropped the redundant plain index of each
+identical-column duplicate pair (kept the UNIQUE/constraint index). Excluded
+auth.*/storage.* (Supabase-managed). Post-apply verification: 0 uncovered
+public FKs, 0 public duplicate-index pairs remain.
+Deliberately DEFERRED from this migration (advisor WARNs with near-zero real
+cost for us — all backend traffic is service_role/BYPASSRLS): auth_rls_initplan
+(64, wrap auth.* in (SELECT ...) — mechanical but a 64-policy rewrite wants its
+own verified session), multiple_permissive_policies (216), unused_index (83,
+drop needs usage confirmation over a longer window).
