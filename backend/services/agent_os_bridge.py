@@ -85,8 +85,14 @@ def map_business_profile(row: dict | None) -> dict:
         "industry": row.get("business_type"),
         "businessType": row.get("business_type"),
         "city": row.get("city"),
+        # state/website/hours feed the engine's system-prompt block
+        # (_authoring.ts PROFILE_FIELDS). Without them, every agent apologizes
+        # ("I don't have your hours on file") even for tenants who set them.
+        "state": row.get("business_state"),
         "phone": row.get("phone"),
         "email": row.get("owner_email"),
+        "website": row.get("website_url"),
+        "hoursSummary": row.get("business_hours_display"),
         "reviewLinkGoogle": row.get("google_review_link"),
     }
     return {k: v for k, v in out.items() if v is not None}

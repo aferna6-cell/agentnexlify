@@ -24,6 +24,34 @@ def test_map_business_profile_omits_missing_and_maps_names():
     assert "reviewLinkGoogle" not in out
 
 
+def test_map_business_profile_maps_hours_website_state():
+    """Hours/website/state feed the engine's prompt block — must be mapped.
+
+    The Node engine (_authoring.ts PROFILE_FIELDS) reads hoursSummary,
+    website, and state. If the Python mapper drops them, every agent's
+    system prompt omits them and the engine apologizes ("I don't have
+    your hours on file") even for tenants who filled them in.
+    """
+    row = {
+        "business_name": "Acme Auto",
+        "business_hours_display": "Mon-Fri 8-6",
+        "website_url": "https://acme.example",
+        "business_state": "TX",
+    }
+    out = bridge.map_business_profile(row)
+    assert out["hoursSummary"] == "Mon-Fri 8-6"
+    assert out["website"] == "https://acme.example"
+    assert out["state"] == "TX"
+
+
+def test_map_business_profile_omits_hours_website_state_when_missing():
+    """Missing hours/website/state are omitted, never sent as null."""
+    out = bridge.map_business_profile({"business_name": "Acme"})
+    assert "hoursSummary" not in out
+    assert "website" not in out
+    assert "state" not in out
+
+
 def test_map_business_profile_handles_none_row():
     assert bridge.map_business_profile(None) == {}
 
