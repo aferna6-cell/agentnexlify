@@ -1,0 +1,56 @@
+{
+  "run": 95,
+  "date": "2026-07-15-pm",
+  "winner": "Add regression test in backend/tests/test_widget_chat.py asserting booking URL injection when booking_enabled=True (and absent when booking_enabled=False)",
+  "category": "code_health",
+  "effort": "S",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "execution_path": "nightly-commit-review code-change channel (test addition is LOW-risk autonomous)",
+  "requires_human": false,
+  "commit_message": "test(widget): assert booking URL injected in AI prompt when booking_enabled=True",
+  "mandate_status": "EXECUTED",
+  "mandate_items_checked": {
+    "widget_guard_fix_committed": "CONFIRMED IMPLEMENTED — commit d73072a, OrderedDict at widget_guard.py:149, regression test exists in test_widget_guard.py lines 43/48/49/59/60",
+    "regression_test_passes": "CONFIRMED — test_widget_guard.py tests eviction at _MAX_TRACKED_SESSIONS",
+    "gh_413_referral_reward_enabled": "STILL NOT SET — Day 24+, 0 human responses after 4 autonomous comments",
+    "first_referral_lead": "NONE — program not activated",
+    "keys_koffee_415_actioned": "NOT ACTIONED — Day 24+, still 0 business_hours rows",
+    "gh_399_status": "OPEN Day 13+ — 40 ai-ready issues blocked (AUTOPILOT_GH_TOKEN expired)",
+    "gh_403_status": "OPEN Day 13+ — KB 72+ days dark (ANTHROPIC_API_KEY missing from GH Actions)"
+  },
+  "key_finding": "Commit 6cc3419 fixed 24-day silent failure where AI widget never injected booking URL into system prompt — users received no booking link from AI for a full month after booking launched. Three silent-failure bugs in 3 days (auto-send toggle broken for 5/7 agents, all appointment reminders dead, booking URL absent). None had preventing tests. Regression test closes this gap immediately.",
+  "bonus_actions": [
+    "File Attribution Dashboard GH issue with ai-ready label — feat(dashboard): AttributionPage.jsx from attribution.py + migration 172 data"
+  ],
+  "parking_lot": [
+    "Step 9F: nightly infra staleness escalation (WEAKENED — marginal at Day 13+; promote once GH #399/#403 resolve)",
+    "Attribution Dashboard GH issue (WEAKENED — loop blocked by GH #403, but filing queues it)",
+    "BotHealthPage.jsx GH issue (not debated — loop blocked)",
+    "KB refresh script (not debated — operational quick win)"
+  ],
+  "persistent_blockers": {
+    "REFERRAL_REWARD_ENABLED": "Day 24+, 4 autonomous comments, 0 human responses. Checklist 10/10 complete. 2-minute Railway action.",
+    "keys_koffee_business_hours": "Day 24+, 3 leads unable to book. Email/call tenant — fix is dashboard Settings Booking Hours.",
+    "gh_399": "Day 13+. Rotate AUTOPILOT_GH_TOKEN. Unblocks 40 ai-ready issues.",
+    "gh_403": "Day 13+. Add ANTHROPIC_API_KEY to GitHub Actions secrets. Unblocks KB autopopulate + autopilot loop."
+  },
+  "ideas_count": 5,
+  "debated_count": 3,
+  "winner_survived_debate": true,
+  "run_96_mandate": [
+    "Did nightly commit the booking URL regression test? Check nightly-2026-07-16 log for test(widget) commit.",
+    "Does the test pass on current HEAD? (pytest backend/tests/test_widget_chat.py -k booking_url -v)",
+    "GH #413: REFERRAL_REWARD_ENABLED=1 set? First referral lead? (Day 25+)",
+    "Keys Koffee GH #415 actioned? First booking? (Day 25+)",
+    "GH #399 + #403: resolved? (Day 14+)",
+    "Parking lot: Step 9F (staleness escalation), Attribution Dashboard issue (post-GH #403 fix), BotHealthPage.jsx, KB refresh script"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-07-15-pm/ideas/ideas.md",
+    "subconscious/runs/2026-07-15-pm/debate/debate-log.md",
+    "subconscious/runs/2026-07-15-pm/winning-concept.md",
+    "subconscious/runs/2026-07-15-pm/improvement-backlog.md",
+    "subconscious/runs/2026-07-15-pm/run-summary.json"
+  ]
+}
