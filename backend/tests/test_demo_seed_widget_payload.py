@@ -54,6 +54,31 @@ def _widget_insert_keys() -> set:
     raise AssertionError("widget_configs insert not found in demo_seed.py")
 
 
+def _tenant_insert_keys() -> set:
+    """Extract the key set of the dict passed to table("tenants").insert."""
+    tree = ast.parse(_SEED_PATH.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if not (isinstance(func, ast.Attribute) and func.attr == "insert"):
+            continue
+        table_call = getattr(func.value, "func", None)
+        if not (isinstance(table_call, ast.Attribute) and table_call.attr == "table"):
+            continue
+        table_args = func.value.args
+        if not (
+            table_args
+            and isinstance(table_args[0], ast.Constant)
+            and table_args[0].value == "tenants"
+        ):
+            continue
+        payload = node.args[0]
+        if isinstance(payload, ast.Dict):
+            return {k.value for k in payload.keys if isinstance(k, ast.Constant)}
+    raise AssertionError("tenants insert not found in demo_seed.py")
+
+
 def test_seed_payload_uses_only_real_columns():
     keys = _widget_insert_keys()
     phantom = keys - WIDGET_CONFIG_COLUMNS
@@ -62,3 +87,17 @@ def test_seed_payload_uses_only_real_columns():
 
 def test_seed_payload_satisfies_not_null_api_key():
     assert "api_key" in _widget_insert_keys()
+
+
+def test_tenant_insert_sets_business_slug():
+    # Without business_slug the public booking page /api/v1/book/{slug} 404s
+    # for the demo — a prospect clicking "book" hits a dead page (found
+    # 2026-07-15: all 3 demo tenants had NULL slug in prod).
+    assert "business_slug" in _tenant_insert_keys()
+
+
+def test_every_vertical_defines_business_slug():
+    import backend.services.demo_seed as ds
+
+    for vertical, cfg in ds._DEMO_VERTICALS.items():
+        assert cfg.get("business_slug"), f"vertical {vertical} missing business_slug"

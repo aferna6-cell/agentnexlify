@@ -368,6 +368,7 @@ _DEMO_VERTICALS: dict[str, dict] = {
         "owner_email": _PLUMBING_OWNER_EMAIL,
         "business_name": _PLUMBING_BUSINESS_NAME,
         "business_type": "plumbing",
+        "business_slug": "reliable-plumbing-demo",
         "phone": _PLUMBING_PHONE,
         "city": _PLUMBING_CITY,
         "greeting_message": _PLUMBING_GREETING,
@@ -394,6 +395,7 @@ _DEMO_VERTICALS: dict[str, dict] = {
         "owner_email": _SALON_OWNER_EMAIL,
         "business_name": _SALON_BUSINESS_NAME,
         "business_type": "salon",
+        "business_slug": "luxe-co-salon-demo",
         "phone": _SALON_PHONE,
         "city": _SALON_CITY,
         "greeting_message": _SALON_GREETING,
@@ -419,6 +421,7 @@ _DEMO_VERTICALS: dict[str, dict] = {
         "owner_email": _FINANCIAL_OWNER_EMAIL,
         "business_name": _FINANCIAL_BUSINESS_NAME,
         "business_type": "financial_services",
+        "business_slug": "summit-trading-demo",
         "phone": _FINANCIAL_PHONE,
         "city": _FINANCIAL_CITY,
         "greeting_message": _FINANCIAL_GREETING,
@@ -1343,7 +1346,11 @@ def _seed_demo_tenant(db: Any, vertical: str) -> str | None:
     cfg = _DEMO_VERTICALS[vertical]
     tenant_id: str | None = None
 
-    # 1. Tenant row
+    # 1. Tenant row.
+    # business_slug is required for the public booking page (/api/v1/book/{slug})
+    # to resolve — without it a prospect who clicks "book" on a demo hits a 404
+    # (real gap found 2026-07-15: all 3 demo tenants had NULL slug). Derive it
+    # from the vertical so re-seeds stay stable and collision-free.
     try:
         result = (
             db.table("tenants")
@@ -1353,6 +1360,7 @@ def _seed_demo_tenant(db: Any, vertical: str) -> str | None:
                 "owner_email": cfg["owner_email"],
                 "phone": cfg["phone"],
                 "city": cfg["city"],
+                "business_slug": cfg["business_slug"],
                 "plan": "professional",
                 "plan_status": "active",
                 "is_demo": True,
