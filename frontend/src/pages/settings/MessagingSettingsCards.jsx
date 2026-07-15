@@ -385,17 +385,18 @@ export function NoShowRecoveryCard({
   );
 }
 
-// Per-agent auto-send rules (gap G6). Agents handling money or complaints
-// (invoicing, payments, complaints) ALWAYS require approval - the backend
-// never-auto-send set cannot be overridden, so they're not listed here.
+// Per-agent auto-send rules (gap G6). Keys MUST be the department ids the
+// engine persists to os_agent_runs.agent_name - resolve_deliverable_status
+// (backend/services/agent_os_bridge.py) looks up os_auto_send_rules[agent_name].
+// The old list used pre-refactor skill ids (generalist/customer_question/
+// booking/lead_nurture/campaign) that no longer match any persisted agent_name,
+// so those toggles silently did nothing. Money/complaint departments
+// (invoicing, customer_service) are hard-gated server-side by
+// NEVER_AUTO_SEND_AGENTS and cannot be auto-sent, so they're not listed.
 const AUTO_SEND_AGENTS = [
-  { key: "generalist", label: "General assistant" },
-  { key: "customer_question", label: "Customer questions (FAQ answers)" },
-  { key: "booking", label: "Booking & scheduling" },
-  { key: "lead_nurture", label: "Lead follow-ups" },
-  { key: "marketing", label: "Marketing drafts" },
-  { key: "campaign", label: "Campaigns" },
-  { key: "operations", label: "Operations" },
+  { key: "sales", label: "Sales replies & lead follow-ups" },
+  { key: "marketing", label: "Marketing & campaign drafts" },
+  { key: "operations", label: "Operations & scheduling" },
 ];
 
 export function AgentOSAutoSendCard({
@@ -421,9 +422,10 @@ export function AgentOSAutoSendCard({
       <p className="settings-card-desc">
         When OFF (default), every Agent OS deliverable waits for your approval
         before any customer-facing action fires. Give standing instructions
-        like you would to human staff: let trusted agents (e.g. FAQ answers at
-        2 AM) send freely while everything else still asks first. Invoicing,
-        payments, and complaint handling always require your approval.
+        like you would to human staff: let a trusted agent (e.g. Sales sending
+        routine follow-ups) send freely while everything else still asks first.
+        Invoicing, payments, and customer-service replies always require your
+        approval.
       </p>
       <CheckboxSettingRow
         id="os-auto-send-toggle"

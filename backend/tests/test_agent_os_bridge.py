@@ -1,6 +1,16 @@
 """Unit tests for the agent_os_bridge pure mappers (no database needed)."""
 
+from unittest.mock import MagicMock
+
 from backend.services import agent_os_bridge as bridge
+
+
+def _settings_db(row):
+    """Mock Supabase client whose tenants lookup returns `row` (or [] if None)."""
+    db = MagicMock()
+    chain = db.table.return_value.select.return_value.eq.return_value.limit.return_value
+    chain.execute.return_value = MagicMock(data=[row] if row is not None else [])
+    return db
 
 
 def test_map_business_profile_omits_missing_and_maps_names():
@@ -54,6 +64,72 @@ def test_map_business_profile_omits_hours_website_state_when_missing():
 
 def test_map_business_profile_handles_none_row():
     assert bridge.map_business_profile(None) == {}
+
+
+# --- resolve_deliverable_status (auto-send gate) ----------------------------
+# The per-agent rule keys MUST be the engine's department ids (the values
+# persisted to os_agent_runs.agent_name). The dashboard toggle writes these
+# keys; a mismatch means the toggle silently no-ops. These lock the contract.
+_TENANT = "aaaaaaaa-0000-0000-0000-000000000001"
+
+
+def test_auto_send_rule_keyed_by_department_id_approves():
+    """A per-agent rule keyed by the real department id auto-approves."""
+    db = _settings_db({"os_auto_send_enabled": False, "os_auto_send_rules": {"sales": True}})
+    status = bridge.resolve_deliverable_status(db, _TENANT, "sales", requires_approval=False)
+    assert status == "approved"
+
+
+def test_auto_send_rule_false_forces_approval():
+    db = _settings_db({"os_auto_send_enabled": True, "os_auto_send_rules": {"sales": False}})
+    status = bridge.resolve_deliverable_status(db, _TENANT, "sales", requires_approval=False)
+    assert status == "pending_approval"
+
+
+def test_stale_v1_rule_key_does_not_match_department_run():
+    """A rule keyed by a retired v1 skill id must NOT auto-send a department run.
+
+    This is exactly the bug the dashboard fix addresses: the old UI wrote
+    {"customer_question": true}, but runs persist agent_name="customer_service",
+    so the lookup misses and the draft correctly waits for approval.
+    """
+    db = _settings_db(
+        {"os_auto_send_enabled": False, "os_auto_send_rules": {"customer_question": True}}
+    )
+    status = bridge.resolve_deliverable_status(
+        db, _TENANT, "customer_service", requires_approval=False
+    )
+    assert status == "pending_approval"
+
+
+def test_never_auto_send_department_ignores_true_rule():
+    """customer_service/invoicing are hard-gated even if a rule says auto-send."""
+    db = _settings_db(
+        {"os_auto_send_enabled": True, "os_auto_send_rules": {"customer_service": True}}
+    )
+    status = bridge.resolve_deliverable_status(
+        db, _TENANT, "customer_service", requires_approval=False
+    )
+    assert status == "pending_approval"
+
+
+def test_global_flag_approves_without_per_agent_rule():
+    db = _settings_db({"os_auto_send_enabled": True, "os_auto_send_rules": {}})
+    status = bridge.resolve_deliverable_status(db, _TENANT, "marketing", requires_approval=False)
+    assert status == "approved"
+
+
+def test_requires_approval_always_gates():
+    db = _settings_db({"os_auto_send_enabled": True, "os_auto_send_rules": {"sales": True}})
+    status = bridge.resolve_deliverable_status(db, _TENANT, "sales", requires_approval=True)
+    assert status == "pending_approval"
+
+
+def test_read_failure_defaults_to_pending():
+    db = MagicMock()
+    db.table.side_effect = RuntimeError("db down")
+    status = bridge.resolve_deliverable_status(db, _TENANT, "sales", requires_approval=False)
+    assert status == "pending_approval"
 
 
 def test_map_widget_history_groups_by_session_and_summarizes():
