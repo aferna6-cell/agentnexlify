@@ -338,6 +338,7 @@ async def submit_public_form(
 
     # Auto-create lead if name/email/phone fields are present
     lead_id = None
+    lead_is_new = False
     lead_name = None
     lead_email = None
     lead_phone = None
@@ -392,6 +393,7 @@ async def submit_public_form(
                 lead_result = db.table("leads").insert(lead_insert).execute()
                 if lead_result.data:
                     lead_id = lead_result.data[0]["id"]
+                    lead_is_new = True
                     logger.info("Form submission created new lead %s for tenant %s", lead_id, tenant_id)
         except Exception:
             logger.exception("Failed to create/find lead from form submission for tenant %s", tenant_id)
@@ -432,6 +434,27 @@ async def submit_public_form(
         )
     except Exception:
         logger.warning("Failed to fire form.submitted webhook for form %s", form_id, exc_info=True)
+
+    # Instant owner alert (email + SMS) — only for a genuinely NEW lead, so a
+    # returning visitor re-submitting a form does not re-ping the owner. The
+    # form path previously notified the owner only if they had a webhook wired;
+    # this brings it to parity with widget lead capture.
+    if lead_is_new and lead_id:
+        try:
+            from backend.services.lead_alerts import fire_new_lead_alert_background
+
+            fire_new_lead_alert_background(
+                tenant_id,
+                lead_name or "New lead",
+                {"email": lead_email, "phone": lead_phone},
+                lead_id=lead_id,
+                source_label="your website contact form",
+            )
+        except Exception:
+            logger.warning(
+                "Failed to fire owner lead alert for form %s lead %s",
+                form_id, lead_id, exc_info=True,
+            )
 
     success_message = form.get("success_message") or "Thank you for your submission!"
     return {

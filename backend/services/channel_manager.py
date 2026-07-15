@@ -79,6 +79,8 @@ def ingest_channel_message(
     # 2. Upsert lead by external sender ID stored in lead tags / metadata.
     #    Look for a lead where a tag matches "fb_psid:<sender_id>".
     lead_id: str | None = None
+    lead_is_new = False
+    lead_display_name = sender_name or f"Facebook User {sender_id[-6:]}"
     tag_marker = f"fb_psid:{sender_id}"
     try:
         existing_lead = (
@@ -94,7 +96,7 @@ def ingest_channel_message(
         else:
             new_lead = {
                 "client_id": tenant_id,
-                "name": sender_name or f"Facebook User {sender_id[-6:]}",
+                "name": lead_display_name,
                 "status": "new",
                 "tags": [tag_marker],
                 "conversation_summary": f"Inbound Facebook Messenger message from {sender_id}",
@@ -102,6 +104,7 @@ def ingest_channel_message(
             inserted = db.table("leads").insert(new_lead).execute()
             if inserted.data:
                 lead_id = inserted.data[0]["id"]
+                lead_is_new = True
     except Exception:
         logger.exception(
             "channel_manager: failed to upsert lead for tenant=%s sender=%s",
@@ -161,5 +164,26 @@ def ingest_channel_message(
             tenant_id,
             session_id,
         )
+
+    # Instant owner alert for a first-contact Messenger lead. Returning senders
+    # match an existing lead (lead_is_new stays False) so the owner is pinged
+    # once per new contact, not on every inbound message. Messenger carries no
+    # email/phone, so lead_info is empty — the alert names the lead + channel.
+    if lead_is_new and lead_id:
+        try:
+            from backend.services.lead_alerts import fire_new_lead_alert_background
+
+            fire_new_lead_alert_background(
+                tenant_id,
+                lead_display_name,
+                {},
+                lead_id=lead_id,
+                source_label="Facebook Messenger",
+            )
+        except Exception:
+            logger.warning(
+                "channel_manager: failed to fire owner lead alert tenant=%s lead=%s",
+                tenant_id, lead_id, exc_info=True,
+            )
 
     return {"tenant_id": tenant_id, "conversation_id": conversation_id}

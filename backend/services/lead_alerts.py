@@ -33,6 +33,7 @@ WARNING: this module is imported by FastAPI routers. Do NOT add
 ``from __future__ import annotations`` here.
 """
 
+import asyncio
 import html as html_mod
 import logging
 
@@ -102,15 +103,21 @@ def _fetch_tenant_alert_config(tenant_id: str) -> dict:
     return rows[0] if rows else {}
 
 
-def _build_email_html(business_name: str, lead_name: str, lead_info: dict) -> str:
+def _build_email_html(
+    business_name: str,
+    lead_name: str,
+    lead_info: dict,
+    source_label: str = "your chat widget",
+) -> str:
     """Build the owner-alert email body. All interpolated values escaped."""
     safe_business = html_mod.escape(business_name)
     safe_name = html_mod.escape(lead_name)
     safe_email = html_mod.escape(lead_info.get("email") or "not provided")
     safe_phone = html_mod.escape(lead_info.get("phone") or "not provided")
+    safe_source = html_mod.escape(source_label or "your chat widget")
     return (
         f"<h2>New lead for {safe_business}</h2>"
-        f"<p>A new lead was just captured from your chat widget:</p>"
+        f"<p>A new lead was just captured from {safe_source}:</p>"
         f"<table style='border-collapse:collapse;margin:16px 0;'>"
         f"<tr><td style='padding:4px 12px 4px 0;font-weight:bold;'>Name</td>"
         f"<td style='padding:4px 0;'>{safe_name}</td></tr>"
@@ -131,7 +138,12 @@ def _build_sms_body(business_name: str, lead_name: str, lead_info: dict) -> str:
 
 
 async def _send_email_alert(
-    tenant_id: str, business_name: str, owner_email: str, lead_name: str, lead_info: dict
+    tenant_id: str,
+    business_name: str,
+    owner_email: str,
+    lead_name: str,
+    lead_info: dict,
+    source_label: str = "your chat widget",
 ) -> None:
     """Send the owner email alert. Swallows every failure."""
     from backend.services.email_sender import send_email
@@ -140,7 +152,7 @@ async def _send_email_alert(
         await send_email(
             to=owner_email,
             subject=f"New lead for {business_name}: {lead_name}",
-            body_html=_build_email_html(business_name, lead_name, lead_info),
+            body_html=_build_email_html(business_name, lead_name, lead_info, source_label),
             tenant_id=tenant_id,
         )
     except Exception:
@@ -175,6 +187,7 @@ async def send_new_lead_alert(
     lead_name: str,
     lead_info: dict,
     lead_id: str = "",
+    source_label: str = "your chat widget",
 ) -> None:
     """Fire instant owner alerts (email + SMS) for a newly captured lead.
 
@@ -188,6 +201,10 @@ async def send_new_lead_alert(
         lead_info: dict with optional "email" / "phone" keys.
         lead_id: the captured lead's id, used for idempotency. When empty
             (legacy callers), the alert still fires but is not deduped.
+        source_label: where the lead came from, shown in the email body
+            (e.g. "your chat widget", "your website contact form",
+            "Facebook Messenger"). Defaults to the widget wording so
+            existing callers are unchanged.
     """
     try:
         if _already_alerted(tenant_id, lead_id):
@@ -209,7 +226,7 @@ async def send_new_lead_alert(
 
         if owner_email:
             await _send_email_alert(
-                tenant_id, business_name, owner_email, lead_name, lead_info
+                tenant_id, business_name, owner_email, lead_name, lead_info, source_label
             )
         else:
             logger.info("lead_alert: no owner_email for tenant=%s, email skipped", tenant_id)
@@ -230,4 +247,43 @@ async def send_new_lead_alert(
         logger.error(
             "lead_alert: send_new_lead_alert FAILED tenant=%s lead=%s",
             tenant_id, lead_name, exc_info=True,
+        )
+
+
+def fire_new_lead_alert_background(
+    tenant_id: str,
+    lead_name: str,
+    lead_info: dict,
+    lead_id: str = "",
+    source_label: str = "your chat widget",
+) -> None:
+    """Schedule ``send_new_lead_alert`` from a sync context without blocking.
+
+    Mirror of ``webhook_dispatcher.fire_event_background``: fire the async
+    owner alert onto the running event loop and return immediately. Callers
+    are sync code paths (form submit, Messenger ingest) that must not await
+    email/SMS sends inside the request/response cycle.
+
+    Best-effort: when there is no running loop (e.g. a pure-sync worker with
+    no event loop, or a unit test calling without one), the alert is skipped
+    rather than raised. NEVER raises.
+    """
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        logger.debug(
+            "lead_alert: no running event loop, skipping alert for tenant=%s lead=%s",
+            tenant_id, lead_id,
+        )
+        return
+    try:
+        loop.create_task(
+            send_new_lead_alert(
+                tenant_id, lead_name, lead_info, lead_id=lead_id, source_label=source_label
+            )
+        )
+    except Exception:
+        logger.error(
+            "lead_alert: failed to schedule background alert tenant=%s lead=%s",
+            tenant_id, lead_id, exc_info=True,
         )
