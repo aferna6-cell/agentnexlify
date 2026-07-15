@@ -1,0 +1,43 @@
+{
+  "run": 94,
+  "date": "2026-07-15",
+  "evidence_summary": "Nightly 2026-07-15 flagged widget_guard.py:141 _SESSION_TURN_COUNTS as unbounded dict (no TTL/LRU). PR #431 shipped 5 new services yesterday. Mandate: all 5 pending-human items still unresolved (REFERRAL_REWARD_ENABLED, Keys Koffee hours, GH #399, GH #403, first booking). widget_guard wiring confirmed (widget_chat.py lines 34+684) — Bonus A resolved.",
+  "ideas_count": 5,
+  "ideas": [
+    "Fix widget_guard._SESSION_TURN_COUNTS unbounded dict",
+    "Add BotHealthPage.jsx dashboard frontend",
+    "File GH issue for attribution dashboard frontend gap",
+    "Add Step 9F to nightly-commit-review SKILL.md",
+    "Add manual KB refresh script for headless sessions"
+  ],
+  "debated": [
+    "Idea 1: Fix widget_guard unbounded dict",
+    "Idea 4: Step 9F nightly infra check",
+    "Idea 3: Attribution dashboard GH issue"
+  ],
+  "verdicts": {
+    "Idea 1": "SURVIVES (STRONG) → WINNER",
+    "Idea 4": "SURVIVES (MODERATE) → Parking lot",
+    "Idea 3": "WEAKENED → Parking lot"
+  },
+  "winner": "Fix _SESSION_TURN_COUNTS in widget_guard.py:141 — replace bare dict with bounded OrderedDict (maxsize=10k, LRU eviction)",
+  "winner_category": "code_health",
+  "winner_effort": "S",
+  "autonomous_executable": true,
+  "requires_human": false,
+  "confidence": "HIGH",
+  "mandate_items_resolved": ["widget_guard wiring confirmed"],
+  "mandate_items_pending": [
+    "REFERRAL_REWARD_ENABLED=1 — Day 23, 0 human responses",
+    "Keys Koffee hours — Day 23, 0 human responses",
+    "GH #399 — OPEN Day 12+",
+    "GH #403 — OPEN Day 12+",
+    "First real booking — still 0"
+  ],
+  "parking_lot": [
+    "Step 9F: nightly infra staleness check (SKILL.md)",
+    "Attribution dashboard GH issue (pending GH #403 resolution)",
+    "BotHealthPage.jsx frontend",
+    "Manual KB refresh script"
+  ]
+}
