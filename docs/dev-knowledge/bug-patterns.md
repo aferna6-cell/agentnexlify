@@ -18562,3 +18562,53 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** backend/services/agent_os_bridge.py,backend/tests/test_agent_os_bridge.py,frontend/src/pages/settings/MessagingSettingsCards.jsx,frontend/src/pages/settings/MessagingSettingsCards.test.jsx
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(agent-os): auto-send config correctness — live automation agents + never-set cleanup (#450)
+
+* chore(agent-os): drop dead skill ids from never-auto-send set
+
+NEVER_AUTO_SEND_AGENTS mirrored the engine's never-auto-send list using
+pre-refactor skill ids (complaint_handler, quote_follow_up, payment_follow_up).
+Post department-refactor those never match a persisted os_agent_runs.agent_name
+(always one of the 8 department ids), so they were dead entries. The real
+gating (customer_service for complaints, invoicing for money) is the department
+ids, which stay. Each sensitive skill also sets requiresApproval=true itself —
+the primary gate — so this set is defense-in-depth only.
+
+Locks the set to department ids with a test; updates the stale comment.
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Ya7tfAw1FiVqejtNXU8BnV
+
+* fix(agent-os): restore live automation agents to auto-send toggle
+
+The #447 auto-send toggle rebuild kept only the engine department ids
+(sales/marketing/operations) and dropped lead_nurture as a "dead v1 id". But
+lead_nurture is NOT dead: voice_recovery.py persists os_agent_runs with
+agent_name="lead_nurture" for missed-call text-backs, and review_requester.py
+persists agent_name="review_requester" for post-appointment review asks. Both
+call resolve_deliverable_status(requires_approval=False) with action_type
+"sms.send", so both are owner-configurable auto-send deliverables — but neither
+had a toggle, so owners couldn't turn on auto-send for them (lead_nurture was
+even configurable before #447).
+
+Add both to AUTO_SEND_AGENTS with clear labels ("Missed-call text-backs",
+"Review requests") and correct the comment: agent_name comes from the engine
+(departments) AND backend automations (their own ids), not departments alone.
+
+Verified against backend: the only live non-engine agent_name producers are
+voice_recovery (lead_nurture) and review_requester (review_requester).
+
+Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Ya7tfAw1FiVqejtNXU8BnV
+
+---------
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-07-15
+**Commit:** 97a6512
+**Author:** aferna6-cell
+**Files Changed:** backend/services/agent_os_bridge.py,backend/tests/test_agent_os_bridge.py,frontend/src/pages/settings/MessagingSettingsCards.jsx,frontend/src/pages/settings/MessagingSettingsCards.test.jsx
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
