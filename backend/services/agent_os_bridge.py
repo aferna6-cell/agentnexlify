@@ -438,7 +438,26 @@ def persist_orchestration(
         "agent_run": agent_run,
         "status": result.get("status"),
         "agent_id": result.get("agentId"),
+        # When the engine is torn between two departments it returns
+        # status="needs_clarification" + the two near-tied candidates. Surface
+        # them (and the decision id) so the UI can offer a one-click re-route
+        # via force_agent_id instead of making the owner retype.
+        "clarify_between": clarify_options(result),
+        "decision_id": result.get("decisionId"),
     }
+
+
+def clarify_options(result: dict) -> list[dict]:
+    """Extract the needs_clarification candidates as [{agent_id}, ...].
+
+    Empty for any non-clarification result. Candidates carry agentId; the UI
+    maps that to a human label.
+    """
+    return [
+        {"agent_id": c.get("agentId")}
+        for c in (result.get("clarifyBetween") or [])
+        if isinstance(c, dict) and c.get("agentId")
+    ]
 
 
 def map_routing_decision_row(decision: dict, run_id: str | None) -> dict:

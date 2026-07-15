@@ -205,6 +205,11 @@ async def process_user_turn(
         "action": "delegate" if agent_run else "answer",
         "agent_runs": [agent_run] if agent_run else [],
         "followup_messages": [connect_message] if connect_message else [],
+        # Routing outcome for the UI: when status is "needs_clarification" the
+        # picker offers clarify_between as one-click re-route buttons.
+        "status": decision_status,
+        "clarify_between": persisted.get("clarify_between") or [],
+        "decision_id": persisted.get("decision_id"),
     }
 
 

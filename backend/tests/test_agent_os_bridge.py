@@ -132,6 +132,55 @@ def test_read_failure_defaults_to_pending():
     assert status == "pending_approval"
 
 
+# --- clarify_options (routing clarification picker) -------------------------
+def test_clarify_options_extracts_candidate_agent_ids():
+    result = {
+        "status": "needs_clarification",
+        "clarifyBetween": [{"agentId": "sales"}, {"agentId": "customer_service"}],
+    }
+    assert bridge.clarify_options(result) == [
+        {"agent_id": "sales"},
+        {"agent_id": "customer_service"},
+    ]
+
+
+def test_clarify_options_empty_for_routed_result():
+    assert bridge.clarify_options({"status": "routed", "agentId": "sales"}) == []
+    assert bridge.clarify_options({}) == []
+
+
+def test_clarify_options_skips_candidates_without_agent_id():
+    result = {"clarifyBetween": [{"agentId": "sales"}, {"confidence": 0.4}, "nope"]}
+    assert bridge.clarify_options(result) == [{"agent_id": "sales"}]
+
+
+def test_persist_orchestration_surfaces_clarify_between_and_decision_id():
+    """A needs_clarification engine result (no agent run) threads the two
+    candidate departments + decision id back for the UI picker."""
+    db = MagicMock()
+    # Every insert/update chain returns a row so the assistant-message insert
+    # and thread bump succeed; telemetry is best-effort and swallowed.
+    db.table.return_value.insert.return_value.execute.return_value = MagicMock(
+        data=[{"id": "msg1"}]
+    )
+    out = {
+        "result": {
+            "status": "needs_clarification",
+            "clarifyBetween": [{"agentId": "sales"}, {"agentId": "customer_service"}],
+            "decisionId": "dec-123",
+        },
+        "record": {"runs": []},
+    }
+    persisted = bridge.persist_orchestration(db, _TENANT, "th1", out)
+    assert persisted["status"] == "needs_clarification"
+    assert persisted["decision_id"] == "dec-123"
+    assert persisted["clarify_between"] == [
+        {"agent_id": "sales"},
+        {"agent_id": "customer_service"},
+    ]
+    assert persisted["agent_run"] is None
+
+
 def test_map_widget_history_groups_by_session_and_summarizes():
     msgs = [
         {"session_id": "s1", "role": "user", "content": "Do you do brakes?", "created_at": "2026-06-01T10:00:00Z"},

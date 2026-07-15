@@ -346,3 +346,96 @@ describe("AgentOS shell", () => {
     expect(screen.queryByText("panel-r1")).not.toBeInTheDocument();
   });
 });
+
+describe("AgentOS routing clarification", () => {
+  async function sendAmbiguous() {
+    listOsThreads.mockResolvedValueOnce([
+      { id: "t1", title: "Task one", created_at: NOW },
+    ]);
+    orchestrateOsTurn.mockResolvedValueOnce({
+      user_message: { id: "u1", role: "user", content: "follow up with them" },
+      assistant_message: {
+        id: "a1",
+        role: "assistant",
+        content: "Which team should handle this?",
+      },
+      agent_runs: [],
+      status: "needs_clarification",
+      clarify_between: [{ agent_id: "sales" }, { agent_id: "customer_service" }],
+      decision_id: "dec1",
+    });
+    render(<AgentOS />);
+    await waitFor(() =>
+      expect(screen.getByText("Task one")).toBeInTheDocument(),
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText("Describe a task for the orchestrator..."),
+      { target: { value: "follow up with them" } },
+    );
+    fireEvent.click(screen.getByText("Send"));
+    await waitFor(() =>
+      expect(screen.getByTestId("clarify-picker")).toBeInTheDocument(),
+    );
+  }
+
+  it("renders a picker with department buttons when routing is ambiguous", async () => {
+    await sendAmbiguous();
+    const picker = screen.getByTestId("clarify-picker");
+    expect(picker).toHaveTextContent("Sales");
+    expect(picker).toHaveTextContent("Customer service");
+  });
+
+  it("re-routes with force_agent_id when a department is picked", async () => {
+    await sendAmbiguous();
+    orchestrateOsTurn.mockResolvedValueOnce({
+      user_message: { id: "u2", role: "user", content: "follow up with them" },
+      assistant_message: { id: "a2", role: "assistant", content: "On it, Sales here." },
+      agent_runs: [],
+      status: "routed",
+    });
+    fireEvent.click(screen.getByText("Sales"));
+    await waitFor(() =>
+      expect(orchestrateOsTurn).toHaveBeenLastCalledWith(
+        "jwt",
+        "t1",
+        "follow up with them",
+        "sales",
+      ),
+    );
+    // Picker clears once a choice is made.
+    await waitFor(() =>
+      expect(screen.queryByTestId("clarify-picker")).toBeNull(),
+    );
+  });
+
+  it("Dismiss hides the picker without routing", async () => {
+    await sendAmbiguous();
+    orchestrateOsTurn.mockClear();
+    fireEvent.click(screen.getByText("Dismiss"));
+    expect(screen.queryByTestId("clarify-picker")).toBeNull();
+    expect(orchestrateOsTurn).not.toHaveBeenCalled();
+  });
+
+  it("shows no picker for a normally routed turn", async () => {
+    listOsThreads.mockResolvedValueOnce([
+      { id: "t1", title: "Task one", created_at: NOW },
+    ]);
+    orchestrateOsTurn.mockResolvedValueOnce({
+      user_message: { id: "u1", role: "user", content: "email the invoice" },
+      assistant_message: { id: "a1", role: "assistant", content: "Done." },
+      agent_runs: [],
+      status: "routed",
+    });
+    render(<AgentOS />);
+    await waitFor(() =>
+      expect(screen.getByText("Task one")).toBeInTheDocument(),
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText("Describe a task for the orchestrator..."),
+      { target: { value: "email the invoice" } },
+    );
+    fireEvent.click(screen.getByText("Send"));
+    await waitFor(() => expect(screen.getByText("Done.")).toBeInTheDocument());
+    expect(screen.queryByTestId("clarify-picker")).toBeNull();
+  });
+});
