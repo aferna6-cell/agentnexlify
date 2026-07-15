@@ -18526,3 +18526,39 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** .github/workflows/pr-check.yml,backend/services/booking.py,backend/tests/test_create_appointment_owner_alert.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(agent-os): make the per-agent auto-send toggle actually work (#447)
+
+The dashboard's Agent OS auto-send toggles were keyed on pre-refactor skill
+ids (generalist/customer_question/booking/lead_nurture/campaign) that no
+longer match any persisted os_agent_runs.agent_name. Since resolve_deliverable_
+status looks up os_auto_send_rules[agent_name] by the engine's department id,
+setting "Customer questions -> Auto-send" wrote {"customer_question": true}
+that never matched the persisted "customer_service" run — the toggle silently
+did nothing for 5 of the 7 listed agents (only marketing + operations worked).
+
+- MessagingSettingsCards.jsx: AUTO_SEND_AGENTS now uses real department ids
+  (sales, marketing, operations) with owner-facing labels. Money/complaint
+  departments (invoicing, customer_service) stay hard-gated server-side by
+  NEVER_AUTO_SEND_AGENTS, so they're not listed; fixed the card copy that
+  promised "FAQ answers at 2 AM" (customer_service is gated).
+- agent_os_bridge.py: corrected the docstring example ({"booking"} ->
+  {"sales"}) to a real department id.
+- Added the first tests for resolve_deliverable_status (7 cases incl. the
+  stale-v1-key-misses-department-run regression) and a Vitest test proving the
+  toggle writes department-id keys.
+
+Verified against prod os_agent_runs: post-refactor runs only ever use the 8
+department ids. Found in the AI Workforce usefulness/ease-of-use audit.
+
+
+Claude-Session: https://claude.ai/code/session_01Ya7tfAw1FiVqejtNXU8BnV
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-07-15
+**Commit:** 561e87f
+**Author:** aferna6-cell
+**Files Changed:** backend/services/agent_os_bridge.py,backend/tests/test_agent_os_bridge.py,frontend/src/pages/settings/MessagingSettingsCards.jsx,frontend/src/pages/settings/MessagingSettingsCards.test.jsx
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
