@@ -7,6 +7,8 @@ vi.mock("../../utils/api/os", () => ({
   approveOsDeliverable: vi.fn(),
   rejectOsDeliverable: vi.fn(),
   reportOsRunBug: vi.fn(),
+  getOsActionRun: vi.fn(),
+  retryOsActionRun: vi.fn(),
 }));
 
 import {
@@ -14,6 +16,8 @@ import {
   approveOsDeliverable,
   rejectOsDeliverable,
   reportOsRunBug,
+  getOsActionRun,
+  retryOsActionRun,
 } from "../../utils/api/os";
 import DeliverablePanel from "./DeliverablePanel";
 
@@ -33,7 +37,19 @@ beforeEach(() => {
   approveOsDeliverable.mockReset();
   rejectOsDeliverable.mockReset();
   reportOsRunBug.mockReset();
+  getOsActionRun.mockReset();
+  retryOsActionRun.mockReset();
 });
+
+function approvedRun(overrides = {}) {
+  return {
+    id: "r9",
+    deliverable_status: "approved",
+    action_run_id: "act1",
+    deliverable: { title: "Draft title", body: "Draft body" },
+    ...overrides,
+  };
+}
 
 describe("DeliverablePanel", () => {
   it("renders nothing without a run", () => {
@@ -188,5 +204,76 @@ describe("DeliverablePanel", () => {
       />,
     );
     expect(screen.getByText("Bug reported - thanks")).toBeDisabled();
+  });
+});
+
+describe("DeliverablePanel send outcome", () => {
+  beforeEach(() => {
+    getOsActionRun.mockReset();
+    retryOsActionRun.mockReset();
+    approveOsDeliverable.mockReset();
+  });
+
+  it("surfaces a real send failure behind an approved deliverable", async () => {
+    getOsActionRun.mockResolvedValue({
+      id: "act1",
+      status: "failed",
+      error_detail: { message: "Twilio 21610: number opted out" },
+    });
+    render(
+      <DeliverablePanel run={approvedRun()} token={TOKEN} onClose={vi.fn()} />,
+    );
+    expect(getOsActionRun).toHaveBeenCalledWith(TOKEN, "act1");
+    expect(await screen.findByTestId("send-status")).toHaveTextContent(
+      "Send failed",
+    );
+    const banner = await screen.findByTestId("send-failed-banner");
+    expect(banner).toHaveTextContent("number opted out");
+  });
+
+  it("shows Sent and no failure banner when the send succeeded", async () => {
+    getOsActionRun.mockResolvedValue({ id: "act1", status: "succeeded" });
+    render(
+      <DeliverablePanel run={approvedRun()} token={TOKEN} onClose={vi.fn()} />,
+    );
+    expect(await screen.findByTestId("send-status")).toHaveTextContent("Sent");
+    expect(screen.queryByTestId("send-failed-banner")).toBeNull();
+  });
+
+  it("Retry send re-queues the action and shows sending", async () => {
+    // act1 (the original) failed; act2 (the retry) is still running.
+    getOsActionRun.mockImplementation((_token, id) =>
+      id === "act2"
+        ? Promise.resolve({ id: "act2", status: "running" })
+        : Promise.resolve({
+            id: "act1",
+            status: "failed",
+            error_detail: { message: "network error" },
+          }),
+    );
+    retryOsActionRun.mockResolvedValue({ id: "act2", status: "queued" });
+    render(
+      <DeliverablePanel run={approvedRun()} token={TOKEN} onClose={vi.fn()} />,
+    );
+    const retryBtn = await screen.findByText("Retry send");
+    fireEvent.click(retryBtn);
+    await waitFor(() =>
+      expect(retryOsActionRun).toHaveBeenCalledWith(TOKEN, "act1"),
+    );
+    expect(await screen.findByTestId("send-status")).toHaveTextContent(
+      "Sending",
+    );
+  });
+
+  it("does not poll for a display-only approved deliverable (no action_run_id)", () => {
+    render(
+      <DeliverablePanel
+        run={approvedRun({ action_run_id: null })}
+        token={TOKEN}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(getOsActionRun).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("send-status")).toBeNull();
   });
 });
