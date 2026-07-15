@@ -625,6 +625,43 @@ def list_appointments(
     return result.data or []
 
 
+def _schedule_customer_notice(kind: str, tenant_id: str, appointment: dict) -> None:
+    """Background-schedule a customer reschedule/cancel notice. Never raises.
+
+    Mirrors the confirmation/owner-alert scheduling in create_appointment:
+    build the coroutine, hand it to the running loop, and if there is no loop
+    (sync/test context) close it cleanly instead of leaking an un-awaited
+    coroutine.
+    """
+    appointment_id = appointment.get("id")
+    try:
+        from backend.services.appointment_customer_notify import (
+            send_cancellation_notice,
+            send_reschedule_notice,
+        )
+
+        sender = send_cancellation_notice if kind == "cancel" else send_reschedule_notice
+        notice = sender(tenant_id, appointment)
+    except Exception:
+        logger.warning(
+            "Failed to build customer %s notice for %s", kind, appointment_id, exc_info=True
+        )
+        return
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(notice)
+    except RuntimeError:
+        if hasattr(notice, "close"):
+            notice.close()
+        logger.info(
+            "No running event loop; skipping customer %s notice for %s", kind, appointment_id
+        )
+    except Exception:
+        logger.warning(
+            "Failed to schedule customer %s notice for %s", kind, appointment_id, exc_info=True
+        )
+
+
 def update_appointment(tenant_id: str, appointment_id: str, data: dict) -> dict:
     """Update appointment fields (status, notes, reschedule)."""
     db = get_service_supabase()
@@ -654,6 +691,27 @@ def update_appointment(tenant_id: str, appointment_id: str, data: dict) -> dict:
                 update_calendar_event(tenant_id, google_event_id, **gcal_updates)
         except Exception:
             logger.warning("Failed to sync appointment update %s to Google Calendar", appointment_id, exc_info=True)
+
+    # Notify the CUSTOMER when staff change the appointment from the dashboard.
+    # update_appointment is the single choke point for both the PATCH endpoint
+    # and cancel_appointment, so keying off `data` covers every staff path:
+    # the customer used to hear nothing when their slot moved or was cancelled.
+    if data.get("status") == "cancelled":
+        _schedule_customer_notice("cancel", tenant_id, appointment)
+    elif "start_time" in data or "end_time" in data:
+        # Re-arm reminders for the new slot (the scheduler ignores duplicates,
+        # so stale rows must be cleared first), then tell the customer.
+        try:
+            from backend.services.appointment_reminders import (
+                reschedule_reminders_for_appointment,
+            )
+
+            reschedule_reminders_for_appointment(appointment)
+        except Exception:
+            logger.warning(
+                "Failed to re-arm reminders for appointment %s", appointment_id, exc_info=True
+            )
+        _schedule_customer_notice("reschedule", tenant_id, appointment)
 
     return appointment
 

@@ -176,6 +176,46 @@ def schedule_reminders_for_appointment(appointment: dict) -> list[dict]:
     return created
 
 
+def reschedule_reminders_for_appointment(appointment: dict) -> list[dict]:
+    """Re-arm reminders after an appointment's time changed.
+
+    ``schedule_reminders_for_appointment`` upserts with
+    ``ignore_duplicates=True`` on (appointment_id, reminder_type), so it will
+    NOT overwrite rows that already exist for this appointment — a reschedule
+    of an appointment whose reminder rows were already created (or already
+    fired) would otherwise leave the NEW slot with no reminder. Delete the
+    existing rows first, then schedule fresh ones for the new ``start_time``.
+
+    Best-effort: callers treat failure as non-fatal, same as scheduling.
+    """
+    appointment_id = appointment.get("id")
+    tenant_id = appointment.get("tenant_id")
+    if not appointment_id or not tenant_id:
+        logger.warning(
+            "reschedule_reminders_for_appointment: missing id/tenant_id — skipping"
+        )
+        return []
+
+    db = get_service_supabase()
+    try:
+        (
+            tenant_table(db, "appointment_reminders", tenant_id)
+            .delete()
+            .eq("appointment_id", appointment_id)
+            .execute()
+        )
+    except Exception:
+        logger.warning(
+            "reschedule_reminders_for_appointment: failed to clear old reminders "
+            "for appointment %s",
+            appointment_id,
+            exc_info=True,
+        )
+        return []
+
+    return schedule_reminders_for_appointment(appointment)
+
+
 def _build_message(reminder_type: str, appointment: dict, business_name: str) -> str:
     customer_name = appointment.get("customer_name") or "there"
     start_dt = _parse_dt(appointment.get("start_time"))
