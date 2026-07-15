@@ -356,6 +356,37 @@ def create_appointment(
     except Exception:
         logger.warning("Failed to send appointment confirmation for %s", appointment["id"], exc_info=True)
 
+    # Notify the business OWNER (best-effort, background). Firing it HERE covers
+    # every create_appointment caller — notably voice/phone bookings, which
+    # previously created an appointment the owner never heard about (the public
+    # booking page uses its own insert path and alerts separately; the alert
+    # dedups per appointment so there is no double-send). (2026-07-15)
+    try:
+        from backend.services.booking_alerts import send_new_booking_alert
+
+        _start = appointment.get("start_time") or ""
+        _end = appointment.get("end_time") or ""
+        owner_alert = send_new_booking_alert(
+            tenant_id=tenant_id,
+            customer_name=appointment.get("customer_name") or "A customer",
+            booking_info={
+                "email": appointment.get("customer_email") or None,
+                "phone": appointment.get("customer_phone") or None,
+                "date": _start[:10] if _start else None,
+                "start_time": _start[11:16] if len(_start) >= 16 else None,
+                "end_time": _end[11:16] if len(_end) >= 16 else None,
+            },
+            appointment_id=appointment.get("id") or "",
+        )
+        loop = asyncio.get_running_loop()
+        loop.create_task(owner_alert)
+    except RuntimeError:
+        if hasattr(owner_alert, "close"):
+            owner_alert.close()
+        logger.info("No running event loop; skipping owner alert for %s", appointment["id"])
+    except Exception:
+        logger.warning("Failed to send owner booking alert for %s", appointment["id"], exc_info=True)
+
     return appointment
 
 
