@@ -18300,3 +18300,39 @@ Voice KB dedupe hotfix (fixes red CI on main) + brain frontier update
 **Author:** aferna6-cell
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(metrics): exclude internal/smoke tenants from daily-business-digest workflow (#438)
+
+Prod audit 2026-07-15: the 'AgentNexLiFy Smoke Test' tenant drove 255 of 296
+conversations (510 messages) in 30d but is is_demo=false, so the daily-business-
+digest GitHub Actions jobs counted it as a real customer — churn-scan listed it
+as a paid tenant and cost-alert tracked its AI spend, muddying the founder's
+read. The backend services (funnel_metrics, churn_watch, tenant_health,
+activation_nudges) already exclude internal tenants via internal_tenants.py, but
+the Actions workflow queried tenants raw.
+
+- daily-business-digest.yml churn-scan + cost-alert: load the CANONICAL
+  is_internal_tenant helper from the checked-out repo (zero-import module) and
+  filter — one source of truth, no duplicated denylist.
+- test_internal_tenants.py: new TestLiveProdTenantNames pins the actual prod
+  names (AgentNexLiFy Smoke Test / Signup Smoke / Agent Nexlify must be
+  excluded; MTOptions + 914 Exterior must stay visible) so a denylist edit
+  can't silently orphan them.
+- add test_internal_tenants.py to the CI pytest list (it wasn't gated before).
+
+Real-funnel note surfaced by the audit: excluding smoke traffic, the genuine
+customer MTOptions converts widget conversations to leads at 24% (8/33) with
+the structured lead parser ON — the product works; real bookings stay purely
+owner-gated (no real tenant has business hours set).
+
+
+Claude-Session: https://claude.ai/code/session_01Ya7tfAw1FiVqejtNXU8BnV
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-07-15
+**Commit:** 39da1f3
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/daily-business-digest.yml,.github/workflows/pr-check.yml,backend/tests/test_internal_tenants.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
