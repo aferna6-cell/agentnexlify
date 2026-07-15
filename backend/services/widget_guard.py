@@ -21,6 +21,7 @@ this is a soft, best-effort ceiling, not a hard global limit).
 
 import json
 import logging
+from collections import OrderedDict
 from typing import Any
 
 from backend.services.llm_runtime import call_claude_messages
@@ -138,7 +139,14 @@ async def screen_widget_input(text: str) -> dict[str, Any]:
 # its own count. This is intentional: a best-effort ceiling on how long a
 # single conversation can run, not a hard global cap. See
 # `.claude/rules/python-fastapi.md` "in-memory state is per-process only".
-_SESSION_TURN_COUNTS: dict[str, int] = {}
+#
+# Bounded LRU (subconscious run 94): every new session_id used to add a dict
+# entry that was never evicted, so a long-running Railway worker grew without
+# limit. Least-recently-bumped sessions are evicted past _MAX_TRACKED_SESSIONS;
+# an evicted-then-returning session restarts its count — acceptable for a
+# soft, best-effort ceiling.
+_MAX_TRACKED_SESSIONS = 10_000
+_SESSION_TURN_COUNTS: OrderedDict[str, int] = OrderedDict()
 
 
 def check_turn_budget(session_id: str, max_turns: int = 40) -> bool:
@@ -149,6 +157,9 @@ def check_turn_budget(session_id: str, max_turns: int = 40) -> bool:
     """
     count = _SESSION_TURN_COUNTS.get(session_id, 0) + 1
     _SESSION_TURN_COUNTS[session_id] = count
+    _SESSION_TURN_COUNTS.move_to_end(session_id)
+    while len(_SESSION_TURN_COUNTS) > _MAX_TRACKED_SESSIONS:
+        _SESSION_TURN_COUNTS.popitem(last=False)
     if count > max_turns:
         logger.info(
             "widget_guard: turn budget exceeded session=%s count=%d max_turns=%d",
