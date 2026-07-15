@@ -34,15 +34,19 @@ CHANNEL_ACTION_MAP = {
     "widget_reply": "widget.message",
 }
 
-# Server-side mirror of the engine's hardcoded never_auto_send agents
-# (complaint / quote follow-up / payment follow-up). The engine already sets
-# requiresApproval=true for these; this set is defense in depth so a engine
-# regression can never auto-send a sensitive draft.
+# Server-side defense-in-depth: departments whose drafts can NEVER auto-send,
+# even if the owner enables auto-send. Keyed by the engine's department id — the
+# value persisted to os_agent_runs.agent_name that resolve_deliverable_status
+# looks up. customer_service owns the complaint-safety skills; invoicing owns
+# money movement. The primary gate is still each skill's own
+# requiresApproval=true (see resolve_deliverable_status); this set guards
+# against an engine regression.
+#
+# Pre-refactor this set also listed skill ids (complaint_handler,
+# quote_follow_up, payment_follow_up) that never match a persisted agent_name —
+# dead entries removed 2026-07-15.
 NEVER_AUTO_SEND_AGENTS = {
-    "complaint_handler",
     "customer_service",
-    "quote_follow_up",
-    "payment_follow_up",
     "invoicing",
 }
 

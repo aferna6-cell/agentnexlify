@@ -113,6 +113,22 @@ def test_never_auto_send_department_ignores_true_rule():
     assert status == "pending_approval"
 
 
+def test_invoicing_department_is_hard_gated():
+    db = _settings_db(
+        {"os_auto_send_enabled": True, "os_auto_send_rules": {"invoicing": True}}
+    )
+    status = bridge.resolve_deliverable_status(
+        db, _TENANT, "invoicing", requires_approval=False
+    )
+    assert status == "pending_approval"
+
+
+def test_never_auto_send_set_is_department_ids_only():
+    """The gate keys must be persisted department ids, not retired v1 skill ids
+    (which never match agent_name and were silently dead)."""
+    assert bridge.NEVER_AUTO_SEND_AGENTS == {"customer_service", "invoicing"}
+
+
 def test_global_flag_approves_without_per_agent_rule():
     db = _settings_db({"os_auto_send_enabled": True, "os_auto_send_rules": {}})
     status = bridge.resolve_deliverable_status(db, _TENANT, "marketing", requires_approval=False)
