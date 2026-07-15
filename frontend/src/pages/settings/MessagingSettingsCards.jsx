@@ -385,18 +385,23 @@ export function NoShowRecoveryCard({
   );
 }
 
-// Per-agent auto-send rules (gap G6). Keys MUST be the department ids the
-// engine persists to os_agent_runs.agent_name - resolve_deliverable_status
-// (backend/services/agent_os_bridge.py) looks up os_auto_send_rules[agent_name].
-// The old list used pre-refactor skill ids (generalist/customer_question/
-// booking/lead_nurture/campaign) that no longer match any persisted agent_name,
-// so those toggles silently did nothing. Money/complaint departments
-// (invoicing, customer_service) are hard-gated server-side by
-// NEVER_AUTO_SEND_AGENTS and cannot be auto-sent, so they're not listed.
+// Per-agent auto-send rules (gap G6). Keys MUST match the agent_name persisted
+// to os_agent_runs - resolve_deliverable_status (backend/services/agent_os_bridge.py)
+// looks up os_auto_send_rules[agent_name]. Two sources persist agent_name:
+//   - the engine, using department ids (sales/marketing/operations/...);
+//   - backend automations, using their own ids: voice_recovery writes
+//     lead_nurture (missed-call text-backs) and review_requester writes
+//     review_requester (post-appointment review asks).
+// The retired skill ids (generalist/customer_question/booking/campaign) never
+// match any persisted agent_name and were dropped. Money/complaint work
+// (invoicing, customer_service) is hard-gated server-side by
+// NEVER_AUTO_SEND_AGENTS, so it is not listed here.
 const AUTO_SEND_AGENTS = [
   { key: "sales", label: "Sales replies & lead follow-ups" },
   { key: "marketing", label: "Marketing & campaign drafts" },
   { key: "operations", label: "Operations & scheduling" },
+  { key: "lead_nurture", label: "Missed-call text-backs" },
+  { key: "review_requester", label: "Review requests" },
 ];
 
 export function AgentOSAutoSendCard({

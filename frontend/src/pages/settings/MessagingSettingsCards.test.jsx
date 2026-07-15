@@ -31,6 +31,9 @@ describe("AgentOSAutoSendCard per-agent toggles", () => {
     expect(screen.getByText("Sales replies & lead follow-ups")).toBeInTheDocument();
     expect(screen.getByText("Marketing & campaign drafts")).toBeInTheDocument();
     expect(screen.getByText("Operations & scheduling")).toBeInTheDocument();
+    // live non-engine automations (voice_recovery, review_requester)
+    expect(screen.getByText("Missed-call text-backs")).toBeInTheDocument();
+    expect(screen.getByText("Review requests")).toBeInTheDocument();
     // retired v1 labels must be gone
     expect(screen.queryByText("Customer questions (FAQ answers)")).toBeNull();
     expect(screen.queryByText("General assistant")).toBeNull();
@@ -39,9 +42,10 @@ describe("AgentOSAutoSendCard per-agent toggles", () => {
 
   it("writes os_auto_send_rules keyed by the department id (sales), not a v1 id", () => {
     const { setForm } = renderCard();
-    // The three per-agent selects render in AUTO_SEND_AGENTS order: sales, marketing, operations.
+    // Per-agent selects render in AUTO_SEND_AGENTS order: sales, marketing,
+    // operations, lead_nurture, review_requester.
     const selects = screen.getAllByRole("combobox");
-    expect(selects).toHaveLength(3);
+    expect(selects).toHaveLength(5);
 
     fireEvent.change(selects[0], { target: { value: "auto" } });
 
@@ -51,6 +55,16 @@ describe("AgentOSAutoSendCard per-agent toggles", () => {
     expect(next.os_auto_send_rules).toEqual({ sales: true });
     // proves the old broken key is NOT what gets written
     expect(next.os_auto_send_rules.customer_question).toBeUndefined();
+  });
+
+  it("writes the live automation key when a non-engine agent is toggled", () => {
+    const { setForm } = renderCard();
+    const selects = screen.getAllByRole("combobox");
+    // index 3 = lead_nurture (voice_recovery missed-call text-backs)
+    fireEvent.change(selects[3], { target: { value: "auto" } });
+    const updater = setForm.mock.calls[0][0];
+    const next = updater({ os_auto_send_rules: {} });
+    expect(next.os_auto_send_rules).toEqual({ lead_nurture: true });
   });
 
   it("'Always ask me' writes false for the department id", () => {
