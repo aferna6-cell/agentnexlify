@@ -73,6 +73,20 @@ const SOURCE_FILTERS = [
   { key: "facebook", label: "Facebook" },
 ];
 
+// Friendly names for the engine's department ids, used by the routing-clarify
+// picker. The engine's clarify candidates carry only the agent id.
+const DEPT_LABELS = {
+  sales: "Sales",
+  marketing: "Marketing",
+  customer_service: "Customer service",
+  operations: "Operations",
+  invoicing: "Invoicing",
+  accounting: "Accounting",
+  admin_records: "Admin & records",
+  people: "Team",
+};
+const deptLabel = (id) => DEPT_LABELS[id] || id;
+
 export default function AgentOS({ onNavigate }) {
   const { token, user } = useAuth();
 
@@ -91,6 +105,9 @@ export default function AgentOS({ onNavigate }) {
   const [error, setError] = useState(null);
   const [panelRunId, setPanelRunId] = useState(null);
   const [showMemory, setShowMemory] = useState(false);
+  // Routing clarification: { content, options: [{agent_id, label}] } when the
+  // engine can't tell which department the ask belongs to.
+  const [clarifyPrompt, setClarifyPrompt] = useState(null);
   // Shown when orchestrate returns 402 (AI Front Desk tenant hitting the
   // AI Workforce) - a clean upgrade prompt instead of a raw error string.
   const [showUpgrade, setShowUpgrade] = useState(false);
@@ -243,6 +260,22 @@ export default function AgentOS({ onNavigate }) {
       if (newRuns.length) {
         setRuns((prev) => [...prev, ...newRuns]);
       }
+      // Ambiguous ask: the engine returned two near-tied departments. Offer a
+      // one-click re-route instead of making the owner rephrase.
+      if (
+        result.status === "needs_clarification" &&
+        result.clarify_between?.length
+      ) {
+        setClarifyPrompt({
+          content,
+          options: result.clarify_between.map((c) => ({
+            agent_id: c.agent_id,
+            label: deptLabel(c.agent_id),
+          })),
+        });
+      } else {
+        setClarifyPrompt(null);
+      }
       setComposer("");
       refreshUsage();
     } catch (err) {
@@ -257,6 +290,40 @@ export default function AgentOS({ onNavigate }) {
       } else {
         setError(err.message || "Failed to send message");
       }
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Owner picked a department from the routing-clarify prompt: re-run the same
+  // ask forced to that department (force_agent_id), no retyping.
+  const handleClarifyPick = async (agentId) => {
+    const prompt = clarifyPrompt;
+    if (!prompt || sending) return;
+    setClarifyPrompt(null);
+    setSending(true);
+    setError(null);
+    try {
+      const result = await orchestrateOsTurn(
+        token,
+        activeThreadId,
+        prompt.content,
+        agentId,
+      );
+      setMessages((prev) => [
+        ...prev,
+        result.user_message,
+        result.assistant_message,
+        ...(result.followup_messages || []),
+      ]);
+      const newRuns =
+        result.agent_runs ?? (result.agent_run ? [result.agent_run] : []);
+      if (newRuns.length) {
+        setRuns((prev) => [...prev, ...newRuns]);
+      }
+      refreshUsage();
+    } catch (err) {
+      setError(err.message || "Failed to route message");
     } finally {
       setSending(false);
     }
@@ -751,6 +818,60 @@ export default function AgentOS({ onNavigate }) {
             })
           )}
         </div>
+
+        {/* Routing clarification picker */}
+        {clarifyPrompt && (
+          <div
+            data-testid="clarify-picker"
+            style={{
+              borderTop: "1px solid var(--border)",
+              padding: "10px 14px",
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span
+              style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}
+            >
+              Which team should handle this?
+            </span>
+            {clarifyPrompt.options.map((opt) => (
+              <button
+                key={opt.agent_id}
+                onClick={() => handleClarifyPick(opt.agent_id)}
+                disabled={sending}
+                style={{
+                  background: "var(--accent-dim)",
+                  border: "1px solid var(--accent)",
+                  borderRadius: 999,
+                  padding: "4px 14px",
+                  color: "var(--accent)",
+                  cursor: sending ? "not-allowed" : "pointer",
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+            <button
+              onClick={() => setClarifyPrompt(null)}
+              disabled={sending}
+              style={{
+                background: "none",
+                border: "none",
+                color: "var(--text-muted)",
+                cursor: sending ? "not-allowed" : "pointer",
+                fontSize: "0.8rem",
+                textDecoration: "underline",
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {/* Composer */}
         <ComposerAttachments
