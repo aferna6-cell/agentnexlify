@@ -178,6 +178,15 @@ jobs:
 
           tenants = get("tenants", "select=id,business_name,plan,created_at&plan=neq.free&limit=500")
 
+          # Exclude internal/smoke/demo tenants using the SAME canonical denylist
+          # the backend services use (loaded from the checked-out repo — the
+          # module has zero imports). Without this the "AgentNexLiFy Smoke Test"
+          # tenant shows up as a churn-risk "paid customer" (found 2026-07-15).
+          import importlib.util as _ilu
+          _spec = _ilu.spec_from_file_location("internal_tenants", "backend/services/internal_tenants.py")
+          _it = _ilu.module_from_spec(_spec); _spec.loader.exec_module(_it)
+          tenants = [t for t in tenants if not _it.is_internal_tenant(t)]
+
           # 2 queries instead of 2N -- efficient for any tenant count
           recent_leads = get("leads", "select=client_id&created_at=gte." + lead_cutoff + "&limit=5000")
           active_lead_tids = {l["client_id"] for l in recent_leads if l.get("client_id")}
@@ -295,7 +304,16 @@ jobs:
 
           tenant_ids = list(counts.keys())
           tenants_raw = get("tenants", "select=id,business_name,plan&limit=500") if tenant_ids else []
+
+          # Drop internal/smoke/demo tenants (canonical denylist from the repo)
+          # so their AI usage never triggers a false cost-spike alert — the
+          # smoke-test tenant sent 510 messages/30d (found 2026-07-15).
+          import importlib.util as _ilu
+          _spec = _ilu.spec_from_file_location("internal_tenants", "backend/services/internal_tenants.py")
+          _it = _ilu.module_from_spec(_spec); _spec.loader.exec_module(_it)
           tenant_map = {t["id"]: t for t in tenants_raw}
+          _internal_ids = {tid for tid, t in tenant_map.items() if _it.is_internal_tenant(t)}
+          counts = Counter({tid: n for tid, n in counts.items() if tid not in _internal_ids})
 
           total_msgs = sum(counts.values())
           total_cost = total_msgs * COST_PER_MSG

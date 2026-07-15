@@ -177,3 +177,31 @@ class TestDemoTenantExclusion:
         # Only the "(demo)" marker matches — a business legitimately named
         # with the word Demo should not be hidden.
         assert is_internal_tenant({"business_name": "Demolition Pros LLC"}) is False
+
+
+class TestLiveProdTenantNames:
+    """Pin the ACTUAL prod tenant names (audited 2026-07-15 via the tenants
+    table) so a future denylist edit can't silently stop excluding them —
+    the smoke-test tenant alone drove 255 of 296 conversations / 510 messages
+    in 30d and was polluting the digest workflow's cost + churn reports.
+    """
+
+    # Real internal/smoke accounts that MUST be excluded from metrics.
+    PROD_INTERNAL = [
+        "AgentNexLiFy Smoke Test",
+        "AgentNexLiFy Signup Smoke 2026-07-09",
+        "Agent Nexlify",
+    ]
+    # Genuine paying/real customers that MUST stay visible in metrics.
+    PROD_REAL = [
+        "MTOptions",
+        "914 Exterior LLC",
+    ]
+
+    def test_prod_internal_names_are_excluded(self):
+        for name in self.PROD_INTERNAL:
+            assert is_internal_tenant({"business_name": name}) is True, name
+
+    def test_prod_real_customers_stay_visible(self):
+        for name in self.PROD_REAL:
+            assert is_internal_tenant({"business_name": name}) is False, name
