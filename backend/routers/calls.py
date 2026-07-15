@@ -176,27 +176,38 @@ def _find_tenant_by_phone(phone: str) -> dict | None:
             exc_info=True,
         )
 
-    try:
-        result = (
-            db.table("tenants")
-            .select(_TENANT_PHONE_SELECT)
-            .limit(200)
-            .execute()
-        )
-    except Exception:
-        logger.exception("Failed to query tenants for phone lookup: %s", phone)
-        return None
-
+    # Paginate the fallback scan instead of a silent 200-row cap (audit
+    # 2026-07-14 L4 — same silent-miss bug class as the limit(50) fixed in
+    # #51: tenant #201+ was unroutable). Stored phone formats vary (spaces,
+    # dashes), so the normalized suffix compare stays in Python.
     norm_phone = phone.replace(" ", "").replace("-", "")
-    for tenant in result.data or []:
-        for tenant_phone in (tenant.get("twilio_number"), tenant.get("notification_phone")):
-            if not tenant_phone:
-                continue
-            # Normalize for comparison (strip spaces, dashes)
-            norm_tenant = tenant_phone.replace(" ", "").replace("-", "")
-            if norm_tenant.endswith(norm_phone[-10:]) or norm_phone.endswith(norm_tenant[-10:]):
-                return tenant
-    return None
+    page_size = 1000
+    offset = 0
+    while True:
+        try:
+            result = (
+                db.table("tenants")
+                .select(_TENANT_PHONE_SELECT)
+                .range(offset, offset + page_size - 1)
+                .execute()
+            )
+        except Exception:
+            logger.exception("Failed to query tenants for phone lookup: %s", phone)
+            return None
+
+        rows = result.data or []
+        for tenant in rows:
+            for tenant_phone in (tenant.get("twilio_number"), tenant.get("notification_phone")):
+                if not tenant_phone:
+                    continue
+                # Normalize for comparison (strip spaces, dashes)
+                norm_tenant = tenant_phone.replace(" ", "").replace("-", "")
+                if norm_tenant.endswith(norm_phone[-10:]) or norm_phone.endswith(norm_tenant[-10:]):
+                    return tenant
+
+        if len(rows) < page_size:
+            return None
+        offset += page_size
 
 
 # ---------------------------------------------------------------------------

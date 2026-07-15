@@ -5,7 +5,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
 from backend.models.database import get_service_supabase as _get_service_supabase
-from backend.routers.analytics._common import (
+from backend.services.analytics_common import (
     _build_control_center_recommendations,
     _period_to_days,
 )

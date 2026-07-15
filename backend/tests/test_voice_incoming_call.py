@@ -96,9 +96,12 @@ def _wire_tenant_lookup(mock_supabase, tenant_row: dict | None) -> None:
 
     _find_tenant_by_phone (G3 Phase 2) runs two queries:
         exact:    db.table("tenants").select(...).eq("twilio_number", ...).limit(1).execute()
-        fallback: db.table("tenants").select(...).limit(200).execute()
+        fallback: db.table("tenants").select(...).range(a, b).execute()  (paginated scan)
     These tenants have no twilio_number, so the exact path returns empty and
     the suffix scan matches on notification_phone - same contract as before.
+    (Fallback wiring switched from .limit(200) to .range() when the silent
+    200-row cap was removed - audit 2026-07-14 L4. The contracts asserted by
+    these tests - greeting/TwiML/matching - are unchanged.)
     """
     exact_result = MagicMock()
     exact_result.data = []
@@ -113,7 +116,7 @@ def _wire_tenant_lookup(mock_supabase, tenant_row: dict | None) -> None:
     ) = exact_result
     (
         select_chain
-        .limit.return_value
+        .range.return_value
         .execute.return_value
     ) = scan_result
 
@@ -312,6 +315,7 @@ class TestAIMode:
                 target.data = []
             # Wire all common chains to the result
             mock_chain.select.return_value.limit.return_value.execute.return_value = target
+            mock_chain.select.return_value.range.return_value.execute.return_value = target
             mock_chain.select.return_value.eq.return_value.limit.return_value.execute.return_value = target
             mock_chain.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute.return_value = target
             mock_chain.insert.return_value.execute.return_value = target
