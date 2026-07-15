@@ -31,6 +31,7 @@ from backend.services.llm_runtime import (
 )
 from backend.services.os_inbound_bridge import bridge_widget, is_bridge_enabled
 from backend.services.webhook_dispatcher import fire_event_background
+from backend.services.booking_prompt import booking_prompt_suffix
 from backend.services.widget_guard import check_turn_budget, screen_widget_input
 from backend.routers.widget_chat_helpers import (
     MODEL,
@@ -1005,14 +1006,14 @@ async def widget_chat(
     # booking. Two-thirds of captured leads were not booking; a passive "mention
     # it" prompt under-converts, so this proactively offers a slot once there is
     # any service/pricing/scheduling interest or once contact info is shared.
-    if widget.get("booking_enabled"):
-        system_prompt += (
-            "\n\nBOOKING: This business has online booking enabled. "
-            "When the visitor shows any interest in a service, pricing, or scheduling — or once "
-            "they have shared their name and contact info — actively offer to book them an "
-            "appointment through the booking link and ask for their preferred day and time. "
-            "Make booking the clear next step rather than waiting for them to ask."
-        )
+    # Booking prompt — inject the REAL public booking URL (built from
+    # business_slug) so the AI has an actual link to share. Empty when booking
+    # is disabled. See booking_prompt.py for why (MTOptions: 21 leads / 0 appts).
+    system_prompt += booking_prompt_suffix(
+        booking_enabled=bool(widget.get("booking_enabled")),
+        business_slug=tenant.get("business_slug"),
+        frontend_url=settings.frontend_url,
+    )
 
     # AI fallback protocol — when enabled, a second-tier managed agent can
     # take over hard questions. Tell first-tier Claude to emit an explicit
