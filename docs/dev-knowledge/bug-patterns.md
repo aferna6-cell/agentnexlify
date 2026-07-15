@@ -18380,3 +18380,39 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** .github/workflows/daily-business-digest.yml,.github/workflows/pr-check.yml,backend/routers/widget_chat.py,backend/routers/widget_chat_helpers.py,backend/services/booking_prompt.py,backend/tests/test_booking_prompt.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(appointments): reminders + automations were dead — filtered on a status no appointment has (#441)
+
+Prod appointments have status 'confirmed' or 'completed' — NEVER 'booked'
+(every creation path sets 'confirmed': booking_page, appointments router,
+booking service). Two subsystems filtered on 'booked' and therefore matched
+zero rows, silently:
+
+- send_appointment_reminders (appointment_jobs.py:64) queried
+  .eq('status','booked') → sent 24h/1h reminders to ZERO appointments, ever.
+  Customers never got a reminder → no-shows → lost revenue for the business.
+  Now .in_('status', ['confirmed','booked']).
+- evaluate_trigger (rule_engine.py) expected status=='booked' for the
+  'appointment_created' trigger → those automations NEVER fired. Now accepts
+  'confirmed' plus legacy 'booked'.
+
+Both matter now that bookings actually flow (rounds G/H: widget shares the
+booking link, owner gets alerted). A booked appointment that gets no reminder
+and fires no follow-up automation is a silent revenue leak.
+
+- backend/tests/test_appointment_reminders.py (NEW, 4 tests): a confirmed
+  appointment in the 24h window now gets an email; the status filter includes
+  'confirmed'; appointment_created trigger matches confirmed + legacy booked.
+  Added to the CI list.
+
+
+Claude-Session: https://claude.ai/code/session_01Ya7tfAw1FiVqejtNXU8BnV
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-07-15
+**Commit:** f143de5
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/pr-check.yml,backend/services/automation/rule_engine.py,backend/services/automation/scheduled/appointment_jobs.py,backend/tests/test_appointment_reminders.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
