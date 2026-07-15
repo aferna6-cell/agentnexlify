@@ -101,3 +101,67 @@ class TestRescheduleResetsReminders:
         # And the stale reminder note-tag was stripped.
         assert "reminder_24h_sent" not in captured["payload"]["notes"]
         assert captured["payload"]["start_time"] == "2026-07-22T14:00:00"
+
+
+class TestCancelNotifiesOwner:
+    @pytest.mark.asyncio
+    async def test_cancel_marks_cancelled_and_alerts_owner(self):
+        appt_id = "appt-9"
+        token = _generate_reschedule_token(appt_id)
+
+        appointment = {
+            "id": appt_id,
+            "tenant_id": "t-1",
+            "lead_id": None,
+            "status": "confirmed",
+            "customer_name": "Jane",
+            "start_time": "2026-07-22T14:00:00",
+            "end_time": "2026-07-22T14:30:00",
+        }
+
+        db = MagicMock()
+        appt_res = MagicMock()
+        appt_res.data = [appointment]
+        db.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = appt_res
+
+        update_chain = MagicMock()
+        def _tenant_table(_db, _name, _tid):
+            return update_chain
+
+        alert = AsyncMock()
+        with patch.object(booking_page, "get_service_supabase", return_value=db), \
+             patch.object(booking_page, "tenant_table", _tenant_table), \
+             patch.object(booking_page, "fire_event_background"), \
+             patch("backend.services.booking_alerts.send_cancellation_alert", alert), \
+             patch("backend.services.activity.log_activity"):
+            result = await booking_page.reschedule_cancel.__wrapped__(
+                MagicMock(), appt_id, booking_page._CancelBody(token=token)
+            )
+
+        assert result["success"] is True
+        # status set to cancelled
+        update_chain.update.assert_called_once()
+        assert update_chain.update.call_args[0][0] == {"status": "cancelled"}
+        # owner alerted with the customer + slot info
+        alert.assert_awaited_once()
+        kwargs = alert.await_args.kwargs
+        assert kwargs["customer_name"] == "Jane"
+        assert kwargs["appointment_id"] == appt_id
+
+    @pytest.mark.asyncio
+    async def test_cancel_of_already_cancelled_is_noop(self):
+        appt_id = "appt-10"
+        token = _generate_reschedule_token(appt_id)
+        db = MagicMock()
+        res = MagicMock()
+        res.data = [{"id": appt_id, "tenant_id": "t-1", "lead_id": None, "status": "cancelled"}]
+        db.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = res
+
+        alert = AsyncMock()
+        with patch.object(booking_page, "get_service_supabase", return_value=db), \
+             patch("backend.services.booking_alerts.send_cancellation_alert", alert):
+            result = await booking_page.reschedule_cancel.__wrapped__(
+                MagicMock(), appt_id, booking_page._CancelBody(token=token)
+            )
+        assert "Already cancelled" in result["message"]
+        alert.assert_not_awaited()

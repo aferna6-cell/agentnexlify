@@ -229,3 +229,46 @@ class TestCancellationAlert:
     def test_cancel_email_handles_missing_slot_fields(self):
         html = booking_alerts._build_cancel_email_html("Acme", "Jane", {})
         assert "cancelled" in html.lower()  # no slot info, still valid
+
+
+class TestCancelSendHelpers:
+    @pytest.mark.asyncio
+    async def test_cancel_email_helper_calls_send_email(self):
+        sent = AsyncMock()
+        with patch("backend.services.email_sender.send_email", sent):
+            await booking_alerts._send_cancel_email_alert("t1", "Acme", "o@x.com", "Jane", BOOKING)
+        sent.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_cancel_email_helper_swallows_failure(self):
+        with patch("backend.services.email_sender.send_email", AsyncMock(side_effect=RuntimeError("boom"))):
+            await booking_alerts._send_cancel_email_alert("t1", "Acme", "o@x.com", "Jane", BOOKING)  # no raise
+
+    @pytest.mark.asyncio
+    async def test_cancel_sms_helper_calls_send_sms(self):
+        sent = AsyncMock()
+        with patch("backend.services.twilio_service.send_sms", sent):
+            await booking_alerts._send_cancel_sms_alert("t1", "Acme", "+15550001111", "Jane", BOOKING)
+        sent.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_cancel_sms_helper_swallows_failure(self):
+        with patch("backend.services.twilio_service.send_sms", AsyncMock(side_effect=RuntimeError("boom"))):
+            await booking_alerts._send_cancel_sms_alert("t1", "Acme", "+15550001111", "Jane", BOOKING)  # no raise
+
+    @pytest.mark.asyncio
+    async def test_cancel_skips_when_no_email_and_no_sms(self):
+        cfg = _config(owner_email=None, sms_notifications_enabled=False)
+        with patch.object(booking_alerts, "_fetch_tenant_alert_config", return_value=cfg), \
+             patch.object(booking_alerts, "_send_cancel_email_alert", new=AsyncMock()) as em, \
+             patch.object(booking_alerts, "_send_cancel_sms_alert", new=AsyncMock()) as sm:
+            await send_cancellation_alert("t1", "Jane", BOOKING, appointment_id="a1")
+        em.assert_not_awaited()
+        sm.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_cancel_empty_config_skips(self):
+        with patch.object(booking_alerts, "_fetch_tenant_alert_config", return_value={}), \
+             patch.object(booking_alerts, "_send_cancel_email_alert", new=AsyncMock()) as em:
+            await send_cancellation_alert("t1", "Jane", BOOKING, appointment_id="a1")
+        em.assert_not_awaited()
