@@ -36,12 +36,12 @@ Dashboard (React/Vite) ─────────→ FastAPI /api/* ───�
 ### Key directories
 - `backend/` — FastAPI service (`main.py`, `routers/`, `services/`)
 - `frontend/` — React/Vite dashboard **+ the live agentnexlify.com marketing site** (`src/pages/`, `src/utils/api/`)
-- `widget/` + `frontend/public/widget/` — embeddable chat widget (**must stay byte-identical**)
+- `widget/` + `frontend/public/widget/` + `landing-page-v2/widget/` — embeddable chat widget (**all three must stay byte-identical**; CI-enforced by `scripts/check_project_invariants.py`)
 - `migrations/` — SQL migration files, numbered 001–154+
 - `docs/dev-knowledge/` — bug-patterns.md, schema-log.md, architecture-decisions.md
 - `knowledge-base/` — LLM-compiled wiki (`raw/`, `wiki/`, pgvector embeddings)
 - `.claude/` — config, rules, skills, agents, commands, hooks
-- `_archive/`, `public/`, `landing-page-v2/` — **legacy, do not touch** (confirmed 2026-06-23). The LIVE agentnexlify.com marketing site + dashboard is **`frontend/`** (React/Vite on Vercel) — proven by live `<title>` matching `frontend/index.html`. The live chat widget is the lead-capture widget embedded in `frontend/index.html` (support@ key `anx_4-H8…`); its **greeting lives in the DB** (`widget_configs.greeting_message`), not in code. Full map + how to change the greeting: `docs/dev-knowledge/website-surface-map.md`.
+- `_archive/`, `public/` — legacy, do not touch. `landing-page-v2/` — **frozen legacy BUT still deploy-live** (Vercel project "agentnexlify" builds it on every push) and its `widget/` mirror is CI-enforced (`check_project_invariants.py` — a "do not touch" note here blocked CI 2026-06-23→07-09): sync the widget mirror, change nothing else. The dashboard + app is **`frontend/`** (Vercel project "app.agentnexlify"); the live chat widget is embedded in `frontend/index.html` (support@ key `anx_4-H8…`), its **greeting lives in the DB** (`widget_configs.greeting_message`), not in code. Full map: `docs/dev-knowledge/website-surface-map.md`.
 
 ### Plan names + prices (repriced 2026-06-15)
 - **Current paid plans**: `chatbot` ($19.99/mo — widget/chat only) · `agent_os` ($99.99/mo — full platform). `free` = internal lapsed/no-subscription state, never sold. Canonical: `backend/services/stripe_service.py` + `ai_usage_guard.PLAN_BASELINE_TOKENS`.
@@ -63,7 +63,7 @@ Dashboard (React/Vite) ─────────→ FastAPI /api/* ───�
 1. **`client_id` not `tenant_id`** on `leads` + `conversations` tables — we've shipped production bugs from this 3+ times. See `.claude/rules/schema-discipline.md`.
 2. **`status` not `lead_stage`** for lead status — column never existed as `lead_stage`.
 3. **`areas_of_interest` not `service_interest`** on leads — column never existed as `service_interest`.
-4. **Widget JS byte-identical** in `widget/` AND `frontend/public/widget/` — mismatched copies break embeds on tenant sites.
+4. **Widget JS byte-identical** in `widget/`, `frontend/public/widget/`, AND `landing-page-v2/widget/` — mismatched copies break embeds on tenant sites.
 5. **No `from __future__ import annotations`** in FastAPI files — PEP 563 deferred annotations make Pydantic resolve bodies as strings → every request 422s.
 6. **No `localStorage` in React artifacts** — storage isn't available in claude.ai artifact sandbox.
 7. **Secrets never in commits or logs** — `.env*` gitignored; pre-commit hook scans; CI audits.
@@ -104,7 +104,7 @@ bash scripts/claude-hooks/auto-commit.sh  # manual auto-commit
 - **New API endpoint** — check existing routers → schema-guard skill → write Pydantic model → route → register in `main.py` (lines 746–813) → test.
 - **New dashboard page** — `frontend/src/pages/<Name>.jsx` → dark theme, live API, helpful empty state, sidebar entry in `Sidebar.jsx` → route in `App.jsx`.
 - **Database migration** — next number in `migrations/NNN_name.sql` → apply via `mcp__supabase__apply_migration` → update `docs/dev-knowledge/schema-log.md` → flag in commit msg.
-- **New widget feature** — edit `widget/agentnexlify-widget.js` → copy byte-identical to `frontend/public/widget/agentnexlify-widget.js` → test cross-origin embed per `.claude/skills/widget-test/SKILL.md`.
+- **New widget feature** — edit `widget/agentnexlify-widget.js` → copy byte-identical to `frontend/public/widget/` AND `landing-page-v2/widget/` → test cross-origin embed per `.claude/skills/widget-test/SKILL.md`.
 - **New skill** — use `.claude/skills/skill-creator/SKILL.md` for eval-driven authoring → frontmatter description ≤200 chars, ruthlessly specific triggers → body ≤150 lines, move long refs to `resources/`.
 
 ### Operating rules (behavioral)

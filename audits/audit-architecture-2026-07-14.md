@@ -18,7 +18,7 @@ Method note: run in a detached working copy, so "grew yesterday" attribution cam
 - Schema-discipline (Pass 4) invariant check: **CLEAN**. All 3 new tables (`tenant_integrations`, `integration_sync_log`, `tenant_kb_documents`) use `client_id`. `connector_awareness` correctly splits `integrations`→tenant_id, `tenant_integrations`→client_id, `tenants`→id, `tenant_api_keys`→tenant_id. `compile_tenant_kb` writes `widget_configs` on `tenant_id` (correct per migration 077). No `tenant_id`/`lead_stage`/`service_interest` drift.
 - Migrations without schema-log entries: 7 (154–159, 163).
 - Layer violations (service→router imports): 3 (control_center trio → `analytics._common`).
-- Dead-code candidates: 1 (`widget_booking_helpers.py`, carryover).
+- Dead-code candidates: 0 (`widget_booking_helpers.py` deleted same-day — see L1 in the changelog below; count corrected 2026-07-15).
 - Sync-DB-in-async hotspots in yesterday's code: 3 write surfaces + 1 read path.
 
 ### Positive notes (yesterday's work)

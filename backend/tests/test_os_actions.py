@@ -14,6 +14,7 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 
 from backend.services.os_actions import all_actions, get_action, run_action
 from backend.services.os_actions.base import (
@@ -216,6 +217,24 @@ def test_registry_includes_gbp_post():
 # ---------------------------------------------------------------------------
 # email.send — handler contract
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _no_sms_suppression():
+    """Stub the TCPA opt-out gate to 'not opted out' for every test here.
+
+    The dispatch tests use a bare MagicMock() db; is_suppressed's opt-out
+    query on that mock returns a truthy chain (res.data is a Mock), which the
+    fail-closed gate reads as 'opted out' and every send suppresses. The gate
+    itself is covered by test_sms_send_suppressed_when_opted_out (which
+    re-patches to True inside the test) and by test_twilio_webhooks.py.
+    """
+    from backend.services.os_actions import sms as sms_action
+
+    with patch.object(
+        sms_action.sms_compliance, "is_suppressed", MagicMock(return_value=False)
+    ):
+        yield
 
 
 def _action_ctx(deliverable: dict, db=None) -> ActionContext:
@@ -506,6 +525,24 @@ def test_sms_send_falls_back_to_platform_when_byo_lookup_raises():
     assert result.request_payload["provider"] == "twilio_platform"
     assert result.response_payload["provider"] == "twilio_platform"
     sender.assert_awaited_once()
+
+
+def test_sms_send_suppressed_when_opted_out():
+    """TCPA gate: an opted-out recipient fails at the compliance stage and
+    the send is never dispatched (locks sms.py's is_suppressed gate)."""
+    from backend.services.os_actions import sms as sms_action
+
+    extractor = AsyncMock(return_value={"to": "+15555550123", "body": "Following up"})
+    sender = AsyncMock(return_value=True)
+    with patch.object(sms_action, "_extract_sms_payload", extractor), patch.object(
+        sms_action, "send_sms", sender
+    ), patch.object(
+        sms_action.sms_compliance, "is_suppressed", MagicMock(return_value=True)
+    ):
+        result = asyncio.run(sms_action._run(_action_ctx({"body": "Draft body"})))
+    assert result.status == "failed"
+    assert result.error_detail["stage"] == "compliance"
+    sender.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------
