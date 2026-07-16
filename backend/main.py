@@ -351,6 +351,7 @@ async def _automation_loop():
     from backend.services.weekly_funnel_report import send_weekly_funnel_report
     from backend.services.os_sync import run_due_syncs as _os_sync_tick
     from backend.services.os_opportunities import run_opportunity_scan as _run_opportunity_scan
+    from backend.services.os_draft_expiry import run_draft_expiry_sweep as _run_draft_expiry_sweep
     from backend.services.drive_kb_sync import run_drive_kb_sync_due as _run_drive_sync_due
 
     async def _drive_kb_sync_due():
@@ -437,6 +438,7 @@ async def _automation_loop():
                         _safe_run("send_birthday_greetings", send_birthday_greetings),
                         _safe_run("send_daily_briefings", send_daily_briefings),
                         _safe_run("run_opportunity_scan", _run_opportunity_scan),
+                        _safe_run("run_draft_expiry_sweep", _run_draft_expiry_sweep),
                         _safe_run(
                             "drive_kb_sync_due", _drive_kb_sync_due, timeout=300.0
                         ),

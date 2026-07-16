@@ -9,7 +9,7 @@ const SOURCES = [
     key: "widget",
     label: "Website Widget",
     description:
-      "Embed chat from your site flows into the Agent OS inbox so the orchestrator can read every visitor message.",
+      "Visitor conversations from your website chat flow into the Agent OS inbox so your AI staff sees every customer message. Read-only: the widget keeps answering customers itself; your staff never replies into the chat.",
   },
   {
     key: "email",

@@ -39,6 +39,11 @@ const DECISION_META = {
     color: "var(--accent)",
     bg: "var(--accent-dim)",
   },
+  expired: {
+    label: "Expired - never sent",
+    color: "#9ca3af",
+    bg: "rgba(156,163,175,0.12)",
+  },
 };
 
 // Send actions that need a recipient the draft text usually doesn't contain.
