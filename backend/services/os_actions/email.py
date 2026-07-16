@@ -16,6 +16,7 @@ one action" decision: single ``email.send`` action_type, branch chosen at
 run time based on which integration row exists for the tenant.
 """
 
+import html as html_lib
 import json
 import logging
 import re
@@ -25,6 +26,7 @@ from backend.services.llm_runtime import call_claude_messages
 from backend.services.m365_mail import is_connected as m365_is_connected
 from backend.services.m365_mail import send_email_via_graph as m365_send_email_via_graph
 from backend.services.os_actions.base import ActionContext, ActionResult, ActionSpec
+from backend.services.os_actions.recipients import normalize_email
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +79,15 @@ async def _extract_email_payload(body: str, client_id: str) -> dict:
     return _parse_json_block(response.text) or {}
 
 
+def _body_to_html(body: str) -> str:
+    """Deterministic plain-text -> HTML: escape, blank lines split paragraphs."""
+    paragraphs = [p.strip() for p in body.split("\n\n") if p.strip()]
+    return "".join(
+        "<p>" + html_lib.escape(p).replace("\n", "<br>") + "</p>"
+        for p in paragraphs
+    )
+
+
 async def _run(ctx: ActionContext) -> ActionResult:
     body = (ctx.deliverable.get("body") or "").strip()
     if not body:
@@ -85,45 +96,64 @@ async def _run(ctx: ActionContext) -> ActionResult:
             error_detail={"message": "deliverable has empty body"},
         )
 
-    try:
-        payload = await _extract_email_payload(body, ctx.client_id)
-    except Exception as e:
-        logger.warning(
-            "os_action_email: extraction failed client_id=%s deliverable_id=%s",
-            ctx.client_id,
-            ctx.deliverable_id,
-            exc_info=True,
-        )
-        return ActionResult(
-            status="failed",
-            error_detail={"stage": "extract", "message": str(e)[:300]},
-        )
+    # Explicit recipient on the deliverable wins: the owner said who this
+    # goes to, so send the approved body verbatim (escaped + wrapped) — no
+    # LLM in the path. Mirrors sms.send.
+    raw_recipient = str(ctx.deliverable.get("recipient") or "").strip()
+    if raw_recipient:
+        explicit = normalize_email(raw_recipient)
+        if not explicit:
+            return ActionResult(
+                status="failed",
+                request_payload={"recipient": raw_recipient[:254]},
+                error_detail={
+                    "stage": "validate",
+                    "message": "recipient is not a valid email address",
+                },
+            )
+        to = explicit
+        subject = (ctx.deliverable.get("title") or "").strip() or "Following up"
+        body_html = _body_to_html(body)
+    else:
+        try:
+            payload = await _extract_email_payload(body, ctx.client_id)
+        except Exception as e:
+            logger.warning(
+                "os_action_email: extraction failed client_id=%s deliverable_id=%s",
+                ctx.client_id,
+                ctx.deliverable_id,
+                exc_info=True,
+            )
+            return ActionResult(
+                status="failed",
+                error_detail={"stage": "extract", "message": str(e)[:300]},
+            )
 
-    if "error" in payload:
-        return ActionResult(
-            status="failed",
-            error_detail={"stage": "extract", "message": payload["error"]},
-        )
+        if "error" in payload:
+            return ActionResult(
+                status="failed",
+                error_detail={"stage": "extract", "message": payload["error"]},
+            )
 
-    to = (payload.get("to") or "").strip()
-    subject = (payload.get("subject") or "").strip() or "Following up"
-    body_html = payload.get("body_html") or ""
+        to = (payload.get("to") or "").strip()
+        subject = (payload.get("subject") or "").strip() or "Following up"
+        body_html = payload.get("body_html") or ""
 
-    if not to or not _EMAIL_RE.match(to):
-        return ActionResult(
-            status="failed",
-            request_payload=payload,
-            error_detail={
-                "stage": "validate",
-                "message": "missing or invalid recipient",
-            },
-        )
-    if not body_html.strip():
-        return ActionResult(
-            status="failed",
-            request_payload=payload,
-            error_detail={"stage": "validate", "message": "empty body_html"},
-        )
+        if not to or not _EMAIL_RE.match(to):
+            return ActionResult(
+                status="failed",
+                request_payload=payload,
+                error_detail={
+                    "stage": "validate",
+                    "message": "missing or invalid recipient",
+                },
+            )
+        if not body_html.strip():
+            return ActionResult(
+                status="failed",
+                request_payload=payload,
+                error_detail={"stage": "validate", "message": "empty body_html"},
+            )
 
     request_payload = {"to": to, "subject": subject, "body_html": body_html}
 

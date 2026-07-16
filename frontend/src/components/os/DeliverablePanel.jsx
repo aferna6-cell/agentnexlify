@@ -41,15 +41,25 @@ const DECISION_META = {
   },
 };
 
+// Send actions that need a recipient the draft text usually doesn't contain.
+// Prod's only real send failed with "missing recipient" - the owner had no
+// way to say who the message goes to. This input is that way.
+const RECIPIENT_ACTIONS = {
+  "sms.send": "Recipient phone (e.g. +1 555-555-0123)",
+  "email.send": "Recipient email (e.g. sam@example.com)",
+};
+
 export default function DeliverablePanel({ run, token, onClose, onUpdated }) {
   const deliverable = run?.deliverable || null;
   const status = run?.deliverable_status || "pending_approval";
   const pending = status === "pending_approval";
   const meta = DECISION_META[status] || DECISION_META.pending_approval;
   const isMobile = useIsMobile();
+  const recipientPlaceholder = RECIPIENT_ACTIONS[run?.action_type] || null;
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [recipient, setRecipient] = useState("");
   const [busy, setBusy] = useState(null); // save | approve | reject | bug | retry
   const [error, setError] = useState(null);
   const [bugReported, setBugReported] = useState(Boolean(run?.bug_reported_at));
@@ -83,6 +93,7 @@ export default function DeliverablePanel({ run, token, onClose, onUpdated }) {
   useEffect(() => {
     setTitle(run?.deliverable?.title || "");
     setBody(run?.deliverable?.body || "");
+    setRecipient(run?.deliverable?.recipient || "");
     setError(null);
     setBugReported(Boolean(run?.bug_reported_at));
     setActionRun(null);
@@ -96,8 +107,13 @@ export default function DeliverablePanel({ run, token, onClose, onUpdated }) {
 
   if (!run || !deliverable) return null;
 
+  const recipientDirty =
+    recipientPlaceholder !== null &&
+    recipient.trim() !== (deliverable.recipient || "");
   const dirty =
-    title !== (deliverable.title || "") || body !== (deliverable.body || "");
+    title !== (deliverable.title || "") ||
+    body !== (deliverable.body || "") ||
+    recipientDirty;
 
   const runAction = async (kind, fn) => {
     setBusy(kind);
@@ -114,15 +130,22 @@ export default function DeliverablePanel({ run, token, onClose, onUpdated }) {
     }
   };
 
-  const handleSave = () =>
-    runAction("save", () =>
-      editOsDeliverable(token, run.id, { title: title.trim(), body }),
-    );
+  const handleSave = () => {
+    const payload = { title: title.trim(), body };
+    if (recipientPlaceholder) payload.recipient = recipient.trim();
+    return runAction("save", () => editOsDeliverable(token, run.id, payload));
+  };
 
   const handleApprove = async () => {
-    const updated = await runAction("approve", () =>
-      approveOsDeliverable(token, run.id),
-    );
+    const updated = await runAction("approve", async () => {
+      // Persist an unsaved recipient first so the send knows who it goes to.
+      if (recipientDirty) {
+        await editOsDeliverable(token, run.id, {
+          recipient: recipient.trim(),
+        });
+      }
+      return approveOsDeliverable(token, run.id);
+    });
     // Approval scheduled the real send in the background - poll its outcome.
     if (updated?.action_run_id) pollActionRun(updated.action_run_id);
   };
@@ -130,7 +153,13 @@ export default function DeliverablePanel({ run, token, onClose, onUpdated }) {
   const handleRetrySend = async () => {
     const id = actionRun?.id || run?.action_run_id;
     if (!id) return;
-    const fresh = await runAction("retry", () => retryOsActionRun(token, id));
+    // Only send-action drafts carry a recipient; display-only retries keep
+    // the original two-argument call shape.
+    const fresh = await runAction("retry", () =>
+      recipientPlaceholder
+        ? retryOsActionRun(token, id, { recipient: recipient.trim() })
+        : retryOsActionRun(token, id),
+    );
     if (fresh?.id) {
       setActionRun(fresh);
       pollActionRun(fresh.id);
@@ -273,6 +302,28 @@ export default function DeliverablePanel({ run, token, onClose, onUpdated }) {
           style={{ width: "100%", marginBottom: 14 }}
         />
 
+        {recipientPlaceholder && pending && (
+          <>
+            <label
+              style={{
+                display: "block",
+                fontSize: "0.75rem",
+                marginBottom: 4,
+                color: "var(--text-secondary)",
+              }}
+            >
+              Send to
+            </label>
+            <input
+              data-testid="recipient-input"
+              value={recipient}
+              onChange={(e) => setRecipient(e.target.value)}
+              placeholder={recipientPlaceholder}
+              style={{ width: "100%", marginBottom: 14 }}
+            />
+          </>
+        )}
+
         <label
           style={{
             display: "block",
@@ -385,6 +436,16 @@ export default function DeliverablePanel({ run, token, onClose, onUpdated }) {
                     ? `: ${actionRun.error_detail.message}`
                     : "."}
                 </span>
+                {recipientPlaceholder && (
+                  <input
+                    data-testid="retry-recipient-input"
+                    value={recipient}
+                    onChange={(e) => setRecipient(e.target.value)}
+                    placeholder={recipientPlaceholder}
+                    aria-label="Send to"
+                    style={{ width: "100%" }}
+                  />
+                )}
                 <button
                   onClick={handleRetrySend}
                   disabled={busy !== null}
