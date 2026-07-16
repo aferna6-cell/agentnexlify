@@ -1,0 +1,76 @@
+{
+  "run": 95,
+  "date": "2026-07-16",
+  "phase": "complete",
+  "winner": {
+    "title": "Implement appointment auto-complete cron job",
+    "file": "backend/services/appointment_completion.py",
+    "category": "customer_value",
+    "effort": "S",
+    "confidence": "HIGH",
+    "autonomous_executable": true,
+    "execution_path": "nightly-commit-review code-change channel",
+    "gh_issue": 454
+  },
+  "mandate_check": {
+    "widget_guard_lru": "IMPLEMENTED — d73072a confirmed in nightly-2026-07-16 (line 51). PR #435, 290 tests green.",
+    "gh_413_referral_enabled": "NOT SET — Day 24, 0 human responses",
+    "keys_koffee_gh415": "NOT ACTIONED — Day 24, 0 human responses",
+    "gh_399_autopilot_token": "OPEN — Day 13, 30 ai-ready issues blocked",
+    "gh_403_kb_stale": "OPEN — Day 13, KB 72+ days dark"
+  },
+  "critical_findings": [
+    "6cc3419 (fix #439): booking URL never in AI prompt — root cause of 0 bookings for 21+ days. MTOptions: 21 leads, 0 bookings. Fixed via new booking_prompt.py.",
+    "f143de5 (fix #441): appointment reminders/automations silently dead — status filter used 'booked' (never exists; appointments are always 'confirmed'). Fixed.",
+    "GH #454 filed today: confirmed→completed auto-transition missing. Without it, all bookings sit confirmed forever and post-booking automation funnel produces zero output.",
+    "5b33967 (security #436): genuine RLS vulnerability removed — PUBLIC anon policies on clients, leads, documents tables.",
+    "112889a (#437): 47 unindexed FKs fixed via migration 174."
+  ],
+  "ideas_evaluated": 5,
+  "ideas_debated": 3,
+  "debate_rounds": 9,
+  "winner_rounds_survived": 3,
+  "bonus_actions": [
+    "GH #399: Day-13 opportunity-cost escalation comment — 30 ai-ready issues blocked by single Railway secret rotation",
+    "GH #413: Day-24 booking-URL connection comment — activate referral before first bookings"
+  ],
+  "standing_human_blockers": [
+    {
+      "issue": "GH #413",
+      "description": "REFERRAL_REWARD_ENABLED=1 not set",
+      "days": 24,
+      "action": "Set env var in Railway → deploy"
+    },
+    {
+      "issue": "GH #415",
+      "description": "Keys Koffee business hours not configured",
+      "days": 24,
+      "action": "Email/call owner for hours"
+    },
+    {
+      "issue": "GH #399",
+      "description": "AUTOPILOT_GH_TOKEN expired",
+      "days": 13,
+      "action": "Rotate PAT in Railway → redeploy"
+    },
+    {
+      "issue": "GH #403",
+      "description": "KB autopopulate stalled",
+      "days": 13,
+      "action": "Resolve access token / Actions secret"
+    }
+  ],
+  "parking_lot": [
+    "Step 9F: KB staleness check in nightly SKILL.md (blocked by GH #403)",
+    "BotHealthPage.jsx (L effort, deferred)",
+    "Post-split-test-repair SKILL.md (long-term carry)"
+  ],
+  "run_96_mandate": [
+    "1. appointment_completion.py committed by nightly? Check nightly-2026-07-17 log.",
+    "2. 3 regression tests pass? (past-confirmed→completed, grace-period→skip, already-completed→skip)",
+    "3. First real booking in AdminFunnelPage? (booking URL fix landed 2026-07-16)",
+    "4. GH #413 REFERRAL_REWARD_ENABLED=1 set? (Day 25+)",
+    "5. GH #399 resolved? (Day 14+ — autopilot loop stalled 30 issues)",
+    "6. Parking lot: Step 9F or BotHealthPage.jsx"
+  ]
+}
