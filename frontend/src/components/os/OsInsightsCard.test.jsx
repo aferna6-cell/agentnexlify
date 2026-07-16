@@ -47,7 +47,9 @@ describe("OsInsightsCard cold-start starters", () => {
       starters: [{ label: "Draft a promo message", prompt: "Draft a promo." }],
     });
     render(<OsInsightsCard token="jwt" onSuggestion={onSuggestion} />);
-    fireEvent.click(await screen.findByText("Draft a promo message"));
+    const chip = await screen.findByText("Draft a promo message");
+    expect(chip).toBeInTheDocument();
+    fireEvent.click(chip);
     expect(onSuggestion).toHaveBeenCalledWith("Draft a promo.");
   });
 
