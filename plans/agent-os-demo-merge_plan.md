@@ -6,6 +6,8 @@
 **Branch:** `claude/gracious-wozniak-QFHoe`
 **Status:** Draft for approval. No code changed yet — this is the plan-first artifact.
 
+> **2026-07-16 update:** executed and superseded. The standalone `Agent-Nexlify-OS` repo was transferred INTO this repo — `agent-service/src/agent-os` is the engine's source of truth now, the standalone repo is stale, and `agent-service/scripts/vendor-agent-os.sh` is retired (hard-fails on run). References to the standalone below are historical.
+
 ---
 
 ## 0. Decision record (locked this session)
