@@ -27,6 +27,7 @@ import { conversationInsights } from "./conversation_insights/agent.ts";
 
 // v2 department-head skills (new).
 import { financialSummary } from "./financial_summary/agent.ts";
+import { marketResearch } from "./market_research/agent.ts";
 import { pricingMemo } from "./pricing_memo/agent.ts";
 import { taxPrep } from "./tax_prep/agent.ts";
 import { jobPost } from "./job_post/agent.ts";
@@ -95,7 +96,7 @@ export const marketing = defineDepartment({
     "Owner asks for a campaign, social post, blog, or content piece",
     "Owner asks for SEO recommendations or review requests",
   ],
-  strong_signals: ["campaign", "post", "blog"],
+  strong_signals: ["campaign", "post", "blog", "research"],
   skills: [
     { agent: campaign, extraKeywords: ["email blast", "promo", "special", "announce"] },
     { agent: socialPost, extraKeywords: ["facebook", "instagram", "social"] },
@@ -103,6 +104,7 @@ export const marketing = defineDepartment({
     { agent: reviewRequest, extraKeywords: ["review", "google review", "testimonial"] },
     { agent: seoRecommendations, extraKeywords: ["seo", "search", "rank", "website"] },
     { agent: aiVisibilityStub, extraKeywords: ["ai visibility", "geo score", "chatgpt see"] },
+    { agent: marketResearch, extraKeywords: ["what do others charge", "what are competitors", "market check"] },
   ],
   defaultSkillId: "campaign",
   examples: [
