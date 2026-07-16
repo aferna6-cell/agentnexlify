@@ -30,6 +30,14 @@ router = APIRouter(prefix="/api/v1/os", tags=["agent-os"])
 class DeliverableEditRequest(BaseModel):
     title: str | None = Field(default=None, max_length=200)
     body: str | None = Field(default=None, max_length=50000)
+    # Who the send goes to (phone for sms.send, email for email.send). The
+    # action handlers prefer this over extracting a recipient from the draft
+    # text - prod's only real send failed because drafts contain no phone.
+    recipient: str | None = Field(default=None, max_length=254)
+
+
+class RetryActionRunRequest(BaseModel):
+    recipient: str | None = Field(default=None, max_length=254)
 
 
 def _now() -> str:
@@ -119,6 +127,8 @@ async def edit_deliverable(
         deliverable["title"] = req.title.strip()
     if req.body is not None:
         deliverable["body"] = req.body
+    if req.recipient is not None:
+        deliverable["recipient"] = req.recipient.strip()
 
     updated = (
         tenant_table(db, "os_agent_runs", client_id)
@@ -206,12 +216,15 @@ async def get_action_run(
 async def retry_action_run(
     action_run_id: str,
     background: BackgroundTasks,
+    req: RetryActionRunRequest | None = None,
     claims: dict = Depends(_get_current_tenant),
 ):
     """Owner-only: retry a failed action run.
 
     Reuses the deliverable + action_type but creates a NEW os_action_runs row
-    so the prior attempt's history is preserved.
+    so the prior attempt's history is preserved. An optional ``recipient`` in
+    the body is written onto the deliverable first, so a send that failed with
+    "missing recipient" can be retried with the owner supplying who it goes to.
     """
     if not _is_owner(claims):
         raise HTTPException(status_code=403, detail="Owner role required")
@@ -240,6 +253,15 @@ async def retry_action_run(
         raise HTTPException(
             status_code=400, detail=f"Unknown action_type {action_type}"
         )
+
+    recipient = (req.recipient or "").strip() if req else ""
+    if recipient:
+        run = _load_run(db, client_id, deliverable_id)
+        deliverable = dict(run.get("deliverable") or {})
+        deliverable["recipient"] = recipient
+        tenant_table(db, "os_agent_runs", client_id).update(
+            {"deliverable": deliverable, "updated_at": _now()}
+        ).eq("id", deliverable_id).execute()
 
     created = (
         tenant_table(db, "os_action_runs", client_id)

@@ -277,3 +277,96 @@ describe("DeliverablePanel send outcome", () => {
     expect(screen.queryByTestId("send-status")).toBeNull();
   });
 });
+
+describe("DeliverablePanel recipient flow", () => {
+  it("shows a Send to input for send-action drafts", () => {
+    render(
+      <DeliverablePanel
+        run={pendingRun({ action_type: "sms.send" })}
+        token={TOKEN}
+        onClose={vi.fn()}
+      />,
+    );
+    const input = screen.getByTestId("recipient-input");
+    expect(input).toBeInTheDocument();
+    expect(input.placeholder).toContain("phone");
+  });
+
+  it("hides the Send to input for display-only drafts", () => {
+    render(
+      <DeliverablePanel run={pendingRun()} token={TOKEN} onClose={vi.fn()} />,
+    );
+    expect(screen.queryByTestId("recipient-input")).toBeNull();
+  });
+
+  it("persists a typed recipient before approving", async () => {
+    editOsDeliverable.mockResolvedValue({});
+    approveOsDeliverable.mockResolvedValue(
+      pendingRun({ deliverable_status: "approved" }),
+    );
+    render(
+      <DeliverablePanel
+        run={pendingRun({ action_type: "sms.send" })}
+        token={TOKEN}
+        onClose={vi.fn()}
+      />,
+    );
+    const input = screen.getByTestId("recipient-input");
+    fireEvent.change(input, { target: { value: "555-555-0123" } });
+    expect(input).toHaveValue("555-555-0123");
+    fireEvent.click(screen.getByText("Approve"));
+    await waitFor(() =>
+      expect(approveOsDeliverable).toHaveBeenCalledWith(TOKEN, "r1"),
+    );
+    expect(editOsDeliverable).toHaveBeenCalledWith(TOKEN, "r1", {
+      recipient: "555-555-0123",
+    });
+  });
+
+  it("approves directly when no recipient was typed", async () => {
+    const updated = pendingRun({ deliverable_status: "approved" });
+    approveOsDeliverable.mockResolvedValue(updated);
+    const onUpdated = vi.fn();
+    render(
+      <DeliverablePanel
+        run={pendingRun({ action_type: "sms.send" })}
+        token={TOKEN}
+        onClose={vi.fn()}
+        onUpdated={onUpdated}
+      />,
+    );
+    expect(screen.getByTestId("recipient-input")).toHaveValue("");
+    fireEvent.click(screen.getByText("Approve"));
+    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith(updated));
+    // No recipient typed means no extra PATCH round-trip before approval.
+    expect(editOsDeliverable).not.toHaveBeenCalled();
+  });
+
+  it("failed send shows a recipient input and retry passes it through", async () => {
+    getOsActionRun.mockResolvedValue({
+      id: "act1",
+      status: "failed",
+      error_detail: { stage: "extract", message: "missing recipient" },
+    });
+    retryOsActionRun.mockResolvedValue({ id: "act2", status: "queued" });
+    render(
+      <DeliverablePanel
+        run={approvedRun({ action_type: "sms.send" })}
+        token={TOKEN}
+        onClose={vi.fn()}
+      />,
+    );
+    const banner = await screen.findByTestId("send-failed-banner");
+    expect(banner).toHaveTextContent("missing recipient");
+
+    fireEvent.change(screen.getByTestId("retry-recipient-input"), {
+      target: { value: "+15555550123" },
+    });
+    fireEvent.click(screen.getByText("Retry send"));
+    await waitFor(() =>
+      expect(retryOsActionRun).toHaveBeenCalledWith(TOKEN, "act1", {
+        recipient: "+15555550123",
+      }),
+    );
+  });
+});

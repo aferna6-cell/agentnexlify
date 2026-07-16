@@ -57,11 +57,11 @@ export function reportOsRunBug(token, runId) {
 
 // --- Deliverables ---
 
-export function editOsDeliverable(token, runId, { title, body }) {
+export function editOsDeliverable(token, runId, { title, body, recipient }) {
   return request(`/api/v1/os/deliverables/${runId}`, {
     method: "PATCH",
     token,
-    body: { title, body },
+    body: { title, body, recipient },
   });
 }
 
@@ -92,11 +92,14 @@ export function getOsActionRun(token, actionRunId) {
 }
 
 // Owner-only: retry a failed action run. Creates a fresh os_action_runs row
-// and returns it (status "queued") so the caller can resume polling.
-export function retryOsActionRun(token, actionRunId) {
+// and returns it (status "queued") so the caller can resume polling. Pass
+// { recipient } to fix a send that failed with "missing recipient" - the
+// backend writes it onto the deliverable before requeueing.
+export function retryOsActionRun(token, actionRunId, { recipient } = {}) {
   return request(`/api/v1/os/action-runs/${actionRunId}/retry`, {
     method: "POST",
     token,
+    body: recipient ? { recipient } : undefined,
   });
 }
 

@@ -23,6 +23,7 @@ import re
 
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.os_actions.base import ActionContext, ActionResult, ActionSpec
+from backend.services.os_actions.recipients import normalize_phone
 from backend.services import sms_compliance
 from backend.services.twilio_service import send_sms
 from backend.services.twilio_tenant import is_connected as twilio_is_connected
@@ -182,44 +183,66 @@ async def _run(ctx: ActionContext) -> ActionResult:
             error_detail={"message": "deliverable has empty body"},
         )
 
-    try:
-        payload = await _extract_sms_payload(body, ctx.client_id)
-    except Exception as e:
-        logger.warning(
-            "os_action_sms: extraction failed client_id=%s deliverable_id=%s",
-            ctx.client_id,
-            ctx.deliverable_id,
-            exc_info=True,
-        )
-        return ActionResult(
-            status="failed",
-            error_detail={"stage": "extract", "message": str(e)[:300]},
-        )
+    # Explicit recipient on the deliverable wins: the owner said who this
+    # goes to, so send the approved body verbatim — no LLM in the path.
+    # (Prod's only real send failed at extract with "missing recipient":
+    # normal drafts don't contain the recipient's phone number.)
+    raw_recipient = str(ctx.deliverable.get("recipient") or "").strip()
+    if raw_recipient:
+        explicit = normalize_phone(raw_recipient)
+        if not explicit:
+            return ActionResult(
+                status="failed",
+                request_payload={"recipient": raw_recipient[:40]},
+                error_detail={
+                    "stage": "validate",
+                    "message": (
+                        "recipient is not a valid phone number "
+                        "(use E.164 like +15555550123, or a 10-digit US number)"
+                    ),
+                },
+            )
+        to = explicit
+        sms_body = body[:1600]
+    else:
+        try:
+            payload = await _extract_sms_payload(body, ctx.client_id)
+        except Exception as e:
+            logger.warning(
+                "os_action_sms: extraction failed client_id=%s deliverable_id=%s",
+                ctx.client_id,
+                ctx.deliverable_id,
+                exc_info=True,
+            )
+            return ActionResult(
+                status="failed",
+                error_detail={"stage": "extract", "message": str(e)[:300]},
+            )
 
-    if "error" in payload:
-        return ActionResult(
-            status="failed",
-            error_detail={"stage": "extract", "message": payload["error"]},
-        )
+        if "error" in payload:
+            return ActionResult(
+                status="failed",
+                error_detail={"stage": "extract", "message": payload["error"]},
+            )
 
-    to = (payload.get("to") or "").strip()
-    sms_body = (payload.get("body") or "").strip()
+        to = (payload.get("to") or "").strip()
+        sms_body = (payload.get("body") or "").strip()
 
-    if not to or not _PHONE_RE.match(to):
-        return ActionResult(
-            status="failed",
-            request_payload=payload,
-            error_detail={
-                "stage": "validate",
-                "message": "missing or invalid recipient (E.164 required)",
-            },
-        )
-    if not sms_body:
-        return ActionResult(
-            status="failed",
-            request_payload=payload,
-            error_detail={"stage": "validate", "message": "empty sms body"},
-        )
+        if not to or not _PHONE_RE.match(to):
+            return ActionResult(
+                status="failed",
+                request_payload=payload,
+                error_detail={
+                    "stage": "validate",
+                    "message": "missing or invalid recipient (E.164 required)",
+                },
+            )
+        if not sms_body:
+            return ActionResult(
+                status="failed",
+                request_payload=payload,
+                error_detail={"stage": "validate", "message": "empty sms body"},
+            )
 
     # TCPA: never text a recipient who opted out (STOP). Gate every send path.
     if sms_compliance.is_suppressed(ctx.db, ctx.client_id, to):
