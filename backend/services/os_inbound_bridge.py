@@ -36,6 +36,7 @@ the §Toggle config section below own read/write/upsert.
 """
 
 import logging
+from datetime import datetime, timezone
 from typing import Any, Literal
 
 from backend.services import usage_meter
@@ -43,6 +44,10 @@ from backend.services.os_thread_runner import process_user_turn
 from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 BridgeSource = Literal["widget", "email", "sms", "facebook"]
 InboundKind = Literal["auto_reply", "normal", "system_notice"]
@@ -427,6 +432,30 @@ async def _bridge_common(
             "user_message": user_message_row,
             "assistant_message": None,
             "action": "skipped_auto_reply",
+            "agent_runs": [],
+        }
+
+    # The widget bridge is OBSERVE-ONLY. The widget already has its own
+    # customer-facing AI answering visitors; running the owner-assistant
+    # engine here and mirroring its reply back into the customer chat is
+    # the documented hijack that forced this bridge off by default. With
+    # observation, the toggle is safe: every visitor conversation lands in
+    # the owner's OS inbox as evidence their staff can read, and nothing
+    # ever answers the customer from this path.
+    if source == "widget":
+        try:
+            tenant_table(db, "os_threads", client_id).update(
+                {"updated_at": _now_iso()}
+            ).eq("id", thread["id"]).execute()
+        except Exception:
+            logger.warning(
+                "inbound bridge: thread bump failed client_id=%s", client_id,
+                exc_info=True,
+            )
+        return {
+            "user_message": user_message_row,
+            "assistant_message": None,
+            "action": "observed",
             "agent_runs": [],
         }
 
