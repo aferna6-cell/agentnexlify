@@ -32,6 +32,7 @@ from backend.services import (
     os_failure_notify,
     os_graph_memory,
     os_kb_feed,
+    os_routing_memory,
 )
 from backend.services.os_action_dispatch import queue_action_for_run
 from backend.services.os_outbound_mirror import mirror_assistant_message
@@ -111,12 +112,22 @@ async def process_user_turn(
                     "the setup link is shown to the owner after your reply."
                 ),
             }
+        # Routing memory v1: replay a standing owner correction for a
+        # near-identical ask (strict similarity gate; explicit force wins).
+        # Threadpool: one Supabase query on the no-force path.
+        effective_force = await run_in_threadpool(
+            os_routing_memory.resolve_force_agent,
+            db,
+            client_id,
+            user_content,
+            force_agent_id,
+        )
         out = await run_in_threadpool(
             agent_sdk_client.orchestrate_sync,
             client_id,
             user_content,
             context,
-            force_agent_id=force_agent_id,
+            force_agent_id=effective_force,
         )
 
     if out is None:
