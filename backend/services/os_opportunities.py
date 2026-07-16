@@ -18,6 +18,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from backend.models.database import get_service_supabase
+from backend.services import os_opportunity_notify
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,25 @@ _TENANT_BATCH = 200
 
 def _iso_days_ago(days: int) -> str:
     return (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _suggestion_kind(summary: str) -> str | None:
+    """Classify a suggestion by the wording our own scanner produces.
+
+    Same dispatch the fulfillment side uses
+    (``os_opportunity_fulfill.fulfill_accepted_suggestion``) — both strings
+    are generated and consumed inside this codebase.
+    """
+    s = (summary or "").lower()
+    if "lead" in s and "cold" in s:
+        return "cold_leads"
+    if "invoice" in s:
+        return "overdue_invoices"
+    return None
 
 
 def compute_suggestions(db: Any, client_id: str) -> list[dict[str, Any]]:
@@ -92,19 +112,42 @@ def compute_suggestions(db: Any, client_id: str) -> list[dict[str, Any]]:
 
 
 def _file_suggestion(db: Any, client_id: str, s: dict[str, Any]) -> bool:
-    """Insert one backlog suggestion unless an identical one is still open."""
+    """Insert one backlog suggestion, superseding stale near-duplicates.
+
+    Prod grew piles of same-kind cards per tenant ("3 leads went cold",
+    "4 leads went cold", "6 leads went cold" — same leads, counts drifting
+    week to week) because dedup matched the exact summary text. Now every
+    filing first marks older pending cards of the SAME KIND ``superseded``
+    so the owner always sees one card with current numbers. An identical
+    pending summary still short-circuits the insert (true duplicate).
+    """
     try:
-        existing = (
+        kind = _suggestion_kind(s["summary"])
+        pending = (
             db.table("os_backlog_requests")
-            .select("id")
+            .select("id, summary")
             .eq("client_id", client_id)
             .eq("reason", "opportunity")
             .eq("status", "pending")
-            .eq("summary", s["summary"])
-            .limit(1)
             .execute()
-        ).data
-        if existing:
+        ).data or []
+        same_kind = [
+            r for r in pending if kind and _suggestion_kind(r.get("summary")) == kind
+        ]
+        identical = [r for r in same_kind if r.get("summary") == s["summary"]]
+        stale = [r for r in same_kind if r.get("summary") != s["summary"]]
+
+        if stale:
+            db.table("os_backlog_requests").update(
+                {
+                    "status": "superseded",
+                    "decided_by": "system",
+                    "decision_note": "Superseded by a newer suggestion with current numbers",
+                    "decided_at": _now(),
+                }
+            ).in_("id", [r["id"] for r in stale]).eq("client_id", client_id).execute()
+
+        if identical:
             return False
         db.table("os_backlog_requests").insert(
             {
@@ -160,9 +203,14 @@ async def run_opportunity_scan() -> int:
         except Exception:
             logger.warning("os_opportunities: daily gate read failed for %s", t["id"], exc_info=True)
             continue
-        for s in compute_suggestions(db, t["id"]):
-            if _file_suggestion(db, t["id"], s):
-                filed += 1
+        filed_here = [
+            s for s in compute_suggestions(db, t["id"]) if _file_suggestion(db, t["id"], s)
+        ]
+        if filed_here:
+            filed += len(filed_here)
+            # The owner learns about new suggestions the moment they're
+            # filed — cards used to land silently and rot unseen.
+            await os_opportunity_notify.notify_new_suggestions(db, t["id"], filed_here)
     if filed:
         logger.info("os_opportunities: filed %d suggestions", filed)
     return filed
