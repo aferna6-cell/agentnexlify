@@ -1,0 +1,214 @@
+"""Admin loop-health board — one endpoint for the automation-loop vitals.
+
+Every operations review re-derived the same numbers with ad-hoc SQL against
+prod: how many drafts are pending and how old, whether opportunity
+suggestions are piling up undecided, whether the Agent OS is being used at
+all, whether any tenant has an inbound bridge on, and whether errors are
+accumulating. This endpoint computes those aggregates deterministically so
+dashboards, digests, and future reviews read one JSON instead of hand-run
+queries.
+
+Protected by the platform admin secret (internal only, not tenant-facing),
+same guard as admin_health. Each section is fault-isolated: a failing query
+nulls that section and the endpoint still returns 200 — partial vitals beat
+a 500.
+
+Schema notes: os_agent_runs / os_backlog_requests / os_threads use
+client_id; error_events is global. See .claude/rules/schema-discipline.md.
+"""
+
+import logging
+from datetime import datetime, timedelta, timezone
+
+from fastapi import APIRouter, Header, Request
+
+from backend.limiter import limiter
+from backend.models.database import get_service_supabase
+from backend.routers.admin_health import _parse_ts, _verify_admin_secret
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api/v1/admin", tags=["platform-admin"])
+
+_RECENT_DAYS = 7
+_FILED_HOURS = 24
+
+
+def _age_days(ts: datetime | None, now: datetime) -> float | None:
+    if ts is None:
+        return None
+    return round((now - ts).total_seconds() / 86400, 1)
+
+
+def _deliverables_section(db, now: datetime) -> dict | None:
+    """Status counts, oldest pending age, and expiries in the last 7 days."""
+    try:
+        rows = (
+            db.table("os_agent_runs")
+            .select("deliverable_status, updated_at")
+            .filter("deliverable_status", "not.is", "null")
+            .execute()
+        ).data or []
+    except Exception:
+        logger.warning("loop-health: deliverables query failed", exc_info=True)
+        return None
+
+    by_status: dict[str, int] = {}
+    oldest_pending: datetime | None = None
+    expired_7d = 0
+    recent_cutoff = now - timedelta(days=_RECENT_DAYS)
+    for row in rows:
+        status = row.get("deliverable_status") or "unknown"
+        by_status[status] = by_status.get(status, 0) + 1
+        ts = _parse_ts(row.get("updated_at"))
+        if status == "pending_approval" and ts is not None:
+            if oldest_pending is None or ts < oldest_pending:
+                oldest_pending = ts
+        if status == "expired" and ts is not None and ts >= recent_cutoff:
+            expired_7d += 1
+
+    return {
+        "by_status": by_status,
+        "pending_oldest_age_days": _age_days(oldest_pending, now),
+        "expired_7d": expired_7d,
+    }
+
+
+def _suggestions_section(db, now: datetime) -> dict | None:
+    """Backlog status counts, oldest pending age, and filing freshness."""
+    try:
+        rows = (
+            db.table("os_backlog_requests")
+            .select("status, created_at")
+            .execute()
+        ).data or []
+    except Exception:
+        logger.warning("loop-health: suggestions query failed", exc_info=True)
+        return None
+
+    by_status: dict[str, int] = {}
+    oldest_pending: datetime | None = None
+    last_filed: datetime | None = None
+    filed_24h = 0
+    filed_cutoff = now - timedelta(hours=_FILED_HOURS)
+    for row in rows:
+        status = row.get("status") or "unknown"
+        by_status[status] = by_status.get(status, 0) + 1
+        ts = _parse_ts(row.get("created_at"))
+        if ts is None:
+            continue
+        if status == "pending" and (oldest_pending is None or ts < oldest_pending):
+            oldest_pending = ts
+        if last_filed is None or ts > last_filed:
+            last_filed = ts
+        if ts >= filed_cutoff:
+            filed_24h += 1
+
+    return {
+        "by_status": by_status,
+        "pending_oldest_age_days": _age_days(oldest_pending, now),
+        "filed_24h": filed_24h,
+        "last_filed_at": last_filed.isoformat() if last_filed else None,
+    }
+
+
+def _os_activity_section(db, now: datetime) -> dict | None:
+    """Is anyone actually using the Agent OS? Threads + runs in 7 days."""
+    cutoff = (now - timedelta(days=_RECENT_DAYS)).isoformat()
+    try:
+        threads = (
+            db.table("os_threads")
+            .select("id", count="exact")
+            .gte("created_at", cutoff)
+            .limit(1)
+            .execute()
+        )
+        runs = (
+            db.table("os_agent_runs")
+            .select("id", count="exact")
+            .gte("created_at", cutoff)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.warning("loop-health: os activity query failed", exc_info=True)
+        return None
+    return {
+        "threads_7d": int(threads.count or 0),
+        "runs_7d": int(runs.count or 0),
+    }
+
+
+def _bridges_section(db) -> dict | None:
+    """How many tenants have at least one inbound bridge switched on."""
+    try:
+        rows = (
+            db.table("tenant_integrations")
+            .select("client_id, enabled, config_jsonb")
+            .eq("provider", "os_inbound_bridges")
+            .execute()
+        ).data or []
+    except Exception:
+        logger.warning("loop-health: bridges query failed", exc_info=True)
+        return None
+
+    enabled_tenants = set()
+    for row in rows:
+        if not row.get("enabled", True):
+            continue
+        cfg = row.get("config_jsonb") or {}
+        if any(
+            bool(value)
+            for key, value in cfg.items()
+            if key.endswith("_enabled")
+        ):
+            enabled_tenants.add(row.get("client_id"))
+
+    return {
+        "tenants_configured": len(rows),
+        "tenants_enabled": len(enabled_tenants),
+    }
+
+
+def _errors_section(db, now: datetime) -> int | None:
+    cutoff = (now - timedelta(days=_RECENT_DAYS)).isoformat()
+    try:
+        result = (
+            db.table("error_events")
+            .select("id", count="exact")
+            .gte("created_at", cutoff)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.warning("loop-health: errors query failed", exc_info=True)
+        return None
+    return int(result.count or 0)
+
+
+@router.get("/loop-health")
+@limiter.limit("10/minute")
+async def get_loop_health(
+    request: Request,
+    x_api_secret: str | None = Header(None),
+):
+    """Automation-loop vitals in one payload.
+
+    Sections: deliverables (draft statuses + rot), suggestions (backlog
+    statuses + filing freshness), os_activity (7-day usage), bridges
+    (inbound adoption), errors_7d. A section is null when its query
+    failed — the rest still comes back.
+    """
+    _verify_admin_secret(x_api_secret)
+
+    now = datetime.now(timezone.utc)
+    db = get_service_supabase()
+
+    return {
+        "generated_at": now.isoformat(),
+        "deliverables": _deliverables_section(db, now),
+        "suggestions": _suggestions_section(db, now),
+        "os_activity": _os_activity_section(db, now),
+        "bridges": _bridges_section(db),
+        "errors_7d": _errors_section(db, now),
+    }
