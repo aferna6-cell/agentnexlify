@@ -1,0 +1,94 @@
+{
+  "run": 96,
+  "run_id": "2026-07-16-pm",
+  "date": "2026-07-16",
+  "winner": {
+    "title": "Implement appointment_completion.py — auto-complete past-confirmed appointments, fire appointment_completed event",
+    "category": "customer_value",
+    "effort": "S",
+    "confidence": "HIGH",
+    "autonomous_executable": true,
+    "requires_human": false,
+    "carry_forward_from_run": 95
+  },
+  "mandate_check": {
+    "appointment_completion_py_committed": false,
+    "appointment_completion_py_status": "ABSENT — backend/services/ confirmed (booker, customer_notify, reminders only)",
+    "first_real_booking": "UNKNOWN — booking URL fix (6cc3419) + status filter fix (f143de5) both landed 2026-07-16",
+    "referral_reward_enabled": false,
+    "gh_413_status": "OPEN Day 25+, 0 human responses after 4 autonomous comments",
+    "gh_399_status": "OPEN Day 14+, AUTOPILOT_GH_TOKEN expired, 30 ai-ready issues stalled",
+    "gh_403_status": "OPEN, KB autopopulate 72+ days dark",
+    "botHealthPage_gh_issue": "Filed as Bonus B (no ai-ready label until GH #399 resolved)"
+  },
+  "ideas": [
+    {
+      "id": 1,
+      "title": "appointment_completion.py (carry-forward)",
+      "verdict": "WINNER",
+      "debate_rounds": 3
+    },
+    {
+      "id": 2,
+      "title": "BotHealthPage.jsx — frontend for admin_loop_health endpoint",
+      "verdict": "PARKING LOT",
+      "debate_rounds": 3,
+      "bonus_action": "GH issue filed as Bonus B"
+    },
+    {
+      "id": 3,
+      "title": "GH #399 Day-14 escalation comment",
+      "verdict": "BONUS ACTION",
+      "debate_rounds": 0
+    },
+    {
+      "id": 4,
+      "title": "os_opportunities referral_activation rule",
+      "verdict": "KILLED",
+      "debate_rounds": 3,
+      "kill_reason": "Mechanism mismatch (env-var in DB-query-only service) + schema migration required + human decision bottleneck"
+    },
+    {
+      "id": 5,
+      "title": "Step 9F nightly SKILL.md KB staleness check",
+      "verdict": "PARKING LOT",
+      "debate_rounds": 0,
+      "note": "Run 97 candidate"
+    }
+  ],
+  "bonus_actions": [
+    {
+      "id": "A",
+      "title": "GH #399 Day-14+ escalation comment",
+      "status": "executed",
+      "mechanism": "mcp__github__add_issue_comment",
+      "comment_id": "4997099627",
+      "url": "https://github.com/aferna6-cell/agentnexlify/issues/399#issuecomment-4997099627"
+    },
+    {
+      "id": "B",
+      "title": "BotHealthPage.jsx GH issue",
+      "status": "executed",
+      "mechanism": "mcp__github__issue_write",
+      "issue_number": 465,
+      "url": "https://github.com/aferna6-cell/agentnexlify/issues/465",
+      "note": "No ai-ready label — waiting for GH #399 resolution before issue-to-pr-loop can pick it up"
+    }
+  ],
+  "context": {
+    "agent_os_sprint_prs": 7,
+    "agent_os_prs": ["#457", "#458", "#459", "#460", "#461", "#462", "#463"],
+    "admin_loop_health_endpoint_shipped": true,
+    "admin_loop_health_commit": "22710b3",
+    "booking_url_fix": "6cc3419",
+    "appointment_reminder_status_fix": "f143de5",
+    "gh_454_open": true
+  },
+  "artifacts": [
+    "subconscious/runs/2026-07-16-pm/winning-concept.md",
+    "subconscious/runs/2026-07-16-pm/improvement-backlog.md",
+    "subconscious/runs/2026-07-16-pm/run-summary.json",
+    "subconscious/runs/2026-07-16-pm/ideas/ideas.md",
+    "subconscious/runs/2026-07-16-pm/debate/debate-log.md"
+  ]
+}
