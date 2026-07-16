@@ -15,9 +15,9 @@ lead capture (which does fire ``send_new_lead_alert``). A service business must
 know an appointment landed so they can staff/prepare. Found 2026-07-15 while
 verifying the booking path after the widget-booking-link fix.
 
-Design contract (identical to lead_alerts): best-effort, non-blocking,
-idempotent per (tenant, appointment), demo-safe (the send_sms/send_email
-wrappers no-op for demo tenants), and this module's entry point NEVER raises.
+Design contract (shared skeleton in ``notify_common``): best-effort,
+non-blocking, idempotent per (tenant, appointment), demo-safe, and this
+module's entry points NEVER raise.
 
 Multi-tenant note: appointments use ``tenant_id``; the owner config we read
 lives on ``tenants`` keyed by ``id``.
@@ -30,56 +30,39 @@ import html as html_mod
 import logging
 
 from backend.models.database import get_service_supabase
+from backend.services.notify_common import (
+    IdempotencyGuard,
+    dispatch_owner_alert,
+    fetch_owner_alert_config,
+    safe_send_email,
+    safe_send_sms,
+)
 
 logger = logging.getLogger(__name__)
 
-# Per-worker idempotency guard, keyed by (tenant_id, appointment_id).
-_alerted: set = set()
-_MAX_TRACKED = 10_000
+_LOG = "booking_alert"
+
+# Per-worker idempotency guard, keyed by (tenant_id, appointment_id:event).
+_guard = IdempotencyGuard()
+# Back-compat aliases: tests exercise the cap-clear contract through these.
+# _alerted IS the guard's live set (same object, not a copy).
+_alerted = _guard._seen
+_MAX_TRACKED = _guard._max_tracked
 
 
 def _already_alerted(tenant_id: str, appointment_id: str) -> bool:
     """Return True if this (tenant, appointment) was already alerted this process."""
-    if not tenant_id or not appointment_id:
-        return False
-    key = (tenant_id, appointment_id)
-    if key in _alerted:
-        return True
-    if len(_alerted) >= _MAX_TRACKED:
-        _alerted.clear()
-    _alerted.add(key)
-    return False
+    return _guard.seen(tenant_id, appointment_id)
 
 
 def reset_idempotency_cache() -> None:
     """Test helper — drop all tracked (tenant, appointment) pairs."""
-    _alerted.clear()
+    _guard.reset()
 
 
 def _fetch_tenant_alert_config(tenant_id: str) -> dict:
-    """Read owner notification config off the tenants table.
-
-    Returns {} on any failure so callers degrade to "no channels" not a raise.
-    """
-    try:
-        result = (
-            get_service_supabase()
-            .table("tenants")
-            .select(
-                "business_name, owner_email, notification_phone, "
-                "sms_notifications_enabled"
-            )
-            .eq("id", tenant_id)
-            .limit(1)
-            .execute()
-        )
-    except Exception:
-        logger.warning(
-            "booking_alert: tenant config lookup failed for %s", tenant_id, exc_info=True
-        )
-        return {}
-    rows = result.data or []
-    return rows[0] if rows else {}
+    """Owner notification config; {} on any failure (degrade, never raise)."""
+    return fetch_owner_alert_config(get_service_supabase, tenant_id, _LOG)
 
 
 def _when(booking_info: dict) -> str:
@@ -123,38 +106,24 @@ def _build_sms_body(business_name: str, customer_name: str, booking_info: dict) 
 async def _send_email_alert(
     tenant_id: str, business_name: str, owner_email: str, customer_name: str, booking_info: dict
 ) -> None:
-    from backend.services.email_sender import send_email
-
-    try:
-        await send_email(
-            to=owner_email,
-            subject=f"New appointment for {business_name}: {customer_name}",
-            body_html=_build_email_html(business_name, customer_name, booking_info),
-            tenant_id=tenant_id,
-        )
-    except Exception:
-        logger.error(
-            "booking_alert: email send FAILED tenant=%s customer=%s",
-            tenant_id, customer_name, exc_info=True,
-        )
+    await safe_send_email(
+        tenant_id=tenant_id,
+        to=owner_email,
+        subject=f"New appointment for {business_name}: {customer_name}",
+        body_html=_build_email_html(business_name, customer_name, booking_info),
+        log_prefix=_LOG,
+    )
 
 
 async def _send_sms_alert(
     tenant_id: str, business_name: str, phone: str, customer_name: str, booking_info: dict
 ) -> None:
-    from backend.services.twilio_service import send_sms
-
-    try:
-        await send_sms(
-            to=phone,
-            body=_build_sms_body(business_name, customer_name, booking_info),
-            tenant_id=tenant_id,
-        )
-    except Exception:
-        logger.error(
-            "booking_alert: SMS send FAILED tenant=%s customer=%s",
-            tenant_id, customer_name, exc_info=True,
-        )
+    await safe_send_sms(
+        tenant_id=tenant_id,
+        to=phone,
+        body=_build_sms_body(business_name, customer_name, booking_info),
+        log_prefix=_LOG,
+    )
 
 
 async def send_new_booking_alert(
@@ -190,27 +159,23 @@ async def send_new_booking_alert(
             logger.warning("booking_alert: no tenant config for %s, skipping", tenant_id)
             return
 
-        business_name = config.get("business_name") or "your business"
-        owner_email = config.get("owner_email")
-        phone = config.get("notification_phone")
-        sms_enabled = config.get("sms_notifications_enabled")
-
-        if owner_email:
+        async def _email(business_name: str, owner_email: str) -> None:
             await _send_email_alert(
                 tenant_id, business_name, owner_email, customer_name, booking_info
             )
-        else:
-            logger.info("booking_alert: no owner_email for tenant=%s, email skipped", tenant_id)
 
-        if sms_enabled and phone:
+        async def _sms(business_name: str, phone: str) -> None:
             await _send_sms_alert(
                 tenant_id, business_name, phone, customer_name, booking_info
             )
-        else:
-            logger.info(
-                "booking_alert: SMS skipped tenant=%s (sms_enabled=%s phone_set=%s)",
-                tenant_id, bool(sms_enabled), bool(phone),
-            )
+
+        await dispatch_owner_alert(
+            tenant_id=tenant_id,
+            config=config,
+            email_fn=_email,
+            sms_fn=_sms,
+            log_prefix=_LOG,
+        )
     except Exception:
         logger.error(
             "booking_alert: send_new_booking_alert FAILED tenant=%s customer=%s",
@@ -248,38 +213,24 @@ def _build_cancel_sms_body(business_name: str, customer_name: str, booking_info:
 async def _send_cancel_email_alert(
     tenant_id: str, business_name: str, owner_email: str, customer_name: str, booking_info: dict
 ) -> None:
-    from backend.services.email_sender import send_email
-
-    try:
-        await send_email(
-            to=owner_email,
-            subject=f"Appointment cancelled — {business_name}: {customer_name}",
-            body_html=_build_cancel_email_html(business_name, customer_name, booking_info),
-            tenant_id=tenant_id,
-        )
-    except Exception:
-        logger.error(
-            "booking_alert: cancel email send FAILED tenant=%s customer=%s",
-            tenant_id, customer_name, exc_info=True,
-        )
+    await safe_send_email(
+        tenant_id=tenant_id,
+        to=owner_email,
+        subject=f"Appointment cancelled — {business_name}: {customer_name}",
+        body_html=_build_cancel_email_html(business_name, customer_name, booking_info),
+        log_prefix=_LOG,
+    )
 
 
 async def _send_cancel_sms_alert(
     tenant_id: str, business_name: str, phone: str, customer_name: str, booking_info: dict
 ) -> None:
-    from backend.services.twilio_service import send_sms
-
-    try:
-        await send_sms(
-            to=phone,
-            body=_build_cancel_sms_body(business_name, customer_name, booking_info),
-            tenant_id=tenant_id,
-        )
-    except Exception:
-        logger.error(
-            "booking_alert: cancel SMS send FAILED tenant=%s customer=%s",
-            tenant_id, customer_name, exc_info=True,
-        )
+    await safe_send_sms(
+        tenant_id=tenant_id,
+        to=phone,
+        body=_build_cancel_sms_body(business_name, customer_name, booking_info),
+        log_prefix=_LOG,
+    )
 
 
 async def send_cancellation_alert(

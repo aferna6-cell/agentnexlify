@@ -24,6 +24,9 @@ const PRICING: Record<string, { input: number; output: number }> = {
   "claude-sonnet-4-6": { input: 3.0, output: 15.0 },
 };
 
+/** Anthropic server-side web search: USD per 1,000 searches. */
+const WEB_SEARCH_USD_PER_1000 = 10.0;
+
 function priceFor(model: string): { input: number; output: number } {
   return PRICING[model] ?? { input: 3.0, output: 15.0 };
 }
@@ -118,6 +121,121 @@ export async function complete(args: CompleteArgs): Promise<CompleteResult> {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await logCall({ runId: args.runId, purpose: args.purpose, model, inputTokens: 0, outputTokens: 0, costUsd: 0, ok: false, error: message });
+    throw err;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Web-grounded completion (market research). Uses Anthropic's server-side
+// web_search tool: no external search credentials, runs on the platform key.
+// The API may stop with `pause_turn` mid-search; the loop resumes by sending
+// the partial assistant turn back, bounded so a stuck search can't spin.
+// ---------------------------------------------------------------------------
+
+export interface WebSearchLoopResult {
+  text: string;
+  inputTokens: number;
+  outputTokens: number;
+  webSearches: number;
+}
+
+interface LoopResponse {
+  stop_reason?: string | null;
+  content: unknown[];
+  usage: {
+    input_tokens: number;
+    output_tokens: number;
+    server_tool_use?: { web_search_requests?: number } | null;
+  };
+}
+
+/**
+ * Pure pause_turn resume loop, injectable for tests. `createFn` performs one
+ * messages.create call with the running message list and returns the response.
+ */
+export async function runWebSearchLoop(
+  createFn: (messages: { role: string; content: unknown }[]) => Promise<LoopResponse>,
+  prompt: string,
+  maxResumes = 3,
+): Promise<WebSearchLoopResult> {
+  const messages: { role: string; content: unknown }[] = [{ role: "user", content: prompt }];
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let webSearches = 0;
+  const texts: string[] = [];
+
+  for (let turn = 0; ; turn++) {
+    const res = await createFn(messages);
+    inputTokens += res.usage.input_tokens;
+    outputTokens += res.usage.output_tokens;
+    webSearches += res.usage.server_tool_use?.web_search_requests ?? 0;
+    for (const block of res.content) {
+      const b = block as { type?: string; text?: string };
+      if (b.type === "text" && typeof b.text === "string") texts.push(b.text);
+    }
+    if (res.stop_reason !== "pause_turn" || turn >= maxResumes) break;
+    // Resume: hand the partial assistant turn back and let it continue.
+    messages.push({ role: "assistant", content: res.content });
+  }
+
+  return { text: texts.join(""), inputTokens, outputTokens, webSearches };
+}
+
+export interface WebSearchCompleteArgs {
+  system: string;
+  prompt: string;
+  maxTokens?: number;
+  runId?: string;
+  model?: string;
+  /** Cap on server-side searches per request (spend control). */
+  maxSearches?: number;
+}
+
+/**
+ * Run a web-grounded completion (server-side web_search tool), logging cost
+ * including the per-search fee. Throws ModelUnavailableError when no key and
+ * UsageCapExceededError at the daily draft cap - callers surface an honest
+ * "temporarily unavailable" instead of an ungrounded draft.
+ */
+export async function completeWithWebSearch(args: WebSearchCompleteArgs): Promise<CompleteResult> {
+  const model = args.model ?? DRAFT_MODEL;
+  const anthropic = getClient();
+
+  if (!anthropic) {
+    await logCall({ runId: args.runId, purpose: "draft", model, inputTokens: 0, outputTokens: 0, costUsd: 0, ok: false, error: "no_api_key" });
+    throw new ModelUnavailableError();
+  }
+  if (await isCapExceeded("draft")) {
+    await logCall({ runId: args.runId, purpose: "draft", model, inputTokens: 0, outputTokens: 0, costUsd: 0, ok: false, error: "usage_cap_exceeded" });
+    throw new UsageCapExceededError("draft");
+  }
+
+  try {
+    const loop = await runWebSearchLoop(
+      (messages) =>
+        anthropic.messages.create({
+          model,
+          max_tokens: args.maxTokens ?? 2048,
+          system: args.system,
+          messages: messages as Anthropic.MessageParam[],
+          tools: [
+            {
+              type: "web_search_20250305",
+              name: "web_search",
+              max_uses: args.maxSearches ?? 3,
+            },
+          ],
+        }) as unknown as Promise<LoopResponse>,
+      args.prompt,
+    );
+    const costUsd =
+      estimateCostUsd(model, loop.inputTokens, loop.outputTokens) +
+      (loop.webSearches / 1000) * WEB_SEARCH_USD_PER_1000;
+    await logCall({ runId: args.runId, purpose: "draft", model, inputTokens: loop.inputTokens, outputTokens: loop.outputTokens, costUsd, ok: true });
+    return { text: loop.text, model, inputTokens: loop.inputTokens, outputTokens: loop.outputTokens, costUsd };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await logCall({ runId: args.runId, purpose: "draft", model, inputTokens: 0, outputTokens: 0, costUsd: 0, ok: false, error: message });
     throw err;
   }
 }
