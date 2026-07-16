@@ -16,6 +16,10 @@ vi.mock("../utils/api/os", () => ({
   fetchOsUsage: vi.fn(),
 }));
 
+vi.mock("../components/os/OpportunityCards", () => ({
+  default: () => null,
+}));
+
 vi.mock("../components/os/AgentRunFlowchart", () => ({
   default: ({ run }) => <div data-testid="flowchart">{run?.status}</div>,
 }));

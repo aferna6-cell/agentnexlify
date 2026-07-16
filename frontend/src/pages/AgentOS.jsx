@@ -25,6 +25,7 @@ import DemoTour from "../components/os/DemoTour";
 import MemoryPanel from "../components/os/MemoryPanel";
 import FirstRunStarters from "../components/os/FirstRunStarters";
 import OsInsightsCard from "../components/os/OsInsightsCard";
+import OpportunityCards from "../components/os/OpportunityCards";
 import ComposerAttachments from "../components/os/ComposerAttachments";
 import UsageUpgradeNudge from "../components/UsageUpgradeNudge";
 import UpgradePrompt from "../components/UpgradePrompt";
@@ -681,7 +682,10 @@ export default function AgentOS({ onNavigate }) {
           style={{ flex: 1, overflowY: "auto", padding: 20 }}
         >
           {!activeThreadId && (
-            <OsInsightsCard token={token} onSuggestion={setComposer} />
+            <>
+              <OpportunityCards token={token} />
+              <OsInsightsCard token={token} onSuggestion={setComposer} />
+            </>
           )}
           {error && (
             <div
