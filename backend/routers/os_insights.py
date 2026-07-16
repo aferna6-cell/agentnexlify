@@ -20,6 +20,7 @@ from fastapi import APIRouter, Depends
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
 from backend.services.os_opportunities import compute_suggestions
+from backend.services.os_starter_tasks import compute_starter_tasks
 from backend.services.weekly_value import compute_weekly_value
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,18 @@ router = APIRouter(prefix="/api/v1/os", tags=["agent-os"])
 async def get_insights(claims: dict = Depends(_get_current_tenant)):
     client_id = claims["tenant_id"]
     db = get_service_supabase()
-    return {
-        "week": compute_weekly_value(db, client_id),
-        "suggestions": compute_suggestions(db, client_id),
-    }
+    week = compute_weekly_value(db, client_id)
+    suggestions = compute_suggestions(db, client_id)
+
+    # Cold-start: an idle tenant (no week activity, nothing noticed) used to
+    # get an empty card that hid itself — a blank composer as the whole
+    # product. Offer three concrete one-click starter tasks instead.
+    idle = (
+        (week.get("leads_captured") or 0)
+        + (week.get("appointments_booked") or 0)
+        + (week.get("invoices_sent") or 0)
+        + (week.get("agent_runs_completed") or 0)
+    ) == 0
+    starters = compute_starter_tasks(db, client_id) if idle and not suggestions else []
+
+    return {"week": week, "suggestions": suggestions, "starters": starters}

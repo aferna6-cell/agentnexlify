@@ -37,7 +37,12 @@ export default function OsInsightsCard({ token, onSuggestion }) {
       (w.agent_runs_completed || 0) >
     0;
   const suggestions = data.suggestions || [];
-  if (!hasActivity && suggestions.length === 0) return null;
+  // Cold-start: idle tenant with nothing noticed. The card used to hide here,
+  // leaving a new owner a blank composer; offer starter tasks instead.
+  const starters =
+    !hasActivity && suggestions.length === 0 ? data.starters || [] : [];
+  if (!hasActivity && suggestions.length === 0 && starters.length === 0)
+    return null;
 
   const stat = (label, value) => (
     <div style={{ minWidth: 92 }}>
@@ -58,7 +63,9 @@ export default function OsInsightsCard({ token, onSuggestion }) {
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: hasActivity ? 10 : 0 }}>
         <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)" }}>
-          Your AI staff this week
+          {starters.length > 0
+            ? "Put your AI staff to work"
+            : "Your AI staff this week"}
         </span>
         <button
           onClick={() => setDismissed(true)}
@@ -75,6 +82,34 @@ export default function OsInsightsCard({ token, onSuggestion }) {
           {stat("invoiced", `$${Math.round(w.invoices_sent_total || 0).toLocaleString()}`)}
           {stat("collected", `$${Math.round(w.invoices_paid_total || 0).toLocaleString()}`)}
           {stat("tasks done", w.agent_runs_completed || 0)}
+        </div>
+      )}
+      {starters.length > 0 && (
+        <div
+          data-testid="starter-tasks"
+          style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 6 }}
+        >
+          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+            Pick a first task and watch your staff handle it:
+          </div>
+          {starters.map((s, i) => (
+            <button
+              key={i}
+              onClick={() => onSuggestion?.(s.prompt)}
+              style={{
+                textAlign: "left",
+                background: "rgba(99,102,241,0.08)",
+                border: "1px solid rgba(99,102,241,0.25)",
+                borderRadius: 8,
+                padding: "8px 10px",
+                color: "var(--text-secondary)",
+                fontSize: "0.78rem",
+                cursor: "pointer",
+              }}
+            >
+              {s.label}
+            </button>
+          ))}
         </div>
       )}
       {suggestions.length > 0 && (
