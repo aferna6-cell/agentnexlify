@@ -8,11 +8,12 @@ worker for it), decline (drop it), or defer.
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.dependencies import _get_current_tenant, require_role
 from backend.models.database import get_service_supabase
+from backend.services.os_opportunity_fulfill import fulfill_accepted_suggestion
 from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,7 @@ async def list_backlog(claims: dict = Depends(_get_current_tenant)):
 async def decide_backlog(
     request_id: str,
     req: BacklogDecisionRequest,
+    background: BackgroundTasks,
     claims: dict = Depends(require_role("owner")),
 ):
     client_id = claims["tenant_id"]
@@ -59,13 +61,14 @@ async def decide_backlog(
     db = get_service_supabase()
     existing = (
         tenant_table(db, "os_backlog_requests", client_id)
-        .select("id")
+        .select("*")
         .eq("id", request_id)
         .limit(1)
         .execute()
     )
     if not existing.data:
         raise HTTPException(status_code=404, detail="Backlog request not found")
+    row = existing.data[0]
     updated = (
         tenant_table(db, "os_backlog_requests", client_id)
         .update(
@@ -79,4 +82,11 @@ async def decide_backlog(
         .eq("id", request_id)
         .execute()
     )
+
+    # Keep the suggestion card's promise: accepting an opportunity ("Accept
+    # and I'll draft a check-in for each") actually drafts the follow-ups.
+    # Background + fault-tolerant - the accept response never waits on it.
+    if req.decision == "accepted" and (row.get("reason") or "") == "opportunity":
+        background.add_task(fulfill_accepted_suggestion, db, client_id, row)
+
     return updated.data[0]
