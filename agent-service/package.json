@@ -1,7 +1,7 @@
 {
   "name": "agentnexlify-agent-service",
   "version": "1.0.0",
-  "description": "HTTP layer for the FastAPI backend. Wraps @anthropic-ai/claude-agent-sdk (POST /agents/:name/run) and hosts the vendored Agent OS engine (src/agent-os) as the orchestration core.",
+  "description": "HTTP layer for the FastAPI backend. Wraps @anthropic-ai/claude-agent-sdk (POST /agents/:name/run) and hosts the Agent OS engine (src/agent-os) as the orchestration core. src/agent-os is the SOURCE OF TRUTH for the engine - the old standalone Agent-Nexlify-OS repo was transferred into this one and is stale.",
   "type": "module",
   "engines": {
     "node": ">=22"
