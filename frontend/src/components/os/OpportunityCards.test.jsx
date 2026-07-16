@@ -77,7 +77,12 @@ describe("OpportunityCards", () => {
     decideOsBacklog.mockResolvedValue({ id: "req-1", status: "accepted" });
     render(<OpportunityCards token="jwt" />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Accept" }));
+    const accept = await screen.findByRole("button", { name: "Accept" });
+    expect(accept).toBeInTheDocument();
+    expect(
+      screen.getByText("5 leads went cold this week - want me to follow up?"),
+    ).toBeInTheDocument();
+    fireEvent.click(accept);
 
     await waitFor(() =>
       expect(decideOsBacklog).toHaveBeenCalledWith("jwt", "req-1", {
@@ -99,7 +104,12 @@ describe("OpportunityCards", () => {
     decideOsBacklog.mockResolvedValue({ id: "req-1", status: "declined" });
     render(<OpportunityCards token="jwt" />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Dismiss" }));
+    const dismiss = await screen.findByRole("button", { name: "Dismiss" });
+    expect(dismiss).toBeInTheDocument();
+    expect(
+      screen.getByText("5 leads went cold this week - want me to follow up?"),
+    ).toBeInTheDocument();
+    fireEvent.click(dismiss);
 
     await waitFor(() =>
       expect(decideOsBacklog).toHaveBeenCalledWith("jwt", "req-1", {
