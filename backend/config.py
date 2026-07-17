@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     widget_prompt_history_messages: int = 8
     widget_prompt_history_chars: int = 2200
     widget_prompt_message_chars: int = 420
+    # KB retrieval opt-ins (#F10 reranker, #F12 hybrid) — both default OFF (0).
+    # Set to 1 via env var to enable per-deployment. See
+    # backend/services/kb_reranker.py, backend/services/kb_hybrid_retrieval.py,
+    # and _query_kb_articles in backend/routers/widget_chat_helpers.py.
+    widget_kb_rerank_enabled: int = 0
+    widget_kb_hybrid_enabled: int = 0
     supabase_url: str = ""
     supabase_key: str = ""
     # Integration-secret encryption at rest (onboarding-v2, migration 148).

@@ -58,6 +58,48 @@ _MAX_CONVERSATIONS = 25
 _MAX_MESSAGES_PER_CONVERSATION = 20
 _MAX_CONTENT_CHARS = 600  # per-message truncation inside the transcript
 
+# Opt-in Anthropic Structured Outputs (output_config.format) schema for the
+# judge verdicts array — see call site in score_tenant_bot_health for the
+# use_structured_output flag. Kept to a conservative JSON-Schema subset
+# (type/properties/items/required/additionalProperties only) — no
+# minItems/maxItems/minimum/maximum — because this sandbox has no web-fetch
+# access to confirm which keywords Anthropic's strict schema validator
+# honors, and rejecting an unsupported keyword would 400 the whole call.
+# Per-item count and range checks stay in Python (_parse_judge_json,
+# _clamp_sentiment) exactly as they do for the non-structured path.
+_VERDICT_ITEM_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "resolved": {
+            "type": "boolean",
+            "description": "True if the assistant answered the user's question or completed their request by the end of the transcript.",
+        },
+        "hallucination_risk": {
+            "type": "boolean",
+            "description": "True if the assistant stated something as fact it could not have known, or contradicted itself.",
+        },
+        "unresolved_intent": {
+            "type": "boolean",
+            "description": "True if the user's stated goal was never addressed or the conversation ended with the user still stuck.",
+        },
+        "sentiment": {
+            "type": "number",
+            "description": "User's apparent satisfaction by the end of the conversation, from -1.0 (very negative) to 1.0 (very positive).",
+        },
+    },
+    "required": ["resolved", "hallucination_risk", "unresolved_intent", "sentiment"],
+    "additionalProperties": False,
+}
+
+
+def _build_verdict_schema() -> dict[str, Any]:
+    """JSON Schema for the judge's response: an array of one verdict object
+    per conversation, in the same order they were given. Item count isn't
+    schema-enforced (see module comment) — `_parse_judge_json`'s
+    `len(parsed) != expected_count` check remains the source of truth.
+    """
+    return {"type": "array", "items": _VERDICT_ITEM_SCHEMA}
+
 _JUDGE_SYSTEM_PROMPT = (
     "You are a strict QA judge for an AI customer-support chat widget. You "
     "will be given a numbered list of conversations, each a transcript of "
@@ -181,12 +223,28 @@ def _compute_health_score(
     return round(max(0.0, min(100.0, score)), 1)
 
 
-async def score_tenant_bot_health(tenant_id: str, window_days: int = 7) -> dict[str, Any] | None:
+async def score_tenant_bot_health(
+    tenant_id: str,
+    window_days: int = 7,
+    *,
+    use_structured_output: bool = False,
+) -> dict[str, Any] | None:
     """Score one tenant's bot quality on its recent chat_messages.
 
     Returns the inserted bot_health_scores row, or None when the tenant has
     no recent messages (nothing to score) or the judge call/parse fails.
     Never raises — every failure is logged and treated as a skip.
+
+    `use_structured_output` (optional, default False) — OPT-IN Anthropic
+    Structured Outputs (#F9 proof-of-concept). False (the default): zero
+    behavior change, same free-text-then-parse path every caller has always
+    used. True: the judge call passes `response_schema=_build_verdict_schema()`
+    through to `call_claude_messages`, which constrains the model's JSON via
+    `output_config.format` — schema-guaranteed valid JSON instead of
+    hand-rolled parse+retry. `_parse_judge_json` still runs as the safety net
+    either way (defends against item-count mismatch, which the schema does
+    not enforce, and against any model/account that silently ignores the
+    constraint) — this is intentionally NOT a hard cutover.
     """
     db = get_service_supabase()
     since = (_now_utc() - timedelta(days=window_days)).isoformat()
@@ -230,7 +288,12 @@ async def score_tenant_bot_health(tenant_id: str, window_days: int = 7) -> dict[
             timeout=45.0,
             system=_JUDGE_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": transcript}],
-            metadata={"tenant_id": tenant_id, "conversation_count": sample_size},
+            metadata={
+                "tenant_id": tenant_id,
+                "conversation_count": sample_size,
+                "structured_output": use_structured_output,
+            },
+            response_schema=_build_verdict_schema() if use_structured_output else None,
         )
     except Exception:
         logger.error("bot_health: judge call failed tenant=%s", tenant_id, exc_info=True)
