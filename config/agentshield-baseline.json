@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "timestamp": "2026-07-14T16:32:10.894Z",
+  "timestamp": "2026-07-17T15:32:30.536Z",
   "score": {
     "grade": "C",
     "numericScore": 60,
@@ -253,22 +253,40 @@
       "fingerprint": "hooks-global-install-1555::scripts/claude-hooks/rtk-rewrite.sh::cargo install"
     },
     {
-      "id": "hooks-logging-disabled-206",
+      "id": "hooks-logging-disabled-248",
       "severity": "high",
       "category": "hooks",
       "title": "Hook disables logging: > /dev/null 2>&1",
       "file": "scripts/claude-hooks/require-tests-for-pr.sh",
       "evidence": "> /dev/null 2>&1",
-      "fingerprint": "hooks-logging-disabled-206::scripts/claude-hooks/require-tests-for-pr.sh::> /dev/null 2>&1"
+      "fingerprint": "hooks-logging-disabled-248::scripts/claude-hooks/require-tests-for-pr.sh::> /dev/null 2>&1"
     },
     {
-      "id": "hooks-logging-disabled-330",
+      "id": "hooks-logging-disabled-465",
       "severity": "high",
       "category": "hooks",
       "title": "Hook disables logging: &>/dev/null",
       "file": "scripts/claude-hooks/require-tests-for-pr.sh",
       "evidence": "&>/dev/null",
-      "fingerprint": "hooks-logging-disabled-330::scripts/claude-hooks/require-tests-for-pr.sh::&>/dev/null"
+      "fingerprint": "hooks-logging-disabled-465::scripts/claude-hooks/require-tests-for-pr.sh::&>/dev/null"
+    },
+    {
+      "id": "hooks-logging-disabled-520",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: &>/dev/null",
+      "file": "scripts/claude-hooks/require-tests-for-pr.sh",
+      "evidence": "&>/dev/null",
+      "fingerprint": "hooks-logging-disabled-520::scripts/claude-hooks/require-tests-for-pr.sh::&>/dev/null"
+    },
+    {
+      "id": "hooks-logging-disabled-673",
+      "severity": "high",
+      "category": "hooks",
+      "title": "Hook disables logging: &>/dev/null",
+      "file": "scripts/claude-hooks/require-tests-for-pr.sh",
+      "evidence": "&>/dev/null",
+      "fingerprint": "hooks-logging-disabled-673::scripts/claude-hooks/require-tests-for-pr.sh::&>/dev/null"
     },
     {
       "id": "hooks-global-install-1277",

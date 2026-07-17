@@ -620,6 +620,11 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
             messages=conversation_messages,
             temperature=0.0,
             timeout=30.0,
+            # Opt-in prompt caching (cost lever F4) — same tenant KB/persona
+            # prefix repeats across the 3-round Gather/Say loop for one call.
+            # Anthropic caches on exact text hash: per-tenant isolation, no
+            # shared key. Default 5-min TTL comfortably covers a live call.
+            cache_system=True,
             metadata={
                 "tenant_id": tenant_id,
                 "call_sid": call_sid,

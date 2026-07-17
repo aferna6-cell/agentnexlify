@@ -1027,7 +1027,7 @@ _KB_FTS_RPC = "match_kb_articles_fts"
 _KB_SEMANTIC_RPC = "match_kb_articles"
 
 
-async def _query_kb_articles(
+async def _query_kb_articles_base(
     query: str,
     match_count: int = 5,
 ) -> List[Dict[str, Any]]:
@@ -1047,6 +1047,10 @@ async def _query_kb_articles(
     by which path executed.
 
     kb_articles is a global (non-tenant-scoped) table.
+
+    This is the BASE retrieval only — no reranking or hybrid merge. See
+    ``_query_kb_articles`` below for the public entrypoint that optionally
+    layers those on top.
     """
     if not query or not query.strip():
         return []
@@ -1123,6 +1127,65 @@ async def _query_kb_articles(
             exc_info=True,
         )
         return []
+
+
+async def _query_kb_articles(
+    query: str,
+    match_count: int = 5,
+) -> List[Dict[str, Any]]:
+    """Public KB retrieval entrypoint — base retrieval + two OPT-IN steps.
+
+    Wraps ``_query_kb_articles_base`` (semantic search + FTS fallback,
+    unchanged) with two additive, opt-in post-processing steps, both OFF by
+    default so every existing caller (widget_chat.py, calls.py) sees zero
+    behavior change unless a tenant/deployment explicitly enables them:
+
+    1. Hybrid keyword+vector merge (#F12) — ``widget_kb_hybrid_enabled``.
+       Runs the existing ``match_kb_articles_fts`` RPC (migration 155)
+       alongside the base rows and merges by id. See
+       ``backend.services.kb_hybrid_retrieval.hybrid_merge_kb_articles``.
+    2. Haiku reranker (#F10) — ``widget_kb_rerank_enabled``. Reorders the
+       (possibly hybrid-merged) rows by relevance to *query* using a single
+       cheap Haiku call. See
+       ``backend.services.kb_reranker.rerank_kb_articles``.
+
+    Both steps are individually fail-open (never raise) and this wrapper
+    adds its own try/except around each call as a second safety net — a bug
+    in either opt-in module can never take down KB retrieval on the widget
+    chat path. Order matters: hybrid merge runs first so the reranker (when
+    both are enabled) sees the fuller candidate set.
+    """
+    rows = await _query_kb_articles_base(query, match_count=match_count)
+
+    if not rows or not query or not query.strip():
+        return rows
+
+    if resolve_int_setting("widget_kb_hybrid_enabled", 0):
+        try:
+            from backend.services.kb_hybrid_retrieval import hybrid_merge_kb_articles
+
+            db = get_service_supabase()
+            rows = await hybrid_merge_kb_articles(db, query, rows, match_count=match_count)
+        except Exception:
+            logger.warning(
+                "kb_query: hybrid merge failed for query=%r — using base rows",
+                query[:60],
+                exc_info=True,
+            )
+
+    if resolve_int_setting("widget_kb_rerank_enabled", 0):
+        try:
+            from backend.services.kb_reranker import rerank_kb_articles
+
+            rows = await rerank_kb_articles(query, rows, top_k=match_count)
+        except Exception:
+            logger.warning(
+                "kb_query: rerank failed for query=%r — using pre-rerank rows",
+                query[:60],
+                exc_info=True,
+            )
+
+    return rows
 
 
 # ---------------------------------------------------------------------------
