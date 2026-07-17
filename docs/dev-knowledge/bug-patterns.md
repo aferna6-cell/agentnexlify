@@ -18629,3 +18629,31 @@ Claude-Session: https://claude.ai/code/session_01EUKAJKYuTJGyrDRnr5fu7W
 **Author:** Claude
 **Files Changed:** scripts/loop_health_scan.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### subconscious: run 2026-07-17 — Step 9F: KB autopopulate staleness check in nightly SKILL.md
+
+Run 97 mandate check:
+- appointment_completion.py: ABSENT (3rd consecutive nightly miss — root cause confirmed:
+  nightly is bug-fix channel only, cannot create new service files from winning-concept.md.
+  GH #454 ai-ready is correct queue — pending GH #399 AUTOPILOT_GH_TOKEN rotation.)
+- GH #399: OPEN Day 15+ (30 ai-ready issues blocked)
+- GH #413: OPEN Day 26+ (REFERRAL_REWARD_ENABLED=1 not set, 0 human responses)
+- BotHealthPage.jsx GH issue: CONFIRMED filed (Bonus B, run 96)
+
+Winner: Step 9F — Add KB autopopulate staleness check to nightly-commit-review SKILL.md.
+Read knowledge-base/log.md last-entry date; if >7 days stale, log + comment GH #403.
+Proven mechanism: Steps 9B/9C/9D/9E all implemented in 1 nightly cycle each.
+KB dark 72+ days with no daily automated pressure signal.
+
+Artifacts: ideas.md (5 ideas), debate-log.md (top 3, 3 rounds), winning-concept.md,
+improvement-backlog.md, run-summary.json. State: governance.json + memory.jsonl updated.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_0121SZYfkwJuDZ7YyLjej485
+**Date:** 2026-07-17
+**Commit:** f6ea32e
+**Author:** Claude
+**Files Changed:** subconscious/runs/2026-07-17/debate/debate-log.md,subconscious/runs/2026-07-17/ideas/ideas.md,subconscious/runs/2026-07-17/improvement-backlog.md,subconscious/runs/2026-07-17/run-summary.json,subconscious/runs/2026-07-17/winning-concept.md,subconscious/state/governance.json,subconscious/state/memory.jsonl
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
