@@ -329,6 +329,7 @@ async def _automation_loop():
     from backend.services.daily_briefing import send_daily_briefings
     from backend.services.noshow_recovery import process_noshow_recovery
     from backend.services.automation_engine import (
+        auto_complete_past_appointments,
         check_new_reviews,
         check_no_response_leads,
         process_pending_steps,
@@ -397,6 +398,10 @@ async def _automation_loop():
                         ),
                         _safe_run(
                             "send_aftercare_instructions", send_aftercare_instructions
+                        ),
+                        _safe_run(
+                            "auto_complete_past_appointments",
+                            auto_complete_past_appointments,
                         ),
                         _safe_run("process_scheduled_posts", _process_scheduled_posts),
                         _safe_run(

@@ -19,6 +19,7 @@ from backend.services.automation.orchestrator import (
 from backend.services.automation.scheduled_jobs import (
     _get_reminder_extras,
     check_no_response_leads,
+    auto_complete_past_appointments,
     send_appointment_reminders,
     send_rebook_suggestions,
     send_aftercare_instructions,
@@ -65,6 +66,7 @@ __all__ = [
     "_advance_execution",
     "_get_reminder_extras",
     "check_no_response_leads",
+    "auto_complete_past_appointments",
     "send_appointment_reminders",
     "send_rebook_suggestions",
     "send_aftercare_instructions",

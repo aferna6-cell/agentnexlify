@@ -31,6 +31,7 @@ to work without modification.
 
 from backend.services.automation.scheduled import (
     _get_reminder_extras,
+    auto_complete_past_appointments,
     check_no_response_leads,
     send_appointment_reminders,
     send_rebook_suggestions,
@@ -58,6 +59,7 @@ from backend.services.automation.scheduled_jobs_ext import (
 __all__ = [
     "_get_reminder_extras",
     "check_no_response_leads",
+    "auto_complete_past_appointments",
     "send_appointment_reminders",
     "send_rebook_suggestions",
     "send_aftercare_instructions",
