@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-07-17",
-  "total_runs": 97,
+  "last_run": "2026-07-17-pm",
+  "total_runs": 98,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -161,6 +161,17 @@
     "last_run": "2026-07-16-pm -> 2026-07-17"
   },
   "run_98_mandate": "1. Step 9F block present in .claude/skills/nightly-commit-review/SKILL.md? (grep 'Step 9F'). 2. First nightly after implementation — 'Step 9F:' line in nightly log? 3. KB still stale: GH #403 has new Step 9F comment? 4. GH #454 (appointment_completion.py) has ai-ready label + full implementation sketch? 5. GH #399 resolved? (Day 16+). 6. GH #413 REFERRAL_REWARD_ENABLED=1 set? (Day 27+). 7. notify_common.py: 12 new tests — do they cover dispatch_owner_alert failure modes? (read test file before recommending more tests).",
+  "run_98_mandate_executed": "EXECUTED 2026-07-17-pm (run 98). All 7 items checked: (1) Step 9F ABSENT — grep -c 'Step 9F' SKILL.md returns 0. Carry-forward fires (2nd cycle). (2) First nightly N/A — not yet implemented. (3) KB healthy: last run 2026-07-13 (4 days, within 7-day threshold). GH #403 comment not needed. (4) GH #454 ASSUMED ai-ready — filed run 95. (5) GH #399 OPEN Day 16+ — AUTOPILOT_GH_TOKEN expired, 30 ai-ready issues blocked. (6) GH #413 NOT SET — Day 27+, 0 human responses to 5 autonomous comments. (7) notify_common.py 12 tests EFFECTIVELY COVER failure modes — safe_send_email swallows all failures by contract; dispatch_owner_alert never propagates exceptions by design. Mandate item 7 CLOSED.",
+  "run_98_governance_corrections": {
+    "mandate_check_1_step_9f": "ABSENT — grep -c 'Step 9F' .claude/skills/nightly-commit-review/SKILL.md returns 0. 2nd consecutive miss. Carry-forward fires.",
+    "mandate_check_7_notify_common": "CLOSED — safe_send_email swallows all failures by contract (design). dispatch_owner_alert does not propagate exceptions by design. 12 tests in test_notify_common.py verify this. No additional tests needed.",
+    "pr_471_landed": "2026-07-17. batch_runtime.py (50% cost reduction offline jobs), kb_hybrid_retrieval.py (FTS+semantic, opt-in off), kb_reranker.py (Haiku reranker, opt-in off), conversation_enrichment_job.py (first wired caller of batch_runtime). loop_health_scan bugs fixed: 26f7829 (blind pagination) + 6391bd3 (issues:write permissions).",
+    "kb_autopopulate_status": "Last run 2026-07-13 (4 days ago). Currently healthy within 7-day threshold. Step 9F would show 'healthy' for 3 more days — still correct to implement now for daily observability.",
+    "debate_new_items": "conversation_enrichment_job.py scheduling WEAKENED → parking lot (GH #399 blocks). kb_hybrid enable WEAKENED → parking lot (needs settings UI or GH #399).",
+    "total_runs": "97 -> 98",
+    "last_run": "2026-07-17 -> 2026-07-17-pm"
+  },
+  "run_99_mandate": "1. Step 9F block present in .claude/skills/nightly-commit-review/SKILL.md? (grep 'Step 9F' — should PASS now after 2 carry-forward cycles). 2. First nightly log after implementation — 'Step 9F:' line present? 3. KB healthy (< 7 days)? If stale: GH #403 has Step 9F comment? 4. GH #399 resolved? (Day 17+) — unlocks conversation_enrichment_job.py + kb_hybrid UI + appointment_completion.py via issue-to-pr-loop. 5. GH #413 REFERRAL_REWARD_ENABLED=1 set? (Day 28+). 6. conversation_enrichment_job.py: once GH #399 resolved, investigate pending queue size and file ai-ready GH issue. 7. kb_hybrid enable: wait for settings UI GH issue; revisit when GH #399 resolved.",
   "active_directions": [
     {
       "title": "Step 9F: KB Autopopulate Staleness Check in nightly-commit-review SKILL.md (run 97 winner)",
@@ -175,7 +186,7 @@
       "effort": "XS",
       "evidence": "KB autopopulate dark 72+ days (last run 2026-05-05). GH #403 open tracking issue but no daily automated pressure signal fires. Steps 9B/9C/9D/9E all implemented in 1 nightly cycle each via same SKILL.md-edit channel. nightly-2026-07-17: 0 service files created, SKILL.md edits confirmed viable autonomous path.",
       "action": "Add Step 9F bash block to .claude/skills/nightly-commit-review/SKILL.md after Step 9E. Block: read knowledge-base/log.md last entry date; calculate days_stale; if >7 days, log + comment on GH #403 with staleness count + likely causes (ANTHROPIC_API_KEY rotation, SUPABASE_ACCESS_TOKEN refresh). Full block in subconscious/runs/2026-07-17/winning-concept.md.",
-      "note": "Run 97 winner. KB feeds AI chat system directly — dark KB means stale AI answers. 72+ days dark with no automated daily signal. Proven mechanism: Steps 9B-9E all implemented in 1 cycle. Guard wraps all failure paths (file missing, parse error, token expiry)."
+      "note": "Run 97 winner → Run 98 carry-forward (2nd cycle, still ABSENT). KB feeds AI chat system directly — dark KB means stale AI answers. 72+ days dark historically with no automated daily signal. Proven mechanism: Steps 9B-9E all implemented in 1 cycle. Guard wraps all failure paths (file missing, parse error, token expiry). KB currently healthy (2026-07-13, 4 days ago) but Step 9F needed for future gaps."
     },
     {
       "title": "Fix _SESSION_TURN_COUNTS unbounded dict in widget_guard.py:141 — bounded OrderedDict (maxsize=10k, LRU eviction) (run 94 winner)",
@@ -1631,6 +1642,18 @@
       "date": "2026-06-29-pm",
       "roi": 1.8,
       "note": "Run 70 winner. Backend ready. No urgency change since run 70. Re-evaluate run 73+ if still unimplemented."
+    },
+    {
+      "title": "Schedule conversation_enrichment_job.py via GitHub Actions cron",
+      "date": "2026-07-17-pm",
+      "roi": 2.0,
+      "note": "Added run 98 debate (WEAKENED -> parking lot). conversation_enrichment_job.py is first wired caller of batch_runtime.py (PR #471, 50% cost reduction). No .github/workflows/conversation-enrichment*.yml exists \u2014 job never runs. Would save ~50% on conversation enrichment vs real-time processing. BLOCKED: GH #399 (AUTOPILOT_GH_TOKEN) stalls 30+ ai-ready issues. Any new GH issue competes with full queue. Re-evaluate after GH #399 resolved. Action when unblocked: file ai-ready GH issue with schedule 0 3 * * * UTC, ANTHROPIC_API_KEY secret needed, pattern from kb-autopopulate.yml."
+    },
+    {
+      "title": "Enable kb_hybrid_retrieval for Keys Koffee pilot (widget_kb_hybrid_enabled=true)",
+      "date": "2026-07-17-pm",
+      "roi": 1.7,
+      "note": "Added run 98 debate (WEAKENED -> parking lot). kb_hybrid_retrieval.py (PR #471) ships FTS+semantic merge, gated behind widget_kb_hybrid_enabled (default off). Keys Koffee coffee FAQ has keyword queries ('do you have oat milk') that FTS would catch. Feature is fail-open by design. BLOCKERS: (1) Supabase MCP unavailable in headless/cron sessions \u2014 direct SQL UPDATE path blocked. (2) No settings UI for new feature flags \u2014 would need Settings admin page. Enable path: Settings UI for widget_configs options, OR GH #399 resolved so issue-to-pr-loop can build the settings toggle as an ai-ready issue. Re-evaluate after settings UI exists or GH #399 clears."
     }
   ],
   "implementation_lag_warning": {

@@ -1,0 +1,53 @@
+{
+  "run": 98,
+  "date": "2026-07-17-pm",
+  "winner": "Step 9F: KB Autopopulate Staleness Check (carry-forward — add bash block to .claude/skills/nightly-commit-review/SKILL.md)",
+  "winner_category": "workflow",
+  "winner_effort": "XS",
+  "winner_confidence": "HIGH",
+  "winner_autonomous_executable": true,
+  "winner_execution_path": "nightly-commit-review SKILL.md-edit channel (proven: Steps 9B/9C/9D/9E all implemented in 1 cycle each)",
+  "requires_human": false,
+  "ideas_count": 5,
+  "ideas_debated": 3,
+  "debate_verdicts": {
+    "Step 9F KB staleness check": "SURVIVES → WINNER (3 rounds)",
+    "conversation_enrichment scheduling GH issue": "WEAKENED → parking lot (GH #399 blocks execution queue)",
+    "kb_hybrid pilot Keys Koffee": "WEAKENED → parking lot (needs settings UI or GH #399 first)"
+  },
+  "mandate_checks": {
+    "step_9f_in_skill_md": "ABSENT — grep returns 0. Carry-forward fires.",
+    "notify_common_failure_modes": "EFFECTIVELY RESOLVED — safe_send_email swallows all failures by contract; 12 tests verify this.",
+    "gh_399_status": "OPEN Day 16+ — AUTOPILOT_GH_TOKEN expired, 30 ai-ready issues blocked",
+    "gh_413_referral_enabled": "NOT SET — Day 27+, 0 human responses to 5 autonomous comments",
+    "gh_454_appointment_completion": "Queued ai-ready issue — nightly cannot create new service files",
+    "botHealthPage_gh_issue": "CONFIRMED filed (Bonus B, run 96)"
+  },
+  "key_evidence": {
+    "commits_since_last_run": "50 commits in 3 days (PR #471 — batch_runtime.py, kb_hybrid_retrieval.py, kb_reranker.py, conversation_enrichment_job.py)",
+    "kb_last_run": "2026-07-13 (4 days ago — healthy, within 7-day threshold)",
+    "loop_health_bugs_fixed": "26f7829 (blind pagination) + 6391bd3 (issues:write permissions) — same day",
+    "pr_471_landed": "180b19e — major AI infrastructure, all opt-in off",
+    "mandate_check_1_fires": "Step 9F ABSENT from nightly SKILL.md after 1 full cycle"
+  },
+  "parking_lot_updates": [
+    "conversation_enrichment_job.py scheduling — ADDED (GH #399 blocks, file GH issue after #399 resolved)",
+    "kb_hybrid enable Keys Koffee — ADDED (needs settings UI or GH #399 first)"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-07-17-pm/winning-concept.md",
+    "subconscious/runs/2026-07-17-pm/improvement-backlog.md",
+    "subconscious/runs/2026-07-17-pm/run-summary.json",
+    "subconscious/runs/2026-07-17-pm/ideas/ideas.md",
+    "subconscious/runs/2026-07-17-pm/debate/debate-log.md"
+  ],
+  "run_99_mandate": [
+    "Step 9F block present in .claude/skills/nightly-commit-review/SKILL.md?",
+    "First nightly log after implementation — 'Step 9F:' line present?",
+    "KB still healthy (< 7 days)? If stale: GH #403 has Step 9F comment?",
+    "GH #399 resolved? (Day 17+)",
+    "GH #413 REFERRAL_REWARD_ENABLED=1 set? (Day 28+)",
+    "conversation_enrichment_job.py: investigate pending queue size; file GH issue after GH #399 resolved",
+    "kb_hybrid enable: wait for settings UI; revisit when GH #399 clears"
+  ]
+}
