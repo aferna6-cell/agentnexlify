@@ -18692,3 +18692,25 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** backend/tests/test_loop_health_scan.py,scripts/loop_health_scan.py
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(digest): grant issues:write so digest jobs can actually file issues (#469)
+
+First live loop-health run proved detection works (BLIND alert written)
+but the github-script step 403'd: the workflow never declared
+permissions, so GITHUB_TOKEN was read-only (Metadata: read). Every
+issue-filing step in this workflow had the same latent failure - it only
+surfaced now because loop-health is the first job to alert since the
+token tightened. Adds the standard workflow-level block used by
+public-uptime-watch.yml and schema-sync-check.yml.
+
+
+Claude-Session: https://claude.ai/code/session_01Ya7tfAw1FiVqejtNXU8BnV
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-07-17
+**Commit:** 6391bd3
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/daily-business-digest.yml
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
