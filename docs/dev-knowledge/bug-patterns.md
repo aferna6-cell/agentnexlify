@@ -18612,3 +18612,20 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** backend/services/agent_os_bridge.py,backend/tests/test_agent_os_bridge.py,frontend/src/pages/settings/MessagingSettingsCards.jsx,frontend/src/pages/settings/MessagingSettingsCards.test.jsx
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(ci): sanitize rest_fetch error to prevent key leak in traceback
+
+urllib traceback for a failed urlopen() can include request context.
+Re-raise as a plain RuntimeError with 'from None' to suppress the chain
+and ensure the Authorization header (SUPABASE_SERVICE_KEY) is never
+visible in GitHub Actions job logs on network failure.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01EUKAJKYuTJGyrDRnr5fu7W
+**Date:** 2026-07-17
+**Commit:** a0a3457
+**Author:** Claude
+**Files Changed:** scripts/loop_health_scan.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
