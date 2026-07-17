@@ -16,6 +16,15 @@ on:
     - cron: "0 8 * * *"   # 8 AM UTC daily
   workflow_dispatch: {}
 
+# Every job files deduped tracking issues via github-script. The default
+# GITHUB_TOKEN here is read-only (Metadata: read), so without this block
+# each "create issue" step 403s with "Resource not accessible by
+# integration" — caught live on the 2026-07-17 loop-health run. Same
+# pattern as public-uptime-watch.yml and schema-sync-check.yml.
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   lead-funnel:
     name: Lead Funnel Digest
