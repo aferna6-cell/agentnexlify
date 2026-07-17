@@ -18657,3 +18657,38 @@ Claude-Session: https://claude.ai/code/session_0121SZYfkwJuDZ7YyLjej485
 **Author:** Claude
 **Files Changed:** subconscious/runs/2026-07-17/debate/debate-log.md,subconscious/runs/2026-07-17/ideas/ideas.md,subconscious/runs/2026-07-17/improvement-backlog.md,subconscious/runs/2026-07-17/run-summary.json,subconscious/runs/2026-07-17/winning-concept.md,subconscious/state/governance.json,subconscious/state/memory.jsonl
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(digest): loop-health scan pages when blind instead of looking healthy (#468)
+
+First live run exposed a real outage: every daily-digest job reads prod
+with the Actions SUPABASE_SERVICE_KEY secret, and that secret holds the
+ANON key - RLS row-filtering returns empty silently, so since the RLS
+lockdown the jobs have either crashed (churn/cost/lead-funnel) or
+reported quiet healthy-looking runs over zero rows. The loop-health scan
+printed 'drafts={} suggestions={} / no alerts' against a prod that has
+both. Verified by reproducing the exact empty responses with the anon
+key against os_backlog_requests / os_agent_runs / tenants / error_events.
+
+Guard: a real deployment always has tenants, so zero tenant rows now
+short-circuits every other rule and emits a single BLIND alert telling
+the operator to rotate the secret to the service_role key. Silence pages.
+
+Tests: blind state fires exactly one alert naming service_role; blind
+guard preempts rot rules even over rotten-looking rows; the
+suggestion-rot fixture gains a tenant row because a sighted scan always
+sees tenants (old fixture predates the guard - contract unchanged).
+
+Operator action still required: update the GitHub Actions secret
+SUPABASE_SERVICE_KEY to the service_role key (repo Settings -> Secrets).
+
+
+Claude-Session: https://claude.ai/code/session_01Ya7tfAw1FiVqejtNXU8BnV
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-07-17
+**Commit:** 26f7829
+**Author:** aferna6-cell
+**Files Changed:** backend/tests/test_loop_health_scan.py,scripts/loop_health_scan.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
