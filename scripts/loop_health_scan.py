@@ -58,8 +58,15 @@ def rest_fetch(base_url, key, table, params):
         base_url.rstrip("/") + "/rest/v1/" + table + "?" + query,
         headers={"apikey": key, "Authorization": "Bearer " + key},
     )
-    with urllib.request.urlopen(req) as response:
-        return json.loads(response.read())
+    try:
+        with urllib.request.urlopen(req) as response:
+            return json.loads(response.read())
+    except Exception as exc:
+        # Re-raise without chaining to avoid leaking request headers
+        # (Authorization header with service key) in the traceback.
+        raise RuntimeError(
+            f"Supabase REST fetch failed for {table}: {type(exc).__name__}"
+        ) from None
 
 
 def collect_vitals(fetch):
@@ -101,9 +108,7 @@ def evaluate_alerts(vitals, now):
         if plan == _FREE_PLAN or tenant.get("plan_status") != "active":
             # The sweep deliberately skips lapsed/free tenants.
             continue
-        rotting.append(
-            (tenant.get("business_name") or row.get("client_id"), ts)
-        )
+        rotting.append((tenant.get("business_name") or row.get("client_id"), ts))
     if rotting:
         oldest = min(ts for _, ts in rotting)
         age = (now - oldest).days
@@ -143,8 +148,10 @@ def summarize(vitals):
         status = row.get("status") or "unknown"
         suggestion_counts[status] = suggestion_counts.get(status, 0) + 1
     return (
-        "loop_health drafts=" + json.dumps(draft_counts, sort_keys=True)
-        + " suggestions=" + json.dumps(suggestion_counts, sort_keys=True)
+        "loop_health drafts="
+        + json.dumps(draft_counts, sort_keys=True)
+        + " suggestions="
+        + json.dumps(suggestion_counts, sort_keys=True)
     )
 
 
@@ -178,7 +185,9 @@ def main():
         )
         return 0
 
-    vitals = collect_vitals(lambda table, params: rest_fetch(base_url, key, table, params))
+    vitals = collect_vitals(
+        lambda table, params: rest_fetch(base_url, key, table, params)
+    )
     now = datetime.now(timezone.utc)
     print(summarize(vitals))
 
