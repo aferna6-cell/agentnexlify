@@ -132,7 +132,7 @@ jobs:
             const digest = fs.existsSync('lead-funnel-digest.md')
               ? fs.readFileSync('lead-funnel-digest.md', 'utf8') : '';
             for (const label of ['automated', 'lead-funnel']) {
-              try { await github.rest.issues.createLabel({ owner: context.repo.owner, repo: context.repo.repo, name: label, color: 'ededed' }); } catch {}
+              try { await github.rest.issues.createLabel({ owner: context.repo.owner, repo: context.repo.repo, name: label, color: 'ededed' }); } catch (e) { if (e.status !== 422) console.warn('createLabel failed:', e.status, e.message); }
             }
             await github.rest.issues.create({
               owner: context.repo.owner,
@@ -245,7 +245,7 @@ jobs:
             const report = fs.existsSync('churn-report.md')
               ? fs.readFileSync('churn-report.md', 'utf8') : '';
             for (const label of ['automated', 'churn-risk']) {
-              try { await github.rest.issues.createLabel({ owner: context.repo.owner, repo: context.repo.repo, name: label, color: 'e11d48' }); } catch {}
+              try { await github.rest.issues.createLabel({ owner: context.repo.owner, repo: context.repo.repo, name: label, color: 'e11d48' }); } catch (e) { if (e.status !== 422) console.warn('createLabel failed:', e.status, e.message); }
             }
             await github.rest.issues.create({
               owner: context.repo.owner,
@@ -368,7 +368,7 @@ jobs:
             const report = fs.existsSync('cost-report.md')
               ? fs.readFileSync('cost-report.md', 'utf8') : '';
             for (const label of ['automated', 'cost-alert']) {
-              try { await github.rest.issues.createLabel({ owner: context.repo.owner, repo: context.repo.repo, name: label, color: 'f59e0b' }); } catch {}
+              try { await github.rest.issues.createLabel({ owner: context.repo.owner, repo: context.repo.repo, name: label, color: 'f59e0b' }); } catch (e) { if (e.status !== 422) console.warn('createLabel failed:', e.status, e.message); }
             }
             await github.rest.issues.create({
               owner: context.repo.owner,
@@ -453,7 +453,7 @@ jobs:
             const body = fs.readFileSync('prod-error-alert.md', 'utf8').trim();
             if (!body) return;
             for (const label of ['automated', 'prod-errors']) {
-              try { await github.rest.issues.createLabel({ owner: context.repo.owner, repo: context.repo.repo, name: label, color: 'b91c1c' }); } catch {}
+              try { await github.rest.issues.createLabel({ owner: context.repo.owner, repo: context.repo.repo, name: label, color: 'b91c1c' }); } catch (e) { if (e.status !== 422) console.warn('createLabel failed:', e.status, e.message); }
             }
             // One open tracking issue per day; skip if today's already exists.
             const today = new Date().toISOString().split('T')[0];
@@ -498,7 +498,7 @@ jobs:
             const body = fs.readFileSync('loop-health-alert.md', 'utf8').trim();
             if (!body) return;
             for (const label of ['automated', 'loop-health']) {
-              try { await github.rest.issues.createLabel({ owner: context.repo.owner, repo: context.repo.repo, name: label, color: 'b45309' }); } catch {}
+              try { await github.rest.issues.createLabel({ owner: context.repo.owner, repo: context.repo.repo, name: label, color: 'b45309' }); } catch (e) { if (e.status !== 422) console.warn('createLabel failed:', e.status, e.message); }
             }
             // One open tracking issue per day; skip if today's already exists.
             const today = new Date().toISOString().split('T')[0];
@@ -601,7 +601,7 @@ jobs:
             const body = fs.readFileSync('booking-readiness-alert.md', 'utf8').trim();
             if (!body) return;
             for (const label of ['automated', 'booking-readiness']) {
-              try { await github.rest.issues.createLabel({ owner: context.repo.owner, repo: context.repo.repo, name: label, color: '7c3aed' }); } catch {}
+              try { await github.rest.issues.createLabel({ owner: context.repo.owner, repo: context.repo.repo, name: label, color: '7c3aed' }); } catch (e) { if (e.status !== 422) console.warn('createLabel failed:', e.status, e.message); }
             }
             const today = new Date().toISOString().split('T')[0];
             const title = 'Booking readiness — ' + today;
