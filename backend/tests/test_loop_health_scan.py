@@ -110,13 +110,47 @@ def test_suggestion_rot_counts_only_old_pending_cards():
             {"status": "superseded", "created_at": _iso_days_ago(90)},
             {"status": "accepted", "created_at": _iso_days_ago(90)},
         ],
-        "tenants": [],
+        # A sighted scan always sees tenants; without one the blind-scan
+        # guard would (correctly) preempt the suggestion-rot rule.
+        "tenants": [_tenant("t1")],
     }
     alerts = evaluate_alerts(vitals, _NOW)
     assert len(alerts) == 1
     assert "rotting undecided" in alerts[0]
     assert "2 pending card(s)" in alerts[0]
     assert "oldest 35d" in alerts[0]
+
+
+def test_blind_scan_pages_instead_of_looking_healthy():
+    """Zero tenants = the key cannot read prod (RLS silent-empty). The
+    scan must alert rather than report a quiet, healthy-looking run —
+    caught live on 2026-07-17 when the Actions secret held the anon key."""
+    vitals = {"drafts": [], "suggestions": [], "tenants": []}
+    alerts = evaluate_alerts(vitals, _NOW)
+    assert len(alerts) == 1
+    assert "BLIND" in alerts[0]
+    assert "service_role" in alerts[0]
+
+
+def test_blind_scan_guard_short_circuits_other_rules():
+    """With no tenant rows, draft/suggestion data is untrustworthy — only
+    the blind alert fires even when rows look rotten."""
+    vitals = {
+        "drafts": [
+            {
+                "client_id": "t1",
+                "deliverable_status": "pending_approval",
+                "updated_at": _iso_days_ago(99),
+            }
+        ],
+        "suggestions": [
+            {"status": "pending", "created_at": _iso_days_ago(99)},
+        ],
+        "tenants": [],
+    }
+    alerts = evaluate_alerts(vitals, _NOW)
+    assert len(alerts) == 1
+    assert "BLIND" in alerts[0]
 
 
 def test_quiet_state_produces_no_alerts():

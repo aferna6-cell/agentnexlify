@@ -93,6 +93,23 @@ def collect_vitals(fetch):
 def evaluate_alerts(vitals, now):
     """Pure decision logic: vitals dict -> list of alert strings."""
     alerts = []
+
+    # Blind-scan guard. A real deployment always has tenants; zero rows
+    # means the key can't actually read prod (RLS row-filtering returns
+    # empty silently — no error). First live run caught exactly this: the
+    # Actions SUPABASE_SERVICE_KEY held the anon key, every digest job had
+    # been reading nothing since the RLS lockdown, and the log looked
+    # healthy. Silence must page, so this short-circuits the other rules
+    # (their empty inputs would be meaningless).
+    if not vitals.get("tenants"):
+        return [
+            "Loop-health scan is BLIND: the tenants query returned zero "
+            "rows, which means the SUPABASE_SERVICE_KEY secret cannot read "
+            "prod (RLS row-filtering — this is what the anon key looks "
+            "like). Rotate the GitHub Actions secret to the service_role "
+            "key; every daily-digest job shares it."
+        ]
+
     tenants = {t.get("id"): t for t in vitals.get("tenants", [])}
 
     sweep_cutoff = now - timedelta(days=SWEEP_ROT_DAYS)
