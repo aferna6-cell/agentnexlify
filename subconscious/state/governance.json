@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-07-16-pm",
-  "total_runs": 96,
+  "last_run": "2026-07-17",
+  "total_runs": 97,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -145,7 +145,38 @@
     "last_run": "2026-07-16 -> 2026-07-16-pm"
   },
   "run_97_mandate": "1. appointment_completion.py committed by nightly? Check nightly-2026-07-17 log. 2. Regression tests pass? (3 test cases: past-confirmed completed, grace-period skip, idempotency). 3. First real booking visible in AdminFunnelPage or Supabase? (booking URL fix + auto-complete now both in place if nightly executed). 4. GH #399 resolved? (Day 15+ — single Railway AUTOPILOT_GH_TOKEN rotation). 5. GH #413 REFERRAL_REWARD_ENABLED=1 set? (Day 26+). 6. Parking lot: Step 9F (KB staleness check in nightly SKILL.md) as run 97 candidate. BotHealthPage.jsx GH issue confirmed filed?",
+  "run_97_mandate_executed": "EXECUTED 2026-07-17 (run 97). All 6 items checked: (1) appointment_completion.py ABSENT — nightly-2026-07-17: 0 fixes applied, 0 new service files. Root cause confirmed: nightly is a bug-fix system, not a feature-implement system. Do not re-propose as subconscious winner until GH #399 resolved. GH #454 (ai-ready) is the correct queue. (2) Regression tests ABSENT — test_appointment_completion.py not created. (3) First real booking UNKNOWN — nightly log silent on bookings. (4) GH #399 OPEN Day 15+ — AUTOPILOT_GH_TOKEN expired, 30 ai-ready issues blocked. (5) GH #413 NOT SET — Day 26+, 0 human responses to 5 autonomous comments. (6) BotHealthPage.jsx GH issue CONFIRMED filed (Bonus B, run 96). Winner: Step 9F KB autopopulate staleness check in nightly SKILL.md.",
+  "run_97_governance_corrections": {
+    "mandate_check_1_appointment_completion": "ABSENT — nightly-2026-07-17: 0 fixes applied. Root cause: nightly-commit-review runs auto_fix_commit() for existing-file bug patches only. Cannot create new service files. 3 consecutive failures (nightly-2026-07-16, nightly-2026-07-16-pm context, nightly-2026-07-17).",
+    "mandate_check_2_regression_tests": "ABSENT — test_appointment_completion.py not created by nightly.",
+    "mandate_check_3_first_booking": "UNKNOWN — nightly log does not report booking funnel state.",
+    "mandate_check_4_gh399": "OPEN Day 15+ — 30 ai-ready issues stalled. AUTOPILOT_GH_TOKEN expired.",
+    "mandate_check_5_gh413": "NOT SET — Day 26+, 0 human responses to 5 autonomous comments.",
+    "mandate_check_6_botHealthPage_filed": "CONFIRMED — filed as Bonus B in run 96.",
+    "new_evidence": "nightly-2026-07-17: notify_common.py extracted shared notification skeleton (IdempotencyGuard, fetch_owner_alert_config, safe_send_email/sms, dispatch_owner_alert) from 3 copies — 12 new tests. loop_health_scan.py limit=1000 scale concern noted (not urgent at 3 tenants). Security fix a0a3457 (key leak in traceback) already landed.",
+    "mechanism_insight": "appointment_completion.py CANNOT be implemented by subconscious autonomous channel (SKILL.md edits + bug patches only). GH #454 (ai-ready) queues it for issue-to-pr-loop when GH #399 resolved. Do NOT re-propose as subconscious winner until GH #399 unblocked.",
+    "kb_autopopulate_stale_days": "72+",
+    "ai_ready_issues_queued": 30,
+    "total_runs": "96 -> 97",
+    "last_run": "2026-07-16-pm -> 2026-07-17"
+  },
+  "run_98_mandate": "1. Step 9F block present in .claude/skills/nightly-commit-review/SKILL.md? (grep 'Step 9F'). 2. First nightly after implementation — 'Step 9F:' line in nightly log? 3. KB still stale: GH #403 has new Step 9F comment? 4. GH #454 (appointment_completion.py) has ai-ready label + full implementation sketch? 5. GH #399 resolved? (Day 16+). 6. GH #413 REFERRAL_REWARD_ENABLED=1 set? (Day 27+). 7. notify_common.py: 12 new tests — do they cover dispatch_owner_alert failure modes? (read test file before recommending more tests).",
   "active_directions": [
+    {
+      "title": "Step 9F: KB Autopopulate Staleness Check in nightly-commit-review SKILL.md (run 97 winner)",
+      "date": "2026-07-17",
+      "confidence": "HIGH",
+      "status": "pending_autonomous",
+      "autonomous_executable": true,
+      "requires_human": false,
+      "category": "workflow",
+      "moratorium_override": false,
+      "source_run": 97,
+      "effort": "XS",
+      "evidence": "KB autopopulate dark 72+ days (last run 2026-05-05). GH #403 open tracking issue but no daily automated pressure signal fires. Steps 9B/9C/9D/9E all implemented in 1 nightly cycle each via same SKILL.md-edit channel. nightly-2026-07-17: 0 service files created, SKILL.md edits confirmed viable autonomous path.",
+      "action": "Add Step 9F bash block to .claude/skills/nightly-commit-review/SKILL.md after Step 9E. Block: read knowledge-base/log.md last entry date; calculate days_stale; if >7 days, log + comment on GH #403 with staleness count + likely causes (ANTHROPIC_API_KEY rotation, SUPABASE_ACCESS_TOKEN refresh). Full block in subconscious/runs/2026-07-17/winning-concept.md.",
+      "note": "Run 97 winner. KB feeds AI chat system directly — dark KB means stale AI answers. 72+ days dark with no automated daily signal. Proven mechanism: Steps 9B-9E all implemented in 1 cycle. Guard wraps all failure paths (file missing, parse error, token expiry)."
+    },
     {
       "title": "Fix _SESSION_TURN_COUNTS unbounded dict in widget_guard.py:141 — bounded OrderedDict (maxsize=10k, LRU eviction) (run 94 winner)",
       "date": "2026-07-15",

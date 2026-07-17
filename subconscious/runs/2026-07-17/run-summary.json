@@ -1,0 +1,41 @@
+{
+  "run": 97,
+  "date": "2026-07-17",
+  "winner": "Step 9F: KB Autopopulate Staleness Check in nightly-commit-review SKILL.md",
+  "winner_category": "workflow",
+  "winner_confidence": "HIGH",
+  "autonomous_executable": true,
+  "requires_human": false,
+  "effort": "XS",
+  "mechanism": "SKILL.md block addition — proven nightly channel (Steps 9B/9C/9D/9E all implemented in 1 cycle each)",
+  "mandate_results": {
+    "appointment_completion_committed": false,
+    "appointment_completion_root_cause": "nightly is bug-fix channel only — cannot create new service files. 3 consecutive nightly failures confirm mechanism mismatch.",
+    "regression_tests_pass": false,
+    "first_real_booking": "unknown",
+    "gh_399_resolved": false,
+    "gh_399_days_open": "15+",
+    "gh_413_referral_enabled": false,
+    "gh_413_days_open": "26+",
+    "botHealthPage_gh_issue_filed": true
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "winner_debate_rounds": 3,
+  "winner_survived_all_rounds": true,
+  "runners_up": [
+    "notify_common.py failure-mode tests (parking lot — verify 12 new tests first)",
+    "appointment_completion.py delivery mechanism (parking lot — GH #454 already filed ai-ready)"
+  ],
+  "new_mechanism_insight": "appointment_completion.py requires human interactive session OR issue-to-pr-loop (GH #399). Do not re-recommend as subconscious winner until one unblocked.",
+  "key_evidence": [
+    "nightly-commit-review-2026-07-17.md: 0 fixes applied, 0 new service files (confirms mechanism mismatch for appointment_completion.py)",
+    "notify_common.py: new SPOF for all owner notifications, 12 tests added, 89 existing tests pass",
+    "loop_health_scan.py: limit=1000 scale concern noted by nightly (not urgent, 3 tenants)",
+    "KB autopopulate: 72+ days dark, GH #403 open, no daily automated pressure signal",
+    "GH #399: Day 15+, 30 ai-ready issues blocked (AUTOPILOT_GH_TOKEN expired)",
+    "GH #413: Day 26+, 0 human responses to 5 autonomous comments"
+  ],
+  "bonus_actions": [],
+  "commit": "pending"
+}
