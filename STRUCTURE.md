@@ -41,7 +41,7 @@ Four root folders, four roles. Agents stop guessing what files mean.
 /plans/onboarding-wizard_plan.md           ← phased rollout
 /plans/dashboard-rebuild_plan.md           ← migration plan
 
-/specs/onboarding-wizard_spec.md           ← what it MUST do
+/specs/onboarding-v2_spec.md               ← what it MUST do
 /specs/full-dashboard-buildout_spec.md     ← acceptance criteria
 ```
 
@@ -68,4 +68,4 @@ Most repos dump .md files into `/docs` or root. Agents (Claude Code, Codex, Curs
 This convention separates them. Agents stop guessing.
 
 ## Migration log
-- 2026-04-15 — Created `/audits`, `/specs`, `/plans` at root. Moved `planning/specs/` → `/specs/`. Kept `planning/` for workflow state (decisions/, architecture/, CONTEXT.md).
+- 2026-04-15 — Created `/audits`, `/specs`, `/plans` at root. Moved `planning/specs/` → `/specs/`. Kept `planning/` for workflow state (decisions/, architecture/, CONTEXT.md). 2026-07-18 — finished that move: deleted the stale `planning/specs/` stragglers, relocated `lead-parser-replacement_spec.md` to `/specs/`.
