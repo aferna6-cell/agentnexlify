@@ -46,6 +46,8 @@ ANALYTICS_ROUTES = [
     "/api/v1/analytics/{tid}/recovery-stats",
     # Added post-split: Front Desk Health dashboard card endpoint.
     "/api/v1/analytics/{tid}/front-desk-health",
+    # Added 2026-07 (GH #453): lead attribution breakdown for AttributionPage.
+    "/api/v1/analytics/{tid}/attribution",
 ]
 
 TENANT_ID = "00000000-0000-0000-0000-000000000001"

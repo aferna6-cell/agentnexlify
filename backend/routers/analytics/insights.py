@@ -214,6 +214,77 @@ async def lead_source_breakdown(
     return response
 
 
+@router.get("/{tenant_id}/attribution")
+async def attribution_breakdown(
+    tenant_id: str,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Aggregate leads.attribution (migration 172) by source/medium/campaign.
+
+    GH #453: attribution jsonb was captured on every widget lead but never
+    surfaced. Leads without attribution bucket as "(none)" so the tenant can
+    see how much of their funnel is still unattributed.
+    """
+    verify_tenant(claims, tenant_id)
+
+    cache_key = f"attribution:{tenant_id}"
+    cached = _cache.get(cache_key)
+    if cached and time.time() - cached[0] < _CACHE_TTL:
+        return cached[1]
+
+    db = get_service_supabase()
+    try:
+        result = (
+            tenant_table(db, "leads", tenant_id)
+            .select("attribution")
+            .eq("client_id", tenant_id)
+            .limit(5000)
+            .execute()
+        )
+    except Exception:
+        logger.warning(
+            "Failed to fetch lead attribution for tenant %s", tenant_id, exc_info=True
+        )
+        return {
+            "by_source": [],
+            "by_medium": [],
+            "by_campaign": [],
+            "total": 0,
+            "attributed": 0,
+        }
+
+    by_source: dict[str, int] = defaultdict(int)
+    by_medium: dict[str, int] = defaultdict(int)
+    by_campaign: dict[str, int] = defaultdict(int)
+    attributed = 0
+    rows = result.data or []
+    for lead in rows:
+        attr = lead.get("attribution") or {}
+        if attr:
+            attributed += 1
+        # utm_source wins over the widget's page-level source when both exist:
+        # it names the paid/campaign channel, which is what this report is for.
+        by_source[attr.get("utm_source") or attr.get("source") or "(none)"] += 1
+        by_medium[attr.get("utm_medium") or "(none)"] += 1
+        by_campaign[attr.get("utm_campaign") or "(none)"] += 1
+
+    def _chart(counts: dict[str, int]) -> list[dict]:
+        return [
+            {"name": name, "count": count}
+            for name, count in sorted(counts.items(), key=lambda x: -x[1])
+        ]
+
+    response = {
+        "by_source": _chart(by_source),
+        "by_medium": _chart(by_medium),
+        "by_campaign": _chart(by_campaign),
+        "total": len(rows),
+        "attributed": attributed,
+    }
+    _cache[cache_key] = (time.time(), response)
+    return response
+
+
 @router.get("/{tenant_id}/kpi-deltas")
 async def kpi_deltas(
     tenant_id: str,

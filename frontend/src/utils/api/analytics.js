@@ -39,6 +39,10 @@ export function fetchLeadSources(tenantId, token) {
   return request(`/api/v1/analytics/${tenantId}/lead-sources`, { token });
 }
 
+export function fetchAttribution(tenantId, token) {
+  return request(`/api/v1/analytics/${tenantId}/attribution`, { token });
+}
+
 export function fetchMissedCallAnalytics(tenantId, token, period = "30d") {
   return request(
     `/api/v1/analytics/${tenantId}/missed-calls?period=${period}`,
