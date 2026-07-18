@@ -41,12 +41,16 @@ REFERRAL_REWARD_CURRENCY = "usd"
 
 def reward_enabled() -> bool:
     """Kill-switch for the reward grant. Default OFF: granting real Stripe
-    credits is an owner decision — set REFERRAL_REWARD_ENABLED=1 in Railway to
-    launch the program. Tracking/attribution stays on either way; only the
-    money grant is gated."""
-    return os.environ.get("REFERRAL_REWARD_ENABLED", "0").strip().lower() in (
+    credits is an owner decision — a platform_settings row for
+    'referral_reward_enabled' (migration 175) or REFERRAL_REWARD_ENABLED=1
+    in Railway launches the program. Tracking/attribution stays on either
+    way; only the money grant is gated."""
+    from backend.services.platform_flags import flag_enabled
+
+    env_on = os.environ.get("REFERRAL_REWARD_ENABLED", "0").strip().lower() in (
         "1", "true", "yes", "on",
     )
+    return flag_enabled("referral_reward_enabled", env_default=env_on)
 
 
 def _resolve_referrer(db, referred_tenant_id):

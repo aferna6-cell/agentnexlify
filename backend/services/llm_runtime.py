@@ -59,7 +59,17 @@ class ClaudeCallResult:
 
 
 def resolve_string_setting(name: str, fallback: str) -> str:
-    """Read a settings value safely even when tests patch settings with MagicMock."""
+    """Read a settings value safely even when tests patch settings with MagicMock.
+
+    A platform_settings DB row (migration 175) overrides the env/config
+    value so operational flags can flip without a Railway deploy. The
+    override layer is a no-op under TESTING and fail-open on DB errors.
+    """
+    from backend.services.platform_flags import flag_value
+
+    override = flag_value(name)
+    if isinstance(override, str) and override.strip():
+        return override.strip()
     value = getattr(settings, name, None)
     if isinstance(value, str) and value.strip():
         return value.strip()
@@ -67,7 +77,21 @@ def resolve_string_setting(name: str, fallback: str) -> str:
 
 
 def resolve_int_setting(name: str, fallback: int, minimum: int = 1) -> int:
-    """Read an integer setting safely even when tests patch settings with MagicMock."""
+    """Read an integer setting safely even when tests patch settings with MagicMock.
+
+    A parseable non-negative platform_settings DB override wins outright -
+    including "0", so a DB row can act as a kill switch over an env "1".
+    """
+    from backend.services.platform_flags import flag_value
+
+    override = flag_value(name)
+    if override is not None:
+        try:
+            parsed = int(override.strip())
+            if parsed >= 0:
+                return parsed
+        except (TypeError, ValueError):
+            pass
     value = getattr(settings, name, None)
     if isinstance(value, bool):
         return fallback
