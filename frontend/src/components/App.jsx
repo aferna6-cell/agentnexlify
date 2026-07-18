@@ -106,6 +106,8 @@ const AdminTenantHealthPage = lazy(
   () => import("../pages/AdminTenantHealthPage"),
 );
 const AdminReferralPage = lazy(() => import("../pages/AdminReferralPage"));
+const BotHealthPage = lazy(() => import("../pages/BotHealthPage"));
+const AttributionPage = lazy(() => import("../pages/AttributionPage"));
 const IntegrationsKeysPage = lazy(
   () => import("../pages/Settings/IntegrationsKeysPage"),
 );
@@ -151,6 +153,8 @@ const pages = {
   admin_funnel: AdminFunnelPage,
   admin_tenant_health: AdminTenantHealthPage,
   admin_referral: AdminReferralPage,
+  admin_loop_health: BotHealthPage,
+  attribution: AttributionPage,
   referral: ReferralPage,
   sms_compliance: SmsCompliancePage,
   knowledge: KnowledgeSourcesPage,
@@ -196,6 +200,8 @@ const PAGE_TO_PATH = {
   admin_funnel: "/admin/funnel",
   admin_tenant_health: "/admin/tenant-health",
   admin_referral: "/admin/referral",
+  admin_loop_health: "/admin/loop-health",
+  attribution: "/dashboard/attribution",
   referral: "/dashboard/referral",
   sms_compliance: "/dashboard/sms-compliance",
   knowledge: "/dashboard/knowledge",

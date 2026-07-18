@@ -3,6 +3,7 @@
 from backend.services.automation.scheduled.lead_checks import check_no_response_leads
 from backend.services.automation.scheduled.appointment_jobs import (
     _get_reminder_extras,
+    auto_complete_past_appointments,
     send_appointment_reminders,
     send_rebook_suggestions,
     send_aftercare_instructions,
@@ -28,6 +29,7 @@ from backend.services.automation.scheduled.conversation_insights_job import (
 __all__ = [
     "check_no_response_leads",
     "_get_reminder_extras",
+    "auto_complete_past_appointments",
     "send_appointment_reminders",
     "send_rebook_suggestions",
     "send_aftercare_instructions",

@@ -6,12 +6,19 @@ from datetime import datetime, timedelta, timezone
 
 from backend.models.database import get_service_supabase
 from backend.services.email_sender import send_email
+from backend.services.internal_tenants import is_internal_tenant
+from backend.services.automation.rule_engine import check_appointment_triggers
 from backend.services.sms_rate_limiter import check_sms_rate_limit, increment_sms_count
 from backend.services.twilio_service import send_sms
 from backend.services.automation.templates import _REMINDER_EXTRAS, _REBOOK_INTERVALS, _AFTERCARE_TEMPLATES
 from backend.services.automation.trigger import BATCH_LIMIT
 
 logger = logging.getLogger(__name__)
+
+# Grace after end_time before auto-completing (GH #454): appointments that
+# run long should not be marked done mid-visit, and a no-show the owner is
+# about to cancel gets a window before the "how was your visit?" chain arms.
+AUTO_COMPLETE_GRACE_HOURS = 1
 
 
 def _get_reminder_extras(business_type: str, notes: str) -> list[str]:
@@ -476,3 +483,85 @@ async def send_aftercare_instructions() -> int:
             )
 
     return sent
+
+
+async def auto_complete_past_appointments() -> int:
+    """Flip confirmed appointments past end_time (+grace) to completed.
+
+    GH #454: review requests, rebook prompts, and aftercare automations all
+    gate on status == "completed", but the only path there was a manual
+    dashboard action - so they never fired for public bookings. This job
+    closes that loop on schedule. Idempotent by construction: the select
+    filter only matches confirmed/booked rows, so completed rows can never
+    be re-processed. Internal/demo tenants are skipped with the same
+    denylist the digest metrics use.
+    """
+    db = get_service_supabase()
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=AUTO_COMPLETE_GRACE_HOURS)
+
+    try:
+        result = (
+            db.table("appointments")
+            .select("id, tenant_id, end_time, status")
+            .in_("status", ["confirmed", "booked"])
+            .lt("end_time", cutoff.isoformat())
+            .limit(BATCH_LIMIT)
+            .execute()
+        )
+    except Exception:
+        logger.exception("auto_complete_past_appointments: appointment query failed")
+        return 0
+
+    appts = result.data or []
+    if not appts:
+        return 0
+
+    tenant_ids = sorted({a.get("tenant_id") for a in appts if a.get("tenant_id")})
+    internal_ids: set[str] = set()
+    try:
+        tenants_result = (
+            db.table("tenants")
+            .select("id, business_name, is_demo")
+            .in_("id", tenant_ids)
+            .execute()
+        )
+        for tenant in tenants_result.data or []:
+            if is_internal_tenant(tenant):
+                internal_ids.add(tenant.get("id"))
+    except Exception:
+        # Fail closed on the guard: if we cannot tell who is internal,
+        # complete nothing rather than arm demo-tenant automations.
+        logger.exception("auto_complete_past_appointments: tenant lookup failed")
+        return 0
+
+    completed = 0
+    for appt in appts:
+        appt_id = appt.get("id")
+        if appt.get("tenant_id") in internal_ids:
+            continue
+        try:
+            (
+                db.table("appointments")
+                .update({"status": "completed"})
+                .eq("id", appt_id)
+                .in_("status", ["confirmed", "booked"])
+                .execute()
+            )
+            completed += 1
+        except Exception:
+            logger.exception(
+                "auto_complete_past_appointments: update failed for %s", appt_id
+            )
+            continue
+        try:
+            await check_appointment_triggers(appt_id, completed=True)
+        except Exception:
+            logger.warning(
+                "auto_complete_past_appointments: trigger dispatch failed for %s",
+                appt_id,
+                exc_info=True,
+            )
+
+    if completed:
+        logger.info("auto_complete_past_appointments: completed %d appointment(s)", completed)
+    return completed

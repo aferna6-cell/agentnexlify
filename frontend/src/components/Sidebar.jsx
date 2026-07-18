@@ -49,6 +49,12 @@ const allNavItems = [
     label: "Analytics",
   },
   {
+    key: "attribution",
+    icon: <Icon d="M3 12h4l3-9 4 18 3-9h4" />,
+    label: "Attribution",
+    roles: ["owner", "admin"],
+  },
+  {
     key: "control_center",
     icon: (
       <Icon d="M12 2l3 7h7l-5.5 4.1 2.1 6.9-6.6-4.8-6.6 4.8 2.1-6.9L2 9h7z" />

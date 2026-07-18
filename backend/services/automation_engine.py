@@ -10,7 +10,8 @@ from backend.services.automation.orchestrator import (
     process_pending_steps, execute_step, _generate_ai_email, _advance_execution,
 )
 from backend.services.automation.scheduled_jobs import (
-    _get_reminder_extras, check_no_response_leads, send_appointment_reminders,
+    _get_reminder_extras, auto_complete_past_appointments, check_no_response_leads,
+    send_appointment_reminders,
     send_rebook_suggestions, send_aftercare_instructions, send_pending_review_requests,
     _send_review_followups, send_monthly_reports, send_portal_links, send_csat_surveys,
     check_new_reviews, send_onboarding_emails, send_invoice_payment_reminders,
