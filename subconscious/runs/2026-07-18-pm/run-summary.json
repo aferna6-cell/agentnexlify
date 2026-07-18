@@ -1,0 +1,55 @@
+{
+  "run": 99,
+  "date": "2026-07-18-pm",
+  "ideas_count": 5,
+  "winner": "Step 9F: KB Autopopulate Staleness Check — Direct Implementation (3-miss mechanism failure escalation)",
+  "winner_category": "operational",
+  "winner_effort": "XS",
+  "confidence": "HIGH",
+  "mechanism_change": "channel_switch",
+  "mechanism_reason": "nightly-commit-review SKILL.md edit path only fires in fix-mode (bugs found → commit). 3 consecutive CLEAN nights confirmed mechanism broken for this use case. Subconscious edits SKILL.md directly.",
+  "implementation_this_run": true,
+  "files_changed": [
+    ".claude/skills/nightly-commit-review/SKILL.md",
+    "subconscious/runs/2026-07-18-pm/ideas/*.md",
+    "subconscious/runs/2026-07-18-pm/debate/debate-log.md",
+    "subconscious/runs/2026-07-18-pm/winning-concept.md",
+    "subconscious/runs/2026-07-18-pm/improvement-backlog.md",
+    "subconscious/runs/2026-07-18-pm/run-summary.json",
+    "subconscious/state/governance.json",
+    "subconscious/state/memory.jsonl"
+  ],
+  "mandate_check_results": {
+    "1_step9f_in_skillmd": "ABSENT (3rd miss) → IMPLEMENTED THIS RUN",
+    "2_first_nightly_step9f_line": "PENDING — next nightly after this commit",
+    "3_kb_health": "HEALTHY — last run 2026-07-13 (5 days, within 7-day threshold)",
+    "4_gh399_resolved": "OPEN Day 17+ — AUTOPILOT_GH_TOKEN expired",
+    "5_gh413_referral_enabled": "EFFECTIVELY YES — PR #476 seeded referral_reward_enabled=1 in platform_settings",
+    "6_conversation_enrichment_schedule": "GH #399 still blocking",
+    "7_kb_hybrid_enabled": "NOW LIVE — widget_kb_hybrid_enabled=1 + widget_kb_rerank_enabled=1 (PR #476)"
+  },
+  "rejected": [],
+  "weakened": [
+    "Platform Settings Admin UI (M-effort, GH #399 blocks, no immediate urgency)",
+    "KB Hybrid + Rerank Smoke Test (too early — just went live, let Step 9F fire first)",
+    "conversation_enrichment_job.py schedule (GH #399 blocks, pending count unknown)",
+    "Close GH #413 + governance cleanup (handled as Bonus Action + Phase 6 corrections)"
+  ],
+  "governance_corrections": {
+    "pr_475": "appointment_jobs.py + BotHealthPage + AttributionPage IMPLEMENTED (23b1da5)",
+    "pr_476": "platform_flags.py + platform_settings + referral_reward_enabled=1 + kb hybrid+rerank live IMPLEMENTED (6b0b0bc)",
+    "gh413_status": "pending_human_action → implemented via platform_settings",
+    "step9f_status": "pending_autonomous → implemented (this run, direct)",
+    "kb_hybrid_status": "pending settings UI → LIVE (platform_settings seeded)"
+  },
+  "bonus_actions": [
+    "Comment on GH #413 explaining referral now live via platform_settings (not Railway env-var)"
+  ],
+  "evidence_highlights": [
+    "nightly-2026-07-18: CLEAN (0 fixes) — confirms 3rd consecutive CLEAN night, Step 9F mechanism failure pattern proven",
+    "PR #475 (23b1da5, 12:12 UTC): appointment_jobs.py + BotHealthPage + AttributionPage — 2506 tests pass",
+    "PR #476 (6b0b0bc, 12:26 UTC): platform_settings + referral_reward_enabled=1 + widget_kb_hybrid_enabled=1 + widget_kb_rerank_enabled=1 — 2520 tests pass",
+    "KB last run: 2026-07-13 (5 days, healthy)",
+    "GH #399: OPEN Day 17+, 30 ai-ready issues blocked"
+  ]
+}
