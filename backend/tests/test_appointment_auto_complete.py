@@ -176,3 +176,67 @@ def test_trigger_failure_does_not_block_other_appointments():
     # Both rows completed even though the first trigger dispatch failed.
     assert count == 2
     assert db.updated_ids == ["appt-1", "appt-2"]
+
+
+def test_appointment_query_failure_returns_zero():
+    """A broken appointments query completes nothing and never raises."""
+    db = MagicMock()
+    db.table.side_effect = RuntimeError("db down")
+    trigger = AsyncMock()
+    with patch.object(appointment_jobs, "get_service_supabase", return_value=db), \
+         patch.object(appointment_jobs, "check_appointment_triggers", trigger):
+        import asyncio
+
+        count = asyncio.run(appointment_jobs.auto_complete_past_appointments())
+    assert count == 0
+    trigger.assert_not_awaited()
+
+
+def test_tenant_lookup_failure_fails_closed():
+    """If we cannot tell who is internal, complete NOTHING - a demo tenant
+    must never have its automations armed by a blind guard."""
+
+    class _TenantFailDb(_FakeDb):
+        def table(self, name):
+            if name == "tenants":
+                raise RuntimeError("tenants unreachable")
+            return super().table(name)
+
+    db = _TenantFailDb([_appt("appt-1", hours_past_end=3)], [])
+    count, trigger = _run(db)
+    assert count == 0
+    assert db.updated_ids == []
+    trigger.assert_not_awaited()
+
+
+def test_update_failure_skips_row_but_continues():
+    """One row's failed update does not abort the batch."""
+
+    class _UpdateFailOnceDb(_FakeDb):
+        def __init__(self, *a, **k):
+            super().__init__(*a, **k)
+            self._fail_next_update = True
+
+        def table(self, name):
+            chain = super().table(name)
+            if name == "appointments":
+                fake = self
+                orig_execute = chain.execute
+
+                def execute():
+                    if chain._update_payload is not None and fake._fail_next_update:
+                        fake._fail_next_update = False
+                        raise RuntimeError("update failed")
+                    return orig_execute()
+
+                chain.execute = execute
+            return chain
+
+    db = _UpdateFailOnceDb(
+        [_appt("appt-1", hours_past_end=3), _appt("appt-2", hours_past_end=4)],
+        [{"id": "t-1", "business_name": "Acme Plumbing", "is_demo": False}],
+    )
+    count, trigger = _run(db)
+    assert count == 1
+    assert db.updated_ids == ["appt-2"]
+    trigger.assert_awaited_once_with("appt-2", completed=True)
