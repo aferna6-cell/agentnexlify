@@ -109,9 +109,7 @@ def _run(db):
          patch.object(appointment_jobs, "check_appointment_triggers", trigger):
         import asyncio
 
-        count = asyncio.get_event_loop().run_until_complete(
-            appointment_jobs.auto_complete_past_appointments()
-        )
+        count = asyncio.run(appointment_jobs.auto_complete_past_appointments())
     return count, trigger
 
 
@@ -174,9 +172,7 @@ def test_trigger_failure_does_not_block_other_appointments():
          patch.object(appointment_jobs, "check_appointment_triggers", trigger):
         import asyncio
 
-        count = asyncio.get_event_loop().run_until_complete(
-            appointment_jobs.auto_complete_past_appointments()
-        )
+        count = asyncio.run(appointment_jobs.auto_complete_past_appointments())
     # Both rows completed even though the first trigger dispatch failed.
     assert count == 2
     assert db.updated_ids == ["appt-1", "appt-2"]
