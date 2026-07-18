@@ -1,8 +1,8 @@
 # Idea 01 — Step 9F: Direct Implementation This Run
 
-**Category:** Workflow / Operational  
-**Effort:** XS (1 file edit, ~25 lines bash)  
-**Confidence:** HIGH  
+**Category:** Workflow / Operational
+**Effort:** XS (1 file edit, ~25 lines bash)
+**Confidence:** HIGH
 **ROI:** 3.1
 
 ## The Idea

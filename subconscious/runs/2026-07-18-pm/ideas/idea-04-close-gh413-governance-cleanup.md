@@ -1,8 +1,8 @@
 # Idea 04 — Close GH #413 + Governance Cleanup for PRs #475/#476
 
-**Category:** Operational / Governance  
-**Effort:** XS (GH API calls + governance.json updates)  
-**Confidence:** HIGH  
+**Category:** Operational / Governance
+**Effort:** XS (GH API calls + governance.json updates)
+**Confidence:** HIGH
 **ROI:** 1.4
 
 ## The Idea

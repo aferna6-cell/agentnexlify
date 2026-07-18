@@ -1,8 +1,8 @@
 # Idea 02 — Platform Settings Admin UI
 
-**Category:** Customer Value / Operational  
-**Effort:** M (new backend endpoint + new dashboard page)  
-**Confidence:** MEDIUM  
+**Category:** Customer Value / Operational
+**Effort:** M (new backend endpoint + new dashboard page)
+**Confidence:** MEDIUM
 **ROI:** 1.9
 
 ## The Idea

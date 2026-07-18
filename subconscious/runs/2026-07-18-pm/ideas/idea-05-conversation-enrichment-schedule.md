@@ -1,8 +1,8 @@
 # Idea 05 — conversation_enrichment_job.py Nightly Schedule GH Issue
 
-**Category:** Operational / AI Performance  
-**Effort:** XS (file GH issue with complete sketch) — S (implement schedule)  
-**Confidence:** MEDIUM  
+**Category:** Operational / AI Performance
+**Effort:** XS (file GH issue with complete sketch) — S (implement schedule)
+**Confidence:** MEDIUM
 **ROI:** 1.6
 
 ## The Idea

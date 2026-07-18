@@ -1,8 +1,8 @@
 # Idea 03 — KB Hybrid + Rerank Production Smoke Test
 
-**Category:** Operational / Code Health  
-**Effort:** S (diagnostic script or Step 9G in nightly SKILL.md)  
-**Confidence:** MEDIUM  
+**Category:** Operational / Code Health
+**Effort:** S (diagnostic script or Step 9G in nightly SKILL.md)
+**Confidence:** MEDIUM
 **ROI:** 1.7
 
 ## The Idea
