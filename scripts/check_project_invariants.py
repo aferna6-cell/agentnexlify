@@ -60,7 +60,6 @@ SKIP_DIR_NAMES = {
     "plans",
     "planning",
     "research-briefs",
-    "research-skill-graph",
     "subconscious",
     "test",
     "tests",
