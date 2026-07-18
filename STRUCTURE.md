@@ -41,7 +41,7 @@ Four root folders, four roles. Agents stop guessing what files mean.
 /plans/onboarding-wizard_plan.md           ← phased rollout
 /plans/dashboard-rebuild_plan.md           ← migration plan
 
-/specs/onboarding-wizard_spec.md           ← what it MUST do
+/specs/onboarding-v2_spec.md               ← what it MUST do
 /specs/full-dashboard-buildout_spec.md     ← acceptance criteria
 ```
 
