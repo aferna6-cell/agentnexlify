@@ -1593,3 +1593,14 @@ cost for us — all backend traffic is service_role/BYPASSRLS): auth_rls_initpla
 (64, wrap auth.* in (SELECT ...) — mechanical but a 64-policy rewrite wants its
 own verified session), multiple_permissive_policies (216), unused_index (83,
 drop needs usage confirmation over a longer window).
+
+## 175_platform_settings.sql (2026-07-18)
+New `platform_settings` table (key text PK, value text, updated_at): DB-backed
+operational flag overrides read by `backend/services/platform_flags.py` with a
+60s cache and env fallback. Motivation: REFERRAL_REWARD_ENABLED sat unset for
+27 days (GH #413) because activation required Railway env access, and the PR
+#471 retrieval flags (widget_kb_rerank_enabled / widget_kb_hybrid_enabled) had
+the same problem via config.py. Service-role only: RLS enabled with zero
+policies + REVOKE ALL from anon/authenticated/PUBLIC, matching the 173
+lockdown posture. Applied to prod 2026-07-18. Seeded rows: the two widget_kb
+flags = '1' (pilot; inert until the reading code deploys).
