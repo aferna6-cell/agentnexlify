@@ -1,0 +1,42 @@
+{
+  "run": "2026-07-19",
+  "run_number": 99,
+  "timestamp": "2026-07-19",
+  "winner": "Step 9F: KB Autopopulate Staleness Check — channel pivot to human-session direct edit",
+  "winner_category": "workflow",
+  "winner_effort": "XS",
+  "winner_confidence": "HIGH",
+  "channel_correction": "Prior runs 97-98 assumed autonomous nightly would add Step 9F. Root cause identified run 99: nightly only fires on live problems; KB currently healthy so no staleness trigger fires. Channel changed from 'autonomous nightly' to 'human-session direct edit'.",
+  "mandate_check_results": {
+    "step_9f_in_skill_md": "FAIL — grep returns 0 (3rd consecutive miss)",
+    "step_9f_nightly_line": "N/A — not yet implemented",
+    "kb_health": "HEALTHY — last run 2026-07-13 (6 days, within 7-day threshold). GH #403 comment not triggered.",
+    "gh_399_resolved": "FAIL — OPEN Day 18+, AUTOPILOT_GH_TOKEN expired",
+    "gh_413_referral_enabled": "FAIL — NOT SET Day 29+, 7 autonomous comments 0 human responses",
+    "conversation_enrichment_scheduling": "FAIL — job not in scheduled_jobs.py",
+    "kb_hybrid_enable": "PENDING — mechanism available via platform_flags"
+  },
+  "governance_corrections": {
+    "appointment_completion_py": "IMPLEMENTED by PR #475 (commit 23b1da5, 2026-07-19) as backend/services/automation/scheduled/appointment_jobs.py. auto_complete_past_appointments() wired in scheduled_jobs.py lines 34+62. GH #454 CLOSED.",
+    "bot_health_page": "IMPLEMENTED by PR #475 in frontend/src/pages/BotHealthPage.jsx. GH #465 CLOSED.",
+    "attribution_page_lead_source": "IMPLEMENTED by PR #475 in frontend/src/pages/AttributionPage.jsx. GH #453 CLOSED. active_direction status updated to implemented.",
+    "total_runs": "98 -> 99",
+    "last_run": "2026-07-17-pm -> 2026-07-19"
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "ideas_parked": 1,
+  "supporting_recommendations": [
+    "conversation_enrichment_job.py scheduling — read implementation first, file GH issue",
+    "GH #413 final escalation — new appointment-completion framing",
+    "kb_hybrid enable for Keys Koffee via platform_flags DB row"
+  ],
+  "new_insight": "Autonomous nightly channel cannot add Step 9F while KB is healthy — no live trigger fires. Human-session direct edit is the correct channel for proactive SKILL.md additions not tied to an active problem.",
+  "key_evidence": [
+    "grep -c 'Step 9F' .claude/skills/nightly-commit-review/SKILL.md returns 0 (3rd cycle)",
+    "KB log.md last entry 2026-07-13 (6 days ago, healthy)",
+    "PR #475 confirmed appointment_jobs.py wired in scheduled_jobs.py",
+    "conversation_enrichment_job.py absent from scheduled_jobs.py",
+    "GH #399 OPEN Day 18+ — AUTOPILOT_GH_TOKEN expired"
+  ]
+}
