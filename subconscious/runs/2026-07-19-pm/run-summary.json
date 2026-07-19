@@ -1,0 +1,38 @@
+{
+  "run": 99,
+  "date": "2026-07-19-pm",
+  "winner": "Step 9F: KB Autopopulate Staleness Check — delivery mechanism changed to interactive session (nightly mechanism proven broken after 3 cycles)",
+  "winner_category": "workflow",
+  "winner_confidence": "HIGH",
+  "winner_effort": "XS",
+  "winner_autonomous_executable": false,
+  "winner_requires_human": true,
+  "winner_delivery_channel_change": "nightly (broken after 3 cycles) → interactive session with human approval",
+  "mandate_check_1_step_9f": "FAIL — ABSENT (3rd consecutive cycle)",
+  "mandate_check_2_nightly_step9f_line": "N/A — not yet implemented",
+  "mandate_check_3_kb_staleness": "6 days — CROSSES 7-DAY THRESHOLD TOMORROW (2026-07-20)",
+  "mandate_check_4_gh399": "FAIL — OPEN Day 17+, AUTOPILOT_GH_TOKEN expired",
+  "mandate_check_5_gh413": "FAIL — NOT SET, Day 28+",
+  "mandate_check_6_conversation_enrichment": "PARKED — wait for GH #399",
+  "mandate_check_7_kb_hybrid": "PARKED — needs settings UI or GH #399",
+  "parking_lot_clears": [
+    "appointment_jobs.py (PR #475, 23b1da5, 2026-07-19) — auto_complete_past_appointments() with 1h grace, idempotency, tenant guard",
+    "BotHealthPage.jsx (PR #475, 23b1da5, 2026-07-19) — loop health dashboard, admin-secret gated, no localStorage",
+    "AttributionPage.jsx (PR #475, 23b1da5, 2026-07-19) — attribution breakdown, client_id correct, 5k-lead ceiling"
+  ],
+  "other_notable_prs": [
+    "PR #476 (6b0b0bc): platform_flags.py + admin_voice_test.py + migration 175. resolve_int_setting minimum bypass risk noted.",
+    "PR #477 (6aa9ba4): 970 stale file deletions, check_project_invariants.py dead paths removed."
+  ],
+  "key_insight": "Nightly mechanism root cause confirmed: nightly adds SKILL.md blocks reactively (detects health issues in commits). Step 9F is proactive with no commit-based trigger. Steps 9B-9E all had reactive triggers. Step 9F never will. Mechanism must change.",
+  "artifacts": [
+    "subconscious/runs/2026-07-19-pm/ideas/ideas.md",
+    "subconscious/runs/2026-07-19-pm/debate/debate-log.md",
+    "subconscious/runs/2026-07-19-pm/winning-concept.md",
+    "subconscious/runs/2026-07-19-pm/improvement-backlog.md",
+    "subconscious/runs/2026-07-19-pm/run-summary.json"
+  ],
+  "governance_updated": true,
+  "memory_appended": true,
+  "commit_pending": true
+}
