@@ -405,6 +405,13 @@ const allNavItems = [
     label: "Knowledge",
   },
   {
+    key: "agent_controls",
+    icon: (
+      <Icon d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" />
+    ),
+    label: "Agent Controls",
+  },
+  {
     key: "sms_compliance",
     icon: (
       <Icon d="M8 21h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2zM12 18h.01" />
@@ -439,6 +446,7 @@ const NAV_GROUPS = [
     label: "SETTINGS",
     items: [
       "team",
+      "agent_controls",
       "billing",
       "referral",
       "business_page",
