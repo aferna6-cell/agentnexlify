@@ -45,7 +45,7 @@ pywebpush>=2.0.0,<3
 PyYAML>=6.0,<7
 # qrcode[pil] — used in routers/widget_config.py QR endpoint (lazy import inside the route).
 # Pulls Pillow as its image backend. Missing it 500s the QR-code endpoint. Audit 2026-06-23.
-qrcode[pil]>=7.4,<9
+qrcode[pil]>=8.2,<9
 # python-dateutil — relativedelta used in routers/invoices.py + automation/scheduled_jobs_ext.py
 # (lazy imports). Missing it 500s those paths. Audit 2026-06-23.
 python-dateutil>=2.8,<3
