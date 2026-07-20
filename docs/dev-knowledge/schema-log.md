@@ -1627,3 +1627,10 @@ map keyed by engine department id. Injected as leading KbEntry rows by
 `os_thread_runner` via `backend/services/os_custom_instructions.py`; edited
 via GET/PUT `/api/v1/os/instructions`. Style guidance only — approval gates
 and outbound guard stay in code.
+
+## 179_tenant_mcp_servers.sql (2026-07-20) — APPLIED
+MCP interop v1 (enterprise-audit item 5): `tenant_mcp_servers` (tenant_id
+scope, RLS on/service-role only) — name, url (https-only at API layer),
+auth_header, auth_token (write-only, plaintext pending #266 key rollout),
+enabled. Platform-gated by `os_mcp_enabled` flag; endpoints under
+`/api/v1/os/mcp/*`; client in `backend/services/mcp_client.py`.
