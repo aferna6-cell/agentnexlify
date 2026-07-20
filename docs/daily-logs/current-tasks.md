@@ -1,6 +1,21 @@
 # Current Task Backlog — AgentNexLiFy
 
-Updated: 2026-05-01 09:31 EDT (automated morning startup)
+Updated: 2026-07-20 14:36 UTC (subconscious run 99 handoff)
+
+## Subconscious Run 99 — COMPLETE, PR #481 CLOSED WITHOUT MERGING
+
+**Human action required:**
+1. Merge branch `subconscious-run-99-2026-07-19` to main (or cherry-pick 3a6f2ab) — run 100 needs this for accurate state
+2. Paste Step 9F block into `.claude/skills/nightly-commit-review/SKILL.md` after line 288 — 3rd consecutive miss, exact block in `subconscious/runs/2026-07-17-pm/winning-concept.md`
+3. Verify: `grep -c "Step 9F" .claude/skills/nightly-commit-review/SKILL.md` returns ≥1
+
+**Other pending items (from run 99 backlog):**
+- GH #413: Post comment with appointment-completion framing (Day 30+)
+- GH #399: AUTOPILOT_GH_TOKEN expired — 30 ai-ready issues blocked
+- conversation_enrichment_job.py: Read implementation, file GH issue before scheduling
+- kb_hybrid for Keys Koffee: Supabase MCP row insert in human session
+
+---
 
 ## Today's Top 3 Priorities
 
