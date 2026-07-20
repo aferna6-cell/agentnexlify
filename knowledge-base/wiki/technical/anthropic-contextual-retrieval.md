@@ -4,7 +4,7 @@ category: technical
 tags: [contextual-retrieval, rag, embeddings, bm25, reranking, prompt-caching]
 sources: ["raw/technical/anthropic-contextual-retrieval.md"]
 created: 2026-04-14
-updated: 2026-04-14
+updated: 2026-07-20
 summary: "Contextual Retrieval prepends chunk-specific context before embedding and BM25 indexing, reducing RAG retrieval failure rates by 49% (67% with reranking) at $1.02 per million document tokens using prompt caching."
 ---
 
@@ -40,4 +40,6 @@ Reranking adds a filtering step between initial retrieval and final prompt injec
 
 ## Relevance to AgentNexLiFy
 
-AgentNexLiFy's tenant knowledge base ingestion pipeline (`backend/services/knowledge_base.py`) chunks uploaded documents and stores embeddings in the `kb_articles` table via pgvector. The current implementation uses standard chunking without contextual prefixes — exactly the failure mode this paper addresses. Implementing Contextual Retrieval for tenant FAQ ingestion would reduce the cases where the chat widget fails to find a relevant answer, which is the #1 cause of user frustration in chat widget interactions. The cost is minimal ($1.02/M tokens) and the preprocessing can run during the existing upload pipeline. For tenants with small knowledge bases (<500 pages), the prompt-stuffing approach with prompt caching should be evaluated first — it eliminates retrieval failures entirely at the cost of higher per-request token usage, which may be acceptable for tenants with compact FAQs.
+AgentNexLiFy's tenant knowledge base pipeline (`backend/services/tenant_kb.py`, `backend/routers/tenant_kb.py`) chunks uploaded documents and stores embeddings in the `kb_articles` table via pgvector. As of PR #471 (2026-07-17), two of the three Contextual Retrieval techniques are now live behind feature flags: `backend/services/kb_reranker.py` adds a Haiku-based reranking pass after initial vector/FTS retrieval (gated by `widget_kb_rerank_enabled`), and `backend/services/kb_hybrid_retrieval.py` merges FTS results alongside semantic results to catch exact keyword matches the embedding misses (gated by `widget_kb_hybrid_enabled`). Both flags are seeded to `'1'` in the `platform_settings` table (migration 175, PR #476) for the pilot — they can be flipped without a Railway deploy. The remaining gap is the contextual embedding step itself: chunks are still embedded without situating context prefixes, which is the primary technique in this paper. Implementing contextual prefixes in the ingestion pipeline would compound on top of the existing reranking + hybrid gains and drive retrieval failure toward the paper's 1.9% floor. For tenants with small knowledge bases (<500 pages), the prompt-stuffing approach with prompt caching should be evaluated first — it eliminates retrieval failures entirely at the cost of higher per-request token usage, which may be acceptable for tenants with compact FAQs.
+
+Updated 2026-07-20 due to #471, #476.
