@@ -21,6 +21,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from backend.services import usage_meter
+from backend.services.os_outbound_guard import apply_outbound_guard
 from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
@@ -385,6 +386,15 @@ def persist_orchestration(
                 agent_name,
                 requires_approval=draft.get("requiresApproval", True),
             )
+            # Outbound guardrail (enterprise-audit item 6): a draft that
+            # matched a secret/SSN/card/payment-redirect pattern never
+            # auto-sends — it parks at the human gate with the flags stored
+            # on the deliverable so the approval UI can say why.
+            deliverable_status, guard_flags = apply_outbound_guard(
+                client_id, agent_name, deliverable, deliverable_status
+            )
+            if guard_flags:
+                deliverable["guard_flags"] = guard_flags
         row = {
             "thread_id": thread_id,
             "agent_name": agent_name,
