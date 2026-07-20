@@ -94,7 +94,7 @@ jobs:
           fi
 
       - name: Create issue if threshold exceeded
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const pending  = parseInt('${{ steps.count.outputs.pending }}')  || 0;

@@ -131,7 +131,7 @@ jobs:
 
       - name: Create issue on anomaly
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -244,7 +244,7 @@ jobs:
 
       - name: Create issue on churn signals
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -367,7 +367,7 @@ jobs:
 
       - name: Create issue on cost spike
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -454,7 +454,7 @@ jobs:
 
       - name: Create issue on prod errors
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -499,7 +499,7 @@ jobs:
 
       - name: Create issue on loop-health alerts
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -602,7 +602,7 @@ jobs:
 
       - name: File booking-readiness issue
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
