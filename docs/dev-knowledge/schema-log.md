@@ -1611,3 +1611,12 @@ step 4). **Apply only after INTEGRATIONS_ENC_KEY is set in Railway** — the
 vault's encrypt path no-ops without it and new OAuth connects would have no
 token storage. Prod `integrations` verified 0 rows on 2026-07-20 (backfill
 vacuous); all readers routed through decrypt_integration_row in the same PR.
+
+## 177_tenant_eval_questions.sql (2026-07-20) — APPLIED
+Golden-question eval harness (enterprise-audit item 2). Two new tables, both
+`tenant_id`-scoped, RLS on with no permissive policies (service-role only):
+- `tenant_eval_questions` — question + expected_phrases text[] + enabled.
+- `tenant_eval_runs` — per-run summary (trigger, total/passed/failed/
+  regressions, results jsonb).
+Evals run deterministically after each `compile_tenant_kb` and on demand via
+`/api/v1/kb-evals/run`; regressions log `kb_eval_regression` to activity_log.

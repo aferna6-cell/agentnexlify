@@ -241,6 +241,13 @@ def compile_tenant_kb(client_id: str) -> dict:
         ", truncated" if truncated else "",
         client_id,
     )
+
+    # Golden-question regression check on the freshly compiled corpus
+    # (enterprise-audit item 2). Best-effort — never breaks a compile.
+    from backend.services.kb_evals import run_evals_after_compile
+
+    run_evals_after_compile(client_id)
+
     return {"documents": len(sections), "chars": total, "truncated": truncated}
 
 
