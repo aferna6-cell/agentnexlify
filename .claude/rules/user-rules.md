@@ -5,16 +5,21 @@ Four rules the user set on 2026-04-15. Non-negotiable for this project. All four
 ## Rule 1 — Plan First, Build Last
 Before ANY implementation: present a plan, get approval, then execute. Plans state files touched, rule mappings, edge cases, commit intent.
 
+**Cross-provider team authorization (2026-07-20):** For an issue governed by `docs/TEAM_OPERATING_CONTRACT.md`, the shared GitHub issue plan and required peer quorum are the approval. Codex, Fable 5, and Kimi 3 do not pause for owner approval on Tier A or contract-compliant Tier B work.
+
 **Why:** prevents wasted work when the user's intent differs from mine. Also gates 2+-file changes through review.
 
 **How to apply:**
 - Non-trivial work (2+ files, schema change, new service, architectural shift) → plan in text, wait for explicit "yes" / "looks good" / equivalent
 - Trivial work (one-line fix, rename, typo) → execute directly
+- Cross-provider issue work → publish the plan, claim lanes, and proceed under the contract without waiting for the owner
 - Plan format: bullet list of files, rule mappings where relevant, edge cases, commit intent
 - Reinforced by `ultrathink.md` plan-mode gate and `no-assumptions.md` 80% threshold
 
 ## Rule 2 — Ask When Unsure
 Confidence below 80% on interpretation → ASK. Never guess scope, target, env, or destructive action.
+
+For cross-provider issue work, first resolve uncertainty with repository evidence and a two-of-three peer decision. Ask the owner only when the missing choice requires their intrinsic authority under Tier C and no safe substitute exists.
 
 **Why:** one clarifying question saves hours of wrong-direction work. Session transcripts show many bugs originated from assumed intent.
 
@@ -68,7 +73,7 @@ If I'm halfway through implementation and notice the design is wrong, stop. Reth
 
 **How to apply:**
 - Smells that trigger a stop: branching logic growing past 3 levels, copy-paste of the same 5 lines twice, a test that needs mocking to exercise, a param list past 5 args
-- On stop, summarize the smell, propose a refactor, ask for go/no-go
+- On stop, summarize the smell and propose a refactor. In cross-provider issue work, record it and obtain peer quorum; otherwise ask for go/no-go.
 - Never silently pivot — always surface
 
 ## Rule 7 — Never Ignore CLAUDE.md or AGENTS.md

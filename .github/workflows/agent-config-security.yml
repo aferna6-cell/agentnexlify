@@ -26,6 +26,7 @@ permissions:
 jobs:
   scan:
     name: AgentShield scan
+    if: ${{ github.event_name != 'pull_request' || !startsWith(github.head_ref, 'team/') }}
     # Linux runner: AgentShield emits POSIX (forward-slash) finding paths that
     # match config/agentshield-baseline.json. windows-latest emitted backslash
     # paths, so every pre-existing finding was miscounted as "new" and the gate

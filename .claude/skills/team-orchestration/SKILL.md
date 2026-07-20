@@ -9,6 +9,8 @@ effort: high
 
 # Team Orchestration
 
+For Codex, Fable 5, and Kimi 3, first read `docs/TEAM_OPERATING_CONTRACT.md`. One GitHub issue is the durable shared task hub. Run `python3 scripts/teamctl.py preflight --issue <number> --agent <name>`, claim non-overlapping lanes, and keep all durable coordination in structured issue comments.
+
 ## When to Use
 
 - Task involves both backend AND frontend work
@@ -67,11 +69,12 @@ Compile results → report to developer
 
 ## Communication Protocol
 
-1. **Task prompt**: When delegating, include ALL context the agent needs (file paths, error messages, prior agent output, specific instructions)
-2. **Output files**: Each agent writes to `.claude/agent-comms/{agent-name}-output.md`
-3. **Passing context**: When one agent depends on another's output, read the output file and include relevant parts in the next agent's delegation prompt
-4. **Conflict resolution**: If agents disagree (e.g., backend-dev wants a column name that schema-guardian says is wrong), schema-guardian wins on schema questions, architecture-decisions.md wins on architecture questions
-5. **Cleanup**: After task completion, delete all files in `.claude/agent-comms/` except README.md and .gitkeep
+1. **Task prompt**: Include the shared issue, claimed lane, dependencies, file paths, and acceptance criteria.
+2. **Durable events**: Use `scripts/teamctl.py update|handoff|review|proof`; never rely on one provider's private context.
+3. **Passing context**: Handoff comments name the recipient, changed files, evidence, and remaining risk. The receiver explicitly claims the lane.
+4. **Conflict resolution**: Executable evidence wins, then `brain/`, ADRs, issue acceptance criteria, and a two-of-three peer decision.
+5. **Local proof**: Run the repository gates locally and commit with `[skip ci]`; never dispatch GitHub Actions for team work.
+6. **Scratch files**: `.claude/agent-comms/` remains allowed only for ephemeral same-session specialist output and is cleaned after completion.
 
 ## When NOT to Delegate
 

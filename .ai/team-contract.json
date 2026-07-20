@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-07-20",
+  "status": "canonical",
+  "north_star": "Reduce the shortest trustworthy path from a nontechnical small-business owner's intent to a live, grounded AI front desk that turns conversations into measurable bookings and revenue.",
+  "agents": {
+    "codex": {
+      "provider": "OpenAI",
+      "default_role": "implementation_and_integration"
+    },
+    "fable5": {
+      "provider": "Anthropic",
+      "default_role": "product_and_architecture"
+    },
+    "kimi3": {
+      "provider": "Moonshot AI",
+      "default_role": "challenge_and_verification"
+    }
+  },
+  "required_reads": [
+    "docs/TEAM_OPERATING_CONTRACT.md",
+    ".ai/team-contract.json",
+    "AGENTS.md",
+    "brain/Maps/Home.md",
+    ".ai/manifest.json"
+  ],
+  "provider_adapters": {
+    "codex": "AGENTS.md",
+    "fable5": "CLAUDE.md",
+    "kimi3": "KIMI.md"
+  },
+  "coordination": {
+    "durable_task_hub": "github_issue",
+    "event_transport": "github_issue_comments",
+    "event_marker": "agent-team:event",
+    "trusted_github_actors": ["aferna6-cell"],
+    "ephemeral_only": ".claude/agent-comms/",
+    "one_issue_per_outcome": true,
+    "duplicate_full_issue_implementations": false,
+    "branch_pattern": "team/{issue}/{agent}/{lane}",
+    "default_claim_lease_hours": 4,
+    "worktree_per_active_lane": true
+  },
+  "review": {
+    "normal_peer_approvals": 1,
+    "risky_peer_approvals": 2,
+    "self_approval_allowed": false,
+    "decision_quorum": 2
+  },
+  "autonomy": {
+    "safe_reversible": "proceed",
+    "risky_reversible": "proceed_with_two_peer_approvals_flag_or_rollback_and_full_local_gate",
+    "irreversible_or_external": "find_safe_substitute_or_isolate_then_post_one_nonblocking_owner_attention_memo_only_if_intrinsic_authority_is_required"
+  },
+  "verification": {
+    "lane_gate": "npm run check:quick",
+    "integration_gate": "bash scripts/ci_local.sh origin/main",
+    "proof_transport": "github_issue_comment"
+  },
+  "github_actions": {
+    "allowed_for_team_work": false,
+    "team_branch_glob": "team/**",
+    "required_commit_marker": "[skip ci]",
+    "validation_location": "local_only"
+  }
+}

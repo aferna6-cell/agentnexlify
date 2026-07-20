@@ -2,20 +2,45 @@
 
 Use this policy when deciding which coding agent or model class should work on
 AgentNexLiFy tasks. The goal is not loyalty to one tool. The goal is to route
-each task to the cheapest worker that can complete it safely, then reserve
-premium reasoning for high-risk work.
+each task to the team member best positioned to complete it safely, then use
+peer review and local evidence in proportion to risk.
+
+## Cross-Provider Product Team
+
+Codex, Fable 5, and Kimi 3 are one autonomous peer team for issue-driven
+product work. The canonical rules are in `docs/TEAM_OPERATING_CONTRACT.md` and
+`.ai/team-contract.json`.
+
+- Fable 5 defaults to product and architecture stewardship.
+- Codex defaults to implementation and integration stewardship.
+- Kimi 3 defaults to challenge and verification, and may implement any claimed lane.
+- All three work from one GitHub issue and claim non-overlapping lanes with
+  `python3 scripts/teamctl.py`.
+- Material work requires another agent's approval. Risky but reversible work
+  requires both other agents, a flag or tested rollback, and the full local gate.
+- Irreversible or externally consequential work is replaced with a safe local
+  substitute where possible; intrinsic owner authority is the only reason for
+  a nonblocking owner-attention memo.
+- Team proof is local. Team and integration commits contain `[skip ci]`; no
+  GitHub Actions workflow is dispatched for this path.
+
+Kimi 3 may join discovery, planning, challenge, and review immediately. Its
+promotion into a production-autopilot executor remains separately governed by
+the routing eval; that legacy autopilot restriction does not make it an
+independent team or prevent explicitly claimed, peer-reviewed product lanes.
 
 ## Current Default
 
-Autopilot remains conservative:
+The unattended, single-agent autopilot workflow remains conservative and is
+separate from the cross-provider product team:
 
 - Classifier: Claude Haiku.
 - Executor: Codex with Claude Sonnet-grade instructions.
 - Reviewer comment handler: Claude Sonnet brief, Codex execution.
-- Human review and merge remain mandatory.
+- Its existing human review and merge requirements remain mandatory.
 
-Do not route production autopilot to Kimi Code, Agent Swarm, or another
-low-cost worker until the repo-specific eval harness shows repeatable quality.
+Do not route legacy production autopilot to an unevaluated low-cost worker
+until the repo-specific eval harness shows repeatable quality.
 
 ## Routing Labels
 
@@ -27,7 +52,7 @@ agent. They are advisory unless paired with `ai-ready`.
 | `ai-routine` | Low-risk scoped implementation, cleanup, small parser work, small UI polish | Low-cost candidate after eval |
 | `ai-docs` | README, docs, playbooks, sales assets, skill wording | Low-cost candidate after eval |
 | `ai-tests` | Test generation, test refactors, focused fixtures, coverage around stable behavior | Low-cost candidate after eval |
-| `ai-risky` | Auth, billing, pricing, Stripe, Supabase RLS, migrations, secrets, legal, customer communication, production deploy logic, runtime AI policy | Premium-only with human review |
+| `ai-risky` | Auth, billing, pricing, Stripe, Supabase RLS, migrations, secrets, legal, customer communication, production deploy logic, runtime AI policy | Cross-provider Tier B/C policy; legacy autopilot blocked |
 
 `ai-ready` is still required before autopilot may attempt an issue. Routing
 labels do not override the autopilot workflow contract.
@@ -47,9 +72,9 @@ Use for:
 
 Rules:
 
-- Require a human-readable plan before implementation.
+- Require a shared, human-readable issue plan before implementation.
 - Run the broadest relevant local checks.
-- Require human review before merge.
+- Require both other team agents for Tier B work; legacy autopilot still requires human review.
 - Do not use `--yolo`, Agent Swarm, or unreviewed write modes.
 
 ### Low-Cost Routine Candidate
@@ -124,8 +149,11 @@ These rules apply to every agent:
 3. Never allow unreviewed writes to auth, billing, pricing, Stripe, Supabase
    RLS, migrations, secrets, legal, customer communications, production deploy
    logic, or customer-facing runtime AI policy.
-4. Never let a low-cost worker commit, push, merge, label, or release.
-5. Escalate to premium routing when task scope is unclear or confidence drops.
+4. Cross-provider agents may commit and push explicitly claimed team lanes with
+   local proof and `[skip ci]`; integration still obeys the peer-review quorum.
+5. Legacy autopilot workers remain unable to merge, label, or release.
+6. Escalate to premium peer review when task scope is unclear or confidence drops.
+7. Never spend GitHub Actions runner minutes on cross-provider team work.
 
 ## Eval Before Adoption
 
@@ -147,5 +175,8 @@ score:
 - Estimated cost.
 - Human cleanup required.
 
-Promote a low-cost worker only after it passes routine, docs, and tests tasks
-without touching sensitive surfaces or creating cleanup churn.
+Promote a low-cost worker into the legacy unattended autopilot only after it
+passes routine, docs, and tests tasks without touching sensitive surfaces or
+creating cleanup churn. The cross-provider team may use it earlier in claimed,
+peer-reviewed lanes because the shared issue, approvals, and local proof are
+the control boundary.

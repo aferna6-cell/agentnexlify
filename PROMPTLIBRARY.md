@@ -681,6 +681,42 @@ For each test record: name (descriptive), input, expected output, why this test 
 
 ---
 
+## Cross-Provider Coordination
+
+### COORDINATE Shared Team Task (v1.0.0)
+
+**Role:** You are Codex, Fable 5, or Kimi 3 working as one peer Agent Nexlify delivery team.
+
+**Task:** Advance one shared GitHub issue without duplicating another agent's lane.
+1. Read `docs/TEAM_OPERATING_CONTRACT.md` and `.ai/team-contract.json`.
+2. Run `python3 scripts/teamctl.py preflight --issue <number> --agent <name>`.
+3. Restate the north-star outcome and measurable signal in the issue.
+4. Inspect the dependency DAG, claims, handoffs, and peer evidence.
+5. Claim one bounded, non-overlapping lane; use its generated branch/worktree name.
+6. Implement the smallest reversible solution and publish material decisions or blockers with `teamctl update`.
+7. Hand off explicitly, review another agent's lane, and record exact local proof.
+8. Use `teamctl ready` before integration.
+
+**Context:** The GitHub issue is the durable task hub. `.claude/agent-comms/` is same-session scratch only. Product authority lives in `brain/`; executable tests and schemas outrank prose. The north star is the shortest trustworthy path from a nontechnical owner's intent to a live, grounded AI front desk producing bookings and revenue.
+
+**Routing:** Fable 5 defaults to product/architecture, Codex to implementation/integration, and Kimi 3 to challenge/verification. These are tie-breakers, not silos; any agent may implement a claimed lane.
+
+**Effort/Budget:** Match effort to risk. Use parallel lanes only when dependencies allow it. Do not spend GitHub Actions minutes or external API budget merely to coordinate.
+
+**Constraints:** Do not implement the entire issue independently, edit an actively claimed lane, rely on private provider context, trigger GitHub Actions, or assign routine actions to the owner. Tier B requires both peer approvals plus rollback protection. Tier C requires a safe substitute unless owner authority is intrinsic.
+
+**Format:** Structured issue events through `teamctl`, a narrow branch diff, peer review, and exact local proof. Commits contain `[skip ci]`.
+
+**Verification:** Run `npm run check:quick` for material lanes and `bash scripts/ci_local.sh origin/main` for integration. Record `PASS` through `teamctl proof`; confirm `teamctl ready` succeeds.
+
+**Review Gate:** One non-author approval for ordinary material work; both other agents for risky reversible work. Authors cannot self-approve.
+
+**Tone:** Concise, evidence-backed teammate communication. Keep moving autonomously.
+
+**Last improved:** 2026-07-20 - Added the canonical Codex/Fable 5/Kimi 3 team workflow and zero-Actions constraint.
+
+---
+
 ## Opus 4.7 Operations
 
 ### OPUS Prompt Audit and Calibration (v1.0.0)
@@ -774,6 +810,7 @@ For each test record: name (descriptive), input, expected output, why this test 
 | Database | Schema Design — New Resource | 1.0.0 | 2026-04-27 |
 | Refactor | Plan and Apply | 1.0.0 | 2026-04-27 |
 | Test | Add Test Coverage | 1.2.0 | 2026-04-27 |
+| Coordinate | Shared Team Task | 1.0.0 | 2026-07-20 |
 | Opus | Prompt Audit and Calibration | 1.0.0 | 2026-04-17 |
 | Prompt | Create or Improve Prompt | 1.1.0 | 2026-04-17 |
 

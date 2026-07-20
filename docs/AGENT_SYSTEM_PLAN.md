@@ -1,6 +1,6 @@
 # Agent System Plan
 
-_Last updated: 2026-04-22_
+_Last updated: 2026-07-20_
 
 ## Purpose
 This document defines the intended steady-state for AgentNexLiFy's coding-agent system.
@@ -17,7 +17,21 @@ It exists because the repo has grown a powerful agent stack across multiple file
 
 This plan makes the hierarchy explicit.
 
+For cross-provider product work, `docs/TEAM_OPERATING_CONTRACT.md` and
+`.ai/team-contract.json` are the canonical human-readable and machine-readable
+team policy. Codex, Fable 5, and Kimi 3 share one GitHub issue, divide it into
+claimed lanes, exchange structured issue events, review one another, and prove
+changes locally without GitHub Actions runner minutes.
+
 ## Canonical Hierarchy
+
+### 0. Team operating contract — canonical cross-provider execution policy
+Use `docs/TEAM_OPERATING_CONTRACT.md` plus `.ai/team-contract.json` for:
+- shared north-star prioritization
+- claims, leases, handoffs, and branch ownership
+- autonomy and peer-review thresholds
+- local proof and zero-Actions enforcement
+- exceptional owner-attention rules
 
 ### 1. `CLAUDE.md` — canonical human-readable repo brain
 Use as the main narrative source of truth for:
@@ -38,6 +52,10 @@ Use as the structured source of truth for:
 - model routing policy summary
 
 It should be regenerated/updated whenever the real agent surface changes.
+
+The smaller `.ai/team-contract.json` is intentionally separate so every
+provider can load the active collaboration policy without parsing the complete
+agent inventory.
 
 ### 3. `AGENTS.md` — thin Codex/general-agent adapter
 Use as a short bootstrap for Codex and generic agents:
@@ -77,6 +95,9 @@ Why:
 - it is simpler than competing orchestration narratives
 - it can delegate to specialized agents cleanly
 - it avoids multiple “default” orchestration stories competing for authority
+
+For cross-provider work, the coordinator publishes its DAG to the GitHub issue
+and uses `scripts/teamctl.py`; `.claude/agent-comms/` is same-session scratch only.
 
 ### Supporting workflows
 - `delegate` remains useful as a planning entrypoint
@@ -132,10 +153,10 @@ Detailed routing policy now lives in:
 - `config/agent-routing-eval.json`
 - `npm run eval:agent-routing`
 
-The short version: keep Codex/Claude as the premium autopilot path, evaluate
-Kimi Code or other low-cost workers only for `ai-routine`, `ai-docs`,
-`ai-tests`, and batch-candidate work, and block `ai-risky` issues from
-autonomous dispatch.
+The short version: Codex, Fable 5, and Kimi 3 are peers for shared product work.
+Use peer approval plus local proof in proportion to risk. The older unattended
+autopilot remains a separate conservative path: evaluate new low-cost executors
+before promotion and continue to block `ai-risky` issues from that dispatcher.
 
 ### Codex
 Use for:
@@ -146,9 +167,9 @@ Use for:
 - tests and refactors
 - day-to-day execution
 
-**Role:** primary execution engine
+**Role:** cross-provider implementation and integration steward
 
-### Anthropic
+### Fable 5 / Anthropic
 Use for:
 - canonical repo reasoning
 - prompt/system design review
@@ -156,7 +177,16 @@ Use for:
 - product-model authority
 - customer-facing runtime AI logic
 
-**Role:** canonical repo brain + production AI authority
+**Role:** cross-provider product and architecture steward + production AI authority
+
+### Kimi 3
+Use for:
+- adversarial analysis and overlooked failure modes
+- independent verification and test design
+- explicitly claimed implementation lanes
+- evidence-backed peer review
+
+**Role:** cross-provider challenger and verification steward
 
 ### MiniMax
 Use for:
@@ -215,6 +245,8 @@ Default split:
    - `AGENTS.md`
 4. Keep `AGENTS.md` short enough that drift is obvious and easy to fix
 5. After touching `.claude/`, `.github/workflows/autopilot-*`, `package.json`, or this plan, run `npm run agent-system:check`
+6. After changing team coordination, run `npm run team:check`
+7. Never use GitHub Actions to validate cross-provider team work; use `npm run check:quick` and `bash scripts/ci_local.sh origin/main` locally
 
 
 ## 2026-04-22 Codex Orchestration Adoption

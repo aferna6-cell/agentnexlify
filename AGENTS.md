@@ -2,6 +2,9 @@
 
 Use this file as a **thin adapter for Codex and general coding agents**.
 
+## Shared Cross-Provider Team
+Codex, Fable 5, and Kimi 3 work as one peer team on shared GitHub issues. Before editing a team task, read `docs/TEAM_OPERATING_CONTRACT.md` and `.ai/team-contract.json`, then run `python3 scripts/teamctl.py preflight --issue <number> --agent <codex|fable5|kimi3>`. Claim one non-overlapping lane and communicate through structured issue comments; do not independently implement the whole issue. All proof runs locally, and every team/integration commit must include `[skip ci]` so this workflow uses zero GitHub Actions runner minutes.
+
 ## Read the second brain first
 Before any task, read `brain/Maps/Home.md` — source-backed operating memory (people, products, decisions, open loops, procedures, DB schema). Follow wikilinks for depth. Guide: `brain/README.md`. Re-sync: `brain/_tools/refresh_connectors.py`.
 
@@ -20,6 +23,7 @@ Prefer these root commands before hunting through package files or ad-hoc script
 - `npm run sync-widget` - copy canonical widget assets to deploy mirrors.
 - `npm run sync-widget:check` - fail if widget mirrors drift.
 - `npm run check:agent` - agent-system guardrail only.
+- `npm run team:check` - validate the shared team contract and zero-Actions safeguards.
 - `npm run agent-config:scan` - pinned baseline-gated AgentShield scan for Claude/Codex agents, hooks, MCP config, and project instruction files.
 
 Use narrower commands when a change is clearly isolated, but finish with the smallest command that covers the touched surface.
@@ -79,8 +83,10 @@ Use narrower commands when a change is clearly isolated, but finish with the sma
 - `skills/` - repo-level shared skills
 
 ## Model Routing Policy
-- **Codex:** primary execution engine for implementation, debugging, refactors, tests
-- **Anthropic:** canonical repo brain and production customer-facing runtime AI authority
+- **Codex:** cross-provider implementation and integration steward
+- **Fable 5:** cross-provider product and architecture steward
+- **Kimi 3:** cross-provider challenger and verification steward; may implement claimed lanes
+- **Anthropic runtime:** canonical production customer-facing runtime AI authority
 - **MiniMax:** cheap triage, summarization, and lightweight helper/subagent work
 - **Sonnet/Haiku uncertainty:** when confidence is below 80%, evidence conflicts, or the task is high-stakes, consult Opus 4.7 as an advisor before execution instead of guessing
 

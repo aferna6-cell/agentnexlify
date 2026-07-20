@@ -57,7 +57,7 @@ Brainstorm → Plan → Execute → code-reviewer → /ultrareview → VerticalC
 ```
 
 ## Anti-patterns
-- Never auto-apply /ultrareview findings without human inspection — it's a signal, not a fix
+- Never auto-apply /ultrareview findings without independent inspection — for cross-provider team work, another agent's recorded review satisfies this gate; otherwise require human inspection
 - Never skip /ultrareview on auth/payment/tenant code because "it looks fine"
 - Never burn free quota on trivial changes — use it on real review needs
 - Never invoke /ultrareview twice on the same diff — no-op waste

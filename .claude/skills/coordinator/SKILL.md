@@ -17,7 +17,7 @@ effort: medium
 
 # Coordinator — Multi-Agent Orchestrator
 
-Auto-decomposes complex tasks into a dependency DAG and dispatches specialized agents in parallel waves. Schema-guardian always first if DB is touched. qa-tester always last.
+Auto-decomposes complex tasks into a dependency DAG and dispatches specialized agents in parallel waves. For Codex/Fable 5/Kimi 3 work, `docs/TEAM_OPERATING_CONTRACT.md` is authoritative: one GitHub issue is the durable task hub and `scripts/teamctl.py` owns claims, handoffs, reviews, and proof. Schema-guardian always goes first if DB is touched. qa-tester always goes last.
 
 ## When to Use
 
@@ -59,11 +59,13 @@ Identify:
 
 ### 1.3 Create the Coordination Plan
 
-Write to `.claude/agent-comms/coordination-plan.md` before dispatching anything:
+Write the plan to the shared GitHub issue before dispatching anything:
 - Task summary
 - DAG (numbered with blockers)
 - Execution waves
 - Status tracking
+
+Each cross-provider agent must run `python3 scripts/teamctl.py preflight --issue <number> --agent <name>` and claim a non-overlapping lane before editing. Use `.claude/agent-comms/` only for ephemeral same-session specialist scratch; it is not durable team state.
 
 ## Phase 3: DAG Execution Rules
 
@@ -71,7 +73,7 @@ Write to `.claude/agent-comms/coordination-plan.md` before dispatching anything:
 - Maximum 4 parallel agents at once
 - Tasks with unmet dependencies wait — never dispatch a task whose blockers have not completed
 - If an agent returns FAIL: pause all dependents, diagnose, re-dispatch, resume
-- After each wave: read all agent output files, update plan, check next wave blockers
+- After each wave: read all handoffs, update the GitHub issue plan, and check next-wave blockers
 
 ## Completion Gate
 
@@ -86,8 +88,8 @@ For all 6 DAG templates (New Feature, Bug Fix, Refactor, Deploy, Widget Change, 
 
 - Schema-guardian wins on schema questions. `architecture-decisions.md` wins on architecture.
 - `widget/` and `frontend/public/widget/` must be byte-identical — widget-specialist always updates both.
-- Passing context to agents: paste relevant sections from prior agents' output files into next agent's prompt.
-- Cleanup after completion: delete individual agent output files, keep coordination report.
+- Passing context to cross-provider agents: record it with `teamctl handoff`; same-session specialists may use ephemeral output files.
+- All team verification runs locally. Team branches and integration commits contain `[skip ci]`; never dispatch GitHub Actions for team work.
 
 ## Cross-refs
 

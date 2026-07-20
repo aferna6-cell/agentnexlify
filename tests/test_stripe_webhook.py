@@ -380,21 +380,24 @@ class TestBillingPlanResolution:
 
 
 class TestInvoiceStripePayments:
-    @patch("backend.routers.invoices.ensure_stripe_configured")
-    @patch("backend.routers.invoices.stripe.Price.create")
-    @patch("backend.routers.invoices.stripe.PaymentLink.create")
+    # The invoice helper moved out of the router in issue #473. Patch the
+    # canonical service so this root-level pre-push regression test follows the
+    # same contract as backend/tests/test_invoices_router.py.
+    @patch("backend.services.invoice_helpers.ensure_stripe_configured")
+    @patch("backend.services.invoice_helpers.stripe.Price.create")
+    @patch("backend.services.invoice_helpers.stripe.PaymentLink.create")
     @pytest.mark.asyncio
     async def test_invoice_payment_link_is_limited_to_one_completed_payment(
         self, mock_payment_link_create, mock_price_create, _mock_ensure
     ):
-        from backend.routers.invoices import _get_or_create_stripe_payment_link
+        from backend.services.invoice_helpers import get_or_create_stripe_payment_link
 
         mock_price_create.return_value = MagicMock(id="price_invoice_123")
         mock_payment_link_create.return_value = MagicMock(
             url="https://buy.stripe.com/test_invoice"
         )
 
-        url = await _get_or_create_stripe_payment_link(
+        url = await get_or_create_stripe_payment_link(
             invoice_id="invoice-1",
             tenant_id="tenant-1",
             invoice_number="INV-001",

@@ -1,10 +1,12 @@
 # Agent Communication Directory
 
-This directory is the shared workspace where agents coordinate on multi-step tasks.
+This directory is an ephemeral scratch workspace for specialists running inside one provider session.
+
+It is **not** the durable coordination layer for Codex, Fable 5, and Kimi 3. Cross-provider work follows `docs/TEAM_OPERATING_CONTRACT.md`, uses one shared GitHub issue, and publishes structured events through `scripts/teamctl.py`.
 
 ## How It Works
 
-When the main Claude Code session delegates a complex task:
+When one Claude Code session delegates a complex task to internal specialists:
 
 1. The orchestrator (main session) breaks the task into subtasks
 2. Each agent writes its findings/output to a file here

@@ -4,6 +4,8 @@ This catches a specific regression class earlier than full pytest:
 tests that still import or patch deleted modules after a dead-code sweep.
 """
 
+from __future__ import annotations
+
 import ast
 import re
 from pathlib import Path
