@@ -454,8 +454,8 @@ class TestSendInvoice:
             },
         )
         email = AsyncMock(return_value={"success": True})
-        with patch("backend.routers.invoices.send_email", new=email), patch(
-            "backend.routers.invoices._get_or_create_stripe_payment_link",
+        with patch("backend.services.invoice_send.send_email", new=email), patch(
+            "backend.services.invoice_send.get_or_create_stripe_payment_link",
             new=AsyncMock(return_value="https://pay.example/x"),
         ):
             resp = client.post(
@@ -495,7 +495,7 @@ class TestSendInvoice:
             },
         )
         with patch(
-            "backend.routers.invoices._get_or_create_stripe_payment_link",
+            "backend.services.invoice_send.get_or_create_stripe_payment_link",
             new=AsyncMock(return_value=None),
         ):
             resp = client.post(
@@ -620,7 +620,7 @@ class TestBulkSend:
             },
         )
         email = AsyncMock(return_value={"success": True})
-        with patch("backend.routers.invoices.send_email", new=email):
+        with patch("backend.services.invoice_send.send_email", new=email):
             resp = client.post(
                 f"{BASE}/bulk-send",
                 json={"invoice_ids": ["b1", "b2"], "channel": "email"},
