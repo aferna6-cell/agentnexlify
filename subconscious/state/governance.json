@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-07-20",
-  "total_runs": 99,
+  "last_run": "2026-07-20-pm",
+  "total_runs": 100,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -186,7 +186,37 @@
     "last_run": "2026-07-17-pm -> 2026-07-20"
   },
   "run_100_mandate": "1. Step 9F confirmed present in SKILL.md? (grep 'Step 9F' — SHOULD PASS: written by run 99). 2. Nightly-2026-07-21 log contains 'Step 9F:' line? (confirms nightly executes new step). 3. KB stale (>7 days by 2026-07-21)? If yes: GH #403 has new Step 9F comment? 4. GH #399 resolved? (Day 18+) — investigate secondary remediation if still open. 5. GH #413 REFERRAL_REWARD_ENABLED=1 set? (Day 10+ of issue). 6. appointment_completion.py: any auto-complete events in nightly or backend logs? 7. platform_settings: any non-boolean rows added since migration 175?",
+  "run_100_mandate_executed": "EXECUTED 2026-07-20-pm (run 100). All 7 items checked: (1) Step 9F PRESENT — grep returns 6. PASS. (2) Nightly-2026-07-21 N/A — log doesn't exist yet. (3) KB at exactly 7-day boundary (2026-07-13 → 2026-07-20) — Step 9F will fire tomorrow. (4) GH #399 OPEN Day 18+ — AUTOPILOT_GH_TOKEN still expired, 30 ai-ready issues blocked. Secondary remediation deferred (human-only scope — Railway UI access required). (5) GH #413 NOT SET — 0 human responses. (6) appointment_completion.py auto-complete CONFIRMED implemented in PR #475 (2026-07-18, 23b1da5). (7) platform_settings non-boolean rows — not explicitly checked; migration 175 ships fail-open pattern. Winner: Wire mcp_client.py into agent execution path (os_thread_runner.py + agent_os_bridge.py).",
+  "run_100_governance_corrections": {
+    "mandate_check_1_step_9f": "PASS — grep -c 'Step 9F' .claude/skills/nightly-commit-review/SKILL.md returns 6. Implemented by run 99 direct escalation.",
+    "mandate_check_2_nightly_2026_07_21": "N/A — log does not exist yet (nightly runs at 2:37 AM local).",
+    "mandate_check_3_kb_staleness": "At 7-day boundary as of 2026-07-20 (last run 2026-07-13). Step 9F will flag tomorrow (2026-07-21) if kb-autopopulate doesn't run today.",
+    "mandate_check_4_gh399": "OPEN Day 18+ — AUTOPILOT_GH_TOKEN expired, 30 ai-ready issues blocked. Secondary remediation: human must rotate token in Railway UI. Runbook not yet in bug-patterns.md (parking lot, run 100).",
+    "mandate_check_5_gh413_referral": "NOT SET — 0 human responses to 7+ autonomous comments on GH #413. Day 10+ of issue.",
+    "mandate_check_6_appointment_completion": "CONFIRMED implemented — PR #475 (23b1da5, 2026-07-18). backend/services/automation/scheduled/appointment_jobs.py. auto_complete_past_appointments() function confirmed.",
+    "mandate_check_7_platform_settings": "Deferred — migration 175 (platform_flags.py) ships fail-open pattern. Non-boolean flag names noted as not-for-platform_settings in PR #476 governance. No evidence of violations added.",
+    "new_evidence_mcp_gap": "mcp_client.py shipped in PR #514 (b17ed5c, 2026-07-20) as one of 7 enterprise features. grep confirms zero imports in os_thread_runner.py or agent_os_bridge.py. Configuration layer complete; execution layer missing. Day-0 silent non-execution for all tenants who configure MCP tools.",
+    "new_evidence_enterprise_audit": "PR #513 (2b3116a, 2026-07-20) landed competitive audit: 12 capability gaps vs Amazon/Microsoft/Google/Salesforce. MCP tool execution = gap #4. Observability = gap #1.",
+    "total_runs": "99 -> 100",
+    "last_run": "2026-07-20 -> 2026-07-20-pm"
+  },
+  "run_101_mandate": "1. mcp_client.py wired into os_thread_runner.py or agent_os_bridge.py? (grep 'mcp_client' in both files — SHOULD PASS if nightly executes). 2. Test in backend/tests/test_agent_os.py covers MCP tool dispatch? 3. GH #399 resolved? (Day 19+). 4. GH #413 REFERRAL_REWARD_ENABLED=1 set? 5. KB compile run after 2026-07-13? (Step 9F should have fired on 2026-07-21 — check nightly log for 'Step 9F:' line). 6. Plan-gating audit: do new PR #514 routers have require_plan('agent_os') decorators? (grep new router files).",
   "active_directions": [
+    {
+      "title": "Wire mcp_client.py into agent execution path (os_thread_runner.py + agent_os_bridge.py) — closes Day-0 MCP execution gap from PR #514 (run 100 winner)",
+      "date": "2026-07-20-pm",
+      "confidence": "HIGH",
+      "status": "pending_autonomous",
+      "autonomous_executable": true,
+      "requires_human": false,
+      "category": "agent_performance",
+      "moratorium_override": false,
+      "source_run": 100,
+      "effort": "S",
+      "evidence": "PR #514 (b17ed5c, 2026-07-20) shipped mcp_client.py as one of 7 enterprise features. grep confirms zero imports of mcp_client in os_thread_runner.py or agent_os_bridge.py. Only importer: backend/routers/os_mcp.py (admin config router). Enterprise audit (PR #513) ranks MCP tool execution as competitive gap #4 vs Amazon/Microsoft/Google/Salesforce. os_outbound_guard IS wired (agent_os_bridge.py:393). Execution layer is missing; configuration layer is complete.",
+      "action": "Add 'from backend.services.mcp_client import MCPClient' to os_thread_runner.py. Implement _execute_mcp_tool_call() helper. Add MCP dispatch branch in agent_os_bridge.py tool dispatch switch, wrapped by apply_outbound_guard (line 393). Add trace logging consistent with os_model_call_log pattern. Write test in backend/tests/test_agent_os.py mocking MCP server response. Verify no 'from __future__ import annotations' introduced.",
+      "note": "Run 100 winner. Day-0 bug from PR #514 enterprise sprint. Additive change only — existing execution path unchanged. MCP client service handles error/timeout/output schema internally. Dispatch branch ~30 lines. Implementation sketch in subconscious/runs/2026-07-20-pm/winning-concept.md."
+    },
     {
       "title": "Step 9F: KB Autopopulate Staleness Check in nightly-commit-review SKILL.md (run 97 winner)",
       "date": "2026-07-17",
