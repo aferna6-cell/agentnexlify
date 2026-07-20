@@ -1620,3 +1620,10 @@ Golden-question eval harness (enterprise-audit item 2). Two new tables, both
   regressions, results jsonb).
 Evals run deterministically after each `compile_tenant_kb` and on demand via
 `/api/v1/kb-evals/run`; regressions log `kb_eval_regression` to activity_log.
+
+## 178_os_custom_instructions.sql (2026-07-20) — APPLIED
+Topics-lite (enterprise-audit item 4): `tenants.os_custom_instructions` jsonb
+map keyed by engine department id. Injected as leading KbEntry rows by
+`os_thread_runner` via `backend/services/os_custom_instructions.py`; edited
+via GET/PUT `/api/v1/os/instructions`. Style guidance only — approval gates
+and outbound guard stay in code.
