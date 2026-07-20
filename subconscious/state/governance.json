@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-07-17-pm",
-  "total_runs": 98,
+  "last_run": "2026-07-20",
+  "total_runs": 99,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -171,13 +171,29 @@
     "total_runs": "97 -> 98",
     "last_run": "2026-07-17 -> 2026-07-17-pm"
   },
-  "run_99_mandate": "1. Step 9F block present in .claude/skills/nightly-commit-review/SKILL.md? (grep 'Step 9F' — should PASS now after 2 carry-forward cycles). 2. First nightly log after implementation — 'Step 9F:' line present? 3. KB healthy (< 7 days)? If stale: GH #403 has Step 9F comment? 4. GH #399 resolved? (Day 17+) — unlocks conversation_enrichment_job.py + kb_hybrid UI + appointment_completion.py via issue-to-pr-loop. 5. GH #413 REFERRAL_REWARD_ENABLED=1 set? (Day 28+). 6. conversation_enrichment_job.py: once GH #399 resolved, investigate pending queue size and file ai-ready GH issue. 7. kb_hybrid enable: wait for settings UI GH issue; revisit when GH #399 resolved.",
+  "run_99_mandate": "EXECUTED 2026-07-20 (run 99). All mandate items checked: (1) Step 9F ABSENT — 3rd consecutive carry-forward. ESCALATION: implemented directly in this run. (2) First nightly N/A — check nightly-2026-07-21 for 'Step 9F:' line. (3) KB at 7-day boundary (last: 2026-07-13) — Step 9F will fire tomorrow if kb-autopopulate doesn't run today. (4) GH #399 OPEN Day 17+ — AUTOPILOT_GH_TOKEN expired, 30 ai-ready issues blocked. (5) GH #413 NOT SET — Day 9+ of issue, 0 human responses. (6) conversation_enrichment_job.py: deferred — GH #399 mandate condition not met. (7) kb_hybrid: deferred — same.",
+  "run_99_governance_corrections": {
+    "appointment_completion": "status: pending_autonomous → implemented. PR #475 (23b1da5, 2026-07-18). backend/services/automation/scheduled/appointment_jobs.py. auto_complete_past_appointments(): cross-tenant service-role query, filters confirmed/booked past end_time+1h grace, fires appointment_completed rule event. Idempotent. BATCH_LIMIT rows per 5-min cadence.",
+    "botHealthPage": "status: parking_lot → implemented. PR #475 (2026-07-18). frontend/src/pages/BotHealthPage.jsx. Admin-secret prompt pattern. No localStorage (CLAUDE.md rule #6 honored).",
+    "attributionPage": "status: new → implemented. PR #475 (2026-07-18). frontend/src/pages/AttributionPage.jsx. Uses client_id on leads (CLAUDE.md invariant #1). 5000-lead hard cap (pre-existing ceiling pattern from lead_source_breakdown).",
+    "step_9f": "status: pending_autonomous → implemented. Written directly to .claude/skills/nightly-commit-review/SKILL.md by subconscious run 99 (2026-07-20). 3rd-carry-forward escalation. grep -c 'Step 9F' returns 6.",
+    "pr_476": "platform_settings migration 175 (platform_flags.py, admin_voice_test.py). DB-level feature toggles with fail-open pattern. Minor: resolve_int_setting minimum bypass — intentional kill-switch semantics, tested. Non-boolean flag names should not be set in platform_settings.",
+    "pr_477": "repo cleanup 970 verified-stale files deleted. check_project_invariants.py dead skip-paths removed. .gitignore dead entries removed. STRUCTURE.md updated.",
+    "gh_399_status": "OPEN Day 17+ — AUTOPILOT_GH_TOKEN expired, 30 ai-ready issues blocked. Last comment 2026-07-16.",
+    "gh_413_status": "OPEN Day 9+ — REFERRAL_REWARD_ENABLED=1 not set. 0 human responses to 7 autonomous comments. Last updated 2026-07-18.",
+    "kb_staleness": "Last run 2026-07-13 (7 days ago). At exactly the >7-day threshold boundary as of 2026-07-20. Step 9F will flag tomorrow if not run today.",
+    "total_runs": "98 -> 99",
+    "last_run": "2026-07-17-pm -> 2026-07-20"
+  },
+  "run_100_mandate": "1. Step 9F confirmed present in SKILL.md? (grep 'Step 9F' — SHOULD PASS: written by run 99). 2. Nightly-2026-07-21 log contains 'Step 9F:' line? (confirms nightly executes new step). 3. KB stale (>7 days by 2026-07-21)? If yes: GH #403 has new Step 9F comment? 4. GH #399 resolved? (Day 18+) — investigate secondary remediation if still open. 5. GH #413 REFERRAL_REWARD_ENABLED=1 set? (Day 10+ of issue). 6. appointment_completion.py: any auto-complete events in nightly or backend logs? 7. platform_settings: any non-boolean rows added since migration 175?",
   "active_directions": [
     {
       "title": "Step 9F: KB Autopopulate Staleness Check in nightly-commit-review SKILL.md (run 97 winner)",
       "date": "2026-07-17",
       "confidence": "HIGH",
-      "status": "pending_autonomous",
+      "status": "implemented",
+      "implemented_date": "2026-07-20",
+      "implemented_by": "subconscious run 99 — direct implementation (3rd-carry-forward escalation). grep -c 'Step 9F' .claude/skills/nightly-commit-review/SKILL.md returns 6.",
       "autonomous_executable": true,
       "requires_human": false,
       "category": "workflow",

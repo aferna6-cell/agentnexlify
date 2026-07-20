@@ -286,6 +286,23 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
           Add comment via `mcp__github__add_issue_comment` with updated days_since_rotation.
     4. **Log result:**
        Add to nightly commit log: "Step 9E: {N} credentials checked, {M} approaching expiry (>=76 days), {K} unknown state"
+9F. (KB Autopopulate Staleness Check) Check when knowledge base was last successfully populated:
+    1. **Read KB log:**
+       Read `knowledge-base/log.md`.
+       If file missing: log "Step 9F: knowledge-base/log.md not found — skipping" and continue to step 10.
+    2. **Extract last run date:**
+       Find the most recent `## [YYYY-MM-DD` header in the file (format: `## [2026-07-13 20:00]`).
+       Parse date as YYYY-MM-DD.
+       If no date found: log "Step 9F: KB log format unreadable — skipping" and continue to step 10.
+    3. **Compute days stale:**
+       days_stale = (today - last_run_date) in days.
+       Log: "Step 9F: KB autopopulate last run: {last_run_date} ({days_stale} days ago)"
+    4. **If days_stale > 7:**
+       a. Add comment via `mcp__github__add_issue_comment`:
+          issue_number: 403
+          body: "**KB autopopulate staleness alert (Step 9F):** {days_stale} days since last successful run (last: {last_run_date}). Check: (1) ANTHROPIC_API_KEY in GitHub Actions secrets — may need rotation. (2) SUPABASE_ACCESS_TOKEN — may be expired. Manual trigger: `bash scripts/daily/kb-autopopulate.sh`."
+       b. If GH comment fails (token expired — GH #399): log "Step 9F: GH comment failed — KB stale {days_stale} days, token may be expired" and continue.
+       c. Log: "Step 9F: KB STALE ({days_stale} days) — comment added to GH #403"
 10. Commit report: `docs(nightly): review YYYY-MM-DD [auto-nightly]`
 11. Push to main
 12. If any guardrail tripped (forbidden path, >5 files, >50 LOC, test-check failed) — abort fixes, file issue only, still write report
