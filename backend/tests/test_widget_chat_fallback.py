@@ -58,7 +58,7 @@ class TestFallbackDisabled:
     ):
         """Common case: first-tier Claude answered fine, no fallback."""
         with patch(
-            "backend.routers.widget_chat.log_activity"
+            "backend.routers.widget_chat_fallback.log_activity"
         ) as mock_log, patch(
             "backend.services.support_agent.run_support_query"
         ) as mock_run:
@@ -81,7 +81,7 @@ class TestFallbackDisabled:
     ):
         """Claude leaked the marker but tenant hasn't opted in — strip it."""
         with patch(
-            "backend.routers.widget_chat.log_activity"
+            "backend.routers.widget_chat_fallback.log_activity"
         ) as mock_log, patch(
             "backend.services.support_agent.run_support_query"
         ) as mock_run:
@@ -107,7 +107,7 @@ class TestFallbackDisabled:
     ):
         """Legacy widget configs without enable_ai_fallback default to off."""
         with patch(
-            "backend.routers.widget_chat.log_activity"
+            "backend.routers.widget_chat_fallback.log_activity"
         ), patch(
             "backend.services.support_agent.run_support_query"
         ) as mock_run:
@@ -132,7 +132,7 @@ class TestFallbackSuccess:
         self, tenant_id, session_id, customer_message
     ):
         with patch(
-            "backend.routers.widget_chat.log_activity"
+            "backend.routers.widget_chat_fallback.log_activity"
         ) as mock_log, patch(
             "backend.services.support_agent.run_support_query",
             return_value={
@@ -167,7 +167,7 @@ class TestFallbackSuccess:
         self, tenant_id, session_id, customer_message
     ):
         with patch(
-            "backend.routers.widget_chat.log_activity"
+            "backend.routers.widget_chat_fallback.log_activity"
         ), patch(
             "backend.services.support_agent.run_support_query",
             return_value={
@@ -195,7 +195,7 @@ class TestFallbackSuccess:
         self, tenant_id, session_id, customer_message
     ):
         with patch(
-            "backend.routers.widget_chat.log_activity"
+            "backend.routers.widget_chat_fallback.log_activity"
         ) as mock_log, patch(
             "backend.services.support_agent.run_support_query",
             return_value={
@@ -235,7 +235,7 @@ class TestFallbackLowConfidenceForcesHandoff:
         self, tenant_id, session_id, customer_message
     ):
         with patch(
-            "backend.routers.widget_chat.log_activity"
+            "backend.routers.widget_chat_fallback.log_activity"
         ), patch(
             "backend.services.support_agent.run_support_query",
             return_value={
@@ -265,7 +265,7 @@ class TestFallbackLowConfidenceForcesHandoff:
         self, tenant_id, session_id, customer_message
     ):
         with patch(
-            "backend.routers.widget_chat.log_activity"
+            "backend.routers.widget_chat_fallback.log_activity"
         ), patch(
             "backend.services.support_agent.run_support_query",
             return_value={
@@ -291,7 +291,7 @@ class TestFallbackLowConfidenceForcesHandoff:
         self, tenant_id, session_id, customer_message
     ):
         with patch(
-            "backend.routers.widget_chat.log_activity"
+            "backend.routers.widget_chat_fallback.log_activity"
         ) as mock_log, patch(
             "backend.services.support_agent.run_support_query",
             return_value={
@@ -330,7 +330,7 @@ class TestFallbackErrors:
             raise asyncio.TimeoutError()
 
         with patch(
-            "backend.routers.widget_chat.log_activity"
+            "backend.routers.widget_chat_fallback.log_activity"
         ) as mock_log, patch(
             "backend.services.support_agent.run_support_query",
             side_effect=_hang,
@@ -358,7 +358,7 @@ class TestFallbackErrors:
         )
 
         with patch(
-            "backend.routers.widget_chat.log_activity"
+            "backend.routers.widget_chat_fallback.log_activity"
         ) as mock_log, patch(
             "backend.services.support_agent.run_support_query",
             side_effect=ManagedAgentNotConfigured("support_agent"),
@@ -382,7 +382,7 @@ class TestFallbackErrors:
         self, tenant_id, session_id, customer_message
     ):
         with patch(
-            "backend.routers.widget_chat.log_activity"
+            "backend.routers.widget_chat_fallback.log_activity"
         ) as mock_log, patch(
             "backend.services.support_agent.run_support_query",
             side_effect=RuntimeError("anthropic 500"),
@@ -407,7 +407,7 @@ class TestFallbackErrors:
     ):
         """If log_activity itself raises, the helper still returns cleanly."""
         with patch(
-            "backend.routers.widget_chat.log_activity",
+            "backend.routers.widget_chat_fallback.log_activity",
             side_effect=RuntimeError("activity log down"),
         ), patch(
             "backend.services.support_agent.run_support_query",
