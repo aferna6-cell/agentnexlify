@@ -6,6 +6,8 @@ workspace. It prints concise PASS/FAIL lines and exits nonzero when any
 invariant is violated.
 """
 
+from __future__ import annotations
+
 import ast
 import os
 import re

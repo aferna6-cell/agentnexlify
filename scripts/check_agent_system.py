@@ -155,7 +155,7 @@ def main() -> int:
     )
     check(
         scripts.get("check:quick")
-        == "npm run agent-system:check && npm run check:instruction-budget && npm run check:skills && npm run sync-skills:check && npm run skills:eval && npm run eval:agent-routing && npm run check:project && npm run sync-widget:check && npm run check:codex-orchestration",
+        == "npm run team:check && npm run agent-system:check && npm run check:instruction-budget && npm run check:skills && npm run sync-skills:check && npm run skills:eval && npm run eval:agent-routing && npm run check:project && npm run sync-widget:check && npm run check:codex-orchestration",
         "package quick check script wires the expected checks",
         failures,
     )
@@ -170,10 +170,15 @@ def main() -> int:
         "package local release check script uses available local gates",
         failures,
     )
-    python_runner = "python scripts/run_python.py"
+    python_runner = "node scripts/run_python.cjs"
     check(
         file_exists("scripts/run_python.py"),
         "preferred Python runner exists",
+        failures,
+    )
+    check(
+        file_exists("scripts/run_python.cjs"),
+        "cross-platform Python bootstrap exists",
         failures,
     )
     check(
@@ -181,6 +186,14 @@ def main() -> int:
         "agent routing policy exists",
         failures,
     )
+    for team_path in (
+        "docs/TEAM_OPERATING_CONTRACT.md",
+        ".ai/team-contract.json",
+        "scripts/teamctl.py",
+        "scripts/check_team_protocol.py",
+        "KIMI.md",
+    ):
+        check(file_exists(team_path), f"team control plane exists: {team_path}", failures)
     check(
         file_exists("config/agent-routing-eval.json"),
         "agent routing eval catalog exists",
@@ -287,6 +300,11 @@ def main() -> int:
         failures,
     )
     check(
+        scripts.get("team:check") == f"{python_runner} scripts/check_team_protocol.py",
+        "cross-provider team check script is registered",
+        failures,
+    )
+    check(
         scripts.get("test:backend") == f"{python_runner} -m pytest tests/ -q",
         "backend tests run through preferred local Python",
         failures,
@@ -315,6 +333,17 @@ def main() -> int:
     check(
         "agentnexlify-task-loader" in codex_skills,
         ".ai manifest lists the task loader codex skill",
+        failures,
+    )
+    cross_provider_team = manifest.get("cross_provider_team", {})
+    check(
+        cross_provider_team.get("contract") == "docs/TEAM_OPERATING_CONTRACT.md",
+        ".ai manifest points to the canonical team contract",
+        failures,
+    )
+    check(
+        cross_provider_team.get("github_actions_minutes") == "forbidden",
+        ".ai manifest forbids Actions minutes for team work",
         failures,
     )
 

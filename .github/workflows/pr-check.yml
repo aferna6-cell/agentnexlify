@@ -5,7 +5,7 @@ name: PR Validation
 # trigger double-charged minutes on every merge (PR run + push run for the same
 # commit). Dropped `push: branches: [main]` — `pull_request` still gates real
 # PRs and `workflow_dispatch` allows a manual run. Local pre-merge verification
-# now runs via `bash scripts/ci-local.sh`, which mirrors these gates with zero
+# now runs via `bash scripts/ci_local.sh`, which mirrors these gates with zero
 # Actions minutes. Re-add the push trigger once minutes are topped up if a
 # belt-and-suspenders main-branch gate is wanted.
 on:
@@ -23,6 +23,7 @@ concurrency:
 jobs:
   validate:
     name: PR Validation
+    if: ${{ github.event_name != 'pull_request' || !startsWith(github.head_ref, 'team/') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

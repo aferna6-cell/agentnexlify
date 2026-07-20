@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+message_file="${1:?commit message file is required}"
+source="${2:-}"
+branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+
+# Team work is locally verified. Preserve zero GitHub Actions runner usage even
+# when an agent forgets the marker. Do not alter merge/revert messages because
+# their final integration message is controlled explicitly by the integrator.
+if [[ "$branch" == team/* && "$source" != "merge" && "$source" != "commit" ]]; then
+  if ! grep -Fqi "[skip ci]" "$message_file"; then
+    first_line="$(head -n 1 "$message_file")"
+    if [[ -n "$first_line" ]]; then
+      sed -i.bak '1s/$/ [skip ci]/' "$message_file"
+      rm -f "${message_file}.bak"
+    fi
+  fi
+fi

@@ -18,6 +18,11 @@ COMPARE_REF="$(git merge-base "$COMPARE_BRANCH" HEAD 2>/dev/null || echo "$COMPA
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
+# npm guarantees Node is present for this gate. Route every Python command
+# through the same cross-platform interpreter selector used by package.json,
+# so macOS, Windows, worktrees, and AGENTNEXLIFY_PYTHON behave identically.
+python() { node scripts/run_python.cjs "$@"; }
+
 PASS=()
 FAIL=()
 SKIP=()

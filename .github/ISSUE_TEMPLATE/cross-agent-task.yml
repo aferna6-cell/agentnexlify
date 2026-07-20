@@ -1,0 +1,89 @@
+name: Cross-agent product task
+description: One shared outcome for Codex, Fable 5, and Kimi 3
+title: "[Team] "
+labels:
+  - agent-team
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue is the durable task hub for one autonomous team outcome. Before editing, each agent must run `python3 scripts/teamctl.py preflight --issue <number> --agent <name>` and claim a non-overlapping lane.
+  - type: textarea
+    id: owner_problem
+    attributes:
+      label: Owner problem
+      description: What is difficult for the nontechnical business owner today?
+      placeholder: The owner cannot...
+    validations:
+      required: true
+  - type: textarea
+    id: north_star
+    attributes:
+      label: North-star outcome
+      description: How does this shorten the trustworthy path to a live front desk, bookings, or revenue?
+      placeholder: This will reduce/increase...
+    validations:
+      required: true
+  - type: input
+    id: metric
+    attributes:
+      label: Measurable signal
+      placeholder: e.g. setup completion rate, booking conversion, grounded-answer rate
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] Observable user outcome
+        - [ ] Failure behavior is safe and recoverable
+        - [ ] Relevant telemetry or evidence exists
+    validations:
+      required: true
+  - type: textarea
+    id: lanes
+    attributes:
+      label: Initial lanes and dependencies
+      description: Propose non-overlapping deliverables; teamctl claims remain authoritative.
+      placeholder: |
+        - product-contract — depends on none
+        - implementation — depends on product-contract
+        - adversarial-proof — can run in parallel
+    validations:
+      required: true
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Highest expected risk tier
+      options:
+        - Tier A — safe and reversible
+        - Tier B — risky but reversible
+        - Tier C — irreversible or externally consequential
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals and protected boundaries
+      placeholder: Out of scope; do not change...
+  - type: checkboxes
+    id: local_only
+    attributes:
+      label: Local-only execution
+      options:
+        - label: All validation will run locally; no GitHub Actions workflow will be triggered or added.
+          required: true
+        - label: Team branch and integration commits will include `[skip ci]`.
+          required: true
+  - type: textarea
+    id: final_proof
+    attributes:
+      label: Final proof required
+      value: |
+        - `npm run check:quick`
+        - `bash scripts/ci_local.sh origin/main`
+        - Peer approvals recorded with `teamctl review`
+        - Passing evidence recorded with `teamctl proof`
+    validations:
+      required: true

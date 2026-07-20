@@ -2,13 +2,16 @@
   "schema_version": 2,
   "project": "AgentNexLiFy",
   "description": "AI-powered business automation platform for small businesses. Includes customer-facing AI, automations, an embeddable widget, MCP access, and a multi-agent development system.",
-  "updated_at": "2026-04-28",
+  "updated_at": "2026-07-20",
   "documentation": {
     "primary": "CLAUDE.md",
     "codex_adapter": "AGENTS.md",
     "ai_architecture_audit": "docs/AI_ARCHITECTURE_AUDIT.md",
     "agent_system_plan": "docs/AGENT_SYSTEM_PLAN.md",
     "agent_routing_policy": "docs/AGENT_ROUTING.md",
+    "team_operating_contract": "docs/TEAM_OPERATING_CONTRACT.md",
+    "team_contract": ".ai/team-contract.json",
+    "kimi_adapter": "KIMI.md",
     "agent_routing_eval": "config/agent-routing-eval.json",
     "agent_system_guardrail": "scripts/check_agent_system.py",
     "everything_claude_code_lock": ".claude/everything-claude-code.lock.json",
@@ -84,13 +87,14 @@
     ]
   },
   "model_routing": {
-    "codex": "Primary implementation/execution engine for code exploration, edits, debugging, refactors, and tests.",
-    "anthropic": "Canonical repo brain, prompt/system-design authority, and production customer-facing runtime AI authority.",
+    "codex": "Cross-provider implementation and integration steward for code exploration, edits, debugging, refactors, tests, and coherent release assembly.",
+    "fable5": "Cross-provider product and architecture steward; Anthropic remains the production customer-facing runtime AI authority.",
+    "kimi3": "Cross-provider challenger and verification steward that may also implement explicitly claimed, peer-reviewed lanes.",
     "minimax": "Lightweight triage, summarization, and cheap helper/subagent orchestration where throughput matters more than exactness.",
-    "candidate_low_cost_workers": "Kimi Code or other low-cost coding workers may be evaluated for ai-routine, ai-docs, ai-tests, and batch-candidate work, but are not autopilot defaults until the repo eval harness passes.",
+    "candidate_low_cost_workers": "Kimi 3 participates in the peer team immediately; promotion into the separate unattended autopilot remains gated by the repo eval harness.",
     "routing_policy": "docs/AGENT_ROUTING.md",
     "routing_eval_command": "npm run eval:agent-routing",
-    "risky_label_rule": "Issues labeled ai-risky require premium human-reviewed routing and must not be dispatched autonomously.",
+    "risky_label_rule": "Issues labeled ai-risky are blocked from legacy unattended autopilot. Cross-provider Tier B work requires both peer approvals, rollback protection, and the full local gate; Tier C uses a safe substitute or intrinsic-authority memo.",
     "approved_claude_models": [
       "claude-sonnet-4-6",
       "claude-opus-4-7",
@@ -298,9 +302,24 @@
     ]
   },
   "agent_communication": {
-    "directory": ".claude/agent-comms/",
-    "pattern": "Agents write findings to {agent-name}-output.md and the orchestrator synthesizes them.",
-    "checkpoint_file": ".claude/agent-comms/checkpoint.md"
+    "durable_hub": "GitHub issue",
+    "event_cli": "scripts/teamctl.py",
+    "event_transport": "structured GitHub issue comments",
+    "branch_pattern": "team/{issue}/{agent}/{lane}",
+    "ephemeral_directory": ".claude/agent-comms/",
+    "ephemeral_scope": "same-provider session scratch only"
+  },
+  "cross_provider_team": {
+    "contract": "docs/TEAM_OPERATING_CONTRACT.md",
+    "machine_contract": ".ai/team-contract.json",
+    "members": ["codex", "fable5", "kimi3"],
+    "north_star": "Shortest trustworthy path from owner intent to a live grounded AI front desk that produces bookings and revenue.",
+    "preflight": "python3 scripts/teamctl.py preflight --issue <number> --agent <name>",
+    "normal_peer_approvals": 1,
+    "risky_peer_approvals": 2,
+    "local_integration_gate": "bash scripts/ci_local.sh origin/main",
+    "github_actions_minutes": "forbidden",
+    "commit_marker": "[skip ci]"
   },
   "workspace_contexts": {
     "backend": "backend/CONTEXT.md",

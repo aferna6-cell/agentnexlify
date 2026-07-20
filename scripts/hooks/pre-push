@@ -16,24 +16,25 @@ WARNINGS=0
 echo "Running AgentNexLiFy pre-push checks..."
 echo ""
 
-detect_python_bin() {
-    if [ -f ".venv313/Scripts/python.exe" ]; then
-        echo ".venv313/Scripts/python.exe"
-        return 0
+# Team branches are deliberately local-proof-only. Block the push if any team
+# commit could allocate GitHub Actions runner minutes.
+CURRENT_BRANCH="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+if [[ "$CURRENT_BRANCH" == team/* ]]; then
+    BASE="$(git merge-base origin/main HEAD 2>/dev/null || true)"
+    if [ -z "$BASE" ]; then
+        BASE="HEAD^"
     fi
-    if [ -f ".venv/Scripts/python.exe" ]; then
-        echo ".venv/Scripts/python.exe"
-        return 0
+    MISSING_SKIP="$(git log --format='%h %s' "$BASE..HEAD" | grep -Fiv '[skip ci]' || true)"
+    if [ -n "$MISSING_SKIP" ]; then
+        echo -e "${RED}PUSH BLOCKED${NC}"
+        echo "  Every team-branch commit must contain [skip ci]:"
+        echo "$MISSING_SKIP"
+        exit 1
     fi
-    if command -v python3 >/dev/null 2>&1; then
-        echo "python3"
-        return 0
-    fi
-    if command -v python >/dev/null 2>&1; then
-        echo "python"
-        return 0
-    fi
-    return 1
+fi
+
+run_python() {
+    node scripts/run_python.cjs "$@"
 }
 
 detect_node_bin() {
@@ -60,7 +61,10 @@ detect_npm_bin() {
     return 1
 }
 
-PY_BIN="$(detect_python_bin || true)"
+PY_AVAILABLE=0
+if command -v node >/dev/null 2>&1 && run_python --version >/dev/null 2>&1; then
+    PY_AVAILABLE=1
+fi
 NODE_BIN="$(detect_node_bin || true)"
 NPM_BIN="$(detect_npm_bin || true)"
 
@@ -80,11 +84,11 @@ fi
 
 # CHECK 2: Python test quality lint
 echo -n "Linting Python test quality... "
-if [ -z "$PY_BIN" ]; then
+if [ "$PY_AVAILABLE" -ne 1 ]; then
     echo -e "${RED}FAILED${NC}"
     echo "  Python is required for Python test-quality linting."
     ERRORS=$((ERRORS + 1))
-elif "$PY_BIN" scripts/lint_python_test_quality.py; then
+elif run_python scripts/lint_python_test_quality.py; then
     echo -e "${GREEN}OK${NC}"
 else
     echo -e "${RED}FAILED${NC}"
@@ -108,11 +112,11 @@ else
     FAST_TESTS=("${DEFAULT_FAST_TESTS[@]}")
 fi
 
-if [ -z "$PY_BIN" ]; then
+if [ "$PY_AVAILABLE" -ne 1 ]; then
     echo -e "${RED}FAILED${NC}"
     echo "  Python is required to run fast critical tests."
     ERRORS=$((ERRORS + 1))
-elif "$PY_BIN" -m pytest -q "${FAST_TESTS[@]}"; then
+elif run_python -m pytest -q "${FAST_TESTS[@]}"; then
     echo -e "${GREEN}OK${NC}"
 else
     echo -e "${RED}FAILED${NC}"
@@ -151,10 +155,13 @@ fi
 
 # CHECK 5: Scan for dangerous __future__ imports in routers
 echo -n "Scanning for __future__ annotations in routers... "
-if grep -rn "from __future__ import annotations" backend/routers/ 2>/dev/null | grep -v "^.*:#" | grep -q .; then
+FUTURE_IMPORTS=$(grep -rnE \
+    '^[[:space:]]*from __future__ import annotations([[:space:]]*(#.*)?)?$' \
+    backend/routers/ --include='*.py' 2>/dev/null || true)
+if [ -n "$FUTURE_IMPORTS" ]; then
     echo -e "${RED}FAILED${NC}"
     echo "  from __future__ import annotations found in router files (breaks FastAPI)."
-    grep -rn "from __future__ import annotations" backend/routers/ 2>/dev/null | grep -v "^.*:#"
+    echo "$FUTURE_IMPORTS"
     ERRORS=$((ERRORS + 1))
 else
     echo -e "${GREEN}OK${NC}"
@@ -197,19 +204,19 @@ fi
 
 # CHECK 9: Plan/audit drift detector (warning only — surface ghost refs)
 echo -n "Checking plan/audit drift... "
-if [ -z "$PY_BIN" ]; then
+if [ "$PY_AVAILABLE" -ne 1 ]; then
     echo -e "${YELLOW}SKIPPED (no python)${NC}"
 elif [ ! -f "scripts/check_plan_drift.py" ]; then
     echo -e "${YELLOW}SKIPPED (detector missing)${NC}"
 else
-    DRIFT_OUT="$("$PY_BIN" scripts/check_plan_drift.py 2>&1 || true)"
+    DRIFT_OUT="$(run_python scripts/check_plan_drift.py 2>&1 || true)"
     if echo "$DRIFT_OUT" | grep -q "^OK:"; then
         echo -e "${GREEN}OK${NC}"
     else
         DRIFT_LINE=$(echo "$DRIFT_OUT" | grep -E "^DRIFT:" | head -1)
         echo -e "${YELLOW}WARNING${NC}"
         echo "  $DRIFT_LINE"
-        echo "  Run: $PY_BIN scripts/check_plan_drift.py"
+        echo "  Run: node scripts/run_python.cjs scripts/check_plan_drift.py"
         WARNINGS=$((WARNINGS + 1))
     fi
 fi

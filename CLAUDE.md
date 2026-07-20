@@ -4,6 +4,9 @@ AI-powered business automation platform. Embeddable chat widget captures leads, 
 
 > This file is your onboarding doc, not a README. Keep it ≤200 lines per [Anthropic guidance](https://docs.claude.com/en/docs/claude-code/memory#write-effective-instructions) — files >200 lines reduce adherence. Reference rule files — never duplicate their contents.
 
+## SHARED TEAM — READ BEFORE TEAM WORK
+Fable 5, Codex, and Kimi 3 operate as one peer team under `docs/TEAM_OPERATING_CONTRACT.md` and `.ai/team-contract.json`. Before editing a shared task, run `python3 scripts/teamctl.py preflight --issue <number> --agent fable5`, claim one non-overlapping lane, and use structured GitHub issue comments for updates, handoffs, review, and local proof. Do not independently implement the whole issue. All team validation is local; team and integration commits require `[skip ci]` so no GitHub Actions runner minutes are allocated.
+
 ## SECOND BRAIN — READ FIRST
 Before any task, read `brain/Maps/Home.md` — the source-backed operating memory for AgentNexLiFy (people, products, decisions, open loops, procedures, DB schema, competitors). Start there, follow wikilinks for depth. Re-sync with `brain/_tools/refresh_connectors.py`; ask it questions via `brain/_tools/ask.py`. Full guide: `brain/README.md`.
 
@@ -185,4 +188,3 @@ Triggers: "council this", "pressure-test this", "war room this". Five independen
 - **Update monthly** — stale facts cause wrong-direction work. Last audit: 2026-04-15.
 - **/init was run once** — this file is the curated version.
 - **Reference, never duplicate** — point to rule files and configs; don't copy contents.
-

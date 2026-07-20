@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   handle-comment:
-    if: contains(github.event.pull_request.labels.*.name, 'autopilot-pr') && github.event.comment.user.login != github.event.pull_request.user.login
+    if: contains(github.event.pull_request.labels.*.name, 'autopilot-pr') && !startsWith(github.event.pull_request.head.ref, 'team/') && github.event.comment.user.login != github.event.pull_request.user.login
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:

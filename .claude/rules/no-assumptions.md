@@ -28,6 +28,9 @@ Confidence <80% on correct interpretation → ASK before proceeding. One questio
 - Reversible local edits in obvious scope
 - Task is explicitly scoped in the request
 - User said "just do it" or "your call"
+- A cross-provider team issue supplies acceptance criteria and the team resolves ambiguity with repository evidence plus the quorum in `docs/TEAM_OPERATING_CONTRACT.md`
+
+For Tier C team decisions, find a safe substitute and continue independent lanes. Ask only when the owner's intrinsic authority is required and no substitute exists.
 
 ## Confidence calibration
 - 95%+ → proceed confidently
