@@ -2,7 +2,7 @@ name: Public Uptime Watch
 
 on:
   schedule:
-    - cron: "0 */2 * * *"  # every 2h — throttled 2026-06-22 from */30 (quota still exhausting; uptime belongs on an external monitor, not Actions)
+    - cron: "0 */6 * * *"  # every 6h — re-throttled 2026-07-20 from */2 (GH #500: minutes exhausted). Uptime belongs on an external monitor (UptimeRobot free tier: 50 monitors @ 5-min interval) — move it there and disable this.
   workflow_dispatch: {}
 
 concurrency:
