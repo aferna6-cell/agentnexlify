@@ -2,9 +2,9 @@ import { useState } from "react";
 import { fetchOsRunTrace } from "../../utils/api/os";
 
 // ---------------------------------------------------------------------------
-// RunTraceDrawer — "why did the agent do that?" (enterprise-audit item 1).
+// RunTraceDrawer - "why did the agent do that?" (enterprise-audit item 1).
 // Self-contained link + overlay: renders a small "View run trace" affordance;
-// on click fetches GET /agent-runs/{id}/trace and shows the run timeline —
+// on click fetches GET /agent-runs/{id}/trace and shows the run timeline -
 // routing decision, thought process, model calls, guardrail flags, action
 // outcomes. Kept self-contained so DeliverablePanel only adds two lines.
 // ---------------------------------------------------------------------------
@@ -135,7 +135,7 @@ export default function RunTraceDrawer({ token, runId }) {
               </button>
             </div>
 
-            {loading && <Empty label="Loading trace…" />}
+            {loading && <Empty label="Loading trace..." />}
             {error && (
               <div style={{ color: "#f87171", fontSize: "0.85rem" }}>{error}</div>
             )}
@@ -144,7 +144,7 @@ export default function RunTraceDrawer({ token, runId }) {
               <>
                 <Section title="Run">
                   <div style={rowStyle}>
-                    {run.agent_name || "unknown"} — {run.status || "?"}
+                    {run.agent_name || "unknown"} - {run.status || "?"}
                     {run.deliverable_status ? ` · draft ${run.deliverable_status}` : ""}
                   </div>
                   {guardFlags.length > 0 && (
@@ -202,7 +202,7 @@ export default function RunTraceDrawer({ token, runId }) {
                   ) : (
                     trace.action_runs.map((a, i) => (
                       <div key={i} style={rowStyle}>
-                        {a.action_type} — {a.status}
+                        {a.action_type} - {a.status}
                       </div>
                     ))
                   )}

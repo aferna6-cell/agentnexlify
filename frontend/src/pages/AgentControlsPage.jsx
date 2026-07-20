@@ -15,7 +15,7 @@ import {
 import { BASE } from "../utils/api/_client";
 
 // ---------------------------------------------------------------------------
-// AgentControlsPage — the owner's control room for the enterprise-audit
+// AgentControlsPage - the owner's control room for the enterprise-audit
 // adopt-cheaply surfaces: per-department instructions (topics-lite), this
 // cycle's usage by department, the golden-question regression suite, and the
 // activity-log CSV export.
@@ -115,7 +115,7 @@ function InstructionsCard({ token }) {
     <div style={cardStyle}>
       <h3 style={headingStyle}>Department instructions</h3>
       <div style={{ ...mutedStyle, marginBottom: 14 }}>
-        Standing preferences each department follows — tone, emphasis, style.
+        Standing preferences each department follows - tone, emphasis, style.
         Approvals and safety rules always apply and cannot be overridden here.
       </div>
       {error && (
@@ -145,7 +145,7 @@ function InstructionsCard({ token }) {
                 disabled={!dirty || savingKey === department}
                 onClick={() => save(department)}
               >
-                {savingKey === department ? "Saving…" : "Save"}
+                {savingKey === department ? "Saving..." : "Save"}
               </button>
             </div>
             <textarea
@@ -190,7 +190,7 @@ function UsageCard({ token }) {
         Agent runs and AI tokens by department since {cycleStart || "cycle start"}.
       </div>
       {rows === null ? (
-        <div style={mutedStyle}>Loading…</div>
+        <div style={mutedStyle}>Loading...</div>
       ) : rows.length === 0 ? (
         <div style={mutedStyle}>
           No agent activity yet this cycle. Ask your Agent OS for something and
@@ -312,13 +312,13 @@ function GoldenQuestionsCard({ token }) {
       >
         <h3 style={headingStyle}>Golden questions</h3>
         <button style={btnQuiet} onClick={runNow} disabled={busy}>
-          {busy ? "Working…" : "Run checks now"}
+          {busy ? "Working..." : "Run checks now"}
         </button>
       </div>
       <div style={{ ...mutedStyle, marginBottom: 14 }}>
         Questions your customers ask, plus the phrases your knowledge must
         contain to answer them. Checked automatically after every knowledge
-        update — you get alerted when an answer breaks.
+        update - you get alerted when an answer breaks.
       </div>
       {latestRun && (
         <div style={{ ...mutedStyle, marginBottom: 12 }}>
@@ -326,7 +326,7 @@ function GoldenQuestionsCard({ token }) {
           {latestRun.regressions > 0 && (
             <span style={{ color: "#f87171" }}>
               {" "}
-              — {latestRun.regressions} regression(s)
+              - {latestRun.regressions} regression(s)
             </span>
           )}
         </div>
@@ -339,7 +339,7 @@ function GoldenQuestionsCard({ token }) {
       {questions.length === 0 && (
         <div style={{ ...mutedStyle, marginBottom: 12 }}>
           No golden questions yet. Start with your three most common customer
-          questions — hours, pricing, booking.
+          questions - hours, pricing, booking.
         </div>
       )}
       {questions.map((q) => (
@@ -393,8 +393,8 @@ function ExportCard() {
     <div style={cardStyle}>
       <h3 style={headingStyle}>Activity export</h3>
       <div style={{ ...mutedStyle, marginBottom: 12 }}>
-        Download everything your agents logged — every send, booking, and
-        guardrail hold — as a CSV audit trail.
+        Download everything your agents logged - every send, booking, and
+        guardrail hold - as a CSV audit trail.
       </div>
       <a
         href={`${BASE}/api/v1/activity/export`}

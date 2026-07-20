@@ -52,11 +52,11 @@ describe("RunTraceDrawer", () => {
     render(<RunTraceDrawer token="jwt" runId="r1" />);
     fireEvent.click(screen.getByText("View run trace"));
 
-    expect(await screen.findByText(/sales — succeeded/)).toBeInTheDocument();
+    expect(await screen.findByText(/sales - succeeded/)).toBeInTheDocument();
     expect(screen.getByText(/heuristic: chose sales/)).toBeInTheDocument();
     expect(screen.getByText("Read the ask")).toBeInTheDocument();
     expect(screen.getByText(/draft · claude-sonnet-5 · 900 in/)).toBeInTheDocument();
-    expect(screen.getByText(/email.send — succeeded/)).toBeInTheDocument();
+    expect(screen.getByText(/email.send - succeeded/)).toBeInTheDocument();
     expect(fetchOsRunTrace).toHaveBeenCalledWith("jwt", "r1");
   });
 
@@ -82,9 +82,9 @@ describe("RunTraceDrawer", () => {
     fetchOsRunTrace.mockResolvedValue(tracePayload());
     render(<RunTraceDrawer token="jwt" runId="r1" />);
     fireEvent.click(screen.getByText("View run trace"));
-    await screen.findByText(/sales — succeeded/);
+    await screen.findByText(/sales - succeeded/);
     fireEvent.click(screen.getByText("Close"));
-    expect(screen.queryByText(/sales — succeeded/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/sales - succeeded/)).not.toBeInTheDocument();
   });
 
   it("renders empty-section labels when trace is sparse", async () => {
