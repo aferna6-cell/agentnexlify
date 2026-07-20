@@ -464,3 +464,513 @@ class TestLlmPath:
         llm.assert_awaited()
         system_prompt = llm.await_args.kwargs["system"]
         assert "founded in 2019" in system_prompt
+
+
+# ---------------------------------------------------------------------------
+# Direct unit tests for the split modules — exception + branch coverage.
+# ---------------------------------------------------------------------------
+
+import asyncio
+
+from fastapi import BackgroundTasks
+
+from backend.models.schemas import WidgetChatRequest
+from backend.routers import (
+    widget_chat_context,
+    widget_chat_effects,
+    widget_chat_fallback,
+    widget_chat_guards,
+)
+
+
+def _run(coro):
+    return asyncio.run(coro)
+
+
+def _req(message="Do you install water heaters?", session_id="sess-unit"):
+    return WidgetChatRequest(
+        api_key="anx_unit", session_id=session_id, message=message
+    )
+
+
+class _RaiseChain:
+    """Query-builder stand-in whose execute() always raises."""
+
+    def __getattr__(self, name):
+        if name.startswith("_"):
+            raise AttributeError(name)
+
+        def _method(*args, **kwargs):
+            if name == "execute":
+                raise RuntimeError("db down")
+            return self
+
+        return _method
+
+
+def _raising_db():
+    db = MagicMock()
+    db.table.side_effect = lambda name: _RaiseChain()
+    return db
+
+
+def _tenant(tid="u1000000-0000-4000-8000-000000000001", **over):
+    row = {
+        "id": tid,
+        "business_name": "Unit Test Co.",
+        "business_type": "general",
+        "plan": "professional",
+        "phone": None,
+        "notification_phone": None,
+        "sms_notifications_enabled": False,
+        "owner_email": None,
+        "conversation_email_notify_enabled": False,
+        "business_slug": None,
+    }
+    row.update(over)
+    return row
+
+
+def _widget(**over):
+    row = {
+        "knowledge_base": "We install water heaters.",
+        "custom_instructions": None,
+        "booking_enabled": False,
+        "enable_ai_fallback": False,
+        "enable_structured_lead_parser": False,
+        "show_watermark": True,
+        "bot_name": None,
+        "greeting_message": None,
+    }
+    row.update(over)
+    return row
+
+
+class TestGuardsUnit:
+    def test_handoff_check_db_error_fails_open(self):
+        result = widget_chat_guards.check_handoff_mode(
+            _raising_db(), _tenant(), _widget(), _req()
+        )
+        assert result is None
+
+    def test_handoff_mode_surfaces_team_reply(self, mock_supabase):
+        db = MagicMock()
+        rows = {
+            "conversations": [{"id": "c1", "tags": ["handoff"]}],
+            "chat_messages": [{"content": "Team here - yes we can help!"}],
+        }
+        db.table.side_effect = lambda name: (
+            MagicMock(
+                select=MagicMock(
+                    side_effect=lambda *a, **k: _Chain(_result(rows.get(name, [])))
+                )
+            )
+        )
+        with patch(
+            "backend.routers.widget_chat_guards._save_chat_messages",
+            return_value=[],
+        ):
+            result = widget_chat_guards.check_handoff_mode(
+                db, _tenant(), _widget(), _req()
+            )
+        assert result is not None
+        assert result.response == "Team here - yes we can help!"
+        assert result.handoff is True
+
+    def test_content_mode_youtube_url_repurposes(self, mock_supabase):
+        db = MagicMock()
+        db.table.side_effect = lambda name: MagicMock(
+            insert=MagicMock(side_effect=lambda *a, **k: _Chain(_result([])))
+        )
+        source = {
+            "content": "video transcript",
+            "title": "How to fix leaks",
+            "source_url": "https://youtu.be/abc123",
+        }
+        with patch(
+            "backend.services.content_repurposer.extract_source",
+            new=AsyncMock(return_value=source),
+        ), patch(
+            "backend.services.content_repurposer.repurpose",
+            new=AsyncMock(return_value={"twitter": "thread"}),
+        ), patch(
+            "backend.routers.widget_chat_guards._save_chat_messages",
+            return_value=[],
+        ):
+            result = _run(
+                widget_chat_guards.maybe_run_content_mode(
+                    db,
+                    _tenant(),
+                    _widget(),
+                    _req(message="https://youtu.be/abc123 watch this"),
+                )
+            )
+        assert result is not None
+        assert "How to fix leaks" in result.response
+
+    def test_content_mode_repurpose_failure_apologizes(self, mock_supabase):
+        with patch(
+            "backend.services.content_repurposer.extract_source",
+            new=AsyncMock(side_effect=RuntimeError("fetch failed")),
+        ), patch(
+            "backend.routers.widget_chat_guards._save_chat_messages",
+            return_value=[],
+        ):
+            result = _run(
+                widget_chat_guards.maybe_run_content_mode(
+                    MagicMock(),
+                    _tenant(),
+                    _widget(),
+                    _req(message="repurpose this: my article text"),
+                )
+            )
+        assert result is not None
+        assert "trouble repurposing" in result.response
+
+    def test_null_state_faq_probe_error_treated_as_zero(self, mock_supabase):
+        mock_supabase.table.side_effect = lambda name: _RaiseChain()
+        with patch(
+            "backend.routers.widget_chat_guards._save_chat_messages",
+            return_value=[],
+        ):
+            result = widget_chat_guards.null_state_guard(
+                _tenant(
+                    tid="u1000000-0000-4000-8000-000000000002",
+                    business_type="other",
+                ),
+                _widget(knowledge_base="", custom_instructions=""),
+                _req(),
+                [],
+                True,
+            )
+        assert result is not None
+        assert "still being set up" in result.response
+
+    def test_null_state_passes_with_faqs(self, mock_supabase):
+        faq_tbl = MagicMock()
+        faq_tbl.select.side_effect = lambda *a, **k: _Chain(_result([], count=3))
+        mock_supabase.table.side_effect = lambda name: faq_tbl
+        result = widget_chat_guards.null_state_guard(
+            _tenant(
+                tid="u1000000-0000-4000-8000-000000000003",
+                business_type="other",
+            ),
+            _widget(knowledge_base="", custom_instructions=""),
+            _req(),
+            [],
+            True,
+        )
+        assert result is None
+
+    def test_turn_budget_error_fails_open(self):
+        with patch(
+            "backend.routers.widget_chat_guards.check_turn_budget",
+            side_effect=RuntimeError("counter broken"),
+        ):
+            result = widget_chat_guards.turn_budget_guard(_tenant(), _req(), True)
+        assert result is None
+
+    def test_input_screen_error_fails_open(self):
+        with patch(
+            "backend.routers.widget_chat_guards.screen_widget_input",
+            new=AsyncMock(side_effect=RuntimeError("guard down")),
+        ):
+            result = _run(
+                widget_chat_guards.input_screen_guard(_tenant(), _req(), True)
+            )
+        assert result is None
+
+
+class TestContextUnit:
+    def test_all_grounding_queries_failing_still_builds_prompt(self):
+        """Every per-table load failing must degrade to an empty section,
+        never a crash — the visitor still gets a prompt."""
+        tenant = _tenant(
+            tid="u2000000-0000-4000-8000-000000000001",
+            business_type="restaurant",
+        )
+        ctx = widget_chat_context.build_chat_context(
+            db=_raising_db(),
+            tenant=tenant,
+            widget=_widget(),
+            req=_req(
+                message="Are you hiring? What does a repair quote cost?"
+            ),
+            messages=[],
+            kb_article_refs=[],
+            conversation_id="conv-u1",
+            is_new=False,
+        )
+        assert "Unit Test Co." in ctx.system_prompt
+        assert ctx.prompt_profile["faq_count"] == 0
+        assert ctx.prompt_profile["menu_items"] == 0
+        assert ctx.prompt_profile["jobs"] == 0
+
+    def test_website_crawl_error_degrades_to_none(self):
+        tenant = _tenant(tid="u2000000-0000-4000-8000-000000000002")
+        with patch(
+            "backend.services.website_crawler.get_crawled_content",
+            side_effect=RuntimeError("crawl store down"),
+        ):
+            ctx = widget_chat_context.build_chat_context(
+                db=_raising_db(),
+                tenant=tenant,
+                widget=_widget(knowledge_base=""),
+                req=_req(),
+                messages=[],
+                kb_article_refs=[],
+                conversation_id="conv-u2",
+                is_new=False,
+            )
+        assert ctx.prompt_profile["has_website"] is False
+
+    def test_flow_truncation_bot_name_and_flow_used_log(self, mock_supabase):
+        tenant = _tenant(tid="u2000000-0000-4000-8000-000000000003")
+        long_label = "Ask about the visitor's plumbing issue in detail. " * 40
+        rows = {
+            "chat_flows": [
+                {
+                    "id": "flow-9",
+                    "flow_json": {
+                        "nodes": [
+                            {
+                                "id": "n1",
+                                "type": "message",
+                                "data": {"label": long_label},
+                            }
+                        ],
+                        "edges": [],
+                    },
+                }
+            ]
+        }
+
+        def _tbl(name):
+            tbl = MagicMock()
+            tbl.select.side_effect = lambda *a, **k: _Chain(
+                _result(rows.get(name, []))
+            )
+            tbl.insert.side_effect = lambda *a, **k: _Chain(_result([]))
+            return tbl
+
+        db = MagicMock()
+        db.table.side_effect = _tbl
+        mock_supabase.table.side_effect = _tbl
+        with patch(
+            "backend.routers.widget_chat_context.resolve_int_setting",
+            side_effect=lambda name, default: 60,
+        ):
+            ctx = widget_chat_context.build_chat_context(
+            db=db,
+            tenant=tenant,
+            widget=_widget(bot_name="Unit Bot 9000"),
+            req=_req(),
+            messages=[],
+            kb_article_refs=[],
+            conversation_id="conv-u3",
+            is_new=True,
+        )
+        assert "[Flow truncated]" in ctx.system_prompt
+        assert ctx.prompt_profile["has_flow"] is True
+
+
+class TestEffectsUnit:
+    def test_usage_counter_cas_retries_then_warns(self):
+        tbl = MagicMock()
+        tbl.select.side_effect = lambda *a, **k: _Chain(
+            _result([{"conversations_used_this_month": 5}])
+        )
+        tbl.update.side_effect = lambda *a, **k: _Chain(_result([]))
+        db = MagicMock()
+        db.table.side_effect = lambda name: tbl
+        widget_chat_effects.increment_usage_counter(db, _tenant())
+
+    def test_usage_counter_db_error_swallowed(self):
+        widget_chat_effects.increment_usage_counter(_raising_db(), _tenant())
+
+    def test_new_conversation_owner_email_scheduled(self):
+        bg = BackgroundTasks()
+        with patch(
+            "backend.services.conversation_notify.notify_new_conversation"
+        ):
+            widget_chat_effects.on_new_conversation(
+                bg,
+                _tenant(conversation_email_notify_enabled=True),
+                _req(),
+                "conv-e1",
+            )
+        assert len(bg.tasks) == 1
+
+    def test_handoff_detection_notifies_sms_and_email(self, mock_supabase):
+        rows = {"conversations": [{"id": "c9", "tags": []}]}
+
+        def _tbl(name):
+            tbl = MagicMock()
+            tbl.select.side_effect = lambda *a, **k: _Chain(
+                _result(rows.get(name, []))
+            )
+            tbl.update.side_effect = lambda *a, **k: _Chain(_result([]))
+            return tbl
+
+        db = MagicMock()
+        db.table.side_effect = _tbl
+        sms = AsyncMock()
+        email = AsyncMock()
+        with patch(
+            "backend.services.twilio_service.send_sms", new=sms
+        ), patch("backend.services.email_sender.send_email", new=email):
+            text, triggered = _run(
+                widget_chat_effects.handle_handoff_detection(
+                    db,
+                    _tenant(
+                        notification_phone="+15551234567",
+                        sms_notifications_enabled=True,
+                        owner_email="owner@unit.test",
+                    ),
+                    _req(),
+                    "conv-h1",
+                    "Connecting you now.\nHANDOFF_REQUESTED",
+                )
+            )
+        assert triggered is True
+        assert "HANDOFF_REQUESTED" not in text
+        sms.assert_awaited()
+        email.assert_awaited()
+
+    def test_handoff_detection_tag_error_still_triggers(self):
+        text, triggered = _run(
+            widget_chat_effects.handle_handoff_detection(
+                _raising_db(),
+                _tenant(),
+                _req(),
+                "conv-h2",
+                "Handing off.\nHANDOFF_REQUESTED",
+            )
+        )
+        assert triggered is True
+
+    def test_post_response_effects_all_branches(self, mock_supabase):
+        """Bridge on, enrichment on, prior-message contact, categorization
+        (5th msg) — every scheduling branch fires."""
+        bg = BackgroundTasks()
+        messages = [
+            {"role": "user", "content": "hi"},
+            {"role": "assistant", "content": "hello"},
+            {"role": "user", "content": "reach me at unit@test.com"},
+        ]
+        with patch(
+            "backend.routers.widget_chat_effects.is_bridge_enabled",
+            return_value=True,
+        ):
+            has_contact = widget_chat_effects.schedule_post_response_effects(
+                bg,
+                tenant=_tenant(),
+                widget=_widget(enable_structured_lead_parser=True),
+                req=_req(message="Sounds good, thanks"),
+                conversation_id="conv-p1",
+                messages=messages,
+                assistant_text="Great, we will follow up.",
+                saved_rows=[{"id": "row-1", "role": "user"}],
+            )
+        # Contact came from the prior message, not the current one.
+        assert has_contact is True
+        # bridge + lead capture + enrichment + categorization (total_msgs=5)
+        assert len(bg.tasks) >= 4
+
+    def test_post_response_bridge_error_swallowed(self, mock_supabase):
+        bg = BackgroundTasks()
+        with patch(
+            "backend.routers.widget_chat_effects.is_bridge_enabled",
+            side_effect=RuntimeError("bridge config down"),
+        ):
+            has_contact = widget_chat_effects.schedule_post_response_effects(
+                bg,
+                tenant=_tenant(),
+                widget=_widget(),
+                req=_req(message="no contact info here"),
+                conversation_id="conv-p2",
+                messages=[],
+                assistant_text="ok",
+                saved_rows=[{"id": "row-2", "role": "user"}],
+            )
+        assert has_contact is False
+
+
+class TestFallbackSdkPath:
+    def test_sdk_path_high_confidence_replaces_reply(self):
+        sdk_raw = {"is_error": False, "result": "{}", "turns": 1, "cost_usd": 0.01}
+        with patch(
+            "backend.services.agent_sdk_client.is_configured", return_value=True
+        ), patch(
+            "backend.services.agent_sdk_client.run_agent_sync",
+            return_value=sdk_raw,
+        ), patch(
+            "backend.services.support_agent.build_support_prompt",
+            return_value="prompt",
+        ), patch(
+            "backend.services.support_agent.parse_support_reply",
+            return_value={"confidence": "high", "answer": "SDK answer."},
+        ), patch(
+            "backend.routers.widget_chat_fallback.log_activity"
+        ):
+            text, fired = _run(
+                widget_chat_fallback._run_support_fallback(
+                    assistant_text="I'm not sure.\nFALLBACK_TO_SUPPORT_AGENT",
+                    widget={"enable_ai_fallback": True},
+                    tenant_id="t-sdk-1",
+                    session_id="sess-sdk-1",
+                    customer_message="What are your hours?",
+                )
+            )
+        assert fired is True
+        assert text == "SDK answer."
+
+    def test_sdk_path_error_falls_back_to_managed(self):
+        with patch(
+            "backend.services.agent_sdk_client.is_configured", return_value=True
+        ), patch(
+            "backend.services.support_agent.build_support_prompt",
+            side_effect=RuntimeError("supabase down"),
+        ), patch(
+            "backend.services.support_agent.run_support_query",
+            return_value={"confidence": "high", "answer": "Managed answer."},
+        ), patch(
+            "backend.routers.widget_chat_fallback.log_activity"
+        ):
+            text, fired = _run(
+                widget_chat_fallback._run_support_fallback(
+                    assistant_text="Hmm.\nFALLBACK_TO_SUPPORT_AGENT",
+                    widget={"enable_ai_fallback": True},
+                    tenant_id="t-sdk-2",
+                    session_id="sess-sdk-2",
+                    customer_message="Do you deliver?",
+                )
+            )
+        assert fired is True
+        assert text == "Managed answer."
+
+
+class TestRouteErrorBranches:
+    def test_kb_retrieval_error_and_confidence_gate_error_still_reply(
+        self, client, mock_supabase
+    ):
+        _seed(
+            mock_supabase,
+            tenant_id="u3000000-0000-4000-8000-000000000001",
+            api_key="anx_pipe_errs",
+        )
+        llm = AsyncMock(return_value=_canned_llm("Still answered fine."))
+        with patch(
+            "backend.routers.widget_chat.call_claude_messages", new=llm
+        ), patch(
+            "backend.routers.widget_chat._query_kb_articles",
+            new=AsyncMock(side_effect=RuntimeError("kb search down")),
+        ), patch(
+            "backend.routers.widget_chat.is_low_confidence_turn",
+            side_effect=RuntimeError("gate broken"),
+        ):
+            resp = _post_chat(
+                client, "anx_pipe_errs", "What services do you offer?", "sess-errs"
+            )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["response"] == "Still answered fine."
