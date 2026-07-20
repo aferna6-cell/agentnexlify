@@ -1,0 +1,41 @@
+{
+  "run": 99,
+  "date": "2026-07-20",
+  "phase": "full",
+  "evidence_summary": "Step 9F absent 3rd consecutive cycle (97/98/99). KB last run 2026-07-13 (7 days ago, at stale boundary). GH #399 OPEN Day 17+ (AUTOPILOT_GH_TOKEN expired, 30 ai-ready issues blocked). GH #413 NOT SET (Day 9+ of issue, 0 human responses). PR #475 (2026-07-18): appointment auto-complete + BotHealthPage + AttributionPage all shipped. PR #476: platform_settings migration 175. PR #477: repo cleanup 970 files. Nightly-2026-07-20: CLEAN, 1 commit. Nightly-2026-07-19: 4 commits CLEAN.",
+  "ideas_count": 5,
+  "winner": "Step 9F: KB Autopopulate Staleness Check — 3rd-carry-forward escalation, implemented directly in this run",
+  "winner_category": "operational",
+  "confidence": "HIGH",
+  "implemented_directly": true,
+  "implementation_note": "3rd consecutive carry-forward triggered direct implementation escalation. Step 9F block written to .claude/skills/nightly-commit-review/SKILL.md after Step 9E (line ~289). Verified: grep -c 'Step 9F' returns 6.",
+  "rejected": [
+    "conversation_enrichment_job.py queue investigation — KILLED (blocked by GH #399; mandate condition: after GH #399 resolved)"
+  ],
+  "parking_lot": [
+    "platform_settings integer kill-switch safety (no prod rows at risk currently)",
+    "Step 9G appointment auto-complete health (premature: service 2 days old)",
+    "governance.json active_directions archive (L-effort, deferred)"
+  ],
+  "mandate_checks": {
+    "step_9f_present": "IMPLEMENTED — written by this run (run 99, 2026-07-20)",
+    "kb_staleness": "7 days exactly — at stale boundary. Step 9F will fire if kb-autopopulate doesn't run today.",
+    "gh_399_resolved": "OPEN Day 17+ — AUTOPILOT_GH_TOKEN expired",
+    "gh_413_set": "NOT SET — Day 9+ of issue, 0 human responses",
+    "appointment_completion_implemented": "CONFIRMED — PR #475 (23b1da5, 2026-07-18)",
+    "botHealthPage_implemented": "CONFIRMED — PR #475 (2026-07-18)",
+    "attributionPage_implemented": "CONFIRMED — PR #475 (2026-07-18)"
+  },
+  "major_governance_corrections": {
+    "appointment_completion": "pending_autonomous → implemented (PR #475, 2026-07-18, backend/services/automation/scheduled/appointment_jobs.py)",
+    "botHealthPage": "parking_lot → implemented (PR #475, 2026-07-18, frontend/src/pages/BotHealthPage.jsx)",
+    "attributionPage": "new → implemented (PR #475, 2026-07-18, frontend/src/pages/AttributionPage.jsx)",
+    "step_9f": "pending_autonomous → implemented (this run, 2026-07-20, .claude/skills/nightly-commit-review/SKILL.md)"
+  },
+  "next_run_priorities": [
+    "Verify Step 9F executes in next nightly (2026-07-21): look for 'Step 9F:' line in log",
+    "KB staleness: if stale >7 days by 2026-07-21, verify GH #403 comment posted",
+    "GH #399 Day 18+ — investigate secondary remediation path",
+    "GH #413 Day 10+ — 0 human responses, continue monitoring"
+  ]
+}
