@@ -33,6 +33,9 @@ from datetime import datetime, timedelta, timezone
 # Sweep expires at 14 days; 2 days of grace for loop drift and deploys.
 SWEEP_ROT_DAYS = 16
 SUGGESTION_ROT_DAYS = 21
+# >5 outbound-guard holds in a week smells like a false-positive pattern,
+# not five real leak attempts — page a human to review the flag breakdown.
+GUARD_HOLD_ALERT_THRESHOLD = 5
 # Plans the expiry sweep covers (mirrors os_draft_expiry's tenant query:
 # plan != 'free' AND plan_status = 'active').
 _FREE_PLAN = "free"
@@ -87,7 +90,20 @@ def collect_vitals(fetch):
         "tenants",
         {"select": "id,plan,plan_status,business_name", "limit": "1000"},
     )
-    return {"drafts": drafts, "suggestions": suggestions, "tenants": tenants}
+    guard_events = fetch(
+        "activity_log",
+        {
+            "select": "activity_type,created_at,metadata",
+            "activity_type": "in.(outbound_guard_flagged,kb_eval_regression)",
+            "limit": "500",
+        },
+    )
+    return {
+        "drafts": drafts,
+        "suggestions": suggestions,
+        "tenants": tenants,
+        "guard_events": guard_events,
+    }
 
 
 def evaluate_alerts(vitals, now):
@@ -149,6 +165,32 @@ def evaluate_alerts(vitals, now):
             f"Opportunity suggestions are rotting undecided: {len(stale)} "
             f"pending card(s) older than {SUGGESTION_ROT_DAYS} days "
             f"(oldest {age}d). The notify + cards loop is not reaching owners."
+        )
+
+    # Week-one watch on the enterprise-audit guardrail + eval features.
+    week_cutoff = now - timedelta(days=7)
+    holds = 0
+    regressions = 0
+    for row in vitals.get("guard_events", []) or []:
+        ts = parse_ts(row.get("created_at"))
+        if ts is None or ts < week_cutoff:
+            continue
+        if row.get("activity_type") == "kb_eval_regression":
+            regressions += 1
+        else:
+            holds += 1
+    if regressions:
+        alerts.append(
+            f"Golden-question regressions: {regressions} in the last 7 days. "
+            "A tenant's knowledge stopped answering a question it used to — "
+            "check /api/v1/kb-evals/runs/latest for the affected tenant(s)."
+        )
+    if holds > GUARD_HOLD_ALERT_THRESHOLD:
+        alerts.append(
+            f"Outbound guard held {holds} auto-send draft(s) in the last 7 "
+            f"days (threshold {GUARD_HOLD_ALERT_THRESHOLD}). Review the flag "
+            "breakdown in /api/v1/admin/loop-health guardrails — a spike "
+            "usually means a false-positive pattern needs tuning."
         )
 
     return alerts

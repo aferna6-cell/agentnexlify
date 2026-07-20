@@ -202,7 +202,7 @@ def test_summarize_counts_by_status():
     assert '"pending": 1' in line
 
 
-def test_collect_vitals_queries_three_tables():
+def test_collect_vitals_queries_four_tables():
     seen = []
 
     def fake_fetch(table, params):
@@ -210,8 +210,61 @@ def test_collect_vitals_queries_three_tables():
         return [{"table": table}]
 
     vitals = collect_vitals(fake_fetch)
-    assert [t for t, _ in seen] == ["os_agent_runs", "os_backlog_requests", "tenants"]
+    assert [t for t, _ in seen] == [
+        "os_agent_runs",
+        "os_backlog_requests",
+        "tenants",
+        "activity_log",
+    ]
     # Drafts query must exclude rows without a deliverable.
     assert vitals["drafts"] == [{"table": "os_agent_runs"}]
     assert vitals["suggestions"] == [{"table": "os_backlog_requests"}]
     assert vitals["tenants"] == [{"table": "tenants"}]
+    assert vitals["guard_events"] == [{"table": "activity_log"}]
+
+
+def test_eval_regression_always_alerts():
+    vitals = {
+        "drafts": [],
+        "suggestions": [],
+        "tenants": [_tenant("t1")],
+        "guard_events": [
+            {"activity_type": "kb_eval_regression", "created_at": _iso_days_ago(1)},
+        ],
+    }
+    alerts = evaluate_alerts(vitals, _NOW)
+    assert len(alerts) == 1
+    assert "Golden-question regressions: 1" in alerts[0]
+
+
+def test_guard_holds_alert_only_above_threshold():
+    from scripts.loop_health_scan import GUARD_HOLD_ALERT_THRESHOLD
+
+    def _holds(count, age_days=1):
+        return [
+            {
+                "activity_type": "outbound_guard_flagged",
+                "created_at": _iso_days_ago(age_days),
+            }
+            for _ in range(count)
+        ]
+
+    base = {"drafts": [], "suggestions": [], "tenants": [_tenant("t1")]}
+
+    quiet = evaluate_alerts(
+        {**base, "guard_events": _holds(GUARD_HOLD_ALERT_THRESHOLD)}, _NOW
+    )
+    assert quiet == []
+
+    noisy = evaluate_alerts(
+        {**base, "guard_events": _holds(GUARD_HOLD_ALERT_THRESHOLD + 1)}, _NOW
+    )
+    assert len(noisy) == 1
+    assert "Outbound guard held" in noisy[0]
+
+    # Events older than the 7-day window never count.
+    stale = evaluate_alerts(
+        {**base, "guard_events": _holds(GUARD_HOLD_ALERT_THRESHOLD + 5, age_days=9)},
+        _NOW,
+    )
+    assert stale == []
