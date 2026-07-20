@@ -44,7 +44,7 @@ jobs:
           echo "${HOME}/.railway/bin" >> "$GITHUB_PATH"
 
       - name: Cache dedup state
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: /tmp/railway-error-seen.txt
           key: railway-error-seen-${{ github.run_id }}
