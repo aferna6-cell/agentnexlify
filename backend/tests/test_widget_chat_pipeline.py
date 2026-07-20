@@ -249,7 +249,7 @@ class TestShortCircuits:
         )
         llm_patch, kb_patch, llm = _patch_llm()
         with llm_patch, kb_patch, patch(
-            "backend.routers.widget_chat.check_turn_budget",
+            "backend.routers.widget_chat_guards.check_turn_budget",
             return_value=False,
         ):
             resp = _post_chat(
@@ -269,7 +269,7 @@ class TestShortCircuits:
         )
         llm_patch, kb_patch, llm = _patch_llm()
         with llm_patch, kb_patch, patch(
-            "backend.routers.widget_chat.screen_widget_input",
+            "backend.routers.widget_chat_guards.screen_widget_input",
             new=AsyncMock(return_value={"allow": False, "reason": "off_topic"}),
         ):
             resp = _post_chat(
