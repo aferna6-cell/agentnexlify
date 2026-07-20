@@ -31,6 +31,7 @@ from typing import Any
 import httpx
 
 from backend.models.database import get_service_supabase
+from backend.services.integration_key_vault import decrypt_integration_row
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,13 @@ def get_integration(tenant_id: str) -> dict | None:
     if not result.data:
         return None
     row = result.data[0]
-    return row if isinstance(row, dict) else None
+    if not isinstance(row, dict):
+        return None
+    # GH #266 step 2: SID/auth-token live in the (to-be-sunset) plaintext
+    # columns today; the vault overlay prefers the encrypted copies once
+    # INTEGRATIONS_ENC_KEY is provisioned, keeping this reader working
+    # through and after the plaintext-column sunset.
+    return decrypt_integration_row(row)
 
 
 def is_connected(tenant_id: str) -> bool:
