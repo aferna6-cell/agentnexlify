@@ -1,8 +1,9 @@
 name: Autopilot Issue Loop
 
 on:
-  schedule:
-    - cron: "0 */4 * * *"  # every 4h — throttled 2026-06-22 from hourly (quota still exhausting). Use workflow_dispatch for an immediate run.
+  # schedule disabled 2026-07-20: AUTOPILOT_GH_TOKEN expired (#399) so every
+  # run failed AND burned minutes (#500). Restore the cron ("0 */4 * * *")
+  # after rotating the token.
   workflow_dispatch:
 
 concurrency:

@@ -7,14 +7,9 @@
 name: e2e
 
 on:
-  pull_request:
-    paths:
-      - "frontend/**"
-      - "e2e/**"
-      - "playwright.config.ts"
-      - ".github/workflows/e2e.yml"
-  schedule:
-    - cron: "17 9 * * *" # daily widget smoke against prod
+  # pull_request + daily cron disabled 2026-07-20 (GH #500 — Actions minutes
+  # exhausted; the ~14-min hermetic job per PR was the largest single burner).
+  # Run manually, or locally via `npx playwright test` / scripts/ci_local.sh.
   workflow_dispatch:
 
 jobs:

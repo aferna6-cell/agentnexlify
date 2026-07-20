@@ -7,7 +7,10 @@ name: KB Auto-Populate
 
 on:
   schedule:
-    - cron: "0 6,18 * * *" # 6 AM + 6 PM UTC (matches local cron intent)
+    # cron disabled 2026-07-20: ANTHROPIC_API_KEY missing in Actions (#403) so
+    # every run failed AND burned minutes (#500). Restore "0 6,18 * * *" after
+    # setting the secret.
+    - cron: "0 6 31 2 *" # never fires (Feb 31)
   workflow_dispatch: {}
 
 permissions:
