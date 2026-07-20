@@ -651,3 +651,356 @@ class TestBulkSend:
         body = resp.json()
         assert body["sent"] == 0
         assert body["failed"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Branch + exception coverage for the split service modules.
+# ---------------------------------------------------------------------------
+
+import asyncio
+
+import pytest
+
+from backend.services import invoice_email, invoice_helpers
+
+
+class _RaiseChain:
+    def __getattr__(self, name):
+        if name.startswith("_"):
+            raise AttributeError(name)
+
+        def _method(*args, **kwargs):
+            if name == "execute":
+                raise RuntimeError("db down")
+            return self
+
+        return _method
+
+
+def _raising_db(mock_supabase):
+    mock_supabase.table.side_effect = lambda name: _RaiseChain()
+
+
+class TestSendSmsAndBoth:
+    def _seed_sendable(self, mock_supabase, *, phone="+15551230000", email=None):
+        return _seed(
+            mock_supabase,
+            {
+                "invoices": {
+                    "select": [
+                        {
+                            "id": "s1",
+                            "status": "draft",
+                            "invoice_number": "INV-9A00-030",
+                            "total": 80.0,
+                            "lead_id": "l1",
+                            "items_json": [],
+                            "subtotal": 80.0,
+                            "tax_amount": 0,
+                            "stripe_payment_link": None,
+                            "notes": None,
+                            "due_date": None,
+                        }
+                    ]
+                },
+                "tenants": {"select": [{"business_name": "Pipe Co", "owner_email": "o@p.co"}]},
+                "leads": {"select": [{"id": "l1", "name": "Ana", "email": email, "phone": phone}]},
+            },
+        )
+
+    def test_send_sms_without_payment_link_uses_fallback_text(
+        self, client, mock_supabase, auth_headers_for
+    ):
+        self._seed_sendable(mock_supabase)
+        sms = AsyncMock(return_value=True)
+        with patch("backend.services.invoice_send.send_sms", new=sms), patch(
+            "backend.services.invoice_send.get_or_create_stripe_payment_link",
+            new=AsyncMock(return_value=None),
+        ):
+            resp = client.post(
+                f"{BASE}/s1/send",
+                json={"method": "sms"},
+                headers=auth_headers_for(TENANT_ID),
+            )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["sms_sent"] is True
+        body = sms.await_args.kwargs["body"]
+        assert "contact us to complete payment" in body
+
+    def test_send_both_reports_each_channel(
+        self, client, mock_supabase, auth_headers_for
+    ):
+        self._seed_sendable(mock_supabase, email="ana@x.co")
+        sms = AsyncMock(return_value=False)
+        email = AsyncMock(return_value={"success": False, "detail": "bounced"})
+        with patch("backend.services.invoice_send.send_sms", new=sms), patch(
+            "backend.services.invoice_send.send_email", new=email
+        ), patch(
+            "backend.services.invoice_send.get_or_create_stripe_payment_link",
+            new=AsyncMock(return_value="https://pay.example/s1"),
+        ):
+            resp = client.post(
+                f"{BASE}/s1/send",
+                json={"method": "both"},
+                headers=auth_headers_for(TENANT_ID),
+            )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["email_sent"] is False
+        assert body["sms_sent"] is False
+        assert any("bounced" in e for e in body["errors"])
+        assert any("SMS delivery failed" in e for e in body["errors"])
+        assert "Pay online" in sms.await_args.kwargs["body"]
+
+    def test_send_channel_exceptions_collected(
+        self, client, mock_supabase, auth_headers_for
+    ):
+        self._seed_sendable(mock_supabase, email="ana@x.co")
+        with patch(
+            "backend.services.invoice_send.send_sms",
+            new=AsyncMock(side_effect=RuntimeError("twilio down")),
+        ), patch(
+            "backend.services.invoice_send.send_email",
+            new=AsyncMock(side_effect=RuntimeError("resend down")),
+        ), patch(
+            "backend.services.invoice_send.get_or_create_stripe_payment_link",
+            new=AsyncMock(return_value=None),
+        ):
+            resp = client.post(
+                f"{BASE}/s1/send",
+                json={"method": "both"},
+                headers=auth_headers_for(TENANT_ID),
+            )
+        assert resp.status_code == 200
+        errors = resp.json()["errors"]
+        assert any("unexpectedly" in e for e in errors)
+        assert len(errors) == 2
+
+    def test_send_fetch_failure_500(self, client, mock_supabase, auth_headers_for):
+        _raising_db(mock_supabase)
+        resp = client.post(
+            f"{BASE}/s1/send",
+            json={"method": "email"},
+            headers=auth_headers_for(TENANT_ID),
+        )
+        assert resp.status_code == 500
+
+
+class TestBulkSendSms:
+    def test_bulk_sms_channel_with_created_link(
+        self, client, mock_supabase, auth_headers_for
+    ):
+        _seed(
+            mock_supabase,
+            {
+                "invoices": {
+                    "select": [
+                        {
+                            "id": "b9",
+                            "status": "draft",
+                            "invoice_number": "INV-9A00-040",
+                            "total": 25.0,
+                            "lead_id": "l1",
+                            "stripe_payment_link": None,
+                        }
+                    ]
+                },
+                "tenants": {"select": [{"business_name": "Pipe Co"}]},
+                "leads": {
+                    "select": [
+                        {"id": "l1", "name": "Ana", "email": None, "phone": "+15551239999"}
+                    ]
+                },
+            },
+        )
+        sms = AsyncMock(return_value=True)
+        with patch("backend.services.invoice_send.send_sms", new=sms), patch(
+            "backend.services.invoice_send.get_or_create_stripe_payment_link",
+            new=AsyncMock(return_value="https://pay.example/b9"),
+        ):
+            resp = client.post(
+                f"{BASE}/bulk-send",
+                json={"invoice_ids": ["b9"], "channel": "sms"},
+                headers=auth_headers_for(TENANT_ID),
+            )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["sent"] == 1
+        assert "Pay here" in sms.await_args.kwargs["body"]
+
+
+class TestCreateBranches:
+    def test_create_with_all_optional_fields(
+        self, client, mock_supabase, auth_headers_for
+    ):
+        tbls = _seed(
+            mock_supabase,
+            {"invoices": {"select": [], "insert": [{"id": "inv-o"}]}},
+        )
+        resp = client.post(
+            BASE,
+            json={
+                "items": [{"description": "job", "quantity": 1, "unit_price": 200}],
+                "tax_rate": 5,
+                "due_date": "2026-09-15",
+                "lead_id": "l1",
+                "bid_id": "bid-9",
+                "notes": "Net 30",
+                "deposit_amount": 50,
+            },
+            headers=auth_headers_for(TENANT_ID),
+        )
+        assert resp.status_code == 201, resp.text
+        payload = tbls["invoices"]._calls["insert"][0]
+        assert payload["due_date"] == "2026-09-15"
+        assert payload["lead_id"] == "l1"
+        assert payload["bid_id"] == "bid-9"
+        assert payload["notes"] == "Net 30"
+        assert payload["deposit_amount"] == 50
+
+    def test_create_retry_exhaustion_500(self, client, mock_supabase, auth_headers_for):
+        def insert_side(call_no, payload):
+            raise RuntimeError("duplicate key idx_invoices_tenant_number")
+
+        _seed(mock_supabase, {"invoices": {"select": [], "insert_side": insert_side}})
+        resp = client.post(
+            BASE,
+            json={"items": [{"description": "q", "quantity": 1, "unit_price": 1}]},
+            headers=auth_headers_for(TENANT_ID),
+        )
+        assert resp.status_code == 500
+
+    def test_create_non_unique_error_500(self, client, mock_supabase, auth_headers_for):
+        def insert_side(call_no, payload):
+            raise RuntimeError("connection reset")
+
+        _seed(mock_supabase, {"invoices": {"select": [], "insert_side": insert_side}})
+        resp = client.post(
+            BASE,
+            json={"items": [{"description": "q", "quantity": 1, "unit_price": 1}]},
+            headers=auth_headers_for(TENANT_ID),
+        )
+        assert resp.status_code == 500
+
+    def test_list_with_filters(self, client, mock_supabase, auth_headers_for):
+        _seed(mock_supabase, {"invoices": {"select": [], "count": 0}})
+        resp = client.get(
+            f"{BASE}?status=sent&lead_id=l1&offset=10&limit=5",
+            headers=auth_headers_for(TENANT_ID),
+        )
+        assert resp.status_code == 200
+        assert resp.json()["offset"] == 10
+
+
+class TestDbFailure500s:
+    @pytest.mark.parametrize(
+        "method,path,payload",
+        [
+            ("GET", "/stats", None),
+            ("GET", "/i1", None),
+            ("PUT", "/i1", {"notes": "x"}),
+            ("DELETE", "/i1", None),
+            ("POST", "/i1/mark-paid", {}),
+            ("GET", "", None),
+        ],
+    )
+    def test_db_down_returns_500(
+        self, client, mock_supabase, auth_headers_for, method, path, payload
+    ):
+        _raising_db(mock_supabase)
+        resp = client.request(
+            method,
+            f"{BASE}{path}",
+            json=payload,
+            headers=auth_headers_for(TENANT_ID),
+        )
+        assert resp.status_code == 500
+
+
+class TestHelpersUnit:
+    def test_next_invoice_number_db_error_falls_back(self, mock_supabase):
+        _raising_db(mock_supabase)
+        num = asyncio.run(
+            invoice_helpers.get_next_invoice_number(
+                __import__("backend.models.database", fromlist=["get_service_supabase"]).get_service_supabase(),
+                TENANT_ID,
+            )
+        )
+        assert num == "INV-9A00-001"
+
+    def test_payment_link_stripe_unconfigured(self):
+        with patch(
+            "backend.services.invoice_helpers.ensure_stripe_configured",
+            side_effect=RuntimeError("no key"),
+        ):
+            url = asyncio.run(
+                invoice_helpers.get_or_create_stripe_payment_link("i1", TENANT_ID, "INV-1", 10.0)
+            )
+        assert url is None
+
+    def test_payment_link_stripe_error(self):
+        import stripe as stripe_mod
+
+        with patch(
+            "backend.services.invoice_helpers.ensure_stripe_configured", return_value=None
+        ), patch(
+            "backend.services.invoice_helpers.stripe.Price.create",
+            side_effect=stripe_mod.StripeError("bad request"),
+        ):
+            url = asyncio.run(
+                invoice_helpers.get_or_create_stripe_payment_link("i1", TENANT_ID, "INV-1", 10.0)
+            )
+        assert url is None
+
+    def test_payment_link_success(self):
+        price = MagicMock(id="price_1")
+        link = MagicMock(url="https://pay.example/ok")
+        with patch(
+            "backend.services.invoice_helpers.ensure_stripe_configured", return_value=None
+        ), patch(
+            "backend.services.invoice_helpers.stripe.Price.create", return_value=price
+        ), patch(
+            "backend.services.invoice_helpers.stripe.PaymentLink.create", return_value=link
+        ) as pl:
+            url = asyncio.run(
+                invoice_helpers.get_or_create_stripe_payment_link("i1", TENANT_ID, "INV-1", 10.0)
+            )
+        assert url == "https://pay.example/ok"
+        assert pl.call_args.kwargs["metadata"]["invoice_id"] == "i1"
+
+    def test_stats_skips_unparseable_dates(self):
+        stats = invoice_helpers.compute_invoice_stats(
+            [{"status": "paid", "total": 5, "sent_at": "garbage", "paid_at": "2026-07-01T00:00:00Z"}]
+        )
+        assert stats["paid_count"] == 1
+        assert stats["avg_days_to_payment"] is None
+
+
+class TestEmailRendering:
+    def test_full_email_includes_all_sections(self):
+        html = invoice_email.build_invoice_email_html(
+            {
+                "invoice_number": "INV-9A00-050",
+                "total": 110.0,
+                "subtotal": 100.0,
+                "tax_amount": 10.0,
+                "due_date": "2026-08-01",
+                "notes": "Thanks for your business",
+                "stripe_payment_link": "https://pay.example/e1",
+                "items_json": [{"description": "Labor", "quantity": 2, "unit_price": 50}],
+            },
+            {"business_name": "Pipe Co", "owner_email": "o@p.co"},
+            {"name": "Ana"},
+        )
+        assert "INV-9A00-050" in html
+        assert "Due: <strong>2026-08-01</strong>" in html
+        assert "Thanks for your business" in html
+        assert "Pay Now" in html
+        assert "Labor" in html
+        assert "Tax" in html
+
+    def test_bulk_email_without_link_shows_amount_due(self):
+        html = invoice_email.build_bulk_invoice_email_html(
+            "INV-9A00-051", {"name": "Ana"}, "Pipe Co", 42.0, None
+        )
+        assert "Amount due: $42.00" in html
+        assert "Pay $" not in html
