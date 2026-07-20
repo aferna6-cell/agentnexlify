@@ -1604,3 +1604,10 @@ the same problem via config.py. Service-role only: RLS enabled with zero
 policies + REVOKE ALL from anon/authenticated/PUBLIC, matching the 173
 lockdown posture. Applied to prod 2026-07-18. Seeded rows: the two widget_kb
 flags = '1' (pilot; inert until the reading code deploys).
+
+## 176_sunset_plaintext_integration_tokens.sql (2026-07-20 — WRITTEN, NOT APPLIED)
+Drops `integrations.access_token` / `refresh_token` plaintext columns (GH #266
+step 4). **Apply only after INTEGRATIONS_ENC_KEY is set in Railway** — the
+vault's encrypt path no-ops without it and new OAuth connects would have no
+token storage. Prod `integrations` verified 0 rows on 2026-07-20 (backfill
+vacuous); all readers routed through decrypt_integration_row in the same PR.

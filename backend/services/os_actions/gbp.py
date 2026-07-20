@@ -16,6 +16,7 @@ import re
 import httpx
 
 from backend.models.database import get_service_supabase
+from backend.services.integration_key_vault import decrypt_integration_row
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.os_actions.base import ActionContext, ActionResult, ActionSpec
 
@@ -68,7 +69,10 @@ def _load_gbp(client_id: str) -> dict | None:
     db = get_service_supabase()
     row = (
         db.table("integrations")
-        .select("access_token, metadata")
+        # GH #266 step 2: fetch the encrypted copy too and overlay it via the
+        # vault so this reader keeps working once the plaintext column is
+        # dropped (and gets decryption when INTEGRATIONS_ENC_KEY is set).
+        .select("access_token, access_token_enc, metadata")
         .eq("tenant_id", client_id)
         .eq("provider", "google_business_profile")
         .limit(1)
@@ -76,7 +80,7 @@ def _load_gbp(client_id: str) -> dict | None:
     )
     if not row.data:
         return None
-    record = row.data[0]
+    record = decrypt_integration_row(row.data[0])
     metadata = record.get("metadata") if isinstance(record, dict) else None
     if not isinstance(metadata, dict):
         metadata = {}
