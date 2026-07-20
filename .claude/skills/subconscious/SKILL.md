@@ -197,6 +197,20 @@ git add subconscious/
 git commit -m "subconscious: run {date} — {winning concept title}"
 ```
 
+**PR dedup guard (added 2026-07-20 — run 99 opened 4 duplicate draft PRs across
+4 days because each headless run invented a fresh branch):**
+
+1. BEFORE creating any branch or PR, list open PRs and look for one whose head
+   branch starts with `subconscious` (e.g. `mcp__github__list_pull_requests`
+   state=open, or `gh pr list --search "head:subconscious"`).
+2. If one exists: check out THAT branch, commit this run's artifacts onto it,
+   and push. The existing PR absorbs the new run. Do NOT open a second PR.
+3. Only when no open subconscious PR exists: create the canonical branch
+   `subconscious/run-{N}` and open ONE draft PR.
+4. If the same winning concept is being carried forward from the previous run,
+   prefer updating the previous run's PR body over adding a new commit-only
+   note — reviewers should see one PR per direction, not one per calendar day.
+
 ## Approval Gate
 
 The subconscious RECOMMENDS but does NOT implement. Implementation requires:
