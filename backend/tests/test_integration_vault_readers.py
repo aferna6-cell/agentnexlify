@@ -59,6 +59,14 @@ class TestTwilioTenantReader:
         _seed_rows(mock_supabase, [])
         assert twilio_tenant.get_integration("t1") is None
 
+    def test_get_integration_none_when_row_not_dict(self, mock_supabase):
+        _seed_rows(mock_supabase, ["not-a-dict"])
+        with patch(
+            "backend.services.twilio_tenant.decrypt_integration_row"
+        ) as vault:
+            assert twilio_tenant.get_integration("t1") is None
+        vault.assert_not_called()
+
 
 class TestGbpReader:
     def test_load_gbp_routes_through_vault(self, mock_supabase):
