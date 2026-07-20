@@ -66,6 +66,9 @@ class _FakeChain:
     def gte(self, *_):
         return self
 
+    def in_(self, *_):
+        return self
+
     def filter(self, *_):
         return self
 
@@ -89,6 +92,7 @@ def _make_db(
     runs_7d_count=0,
     bridges=None,
     errors_count=0,
+    guard_activity=None,
     fail_tables=(),
 ):
     """Route table() calls to fake chains.
@@ -114,6 +118,8 @@ def _make_db(
             return _FakeChain(data=bridges or [])
         if name == "error_events":
             return _FakeChain(data=[], count=errors_count)
+        if name == "activity_log":
+            return _FakeChain(data=guard_activity or [])
         return _FakeChain(data=[])
 
     db = MagicMock()
@@ -237,6 +243,57 @@ class TestLoopHealthAggregation:
         }
         assert body["suggestions"]["by_status"] == {}
         assert body["suggestions"]["last_filed_at"] is None
+
+
+class TestGuardrailsSection:
+    def test_counts_guard_holds_flags_and_regressions(
+        self, client, mock_supabase, admin_headers
+    ):
+        db = _make_db(
+            guard_activity=[
+                {
+                    "activity_type": "outbound_guard_flagged",
+                    "metadata": {"flags": ["payment_redirect", "ssn"]},
+                },
+                {
+                    "activity_type": "outbound_guard_flagged",
+                    "metadata": {"flags": ["payment_redirect"]},
+                },
+                {"activity_type": "kb_eval_regression", "metadata": {}},
+            ]
+        )
+        mock_supabase.table.side_effect = db.table.side_effect
+
+        resp = client.get("/api/v1/admin/loop-health", headers=admin_headers)
+        assert resp.status_code == 200
+        guardrails = resp.json()["guardrails"]
+        assert guardrails == {
+            "outbound_guard_holds_7d": 2,
+            "guard_flag_counts": {"payment_redirect": 2, "ssn": 1},
+            "kb_eval_regressions_7d": 1,
+        }
+
+    def test_empty_activity_returns_zeroes(
+        self, client, mock_supabase, admin_headers
+    ):
+        db = _make_db()
+        mock_supabase.table.side_effect = db.table.side_effect
+
+        resp = client.get("/api/v1/admin/loop-health", headers=admin_headers)
+        guardrails = resp.json()["guardrails"]
+        assert guardrails["outbound_guard_holds_7d"] == 0
+        assert guardrails["kb_eval_regressions_7d"] == 0
+
+    def test_failing_activity_query_nulls_only_guardrails(
+        self, client, mock_supabase, admin_headers
+    ):
+        db = _make_db(errors_count=3, fail_tables=("activity_log",))
+        mock_supabase.table.side_effect = db.table.side_effect
+
+        resp = client.get("/api/v1/admin/loop-health", headers=admin_headers)
+        body = resp.json()
+        assert body["guardrails"] is None
+        assert body["errors_7d"] == 3
 
 
 class TestLoopHealthFaultTolerance:

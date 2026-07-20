@@ -170,6 +170,46 @@ def _bridges_section(db) -> dict | None:
     }
 
 
+def _guardrails_section(db, now: datetime) -> dict | None:
+    """7-day outbound-guard holds + eval regressions from activity_log.
+
+    Week-one watching for the enterprise-audit guardrail + eval features:
+    surfaces how often the outbound guard held a draft (with per-flag counts
+    so false-positive patterns are visible) and how many golden-question
+    regressions fired. Both ride the daily digest via this endpoint.
+    """
+    cutoff = (now - timedelta(days=_RECENT_DAYS)).isoformat()
+    try:
+        rows = (
+            db.table("activity_log")
+            .select("activity_type, metadata")
+            .in_("activity_type", ["outbound_guard_flagged", "kb_eval_regression"])
+            .gte("created_at", cutoff)
+            .limit(500)
+            .execute()
+        ).data or []
+    except Exception:
+        logger.warning("loop-health: guardrails query failed", exc_info=True)
+        return None
+
+    guard_holds = 0
+    flag_counts: dict[str, int] = {}
+    eval_regressions = 0
+    for row in rows:
+        if row.get("activity_type") == "outbound_guard_flagged":
+            guard_holds += 1
+            meta = row.get("metadata") or {}
+            for flag in meta.get("flags") or []:
+                flag_counts[str(flag)] = flag_counts.get(str(flag), 0) + 1
+        else:
+            eval_regressions += 1
+    return {
+        "outbound_guard_holds_7d": guard_holds,
+        "guard_flag_counts": flag_counts,
+        "kb_eval_regressions_7d": eval_regressions,
+    }
+
+
 def _errors_section(db, now: datetime) -> int | None:
     cutoff = (now - timedelta(days=_RECENT_DAYS)).isoformat()
     try:
@@ -210,5 +250,6 @@ async def get_loop_health(
         "suggestions": _suggestions_section(db, now),
         "os_activity": _os_activity_section(db, now),
         "bridges": _bridges_section(db),
+        "guardrails": _guardrails_section(db, now),
         "errors_7d": _errors_section(db, now),
     }
