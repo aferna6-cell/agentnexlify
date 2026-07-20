@@ -172,3 +172,25 @@ export function forgetOsGraphNode(token, nodeId) {
     token,
   });
 }
+
+// --- Enterprise-audit surfaces (trace, usage breakdown, instructions) ---
+
+export function fetchOsRunTrace(token, runId) {
+  return request(`/api/v1/os/agent-runs/${runId}/trace`, { token });
+}
+
+export function fetchOsUsageBreakdown(token) {
+  return request("/api/v1/os/usage/breakdown", { token });
+}
+
+export function fetchOsInstructions(token) {
+  return request("/api/v1/os/instructions", { token });
+}
+
+export function putOsInstruction(token, department, text) {
+  return request(`/api/v1/os/instructions/${department}`, {
+    method: "PUT",
+    token,
+    body: { text },
+  });
+}

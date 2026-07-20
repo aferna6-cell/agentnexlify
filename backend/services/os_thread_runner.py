@@ -29,6 +29,7 @@ from backend.services import (
     agent_sdk_client,
     connector_awareness,
     os_approval_notify,
+    os_custom_instructions,
     os_failure_notify,
     os_graph_memory,
     os_kb_feed,
@@ -97,12 +98,15 @@ async def process_user_turn(
         profile = context.get("businessProfile") or {}
         business_name = profile.get("businessName") or ""
         # Knowledge rides in as KbEntry rows — the engine's agents already
-        # consume SharedContext.kb, so no engine change is needed. Static
-        # business truth first (vertical guidance + FAQs + website), then
-        # learned memory (knowledge graph + semantic hits for this ask).
-        context["kb"] = os_kb_feed.tenant_kb_entries(
-            db, client_id, profile.get("businessType")
-        ) + await os_graph_memory.graph_kb_entries(db, client_id, user_content)
+        # consume SharedContext.kb, so no engine change is needed. Owner's
+        # per-department instructions lead the feed (topics-lite), then static
+        # business truth (vertical guidance + FAQs + website), then learned
+        # memory (knowledge graph + semantic hits for this ask).
+        context["kb"] = (
+            os_custom_instructions.kb_entries(db, client_id)
+            + os_kb_feed.tenant_kb_entries(db, client_id, profile.get("businessType"))
+            + await os_graph_memory.graph_kb_entries(db, client_id, user_content)
+        )
         if missing_connectors:
             context["integrations"] = {
                 "missing_for_this_request": [m["key"] for m in missing_connectors],

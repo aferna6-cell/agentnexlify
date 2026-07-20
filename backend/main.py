@@ -124,6 +124,12 @@ from backend.routers import (
     os_backlog,
     os_insights,
     os_usage,
+    os_usage_breakdown,
+    activity_export,
+    kb_evals as kb_evals_router,
+    os_instructions,
+    os_mcp,
+    os_run_trace,
     os_inbound,
     os_sync as os_sync_router,
     os_files,
@@ -980,6 +986,12 @@ app.include_router(os_memory.router)
 app.include_router(os_backlog.router)
 app.include_router(os_insights.router)
 app.include_router(os_usage.router)
+app.include_router(os_usage_breakdown.router)
+app.include_router(activity_export.router)
+app.include_router(kb_evals_router.router)
+app.include_router(os_instructions.router)
+app.include_router(os_mcp.router)
+app.include_router(os_run_trace.router)
 app.include_router(os_files.router)
 app.include_router(os_inbound.router)
 app.include_router(os_sync_router.router)

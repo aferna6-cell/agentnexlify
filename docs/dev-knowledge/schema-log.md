@@ -1611,3 +1611,26 @@ step 4). **Apply only after INTEGRATIONS_ENC_KEY is set in Railway** — the
 vault's encrypt path no-ops without it and new OAuth connects would have no
 token storage. Prod `integrations` verified 0 rows on 2026-07-20 (backfill
 vacuous); all readers routed through decrypt_integration_row in the same PR.
+
+## 177_tenant_eval_questions.sql (2026-07-20) — APPLIED
+Golden-question eval harness (enterprise-audit item 2). Two new tables, both
+`tenant_id`-scoped, RLS on with no permissive policies (service-role only):
+- `tenant_eval_questions` — question + expected_phrases text[] + enabled.
+- `tenant_eval_runs` — per-run summary (trigger, total/passed/failed/
+  regressions, results jsonb).
+Evals run deterministically after each `compile_tenant_kb` and on demand via
+`/api/v1/kb-evals/run`; regressions log `kb_eval_regression` to activity_log.
+
+## 178_os_custom_instructions.sql (2026-07-20) — APPLIED
+Topics-lite (enterprise-audit item 4): `tenants.os_custom_instructions` jsonb
+map keyed by engine department id. Injected as leading KbEntry rows by
+`os_thread_runner` via `backend/services/os_custom_instructions.py`; edited
+via GET/PUT `/api/v1/os/instructions`. Style guidance only — approval gates
+and outbound guard stay in code.
+
+## 179_tenant_mcp_servers.sql (2026-07-20) — APPLIED
+MCP interop v1 (enterprise-audit item 5): `tenant_mcp_servers` (tenant_id
+scope, RLS on/service-role only) — name, url (https-only at API layer),
+auth_header, auth_token (write-only, plaintext pending #266 key rollout),
+enabled. Platform-gated by `os_mcp_enabled` flag; endpoints under
+`/api/v1/os/mcp/*`; client in `backend/services/mcp_client.py`.

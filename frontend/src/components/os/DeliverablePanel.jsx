@@ -16,6 +16,7 @@ import {
   retryOsActionRun,
 } from "../../utils/api/os";
 import useIsMobile from "../../hooks/useIsMobile";
+import RunTraceDrawer from "./RunTraceDrawer";
 
 // os_action_runs.status -> how the send outcome reads to the owner. Approval
 // only means "the owner said go"; whether the SMS/email/widget action actually
@@ -494,6 +495,7 @@ export default function DeliverablePanel({ run, token, onClose, onUpdated }) {
               ? "Reporting..."
               : "Report a problem with this run"}
         </button>
+        <RunTraceDrawer token={token} runId={run?.id} />
       </div>
     </aside>
   );
