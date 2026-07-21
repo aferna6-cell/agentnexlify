@@ -89,6 +89,53 @@ def verify_booking_token(
     return claims
 
 
+def authorize_booking(
+    *,
+    widget_api_key: str | None,
+    api_key: str | None = None,
+    bearer_token: str | None = None,
+    now: datetime | None = None,
+) -> tuple[int, str]:
+    """Authorize a widget booking request via EITHER path against the tenant's key.
+
+    ``widget_api_key`` is the tenant's own widget key (looked up by the caller
+    from ``widget_configs``) — the shared secret both paths authenticate against.
+
+    Returns ``(status, detail)``: ``(200, "ok")`` when authorized, else the HTTP
+    status the router should raise — 401 (bad/expired token or wrong api_key),
+    429 (this token's hourly booking cap is spent), 403 (tenant not found /
+    misconfigured).
+
+    Precedence: an explicit legacy ``api_key`` is checked first (constant-time
+    compare); otherwise the ``Authorization: Bearer`` token is verified with the
+    same key and its ``jti`` counted against the hourly cap.
+    """
+    if not widget_api_key:
+        return 403, "tenant not found"
+
+    if api_key:
+        if _consteq(api_key, widget_api_key):
+            return 200, "ok"
+        return 401, "invalid api key"
+
+    if bearer_token:
+        claims = verify_booking_token(bearer_token, widget_api_key, now=now)
+        if not claims:
+            return 401, "invalid or expired token"
+        allowed, _count = check_jti_rate(claims["jti"], now=now)
+        if not allowed:
+            return 429, "booking rate limit exceeded for this session"
+        return 200, "ok"
+
+    return 401, "missing credentials"
+
+
+def _consteq(a: str, b: str) -> bool:
+    import hmac as _hmac
+
+    return _hmac.compare_digest(str(a), str(b))
+
+
 def check_jti_rate(
     jti: str,
     *,
