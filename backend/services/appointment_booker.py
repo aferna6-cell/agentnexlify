@@ -292,6 +292,18 @@ class AppointmentBooker:
                 exc_info=True,
             )
 
+        # Surface the booking on the activity feed (best-effort, fail-open) so the
+        # managed-agent booking shows up alongside widget/manual bookings (#119).
+        from backend.services.activity import log_activity
+
+        log_activity(
+            tenant_id=inp.client_id,
+            activity_type="appointment_booked",
+            description="Appointment booked by the scheduling agent.",
+            lead_id=inp.lead_id,
+            metadata={"appointment_id": appointment_id, "source": "appointment_booker"},
+        )
+
         logger.info(
             "appointment_booker: lead %s booked appointment %s",
             inp.lead_id,
