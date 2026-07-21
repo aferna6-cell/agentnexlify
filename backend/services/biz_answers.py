@@ -55,6 +55,51 @@ def _count(db, table: str, client_id: str, since: str, date_col: str = "created_
     )
 
 
+def _revenue(db, client_id: str, since: str) -> tuple[float, float]:
+    """(collected, outstanding) invoice totals for the period."""
+    rows = (
+        tenant_select(db, "invoices", client_id, "total, status")
+        .gte("created_at", since)
+        .limit(1000)
+        .execute()
+    ).data or []
+    collected = sum(
+        float(r.get("total") or 0) for r in rows if (r.get("status") or "") == "paid"
+    )
+    outstanding = sum(
+        float(r.get("total") or 0) for r in rows if (r.get("status") or "") == "sent"
+    )
+    return collected, outstanding
+
+
+def _count_between(db, table: str, client_id: str, start: str, end: str) -> int:
+    return len(
+        (
+            tenant_select(db, table, client_id, "id")
+            .gte("created_at", start)
+            .lt("created_at", end)
+            .limit(1000)
+            .execute()
+        ).data
+        or []
+    )
+
+
+def _upcoming_appointments(db, client_id: str, days: int = 7) -> int:
+    now = datetime.now(timezone.utc)
+    until = (now + timedelta(days=days)).isoformat()
+    return len(
+        (
+            tenant_select(db, "appointments", client_id, "id")
+            .gte("start_time", now.isoformat())
+            .lte("start_time", until)
+            .limit(1000)
+            .execute()
+        ).data
+        or []
+    )
+
+
 def _leads_by_source(db, client_id: str, since: str) -> dict[str, int]:
     rows = (
         tenant_select(db, "leads", client_id, "source")
@@ -70,13 +115,30 @@ def _leads_by_source(db, client_id: str, since: str) -> dict[str, int]:
 
 
 TEMPLATES: list[tuple[str, re.Pattern]] = [
+    # Order matters - first match wins. Specific templates (revenue,
+    # comparison, upcoming) sit above the broad count patterns they overlap.
+    (
+        "revenue",
+        re.compile(
+            r"revenue|how much.*(made|earned|paid|money)|income|sales total|total sales",
+            re.I,
+        ),
+    ),
+    (
+        "lead_comparison",
+        re.compile(r"compare|vs\.?\s*last|versus|than last|up or down", re.I),
+    ),
+    (
+        "upcoming_appointments",
+        re.compile(r"upcoming|coming up|next week.*(appointment|booking)|scheduled ahead", re.I),
+    ),
     ("leads_by_source", re.compile(r"lead.*(source|from|where)|source.*lead", re.I)),
     ("lead_count", re.compile(r"how many.*lead|lead.*(count|total)|new leads", re.I)),
     (
         "appointment_count",
         re.compile(r"appointment|booking|book.*(count|many)", re.I),
     ),
-    ("invoice_count", re.compile(r"invoice|billed|revenue", re.I)),
+    ("invoice_count", re.compile(r"invoice|billed", re.I)),
     (
         "conversation_count",
         re.compile(r"conversation|chat|message.*(count|many)|how many.*(chat|talk)", re.I),
@@ -86,6 +148,9 @@ TEMPLATES: list[tuple[str, re.Pattern]] = [
 SUPPORTED = [
     "How many leads did I get this month/week/today?",
     "Which sources do my leads come from?",
+    "How much revenue did I collect this month?",
+    "How do my leads compare to last week?",
+    "What appointments are coming up?",
     "How many appointments were booked this month?",
     "How many invoices were created this month?",
     "How many conversations happened this week?",
@@ -116,7 +181,40 @@ def answer_question(db, client_id: str, question: str) -> dict:
         }
 
     try:
-        if template == "lead_count":
+        if template == "revenue":
+            collected, outstanding = _revenue(db, client_id, since)
+            answer = (
+                f"You collected ${collected:,.2f} in the last {period_name}"
+                + (
+                    f", with ${outstanding:,.2f} still outstanding on sent invoices."
+                    if outstanding
+                    else "."
+                )
+            )
+            data = {"collected": collected, "outstanding": outstanding}
+        elif template == "lead_comparison":
+            now = datetime.now(timezone.utc)
+            period_start = now - timedelta(days=days)
+            prev_start = now - timedelta(days=days * 2)
+            current = _count_between(
+                db, "leads", client_id, period_start.isoformat(), now.isoformat()
+            )
+            previous = _count_between(
+                db, "leads", client_id, prev_start.isoformat(), period_start.isoformat()
+            )
+            delta = current - previous
+            direction = "up" if delta > 0 else ("down" if delta < 0 else "flat")
+            answer = (
+                f"{current} lead(s) this {period_name} vs {previous} the "
+                f"{period_name} before - {direction}"
+                + (f" by {abs(delta)}." if delta else ".")
+            )
+            data = {"current": current, "previous": previous, "delta": delta}
+        elif template == "upcoming_appointments":
+            count = _upcoming_appointments(db, client_id)
+            answer = f"You have {count} appointment(s) scheduled in the next 7 days."
+            data = {"upcoming": count}
+        elif template == "lead_count":
             count = _count(db, "leads", client_id, since)
             answer = f"You got {count} new lead(s) in the last {period_name}."
             data: dict = {"leads": count}

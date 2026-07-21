@@ -108,3 +108,12 @@ async def update_task(
     if not updated.data:
         raise HTTPException(status_code=404, detail="Task not found")
     return updated.data[0]
+
+
+@router.get("/tasks/suggestions")
+async def task_suggestions(claims: dict = Depends(_get_current_tenant)):
+    """One-click starter recurring tasks for tenants with none yet."""
+    from backend.services.os_starter_tasks import suggest_recurring_tasks
+
+    db = get_service_supabase()
+    return {"suggestions": suggest_recurring_tasks(db, claims["tenant_id"])}

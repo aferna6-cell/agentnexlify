@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   createOsTask,
   deleteOsTask,
+  fetchOsTaskSuggestions,
   listOsTasks,
   updateOsTask,
 } from "../../utils/api/os";
@@ -55,6 +56,7 @@ const mutedStyle = { fontSize: "0.8rem", color: "var(--text-muted)" };
 
 export default function ScheduledTasksCard({ token }) {
   const [tasks, setTasks] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [department, setDepartment] = useState("marketing");
   const [prompt, setPrompt] = useState("");
@@ -67,6 +69,16 @@ export default function ScheduledTasksCard({ token }) {
       const out = await listOsTasks(token);
       setTasks(out.tasks || []);
       setDepartments(out.departments || []);
+      if ((out.tasks || []).length === 0) {
+        try {
+          const sug = await fetchOsTaskSuggestions(token);
+          setSuggestions(sug.suggestions || []);
+        } catch {
+          setSuggestions([]);
+        }
+      } else {
+        setSuggestions([]);
+      }
     } catch {
       setError("Could not load scheduled tasks.");
     }
@@ -129,8 +141,56 @@ export default function ScheduledTasksCard({ token }) {
       )}
       {tasks.length === 0 && (
         <div style={{ ...mutedStyle, marginBottom: 12 }}>
-          No recurring tasks yet. Add one below - for example: "Draft this
-          week's promotional social post."
+          No recurring tasks yet.
+          {suggestions.length === 0 &&
+            ' Add one below - for example: "Draft this week\'s promotional social post."'}
+        </div>
+      )}
+      {tasks.length === 0 && suggestions.length > 0 && (
+        <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
+          {suggestions.map((s) => (
+            <div
+              key={s.label}
+              style={{ display: "flex", gap: 10, alignItems: "center" }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    color: "var(--text-primary, #f1f5f9)",
+                  }}
+                >
+                  {s.label}
+                </div>
+                <div style={mutedStyle}>
+                  {s.department} · every {s.interval_days} days
+                </div>
+              </div>
+              <button
+                style={btnStyle}
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  setError("");
+                  try {
+                    await createOsTask(token, {
+                      department: s.department,
+                      prompt: s.prompt,
+                      interval_days: s.interval_days,
+                      enabled: true,
+                    });
+                    await load();
+                  } catch (e) {
+                    setError(e?.message || "Could not add the task.");
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                Add
+              </button>
+            </div>
+          ))}
         </div>
       )}
       {tasks.map((task) => (

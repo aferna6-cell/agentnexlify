@@ -611,7 +611,7 @@ class TestSendWeeklyDigestBatchIsolation:
 
         send_counts = {"b": 0}
 
-        async def mock_build_and_send(db, tenant, tid, email, week_start, week_tag, opportunity_html=None):
+        async def mock_build_and_send(db, tenant, tid, email, week_start, week_tag, opportunity_html=None, workforce_html=None):
             if tid == "tenant-a":
                 raise RuntimeError("Simulated crash for tenant A")
             send_counts["b"] += 1

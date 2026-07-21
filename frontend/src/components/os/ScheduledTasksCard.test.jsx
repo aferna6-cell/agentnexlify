@@ -7,11 +7,13 @@ vi.mock("../../utils/api/os", () => ({
   createOsTask: vi.fn(),
   updateOsTask: vi.fn(),
   deleteOsTask: vi.fn(),
+  fetchOsTaskSuggestions: vi.fn(),
 }));
 
 import {
   createOsTask,
   deleteOsTask,
+  fetchOsTaskSuggestions,
   listOsTasks,
   updateOsTask,
 } from "../../utils/api/os";
@@ -31,6 +33,8 @@ beforeEach(() => {
   createOsTask.mockReset();
   updateOsTask.mockReset();
   deleteOsTask.mockReset();
+  fetchOsTaskSuggestions.mockReset();
+  fetchOsTaskSuggestions.mockResolvedValue({ suggestions: [] });
   listOsTasks.mockResolvedValue({
     tasks: [TASK],
     departments: ["marketing", "sales"],
@@ -86,6 +90,32 @@ describe("ScheduledTasksCard", () => {
     await screen.findByText("Draft this week's promo");
     fireEvent.click(screen.getByText("Delete"));
     await waitFor(() => expect(deleteOsTask).toHaveBeenCalledWith("jwt", "t1"));
+  });
+
+  it("offers one-click starter suggestions when the tenant has no tasks", async () => {
+    listOsTasks.mockResolvedValue({ tasks: [], departments: ["marketing"] });
+    fetchOsTaskSuggestions.mockResolvedValue({
+      suggestions: [
+        {
+          label: "Weekly promo draft",
+          department: "marketing",
+          interval_days: 7,
+          prompt: "Draft this week's promotional post for my coffee shop.",
+        },
+      ],
+    });
+    createOsTask.mockResolvedValue({});
+    render(<ScheduledTasksCard token="jwt" />);
+    expect(await screen.findByText("Weekly promo draft")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Add"));
+    await waitFor(() =>
+      expect(createOsTask).toHaveBeenCalledWith("jwt", {
+        department: "marketing",
+        prompt: "Draft this week's promotional post for my coffee shop.",
+        interval_days: 7,
+        enabled: true,
+      })
+    );
   });
 
   it("surfaces a load failure", async () => {

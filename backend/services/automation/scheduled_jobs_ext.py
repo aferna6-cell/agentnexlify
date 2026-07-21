@@ -389,6 +389,19 @@ async def send_weekly_digest() -> int:
         # ---- Per-tenant work wrapped for best-effort isolation ----
         # A crash for one tenant must not abort the batch for others.
         try:
+            # Workforce section (governance pillar): what the AI staff did,
+            # what's waiting for approval. Best-effort - None keeps the
+            # digest exactly as before for chatbot-only tenants.
+            workforce_html = None
+            try:
+                from backend.services.workforce_digest import build_workforce_html
+
+                workforce_html = build_workforce_html(db, tid)
+            except Exception:
+                logger.warning(
+                    "send_weekly_digest: workforce section failed for %s", tid
+                )
+
             ok = await _build_and_send_digest(
                 db=db,
                 tenant=tenant,
@@ -401,6 +414,7 @@ async def send_weekly_digest() -> int:
                 # can pre-fetch highlights and pass them in.
                 # DO NOT import os_opportunities in this module.
                 opportunity_html=None,
+                workforce_html=workforce_html,
             )
             if ok:
                 sent += 1
@@ -425,6 +439,9 @@ async def _build_and_send_digest(
     # separate.  The outer scheduler can call os_opportunities.get_highlights(tid)
     # and pass the result in.  When None, no opportunity section is rendered.
     opportunity_html: "str | None" = None,
+    # Pre-formatted HTML from workforce_digest.build_workforce_html (system-
+    # generated counts only). None = no Agent OS activity, section omitted.
+    workforce_html: "str | None" = None,
 ) -> bool:
     """Build + send one tenant's weekly value digest email.
 
@@ -628,6 +645,12 @@ async def _build_and_send_digest(
             body_html += (
                 f"<h3 style='color:#1e293b;margin-top:24px;'>Opportunities this week</h3>"
                 f"<div style='color:#374151;'>{opportunity_html}</div>"
+            )
+
+        if workforce_html:
+            body_html += (
+                f"<h3 style='color:#1e293b;margin-top:24px;'>Your AI workforce</h3>"
+                f"<div style='color:#374151;'>{workforce_html}</div>"
             )
 
         body_html += (

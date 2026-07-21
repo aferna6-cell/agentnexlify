@@ -20,6 +20,7 @@ vi.mock("../utils/api/os", () => ({
   approveOsProject: vi.fn(),
   cancelOsProject: vi.fn(),
   listOsTasks: vi.fn(() => Promise.resolve({ tasks: [], departments: [] })),
+  fetchOsTaskSuggestions: vi.fn(() => Promise.resolve({ suggestions: [] })),
   createOsTask: vi.fn(),
   updateOsTask: vi.fn(),
   deleteOsTask: vi.fn(),
