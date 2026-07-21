@@ -245,6 +245,22 @@ def build_chat_context(
         kb_article_refs=kb_article_refs or None,
     )
 
+    # Customer memory (suite item 5): a returning visitor's known-lead profile
+    # rides into the prompt so the bot greets them warm instead of cold.
+    # Deterministic reads, fail-open - chat never degrades on a memory miss.
+    if not is_new:
+        from backend.services.customer_memory import profile_block
+
+        try:
+            memory_block = profile_block(db, tid, req.session_id)
+        except Exception:
+            logger.warning(
+                "customer_memory failed for tenant %s", tid, exc_info=True
+            )
+            memory_block = None
+        if memory_block:
+            system_prompt += "\n\n" + memory_block
+
     # Inject active flow instructions into system prompt
     if active_flow and active_flow.get("nodes"):
         flow_instructions = _build_flow_instructions(active_flow)

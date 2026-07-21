@@ -143,7 +143,7 @@ def test_assess_photo_builds_prompt_calls_model_and_parses():
             {"severity": "minor", "quote_low": 100, "quote_high": 300,
              "confidence": 0.9, "summary": "ok"})})()
 
-    out = asyncio.get_event_loop().run_until_complete(
+    out = asyncio.new_event_loop().run_until_complete(
         svc.assess_photo(
             "BASE64DATA", "image/jpeg", {"industry": "plumbing"}, "plumbing",
             llm_call=fake_llm, build_prompt=fake_build_prompt, resolve_threshold=_THRESHOLD,

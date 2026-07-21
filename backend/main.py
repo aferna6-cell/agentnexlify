@@ -133,6 +133,8 @@ from backend.routers import (
     os_instructions,
     os_mcp,
     os_run_trace,
+    os_tasks,
+    os_ask_data,
     os_inbound,
     os_sync as os_sync_router,
     os_files,
@@ -393,8 +395,14 @@ async def _automation_loop():
 
             # Every 5 min: notifications, reminders, scheduled content, campaign recovery
             if tick % 5 == 0:
+                from backend.models.database import get_service_supabase as _db
+                from backend.services.os_scheduled_tasks import run_due_tasks
+
                 core_tasks.extend(
                     [
+                        _safe_run(
+                            "run_due_os_tasks", lambda: run_due_tasks(_db())
+                        ),
                         _safe_run(
                             "send_pending_review_requests", send_pending_review_requests
                         ),
@@ -1005,6 +1013,8 @@ app.include_router(kb_evals_router.router)
 app.include_router(os_instructions.router)
 app.include_router(os_mcp.router)
 app.include_router(os_run_trace.router)
+app.include_router(os_tasks.router)
+app.include_router(os_ask_data.router)
 app.include_router(os_files.router)
 app.include_router(os_inbound.router)
 app.include_router(os_sync_router.router)

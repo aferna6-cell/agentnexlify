@@ -1635,6 +1635,14 @@ auth_header, auth_token (write-only, plaintext pending #266 key rollout),
 enabled. Platform-gated by `os_mcp_enabled` flag; endpoints under
 `/api/v1/os/mcp/*`; client in `backend/services/mcp_client.py`.
 
+## 180_os_scheduled_tasks.sql (2026-07-20) — APPLIED
+Recurring Agent OS tasks (suite item 1): `os_scheduled_tasks` (client_id
+scope + tenant_scope override; RLS on/service-role only) — department,
+prompt, interval_days (1-90), enabled, next_run_at/last_run_at. Runner
+`os_scheduled_tasks.run_due_tasks` fires from main._automation_loop's 5-min
+tier and drives normal engine turns (approvals + outbound guard unchanged).
+CRUD at `/api/v1/os/tasks`.
+
 ## 181_kb_article_provenance.sql (2026-07-21) — DRAFT / UNAPPLIED
 KB article provenance (issue #70). Adds `kb_articles.last_validated timestamptz`
 (existing rows backfilled to `updated_at`; column default set to `now()` after
