@@ -25,6 +25,9 @@ from backend.services.automation.scheduled.billing_jobs import (
 from backend.services.automation.scheduled.conversation_insights_job import (
     run_monthly_conversation_insights,
 )
+from backend.services.automation.scheduled.photo_quote_jobs import (
+    purge_photo_quote_images_30d,
+)
 
 __all__ = [
     "check_no_response_leads",
@@ -42,4 +45,5 @@ __all__ = [
     "send_onboarding_emails",
     "send_invoice_payment_reminders",
     "run_monthly_conversation_insights",
+    "purge_photo_quote_images_30d",
 ]

@@ -45,6 +45,7 @@ from backend.services.automation.scheduled import (
     send_onboarding_emails,
     send_invoice_payment_reminders,
     run_monthly_conversation_insights,
+    purge_photo_quote_images_30d,
 )
 
 # Re-export from scheduled_jobs_ext to keep the public API of this module intact
@@ -72,6 +73,7 @@ __all__ = [
     "send_onboarding_emails",
     "send_invoice_payment_reminders",
     "run_monthly_conversation_insights",
+    "purge_photo_quote_images_30d",
     "send_weekly_intelligence_briefs",
     "send_weekly_digest",
     "send_birthday_greetings",
