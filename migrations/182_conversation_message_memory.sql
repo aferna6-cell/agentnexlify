@@ -1,9 +1,8 @@
--- 182: conversation message memory tier (issue #69) — DRAFT / UNAPPLIED
+-- 182: conversation message memory tier (issue #69) — APPLIED 2026-07-21
 --
--- Status: DRAFT for peer review. Validated by applying against a scratch
---   Postgres 16 (see PR proof). NOT applied to prod Supabase (no Supabase MCP
---   this session). A peer applies via apply_migration and flips the schema-log
---   entry to APPLIED.
+-- Status: APPLIED to prod Supabase 2026-07-21 by fable5 via apply_migration.
+--   Verified: message_relevance_score + message_confidence columns present,
+--   idx_chat_messages_session_confidence partial index created.
 -- Author: fable5 (Agent Nexlify team contract) — lane team/69/fable5/conversation-memory-tier
 -- Issue: #69. Migration number 182 chosen next-free after 180 (PR #517) and
 --   181 (PR #518); the issue body's "migration 110/111" is long stale.

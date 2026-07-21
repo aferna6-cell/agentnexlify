@@ -1643,7 +1643,7 @@ prompt, interval_days (1-90), enabled, next_run_at/last_run_at. Runner
 tier and drives normal engine turns (approvals + outbound guard unchanged).
 CRUD at `/api/v1/os/tasks`.
 
-## 181_kb_article_provenance.sql (2026-07-21) — DRAFT / UNAPPLIED
+## 181_kb_article_provenance.sql (2026-07-21) — APPLIED 2026-07-21
 KB article provenance (issue #70). Adds `kb_articles.last_validated timestamptz`
 (existing rows backfilled to `updated_at`; column default set to `now()` after
 backfill so newly-compiled articles are marked fresh) + `kb_articles.citation_count
@@ -1655,12 +1655,11 @@ untouched; provenance is merged in Python by article id via
 `backend/services/kb_provenance.py` (works for both the semantic and FTS paths)
 and surfaced in the widget system prompt as `[Source: url, last verified date]`
 with a `⚠ KB article may be outdated` warning past 60 days. Citation increment is
-fire-and-forget on retrieval. DRAFT: not applied to prod (no Supabase MCP this
-session). Validated by applying against a scratch Postgres 16 (backfill, default,
-RPC increment all correct). A peer applies via apply_migration and flips to APPLIED.
+fire-and-forget on retrieval. APPLIED to prod 2026-07-21 by fable5 via
+apply_migration (verified: both columns present, RPC exists, service_role grant).
 Migration number 181 chosen to avoid colliding with open PR #517 (migration 180).
 
-## 182_conversation_message_memory.sql (2026-07-21) — DRAFT / UNAPPLIED
+## 182_conversation_message_memory.sql (2026-07-21) — APPLIED 2026-07-21
 Conversation memory tier (issue #69). Adds `chat_messages.message_relevance_score`
 (double precision, default 0.5) + `chat_messages.message_confidence` (default 0.8)
 + partial index `idx_chat_messages_session_confidence` on (session_id,
@@ -1672,6 +1671,6 @@ canonical, keyed by session_id, scoped by tenant_id). Backend
 0.4·cosine+0.3·recency+0.3·confidence and the widget path uses recent-window +
 top-k older when a conversation is long — OPT-IN via
 `widget_conversation_memory_tier_enabled` (default 0), so widget behavior is
-unchanged until enabled. DRAFT: not applied to prod (no Supabase MCP this session);
-validated on a scratch Postgres 16 (columns default 0.5/0.8, partial index created).
+unchanged until enabled. APPLIED to prod 2026-07-21 by fable5 via apply_migration
+(verified: both columns present, partial index created).
 Migration number 182 is next-free after 180 (PR #517) and 181 (PR #518).
