@@ -1,0 +1,74 @@
+{
+  "_meta": {
+    "industry": "auto_body",
+    "currency": "USD",
+    "source": "Angi / national auto-body 2025 average estimates",
+    "source_urls": [
+      "https://www.angi.com/articles/how-much-does-car-body-repair-cost.htm",
+      "https://www.homeadvisor.com/cost/automotive/"
+    ],
+    "note": "Platform default pricing \u2014 tenants should customize in the dashboard. Plumbing validated by pilot; others refined post-pilot."
+  },
+  "damage_types": {
+    "dent": {
+      "minor": {
+        "low": 100,
+        "high": 350
+      },
+      "major": {
+        "low": 500,
+        "high": 2000
+      }
+    },
+    "scratch": {
+      "minor": {
+        "low": 75,
+        "high": 300
+      },
+      "major": {
+        "low": 400,
+        "high": 1500
+      }
+    },
+    "paint-chip": {
+      "minor": {
+        "low": 60,
+        "high": 250
+      },
+      "major": {
+        "low": 350,
+        "high": 1200
+      }
+    },
+    "bumper-crack": {
+      "minor": {
+        "low": 200,
+        "high": 600
+      },
+      "major": {
+        "low": 700,
+        "high": 2500
+      }
+    },
+    "panel-replacement": {
+      "minor": {
+        "low": 500,
+        "high": 1200
+      },
+      "major": {
+        "low": 1300,
+        "high": 4000
+      }
+    },
+    "rust": {
+      "minor": {
+        "low": 150,
+        "high": 500
+      },
+      "major": {
+        "low": 600,
+        "high": 3000
+      }
+    }
+  }
+}

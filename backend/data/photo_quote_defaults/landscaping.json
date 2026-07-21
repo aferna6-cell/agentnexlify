@@ -1,0 +1,74 @@
+{
+  "_meta": {
+    "industry": "landscaping",
+    "currency": "USD",
+    "source": "HomeAdvisor/Angi 2025 national averages \u2014 landscaping cost guides",
+    "source_urls": [
+      "https://www.homeadvisor.com/cost/landscape/",
+      "https://www.angi.com/articles/how-much-does-landscaping-cost.htm"
+    ],
+    "note": "Platform default pricing \u2014 tenants should customize in the dashboard. Plumbing validated by pilot; others refined post-pilot."
+  },
+  "damage_types": {
+    "overgrowth": {
+      "minor": {
+        "low": 100,
+        "high": 400
+      },
+      "major": {
+        "low": 500,
+        "high": 2000
+      }
+    },
+    "dead-plant": {
+      "minor": {
+        "low": 75,
+        "high": 300
+      },
+      "major": {
+        "low": 400,
+        "high": 1500
+      }
+    },
+    "pest-damage": {
+      "minor": {
+        "low": 150,
+        "high": 500
+      },
+      "major": {
+        "low": 600,
+        "high": 2500
+      }
+    },
+    "irrigation-failure": {
+      "minor": {
+        "low": 150,
+        "high": 500
+      },
+      "major": {
+        "low": 600,
+        "high": 3000
+      }
+    },
+    "hardscape-crack": {
+      "minor": {
+        "low": 200,
+        "high": 600
+      },
+      "major": {
+        "low": 700,
+        "high": 3500
+      }
+    },
+    "tree-removal": {
+      "minor": {
+        "low": 300,
+        "high": 900
+      },
+      "major": {
+        "low": 1000,
+        "high": 5000
+      }
+    }
+  }
+}
