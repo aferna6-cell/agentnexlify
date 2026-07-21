@@ -170,9 +170,69 @@ def run_evals(client_id: str, trigger: str = "manual") -> dict:
     return summary
 
 
+_AUTO_SEED_CAP = 8
+_SEED_PHRASE_WORDS = 6
+
+
+def auto_seed_from_faqs(db, client_id: str) -> int:
+    """Seed golden questions from FAQs for a tenant with none (suite item 6).
+
+    Deterministic: each FAQ becomes a question whose expected phrase is the
+    answer's first N words - guaranteed to pass today (the corpus contains
+    the answer verbatim), and guaranteed to catch the FAQ being deleted or
+    rewritten later. Returns the number of questions created (0 when the
+    tenant already has any, so owner-curated suites are never polluted).
+    """
+    try:
+        existing = (
+            tenant_select(db, "tenant_eval_questions", client_id, "id")
+            .limit(1)
+            .execute()
+        ).data or []
+        if existing:
+            return 0
+        faqs = (
+            db.table("faq_entries")
+            .select("question, answer")
+            .eq("tenant_id", client_id)
+            .limit(_AUTO_SEED_CAP)
+            .execute()
+        ).data or []
+    except Exception:
+        logger.warning(
+            "kb_evals: auto-seed read failed tenant=%s", client_id, exc_info=True
+        )
+        return 0
+
+    rows = []
+    for faq in faqs:
+        question = str(faq.get("question") or "").strip()
+        answer_words = str(faq.get("answer") or "").split()
+        phrase = " ".join(answer_words[:_SEED_PHRASE_WORDS]).strip()
+        if len(question) >= 3 and len(phrase) >= 10:
+            rows.append(
+                {
+                    "question": question[:MAX_QUESTION_LEN],
+                    "expected_phrases": [phrase[:MAX_PHRASE_LEN]],
+                    "enabled": True,
+                }
+            )
+    if not rows:
+        return 0
+    try:
+        tenant_table(db, "tenant_eval_questions", client_id).insert(rows).execute()
+    except Exception:
+        logger.warning(
+            "kb_evals: auto-seed insert failed tenant=%s", client_id, exc_info=True
+        )
+        return 0
+    return len(rows)
+
+
 def run_evals_after_compile(client_id: str) -> None:
     """Best-effort post-compile hook — never raises into the compile path."""
     try:
+        auto_seed_from_faqs(get_service_supabase(), client_id)
         run_evals(client_id, trigger="kb_compile")
     except Exception:
         logger.warning(

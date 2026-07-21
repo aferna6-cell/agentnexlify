@@ -31,6 +31,7 @@ from backend.services import (
     os_approval_notify,
     os_custom_instructions,
     os_failure_notify,
+    os_mcp_context,
     os_graph_memory,
     os_kb_feed,
     os_routing_memory,
@@ -104,6 +105,7 @@ async def process_user_turn(
         # memory (knowledge graph + semantic hits for this ask).
         context["kb"] = (
             os_custom_instructions.kb_entries(db, client_id)
+            + os_mcp_context.kb_entries(db, client_id)
             + os_kb_feed.tenant_kb_entries(db, client_id, profile.get("businessType"))
             + await os_graph_memory.graph_kb_entries(db, client_id, user_content)
         )

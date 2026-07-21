@@ -46,6 +46,7 @@ TENANT_DATA_TABLES: tuple[str, ...] = (
     "os_sync_state",
     "os_tenant_usage",
     "os_uploads",
+    "os_scheduled_tasks",
     # Communications + CRM
     "chat_messages",
     "conversations",
