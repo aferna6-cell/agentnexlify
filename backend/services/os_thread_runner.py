@@ -81,7 +81,7 @@ async def process_user_turn(
     # instant, token-free, never hallucinated. Scheduled/project prompts
     # (force_agent_id set) always take the engine path.
     if force_agent_id is None:
-        from backend.services import os_data_answers
+        from backend.services import os_chat_projects, os_data_answers
 
         data_answer = await os_data_answers.try_data_answer(
             db, client_id, thread_id, user_message_row
@@ -91,6 +91,15 @@ async def process_user_turn(
                 db, client_id, thread_id, data_answer["assistant_message"]
             )
             return data_answer
+
+        # Chat-originated projects: an explicit "start a project: ..." queues
+        # an os_projects row for the background planner - deterministic
+        # trigger, owner-facing threads only, nothing runs until approval.
+        chat_project = await os_chat_projects.try_start_project(
+            db, client_id, thread_id, user_message_row
+        )
+        if chat_project is not None:
+            return chat_project
 
     # Connector-need inference (deterministic regex + status lookups on hit
     # only). When the ask needs an unconnected integration, the engine gets

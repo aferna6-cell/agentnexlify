@@ -266,3 +266,22 @@ export function cancelOsProject(token, projectId) {
 export function fetchOsTaskSuggestions(token) {
   return request("/api/v1/os/tasks/suggestions", { token });
 }
+
+// --- Deep research (propose-only briefs from owned sources) ---
+
+export function runOsResearch(token, topic) {
+  return request("/api/v1/os/research", {
+    method: "POST",
+    token,
+    body: { topic },
+  });
+}
+
+// Seed a multi-department project from a research brief's findings. Returns
+// { project, steps } - the project parks as an approvable draft plan.
+export function createProjectFromResearch(token, runId) {
+  return request(`/api/v1/os/research/${runId}/to-project`, {
+    method: "POST",
+    token,
+  });
+}

@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 MAX_TOPIC_LEN = 500
 _MAX_SOURCE_CHARS = 12000
 _RESEARCH_MODEL = "claude-sonnet-5"
+_HANDOFF_BRIEF_CHARS = 1500
 
 
 def _now() -> str:
@@ -158,3 +159,42 @@ async def run_research(db, client_id: str, topic: str) -> dict:
         )
         return {"error": "could not save the research brief"}
     return {"run": created}
+
+
+async def research_to_project(db, client_id: str, run_id: str) -> dict:
+    """Seed a multi-department project from a research brief (round-4 item 4).
+
+    The suite loop: deep research produces a brief, the owner clicks "Act on
+    this brief", and the orchestration pillar turns it into an approvable
+    plan. The project ask carries the topic plus the brief's first chunk so
+    the planner grounds its steps in the findings. Raises ValueError on a
+    missing/empty brief; plan_project enforces the active-project cap.
+    """
+    from backend.services.tenant_scope import tenant_select
+
+    rows = (
+        tenant_select(db, "os_agent_runs", client_id, "id, agent_name, deliverable")
+        .eq("id", run_id)
+        .limit(1)
+        .execute()
+    ).data or []
+    if not rows or rows[0].get("agent_name") != "research":
+        raise ValueError("research brief not found")
+    deliverable = rows[0].get("deliverable") or {}
+    if not isinstance(deliverable, dict):
+        raise ValueError("research brief not found")
+    title = str(deliverable.get("title") or "")
+    body = str(deliverable.get("body") or "").strip()
+    if not body:
+        raise ValueError("research brief has no content")
+
+    topic = title.removeprefix("Research brief: ").strip() or "the research topic"
+    ask = (
+        f"Act on this research brief about {topic}. Turn its findings into "
+        "concrete department work.\n\nBrief:\n"
+        f"{body[:_HANDOFF_BRIEF_CHARS]}"
+    )
+
+    from backend.services.os_projects import MAX_ASK_LEN, plan_project
+
+    return await plan_project(db, client_id, ask[:MAX_ASK_LEN])

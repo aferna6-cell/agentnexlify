@@ -18,6 +18,7 @@ import MarketingUpsell, {
 import NotificationBell from "./NotificationBell";
 import Sidebar from "./Sidebar";
 import SkeletonLoader from "./SkeletonLoader";
+import UpgradeGateBanner from "./UpgradeGateBanner";
 
 class PageErrorBoundary extends Component {
   constructor(props) {
@@ -401,6 +402,7 @@ export default function App() {
         >
           <NotificationBell onNavigate={handleNavigate} />
         </div>
+        <UpgradeGateBanner onNavigate={handleNavigate} />
         <main className="content">
           {loading ? (
             <SkeletonLoader />

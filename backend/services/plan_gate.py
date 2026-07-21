@@ -15,11 +15,20 @@ import logging
 from fastapi import Depends, HTTPException
 
 from backend.models.database import get_service_supabase
+from backend.services.agent_os_gate import AGENT_OS_PLANS
 from backend.services.auth_service import get_current_tenant
 
 logger = logging.getLogger(__name__)
 
-MARKETING_PLANS = {"agent_os"}
+# Marketing rides the same plan set as the Agent OS suite gate: `agent_os`
+# plus every legacy/grandfathered plan still honored on old contracts
+# (CLAUDE.md "Plan names + prices" - gates include them). Marketing is
+# surfaced primarily through the Agent OS marketing department, so any plan
+# with workforce access gets the standalone marketing surfaces too - the two
+# gates sharing one source of truth keeps them from drifting. `chatbot` and
+# `free` stay out. (Until 2026-07-21 this was {"agent_os"} only, wrongly
+# 402-ing grandfathered marketing contracts.)
+MARKETING_PLANS = set(AGENT_OS_PLANS)
 MARKETING_UPGRADE_PATH = "/billing"
 
 

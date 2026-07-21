@@ -39,10 +39,10 @@ def _premium_gates():
     from backend.services.lead_qualification import _ELIGIBLE_PLANS as LQ
 
     # NOTE: marketing_campaigns._CAMPAIGN_SEND_PLANS is intentionally NOT here.
-    # Marketing is an agent_os-only feature (not the PREMIUM_PLANS set), gated by
-    # plan_gate.MARKETING_PLANS and covered by test_plan_gate.py /
-    # test_two_plan_repricing.py. Adding it here would (correctly) fail the
-    # "unlocks all premium plans" assertion because legacy plans are excluded.
+    # Marketing is gated by plan_gate.MARKETING_PLANS (agent_os + legacy plans,
+    # aligned with agent_os_gate.AGENT_OS_PLANS since 2026-07-21) and covered
+    # by test_two_plan_repricing.py / test_plan_gating_new_plans.py. This list
+    # holds only the PREMIUM_PLANS-shaped gates.
     return [
         ("api_key_auth._ALLOWED_PLANS (Zapier)", set(_ALLOWED_PLANS)),
         ("sms_rate_limiter._UNLIMITED_PLANS", set(_UNLIMITED_PLANS)),

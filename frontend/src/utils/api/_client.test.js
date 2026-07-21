@@ -167,6 +167,48 @@ describe("request", () => {
     expect(window.location.href).toBe("/login?expired=1");
   });
 
+  it("dispatches the plan-upgrade event on a 402 gate payload", async () => {
+    const dispatchEvent = vi.fn();
+    window.dispatchEvent = dispatchEvent;
+    globalThis.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 402,
+      json: () =>
+        Promise.resolve({
+          detail: {
+            error: "plan_upgrade_required",
+            message: "Upgrade to Agent OS",
+            upgrade_path: "/billing",
+          },
+        }),
+    });
+
+    await expect(request("/api/v1/os/projects")).rejects.toMatchObject({
+      status: 402,
+      message: "Upgrade to Agent OS",
+    });
+
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    const event = dispatchEvent.mock.calls[0][0];
+    expect(event.type).toBe("anx:plan-upgrade-required");
+    expect(event.detail.upgrade_path).toBe("/billing");
+  });
+
+  it("does not dispatch the upgrade event for other 402 payloads", async () => {
+    const dispatchEvent = vi.fn();
+    window.dispatchEvent = dispatchEvent;
+    globalThis.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 402,
+      json: () => Promise.resolve({ detail: "Payment required" }),
+    });
+
+    await expect(request("/api/v1/whatever")).rejects.toMatchObject({
+      status: 402,
+    });
+    expect(dispatchEvent).not.toHaveBeenCalled();
+  });
+
   it("does NOT redirect on 401 if already on login page", async () => {
     window.location.pathname = "/login";
     const originalHref = window.location.href;
@@ -197,6 +239,20 @@ describe("ApiError", () => {
     const err = new ApiError(500, {});
 
     expect(err.message).toBe("API error 500");
+  });
+
+  it("surfaces the message inside a structured detail object", () => {
+    const err = new ApiError(402, {
+      detail: {
+        error: "plan_upgrade_required",
+        message: "The AI Workforce suite is part of the Agent OS plan.",
+        upgrade_path: "/billing",
+      },
+    });
+
+    expect(err.message).toBe(
+      "The AI Workforce suite is part of the Agent OS plan.",
+    );
   });
 
   it("formats FastAPI validation details", () => {
