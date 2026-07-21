@@ -24,7 +24,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/os/mcp", tags=["agent-os"])
 
 _SERVER_CAP = 10
-_PUBLIC_COLUMNS = "id, name, url, auth_header, enabled, created_at, updated_at"
+_PUBLIC_COLUMNS = (
+    "id, name, url, auth_header, enabled, context_tool, context_args, "
+    "created_at, updated_at"
+)
 
 
 class ServerIn(BaseModel):
@@ -38,6 +41,15 @@ class ServerIn(BaseModel):
 class ToolCallIn(BaseModel):
     tool: str = Field(min_length=1, max_length=200)
     arguments: dict = Field(default_factory=dict)
+
+
+class ContextToolIn(BaseModel):
+    """Owner-designated read-only tool auto-run into run context (phase 2).
+
+    Null tool clears the designation."""
+
+    context_tool: str | None = Field(default=None, max_length=200)
+    context_args: dict = Field(default_factory=dict)
 
 
 def _now() -> str:
@@ -166,3 +178,22 @@ async def call_server_tool(
         {"updated_at": _now()}
     ).eq("id", server_id).execute()
     return {"server_id": server_id, "tool": body.tool, "result": result}
+
+
+@router.patch("/servers/{server_id}/context-tool")
+async def set_context_tool(
+    server_id: str, body: ContextToolIn, claims: dict = Depends(_get_current_tenant)
+):
+    """Designate (or clear) the one read-only tool injected into run context."""
+    _require_flag()
+    db = get_service_supabase()
+    _load_server(db, claims["tenant_id"], server_id)
+    tool = (body.context_tool or "").strip() or None
+    tenant_table(db, "tenant_mcp_servers", claims["tenant_id"]).update(
+        {
+            "context_tool": tool,
+            "context_args": body.context_args if tool else {},
+            "updated_at": _now(),
+        }
+    ).eq("id", server_id).execute()
+    return {"server_id": server_id, "context_tool": tool}

@@ -1,9 +1,8 @@
--- 181: KB article provenance (issue #70) — DRAFT / UNAPPLIED
+-- 181: KB article provenance (issue #70) — APPLIED 2026-07-21
 --
--- Status: DRAFT for peer review. Validated locally by applying against a scratch
---   Postgres 16 (see PR proof). NOT yet applied to prod Supabase (no Supabase MCP
---   access this session). A peer applies via mcp__supabase__apply_migration and
---   flips the schema-log entry to APPLIED.
+-- Status: APPLIED to prod Supabase 2026-07-21 by fable5 via apply_migration.
+--   Verified: last_validated + citation_count columns present,
+--   increment_kb_citations RPC exists with service_role grant.
 -- Author: fable5 (Agent Nexlify team contract) — lane team/70/fable5/kb-provenance
 -- Issue: #70. Migration number 181 chosen to avoid colliding with the open
 --   PR #517 (migration 180, issue #114). Supersedes the closed auto-PR #72,

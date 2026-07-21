@@ -1643,7 +1643,7 @@ prompt, interval_days (1-90), enabled, next_run_at/last_run_at. Runner
 tier and drives normal engine turns (approvals + outbound guard unchanged).
 CRUD at `/api/v1/os/tasks`.
 
-## 181_kb_article_provenance.sql (2026-07-21) — DRAFT / UNAPPLIED
+## 181_kb_article_provenance.sql (2026-07-21) — APPLIED 2026-07-21
 KB article provenance (issue #70). Adds `kb_articles.last_validated timestamptz`
 (existing rows backfilled to `updated_at`; column default set to `now()` after
 backfill so newly-compiled articles are marked fresh) + `kb_articles.citation_count
@@ -1655,12 +1655,11 @@ untouched; provenance is merged in Python by article id via
 `backend/services/kb_provenance.py` (works for both the semantic and FTS paths)
 and surfaced in the widget system prompt as `[Source: url, last verified date]`
 with a `⚠ KB article may be outdated` warning past 60 days. Citation increment is
-fire-and-forget on retrieval. DRAFT: not applied to prod (no Supabase MCP this
-session). Validated by applying against a scratch Postgres 16 (backfill, default,
-RPC increment all correct). A peer applies via apply_migration and flips to APPLIED.
+fire-and-forget on retrieval. APPLIED to prod 2026-07-21 by fable5 via
+apply_migration (verified: both columns present, RPC exists, service_role grant).
 Migration number 181 chosen to avoid colliding with open PR #517 (migration 180).
 
-## 182_conversation_message_memory.sql (2026-07-21) — DRAFT / UNAPPLIED
+## 182_conversation_message_memory.sql (2026-07-21) — APPLIED 2026-07-21
 Conversation memory tier (issue #69). Adds `chat_messages.message_relevance_score`
 (double precision, default 0.5) + `chat_messages.message_confidence` (default 0.8)
 + partial index `idx_chat_messages_session_confidence` on (session_id,
@@ -1672,6 +1671,29 @@ canonical, keyed by session_id, scoped by tenant_id). Backend
 0.4·cosine+0.3·recency+0.3·confidence and the widget path uses recent-window +
 top-k older when a conversation is long — OPT-IN via
 `widget_conversation_memory_tier_enabled` (default 0), so widget behavior is
-unchanged until enabled. DRAFT: not applied to prod (no Supabase MCP this session);
-validated on a scratch Postgres 16 (columns default 0.5/0.8, partial index created).
+unchanged until enabled. APPLIED to prod 2026-07-21 by fable5 via apply_migration
+(verified: both columns present, partial index created).
 Migration number 182 is next-free after 180 (PR #517) and 181 (PR #518).
+
+## 183_os_projects.sql (2026-07-21) - APPLIED 2026-07-21
+Multi-department OS Projects (specs/os-projects_spec.md, suite item 4 -
+orchestration). `os_projects` (client_id scope, RLS on/service-role only) -
+title, ask, status draft|approved|running|done|canceled|failed, error.
+`os_project_steps` (client_id scope, FK project_id ON DELETE CASCADE) -
+position, department, objective, status pending|awaiting_approval|done|
+failed|canceled, agent_run_id, thread_id. Partial index on active statuses.
+Planner (`os_projects.plan_project`, Sonnet structured call) persists 2-6
+validated steps; runner (`run_project_ticks`) fires from main._automation_loop
+5-min tier behind `os_projects_enabled` flag and drives one engine turn per
+project per tick via process_user_turn - approvals + never-auto-send +
+outbound guard unchanged (project approval is NOT an auto-send grant).
+Tables added to tenant_scope overrides + account_deletion.TENANT_DATA_TABLES.
+
+## 184_mcp_context_tool.sql (2026-07-21) - APPLIED 2026-07-21
+Interop phase 2. Adds `tenant_mcp_servers.context_tool text` +
+`context_args jsonb DEFAULT '{}'` - the owner designates ONE read-only tool
+per server (with fixed args) whose live result is fetched at run time
+(`os_mcp_context.tool_context_entries`, 6s timeout, cap 2 servers, failures
+degrade to phase-1 awareness) and injected into Agent OS run context. Only
+the owner-chosen tool auto-runs; arbitrary calls stay owner-invoked
+(`PATCH /api/v1/os/mcp/servers/{id}/context-tool` sets/clears it).

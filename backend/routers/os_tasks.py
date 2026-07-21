@@ -77,3 +77,34 @@ async def delete_task(task_id: str, claims: dict = Depends(_get_current_tenant))
     if not deleted.data:
         raise HTTPException(status_code=404, detail="Task not found")
     return {"deleted": True}
+
+
+class TaskPatch(BaseModel):
+    prompt: str | None = Field(default=None, min_length=5, max_length=MAX_PROMPT_LEN)
+    interval_days: int | None = None
+    enabled: bool | None = None
+
+
+@router.patch("/tasks/{task_id}")
+async def update_task(
+    task_id: str, body: TaskPatch, claims: dict = Depends(_get_current_tenant)
+):
+    fields: dict = {}
+    if body.prompt is not None:
+        fields["prompt"] = body.prompt.strip()
+    if body.interval_days is not None:
+        fields["interval_days"] = clamp_interval(body.interval_days)
+    if body.enabled is not None:
+        fields["enabled"] = body.enabled
+    if not fields:
+        raise HTTPException(status_code=422, detail="nothing to update")
+    db = get_service_supabase()
+    updated = (
+        tenant_table(db, "os_scheduled_tasks", claims["tenant_id"])
+        .update(fields)
+        .eq("id", task_id)
+        .execute()
+    )
+    if not updated.data:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return updated.data[0]

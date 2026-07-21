@@ -33,6 +33,8 @@ _TENANT_COLUMN_OVERRIDES = {
     "os_graph_edges": "client_id",
     "os_uploads": "client_id",
     "os_scheduled_tasks": "client_id",
+    "os_projects": "client_id",
+    "os_project_steps": "client_id",
 }
 
 

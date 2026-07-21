@@ -194,3 +194,71 @@ export function putOsInstruction(token, department, text) {
     body: { text },
   });
 }
+
+// --- Scheduled tasks (recurring department prompts) ---
+
+export function listOsTasks(token) {
+  return request("/api/v1/os/tasks", { token });
+}
+
+export function createOsTask(token, { department, prompt, interval_days, enabled }) {
+  return request("/api/v1/os/tasks", {
+    method: "POST",
+    token,
+    body: { department, prompt, interval_days, enabled },
+  });
+}
+
+export function updateOsTask(token, taskId, fields) {
+  return request(`/api/v1/os/tasks/${taskId}`, {
+    method: "PATCH",
+    token,
+    body: fields,
+  });
+}
+
+export function deleteOsTask(token, taskId) {
+  return request(`/api/v1/os/tasks/${taskId}`, { method: "DELETE", token });
+}
+
+// --- Ask your business (deterministic data answers) ---
+
+export function askBusinessData(token, question) {
+  return request("/api/v1/os/ask-data", {
+    method: "POST",
+    token,
+    body: { question },
+  });
+}
+
+export function fetchAskDataSupported(token) {
+  return request("/api/v1/os/ask-data/supported", { token });
+}
+
+// --- Multi-department projects ---
+
+export function listOsProjects(token) {
+  return request("/api/v1/os/projects", { token });
+}
+
+export function createOsProject(token, ask) {
+  return request("/api/v1/os/projects", { method: "POST", token, body: { ask } });
+}
+
+export function fetchOsProject(token, projectId) {
+  return request(`/api/v1/os/projects/${projectId}`, { token });
+}
+
+export function approveOsProject(token, projectId) {
+  return request(`/api/v1/os/projects/${projectId}/approve`, {
+    method: "POST",
+    token,
+  });
+}
+
+export function cancelOsProject(token, projectId) {
+  return request(`/api/v1/os/projects/${projectId}/cancel`, {
+    method: "POST",
+    token,
+  });
+}

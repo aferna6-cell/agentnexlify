@@ -132,6 +132,7 @@ from backend.routers import (
     kb_evals as kb_evals_router,
     os_instructions,
     os_mcp,
+    os_projects,
     os_run_trace,
     os_tasks,
     os_ask_data,
@@ -178,6 +179,34 @@ _cors_warning_logged = False
 
 def _app_uptime_seconds() -> float:
     return round(time.time() - _startup_time, 1) if _startup_time else 0.0
+
+
+# Set by _automation_loop at the top of every tick; /health surfaces its age
+# so a silently-dead loop is visible from the outside.
+_automation_last_tick: float = 0.0
+
+
+def _automation_tick_age_seconds() -> float | None:
+    return round(time.time() - _automation_last_tick, 1) if _automation_last_tick else None
+
+
+async def _automation_loop_supervisor():
+    """Keep the automation loop alive across crashes.
+
+    Incident 2026-07-21: the bare create_task(_automation_loop()) coroutine
+    died on an uncaught exception and prod ran for hours with zero
+    automations - no log line, no restart, no external signal. Any
+    non-cancellation error now logs loudly and the loop restarts after a
+    backoff.
+    """
+    while True:
+        try:
+            await _automation_loop()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Automation loop crashed; restarting in 60s")
+            await asyncio.sleep(60)
 
 
 def _app_version() -> str:
@@ -377,9 +406,11 @@ async def _automation_loop():
     from backend.services.activation_nudges import send_activation_nudges
     from backend.services.conversation_enrichment_job import run_pending_enrichment
 
+    global _automation_last_tick
     tick = 0
     while True:
         tick += 1
+        _automation_last_tick = time.time()
         lock_name = "automation_loop_tick"
         if not _try_acquire_automation_lock(lock_name):
             await asyncio.sleep(60)
@@ -396,12 +427,21 @@ async def _automation_loop():
             # Every 5 min: notifications, reminders, scheduled content, campaign recovery
             if tick % 5 == 0:
                 from backend.models.database import get_service_supabase as _db
+                from backend.services.os_projects import run_project_ticks
                 from backend.services.os_scheduled_tasks import run_due_tasks
+                from backend.services.platform_flags import flag_enabled as _flag
 
                 core_tasks.extend(
                     [
                         _safe_run(
                             "run_due_os_tasks", lambda: run_due_tasks(_db())
+                        ),
+                        _safe_run(
+                            "run_os_project_ticks",
+                            lambda: run_project_ticks(_db())
+                            if _flag("os_projects_enabled")
+                            else asyncio.sleep(0),
+                            timeout=120.0,
                         ),
                         _safe_run(
                             "send_pending_review_requests", send_pending_review_requests
@@ -702,7 +742,7 @@ async def lifespan(app: FastAPI):
             "API_SECRET_KEY is not set; dev fallback is enabled outside production only."
         )
     if not os.environ.get("TESTING"):
-        task = asyncio.create_task(_automation_loop())
+        task = asyncio.create_task(_automation_loop_supervisor())
     yield
     if not os.environ.get("TESTING"):
         task.cancel()
@@ -1012,6 +1052,7 @@ app.include_router(activity_export.router)
 app.include_router(kb_evals_router.router)
 app.include_router(os_instructions.router)
 app.include_router(os_mcp.router)
+app.include_router(os_projects.router)
 app.include_router(os_run_trace.router)
 app.include_router(os_tasks.router)
 app.include_router(os_ask_data.router)
@@ -1094,6 +1135,9 @@ async def health():
         "uptime_seconds": uptime,
         "checks": {
             "supabase": supabase_status,
+            # None = loop never ticked in this process (dead or TESTING);
+            # a healthy loop keeps this under ~120s.
+            "automation_tick_age_seconds": _automation_tick_age_seconds(),
         },
     }
 

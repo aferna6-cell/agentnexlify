@@ -106,6 +106,7 @@ async def process_user_turn(
         context["kb"] = (
             os_custom_instructions.kb_entries(db, client_id)
             + os_mcp_context.kb_entries(db, client_id)
+            + await os_mcp_context.tool_context_entries(db, client_id)
             + os_kb_feed.tenant_kb_entries(db, client_id, profile.get("businessType"))
             + await os_graph_memory.graph_kb_entries(db, client_id, user_content)
         )

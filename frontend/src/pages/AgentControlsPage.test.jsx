@@ -11,6 +11,18 @@ vi.mock("../utils/api/os", () => ({
   fetchOsInstructions: vi.fn(),
   fetchOsUsageBreakdown: vi.fn(),
   putOsInstruction: vi.fn(),
+  // New Agent Controls cards (ask-data, projects, scheduled tasks)
+  fetchAskDataSupported: vi.fn(() => Promise.resolve({ supported_questions: [] })),
+  askBusinessData: vi.fn(() => Promise.resolve({ answer: "" })),
+  listOsProjects: vi.fn(() => Promise.resolve({ projects: [] })),
+  createOsProject: vi.fn(),
+  fetchOsProject: vi.fn(),
+  approveOsProject: vi.fn(),
+  cancelOsProject: vi.fn(),
+  listOsTasks: vi.fn(() => Promise.resolve({ tasks: [], departments: [] })),
+  createOsTask: vi.fn(),
+  updateOsTask: vi.fn(),
+  deleteOsTask: vi.fn(),
 }));
 
 vi.mock("../utils/api/kb-evals", () => ({

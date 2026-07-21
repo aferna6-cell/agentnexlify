@@ -13,6 +13,9 @@ import {
   runEvals,
 } from "../utils/api/kb-evals";
 import { BASE } from "../utils/api/_client";
+import AskDataCard from "../components/os/AskDataCard";
+import ProjectsCard from "../components/os/ProjectsCard";
+import ScheduledTasksCard from "../components/os/ScheduledTasksCard";
 
 // ---------------------------------------------------------------------------
 // AgentControlsPage - the owner's control room for the enterprise-audit
@@ -434,6 +437,9 @@ export default function AgentControlsPage() {
           their answers honest.
         </div>
       </div>
+      <AskDataCard token={token} />
+      <ProjectsCard token={token} />
+      <ScheduledTasksCard token={token} />
       <InstructionsCard token={token} />
       <GoldenQuestionsCard token={token} />
       <UsageCard token={token} />
