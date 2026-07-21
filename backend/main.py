@@ -101,6 +101,7 @@ from backend.routers import (
     widget_config,
     widget_lead,
     widget_photo_quote,
+    photo_quote_admin,
     widget_appointments_book,
     wizard_analytics,
     ab_tests,
@@ -930,6 +931,7 @@ app.include_router(widget_chat.router)
 app.include_router(widget_config.router)
 app.include_router(widget_lead.router)
 app.include_router(widget_photo_quote.router)
+app.include_router(photo_quote_admin.router)
 app.include_router(widget_appointments_book.router)
 app.include_router(notifications.router)
 app.include_router(business_page.router)

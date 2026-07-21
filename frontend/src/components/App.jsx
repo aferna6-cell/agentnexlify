@@ -116,6 +116,7 @@ const CallsPage = lazy(() => import("../pages/CallsPage"));
 const SmsCompliancePage = lazy(() => import("../pages/SmsCompliance"));
 const KnowledgeSourcesPage = lazy(() => import("../pages/KnowledgeSourcesPage"));
 const AgentControlsPage = lazy(() => import("../pages/AgentControlsPage"));
+const QuoteRequestsPage = lazy(() => import("../pages/QuoteRequests"));
 
 const pages = {
   dashboard: Dashboard,
@@ -160,6 +161,7 @@ const pages = {
   sms_compliance: SmsCompliancePage,
   knowledge: KnowledgeSourcesPage,
   agent_controls: AgentControlsPage,
+  quote_requests: QuoteRequestsPage,
 };
 
 // --------------------------------------------------------------------------
@@ -194,6 +196,7 @@ const PAGE_TO_PATH = {
   trigger_logs: "/dashboard/trigger-logs",
   invoices: "/dashboard/invoices",
   documents: "/dashboard/documents",
+  quote_requests: "/dashboard/quote-requests",
   support: "/dashboard/support",
   integration_keys: "/settings/integration-keys",
   admin_analytics: "/admin/analytics",
