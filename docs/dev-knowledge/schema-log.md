@@ -1634,3 +1634,17 @@ scope, RLS on/service-role only) — name, url (https-only at API layer),
 auth_header, auth_token (write-only, plaintext pending #266 key rollout),
 enabled. Platform-gated by `os_mcp_enabled` flag; endpoints under
 `/api/v1/os/mcp/*`; client in `backend/services/mcp_client.py`.
+
+## 180_ops_automation_pending_automations.sql (2026-07-21) — DRAFT / UNAPPLIED
+ops-automation retry queue (issue #114, spec §6.2 G6). `pending_automations`
+(tenant_id scope, RLS on/service-role bypass, index on
+(tenant_id, status, scheduled_for)) — automation_type, payload_json,
+scheduled_for, status CHECK, retry_count, last_error. Backs Twilio-down /
+GCal-OAuth-expiry retries with no silent loss; unblocks the retry worker (#118).
+DRAFT: not yet applied (no Supabase MCP access this session). Two open decisions
+gate the rest of #114 — (D1) tenant_id vs client_id convention (applied tables
+use tenant_id; spec/issue say client_id), and (D2) whether to ALTER the
+migration-005 appointments reminders table into the spec's booking table. The
+activity_feed_events materialized view is DEFERRED until D2 lands, because the
+spec's view references booking columns that do not yet exist. See the migration
+file header for the full audit.
