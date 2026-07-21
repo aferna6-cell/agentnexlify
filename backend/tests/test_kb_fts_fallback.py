@@ -104,9 +104,16 @@ class TestQueryKbArticles(unittest.TestCase):
              patch(PATCH_EMBED, side_effect=_raise_unavailable):
             result = _run(_query_kb_articles("plumbing services"))
 
-        # FTS RPC must have been called
-        mock_db.rpc.assert_called_once_with(
-            "match_kb_articles_fts",
+        # FTS RPC must have been called. Since the kb-provenance change
+        # (issue #70), retrieval also fires a fire-and-forget
+        # increment_kb_citations RPC — filter to the retrieval call.
+        retrieval_calls = [
+            c for c in mock_db.rpc.call_args_list
+            if c[0][0] == "match_kb_articles_fts"
+        ]
+        self.assertEqual(len(retrieval_calls), 1)
+        self.assertEqual(
+            retrieval_calls[0][0][1],
             {"query_text": "plumbing services", "match_count": 5},
         )
         self.assertEqual(len(result), 2)
@@ -133,12 +140,14 @@ class TestQueryKbArticles(unittest.TestCase):
              patch(PATCH_EMBED, side_effect=_fake_embed_query):
             result = _run(_query_kb_articles("plumbing services"))
 
-        # Semantic RPC must have been called with the embedding
-        mock_db.rpc.assert_called_once()
-        call_args = mock_db.rpc.call_args
-        rpc_name = call_args[0][0]
-        rpc_params = call_args[0][1]
-        self.assertEqual(rpc_name, "match_kb_articles")
+        # Semantic RPC must have been called with the embedding (a second
+        # increment_kb_citations RPC is expected since issue #70 — filter).
+        semantic_calls = [
+            c for c in mock_db.rpc.call_args_list
+            if c[0][0] == "match_kb_articles"
+        ]
+        self.assertEqual(len(semantic_calls), 1)
+        rpc_params = semantic_calls[0][0][1]
         self.assertIn("query_embedding", rpc_params)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["slug"], "article-1")
