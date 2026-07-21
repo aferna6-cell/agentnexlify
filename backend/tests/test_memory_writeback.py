@@ -220,3 +220,169 @@ class TestMcpContextTool:
 
     def test_render_result_plain_dict(self):
         assert "42" in os_mcp_context._render_result({"count": 42})
+
+
+class TestErrorPaths:
+    def test_service_types_read_failure_returns_empty(self):
+        db = MagicMock()
+        db.table.side_effect = RuntimeError("db down")
+        assert customer_memory.detect_interest_writebacks(db, "t1") == []
+
+    def test_convo_read_failure_returns_empty(self):
+        calls = {"n": 0}
+
+        def _table(name):
+            if name == "service_types":
+                return _Query(_SERVICES, table=name)
+            raise RuntimeError("db down")
+
+        db = MagicMock()
+        db.table.side_effect = _table
+        assert customer_memory.detect_interest_writebacks(db, "t1") == []
+
+    def test_per_convo_failure_skips_that_convo(self):
+        def _table(name):
+            if name == "service_types":
+                return _Query(_SERVICES, table=name)
+            if name == "conversations":
+                return _Query(_CONVO, table=name)
+            raise RuntimeError("lead read down")
+
+        db = MagicMock()
+        db.table.side_effect = _table
+        assert customer_memory.detect_interest_writebacks(db, "t1") == []
+
+    def test_missing_lead_row_skipped(self):
+        db = _db(
+            {
+                "service_types": _SERVICES,
+                "conversations": _CONVO,
+                "leads": [],
+                "chat_messages": [{"role": "user", "content": "roof repair please"}],
+            }
+        )
+        assert customer_memory.detect_interest_writebacks(db, "t1") == []
+
+    def test_convo_without_lead_or_session_skipped(self):
+        db = _db(
+            {
+                "service_types": _SERVICES,
+                "conversations": [{"session_id": None, "lead_id": None}],
+            }
+        )
+        assert customer_memory.detect_interest_writebacks(db, "t1") == []
+
+    def test_short_service_names_filtered(self):
+        db = _db(
+            {
+                "service_types": [{"name": "ac"}, {"name": ""}],
+                "conversations": _CONVO,
+            }
+        )
+        assert customer_memory.detect_interest_writebacks(db, "t1") == []
+
+    def test_apply_skips_when_nothing_new_to_merge(self):
+        # Detection finds the mention, but by apply time the lead already
+        # carries it (race with a manual edit) - update must be skipped.
+        findings = [
+            {"lead_id": "l1", "lead_name": "Sam", "new_interests": ["Roof Repair"]}
+        ]
+        db = _db(
+            {"leads": [{"id": "l1", "areas_of_interest": ["roof repair"]}]}
+        )
+        with patch.object(
+            customer_memory, "detect_interest_writebacks", return_value=findings
+        ):
+            assert customer_memory.apply_interest_writebacks(db, "t1") == 0
+
+    def test_apply_lead_update_failure_counts_zero(self):
+        findings = [
+            {"lead_id": "l1", "lead_name": "Sam", "new_interests": ["Roof Repair"]}
+        ]
+        db = MagicMock()
+        db.table.side_effect = RuntimeError("db down")
+        with patch.object(
+            customer_memory, "detect_interest_writebacks", return_value=findings
+        ):
+            assert customer_memory.apply_interest_writebacks(db, "t1") == 0
+
+    def test_compute_suggestions_survives_writeback_scan_failure(self):
+        db = _db({"leads": [], "invoices": []})
+        with patch.object(
+            customer_memory,
+            "detect_interest_writebacks",
+            side_effect=RuntimeError("scan blew up"),
+        ):
+            assert os_opportunities.compute_suggestions(db, "c1") == []
+
+    def test_plural_suggestion_wording(self):
+        s = customer_memory.writeback_suggestion(
+            [
+                {"lead_id": "l1", "lead_name": "Sam", "new_interests": ["Roof Repair"]},
+                {"lead_id": "l2", "lead_name": "Kim", "new_interests": ["Gutter Cleaning"]},
+            ]
+        )
+        assert "2 leads" in s["summary"]
+
+
+class TestFulfillDispatch:
+    def test_writeback_summary_routes_to_apply(self):
+        from backend.services import os_opportunity_fulfill
+
+        row = {
+            "reason": "opportunity",
+            "summary": "Remember new customer interests from recent chats (1 lead)",
+        }
+        with patch.object(
+            customer_memory, "apply_interest_writebacks", return_value=3
+        ) as apply:
+            out = _run(
+                os_opportunity_fulfill.fulfill_accepted_suggestion(
+                    _db({}), "c1", row
+                )
+            )
+        assert out == 3
+        apply.assert_called_once()
+
+
+class TestMcpContextToolEdges:
+    def test_server_read_failure_returns_empty(self):
+        db = MagicMock()
+        db.table.side_effect = RuntimeError("db down")
+        with patch.object(os_mcp_context, "flag_enabled", return_value=True):
+            assert _run(os_mcp_context.tool_context_entries(db, "t1")) == []
+
+    def test_blank_tool_name_skipped(self):
+        rows = [{"name": "crm", "url": "https://x/mcp", "context_tool": "  "}]
+        db = _db({"tenant_mcp_servers": rows})
+        with patch.object(os_mcp_context, "flag_enabled", return_value=True):
+            assert _run(os_mcp_context.tool_context_entries(db, "t1")) == []
+
+    def test_empty_snippet_skipped(self):
+        rows = [
+            {
+                "name": "crm",
+                "url": "https://x/mcp",
+                "auth_header": None,
+                "auth_token": None,
+                "context_tool": "list_orders",
+                "context_args": {},
+            }
+        ]
+        db = _db({"tenant_mcp_servers": rows})
+        result = {"content": [{"type": "text", "text": "   "}]}
+        with patch.object(os_mcp_context, "flag_enabled", return_value=True), patch(
+            "backend.services.mcp_client.call_tool",
+            new=AsyncMock(return_value=result),
+        ):
+            assert _run(os_mcp_context.tool_context_entries(db, "t1")) == []
+
+    def test_render_result_unserializable_dict_falls_back_to_str(self):
+        class _Weird:
+            pass
+
+        out = os_mcp_context._render_result({"x": _Weird()})
+        assert "x" in out
+
+    def test_render_result_non_dict(self):
+        assert os_mcp_context._render_result([1, 2, 3]) == "[1, 2, 3]"

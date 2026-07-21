@@ -181,6 +181,34 @@ def _app_uptime_seconds() -> float:
     return round(time.time() - _startup_time, 1) if _startup_time else 0.0
 
 
+# Set by _automation_loop at the top of every tick; /health surfaces its age
+# so a silently-dead loop is visible from the outside.
+_automation_last_tick: float = 0.0
+
+
+def _automation_tick_age_seconds() -> float | None:
+    return round(time.time() - _automation_last_tick, 1) if _automation_last_tick else None
+
+
+async def _automation_loop_supervisor():
+    """Keep the automation loop alive across crashes.
+
+    Incident 2026-07-21: the bare create_task(_automation_loop()) coroutine
+    died on an uncaught exception and prod ran for hours with zero
+    automations - no log line, no restart, no external signal. Any
+    non-cancellation error now logs loudly and the loop restarts after a
+    backoff.
+    """
+    while True:
+        try:
+            await _automation_loop()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Automation loop crashed; restarting in 60s")
+            await asyncio.sleep(60)
+
+
 def _app_version() -> str:
     for env_name in ("APP_VERSION", "RELEASE_VERSION", "SERVICE_VERSION"):
         value = os.environ.get(env_name, "").strip()
@@ -378,9 +406,11 @@ async def _automation_loop():
     from backend.services.activation_nudges import send_activation_nudges
     from backend.services.conversation_enrichment_job import run_pending_enrichment
 
+    global _automation_last_tick
     tick = 0
     while True:
         tick += 1
+        _automation_last_tick = time.time()
         lock_name = "automation_loop_tick"
         if not _try_acquire_automation_lock(lock_name):
             await asyncio.sleep(60)
@@ -712,7 +742,7 @@ async def lifespan(app: FastAPI):
             "API_SECRET_KEY is not set; dev fallback is enabled outside production only."
         )
     if not os.environ.get("TESTING"):
-        task = asyncio.create_task(_automation_loop())
+        task = asyncio.create_task(_automation_loop_supervisor())
     yield
     if not os.environ.get("TESTING"):
         task.cancel()
@@ -1105,6 +1135,9 @@ async def health():
         "uptime_seconds": uptime,
         "checks": {
             "supabase": supabase_status,
+            # None = loop never ticked in this process (dead or TESTING);
+            # a healthy loop keeps this under ~120s.
+            "automation_tick_age_seconds": _automation_tick_age_seconds(),
         },
     }
 
