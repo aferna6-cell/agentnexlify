@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     stripe_price_chatbot_monthly: str = ""
     stripe_price_agent_os_monthly: str = ""
     stripe_price_usage_pack: str = ""
+    # Metered price for photo-quote overage (>500/mo). Empty => reporting is a
+    # no-op (usage is still counted locally). See services/photo_quote_usage.py.
+    stripe_photo_quote_metered_price_id: str = ""
     frontend_url: str = "http://localhost:5173"
     api_url: str = "https://agentnexlify-production.up.railway.app"
     cors_allowed_origins: str = ""

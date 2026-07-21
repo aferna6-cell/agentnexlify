@@ -24,7 +24,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from backend.models.database import get_service_supabase
-from backend.services import api_key_limiter, photo_quote_service
+from backend.services import api_key_limiter, photo_quote_service, photo_quote_usage
 from backend.services.llm_runtime import call_claude_messages
 
 logger = logging.getLogger(__name__)
@@ -120,6 +120,15 @@ async def create_photo_quote(
 
     db = get_service_supabase()
 
+    # Photo-quote is a premium feature — a non-Pro tenant gets 402 (#39).
+    try:
+        tres = db.table("tenants").select("plan").eq("id", client_id).limit(1).execute()
+        plan = (tres.data or [{}])[0].get("plan")
+    except Exception:
+        plan = None
+    if not photo_quote_usage.is_billing_eligible(plan):
+        raise HTTPException(status_code=402, detail="Photo quotes require a Pro plan.")
+
     # Hard daily per-tenant quota (cost guard).
     if photo_quote_service.is_over_daily_quota(db, client_id):
         raise HTTPException(status_code=429, detail="Daily photo-quote limit reached.")
@@ -172,6 +181,14 @@ async def create_photo_quote(
                 quote_request_id = created.data[0].get("id")
         except Exception:
             logger.warning("widget_photo_quote: quote_requests insert failed for %s", client_id)
+
+        # Meter the quote for billing — 500/mo cap + $0.15 overage (#39). Best-effort.
+        try:
+            photo_quote_usage.increment_usage(
+                client_id, quote_request_id=quote_request_id, db=db
+            )
+        except Exception:
+            logger.warning("widget_photo_quote: usage metering failed for %s", client_id)
 
     return PhotoQuoteResponse(
         quote_low=quote["quote_low"],
