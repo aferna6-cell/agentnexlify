@@ -125,7 +125,18 @@ async def plan_project(db, client_id: str, ask: str) -> dict:
         .insert({"title": ask[:60], "ask": ask, "status": "draft"})
         .execute()
     ).data[0]
+    return await generate_and_persist_plan(db, project)
 
+
+async def generate_and_persist_plan(db, project: dict) -> dict:
+    """Run the Sonnet planner for one project row and persist the steps.
+
+    Shared by the interactive endpoint (plan_project) and the background
+    runner (plan_pending_projects). Planner failure leaves the project as a
+    draft with an error note and NO steps - never a half-plan.
+    """
+    client_id = project["client_id"]
+    ask = str(project.get("ask") or "")
     try:
         from backend.services.llm_runtime import call_claude_messages
 
@@ -149,9 +160,14 @@ async def plan_project(db, client_id: str, ask: str) -> dict:
             exc_info=True,
         )
         tenant_table(db, "os_projects", client_id).update(
-            {"error": f"planner failed: {exc}"[:500], "updated_at": _now()}
+            {
+                "status": "draft",
+                "error": f"planner failed: {exc}"[:500],
+                "updated_at": _now(),
+            }
         ).eq("id", project["id"]).execute()
         project["error"] = f"planner failed: {exc}"[:500]
+        project["status"] = "draft"
         return {"project": project, "steps": []}
 
     rows = [
@@ -167,10 +183,47 @@ async def plan_project(db, client_id: str, ask: str) -> dict:
     ]
     steps = (db.table("os_project_steps").insert(rows).execute()).data or rows
     tenant_table(db, "os_projects", client_id).update(
-        {"title": plan["title"], "updated_at": _now()}
+        {"title": plan["title"], "status": "draft", "updated_at": _now()}
     ).eq("id", project["id"]).execute()
     project["title"] = plan["title"]
+    project["status"] = "draft"
     return {"project": project, "steps": steps}
+
+
+_PLANNING_BATCH_CAP = 3
+
+
+async def plan_pending_projects(db) -> int:
+    """Plan projects created with status='planning' (chat/SQL-originated).
+
+    Lets a project be requested from any surface that can insert a row -
+    the runner turns the ask into an approvable draft plan through the same
+    validated planner path the endpoint uses. Returns projects planned.
+    """
+    try:
+        pending = (
+            db.table("os_projects")
+            .select("*")
+            .eq("status", "planning")
+            .order("created_at", desc=False)
+            .limit(_PLANNING_BATCH_CAP)
+            .execute()
+        ).data or []
+    except Exception:
+        logger.warning("os_projects: planning read failed", exc_info=True)
+        return 0
+    planned = 0
+    for project in pending:
+        try:
+            await generate_and_persist_plan(db, project)
+            planned += 1
+        except Exception:
+            logger.warning(
+                "os_projects: background plan failed project=%s",
+                project.get("id"),
+                exc_info=True,
+            )
+    return planned
 
 
 def project_steps(db, client_id: str, project_id: str) -> list[dict]:
@@ -354,7 +407,15 @@ async def advance_project(db, project: dict) -> None:
 
 
 async def run_project_ticks(db) -> int:
-    """Advance every approved/running project by one step. Returns count."""
+    """Advance every approved/running project by one step. Returns count.
+
+    Also plans any 'planning'-status projects first, so chat/SQL-originated
+    asks become approvable drafts on the same tick cadence.
+    """
+    try:
+        await plan_pending_projects(db)
+    except Exception:
+        logger.warning("os_projects: plan_pending_projects failed", exc_info=True)
     try:
         projects = (
             db.table("os_projects")

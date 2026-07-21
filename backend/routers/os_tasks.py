@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.dependencies import _get_current_tenant
+from backend.services.agent_os_gate import require_agent_os_access
 from backend.models.database import get_service_supabase
 from backend.services.os_routing_memory import KNOWN_DEPARTMENTS
 from backend.services.os_scheduled_tasks import MAX_PROMPT_LEN, clamp_interval
@@ -13,7 +14,12 @@ from backend.services.tenant_scope import tenant_select, tenant_table
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/os", tags=["agent-os"])
+router = APIRouter(
+    prefix="/api/v1/os",
+    tags=["agent-os"],
+    # Suite surface - agent_os plan (+ legacy) only; 402 upsell otherwise.
+    dependencies=[Depends(require_agent_os_access)],
+)
 
 _TASK_CAP = 20
 

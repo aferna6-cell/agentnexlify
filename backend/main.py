@@ -133,6 +133,7 @@ from backend.routers import (
     os_instructions,
     os_mcp,
     os_projects,
+    os_research,
     os_run_trace,
     os_tasks,
     os_ask_data,
@@ -486,8 +487,11 @@ async def _automation_loop():
 
             # Every 30 min: heavy/infrequent tasks
             if tick % 30 == 0:
+                from backend.services.os_approval_rollup import send_approval_rollups
+
                 core_tasks.extend(
                     [
+                        _safe_run("send_approval_rollups", send_approval_rollups),
                         _safe_run("send_monthly_reports", send_monthly_reports),
                         _safe_run(
                             "sync_twilio_webhooks", sync_twilio_number_webhooks
@@ -1053,6 +1057,7 @@ app.include_router(kb_evals_router.router)
 app.include_router(os_instructions.router)
 app.include_router(os_mcp.router)
 app.include_router(os_projects.router)
+app.include_router(os_research.router)
 app.include_router(os_run_trace.router)
 app.include_router(os_tasks.router)
 app.include_router(os_ask_data.router)

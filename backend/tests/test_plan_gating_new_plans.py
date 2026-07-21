@@ -98,3 +98,22 @@ def test_chatbot_gets_widget_branding_but_no_white_label():
     assert out.get("widget_title") == "Chat with us"
     assert "hide_powered_by" not in out
     assert "custom_css" not in out
+
+
+# --- Agent OS suite gate (round-3, 2026-07-21) ------------------------------
+
+def test_agent_os_in_suite_gate():
+    from backend.services.agent_os_gate import AGENT_OS_PLANS
+    assert "agent_os" in AGENT_OS_PLANS
+
+
+def test_legacy_plans_grandfathered_in_suite_gate():
+    from backend.services.agent_os_gate import AGENT_OS_PLANS
+    for plan in ("growth", "autopilot", "professional", "enterprise"):
+        assert plan in AGENT_OS_PLANS
+
+
+def test_chatbot_and_free_excluded_from_suite_gate():
+    from backend.services.agent_os_gate import AGENT_OS_PLANS
+    assert "chatbot" not in AGENT_OS_PLANS
+    assert "free" not in AGENT_OS_PLANS

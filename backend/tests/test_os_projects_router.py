@@ -7,6 +7,7 @@ os.environ.setdefault("TESTING", "1")
 
 from backend.dependencies import _get_current_tenant
 from backend.main import app
+from backend.services.agent_os_gate import require_agent_os_access
 from backend.tests.conftest import SyncASGITestClient
 
 
@@ -50,11 +51,13 @@ def _db(rows_by_table, sink=None):
 
 def _client():
     app.dependency_overrides[_get_current_tenant] = lambda: CLAIMS
+    app.dependency_overrides[require_agent_os_access] = lambda: CLAIMS
     return SyncASGITestClient(app)
 
 
 def _teardown():
     app.dependency_overrides.pop(_get_current_tenant, None)
+    app.dependency_overrides.pop(require_agent_os_access, None)
 
 
 DRAFT = {"id": "p1", "client_id": CLAIMS["tenant_id"], "status": "draft",
