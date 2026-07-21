@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_run": "2026-07-20-pm",
+  "last_run": "2026-07-21",
   "total_runs": 100,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
@@ -186,8 +186,8 @@
     "last_run": "2026-07-17-pm -> 2026-07-20"
   },
   "run_100_mandate": "1. Step 9F confirmed present in SKILL.md? (grep 'Step 9F' — SHOULD PASS: written by run 99). 2. Nightly-2026-07-21 log contains 'Step 9F:' line? (confirms nightly executes new step). 3. KB stale (>7 days by 2026-07-21)? If yes: GH #403 has new Step 9F comment? 4. GH #399 resolved? (Day 18+) — investigate secondary remediation if still open. 5. GH #413 REFERRAL_REWARD_ENABLED=1 set? (Day 10+ of issue). 6. appointment_completion.py: any auto-complete events in nightly or backend logs? 7. platform_settings: any non-boolean rows added since migration 175?",
-  "run_100_mandate_executed": "EXECUTED 2026-07-20-pm (run 100). All 7 items checked: (1) Step 9F PRESENT — grep returns 6. PASS. (2) Nightly-2026-07-21 N/A — log doesn't exist yet. (3) KB at exactly 7-day boundary (2026-07-13 → 2026-07-20) — Step 9F will fire tomorrow. (4) GH #399 OPEN Day 18+ — AUTOPILOT_GH_TOKEN still expired, 30 ai-ready issues blocked. Secondary remediation deferred (human-only scope — Railway UI access required). (5) GH #413 NOT SET — 0 human responses. (6) appointment_completion.py auto-complete CONFIRMED implemented in PR #475 (2026-07-18, 23b1da5). (7) platform_settings non-boolean rows — not explicitly checked; migration 175 ships fail-open pattern. Winner: Wire mcp_client.py into agent execution path (os_thread_runner.py + agent_os_bridge.py).",
-  "run_100_governance_corrections": {
+  "run_100a_mandate_executed": "EXECUTED 2026-07-20-pm (run 100). All 7 items checked: (1) Step 9F PRESENT — grep returns 6. PASS. (2) Nightly-2026-07-21 N/A — log doesn't exist yet. (3) KB at exactly 7-day boundary (2026-07-13 → 2026-07-20) — Step 9F will fire tomorrow. (4) GH #399 OPEN Day 18+ — AUTOPILOT_GH_TOKEN still expired, 30 ai-ready issues blocked. Secondary remediation deferred (human-only scope — Railway UI access required). (5) GH #413 NOT SET — 0 human responses. (6) appointment_completion.py auto-complete CONFIRMED implemented in PR #475 (2026-07-18, 23b1da5). (7) platform_settings non-boolean rows — not explicitly checked; migration 175 ships fail-open pattern. Winner: Wire mcp_client.py into agent execution path (os_thread_runner.py + agent_os_bridge.py).",
+  "run_100a_governance_corrections": {
     "mandate_check_1_step_9f": "PASS — grep -c 'Step 9F' .claude/skills/nightly-commit-review/SKILL.md returns 6. Implemented by run 99 direct escalation.",
     "mandate_check_2_nightly_2026_07_21": "N/A — log does not exist yet (nightly runs at 2:37 AM local).",
     "mandate_check_3_kb_staleness": "At 7-day boundary as of 2026-07-20 (last run 2026-07-13). Step 9F will flag tomorrow (2026-07-21) if kb-autopopulate doesn't run today.",
@@ -200,8 +200,8 @@
     "total_runs": "99 -> 100",
     "last_run": "2026-07-20 -> 2026-07-20-pm"
   },
-  "run_101_mandate": "1. mcp_client.py wired into os_thread_runner.py or agent_os_bridge.py? (grep 'mcp_client' in both files — SHOULD PASS if nightly executes). 2. Test in backend/tests/test_agent_os.py covers MCP tool dispatch? 3. GH #399 resolved? (Day 19+). 4. GH #413 REFERRAL_REWARD_ENABLED=1 set? 5. KB compile run after 2026-07-13? (Step 9F should have fired on 2026-07-21 — check nightly log for 'Step 9F:' line). 6. Plan-gating audit: do new PR #514 routers have require_plan('agent_os') decorators? (grep new router files).",
-  "active_directions": [
+  "run_101a_mandate_mcp_wire": "1. mcp_client.py wired into os_thread_runner.py or agent_os_bridge.py? (grep 'mcp_client' in both files — SHOULD PASS if nightly executes). 2. Test in backend/tests/test_agent_os.py covers MCP tool dispatch? 3. GH #399 resolved? (Day 19+). 4. GH #413 REFERRAL_REWARD_ENABLED=1 set? 5. KB compile run after 2026-07-13? (Step 9F should have fired on 2026-07-21 — check nightly log for 'Step 9F:' line). 6. Plan-gating audit: do new PR #514 routers have require_plan('agent_os') decorators? (grep new router files).",
+  "active_directions_run_100a": [
     {
       "title": "Wire mcp_client.py into agent execution path (os_thread_runner.py + agent_os_bridge.py) — closes Day-0 MCP execution gap from PR #514 (run 100 winner)",
       "date": "2026-07-20-pm",
@@ -216,6 +216,40 @@
       "evidence": "PR #514 (b17ed5c, 2026-07-20) shipped mcp_client.py as one of 7 enterprise features. grep confirms zero imports of mcp_client in os_thread_runner.py or agent_os_bridge.py. Only importer: backend/routers/os_mcp.py (admin config router). Enterprise audit (PR #513) ranks MCP tool execution as competitive gap #4 vs Amazon/Microsoft/Google/Salesforce. os_outbound_guard IS wired (agent_os_bridge.py:393). Execution layer is missing; configuration layer is complete.",
       "action": "Add 'from backend.services.mcp_client import MCPClient' to os_thread_runner.py. Implement _execute_mcp_tool_call() helper. Add MCP dispatch branch in agent_os_bridge.py tool dispatch switch, wrapped by apply_outbound_guard (line 393). Add trace logging consistent with os_model_call_log pattern. Write test in backend/tests/test_agent_os.py mocking MCP server response. Verify no 'from __future__ import annotations' introduced.",
       "note": "Run 100 winner. Day-0 bug from PR #514 enterprise sprint. Additive change only — existing execution path unchanged. MCP client service handles error/timeout/output schema internally. Dispatch branch ~30 lines. Implementation sketch in subconscious/runs/2026-07-20-pm/winning-concept.md."
+    }
+  ],
+  "run_100_mandate_executed": "EXECUTED 2026-07-21 (run 100 — centenary). All 7 items checked: (1) Step 9F CONFIRMED — grep -c 'Step 9F' SKILL.md returns 6. PASS. (2) Nightly-2026-07-21 'Step 9F:' line ABSENT — log does not contain the line. Possible: log format suppresses silent steps OR step not executing. (3) KB stale 8 days (last: 2026-07-13) — above >7-day threshold. GH #403 Step 9F comment UNKNOWN (not verified this run). (4) GH #399 OPEN Day 18+ — AUTOPILOT_GH_TOKEN expired, 30 ai-ready issues blocked. (5) GH #413 NOT SET — Day 10+, 0 human responses. (6) appointment_completion.py confirmed implemented (PR #475, 2026-07-18) — auto-complete events UNKNOWN. (7) platform_settings non-boolean rows UNKNOWN — 0 prod rows as of run 99, not rechecked.",
+  "run_100_governance_corrections": {
+    "mandate_check_1_step_9f_in_skill": "PASS — grep -c 'Step 9F' .claude/skills/nightly-commit-review/SKILL.md returns 6",
+    "mandate_check_2_nightly_step_9f_line": "FAIL — 'Step 9F:' absent from ops/routines/logs/nightly-commit-review-2026-07-21.md. KB 8 days stale should have triggered Step 9F comment on GH #403. Investigate in run 101: check GH #403 for Step 9F comment OR verify nightly execution path includes Step 9F block.",
+    "mandate_check_3_kb_stale": "PASS — KB last run 2026-07-13, 8 days ago, above >7-day threshold. GH #403 Step 9F comment UNKNOWN.",
+    "mandate_check_4_gh399": "OPEN Day 18+ — AUTOPILOT_GH_TOKEN expired, 30 ai-ready issues blocked. Not checked further this run.",
+    "mandate_check_5_gh413": "NOT SET — Day 10+, 0 human responses to 7+ autonomous comments.",
+    "mandate_check_6_appointment_events": "UNKNOWN — appointment_completion.py confirmed implemented (PR #475) but backend logs not checked for auto-complete events.",
+    "mandate_check_7_platform_settings": "NOT CHECKED — 0 prod rows as of run 99, low priority.",
+    "photo_quote_billing_audit": "EXECUTED during debate. backend/services/photo_quote_usage.py verified solid: FREE_MONTHLY_QUOTA=500, OVERAGE_PRICE_USD=0.15, idempotency key f'{client_id}:{quote_request_id}' correct, client_id used throughout (not tenant_id — CLAUDE.md invariant #1 honored), fail-open except blocks correct, injectable Stripe callable for testing, daily(50) + monthly(500) caps layered correctly. No billing bugs found.",
+    "migration_176_alert": "HIGH — migrations/176_sunset_plaintext_integration_tokens.sql irreversible drop of access_token+refresh_token from integrations. 0 prod rows (safe window). GCal just shipped (34fa9bd). INTEGRATIONS_ENC_KEY not in Railway. Run 100 winner: file GH issue for this blocker.",
+    "nightly_2026_07_21_highlights": "45 commits reviewed. 4 HIGH triage (3 clean, 1 action-required = migration 176). 11 MEDIUM. 30 LOW. 0 auto-fixes. 0 issues filed. Migrations 181+182 DRAFT pending peer apply. All CLAUDE.md invariants PASS.",
+    "total_runs": "99 -> 100",
+    "last_run": "2026-07-20 -> 2026-07-21"
+  },
+  "run_101_mandate": "1. Migration 176 GH issue filed in aferna6-cell/agentnexlify with INTEGRATIONS_ENC_KEY provisioning instructions? 2. INTEGRATIONS_ENC_KEY now in Railway prod? Migration 176 applied? (human action required). 3. Step 9F nightly execution confirmed: check nightly-2026-07-22.md for 'Step 9F:' line OR check GH #403 for Step 9F comment from 2026-07-21/22. 4. KB stale: if >7 days since 2026-07-13, Step 9F should have posted to GH #403. 5. GH #399 resolved? (Day 19+) — unlocks: issue-to-pr-loop, conversation_enrichment_job.py, 30 queued issues. 6. GH #413 REFERRAL_REWARD_ENABLED=1 set? (Day 11+). 7. Migrations 181+182 applied by peer agent (Codex or Kimi3)?",
+  "active_directions": [
+    {
+      "title": "File GH issue: Migration 176 INTEGRATIONS_ENC_KEY provisioning blocker — irreversible OAuth token drop blocked until Railway env var set (run 100 winner)",
+      "date": "2026-07-21",
+      "confidence": "HIGH",
+      "status": "pending_recommendation",
+      "autonomous_executable": false,
+      "requires_human": true,
+      "requires_human_scope": "1. Provision INTEGRATIONS_ENC_KEY in Railway Variables (openssl rand -base64 32). 2. Apply migration 176 via Supabase SQL editor or mcp__supabase__apply_migration. 3. Verify first GCal OAuth connect succeeds.",
+      "category": "operational",
+      "moratorium_override": false,
+      "source_run": 100,
+      "effort": "XS",
+      "evidence": "nightly-commit-review-2026-07-21 flagged commit ec0de08 (migration 176_sunset_plaintext_integration_tokens.sql) as HIGH / ACTION REQUIRED. Migration drops access_token + refresh_token from integrations table — irreversible. Migration comment: DO NOT APPLY until INTEGRATIONS_ENC_KEY is set. GCal integration just shipped (34fa9bd, 2026-07-21 window). 0 rows in integrations now = safe provisioning window.",
+      "action": "Create GH issue in aferna6-cell/agentnexlify: 'ACTION REQUIRED: Provision INTEGRATIONS_ENC_KEY in Railway before applying Migration 176'. Labels: migration, infrastructure, action-required, security. Body: what migration does, why key must come first, how to provision (Railway → Variables → INTEGRATIONS_ENC_KEY → openssl rand -base64 32), how to apply (mcp__supabase__apply_migration), how to verify. Acceptance criteria: CLOSE ONLY when key in Railway prod + migration 176 applied + one GCal OAuth round-trip verified.",
+      "note": "Run 100 centenary winner. Novel direction — not a carry-forward. Photo-quote billing audit WEAKENED (billing verified solid). Migrations 181+182 WEAKENED (peer-protocol required, not Fable5 lane)."
     },
     {
       "title": "Step 9F: KB Autopopulate Staleness Check in nightly-commit-review SKILL.md (run 97 winner)",

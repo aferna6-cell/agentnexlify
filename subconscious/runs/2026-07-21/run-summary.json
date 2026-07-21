@@ -1,0 +1,47 @@
+{
+  "run_number": 100,
+  "date": "2026-07-21",
+  "evidence_digest": {
+    "commits_reviewed": 45,
+    "key_observations": [
+      "Migration 176 (integrations table token drop) committed but BLOCKED — INTEGRATIONS_ENC_KEY not in Railway prod; GCal just shipped means OAuth connects imminent; 0 rows in integrations = safe provisioning window now",
+      "Migrations 181+182 DRAFT pending peer apply — conversation memory and KB provenance silently no-op until applied",
+      "KB autopopulate 8 days stale (last run 2026-07-13) — above 7-day Step 9F threshold; GH #403 comment expected but unverified",
+      "Step 9F confirmed in SKILL.md (grep=6) but absent from nightly-2026-07-21.md log — may be log format issue or execution gap",
+      "Photo-quote metered billing implementation verified solid: idempotency key correct, client_id correct, fail-open correct, daily+monthly quota layers both present"
+    ]
+  },
+  "mandate_checks": {
+    "step_9f_in_skill_md": "PASS",
+    "nightly_2026_07_21_step_9f_line": "FAIL — not found in log",
+    "kb_stale_8_days": "PASS — above threshold",
+    "gh_403_step_9f_comment": "UNKNOWN",
+    "gh_399_resolved": "UNKNOWN — Day 18+",
+    "gh_413_referral_reward": "UNKNOWN — Day 10+",
+    "appointment_autocomplete_events": "UNKNOWN",
+    "platform_settings_nonboolean": "NOT_CHECKED"
+  },
+  "ideas_count": 5,
+  "ideas": [
+    "File GH issue: Migration 176 INTEGRATIONS_ENC_KEY provisioning blocker",
+    "Apply migrations 181+182 via team peer protocol",
+    "Photo-quote overage billing Stripe audit",
+    "Step 9F nightly execution gap investigation",
+    "Platform_settings integer kill-switch safety audit"
+  ],
+  "top_3_debated": [
+    "Migration 176 GH issue (SURVIVES)",
+    "Photo-quote billing audit (WEAKENED — implementation verified solid)",
+    "Migrations 181+182 peer apply (WEAKENED — wrong mechanism, peer contract required)"
+  ],
+  "winner": "File GH issue: Migration 176 INTEGRATIONS_ENC_KEY provisioning blocker",
+  "winner_category": "operational",
+  "confidence": "HIGH",
+  "rejected": ["platform_settings integer kill-switch audit"],
+  "parking_lot": [
+    "migrations 181+182 peer apply — correct mechanism needed",
+    "photo-quote billing audit — implementation verified solid",
+    "step 9f nightly execution verification"
+  ],
+  "milestone": "Run 100 — centenary run"
+}
