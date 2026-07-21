@@ -16,7 +16,7 @@ from fastapi.responses import PlainTextResponse
 from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
-from backend.services import sms_compliance
+from backend.services import missed_call_gate, sms_compliance
 from backend.services.activity import log_activity
 from backend.services.twilio_service import format_textback_message, send_sms
 
@@ -291,6 +291,7 @@ async def handle_missed_call(request: Request):
     called = params.get("To", "")
     call_status = params.get("CallStatus", "")
     call_sid = params.get("CallSid", "")
+    call_duration = params.get("CallDuration", "")
     timestamp_str = params.get("Timestamp", "")
 
     if not caller:
@@ -339,6 +340,32 @@ async def handle_missed_call(request: Request):
         logger.info(
             "missed_call_textback automation disabled for tenant %s, skipping",
             tenant_id,
+        )
+        return PlainTextResponse("OK")
+
+    # Plan gate: branded automation is a premium feature (agent_os + legacy paid).
+    # Free/chatbot tenants get no text-back. Canonical set: plan_catalog.PREMIUM_PLANS.
+    if not missed_call_gate.is_plan_eligible(tenant.get("plan")):
+        logger.info(
+            "missed_call_textback not available on plan '%s' for tenant %s, skipping",
+            tenant.get("plan"),
+            tenant_id,
+        )
+        return PlainTextResponse("OK")
+
+    # An answered call (CallDuration > 10s) is not a missed call.
+    if missed_call_gate.should_skip_for_duration(call_duration):
+        logger.info(
+            "Call answered (duration=%ss) for tenant %s, skipping text-back",
+            call_duration,
+            tenant_id,
+        )
+        return PlainTextResponse("OK")
+
+    # Spam blocklist (automation.config.spam_blocklist) — skip silently.
+    if missed_call_gate.is_spam_blocked(caller, automation.get("config")):
+        logger.info(
+            "Caller on spam blocklist for tenant %s, skipping text-back", tenant_id
         )
         return PlainTextResponse("OK")
 
@@ -458,9 +485,8 @@ async def handle_missed_call(request: Request):
             )
 
     else:
-        # Phase 1: log warning only. Phase 4 will add pending_automations retry queue.
         logger.warning(
-            "Text-back send FAILED for tenant %s caller=%s — skipping row insert",
+            "Text-back send FAILED for tenant %s caller=%s — recording + queuing retry",
             tenant_id,
             caller,
         )
@@ -473,6 +499,21 @@ async def handle_missed_call(request: Request):
             template_id=template_id,
             status="failed",
             lead_id=lead_id,
+        )
+        # Queue a pending_automations retry so a transient Twilio outage does not
+        # silently drop the text-back. Fail-open: pending_automations is migration
+        # 180 (unapplied) — a missing table degrades to record-only, never 500s.
+        missed_call_gate.enqueue_missed_call_retry(
+            tenant_id,
+            {
+                "caller": caller,
+                "called": called,
+                "call_sid": call_sid,
+                "template_id": template_id,
+                "message": message,
+                "lead_id": lead_id,
+            },
+            db=get_service_supabase(),
         )
 
     return PlainTextResponse("OK")
