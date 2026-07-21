@@ -75,6 +75,48 @@ def _report_overage_to_stripe(
         )
 
 
+def get_usage_summary(
+    client_id: str,
+    *,
+    db=None,
+    now: datetime | None = None,
+) -> dict:
+    """Current-month usage for the dashboard meter.
+
+    Returns ``{quote_count, overage_count, cap, overage_charge}`` — the count
+    against the 500/mo cap and the dollar value of any overage. Fail-open: a read
+    error returns zeros rather than 500ing the dashboard.
+    """
+    now = now or datetime.now(timezone.utc)
+    period = _period_start(now)
+    if db is None:
+        from backend.models.database import get_service_supabase
+
+        db = get_service_supabase()
+    quote_count = 0
+    overage_count = 0
+    try:
+        res = (
+            db.table("tenant_quote_usage")
+            .select("quote_count, overage_count")
+            .eq("client_id", client_id)
+            .eq("period_start", period)
+            .limit(1)
+            .execute()
+        )
+        row = (res.data or [{}])[0]
+        quote_count = int(row.get("quote_count") or 0)
+        overage_count = int(row.get("overage_count") or 0)
+    except Exception:
+        logger.warning("photo_quote_usage: summary read failed for %s", client_id)
+    return {
+        "quote_count": quote_count,
+        "overage_count": overage_count,
+        "cap": FREE_MONTHLY_QUOTA,
+        "overage_charge": round(overage_count * OVERAGE_PRICE_USD, 2),
+    }
+
+
 def increment_usage(
     client_id: str,
     *,

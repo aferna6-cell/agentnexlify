@@ -70,6 +70,11 @@ const allNavItems = [
     label: "AI Workforce",
   },
   {
+    key: "quote_requests",
+    icon: <Icon d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5" />,
+    label: "Quote Requests",
+  },
+  {
     key: "clients",
     icon: (
       <Icon d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
