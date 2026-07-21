@@ -92,3 +92,53 @@ def test_distinct_jtis_are_independent():
     a_allowed, _ = auth.check_jti_rate("jti-A", now=NOW)
     b_allowed, _ = auth.check_jti_rate("jti-B", now=NOW)
     assert a_allowed and b_allowed
+
+
+# --------------------------------------------------------------------------- #
+# authorize_booking — the dual-path decision                                   #
+# --------------------------------------------------------------------------- #
+def test_authorize_legacy_api_key_match_ok():
+    status, _ = auth.authorize_booking(widget_api_key="anx_secret", api_key="anx_secret", now=NOW)
+    assert status == 200
+
+
+def test_authorize_legacy_api_key_mismatch_401():
+    status, _ = auth.authorize_booking(widget_api_key="anx_secret", api_key="wrong", now=NOW)
+    assert status == 401
+
+
+def test_authorize_bearer_valid_ok():
+    token = auth.mint_booking_token("anx_secret", now=NOW, jti="auth-jti-ok")
+    status, _ = auth.authorize_booking(widget_api_key="anx_secret", bearer_token=token, now=NOW)
+    assert status == 200
+
+
+def test_authorize_bearer_expired_401():
+    token = auth.mint_booking_token("anx_secret", now=NOW)
+    later = NOW + timedelta(minutes=6)
+    status, _ = auth.authorize_booking(widget_api_key="anx_secret", bearer_token=token, now=later)
+    assert status == 401
+
+
+def test_authorize_bearer_wrong_key_401():
+    token = auth.mint_booking_token("other_secret", now=NOW)
+    status, _ = auth.authorize_booking(widget_api_key="anx_secret", bearer_token=token, now=NOW)
+    assert status == 401
+
+
+def test_authorize_bearer_over_jti_rate_429():
+    token = auth.mint_booking_token("anx_secret", now=NOW, jti="auth-jti-rate")
+    last = 200
+    for _ in range(6):
+        last, _ = auth.authorize_booking(widget_api_key="anx_secret", bearer_token=token, now=NOW)
+    assert last == 429  # 6th use of this token in the hour
+
+
+def test_authorize_no_credentials_401():
+    status, _ = auth.authorize_booking(widget_api_key="anx_secret", now=NOW)
+    assert status == 401
+
+
+def test_authorize_unknown_tenant_403():
+    status, _ = auth.authorize_booking(widget_api_key=None, api_key="anything", now=NOW)
+    assert status == 403
