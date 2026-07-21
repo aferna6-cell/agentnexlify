@@ -1,8 +1,9 @@
 # Spec: Multi-Department Projects ("OS Projects")
 
-Status: SPEC (suite item 4 — orchestration pillar). Implementation is a
-separate effort; this locks scope and contracts first per daily-skills
-sequencing.
+Status: IMPLEMENTED 2026-07-21 (migration 183, backend/services/os_projects.py,
+backend/routers/os_projects.py, ProjectsCard.jsx; runner in the 5-min
+automation tier behind os_projects_enabled). This document remains the
+contract of record.
 
 ## Goal
 One owner ask ("launch a spring promo") becomes a visible, approvable PLAN of

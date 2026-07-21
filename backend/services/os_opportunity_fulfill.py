@@ -327,6 +327,12 @@ async def fulfill_accepted_suggestion(
             return await _draft_lead_followups(db, client_id)
         if "invoice" in summary:
             return await _draft_invoice_reminders(db, client_id)
+        if "remember" in summary and "interest" in summary:
+            # Memory write-back: the owner's accept IS the approval - append
+            # the re-derived interests to each lead record. No drafts.
+            from backend.services import customer_memory
+
+            return customer_memory.apply_interest_writebacks(db, client_id)
         logger.info(
             "opportunity_fulfill: unrecognized suggestion wording client_id=%s",
             client_id,

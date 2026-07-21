@@ -47,6 +47,8 @@ def _suggestion_kind(summary: str) -> str | None:
         return "cold_leads"
     if "invoice" in s:
         return "overdue_invoices"
+    if "remember" in s and "interest" in s:
+        return "memory_writeback"
     return None
 
 
@@ -107,6 +109,23 @@ def compute_suggestions(db: Any, client_id: str) -> list[dict[str, Any]]:
             )
     except Exception:
         logger.warning("os_opportunities: overdue-invoice scan failed for %s", client_id, exc_info=True)
+
+    # Rule 3 — customer-memory write-back (propose-only): recent chats where
+    # a known lead mentioned a service missing from their record.
+    try:
+        from backend.services import customer_memory
+
+        writeback = customer_memory.writeback_suggestion(
+            customer_memory.detect_interest_writebacks(db, client_id)
+        )
+        if writeback:
+            suggestions.append(writeback)
+    except Exception:
+        logger.warning(
+            "os_opportunities: memory write-back scan failed for %s",
+            client_id,
+            exc_info=True,
+        )
 
     return suggestions
 

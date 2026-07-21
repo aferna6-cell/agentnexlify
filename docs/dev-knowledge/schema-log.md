@@ -1674,3 +1674,26 @@ top-k older when a conversation is long — OPT-IN via
 unchanged until enabled. APPLIED to prod 2026-07-21 by fable5 via apply_migration
 (verified: both columns present, partial index created).
 Migration number 182 is next-free after 180 (PR #517) and 181 (PR #518).
+
+## 183_os_projects.sql (2026-07-21) - APPLIED 2026-07-21
+Multi-department OS Projects (specs/os-projects_spec.md, suite item 4 -
+orchestration). `os_projects` (client_id scope, RLS on/service-role only) -
+title, ask, status draft|approved|running|done|canceled|failed, error.
+`os_project_steps` (client_id scope, FK project_id ON DELETE CASCADE) -
+position, department, objective, status pending|awaiting_approval|done|
+failed|canceled, agent_run_id, thread_id. Partial index on active statuses.
+Planner (`os_projects.plan_project`, Sonnet structured call) persists 2-6
+validated steps; runner (`run_project_ticks`) fires from main._automation_loop
+5-min tier behind `os_projects_enabled` flag and drives one engine turn per
+project per tick via process_user_turn - approvals + never-auto-send +
+outbound guard unchanged (project approval is NOT an auto-send grant).
+Tables added to tenant_scope overrides + account_deletion.TENANT_DATA_TABLES.
+
+## 184_mcp_context_tool.sql (2026-07-21) - APPLIED 2026-07-21
+Interop phase 2. Adds `tenant_mcp_servers.context_tool text` +
+`context_args jsonb DEFAULT '{}'` - the owner designates ONE read-only tool
+per server (with fixed args) whose live result is fetched at run time
+(`os_mcp_context.tool_context_entries`, 6s timeout, cap 2 servers, failures
+degrade to phase-1 awareness) and injected into Agent OS run context. Only
+the owner-chosen tool auto-runs; arbitrary calls stay owner-invoked
+(`PATCH /api/v1/os/mcp/servers/{id}/context-tool` sets/clears it).
