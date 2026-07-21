@@ -1,0 +1,74 @@
+{
+  "_meta": {
+    "industry": "plumbing",
+    "currency": "USD",
+    "source": "HomeAdvisor/Angi 2025 national averages \u2014 plumbing repair cost guides",
+    "source_urls": [
+      "https://www.homeadvisor.com/cost/plumbing/repair-a-plumbing-system/",
+      "https://www.angi.com/articles/how-much-does-plumbing-repair-cost.htm"
+    ],
+    "note": "Platform default pricing \u2014 tenants should customize in the dashboard. Plumbing validated by pilot; others refined post-pilot."
+  },
+  "damage_types": {
+    "leak": {
+      "minor": {
+        "low": 150,
+        "high": 400
+      },
+      "major": {
+        "low": 500,
+        "high": 1500
+      }
+    },
+    "burst": {
+      "minor": {
+        "low": 400,
+        "high": 900
+      },
+      "major": {
+        "low": 1000,
+        "high": 4000
+      }
+    },
+    "clog": {
+      "minor": {
+        "low": 100,
+        "high": 300
+      },
+      "major": {
+        "low": 350,
+        "high": 900
+      }
+    },
+    "corrosion": {
+      "minor": {
+        "low": 200,
+        "high": 600
+      },
+      "major": {
+        "low": 800,
+        "high": 3000
+      }
+    },
+    "frozen-pipe": {
+      "minor": {
+        "low": 200,
+        "high": 500
+      },
+      "major": {
+        "low": 600,
+        "high": 2500
+      }
+    },
+    "water-damage": {
+      "minor": {
+        "low": 350,
+        "high": 1200
+      },
+      "major": {
+        "low": 1500,
+        "high": 6000
+      }
+    }
+  }
+}

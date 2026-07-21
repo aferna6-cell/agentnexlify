@@ -1,0 +1,74 @@
+{
+  "_meta": {
+    "industry": "hvac",
+    "currency": "USD",
+    "source": "HomeAdvisor/Angi 2025 national averages \u2014 HVAC repair cost guides",
+    "source_urls": [
+      "https://www.homeadvisor.com/cost/heating-and-cooling/repair-an-ac-unit/",
+      "https://www.angi.com/articles/how-much-does-hvac-repair-cost.htm"
+    ],
+    "note": "Platform default pricing \u2014 tenants should customize in the dashboard. Plumbing validated by pilot; others refined post-pilot."
+  },
+  "damage_types": {
+    "condenser-damage": {
+      "minor": {
+        "low": 200,
+        "high": 600
+      },
+      "major": {
+        "low": 800,
+        "high": 2800
+      }
+    },
+    "coil-fouling": {
+      "minor": {
+        "low": 150,
+        "high": 450
+      },
+      "major": {
+        "low": 600,
+        "high": 2000
+      }
+    },
+    "compressor-failure": {
+      "minor": {
+        "low": 600,
+        "high": 1200
+      },
+      "major": {
+        "low": 1300,
+        "high": 2900
+      }
+    },
+    "duct-leak": {
+      "minor": {
+        "low": 150,
+        "high": 500
+      },
+      "major": {
+        "low": 700,
+        "high": 2500
+      }
+    },
+    "refrigerant-leak": {
+      "minor": {
+        "low": 200,
+        "high": 600
+      },
+      "major": {
+        "low": 700,
+        "high": 1800
+      }
+    },
+    "electrical": {
+      "minor": {
+        "low": 150,
+        "high": 500
+      },
+      "major": {
+        "low": 600,
+        "high": 2200
+      }
+    }
+  }
+}
