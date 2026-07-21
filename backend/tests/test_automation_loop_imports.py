@@ -56,3 +56,6 @@ def test_loop_import_block_resolves():
     from backend.services.os_scheduled_tasks import run_due_tasks  # noqa: F401
     from backend.services.os_projects import run_project_ticks  # noqa: F401
     from backend.services.platform_flags import flag_enabled  # noqa: F401
+    from backend.services.os_approval_rollup import send_approval_rollups  # noqa: F401
+    # Lazily imported inside process_user_turn (chat BI fast path)
+    from backend.services.os_data_answers import try_data_answer  # noqa: F401

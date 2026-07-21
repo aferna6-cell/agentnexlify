@@ -76,6 +76,22 @@ async def process_user_turn(
     """
     user_content = user_message_row["content"]
 
+    # Deterministic BI fast path: a short typed data question ("how many
+    # leads this week?") is answered straight from the tenant's tables -
+    # instant, token-free, never hallucinated. Scheduled/project prompts
+    # (force_agent_id set) always take the engine path.
+    if force_agent_id is None:
+        from backend.services import os_data_answers
+
+        data_answer = await os_data_answers.try_data_answer(
+            db, client_id, thread_id, user_message_row
+        )
+        if data_answer is not None:
+            await _mirror_to_channel(
+                db, client_id, thread_id, data_answer["assistant_message"]
+            )
+            return data_answer
+
     # Connector-need inference (deterministic regex + status lookups on hit
     # only). When the ask needs an unconnected integration, the engine gets
     # told so its reply is grounded, and a follow-up connect prompt is posted

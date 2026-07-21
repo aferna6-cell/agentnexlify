@@ -6,13 +6,19 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.dependencies import _get_current_tenant
+from backend.services.agent_os_gate import require_agent_os_access
 from backend.models.database import get_service_supabase
 from backend.services import os_custom_instructions
 from backend.services.os_routing_memory import KNOWN_DEPARTMENTS
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/os", tags=["agent-os"])
+router = APIRouter(
+    prefix="/api/v1/os",
+    tags=["agent-os"],
+    # Suite surface - agent_os plan (+ legacy) only; 402 upsell otherwise.
+    dependencies=[Depends(require_agent_os_access)],
+)
 
 
 class InstructionIn(BaseModel):
