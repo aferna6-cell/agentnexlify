@@ -8,7 +8,12 @@ from pydantic import BaseModel, Field
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
 from backend.services.agent_os_gate import require_agent_os_access
-from backend.services.os_research import MAX_TOPIC_LEN, run_research
+from backend.services.os_research import (
+    MAX_TOPIC_LEN,
+    research_to_project,
+    run_research,
+)
+from backend.services.platform_flags import flag_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -35,3 +40,21 @@ async def research(body: ResearchIn, claims: dict = Depends(_get_current_tenant)
     if out.get("error"):
         raise HTTPException(status_code=422, detail=out["error"])
     return out
+
+
+@router.post("/research/{run_id}/to-project")
+async def research_run_to_project(
+    run_id: str, claims: dict = Depends(_get_current_tenant)
+):
+    """Seed a multi-department project from a research brief's findings.
+
+    The project parks as an approvable draft plan - same lifecycle as any
+    project. Mirrors the /projects surface's flag gate.
+    """
+    if not flag_enabled("os_projects_enabled"):
+        raise HTTPException(status_code=404, detail="Projects not enabled")
+    db = get_service_supabase()
+    try:
+        return await research_to_project(db, claims["tenant_id"], run_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))

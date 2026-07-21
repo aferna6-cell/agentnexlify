@@ -21,8 +21,15 @@ const FEATURES = [
 ];
 
 // Plans whose tenants see marketing pages instead of this upsell.
-// Only agent_os includes marketing features in the two-plan model.
-export const MARKETING_PLANS = new Set(["agent_os"]);
+// Mirrors backend plan_gate.MARKETING_PLANS: agent_os plus the
+// legacy/grandfathered plans still honored on old contracts.
+export const MARKETING_PLANS = new Set([
+  "agent_os",
+  "growth",
+  "autopilot",
+  "professional",
+  "enterprise",
+]);
 
 export const MARKETING_GATED_KEYS = new Set([
   "marketing_dashboard",

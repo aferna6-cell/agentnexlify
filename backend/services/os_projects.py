@@ -27,7 +27,9 @@ MAX_ACTIVE_PROJECTS = 3
 _RUNNER_BATCH_CAP = 5
 _SUMMARY_BODY_CHARS = 300
 
-ACTIVE_STATUSES = ("draft", "approved", "running")
+# "planning" rows (chat/SQL-queued, awaiting the background planner) count as
+# active so a tenant can't queue unlimited projects past MAX_ACTIVE_PROJECTS.
+ACTIVE_STATUSES = ("planning", "draft", "approved", "running")
 
 _PLANNER_MODEL = "claude-sonnet-5"
 

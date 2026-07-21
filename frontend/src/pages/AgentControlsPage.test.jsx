@@ -24,6 +24,9 @@ vi.mock("../utils/api/os", () => ({
   createOsTask: vi.fn(),
   updateOsTask: vi.fn(),
   deleteOsTask: vi.fn(),
+  // Deep research card
+  runOsResearch: vi.fn(),
+  createProjectFromResearch: vi.fn(),
 }));
 
 vi.mock("../utils/api/kb-evals", () => ({

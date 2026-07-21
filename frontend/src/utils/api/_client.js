@@ -99,6 +99,19 @@ export async function request(path, { method = "GET", body, token } = {}) {
       handleUnauthorized();
       throw new ApiError(res.status, err);
     }
+    // Plan gate (agent_os_gate / plan_gate): surface one app-wide upsell
+    // instead of a dead inline error on every gated card. The event is
+    // rendered by UpgradeGateBanner; the ApiError still throws so callers
+    // keep their own error handling.
+    if (res.status === 402 && err?.detail?.error === "plan_upgrade_required") {
+      try {
+        window.dispatchEvent(
+          new CustomEvent("anx:plan-upgrade-required", { detail: err.detail }),
+        );
+      } catch {
+        // Non-browser test environments without CustomEvent - ignore.
+      }
+    }
     if (res.status >= 500) {
       reportError(new ApiError(res.status, err), {
         source: "api-client",

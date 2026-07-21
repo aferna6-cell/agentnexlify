@@ -117,3 +117,33 @@ def test_chatbot_and_free_excluded_from_suite_gate():
     from backend.services.agent_os_gate import AGENT_OS_PLANS
     assert "chatbot" not in AGENT_OS_PLANS
     assert "free" not in AGENT_OS_PLANS
+
+
+# --- Marketing gate aligned with the suite gate (round-4, 2026-07-21) -------
+
+def test_marketing_plans_match_suite_gate():
+    # Marketing is surfaced through the Agent OS marketing department, so the
+    # standalone marketing routers honor exactly the plans that have the
+    # workforce. Until 2026-07-21 MARKETING_PLANS was {"agent_os"} only,
+    # wrongly 402-ing grandfathered contracts (CLAUDE.md: gates include them).
+    from backend.services.agent_os_gate import AGENT_OS_PLANS
+    from backend.services.plan_gate import MARKETING_PLANS
+    assert MARKETING_PLANS == set(AGENT_OS_PLANS)
+
+
+def test_legacy_plans_grandfathered_in_marketing_gate():
+    from backend.services.plan_gate import MARKETING_PLANS
+    for plan in ("growth", "autopilot", "professional", "enterprise"):
+        assert plan in MARKETING_PLANS
+
+
+def test_chatbot_and_free_still_excluded_from_marketing_gate():
+    from backend.services.plan_gate import MARKETING_PLANS
+    assert "chatbot" not in MARKETING_PLANS
+    assert "free" not in MARKETING_PLANS
+
+
+def test_campaign_send_plans_share_marketing_source_of_truth():
+    from backend.routers.marketing_campaigns import _CAMPAIGN_SEND_PLANS
+    from backend.services.plan_gate import MARKETING_PLANS
+    assert _CAMPAIGN_SEND_PLANS is MARKETING_PLANS

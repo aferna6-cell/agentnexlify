@@ -15,6 +15,7 @@ import {
 import { BASE } from "../utils/api/_client";
 import AskDataCard from "../components/os/AskDataCard";
 import ProjectsCard from "../components/os/ProjectsCard";
+import ResearchCard from "../components/os/ResearchCard";
 import ScheduledTasksCard from "../components/os/ScheduledTasksCard";
 
 // ---------------------------------------------------------------------------
@@ -438,6 +439,7 @@ export default function AgentControlsPage() {
         </div>
       </div>
       <AskDataCard token={token} />
+      <ResearchCard token={token} />
       <ProjectsCard token={token} />
       <ScheduledTasksCard token={token} />
       <InstructionsCard token={token} />

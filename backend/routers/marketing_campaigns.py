@@ -17,13 +17,13 @@ from backend.services.llm_runtime import call_claude_messages
 
 logger = logging.getLogger(__name__)
 
-# Plans allowed to SEND campaigns. Marketing is an agent_os-only feature — the
-# router already gates the whole /api/v1/campaigns surface via
-# require_marketing_access (plan_gate.MARKETING_PLANS = {agent_os}; legacy plans
-# get 402, enforced by test_plan_gate.py). This inline check is defense-in-depth
-# and MUST share that single source of truth so the two gates can't drift.
-# (agent_os included fixes the earlier bug where the $99.99 plan was blocked;
-# chatbot/free/legacy are excluded, matching the router.)
+# Plans allowed to SEND campaigns. The router already gates the whole
+# /api/v1/campaigns surface via require_marketing_access
+# (plan_gate.MARKETING_PLANS = agent_os + legacy/grandfathered plans, aligned
+# with agent_os_gate.AGENT_OS_PLANS since 2026-07-21; chatbot/free get 402,
+# enforced by test_two_plan_repricing.py + test_plan_gating_new_plans.py).
+# This inline check is defense-in-depth and MUST share that single source of
+# truth so the two gates can't drift.
 _CAMPAIGN_SEND_PLANS = MARKETING_PLANS
 
 router = APIRouter(

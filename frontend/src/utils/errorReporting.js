@@ -1,6 +1,17 @@
 export function apiErrorMessage(status, body = {}) {
   const detail = body?.detail;
   if (typeof detail === "string" && detail.trim()) return detail;
+  // Structured error payloads (e.g. the 402 plan gate) put a human message
+  // inside the detail object - surface it instead of "API error 402".
+  if (
+    detail &&
+    !Array.isArray(detail) &&
+    typeof detail === "object" &&
+    typeof detail.message === "string" &&
+    detail.message.trim()
+  ) {
+    return detail.message;
+  }
   if (Array.isArray(detail) && detail.length > 0) {
     return detail
       .map((item) => {
