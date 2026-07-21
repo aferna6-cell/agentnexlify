@@ -121,7 +121,7 @@ def _install(monkeypatch, rows, *, fail_paths=None, hour=3):
 
 
 def _run():
-    return asyncio.get_event_loop().run_until_complete(
+    return asyncio.new_event_loop().run_until_complete(
         pq.purge_photo_quote_images_30d()
     )
 
