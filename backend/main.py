@@ -100,6 +100,7 @@ from backend.routers import (
     widget_chat,
     widget_config,
     widget_lead,
+    widget_photo_quote,
     wizard_analytics,
     ab_tests,
     automation_rules,
@@ -927,6 +928,7 @@ app.include_router(twilio_webhooks.router)
 app.include_router(widget_chat.router)
 app.include_router(widget_config.router)
 app.include_router(widget_lead.router)
+app.include_router(widget_photo_quote.router)
 app.include_router(notifications.router)
 app.include_router(business_page.router)
 app.include_router(booking_page.router)
