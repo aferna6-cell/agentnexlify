@@ -1634,3 +1634,20 @@ scope, RLS on/service-role only) — name, url (https-only at API layer),
 auth_header, auth_token (write-only, plaintext pending #266 key rollout),
 enabled. Platform-gated by `os_mcp_enabled` flag; endpoints under
 `/api/v1/os/mcp/*`; client in `backend/services/mcp_client.py`.
+
+## 181_kb_article_provenance.sql (2026-07-21) — DRAFT / UNAPPLIED
+KB article provenance (issue #70). Adds `kb_articles.last_validated timestamptz`
+(existing rows backfilled to `updated_at`; column default set to `now()` after
+backfill so newly-compiled articles are marked fresh) + `kb_articles.citation_count
+int DEFAULT 0`, and an `increment_kb_citations(uuid[])` SECURITY DEFINER RPC
+(EXECUTE granted to service_role). Reuses the existing `source_urls TEXT[]`
+(mig 081) for the source footer — no redundant singular column. The semantic
+`match_kb_articles` RPC (no checked-in migration, applied ad-hoc) is left
+untouched; provenance is merged in Python by article id via
+`backend/services/kb_provenance.py` (works for both the semantic and FTS paths)
+and surfaced in the widget system prompt as `[Source: url, last verified date]`
+with a `⚠ KB article may be outdated` warning past 60 days. Citation increment is
+fire-and-forget on retrieval. DRAFT: not applied to prod (no Supabase MCP this
+session). Validated by applying against a scratch Postgres 16 (backfill, default,
+RPC increment all correct). A peer applies via apply_migration and flips to APPLIED.
+Migration number 181 chosen to avoid colliding with open PR #517 (migration 180).
