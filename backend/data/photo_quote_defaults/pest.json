@@ -1,0 +1,74 @@
+{
+  "_meta": {
+    "industry": "pest",
+    "currency": "USD",
+    "source": "HomeAdvisor/Angi 2025 national averages \u2014 pest control cost guides",
+    "source_urls": [
+      "https://www.homeadvisor.com/cost/environmental-safety/pest-control/",
+      "https://www.angi.com/articles/how-much-does-pest-control-cost.htm"
+    ],
+    "note": "Platform default pricing \u2014 tenants should customize in the dashboard. Plumbing validated by pilot; others refined post-pilot."
+  },
+  "damage_types": {
+    "rodent-entry": {
+      "minor": {
+        "low": 150,
+        "high": 450
+      },
+      "major": {
+        "low": 500,
+        "high": 1500
+      }
+    },
+    "termite-damage": {
+      "minor": {
+        "low": 250,
+        "high": 900
+      },
+      "major": {
+        "low": 1200,
+        "high": 5000
+      }
+    },
+    "ant-colony": {
+      "minor": {
+        "low": 100,
+        "high": 350
+      },
+      "major": {
+        "low": 400,
+        "high": 1200
+      }
+    },
+    "cockroach-nest": {
+      "minor": {
+        "low": 100,
+        "high": 400
+      },
+      "major": {
+        "low": 500,
+        "high": 1500
+      }
+    },
+    "wasp-nest": {
+      "minor": {
+        "low": 100,
+        "high": 350
+      },
+      "major": {
+        "low": 400,
+        "high": 1000
+      }
+    },
+    "bedbug": {
+      "minor": {
+        "low": 300,
+        "high": 900
+      },
+      "major": {
+        "low": 1000,
+        "high": 5000
+      }
+    }
+  }
+}

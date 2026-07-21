@@ -1,0 +1,74 @@
+{
+  "_meta": {
+    "industry": "roofing",
+    "currency": "USD",
+    "source": "HomeAdvisor/Angi 2025 national averages \u2014 roof repair cost guides",
+    "source_urls": [
+      "https://www.homeadvisor.com/cost/roofing/repair-a-roof/",
+      "https://www.angi.com/articles/how-much-does-it-cost-repair-roof.htm"
+    ],
+    "note": "Platform default pricing \u2014 tenants should customize in the dashboard. Plumbing validated by pilot; others refined post-pilot."
+  },
+  "damage_types": {
+    "missing-shingle": {
+      "minor": {
+        "low": 150,
+        "high": 450
+      },
+      "major": {
+        "low": 600,
+        "high": 2500
+      }
+    },
+    "curl": {
+      "minor": {
+        "low": 200,
+        "high": 500
+      },
+      "major": {
+        "low": 700,
+        "high": 3000
+      }
+    },
+    "crack": {
+      "minor": {
+        "low": 150,
+        "high": 400
+      },
+      "major": {
+        "low": 500,
+        "high": 2000
+      }
+    },
+    "granule-loss": {
+      "minor": {
+        "low": 200,
+        "high": 600
+      },
+      "major": {
+        "low": 800,
+        "high": 3500
+      }
+    },
+    "flashing-damage": {
+      "minor": {
+        "low": 200,
+        "high": 550
+      },
+      "major": {
+        "low": 600,
+        "high": 2000
+      }
+    },
+    "sag": {
+      "minor": {
+        "low": 500,
+        "high": 1500
+      },
+      "major": {
+        "low": 2000,
+        "high": 8000
+      }
+    }
+  }
+}
