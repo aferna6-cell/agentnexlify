@@ -1651,3 +1651,19 @@ fire-and-forget on retrieval. DRAFT: not applied to prod (no Supabase MCP this
 session). Validated by applying against a scratch Postgres 16 (backfill, default,
 RPC increment all correct). A peer applies via apply_migration and flips to APPLIED.
 Migration number 181 chosen to avoid colliding with open PR #517 (migration 180).
+
+## 182_conversation_message_memory.sql (2026-07-21) — DRAFT / UNAPPLIED
+Conversation memory tier (issue #69). Adds `chat_messages.message_relevance_score`
+(double precision, default 0.5) + `chat_messages.message_confidence` (default 0.8)
++ partial index `idx_chat_messages_session_confidence` on (session_id,
+message_confidence) WHERE message_confidence > 0.3. SCHEMA CORRECTION: the issue
+proposed `conversations.messages` keyed by `conversation_id` scoped by `client_id`;
+all three are wrong (conversations.messages JSONB was dropped — chat_messages is
+canonical, keyed by session_id, scoped by tenant_id). Backend
+`backend/services/conversation_memory.py` scores older messages by
+0.4·cosine+0.3·recency+0.3·confidence and the widget path uses recent-window +
+top-k older when a conversation is long — OPT-IN via
+`widget_conversation_memory_tier_enabled` (default 0), so widget behavior is
+unchanged until enabled. DRAFT: not applied to prod (no Supabase MCP this session);
+validated on a scratch Postgres 16 (columns default 0.5/0.8, partial index created).
+Migration number 182 is next-free after 180 (PR #517) and 181 (PR #518).

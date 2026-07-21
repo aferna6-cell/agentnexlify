@@ -146,6 +146,26 @@ async def widget_chat(
 
     # 5. Load message history from chat_messages table (last 20 messages)
     messages = _load_chat_history(tenant["id"], req.session_id)
+
+    # 5-mem. Conversation memory tier (#69) — OPT-IN, default OFF. When enabled
+    # and the conversation is long, replace the flat window with a recent window
+    # plus the most relevant older messages (hybrid relevance/recency/confidence).
+    # Fail-open: any error keeps the default history above.
+    if resolve_int_setting("widget_conversation_memory_tier_enabled", 0):
+        try:
+            from backend.services.conversation_memory import build_tiered_history
+
+            tiered = await build_tiered_history(
+                db, tenant["id"], req.session_id, req.message
+            )
+            if tiered is not None:
+                messages = tiered
+        except Exception:
+            logger.warning(
+                "widget_chat: memory tier failed for session=%s — using default history",
+                req.session_id,
+                exc_info=True,
+            )
     logger.info(
         "widget_chat: session=%s loaded %d previous messages, first_role=%s",
         req.session_id,
