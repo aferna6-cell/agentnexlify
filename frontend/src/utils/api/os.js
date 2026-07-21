@@ -262,3 +262,7 @@ export function cancelOsProject(token, projectId) {
     token,
   });
 }
+
+export function fetchOsTaskSuggestions(token) {
+  return request("/api/v1/os/tasks/suggestions", { token });
+}

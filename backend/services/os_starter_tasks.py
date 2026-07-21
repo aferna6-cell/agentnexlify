@@ -119,3 +119,83 @@ def compute_starter_tasks(db: Any, client_id: str) -> list[dict[str, str]]:
         starters.append(g)
 
     return starters[:_STARTER_COUNT]
+
+
+# ---------------------------------------------------------------------------
+# Starter RECURRING tasks (suite - activation -> autonomous agents).
+#
+# The scheduled-task feature only earns its keep once a tenant has a standing
+# task; hand-writing the first one is a concierge step. These suggestions
+# make "your AI workforce shows up on Monday" a one-click default for a new
+# tenant: personalized on business_type + whatever data already exists, and
+# only offered while the tenant has ZERO scheduled tasks (never pollutes an
+# owner-curated schedule).
+# ---------------------------------------------------------------------------
+
+_SUGGESTION_CAP = 2
+
+
+def suggest_recurring_tasks(db: Any, client_id: str) -> list[dict[str, Any]]:
+    """Up to 2 one-click recurring-task suggestions, [] once any task exists."""
+    try:
+        existing = (
+            db.table("os_scheduled_tasks")
+            .select("id")
+            .eq("client_id", client_id)
+            .limit(1)
+            .execute()
+        ).data or []
+        if existing:
+            return []
+    except Exception:
+        logger.warning(
+            "starter_tasks: scheduled-task check failed for %s",
+            client_id,
+            exc_info=True,
+        )
+        return []
+
+    biz = _business_type(db, client_id)
+    biz_phrase = biz.replace("_", " ") if biz else "business"
+
+    suggestions: list[dict[str, Any]] = [
+        {
+            "label": "Weekly promo draft",
+            "department": "marketing",
+            "interval_days": 7,
+            "prompt": (
+                f"Draft this week's promotional post for my {biz_phrase}. "
+                "Highlight something timely and keep it short and friendly - "
+                "I'll review it before it goes anywhere."
+            ),
+        }
+    ]
+
+    if _count(db, "leads", "client_id", client_id) > 0:
+        suggestions.append(
+            {
+                "label": "Weekly lead follow-up sweep",
+                "department": "sales",
+                "interval_days": 7,
+                "prompt": (
+                    "Review my open leads from the past week and draft a "
+                    "short, personal follow-up for each one that hasn't been "
+                    "answered. I approve every message before it sends."
+                ),
+            }
+        )
+    else:
+        suggestions.append(
+            {
+                "label": "Weekly business summary",
+                "department": "operations",
+                "interval_days": 7,
+                "prompt": (
+                    "Prepare my weekly business summary: leads, bookings, "
+                    "conversations, and anything that needs my attention. "
+                    "Keep it to a scannable one-pager."
+                ),
+            }
+        )
+
+    return suggestions[:_SUGGESTION_CAP]
