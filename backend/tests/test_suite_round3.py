@@ -492,3 +492,12 @@ class TestRollupEdges:
             new=AsyncMock(return_value={"success": False}),
         ):
             assert _run(os_approval_rollup.send_approval_rollups()) == 0
+
+
+class TestPlanSchemaApiContract:
+    def test_every_object_level_forbids_additional_properties(self):
+        # Anthropic structured output 400s without this - caught by the
+        # 2026-07-21 prod planner smoke, unreachable from mocked tests.
+        schema = os_projects._PLAN_SCHEMA
+        assert schema["additionalProperties"] is False
+        assert schema["properties"]["steps"]["items"]["additionalProperties"] is False

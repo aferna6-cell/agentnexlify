@@ -31,6 +31,9 @@ ACTIVE_STATUSES = ("draft", "approved", "running")
 
 _PLANNER_MODEL = "claude-sonnet-5"
 
+# Anthropic structured output requires additionalProperties: false on every
+# object level - the prod planner smoke (2026-07-21) failed with a 400
+# without it (local tests mock the LLM call and cannot catch this).
 _PLAN_SCHEMA = {
     "type": "object",
     "properties": {
@@ -44,10 +47,12 @@ _PLAN_SCHEMA = {
                     "objective": {"type": "string"},
                 },
                 "required": ["department", "objective"],
+                "additionalProperties": False,
             },
         },
     },
     "required": ["title", "steps"],
+    "additionalProperties": False,
 }
 
 
