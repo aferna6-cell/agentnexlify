@@ -802,6 +802,10 @@ def _build_system_prompt(
     # limits which articles surface via relevance. Do not add client_id filter here.
     kb_article_refs_block = ""
     if kb_article_refs:
+        # Provenance footer (source URL + last-verified date + stale warning) is
+        # appended per article so cited answers are auditable (#70).
+        from backend.services.kb_provenance import provenance_suffix
+
         _kb_article_refs_limit = resolve_int_setting(
             "widget_prompt_kb_article_refs_chars", 2000
         )
@@ -814,6 +818,7 @@ def _build_system_prompt(
                 continue
             _summary_truncated = _summary[:120] + ("..." if len(_summary) > 120 else "")
             _line = f"- {_title}: {_summary_truncated}" if _summary_truncated else f"- {_title}"
+            _line += provenance_suffix(_art)
             if _chars_used + len(_line) > _kb_article_refs_limit:
                 break
             _article_lines.append(_line)
@@ -1184,6 +1189,21 @@ async def _query_kb_articles(
                 query[:60],
                 exc_info=True,
             )
+
+    # Annotate the final cited set with provenance and record the citation (#70).
+    # Both steps fail-open: a provenance/telemetry error never breaks retrieval.
+    try:
+        from backend.services.kb_provenance import merge_provenance, record_citations
+
+        db = get_service_supabase()
+        rows = merge_provenance(db, rows)
+        record_citations(db, rows)
+    except Exception:
+        logger.warning(
+            "kb_query: provenance annotation failed for query=%r — using plain rows",
+            query[:60],
+            exc_info=True,
+        )
 
     return rows
 
