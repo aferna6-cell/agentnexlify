@@ -1705,3 +1705,15 @@ instrumentation for the photo-quote GA gate: tenant error rate (<5% goal) +
 quote->appointment conversion (30% goal). Read/written fail-open by
 `backend/services/photo_quote_telemetry.py`, so shipping the code before apply
 degrades to "no feedback recorded". Apply via Supabase. client_id-scoped (mig 108).
+
+## Migration 186 — pending_automations (2026-07-22, UNAPPLIED)
+Creates `pending_automations`, the ops-automation retry queue (#118). The enqueue
+side (#117 missed_call_gate, #119 booking_gcal) shipped writing to this table
+fail-open, but no migration ever created it (the sibling comment citing "migration
+180" was wrong; 180 is os_scheduled_tasks). Columns match the shipped enqueuers:
+`tenant_id`-scoped, retry counter is `attempts` (NOT client_id/retry_count).
+Columns: id, tenant_id, automation_type, payload jsonb, status
+(pending|done|failed), attempts int, scheduled_for timestamptz, created_at,
+updated_at. Indexes: (status, scheduled_for) for the drainer's hot query,
+(tenant_id). Drained by `backend/services/retry_worker.py` on the 60s tick with
+30s/2min/10min backoff, max 3 attempts. Apply via Supabase.

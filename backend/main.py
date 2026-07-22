@@ -402,6 +402,12 @@ async def _automation_loop():
     async def _drive_kb_sync_due():
         # Sync path is blocking (httpx + DB); keep the loop's event loop free.
         return await asyncio.to_thread(_run_drive_sync_due)
+
+    from backend.services.retry_worker import drain_pending_automations
+
+    async def _drain_pending_automations():
+        # Blocking DB calls (+ re-fired outbounds); run off the event loop.
+        return await asyncio.to_thread(drain_pending_automations)
     from backend.services.twilio_webhook_sync import sync_twilio_number_webhooks
     from backend.services.demo_reset_job import reset_demo_tenants
     from backend.services.activation_nudges import send_activation_nudges
@@ -423,6 +429,7 @@ async def _automation_loop():
                 _safe_run("process_pending_steps", process_pending_steps),
                 _safe_run("check_no_response_leads", check_no_response_leads),
                 _safe_run("send_appointment_reminders", send_appointment_reminders),
+                _safe_run("drain_pending_automations", _drain_pending_automations),
             ]
 
             # Every 5 min: notifications, reminders, scheduled content, campaign recovery
