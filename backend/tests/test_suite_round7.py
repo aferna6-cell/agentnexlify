@@ -161,6 +161,14 @@ class TestMcpServer:
         ):
             assert mcp_server._header_api_key() == ""
 
+    def test_header_api_key_empty_when_context_has_no_request(self):
+        from backend import mcp_server
+
+        ctx = MagicMock()
+        ctx.request_context.request = None
+        with patch.object(mcp_server.mcp, "get_context", return_value=ctx):
+            assert mcp_server._header_api_key() == ""
+
     def test_lookup_uses_header_when_no_explicit_key(self):
         from backend import mcp_server
 
@@ -215,3 +223,56 @@ class TestMcpKeyEndpoints:
         )
         deps = [d.call for d in route.dependant.dependencies]
         assert require_agent_os_access not in deps
+
+    def test_get_returns_key_state_for_own_tenant(self):
+        from backend.main import app
+        from backend.routers import auth as auth_router
+        from backend.tests.conftest import SyncASGITestClient, _make_auth_token
+
+        tenant_id = "00000000-0000-0000-0000-0000000000aa"
+        db = MagicMock()
+        result = MagicMock()
+        result.data = [{"mcp_api_key": "mcp_secret123", "mcp_enabled": True}]
+        (
+            db.table.return_value.select.return_value.eq.return_value
+            .limit.return_value.execute.return_value
+        ) = result
+        with patch.object(auth_router, "get_service_supabase", return_value=db):
+            resp = SyncASGITestClient(app).get(
+                f"/api/v1/auth/mcp-key/{tenant_id}",
+                headers={"Authorization": f"Bearer {_make_auth_token(tenant_id)}"},
+            )
+        assert resp.status_code == 200
+        assert resp.json() == {"mcp_api_key": "mcp_secret123", "mcp_enabled": True}
+
+    def test_get_rejects_other_tenants_key(self):
+        from backend.main import app
+        from backend.tests.conftest import SyncASGITestClient, _make_auth_token
+
+        resp = SyncASGITestClient(app).get(
+            "/api/v1/auth/mcp-key/00000000-0000-0000-0000-0000000000bb",
+            headers={
+                "Authorization": f"Bearer {_make_auth_token('00000000-0000-0000-0000-0000000000aa')}"
+            },
+        )
+        assert resp.status_code == 403
+
+    def test_get_404_when_tenant_row_missing(self):
+        from backend.main import app
+        from backend.routers import auth as auth_router
+        from backend.tests.conftest import SyncASGITestClient, _make_auth_token
+
+        tenant_id = "00000000-0000-0000-0000-0000000000cc"
+        db = MagicMock()
+        result = MagicMock()
+        result.data = []
+        (
+            db.table.return_value.select.return_value.eq.return_value
+            .limit.return_value.execute.return_value
+        ) = result
+        with patch.object(auth_router, "get_service_supabase", return_value=db):
+            resp = SyncASGITestClient(app).get(
+                f"/api/v1/auth/mcp-key/{tenant_id}",
+                headers={"Authorization": f"Bearer {_make_auth_token(tenant_id)}"},
+            )
+        assert resp.status_code == 404
