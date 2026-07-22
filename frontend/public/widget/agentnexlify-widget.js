@@ -987,6 +987,10 @@
             <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
           <input type="file" id="anx-file-input" accept="image/*,.pdf,.doc,.docx" />
+          <button id="anx-photo-quote" title="Get a photo quote" style="display:none;">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="13" r="4" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+          </button>
+          <input type="file" id="anx-pq-file" accept="image/jpeg,image/png" style="display:none;" />
           <textarea id="anx-input" placeholder="${t('inputPlaceholder')}" rows="1"></textarea>
           <button id="anx-send" title="${t('sendTitle')}">
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
@@ -1042,6 +1046,10 @@
   // Booking state
   let tenantId = "";
   let bookingEnabled = false;
+  // Photo-quote (#41). Gated on tenant config; the upload control stays hidden
+  // and unwired until photo_quote_enabled is true, so the feature is inert for
+  // every tenant that has not turned it on.
+  let photoQuoteEnabled = false;
   let bookingStep = null; // null | "date" | "slots" | "form" | "confirmed"
   let selectedDate = null;
   let availableSlots = [];
@@ -1061,6 +1069,7 @@
       agentName = data.agent_name || "Agent";
       tenantId = data.tenant_id || "";
       bookingEnabled = data.booking_enabled || false;
+      photoQuoteEnabled = data.photo_quote_enabled || false;
       businessType = (data.business_type || "").toLowerCase();
       widgetIsOnline = data.is_online !== false;
       if (data.greeting_message) greetingMessage = data.greeting_message;
@@ -1709,6 +1718,102 @@
     }
   }
 
+  // --- Photo-quote (#41) ---
+  // Upload one image to /api/widget/photo-quote and render the returned range,
+  // or a three-fork handoff when the model routes to needs_human. All error
+  // states surface as an assistant message; nothing here runs unless the tenant
+  // has photo_quote_enabled.
+  async function submitPhotoQuote() {
+    const fileInput = document.getElementById("anx-pq-file");
+    const file = fileInput && fileInput.files && fileInput.files[0];
+    if (!file) return;
+    fileInput.value = ""; // allow re-selecting the same file
+
+    if (!/^image\/(jpeg|png)$/.test(file.type || "")) {
+      addMessage("assistant", "Please upload a JPEG or PNG photo.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      addMessage("assistant", "That photo is over 10 MB. Please upload a smaller one.");
+      return;
+    }
+    if (!API_BASE || !tenantId) return;
+
+    addMessage("user", "Photo uploaded for a quote.");
+    addMessage("assistant", "Analyzing your photo...");
+
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      fd.append("client_id", tenantId);
+      fd.append("conversation_id", getSessionId());
+      const resp = await fetchWithTimeout(`${API_BASE}/api/widget/photo-quote`, {
+        method: "POST",
+        body: fd,
+      });
+      if (resp.status === 429) {
+        addMessage("assistant", "You've reached the photo-quote limit for now. Please try again later.");
+        return;
+      }
+      if (resp.status === 402) {
+        addMessage("assistant", "Photo quotes aren't enabled on this plan yet.");
+        return;
+      }
+      if (resp.status === 413 || resp.status === 415) {
+        addMessage("assistant", "That image couldn't be read. Please upload a JPEG or PNG under 10 MB.");
+        return;
+      }
+      if (!resp.ok) {
+        addMessage("assistant", "Sorry, we couldn't process that photo. Please try again.");
+        return;
+      }
+      const quote = await resp.json();
+      renderPhotoQuoteResult(quote);
+    } catch (e) {
+      console.error("AgentNexLiFy: photo quote failed", e);
+      addMessage("assistant", "Upload failed. Please try again.");
+    }
+  }
+
+  function renderPhotoQuoteResult(quote) {
+    if (!quote || quote.needs_human) {
+      addMessage(
+        "assistant",
+        (quote && quote.summary) ||
+          "This one needs a person to price. How would you like to proceed?",
+      );
+      // Three-fork handoff (resolved decision #8).
+      const container = document.getElementById("anx-messages");
+      if (!container) return;
+      const row = document.createElement("div");
+      row.className = "anx-msg assistant";
+      row.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
+      const forks = [
+        ["Try another photo", () => document.getElementById("anx-pq-file").click()],
+        ["Book inspection", () => (bookingEnabled ? showBooking("date") : addMessage("assistant", "Tell me a good time and I'll set it up."))],
+        ["Get text quote", () => addMessage("assistant", "Sure - describe the job and I'll get you a written quote.")],
+      ];
+      forks.forEach(([label, fn]) => {
+        const b = document.createElement("button");
+        b.textContent = label;
+        b.style.cssText =
+          "padding:6px 12px;border:1px solid " + BRAND_COLOR + ";background:none;color:" + BRAND_COLOR + ";border-radius:8px;cursor:pointer;font-size:13px;";
+        b.addEventListener("click", fn);
+        row.appendChild(b);
+      });
+      container.appendChild(row);
+      container.scrollTop = container.scrollHeight;
+      return;
+    }
+    const conf = quote.confidence != null ? " (" + Math.round(quote.confidence * 100) + "% confidence)" : "";
+    addMessage(
+      "assistant",
+      "Estimated $" + (quote.quote_low || 0) + " - $" + (quote.quote_high || 0) + conf +
+        ". " + (quote.summary || "") +
+        "\n\nThis is an instant estimate, not a final quote. Want to book an inspection to confirm?",
+    );
+  }
+
   // --- Auto-resize textarea ---
   function autoResize(textarea) {
     textarea.style.height = "auto";
@@ -2243,6 +2348,18 @@
     document
       .getElementById("anx-file-input")
       .addEventListener("change", handleFileUpload);
+
+    // Photo-quote (#41) - only surfaced + wired when the tenant enabled it.
+    // Left inert (hidden, no listeners) for everyone else.
+    if (photoQuoteEnabled) {
+      const pqBtn = document.getElementById("anx-photo-quote");
+      const pqFile = document.getElementById("anx-pq-file");
+      if (pqBtn && pqFile) {
+        pqBtn.style.display = "";
+        pqBtn.addEventListener("click", () => pqFile.click());
+        pqFile.addEventListener("change", submitPhotoQuote);
+      }
+    }
 
     const input = document.getElementById("anx-input");
     input.addEventListener("keydown", (e) => {
