@@ -252,7 +252,71 @@ _FAST_PATH_TYPES = [
     "os_research_run",
     "email_action_approve",
     "email_action_reject",
+    # Round 8: valid-token one-click page views - separates "rollup never
+    # opened" from "opened, didn't decide".
+    "email_action_viewed",
 ]
+
+
+def _decision_funnel_section(db, now: datetime) -> dict | None:
+    """Draft decision throughput (round 8).
+
+    Prod 2026-07-22: 39 drafts produced in 7 days, 39 pending, 0 decided -
+    the workforce produced and the loop died at the owner decision. This
+    section makes that visible: pending backlog, decisions in the window,
+    and created->decided latency for what did get decided.
+    """
+    cutoff = (now - timedelta(days=_RECENT_DAYS)).isoformat()
+    try:
+        pending = (
+            db.table("os_agent_runs")
+            .select("id", count="exact")
+            .eq("deliverable_status", "pending_approval")
+            .limit(1)
+            .execute()
+        )
+        decided = (
+            db.table("os_agent_runs")
+            .select("created_at, updated_at, deliverable_status")
+            .in_("deliverable_status", ["approved", "rejected", "sent"])
+            .gte("updated_at", cutoff)
+            .limit(500)
+            .execute()
+        ).data or []
+    except Exception:
+        logger.warning("loop-health: decision-funnel query failed", exc_info=True)
+        return None
+
+    latencies = []
+    approved = rejected = 0
+    for row in decided:
+        status = row.get("deliverable_status")
+        if status == "rejected":
+            rejected += 1
+        else:
+            approved += 1
+        try:
+            created = datetime.fromisoformat(
+                str(row.get("created_at")).replace("Z", "+00:00")
+            )
+            updated = datetime.fromisoformat(
+                str(row.get("updated_at")).replace("Z", "+00:00")
+            )
+            hours = (updated - created).total_seconds() / 3600
+            if hours >= 0:
+                latencies.append(hours)
+        except Exception:
+            continue
+
+    latencies.sort()
+    median = latencies[len(latencies) // 2] if latencies else None
+    return {
+        "pending_now": int(pending.count or 0),
+        "decided_7d": len(decided),
+        "approved_7d": approved,
+        "rejected_7d": rejected,
+        "median_decision_hours": round(median, 1) if median is not None else None,
+    }
 
 
 def _fast_paths_section(db, now: datetime) -> dict | None:
@@ -326,5 +390,6 @@ async def get_loop_health(
         "guardrails": _guardrails_section(db, now),
         "fast_paths_7d": _fast_paths_section(db, now),
         "routing_quality": _routing_quality_section(db, now),
+        "decision_funnel": _decision_funnel_section(db, now),
         "errors_7d": _errors_section(db, now),
     }

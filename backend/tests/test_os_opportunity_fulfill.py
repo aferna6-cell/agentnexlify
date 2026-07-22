@@ -262,14 +262,17 @@ def test_degrades_gracefully_when_side_tables_fail():
 
 def test_run_insert_failure_is_not_counted():
     leads = [_lead(1, email="a@x.com"), _lead(2, email="b@x.com")]
-    inserted = []
+    run_calls = []
 
+    # os_agent_runs is now touched once BEFORE any insert (the dedupe scan
+    # added 2026-07-22); the contract under test is unchanged - a failed
+    # draft insert must not count. Call 1 = scan, call 2 = first insert.
     def tenant_table(db, table, client_id):
         if table == "leads":
             return _Query(list(leads))
         if table == "os_agent_runs":
-            if not inserted:
-                inserted.append(True)
+            run_calls.append(True)
+            if len(run_calls) == 2:
                 raise RuntimeError("insert down")
             return _Query([])
         if table == "tenants":
