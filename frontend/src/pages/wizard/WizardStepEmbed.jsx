@@ -29,7 +29,7 @@ const PLATFORM_GUIDES = [
   },
 ];
 
-export default function WizardStepEmbed({ wizardData, token, tenantId }) {
+export default function WizardStepEmbed({ wizardData, token, tenantId, onNext }) {
   const [copied, setCopied] = useState(false);
   const [apiKey, setApiKey] = useState(null);
   const [helperEmail, setHelperEmail] = useState("");
@@ -181,6 +181,27 @@ export default function WizardStepEmbed({ wizardData, token, tenantId }) {
       <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.85rem", margin: 0 }}>
         Your AI office manager is ready - ask it anything about running {wizardData.business_name || "your business"}.
       </p>
+
+      {onNext && (
+        <button
+          type="button"
+          onClick={() => onNext()}
+          style={{
+            display: "block",
+            width: "100%",
+            marginTop: 20,
+            padding: "12px",
+            background: "none",
+            border: "1px solid rgba(255,255,255,0.12)",
+            borderRadius: 10,
+            color: "rgba(255,255,255,0.7)",
+            fontSize: "0.88rem",
+            cursor: "pointer",
+          }}
+        >
+          Optional: connect Google Drive so your AI learns your brand voice →
+        </button>
+      )}
     </div>
   );
 }
