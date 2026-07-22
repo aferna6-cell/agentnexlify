@@ -69,7 +69,13 @@ export default function KnowledgeSourcesPage() {
   const [dragOver, setDragOver] = useState(false);
   const [syncCmd, setSyncCmd] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Spec Resolved-Q7-D: while a Drive folder is actively syncing, the KB
+  // dashboard is read-only. Manual uploads/removals would be overwritten by
+  // the next sync, so edit controls are disabled until sync is disconnected.
+  const syncActive = Boolean(drive?.folder_id);
 
   const load = useCallback(async () => {
     if (!tenantId || !token) return;
@@ -181,6 +187,7 @@ export default function KnowledgeSourcesPage() {
   }
 
   async function handleDisconnect() {
+    setConfirmDisconnect(false);
     setBusy(true);
     try {
       await disconnectDrive(token);
@@ -252,25 +259,48 @@ export default function KnowledgeSourcesPage() {
         </div>
       )}
 
+      {/* Read-only banner while Drive sync owns the KB (spec Resolved-Q7-D) */}
+      {syncActive && (
+        <div
+          style={{
+            ...cardStyle,
+            marginBottom: 16,
+            padding: "12px 16px",
+            fontSize: "0.85rem",
+            color: "var(--text-secondary)",
+            borderColor: "var(--yellow, #f59e0b)",
+          }}
+        >
+          Knowledge is synced from Google Drive. Disconnect sync to edit
+          documents manually.
+        </div>
+      )}
+
       {/* Upload drop zone */}
       <div
         onDragOver={(e) => {
+          if (syncActive) return;
           e.preventDefault();
           setDragOver(true);
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(e) => {
           e.preventDefault();
+          if (syncActive) return;
           setDragOver(false);
           handleFiles(e.dataTransfer.files);
         }}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => {
+          if (syncActive) return;
+          fileInputRef.current?.click();
+        }}
         style={{
           ...cardStyle,
           marginBottom: 20,
           textAlign: "center",
           padding: "34px 20px",
-          cursor: "pointer",
+          cursor: syncActive ? "not-allowed" : "pointer",
+          opacity: syncActive ? 0.5 : 1,
           borderStyle: "dashed",
           borderColor: dragOver ? "var(--accent, #6366f1)" : "var(--border)",
           background: dragOver ? "rgba(99,102,241,0.08)" : cardStyle.background,
@@ -324,7 +354,7 @@ export default function KnowledgeSourcesPage() {
                     Sync now
                   </button>
                 )}
-                <button onClick={handleDisconnect} disabled={busy} style={btnQuiet}>
+                <button onClick={() => setConfirmDisconnect(true)} disabled={busy} style={btnQuiet}>
                   Disconnect
                 </button>
               </>
@@ -479,8 +509,15 @@ export default function KnowledgeSourcesPage() {
                     <td style={{ padding: "8px 10px", textAlign: "right" }}>
                       <button
                         onClick={() => removeDoc(doc)}
-                        disabled={busy}
-                        style={{ ...btnQuiet, padding: "4px 10px", fontSize: "0.78rem" }}
+                        disabled={busy || syncActive}
+                        title={syncActive ? "Disconnect Drive sync to edit documents" : undefined}
+                        style={{
+                          ...btnQuiet,
+                          padding: "4px 10px",
+                          fontSize: "0.78rem",
+                          opacity: syncActive ? 0.4 : 1,
+                          cursor: syncActive ? "not-allowed" : "pointer",
+                        }}
                       >
                         Remove
                       </button>
@@ -492,6 +529,41 @@ export default function KnowledgeSourcesPage() {
           </div>
         )}
       </div>
+
+      {confirmDisconnect && (
+        <div
+          onClick={() => setConfirmDisconnect(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ ...cardStyle, width: "100%", maxWidth: 420 }}
+          >
+            <h3 style={{ margin: 0, fontSize: "1.05rem" }}>Disconnect Google Drive?</h3>
+            <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", margin: "10px 0 0" }}>
+              New and edited Drive docs stop syncing. Documents already synced
+              stay in your knowledge base, and you can edit manually again.
+            </p>
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button onClick={handleDisconnect} disabled={busy} style={btnStyle}>
+                Disconnect
+              </button>
+              <button onClick={() => setConfirmDisconnect(false)} style={btnQuiet}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
