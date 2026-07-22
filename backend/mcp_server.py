@@ -12,6 +12,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 from backend.models.database import get_service_supabase
 
@@ -21,11 +22,20 @@ logger = logging.getLogger(__name__)
 # affinity, so every request must be self-contained. streamable_http_path
 # "/" because main.py mounts this app at /mcp - the public URL owners
 # configure is <API_BASE>/mcp (what MCPSetupPage renders).
+#
+# DNS-rebinding protection is host-allowlist based and defaults to
+# rejecting anything not localhost - prod probes got "Invalid Host
+# header" behind Railway's proxy. This is a public API server
+# authenticated by per-tenant mcp_ keys (not ambient browser
+# credentials), so rebinding protection adds nothing here; disable it.
 mcp = FastMCP(
     "AgentNexLiFy",
     instructions="AI-powered business automation — leads, appointments, conversations, and analytics. Authenticate with your dedicated MCP API key (Authorization: Bearer header, or pass it as the api_key argument).",
     stateless_http=True,
     streamable_http_path="/",
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=False
+    ),
 )
 
 # --- Auth helpers ---

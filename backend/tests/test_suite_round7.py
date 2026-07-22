@@ -121,6 +121,16 @@ class TestMcpServer:
         mounts = [r.path for r in app.routes if r.__class__.__name__ == "Mount"]
         assert "/mcp" in mounts
 
+    def test_dns_rebinding_protection_disabled_for_proxied_prod(self):
+        # Default protection allowlists localhost only - prod behind
+        # Railway's proxy got "Invalid Host header" until disabled. Auth
+        # is the per-tenant mcp_ key, not ambient browser credentials.
+        from backend import mcp_server
+
+        security = mcp_server.mcp.settings.transport_security
+        assert security is not None
+        assert security.enable_dns_rebinding_protection is False
+
     def test_all_six_tools_registered(self):
         from backend import mcp_server
 
