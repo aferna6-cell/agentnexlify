@@ -19,6 +19,49 @@ logger = logging.getLogger(__name__)
 
 _MIN_OLDEST_HOURS = 24
 _TENANT_BATCH = 200
+_EMAIL_DRAFT_ROWS = 3
+
+
+def _draft_rows_html(client_id: str, drafts: list[dict]) -> str:
+    """Per-draft rows with signed one-click Approve/Reject links."""
+    import html as html_mod
+
+    from backend.config import settings
+    from backend.services.os_email_actions import make_action_token
+
+    base = str(getattr(settings, "api_url", "") or "").rstrip("/")
+    if not base or not drafts:
+        return ""
+    rows = []
+    for draft in drafts:
+        try:
+            approve = make_action_token(client_id, draft["id"], "approve")
+            reject = make_action_token(client_id, draft["id"], "reject")
+        except Exception:
+            logger.warning("approval_rollup: token build failed", exc_info=True)
+            continue
+        link = f"{base}/api/v1/os/deliverables/email-action?token="
+        title = html_mod.escape(str(draft.get("title") or "Untitled draft")[:70])
+        rows.append(
+            "<tr>"
+            f"<td style='padding:6px 8px;color:#374151;'>{title}</td>"
+            f"<td style='padding:6px 8px;'><a href='{link}{approve}' "
+            "style='color:#059669;font-weight:600;text-decoration:none;'>"
+            "Approve</a></td>"
+            f"<td style='padding:6px 8px;'><a href='{link}{reject}' "
+            "style='color:#b91c1c;text-decoration:none;'>Reject</a></td>"
+            "</tr>"
+        )
+    if not rows:
+        return ""
+    return (
+        "<table style='border-collapse:collapse;margin:12px 0;'>"
+        + "".join(rows)
+        + "</table>"
+        "<p style='color:#6b7280;font-size:12px;'>Links work without "
+        "logging in and expire in 7 days. Each one shows the draft and asks "
+        "you to confirm before anything sends.</p>"
+    )
 
 
 def _now() -> datetime:
@@ -44,7 +87,7 @@ async def send_approval_rollups() -> int:
     try:
         runs = (
             db.table("os_agent_runs")
-            .select("client_id, created_at")
+            .select("id, client_id, created_at, deliverable")
             .eq("deliverable_status", "pending_approval")
             .order("created_at", desc=False)
             .limit(1000)
@@ -59,8 +102,18 @@ async def send_approval_rollups() -> int:
         cid = run.get("client_id")
         if not cid:
             continue
-        q = queues.setdefault(cid, {"count": 0, "oldest": run.get("created_at")})
+        q = queues.setdefault(
+            cid, {"count": 0, "oldest": run.get("created_at"), "drafts": []}
+        )
         q["count"] += 1
+        # The oldest few drafts ride in the email with one-click action links
+        # (runs are already ordered oldest-first).
+        if len(q["drafts"]) < _EMAIL_DRAFT_ROWS and run.get("id"):
+            deliverable = run.get("deliverable") or {}
+            title = ""
+            if isinstance(deliverable, dict):
+                title = str(deliverable.get("title") or "")
+            q["drafts"].append({"id": run["id"], "title": title or "Untitled draft"})
 
     sent = 0
     for cid, q in list(queues.items())[:_TENANT_BATCH]:
@@ -98,7 +151,8 @@ async def send_approval_rollups() -> int:
                 f"approval - the oldest has waited {oldest_days} "
                 f"day{'s' if oldest_days != 1 else ''}. Nothing sends until "
                 f"you approve it.</p>"
-                f"<p><a href='https://app.agentnexlify.com/dashboard/agent-os' "
+                + _draft_rows_html(cid, q.get("drafts") or [])
+                + f"<p><a href='https://app.agentnexlify.com/dashboard/agent-os' "
                 f"style='color:#6366f1;font-weight:600;text-decoration:none;'>"
                 f"Review your drafts &rarr;</a></p>"
                 f"</div>"

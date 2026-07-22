@@ -19,6 +19,7 @@ import NotificationBell from "./NotificationBell";
 import Sidebar from "./Sidebar";
 import SkeletonLoader from "./SkeletonLoader";
 import UpgradeGateBanner from "./UpgradeGateBanner";
+import { hasAgentOsAccess } from "../utils/planAccess";
 
 class PageErrorBoundary extends Component {
   constructor(props) {
@@ -314,8 +315,11 @@ export default function App() {
 
   // Poll pending Agent OS approvals every 30s so the sidebar badge stays
   // current from any page. Cheap GET - count + lightweight summary only.
+  // Skipped for plans outside the suite gate (stage-2, 2026-07-22): the
+  // backend would 402 and every poll would pop the upgrade banner passively.
   useEffect(() => {
     if (!token) return;
+    if (!hasAgentOsAccess(activePlan || user?.plan)) return;
     let cancelled = false;
     const refresh = () => {
       fetchOsPendingDeliverables(token)
@@ -333,7 +337,7 @@ export default function App() {
       cancelled = true;
       clearInterval(id);
     };
-  }, [token]);
+  }, [token, activePlan, user?.plan]);
 
   // Sync page state with browser back/forward buttons
   useEffect(() => {

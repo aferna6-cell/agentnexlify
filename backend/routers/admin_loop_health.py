@@ -210,6 +210,43 @@ def _guardrails_section(db, now: datetime) -> dict | None:
     }
 
 
+_FAST_PATH_TYPES = [
+    "os_fast_path_data_answer",
+    "os_fast_path_chat_project",
+    "os_research_run",
+    "email_action_approve",
+    "email_action_reject",
+]
+
+
+def _fast_paths_section(db, now: datetime) -> dict | None:
+    """7-day adoption counts for the suite fast paths (round-5 item 6).
+
+    Answers "is anyone using this?" with data instead of guesses: chat BI
+    answers, chat-queued projects, research briefs, and email one-click
+    approvals, each tagged in activity_log at the moment they fire.
+    """
+    cutoff = (now - timedelta(days=_RECENT_DAYS)).isoformat()
+    try:
+        rows = (
+            db.table("activity_log")
+            .select("activity_type")
+            .in_("activity_type", _FAST_PATH_TYPES)
+            .gte("created_at", cutoff)
+            .limit(2000)
+            .execute()
+        ).data or []
+    except Exception:
+        logger.warning("loop-health: fast-paths query failed", exc_info=True)
+        return None
+    counts = {t: 0 for t in _FAST_PATH_TYPES}
+    for row in rows:
+        t = row.get("activity_type")
+        if t in counts:
+            counts[t] += 1
+    return counts
+
+
 def _errors_section(db, now: datetime) -> int | None:
     cutoff = (now - timedelta(days=_RECENT_DAYS)).isoformat()
     try:
@@ -251,5 +288,6 @@ async def get_loop_health(
         "os_activity": _os_activity_section(db, now),
         "bridges": _bridges_section(db),
         "guardrails": _guardrails_section(db, now),
+        "fast_paths_7d": _fast_paths_section(db, now),
         "errors_7d": _errors_section(db, now),
     }

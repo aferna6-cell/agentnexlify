@@ -185,6 +185,16 @@ async def try_start_project(
             .insert({"title": ask[:60], "ask": ask, "status": "planning"})
             .execute()
         ).data[0]
+        try:
+            from backend.services.activity import log_activity
+
+            log_activity(
+                tenant_id=client_id,
+                activity_type="os_fast_path_chat_project",
+                description=f"Project queued from chat: {ask[:80]}",
+            )
+        except Exception:
+            logger.warning("os_chat_projects: usage log failed", exc_info=True)
         return _reply(
             db,
             client_id,

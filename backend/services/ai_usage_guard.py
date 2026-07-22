@@ -15,10 +15,23 @@ logger = logging.getLogger(__name__)
 # free     = lapsed/no-active-subscription state.
 # chatbot  = $19.99/mo — ~$4/mo Claude budget ≈ 800k tokens at blended cost.
 # agent_os = $99.99/mo — ~$25/mo Claude budget ≈ 5M tokens at blended cost.
+# Legacy/grandfathered plans (agent_os_gate.AGENT_OS_PLANS members) keep the
+# tiered budgets from their original contracts, matching the values
+# billing_reconciliation has always audited against. Until 2026-07-22 they
+# were missing here and ENFORCEMENT silently fell to the chatbot default —
+# a grandfathered enterprise tenant peaked at 363k tokens in May (45% of
+# that $19.99 cap; ~61% at the Sonnet-5 tokenizer's 1.35x). Re-baseline
+# measurement (2026-07-22, tenant_ai_usage_monthly): heaviest tenant-month
+# ever is 363k total tokens, zero alerts/hard-blocks — the current tier
+# values keep ample headroom and stay unchanged.
 PLAN_BASELINE_TOKENS: dict[str, int] = {
     "free": 100_000,
     "chatbot": 800_000,
     "agent_os": 5_000_000,
+    "growth": 1_000_000,
+    "autopilot": 1_200_000,
+    "professional": 2_000_000,
+    "enterprise": 5_000_000,
 }
 
 DEFAULT_BASELINE_TOKENS = PLAN_BASELINE_TOKENS["chatbot"]

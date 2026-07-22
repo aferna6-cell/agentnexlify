@@ -156,10 +156,23 @@ class TestPlanBaselineTokens:
         from backend.services.ai_usage_guard import PLAN_BASELINE_TOKENS
         assert PLAN_BASELINE_TOKENS["agent_os"] == 5_000_000
 
-    def test_no_legacy_plans_in_baseline(self):
+    def test_retired_plans_never_in_baseline(self):
+        # Contract corrected 2026-07-22: the old assertion kept LEGACY plans
+        # out of PLAN_BASELINE_TOKENS, so grandfathered full-platform
+        # contracts silently fell to the chatbot default (800k) - contradicting
+        # CLAUDE.md ("legacy plans honored; gates include them") and the
+        # tiered values billing_reconciliation has always audited against.
+        # The real invariant is that RETIRED names never come back.
         from backend.services.ai_usage_guard import PLAN_BASELINE_TOKENS
-        for old in ("growth", "autopilot", "professional", "enterprise"):
-            assert old not in PLAN_BASELINE_TOKENS
+        from backend.services.plan_catalog import RETIRED_PLANS
+
+        for retired in RETIRED_PLANS:
+            assert retired not in PLAN_BASELINE_TOKENS
+
+    def test_legacy_plans_enforced_at_contract_tiers(self):
+        from backend.services.ai_usage_guard import PLAN_BASELINE_TOKENS
+        assert PLAN_BASELINE_TOKENS["enterprise"] == 5_000_000
+        assert PLAN_BASELINE_TOKENS["professional"] == 2_000_000
 
     def test_resolve_policy_chatbot(self):
         from backend.services.ai_usage_guard import resolve_ai_usage_policy, ALERT_MULTIPLIER, HARD_LIMIT_MULTIPLIER

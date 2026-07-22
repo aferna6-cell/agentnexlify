@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  approveOsDeliverable,
   approveOsProject,
   cancelOsProject,
   createOsProject,
   fetchOsProject,
   listOsProjects,
+  rejectOsDeliverable,
 } from "../../utils/api/os";
 
 // Multi-department projects: one big ask becomes an approvable plan of
@@ -121,16 +123,39 @@ export default function ProjectsCard({ token }) {
     }
   };
 
+  const refreshSteps = async (projectId) => {
+    const out = await fetchOsProject(token, projectId);
+    setOpenSteps((prev) => ({ ...prev, [projectId]: out.steps || [] }));
+  };
+
   const toggleSteps = async (projectId) => {
     if (openSteps[projectId]) {
       setOpenSteps((prev) => ({ ...prev, [projectId]: null }));
       return;
     }
     try {
-      const out = await fetchOsProject(token, projectId);
-      setOpenSteps((prev) => ({ ...prev, [projectId]: out.steps || [] }));
+      await refreshSteps(projectId);
     } catch {
       setError("Could not load project steps.");
+    }
+  };
+
+  // Inline step-deliverable decision: a running project waits on the exact
+  // same approval as the Pending approvals queue - deciding it here keeps
+  // the whole loop on one screen. The runner picks the outcome up on its
+  // next tick.
+  const decideStep = async (projectId, runId, decision) => {
+    setError("");
+    try {
+      if (decision === "approve") {
+        await approveOsDeliverable(token, runId);
+      } else {
+        await rejectOsDeliverable(token, runId);
+      }
+      await refreshSteps(projectId);
+      await load();
+    } catch (e) {
+      setError(e?.message || "Could not update the step's draft.");
     }
   };
 
@@ -211,26 +236,65 @@ export default function ProjectsCard({ token }) {
           </div>
           {openSteps[project.id] && (
             <div style={{ marginTop: 8, display: "grid", gap: 4 }}>
-              {openSteps[project.id].map((step) => (
-                <div
-                  key={step.id}
-                  style={{ display: "flex", gap: 8, alignItems: "center" }}
-                >
-                  <span style={mutedStyle}>
-                    {step.position}. {step.department.replace("_", " ")}
-                  </span>
-                  <span
-                    style={{
-                      ...mutedStyle,
-                      flex: 1,
-                      color: "var(--text-secondary)",
-                    }}
-                  >
-                    {step.objective}
-                  </span>
-                  <StatusPill status={step.status} />
-                </div>
-              ))}
+              {openSteps[project.id].map((step) => {
+                const needsDecision =
+                  step.status === "awaiting_approval" &&
+                  step.deliverable_status === "pending_approval" &&
+                  step.agent_run_id;
+                return (
+                  <div key={step.id}>
+                    <div
+                      style={{ display: "flex", gap: 8, alignItems: "center" }}
+                    >
+                      <span style={mutedStyle}>
+                        {step.position}. {step.department.replace("_", " ")}
+                      </span>
+                      <span
+                        style={{
+                          ...mutedStyle,
+                          flex: 1,
+                          color: "var(--text-secondary)",
+                        }}
+                      >
+                        {step.objective}
+                      </span>
+                      <StatusPill status={step.status} />
+                    </div>
+                    {step.deliverable_title && (
+                      <div style={{ ...mutedStyle, paddingLeft: 16 }}>
+                        Produced: {step.deliverable_title}
+                      </div>
+                    )}
+                    {needsDecision && (
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 8,
+                          paddingLeft: 16,
+                          marginTop: 4,
+                        }}
+                      >
+                        <button
+                          style={btnStyle}
+                          onClick={() =>
+                            decideStep(project.id, step.agent_run_id, "approve")
+                          }
+                        >
+                          Approve draft
+                        </button>
+                        <button
+                          style={btnQuiet}
+                          onClick={() =>
+                            decideStep(project.id, step.agent_run_id, "reject")
+                          }
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
