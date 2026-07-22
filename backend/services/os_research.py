@@ -158,6 +158,16 @@ async def run_research(db, client_id: str, topic: str) -> dict:
             "os_research: run persist failed tenant=%s", client_id, exc_info=True
         )
         return {"error": "could not save the research brief"}
+    try:
+        from backend.services.activity import log_activity
+
+        log_activity(
+            tenant_id=client_id,
+            activity_type="os_research_run",
+            description=f"Research brief produced: {topic[:80]}",
+        )
+    except Exception:
+        logger.warning("os_research: usage log failed", exc_info=True)
     return {"run": created}
 
 

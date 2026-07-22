@@ -69,6 +69,17 @@ async def try_data_answer(
         )
         return None
 
+    try:
+        from backend.services.activity import log_activity
+
+        log_activity(
+            tenant_id=client_id,
+            activity_type="os_fast_path_data_answer",
+            description=f"Chat BI fast path: {result.get('template') or 'template'}",
+        )
+    except Exception:
+        logger.warning("os_data_answers: usage log failed", exc_info=True)
+
     return {
         "user_message": user_message_row,
         "assistant_message": assistant_message,

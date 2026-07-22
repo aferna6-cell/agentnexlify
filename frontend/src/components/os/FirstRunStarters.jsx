@@ -73,6 +73,9 @@ const SHARED_STARTERS = [
   "Draft an email campaign for past customers",
   "Send an invoice for a finished job",
   "What's on my calendar this week?",
+  // Suite fast paths (round 5): instant BI answers + chat-queued projects.
+  "How many leads did we get this week?",
+  "Start a project: win back customers we haven't seen in a while",
 ];
 
 function getStarters(businessType) {

@@ -24,6 +24,7 @@ import DeliverablePanel from "../components/os/DeliverablePanel";
 import DemoTour from "../components/os/DemoTour";
 import MemoryPanel from "../components/os/MemoryPanel";
 import FirstRunStarters from "../components/os/FirstRunStarters";
+import SuiteHintChips from "../components/os/SuiteHintChips";
 import OsInsightsCard from "../components/os/OsInsightsCard";
 import OpportunityCards from "../components/os/OpportunityCards";
 import ComposerAttachments from "../components/os/ComposerAttachments";
@@ -878,6 +879,11 @@ export default function AgentOS({ onNavigate }) {
         )}
 
         {/* Composer */}
+        <SuiteHintChips
+          onSelectPrompt={setComposer}
+          composerRef={composerRef}
+          disabled={sending || capReached}
+        />
         <ComposerAttachments
           token={token}
           attachments={attachments}

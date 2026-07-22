@@ -72,14 +72,55 @@ def _get_project(db, client_id: str, project_id: str) -> dict:
     return rows[0]
 
 
+def _attach_deliverables(db, client_id: str, steps: list[dict]) -> list[dict]:
+    """Attach deliverable_status + deliverable_title to steps with runs.
+
+    Lets the project timeline show what each step produced and offer inline
+    approve/reject on awaiting steps without a second lookup per step.
+    Best-effort: a failure returns the bare steps.
+    """
+    run_ids = [s.get("agent_run_id") for s in steps if s.get("agent_run_id")]
+    if not run_ids:
+        return steps
+    try:
+        runs = (
+            tenant_select(
+                db, "os_agent_runs", client_id, "id, deliverable, deliverable_status"
+            )
+            .in_("id", run_ids)
+            .execute()
+        ).data or []
+    except Exception:
+        logger.warning("os_projects: deliverable attach failed", exc_info=True)
+        return steps
+    by_id = {r.get("id"): r for r in runs}
+    out = []
+    for step in steps:
+        run = by_id.get(step.get("agent_run_id"))
+        if run:
+            deliverable = run.get("deliverable") or {}
+            step = {
+                **step,
+                "deliverable_status": run.get("deliverable_status"),
+                "deliverable_title": (
+                    deliverable.get("title")
+                    if isinstance(deliverable, dict)
+                    else None
+                ),
+            }
+        out.append(step)
+    return out
+
+
 @router.get("/projects/{project_id}")
 async def get_project(project_id: str, claims: dict = Depends(_get_current_tenant)):
     _require_flag()
     db = get_service_supabase()
     project = _get_project(db, claims["tenant_id"], project_id)
+    steps = project_steps(db, claims["tenant_id"], project_id)
     return {
         "project": project,
-        "steps": project_steps(db, claims["tenant_id"], project_id),
+        "steps": _attach_deliverables(db, claims["tenant_id"], steps),
     }
 
 

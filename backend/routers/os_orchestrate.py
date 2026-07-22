@@ -23,13 +23,21 @@ from pydantic import BaseModel, Field
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
 from backend.services import agent_os_bridge, usage_meter
+from backend.services.agent_os_gate import require_agent_os_access
 from backend.services.demo_guard import is_demo_tenant
 from backend.services.os_thread_runner import process_user_turn
 from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/os", tags=["agent-os"])
+router = APIRouter(
+    prefix="/api/v1/os",
+    tags=["agent-os"],
+    # Stage-2 plan gate (2026-07-22). Demo tenants carry an allowed plan, so
+    # the public sandbox is unaffected; its own daily turn cap still runs
+    # inside the endpoint.
+    dependencies=[Depends(require_agent_os_access)],
+)
 
 # Live-demo sandbox: hard daily turn budget shared by all demo visitors.
 # Self-resets at midnight UTC (like the nightly data reset) and is checked

@@ -18,13 +18,21 @@ from pydantic import BaseModel, Field
 
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
+from backend.services.agent_os_gate import require_agent_os_access
 from backend.services.os_action_dispatch import queue_action_for_run
 from backend.services.os_actions import all_actions, get_action, run_action
 from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/os", tags=["agent-os"])
+# Stage-2 plan gate (2026-07-22). The signed email-action pages live in
+# routers/os_email_actions.py, deliberately outside this gate - owners click
+# them straight from their inbox with no JWT.
+router = APIRouter(
+    prefix="/api/v1/os",
+    tags=["agent-os"],
+    dependencies=[Depends(require_agent_os_access)],
+)
 
 
 class DeliverableEditRequest(BaseModel):

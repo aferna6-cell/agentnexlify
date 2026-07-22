@@ -23,12 +23,20 @@ from pydantic import BaseModel, Field
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
 from backend.services import usage_meter
+from backend.services.agent_os_gate import require_agent_os_access
 from backend.services.os_thread_runner import process_user_turn
 from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/os", tags=["agent-os"])
+router = APIRouter(
+    prefix="/api/v1/os",
+    tags=["agent-os"],
+    # Stage-2 plan gate (2026-07-22): core chat joins the suite gate now that
+    # the 402 payload renders as a real upsell. Demo tenants carry an allowed
+    # plan; inbound bridges call the runner service directly and are unaffected.
+    dependencies=[Depends(require_agent_os_access)],
+)
 
 
 class ThreadCreateRequest(BaseModel):

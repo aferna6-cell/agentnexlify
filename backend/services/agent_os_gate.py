@@ -10,10 +10,11 @@ Plan set: `agent_os` plus every legacy/grandfathered plan still honored on
 old contracts (CLAUDE.md "Plan names + prices" - gates include them).
 `chatbot` and `free` stay out.
 
-Staged rollout: the core chat surfaces (os_threads / os_orchestrate /
-os_deliverables) are intentionally NOT gated in this pass - existing
-conversations keep working while the gate proves out on the new suite
-surfaces. Widening is a follow-up decision, not a default.
+Staged rollout: stage 1 (2026-07-21) gated the six new suite routers;
+stage 2 (2026-07-22) widened to the core chat surfaces (os_threads /
+os_orchestrate / os_deliverables) once the 402 payload rendered as a real
+upsell in the dashboard. Demo tenants carry an allowed plan; inbound
+bridges and the signed email-action pages bypass routers entirely.
 
 Fail-open on read errors: a DB blip must not lock paying owners out of
 their workforce; the gate only blocks on a positively-known outside plan.
