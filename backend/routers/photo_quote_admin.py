@@ -11,13 +11,23 @@ is ``client_id``-scoped (migration 108).
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 
 from backend.dependencies import _get_current_tenant
-from backend.services import photo_quote_admin_service, photo_quote_usage
+from backend.services import (
+    photo_quote_admin_service,
+    photo_quote_telemetry,
+    photo_quote_usage,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/photo-quotes", tags=["photo-quote-admin"])
+
+
+class QuoteFeedback(BaseModel):
+    quote_id: str
+    feedback: str  # correct | too_low | too_high | unclear
 
 
 @router.get("/{tenant_id}")
@@ -30,7 +40,7 @@ async def list_photo_quotes(
     end_date: str = Query(None),
     claims: dict = Depends(_get_current_tenant),
 ):
-    """Return ``{items, usage}`` for the tenant's Quote Requests dashboard."""
+    """Return ``{items, usage, telemetry}`` for the Quote Requests dashboard."""
     if claims.get("tenant_id") != tenant_id:
         raise HTTPException(status_code=403, detail="Tenant mismatch")
 
@@ -43,4 +53,25 @@ async def list_photo_quotes(
         end_date=end_date,
     )
     usage = photo_quote_usage.get_usage_summary(tenant_id)
-    return {"items": items, "usage": usage}
+    telemetry = {
+        "error_rate": photo_quote_telemetry.compute_error_rate(tenant_id),
+        "conversion": photo_quote_telemetry.compute_conversion_rate(tenant_id),
+    }
+    return {"items": items, "usage": usage, "telemetry": telemetry}
+
+
+@router.post("/{tenant_id}/feedback")
+async def submit_quote_feedback(
+    tenant_id: str,
+    payload: QuoteFeedback,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """Record the tenant's rating on one quote (#44 pilot instrumentation)."""
+    if claims.get("tenant_id") != tenant_id:
+        raise HTTPException(status_code=403, detail="Tenant mismatch")
+    if payload.feedback not in photo_quote_telemetry.VALID_FEEDBACK:
+        raise HTTPException(status_code=422, detail="Invalid feedback value")
+    ok = photo_quote_telemetry.record_feedback(
+        tenant_id, payload.quote_id, payload.feedback
+    )
+    return {"ok": ok}
