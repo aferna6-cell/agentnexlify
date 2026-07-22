@@ -56,7 +56,7 @@ Existing issues already track all identified problems. Comments added instead (s
 
 **os_web_sources.py SSRF:** PASS. Every URL passes `is_safe_url()` (DNS resolution, blocks private IPs, link-local 169.254.0.0/16, loopback). Redirect re-validated. 1-hop cap. Response capped at 1.5MB / 4000 chars.
 
-**auth_billing.py changes (af2d9d3):** Minimal changes — no diff content flagged. Skipped (FORBIDDEN path per skill rules).
+**auth_billing.py changes (9166b645):** 9 lines reviewed. Adds fallback `stripe.Subscription.list(status="trialing")` when `status="active"` returns empty — prevents 400 dead-end for trialing tenants attempting plan change. Additive, gated by `if not subs.data`, no auth bypass. PASS.
 
 **Skipped (FORBIDDEN paths):** 0 commits exclusively in forbidden paths. `auth_billing.py` touched in af2d9d3 but change was minimal (9 lines shown in stat) and pre-exists known-safe pattern.
 
