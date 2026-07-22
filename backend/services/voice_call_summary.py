@@ -178,6 +178,33 @@ async def _generate_call_summary(call_id: str, tenant_id: str, lead_id: str | No
             call_id,
         )
 
+    # Round 6: mirror the call into the owner's AI Workforce as an
+    # observe-only thread (voice bridge, opt-in per tenant). Calls were the
+    # one live channel invisible where the owner works. Best-effort - a
+    # bridge failure never disturbs the saved summary.
+    try:
+        from backend.services.os_inbound_bridge import bridge_voice
+
+        parts = [f"Phone call from {caller_phone or 'unknown number'}."]
+        if summary:
+            parts.append(f"Summary: {summary}")
+        if sentiment:
+            parts.append(f"Caller sentiment: {sentiment}.")
+        if follow_up:
+            parts.append(f"Suggested follow-up: {follow_up}")
+        await bridge_voice(
+            db,
+            tenant_id,
+            caller_phone=caller_phone,
+            call_id=call_id,
+            user_content="\n".join(parts)[:4000],
+            sender_metadata={"caller_phone": caller_phone, "call_id": call_id},
+        )
+    except Exception:
+        logger.exception(
+            "Voice bridge failed for call %s (summary still saved)", call_id
+        )
+
 
 async def _insert_call_action_items(
     tenant_id: str,

@@ -47,6 +47,27 @@ describe("ResearchCard", () => {
     expect(runOsResearch).toHaveBeenCalledWith(
       "jwt",
       "How do regulars respond to pricing?",
+      [],
+    );
+  });
+
+  it("passes comma-separated web page URLs, capped at three", async () => {
+    runOsResearch.mockResolvedValue({ run: BRIEF_RUN });
+    render(<ResearchCard token="jwt" />);
+    typeTopic("How does our pricing compare to competitors?");
+    fireEvent.change(screen.getByPlaceholderText(/web pages to include/), {
+      target: {
+        value: "https://a.com, b.com/pricing , https://c.com, https://d.com",
+      },
+    });
+    fireEvent.click(screen.getByText("Research"));
+    expect(
+      await screen.findByText("Research brief: pricing strategy"),
+    ).toBeInTheDocument();
+    expect(runOsResearch).toHaveBeenCalledWith(
+      "jwt",
+      "How does our pricing compare to competitors?",
+      ["https://a.com", "b.com/pricing", "https://c.com"],
     );
   });
 

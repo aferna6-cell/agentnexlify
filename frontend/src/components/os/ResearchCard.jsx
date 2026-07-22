@@ -53,6 +53,7 @@ const mutedStyle = { fontSize: "0.8rem", color: "var(--text-muted)" };
 
 export default function ResearchCard({ token }) {
   const [topic, setTopic] = useState("");
+  const [urlsText, setUrlsText] = useState("");
   const [run, setRun] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -65,12 +66,17 @@ export default function ResearchCard({ token }) {
       setError("Give the research a real topic - at least 10 characters.");
       return;
     }
+    const urls = urlsText
+      .split(",")
+      .map((u) => u.trim())
+      .filter(Boolean)
+      .slice(0, 3);
     setBusy(true);
     setError("");
     setRun(null);
     setProjectNote("");
     try {
-      const out = await runOsResearch(token, text);
+      const out = await runOsResearch(token, text, urls);
       setRun(out.run || null);
     } catch (e) {
       setError(e?.message || "Research failed.");
@@ -126,6 +132,15 @@ export default function ResearchCard({ token }) {
           {busy ? "Researching..." : "Research"}
         </button>
       </div>
+      <input
+        style={{ ...inputStyle, width: "100%", marginTop: 8 }}
+        placeholder="Optional: web pages to include, comma-separated (up to 3 URLs - e.g. a competitor's pricing page)"
+        value={urlsText}
+        onChange={(e) => setUrlsText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") research();
+        }}
+      />
       {error && (
         <div style={{ color: "#f87171", fontSize: "0.85rem", marginTop: 10 }}>
           {error}

@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 # Threads originating from these channels are customer-facing - the person
 # typing cannot connect the owner's integrations (os_inbound_bridge sources).
-_INBOUND_THREAD_SOURCES = {"widget", "email", "sms", "facebook", "instagram"}
+_INBOUND_THREAD_SOURCES = {"widget", "email", "sms", "facebook", "instagram", "voice"}
 
 ENGINE_OFFLINE_REPLY = (
     "Your message is saved, but the agent engine is temporarily unavailable. "
