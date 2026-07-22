@@ -1,0 +1,58 @@
+{
+  "run": 100,
+  "date": "2026-07-22",
+  "milestone": "run_100",
+  "winner": {
+    "title": "Fix Agent OS plan gate coverage gap: 10 ungated os_* routers",
+    "category": "code_health",
+    "severity": "HIGH",
+    "effort": "M",
+    "source": "audits/audit-architecture-2026-07-22.md finding H1",
+    "ungated_routers": [
+      "os_agent_runs",
+      "os_backlog",
+      "os_files",
+      "os_graph",
+      "os_insights",
+      "os_memory",
+      "os_run_trace",
+      "os_sync",
+      "os_usage",
+      "os_usage_breakdown"
+    ],
+    "action": "File GH issue → issue-to-pr-loop executes when #399 unblocked",
+    "artifact": "subconscious/runs/2026-07-22/winning-concept.md"
+  },
+  "ideas_generated": 5,
+  "ideas_killed": 1,
+  "kill_log": [
+    {
+      "idea": "Zapier plan_status verification gap",
+      "reason": "False positive — bug #107 (2026-06-13) already fixed. authentication.js line 14 confirms 402 for Free/cancelled tenants."
+    }
+  ],
+  "parking_lot": [
+    "Step 9G Drive KB health (target: run ~105)",
+    "Mock DB helpers shared fixture (target: run ~103)",
+    "calls.py god class split H2 (target: run ~104)"
+  ],
+  "mandate_checks": {
+    "step_9f_in_skill": "PASS",
+    "gh_399_status": "OPEN day 18+",
+    "gh_413_status": "OPEN day 10+",
+    "nightly_2026_07_21": "NOT_FOUND (only 3 nightly files exist; 2026-07-22 is current)",
+    "governance_corrections_run99": "VERIFIED via PR #475"
+  },
+  "bonus_actions": [
+    "SUPABASE_ACCESS_TOKEN comment bundled into GH #399",
+    "GH #413 run-100 comment filed"
+  ],
+  "health_signals": {
+    "widget_byte_identical": "PASS",
+    "client_id_usage": "PASS",
+    "future_annotations": "PASS",
+    "moratorium_active": false,
+    "autopilot_loop_stalled": true,
+    "kb_staleness_days": 9
+  }
+}
