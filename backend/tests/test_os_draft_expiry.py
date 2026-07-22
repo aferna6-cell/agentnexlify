@@ -243,7 +243,14 @@ async def test_notify_owner_digest_skips_missing_owner_email(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_sweep_expires_across_tenants_and_notifies_selectively(monkeypatch):
-    db = _TenantsDB([{"id": "tenant-a"}, {"id": "tenant-b"}])
+    # Sweep covers every tenant since 2026-07-22; digests stay scoped to
+    # active paid plans, so fixture tenants carry plan fields now.
+    db = _TenantsDB(
+        [
+            {"id": "tenant-a", "plan": "agent_os", "plan_status": "active"},
+            {"id": "tenant-b", "plan": "agent_os", "plan_status": "active"},
+        ]
+    )
     monkeypatch.setattr(os_draft_expiry, "get_service_supabase", lambda: db)
 
     per_tenant = {
@@ -269,6 +276,32 @@ async def test_sweep_expires_across_tenants_and_notifies_selectively(monkeypatch
     assert total == 2
     # Only the tenant that had something expire gets a digest.
     assert notified == [("tenant-a", 2)]
+
+
+@pytest.mark.asyncio
+async def test_sweep_covers_lapsed_tenants_without_emailing_them(monkeypatch):
+    # Prod 2026-07-22: June drafts sat pending forever on a plan='free'
+    # (lapsed) tenant because the old sweep filtered it out. Hygiene is
+    # plan-independent; the digest email is not.
+    db = _TenantsDB([{"id": "tenant-lapsed", "plan": "free", "plan_status": "canceled"}])
+    monkeypatch.setattr(os_draft_expiry, "get_service_supabase", lambda: db)
+    monkeypatch.setattr(
+        os_draft_expiry,
+        "expire_stale_drafts",
+        lambda db_, client_id: [_stale_row("run-old")],
+    )
+    notified = []
+
+    async def fake_digest(db_, client_id, expired):
+        notified.append(client_id)
+        return True
+
+    monkeypatch.setattr(os_draft_expiry, "_notify_owner_digest", fake_digest)
+
+    total = await os_draft_expiry.run_draft_expiry_sweep()
+
+    assert total == 1
+    assert notified == []
 
 
 @pytest.mark.asyncio

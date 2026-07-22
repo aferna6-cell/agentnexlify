@@ -59,6 +59,38 @@ def _first_name(full: str) -> str:
     return (full or "").strip().split(" ")[0] or "there"
 
 
+def _pending_metadata_ids(db: Any, client_id: str, key: str) -> set:
+    """IDs (lead_id / invoice_id) that already have a pending draft.
+
+    Prod 2026-07-22: accepting the cold-leads card twice produced up to 5
+    identical "Check in with ..." drafts per lead in one day - drafting
+    does not touch the lead row, so every accept re-drafted every
+    still-cold lead. Skip anything that already has a draft waiting.
+    """
+    try:
+        rows = (
+            tenant_table(db, "os_agent_runs", client_id)
+            .select("deliverable")
+            .eq("deliverable_status", "pending_approval")
+            .limit(200)
+            .execute()
+        ).data or []
+    except Exception:
+        logger.warning(
+            "opportunity_fulfill: pending-draft scan failed %s",
+            client_id,
+            exc_info=True,
+        )
+        return set()
+    ids = set()
+    for row in rows:
+        meta = (row.get("deliverable") or {}).get("metadata") or {}
+        value = meta.get(key)
+        if value:
+            ids.add(value)
+    return ids
+
+
 def _business_identity(db: Any, client_id: str) -> tuple:
     """(business_name, signoff) with safe defaults; never raises."""
     try:
@@ -181,8 +213,12 @@ async def _draft_lead_followups(db: Any, client_id: str) -> int:
         .limit(25)
         .execute()
     ).data or []
+    already_drafted = _pending_metadata_ids(db, client_id, "lead_id")
     contactable = [
-        l for l in leads if (l.get("email") or "").strip() or (l.get("phone") or "").strip()
+        l
+        for l in leads
+        if l.get("id") not in already_drafted
+        and ((l.get("email") or "").strip() or (l.get("phone") or "").strip())
     ][:_MAX_DRAFTS]
     if not contactable:
         return 0
@@ -202,7 +238,7 @@ async def _draft_lead_followups(db: Any, client_id: str) -> int:
 
     drafted = 0
     for lead in contactable:
-        name = lead.get("name") or "there"
+        name = (lead.get("name") or "").strip()
         first = _first_name(name)
         email = (lead.get("email") or "").strip()
         phone = (lead.get("phone") or "").strip()
@@ -222,7 +258,9 @@ async def _draft_lead_followups(db: Any, client_id: str) -> int:
             client_id,
             thread_id=thread_id,
             agent_name="sales",
-            title=f"Check in with {name}",
+            # Nameless lead -> identify by contact info. "Check in with
+            # there" shipped to real queues before this fallback existed.
+            title=f"Check in with {name or recipient}",
             body=body,
             channel=channel,
             recipient=recipient,
@@ -246,7 +284,12 @@ async def _draft_invoice_reminders(db: Any, client_id: str) -> int:
         .limit(25)
         .execute()
     ).data or []
-    linked = [i for i in overdue if i.get("lead_id")][:_MAX_DRAFTS]
+    already_drafted = _pending_metadata_ids(db, client_id, "invoice_id")
+    linked = [
+        i
+        for i in overdue
+        if i.get("lead_id") and i.get("id") not in already_drafted
+    ][:_MAX_DRAFTS]
     if not linked:
         return 0
 

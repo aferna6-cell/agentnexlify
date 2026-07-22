@@ -97,7 +97,7 @@ def collect_vitals(fetch):
             "activity_type": (
                 "in.(outbound_guard_flagged,kb_eval_regression,"
                 "os_fast_path_data_answer,os_fast_path_chat_project,"
-                "os_research_run,email_action_approve,email_action_reject)"
+                "os_research_run,email_action_approve,email_action_reject,email_action_viewed)"
             ),
             "limit": "500",
         },

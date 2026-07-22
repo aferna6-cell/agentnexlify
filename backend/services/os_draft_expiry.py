@@ -179,11 +179,14 @@ async def run_draft_expiry_sweep() -> int:
     """
     db = get_service_supabase()
     try:
+        # ALL tenants, whatever the plan: prod 2026-07-22 found June drafts
+        # still pending on a lapsed (plan='free') tenant because the old
+        # filter skipped them - queue hygiene is plan-independent. Only the
+        # digest email stays scoped to active paid tenants; lapsed accounts
+        # get the cleanup, not marketing-adjacent mail.
         tenants = (
             db.table("tenants")
-            .select("id")
-            .neq("plan", "free")
-            .eq("plan_status", "active")
+            .select("id, plan, plan_status")
             .limit(_TENANT_BATCH)
             .execute()
         ).data or []
@@ -196,7 +199,8 @@ async def run_draft_expiry_sweep() -> int:
         expired = expire_stale_drafts(db, t["id"])
         if expired:
             total += len(expired)
-            await _notify_owner_digest(db, t["id"], expired)
+            if (t.get("plan") or "free") != "free" and t.get("plan_status") == "active":
+                await _notify_owner_digest(db, t["id"], expired)
     if total:
         logger.info("os_draft_expiry: expired %d stale drafts", total)
     return total

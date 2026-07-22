@@ -89,6 +89,22 @@ async def email_action_confirm(token: str = Query(min_length=16)):
     except Exception:
         logger.warning("email_action: load failed", exc_info=True)
         return _invalid()
+
+    # Funnel meter (round 8): a valid-token GET means the owner opened the
+    # link (scanner prefetches also land here - treat as upper bound).
+    # Distinguishes "rollup never opened" from "opened, didn't decide".
+    try:
+        from backend.services.activity import log_activity
+
+        log_activity(
+            tenant_id=payload["c"],
+            activity_type="email_action_viewed",
+            description=f"One-click {payload['a']} page viewed",
+            metadata={"run_id": payload["r"], "action": payload["a"], "state": state},
+        )
+    except Exception:
+        logger.warning("email_action: view log failed", exc_info=True)
+
     if state != "pending":
         return _state_page(state, title, payload["a"])
 
