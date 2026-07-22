@@ -58,3 +58,7 @@ widget key - the connect flow could not work end to end.
 - Revoking or regenerating the key kills existing connections on their
   next call (key checked per request; nothing cached).
 - `python -m backend.mcp_server` still runs stdio mode for local tests.
+
+## Activation log
+
+- 2026-07-22: first live tenant activated (Agent Nexlify, enterprise). Live tools/call smoke passed over header auth; key readable from MCP Setup, rotate any time.
