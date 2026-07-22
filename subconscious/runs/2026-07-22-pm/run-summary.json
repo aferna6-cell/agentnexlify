@@ -1,0 +1,46 @@
+{
+  "run": 101,
+  "date": "2026-07-22-pm",
+  "winner": {
+    "title": "Fix nightly LOC guardrail: per-fix vs total-batch ambiguity",
+    "category": "workflow_efficiency",
+    "severity": "MEDIUM",
+    "effort": "XS",
+    "source": "docs/dev-knowledge/nightly-reviews/2026-07-22.md — 0 autonomous fixes on 18 MEDIUM/LOW commits",
+    "autonomous_executable": true,
+    "requires_human": false,
+    "action": "Edit .claude/skills/nightly-commit-review/SKILL.md lines 110 and 308 — clarify LOC guardrail to per-fix not per-batch. Commit to main [skip ci].",
+    "artifact": "subconscious/runs/2026-07-22-pm/winning-concept.md"
+  },
+  "ideas_generated": 5,
+  "ideas_killed": 2,
+  "kill_log": [
+    {
+      "idea": "Wire mcp_client.py into os_thread_runner.py",
+      "kill_reason": "PR #537 already has this implementation. Creating a 3rd parallel attempt worsens merge situation. Correct path: merge PR #559 → rebase PR #537 → merge."
+    },
+    {
+      "idea": "Subconscious PR dedup guard sentinel file",
+      "kill_reason": "Low-frequency problem, marginal improvement over existing dedup guard. Deferred to future run if collision recurs."
+    }
+  ],
+  "mandate_checks": {
+    "step_9f_status": "PASS — fired correctly in today's nightly (KB stale 9 days, comment on GH #403)",
+    "nightly_bash_path": "Remote Claude Routine invokes SKILL.md directly — bash script is manual-only fallback (disabled by default)",
+    "gh_399_autopilot_token": "STILL OPEN — Day 19+. Human action required.",
+    "gh_403_anthropic_api_key": "STILL OPEN — KB stale 9 days. Human action required.",
+    "gh_413_referral_reward": "CLOSED 2026-07-22 — Railway activation (REFERRAL_REWARD_ENABLED=1) unverified. Check Railway Variables.",
+    "gh_558_plan_gate": "OPEN — 10 os_* routers ungated. PR #559 ready for review (run 100 AM winner).",
+    "pr_537_conflict": "OPEN — mcp_client.py wiring + Step 9F bash conflicts with PR #559. Merge sequence: #559 first, then rebase #537."
+  },
+  "governance_updates": {
+    "total_runs": 101,
+    "referral_direction_correction": "run-93 referral direction updated: GH #413 closed 2026-07-22, Railway verification pending"
+  },
+  "prior_run": {
+    "run": 100,
+    "date": "2026-07-22",
+    "winner": "Fix Agent OS plan gate coverage gap: 10 ungated os_* routers",
+    "pr": 559
+  }
+}
