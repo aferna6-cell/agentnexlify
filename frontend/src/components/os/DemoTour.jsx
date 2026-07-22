@@ -1,14 +1,16 @@
 /**
- * DemoTour - first-visit guided coach-mark tour for live-demo sessions.
+ * DemoTour - first-visit guided coach-mark tour for the workforce page.
  *
- * Shows a 3-step spotlight walking the visitor to the wow moment: the pending
- * draft waiting for approval. Visible only when:
- *   - user.role === "demo"
- *   - sessionStorage key "anx_demo_tour_done" is NOT set
+ * Two audiences (suite onboarding, round 7 item 5):
+ *   - Demo visitors (user.role === "demo"): once per session via the
+ *     sessionStorage key "anx_demo_tour_done"; after the 2-hour demo token
+ *     expires the visitor gets a fresh session and the tour runs again.
+ *   - Real owners: once ever per browser via the localStorage key
+ *     "anx_os_tour_done", with owner copy (no "sends are simulated" line) -
+ *     a new agent_os signup lands here from the wizard and gets walked to
+ *     the approval loop on their first visit.
  *
- * Dismissal (Skip or Done) sets the key so the tour appears once per session.
- * After the 2-hour demo token expires the visitor gets a fresh session and
- * the tour runs again.
+ * Dismissal (Skip or Done) sets the matching key.
  *
  * Targets are located by data-tour attributes added to the OS page:
  *   - data-tour="thread-rail" - the inbox thread list
@@ -22,6 +24,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 
 const STORAGE_KEY = "anx_demo_tour_done";
+const OWNER_STORAGE_KEY = "anx_os_tour_done";
 
 const STEPS = [
   {
@@ -38,6 +41,24 @@ const STEPS = [
     target: "approve-button",
     heading: "Nothing sends without your OK",
     body: "Tap Approve to see it go out. In the demo, sends are simulated - no real messages leave.",
+  },
+];
+
+const OWNER_STEPS = [
+  {
+    target: "thread-rail",
+    heading: "Meet your AI workforce",
+    body: "Ask for anything here - follow up with leads, draft an email, research a competitor. Each thread is a task your AI staff works on.",
+  },
+  {
+    target: "deliverable-panel",
+    heading: "Drafts land here for review",
+    body: "When your staff writes something outbound - a text, an email, a quote - the draft parks here. Pick a starter task below to see it happen.",
+  },
+  {
+    target: "approve-button",
+    heading: "Nothing sends without your OK",
+    body: "Every outbound draft waits for your approval. Approve it and your staff sends it; reject it and they learn from the feedback.",
   },
 ];
 
@@ -104,13 +125,21 @@ export default function DemoTour() {
   const [visible, setVisible] = useState(false);
   const [targetRect, setTargetRect] = useState(null);
 
-  // Determine whether to show on mount
+  const isDemo = user?.role === "demo";
+  const steps = isDemo ? STEPS : OWNER_STEPS;
+
+  // Determine whether to show on mount. Demo: once per session. Owner:
+  // once ever per browser (first workforce visit after signup).
   useEffect(() => {
-    if (!user || user.role !== "demo") return;
+    if (!user) return;
     try {
-      if (sessionStorage.getItem(STORAGE_KEY)) return;
+      if (user.role === "demo") {
+        if (sessionStorage.getItem(STORAGE_KEY)) return;
+      } else if (localStorage.getItem(OWNER_STORAGE_KEY)) {
+        return;
+      }
     } catch {
-      // sessionStorage unavailable - show the tour anyway
+      // storage unavailable - show the tour anyway
     }
     setVisible(true);
   }, [user]);
@@ -123,7 +152,7 @@ export default function DemoTour() {
     }
     removeAllHighlights();
 
-    const current = STEPS[step];
+    const current = steps[step];
     if (!current) return;
 
     // Allow the DOM to settle (target may appear slightly after state update)
@@ -147,24 +176,28 @@ export default function DemoTour() {
     removeAllHighlights();
     setVisible(false);
     try {
-      sessionStorage.setItem(STORAGE_KEY, "1");
+      if (isDemo) {
+        sessionStorage.setItem(STORAGE_KEY, "1");
+      } else {
+        localStorage.setItem(OWNER_STORAGE_KEY, "1");
+      }
     } catch {
-      // sessionStorage unavailable - tour will show again on next mount
+      // storage unavailable - tour will show again on next mount
     }
-  }, []);
+  }, [isDemo]);
 
   const handleNext = useCallback(() => {
-    if (step < STEPS.length - 1) {
+    if (step < steps.length - 1) {
       setStep((s) => s + 1);
     } else {
       dismiss();
     }
-  }, [step, dismiss]);
+  }, [step, steps.length, dismiss]);
 
   if (!visible) return null;
 
-  const current = STEPS[step];
-  const isLast = step === STEPS.length - 1;
+  const current = steps[step];
+  const isLast = step === steps.length - 1;
   const posStyle = cardPosition(targetRect);
 
   return (
@@ -196,7 +229,7 @@ export default function DemoTour() {
           boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
         }}
         role="dialog"
-        aria-label={`Tour step ${step + 1} of ${STEPS.length}: ${current.heading}`}
+        aria-label={`Tour step ${step + 1} of ${steps.length}: ${current.heading}`}
       >
         {/* Step indicator */}
         <div
@@ -206,7 +239,7 @@ export default function DemoTour() {
             marginBottom: 12,
           }}
         >
-          {STEPS.map((_, i) => (
+          {steps.map((_, i) => (
             <span
               key={i}
               style={{

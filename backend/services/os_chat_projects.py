@@ -19,12 +19,13 @@ import logging
 import re
 from datetime import datetime, timezone
 
+from backend.services.os_constants import INBOUND_THREAD_SOURCES
 from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
 
-# Owner-facing dashboard threads only. Mirrors os_thread_runner's inbound set.
-_INBOUND_THREAD_SOURCES = {"widget", "email", "sms", "facebook", "instagram", "voice"}
+# Owner-facing dashboard threads only. Alias kept for existing callers/tests.
+_INBOUND_THREAD_SOURCES = INBOUND_THREAD_SOURCES
 
 # Deterministic triggers: explicit project phrasing at the start of the
 # message. Ordinary asks ("plan my week") never match.

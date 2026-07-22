@@ -37,6 +37,7 @@ from backend.services import (
     os_routing_memory,
 )
 from backend.services.os_action_dispatch import queue_action_for_run
+from backend.services.os_constants import INBOUND_THREAD_SOURCES
 from backend.services.os_outbound_mirror import mirror_assistant_message
 from backend.services.tenant_scope import tenant_table
 
@@ -44,7 +45,8 @@ logger = logging.getLogger(__name__)
 
 # Threads originating from these channels are customer-facing - the person
 # typing cannot connect the owner's integrations (os_inbound_bridge sources).
-_INBOUND_THREAD_SOURCES = {"widget", "email", "sms", "facebook", "instagram", "voice"}
+# Alias kept for existing callers/tests.
+_INBOUND_THREAD_SOURCES = INBOUND_THREAD_SOURCES
 
 ENGINE_OFFLINE_REPLY = (
     "Your message is saved, but the agent engine is temporarily unavailable. "

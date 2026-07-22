@@ -37,6 +37,24 @@ def _reset_rate_limiter():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _bypass_plan_gate():
+    """Stage-3 plan gate (2026-07-22) covers os_files at the router level.
+
+    These tests exercise upload/generation mechanics, not plan gating -
+    gate behavior has its own suite (test_suite_round3/5 + plan-gating
+    tests). Override like every other suite-router test does.
+    """
+    from backend.main import app
+    from backend.services.agent_os_gate import require_agent_os_access
+
+    app.dependency_overrides[require_agent_os_access] = lambda: {
+        "tenant_id": _TENANT_ID
+    }
+    yield
+    app.dependency_overrides.pop(require_agent_os_access, None)
+
+
 # ── auth helpers ──────────────────────────────────────────────────────────────
 
 

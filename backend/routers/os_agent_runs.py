@@ -11,12 +11,19 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.dependencies import _get_current_tenant
+from backend.services.agent_os_gate import require_agent_os_access
 from backend.models.database import get_service_supabase
 from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/os", tags=["agent-os"])
+# Stage-3 plan gate (2026-07-22, audit H1): suite surface - agent_os
+# plan (+ legacy) only; 402 upsell otherwise.
+router = APIRouter(
+    prefix="/api/v1/os",
+    tags=["agent-os"],
+    dependencies=[Depends(require_agent_os_access)],
+)
 
 
 def _now() -> str:

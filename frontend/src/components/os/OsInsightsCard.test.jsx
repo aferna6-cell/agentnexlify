@@ -2,14 +2,16 @@ import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+vi.mock("../../utils/api/os", () => ({
+  fetchOsInsights: vi.fn(),
+}));
+
+import { fetchOsInsights } from "../../utils/api/os";
 import OsInsightsCard from "./OsInsightsCard";
 
-// The card fetches /api/v1/os/insights directly; stub the transport.
+// The card loads insights via the shared api layer (audit M5); stub it.
 function stubInsights(payload) {
-  global.fetch = vi.fn().mockResolvedValue({
-    ok: true,
-    json: () => Promise.resolve(payload),
-  });
+  fetchOsInsights.mockResolvedValue(payload);
 }
 
 const IDLE_WEEK = {
@@ -20,7 +22,7 @@ const IDLE_WEEK = {
 };
 
 afterEach(() => {
-  delete global.fetch;
+  vi.restoreAllMocks();
 });
 
 describe("OsInsightsCard cold-start starters", () => {
@@ -58,7 +60,7 @@ describe("OsInsightsCard cold-start starters", () => {
     const { container } = render(
       <OsInsightsCard token="jwt" onSuggestion={vi.fn()} />,
     );
-    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+    await waitFor(() => expect(fetchOsInsights).toHaveBeenCalled());
     expect(container).toBeEmptyDOMElement();
   });
 

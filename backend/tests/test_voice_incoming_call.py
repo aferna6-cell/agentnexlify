@@ -130,7 +130,7 @@ def _wire_tenant_lookup(mock_supabase, tenant_row: dict | None) -> None:
 def _bypass_twilio_sig():
     """Override the verify_twilio_request dependency for all tests in this module.
 
-    verify_twilio_request is imported into backend.routers.calls and used as a
+    verify_twilio_request is imported into backend.routers.calls_webhooks and used as a
     FastAPI Depends().  app.dependency_overrides replaces the resolved value
     so the HMAC-SHA1 check is skipped.
     """

@@ -118,7 +118,7 @@ class TestIncomingCallGuard:
 
     def test_over_cap_degrades_to_voicemail(self, mock_supabase):
         with patch(
-            "backend.routers.calls._find_tenant_by_phone", return_value=self._TENANT
+            "backend.routers.calls_webhooks._find_tenant_by_phone", return_value=self._TENANT
         ), patch(
             "backend.services.voice_usage.voice_minutes_exhausted", return_value=True
         ):
@@ -129,7 +129,7 @@ class TestIncomingCallGuard:
 
     def test_under_cap_stays_in_ai_mode(self, mock_supabase):
         with patch(
-            "backend.routers.calls._find_tenant_by_phone", return_value=self._TENANT
+            "backend.routers.calls_webhooks._find_tenant_by_phone", return_value=self._TENANT
         ), patch(
             "backend.services.voice_usage.voice_minutes_exhausted", return_value=False
         ):
@@ -139,7 +139,7 @@ class TestIncomingCallGuard:
 
     def test_metering_error_fails_open_to_ai_mode(self, mock_supabase):
         with patch(
-            "backend.routers.calls._find_tenant_by_phone", return_value=self._TENANT
+            "backend.routers.calls_webhooks._find_tenant_by_phone", return_value=self._TENANT
         ), patch(
             "backend.services.voice_usage.voice_minutes_exhausted",
             side_effect=RuntimeError("metering down"),

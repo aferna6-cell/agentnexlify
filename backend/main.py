@@ -21,6 +21,7 @@ from starlette.datastructures import Headers, MutableHeaders
 
 from backend.config import is_production, settings
 from backend.limiter import limiter
+from backend import mcp_server
 from backend.routers import (
     action_items,
     analytics,
@@ -755,7 +756,10 @@ async def lifespan(app: FastAPI):
         )
     if not os.environ.get("TESTING"):
         task = asyncio.create_task(_automation_loop_supervisor())
-    yield
+    # The owner-facing MCP server (mounted at /mcp below) needs its
+    # streamable-HTTP session manager running for the whole app lifetime.
+    async with mcp_server.mcp.session_manager.run():
+        yield
     if not os.environ.get("TESTING"):
         task.cancel()
     logger.info("AgentNexLiFy shutting down")
@@ -1085,6 +1089,12 @@ app.include_router(intake_ai.router)
 
 # --- Static files (widget) ---
 app.mount("/widget", StaticFiles(directory="widget"), name="widget")
+
+# --- Owner-facing MCP server (Claude Desktop / MCP-compatible assistants) ---
+# Streamable HTTP at /mcp - the URL MCPSetupPage hands owners. Auth is the
+# per-tenant mcp_ key (Authorization: Bearer header or api_key tool arg);
+# the session manager runs in lifespan above.
+app.mount("/mcp", mcp_server.mcp.streamable_http_app())
 
 
 # --- Health check ---

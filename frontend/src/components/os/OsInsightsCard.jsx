@@ -6,7 +6,7 @@
  * Fails silent: a fetch error renders nothing rather than noise.
  */
 import { useEffect, useState } from "react";
-import { BASE } from "../../utils/api/_client";
+import { fetchOsInsights } from "../../utils/api/os";
 
 export default function OsInsightsCard({ token, onSuggestion }) {
   const [data, setData] = useState(null);
@@ -15,10 +15,7 @@ export default function OsInsightsCard({ token, onSuggestion }) {
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
-    fetch(`${BASE}/api/v1/os/insights`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => (r.ok ? r.json() : null))
+    fetchOsInsights(token)
       .then((d) => {
         if (!cancelled && d) setData(d);
       })

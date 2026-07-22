@@ -18,6 +18,7 @@ import logging
 from fastapi import APIRouter, Depends
 
 from backend.dependencies import _get_current_tenant
+from backend.services.agent_os_gate import require_agent_os_access
 from backend.models.database import get_service_supabase
 from backend.services.os_opportunities import compute_suggestions
 from backend.services.os_starter_tasks import compute_starter_tasks
@@ -25,7 +26,13 @@ from backend.services.weekly_value import compute_weekly_value
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/os", tags=["agent-os"])
+# Stage-3 plan gate (2026-07-22, audit H1): suite surface - agent_os
+# plan (+ legacy) only; 402 upsell otherwise.
+router = APIRouter(
+    prefix="/api/v1/os",
+    tags=["agent-os"],
+    dependencies=[Depends(require_agent_os_access)],
+)
 
 
 @router.get("/insights")

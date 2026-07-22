@@ -8,7 +8,7 @@
  * and the thread keeps a durable reference.
  */
 import { useRef, useState } from "react";
-import { BASE } from "../../utils/api/_client";
+import { generateOsImage, uploadOsAttachment } from "../../utils/api/os";
 
 const ACCEPT = ".png,.jpg,.jpeg,.webp,.gif,.pdf";
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -45,16 +45,9 @@ export default function ComposerAttachments({
     setError("");
     setBusy(true);
     try {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await fetch(`${BASE}/api/v1/os/uploads`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: form,
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(friendly(res.status, body));
+      const { ok, status, body } = await uploadOsAttachment(token, file);
+      if (!ok) {
+        setError(friendly(status, body));
         return;
       }
       setAttachments((prev) => [...prev, body]);
@@ -74,17 +67,9 @@ export default function ComposerAttachments({
     setError("");
     setBusy(true);
     try {
-      const res = await fetch(`${BASE}/api/v1/os/images/generate`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ prompt }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(friendly(res.status, body));
+      const { ok, status, body } = await generateOsImage(token, prompt);
+      if (!ok) {
+        setError(friendly(status, body));
         return;
       }
       setAttachments((prev) => [

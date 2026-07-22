@@ -1,7 +1,6 @@
 """Round-4 contracts: chat-originated projects, research-to-project handoff,
 marketing-gate alignment, and the runner wiring for the chat fast paths."""
 
-import asyncio
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -12,43 +11,11 @@ os.environ.setdefault("TESTING", "1")
 from backend.services import os_chat_projects, os_research
 
 
-def _run(coro):
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
-
-
-class _Result:
-    def __init__(self, data):
-        self.data = data
-
-
-class _Query:
-    def __init__(self, rows, sink, table):
-        self._rows = rows
-        self._sink = sink
-        self._table = table
-
-    def __getattr__(self, name):
-        def _method(*args, **kwargs):
-            self._sink.append((self._table, name, args))
-            if name == "execute":
-                return _Result(self._rows)
-            return self
-
-        return _method
-
-
-def _db(rows_by_table, sink=None):
-    sink = sink if sink is not None else []
-    db = MagicMock()
-    db.table.side_effect = lambda name: _Query(
-        rows_by_table.get(name, []), sink, name
-    )
-    db._sink = sink
-    return db
+from backend.tests.fake_supabase import (
+    Result as _Result,
+    db as _db,
+    run as _run,
+)
 
 
 # --- extract_project_ask (pure trigger parsing) -----------------------------

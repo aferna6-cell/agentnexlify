@@ -4,7 +4,7 @@
  * All endpoints derive client_id from the JWT, so no tenant id is passed
  * in the path. Just the bearer token.
  */
-import { request } from "./_client";
+import { BASE, request } from "./_client";
 
 // --- Threads + the orchestration flow ---
 
@@ -282,4 +282,38 @@ export function createProjectFromResearch(token, runId) {
     method: "POST",
     token,
   });
+}
+
+// --- Insights + composer attachments ---
+
+export function fetchOsInsights(token) {
+  return request("/api/v1/os/insights", { token });
+}
+
+// Multipart upload - FormData can't ride the JSON request() helper, but the
+// fetch still belongs in this layer. Returns {ok, status, body} so the
+// composer keeps its friendly per-status error copy instead of thrown text.
+export async function uploadOsAttachment(token, file) {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${BASE}/api/v1/os/uploads`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  const body = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, body };
+}
+
+export async function generateOsImage(token, prompt) {
+  const res = await fetch(`${BASE}/api/v1/os/images/generate`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ prompt }),
+  });
+  const body = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, body };
 }

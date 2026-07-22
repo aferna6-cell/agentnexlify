@@ -106,9 +106,9 @@ def respond_client(mock_supabase):
 def _base_patches(llm_text, kb_articles=None):
     """Common patch set: tenant routing, LLM, KB retrieval, vertical guidance."""
     return (
-        patch("backend.routers.calls._find_tenant_by_phone", return_value=_TENANT),
+        patch("backend.routers.calls_webhooks._find_tenant_by_phone", return_value=_TENANT),
         patch(
-            "backend.routers.calls.call_claude_messages",
+            "backend.routers.calls_webhooks.call_claude_messages",
             new=AsyncMock(return_value=_llm_result(llm_text)),
         ),
         patch(
@@ -138,7 +138,7 @@ class TestRespondBasics:
 
     def test_unknown_tenant_ends_gracefully(self, respond_client):
         client, _ = respond_client
-        with patch("backend.routers.calls._find_tenant_by_phone", return_value=None):
+        with patch("backend.routers.calls_webhooks._find_tenant_by_phone", return_value=None):
             resp = _post(client, "hello")
         assert resp.status_code == 200
         assert "<Gather" not in resp.text
@@ -147,7 +147,7 @@ class TestRespondBasics:
         client, _ = respond_client
         p1, p2, p3, p4 = _base_patches("Thanks for the chat.")
         with p1, p2, p3, p4, patch(
-            "backend.routers.calls._finalize_ai_call", new=AsyncMock()
+            "backend.routers.calls_webhooks._finalize_ai_call", new=AsyncMock()
         ) as finalize, patch(
             "backend.services.voice_booking.booking_prompt_context", return_value=None
         ):
@@ -166,8 +166,8 @@ class TestKbGrounding:
             {"title": "Burst pipe first steps", "summary": "Shut off the main water valve."}
         ]
         with patch(
-            "backend.routers.calls._find_tenant_by_phone", return_value=_TENANT
-        ), patch("backend.routers.calls.call_claude_messages", new=llm), patch(
+            "backend.routers.calls_webhooks._find_tenant_by_phone", return_value=_TENANT
+        ), patch("backend.routers.calls_webhooks.call_claude_messages", new=llm), patch(
             "backend.routers.widget_chat_helpers._query_kb_articles",
             new=AsyncMock(return_value=articles),
         ), patch("backend.services.os_kb_feed.vertical_guidance", return_value=[]):
@@ -193,8 +193,8 @@ class TestBookingFlow:
         ]
         llm = AsyncMock(return_value=_llm_result("I can book you in at 9 AM."))
         with patch(
-            "backend.routers.calls._find_tenant_by_phone", return_value=_TENANT
-        ), patch("backend.routers.calls.call_claude_messages", new=llm), patch(
+            "backend.routers.calls_webhooks._find_tenant_by_phone", return_value=_TENANT
+        ), patch("backend.routers.calls_webhooks.call_claude_messages", new=llm), patch(
             "backend.routers.widget_chat_helpers._query_kb_articles",
             new=AsyncMock(return_value=[]),
         ), patch("backend.services.os_kb_feed.vertical_guidance", return_value=[]), patch(
@@ -218,9 +218,9 @@ class TestBookingFlow:
         )
         appt = {"id": "appt-1", "lead_id": None}
         with patch(
-            "backend.routers.calls._find_tenant_by_phone", return_value=_TENANT
+            "backend.routers.calls_webhooks._find_tenant_by_phone", return_value=_TENANT
         ), patch(
-            "backend.routers.calls.call_claude_messages",
+            "backend.routers.calls_webhooks.call_claude_messages",
             new=AsyncMock(return_value=_llm_result(marker_reply)),
         ), patch(
             "backend.routers.widget_chat_helpers._query_kb_articles",

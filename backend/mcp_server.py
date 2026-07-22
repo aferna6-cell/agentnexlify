@@ -17,20 +17,50 @@ from backend.models.database import get_service_supabase
 
 logger = logging.getLogger(__name__)
 
+# stateless_http: production runs 4 uvicorn workers with no session
+# affinity, so every request must be self-contained. streamable_http_path
+# "/" because main.py mounts this app at /mcp - the public URL owners
+# configure is <API_BASE>/mcp (what MCPSetupPage renders).
 mcp = FastMCP(
     "AgentNexLiFy",
-    instructions="AI-powered business automation — leads, appointments, conversations, and analytics. Use your dedicated MCP API key to authenticate.",
+    instructions="AI-powered business automation — leads, appointments, conversations, and analytics. Authenticate with your dedicated MCP API key (Authorization: Bearer header, or pass it as the api_key argument).",
+    stateless_http=True,
+    streamable_http_path="/",
 )
 
-# --- Auth helper ---
+# --- Auth helpers ---
+
+def _header_api_key() -> str:
+    """MCP key from the HTTP request headers, if this call came over HTTP.
+
+    The Claude Desktop config we hand owners passes the key as an
+    Authorization: Bearer header via mcp-remote, so tools work without
+    pasting the key into every conversation. Stdio runs have no request -
+    return empty and let the explicit api_key argument path handle it.
+    """
+    try:
+        request = mcp.get_context().request_context.request
+        if request is None:
+            return ""
+        auth = request.headers.get("authorization") or ""
+        if auth.lower().startswith("bearer "):
+            return auth[7:].strip()
+        return (request.headers.get("x-api-key") or "").strip()
+    except Exception:
+        return ""
+
 
 def _get_tenant_by_api_key(api_key: str) -> dict | None:
-    """Look up tenant by dedicated MCP API key only. Returns tenant dict or None."""
-    db = get_service_supabase()
+    """Look up tenant by dedicated MCP API key only. Returns tenant dict or None.
+
+    Falls back to the Authorization header when no explicit key was passed.
+    """
+    api_key = (api_key or "").strip() or _header_api_key()
 
     if not api_key or not api_key.startswith("mcp_"):
         return None
 
+    db = get_service_supabase()
     result = (
         db.table("tenants")
         .select("id, business_name, owner_email, plan, business_type, mcp_enabled")
@@ -45,11 +75,11 @@ def _get_tenant_by_api_key(api_key: str) -> dict | None:
 # --- Tool 1: List Recent Leads ---
 
 @mcp.tool()
-def list_recent_leads(api_key: str, days: int = 7, limit: int = 20) -> str:
+def list_recent_leads(api_key: str = "", days: int = 7, limit: int = 20) -> str:
     """List recent leads captured by the chat widget.
 
     Args:
-        api_key: Your AgentNexLiFy MCP API key
+        api_key: Your AgentNexLiFy MCP API key (optional when the connection sends an Authorization header)
         days: Number of days to look back (default 7)
         limit: Maximum number of leads to return (default 20, max 50)
     """
@@ -100,11 +130,11 @@ def list_recent_leads(api_key: str, days: int = 7, limit: int = 20) -> str:
 # --- Tool 2: List Today's Appointments ---
 
 @mcp.tool()
-def list_today_appointments(api_key: str) -> str:
+def list_today_appointments(api_key: str = "") -> str:
     """List today's appointments.
 
     Args:
-        api_key: Your AgentNexLiFy MCP API key
+        api_key: Your AgentNexLiFy MCP API key (optional when the connection sends an Authorization header)
     """
     tenant = _get_tenant_by_api_key(api_key)
     if not tenant:
@@ -148,11 +178,11 @@ def list_today_appointments(api_key: str) -> str:
 # --- Tool 3: Get Unread Conversations ---
 
 @mcp.tool()
-def get_unread_conversations(api_key: str, limit: int = 10) -> str:
+def get_unread_conversations(api_key: str = "", limit: int = 10) -> str:
     """Get recent conversations that may need attention.
 
     Args:
-        api_key: Your AgentNexLiFy MCP API key
+        api_key: Your AgentNexLiFy MCP API key (optional when the connection sends an Authorization header)
         limit: Maximum conversations to return (default 10)
     """
     tenant = _get_tenant_by_api_key(api_key)
@@ -187,11 +217,11 @@ def get_unread_conversations(api_key: str, limit: int = 10) -> str:
 # --- Tool 4: Get Action Items ---
 
 @mcp.tool()
-def get_action_items(api_key: str, status: str = "pending") -> str:
+def get_action_items(api_key: str = "", status: str = "pending") -> str:
     """Get AI-extracted action items from conversations.
 
     Args:
-        api_key: Your AgentNexLiFy MCP API key
+        api_key: Your AgentNexLiFy MCP API key (optional when the connection sends an Authorization header)
         status: Filter by status — "pending", "done", or "all" (default "pending")
     """
     tenant = _get_tenant_by_api_key(api_key)
@@ -229,11 +259,11 @@ def get_action_items(api_key: str, status: str = "pending") -> str:
 # --- Tool 5: Get Analytics Summary ---
 
 @mcp.tool()
-def get_analytics_summary(api_key: str, days: int = 30) -> str:
+def get_analytics_summary(api_key: str = "", days: int = 30) -> str:
     """Get a summary of business analytics — leads, conversations, appointments.
 
     Args:
-        api_key: Your AgentNexLiFy MCP API key
+        api_key: Your AgentNexLiFy MCP API key (optional when the connection sends an Authorization header)
         days: Number of days to analyze (default 30)
     """
     tenant = _get_tenant_by_api_key(api_key)
@@ -270,11 +300,11 @@ def get_analytics_summary(api_key: str, days: int = 30) -> str:
 # --- Tool 6: Reply to Conversation ---
 
 @mcp.tool()
-def reply_to_conversation(api_key: str, session_id: str, message: str) -> str:
+def reply_to_conversation(session_id: str, message: str, api_key: str = "") -> str:
     """Send a reply to a chat conversation as the business owner.
 
     Args:
-        api_key: Your AgentNexLiFy MCP API key
+        api_key: Your AgentNexLiFy MCP API key (optional when the connection sends an Authorization header)
         session_id: The session ID of the conversation to reply to
         message: The reply message text
     """
