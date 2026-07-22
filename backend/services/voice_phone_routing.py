@@ -130,4 +130,3 @@ def _find_tenant_by_phone(phone: str) -> dict | None:
         if len(rows) < page_size:
             return None
         offset += page_size
-

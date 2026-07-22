@@ -871,5 +871,3 @@ async def handle_transcription_complete(
     )
 
     return Response(content="OK", media_type="text/plain")
-
-
