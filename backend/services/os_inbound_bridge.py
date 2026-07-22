@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
-BridgeSource = Literal["widget", "email", "sms", "facebook"]
+BridgeSource = Literal["widget", "email", "sms", "facebook", "voice"]
 InboundKind = Literal["auto_reply", "normal", "system_notice"]
 
 _BRIDGE_PROVIDER = "os_inbound_bridges"
@@ -63,6 +63,9 @@ _DEFAULT_CONFIG: dict[str, Any] = {
     "email_enabled": False,
     "sms_enabled": False,
     "facebook_enabled": False,
+    # Voice (round 6): completed AI phone calls land as observe-only thread
+    # evidence - summary, sentiment, follow-up. Never answers the caller.
+    "voice_enabled": False,
     "email_provider": None,
     "email_inbound_address": None,
 }
@@ -358,6 +361,34 @@ async def bridge_sms(
     )
 
 
+async def bridge_voice(
+    db: Any,
+    client_id: str,
+    caller_phone: str,
+    call_id: str,
+    user_content: str,
+    sender_metadata: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Bridge a completed phone call's summary into the OS (round 6).
+
+    OBSERVE-ONLY like the widget bridge: the call already happened, so the
+    engine never generates a reply - the summary lands as thread evidence
+    the owner's staff can read and act on. ``caller_phone`` keys the thread
+    so repeat callers share one thread; ``call_id`` keys idempotency so a
+    re-fired summary never duplicates.
+    """
+    return await _bridge_common(
+        db=db,
+        client_id=client_id,
+        source="voice",
+        source_thread_id=caller_phone or call_id,
+        provider_message_id=call_id,
+        user_content=user_content,
+        sender_metadata=sender_metadata,
+        inbound_kind="normal",
+    )
+
+
 async def bridge_facebook(
     db: Any,
     client_id: str,
@@ -435,14 +466,14 @@ async def _bridge_common(
             "agent_runs": [],
         }
 
-    # The widget bridge is OBSERVE-ONLY. The widget already has its own
-    # customer-facing AI answering visitors; running the owner-assistant
-    # engine here and mirroring its reply back into the customer chat is
-    # the documented hijack that forced this bridge off by default. With
-    # observation, the toggle is safe: every visitor conversation lands in
-    # the owner's OS inbox as evidence their staff can read, and nothing
-    # ever answers the customer from this path.
-    if source == "widget":
+    # The widget + voice bridges are OBSERVE-ONLY. The widget already has
+    # its own customer-facing AI answering visitors (running the owner
+    # assistant here and mirroring its reply into the customer chat is the
+    # documented hijack that forced this bridge off by default), and a
+    # completed phone call has nobody left to answer. With observation the
+    # toggle is safe: the conversation lands in the owner's OS inbox as
+    # evidence their staff can read, and nothing answers the customer.
+    if source in ("widget", "voice"):
         try:
             tenant_table(db, "os_threads", client_id).update(
                 {"updated_at": _now_iso()}

@@ -24,7 +24,7 @@ from backend.services.tenant_scope import tenant_table
 logger = logging.getLogger(__name__)
 
 # Owner-facing dashboard threads only. Mirrors os_thread_runner's inbound set.
-_INBOUND_THREAD_SOURCES = {"widget", "email", "sms", "facebook", "instagram"}
+_INBOUND_THREAD_SOURCES = {"widget", "email", "sms", "facebook", "instagram", "voice"}
 
 # Deterministic triggers: explicit project phrasing at the start of the
 # message. Ordinary asks ("plan my week") never match.

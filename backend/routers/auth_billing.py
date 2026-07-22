@@ -208,8 +208,15 @@ async def billing_change_plan(
     if current_plan == new_plan:
         raise HTTPException(status_code=400, detail="Already on this plan")
 
-    # Find active subscription
+    # Find the live subscription. Legacy "trialing" subscriptions (created
+    # before checkout charged immediately) are upgradeable too - without this
+    # a trialing tenant clicking "Switch Plan" dead-ended on a 400 while the
+    # UI offered no checkout button (funnel audit 2026-07-22).
     subs = stripe.Subscription.list(customer=customer_id, status="active", limit=1)
+    if not subs.data:
+        subs = stripe.Subscription.list(
+            customer=customer_id, status="trialing", limit=1
+        )
     if not subs.data:
         raise HTTPException(
             status_code=400,

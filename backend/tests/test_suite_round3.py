@@ -200,7 +200,9 @@ class TestResearchV1:
             out = _run(
                 os_research.run_research(_db({}), "c1", "what do customers ask most?")
             )
-        assert "No owned sources" in out["error"]
+        # Copy updated in round 6 when web URLs became a source option; the
+        # contract under test is unchanged: empty corpus -> helpful error.
+        assert "No sources to research from yet" in out["error"]
 
     def test_brief_parks_at_approval_gate_with_provenance(self):
         sink: list = []

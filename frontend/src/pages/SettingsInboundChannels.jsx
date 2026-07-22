@@ -29,6 +29,12 @@ const SOURCES = [
     description:
       "Page DMs ingested via the existing Facebook webhook are mirrored into OS threads, idempotent on Facebook message id.",
   },
+  {
+    key: "voice",
+    label: "Phone Calls (AI Receptionist)",
+    description:
+      "Completed AI phone calls land in the OS inbox as a thread per caller - summary, sentiment, and suggested follow-up. Read-only: the call already happened; your staff reads and acts, nothing calls anyone back from here.",
+  },
 ];
 
 const CARD_STYLE = {

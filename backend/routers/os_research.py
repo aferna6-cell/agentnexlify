@@ -13,6 +13,7 @@ from backend.services.os_research import (
     research_to_project,
     run_research,
 )
+from backend.services.os_web_sources import MAX_URLS
 from backend.services.platform_flags import flag_enabled
 
 logger = logging.getLogger(__name__)
@@ -26,15 +27,18 @@ router = APIRouter(
 
 class ResearchIn(BaseModel):
     topic: str = Field(min_length=10, max_length=MAX_TOPIC_LEN)
+    # Research v2: up to MAX_URLS owner-provided web pages join the corpus
+    # (SSRF-gated server-side; each capped and cited in provenance).
+    urls: list[str] | None = Field(default=None, max_length=MAX_URLS)
 
 
 @router.post("/research")
 async def research(body: ResearchIn, claims: dict = Depends(_get_current_tenant)):
     """Synthesize a propose-only research brief from the tenant's own
-    sources. The brief parks at the normal approval gate."""
+    sources plus optional web pages. The brief parks at the approval gate."""
     db = get_service_supabase()
     try:
-        out = await run_research(db, claims["tenant_id"], body.topic)
+        out = await run_research(db, claims["tenant_id"], body.topic, body.urls)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     if out.get("error"):

@@ -94,7 +94,11 @@ def collect_vitals(fetch):
         "activity_log",
         {
             "select": "activity_type,created_at,metadata",
-            "activity_type": "in.(outbound_guard_flagged,kb_eval_regression)",
+            "activity_type": (
+                "in.(outbound_guard_flagged,kb_eval_regression,"
+                "os_fast_path_data_answer,os_fast_path_chat_project,"
+                "os_research_run,email_action_approve,email_action_reject)"
+            ),
             "limit": "500",
         },
     )
@@ -177,7 +181,9 @@ def evaluate_alerts(vitals, now):
             continue
         if row.get("activity_type") == "kb_eval_regression":
             regressions += 1
-        else:
+        elif row.get("activity_type") == "outbound_guard_flagged":
+            # Explicit branch: the same query now also carries fast-path
+            # adoption tags, which must never count as guard holds.
             holds += 1
     if regressions:
         alerts.append(
@@ -206,11 +212,20 @@ def summarize(vitals):
     for row in vitals.get("suggestions", []):
         status = row.get("status") or "unknown"
         suggestion_counts[status] = suggestion_counts.get(status, 0) + 1
+    # Suite fast-path adoption (round 6): the daily job log answers "is
+    # anyone using the fast paths?" without an extra dashboard visit.
+    fast_path_counts = {}
+    for row in vitals.get("guard_events", []) or []:
+        kind = row.get("activity_type") or ""
+        if kind.startswith(("os_fast_path", "os_research", "email_action")):
+            fast_path_counts[kind] = fast_path_counts.get(kind, 0) + 1
     return (
         "loop_health drafts="
         + json.dumps(draft_counts, sort_keys=True)
         + " suggestions="
         + json.dumps(suggestion_counts, sort_keys=True)
+        + " fast_paths="
+        + json.dumps(fast_path_counts, sort_keys=True)
     )
 
 

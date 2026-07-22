@@ -185,7 +185,16 @@ export default function BillingPage() {
       await changePlan(token, planKey);
       await load();
     } catch (err) {
-      notify.error(err.body?.detail || err.message || "Failed to change plan");
+      const detail = err.body?.detail || err.message || "";
+      // No live subscription to modify (lapsed card, missing customer,
+      // legacy states) - fall through to a fresh checkout instead of a
+      // dead-end error (funnel audit 2026-07-22).
+      if (typeof detail === "string" && detail.toLowerCase().includes("checkout")) {
+        setChangingPlan(null);
+        await handleUpgrade(planKey);
+        return;
+      }
+      notify.error(detail || "Failed to change plan");
     } finally {
       setChangingPlan(null);
     }
@@ -275,18 +284,37 @@ export default function BillingPage() {
                   : ""}
             </div>
           </div>
-          <button
-            className="btn-primary"
-            onClick={() => handleUpgrade("chatbot")}
-            disabled={upgrading === "chatbot"}
-            style={{
-              background: "#fff",
-              color: trialData.is_expired ? "#dc2626" : "#1e40af",
-              fontWeight: 600,
-            }}
-          >
-            {upgrading === "chatbot" ? "Redirecting..." : "Upgrade Now"}
-          </button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              className="btn-primary"
+              onClick={() => handleUpgrade("agent_os")}
+              disabled={upgrading === "agent_os"}
+              style={{
+                background: "#fff",
+                color: trialData.is_expired ? "#dc2626" : "#1e40af",
+                fontWeight: 600,
+              }}
+            >
+              {upgrading === "agent_os"
+                ? "Redirecting..."
+                : `Get ${PLAN_DISPLAY.agent_os}`}
+            </button>
+            <button
+              className="btn-secondary"
+              onClick={() => handleUpgrade("chatbot")}
+              disabled={upgrading === "chatbot"}
+              style={{
+                background: "transparent",
+                color: "#fff",
+                border: "1px solid rgba(255,255,255,0.6)",
+                fontWeight: 600,
+              }}
+            >
+              {upgrading === "chatbot"
+                ? "Redirecting..."
+                : `${PLAN_DISPLAY.chatbot} $19.99`}
+            </button>
+          </div>
         </div>
       )}
 

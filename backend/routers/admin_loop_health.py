@@ -210,6 +210,42 @@ def _guardrails_section(db, now: datetime) -> dict | None:
     }
 
 
+def _routing_quality_section(db, now: datetime) -> dict | None:
+    """7-day orchestrator routing quality (round-6 item 4).
+
+    os_routing_decision gives free ground truth: `accepted=false` marks a
+    decision the owner re-routed (a misroute), `owner_override` rows are the
+    corrected re-runs, and `ambiguous` decisions are clarify prompts. Turns
+    "does the orchestrator route well?" into tracked rates.
+    """
+    cutoff = (now - timedelta(days=_RECENT_DAYS)).isoformat()
+    try:
+        rows = (
+            db.table("os_routing_decision")
+            .select("decision, accepted")
+            .gte("created_at", cutoff)
+            .limit(2000)
+            .execute()
+        ).data or []
+    except Exception:
+        logger.warning("loop-health: routing query failed", exc_info=True)
+        return None
+    total = len(rows)
+    routed = sum(1 for r in rows if r.get("decision") == "routed")
+    ambiguous = sum(1 for r in rows if r.get("decision") == "ambiguous")
+    overrides = sum(1 for r in rows if r.get("decision") == "owner_override")
+    misroutes = sum(1 for r in rows if r.get("accepted") is False)
+    return {
+        "decisions_7d": total,
+        "routed_7d": routed,
+        "ambiguous_7d": ambiguous,
+        "owner_overrides_7d": overrides,
+        "misroutes_7d": misroutes,
+        "misroute_rate_pct": round(misroutes * 100 / routed, 1) if routed else 0.0,
+        "clarify_rate_pct": round(ambiguous * 100 / total, 1) if total else 0.0,
+    }
+
+
 _FAST_PATH_TYPES = [
     "os_fast_path_data_answer",
     "os_fast_path_chat_project",
@@ -289,5 +325,6 @@ async def get_loop_health(
         "bridges": _bridges_section(db),
         "guardrails": _guardrails_section(db, now),
         "fast_paths_7d": _fast_paths_section(db, now),
+        "routing_quality": _routing_quality_section(db, now),
         "errors_7d": _errors_section(db, now),
     }

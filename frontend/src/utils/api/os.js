@@ -269,12 +269,10 @@ export function fetchOsTaskSuggestions(token) {
 
 // --- Deep research (propose-only briefs from owned sources) ---
 
-export function runOsResearch(token, topic) {
-  return request("/api/v1/os/research", {
-    method: "POST",
-    token,
-    body: { topic },
-  });
+export function runOsResearch(token, topic, urls) {
+  const body = { topic };
+  if (urls && urls.length > 0) body.urls = urls;
+  return request("/api/v1/os/research", { method: "POST", token, body });
 }
 
 // Seed a multi-department project from a research brief's findings. Returns

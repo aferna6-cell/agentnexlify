@@ -36,8 +36,10 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-async def gather_sources(db, client_id: str, topic: str) -> tuple[str, list[str]]:
-    """(corpus, source_kinds) from everything the tenant already owns."""
+async def gather_sources(
+    db, client_id: str, topic: str, urls: list[str] | None = None
+) -> tuple[str, list[str]]:
+    """(corpus, source_kinds) from owned sources plus optional web pages."""
     entries: list[dict] = []
     kinds: list[str] = []
 
@@ -73,6 +75,17 @@ async def gather_sources(db, client_id: str, topic: str) -> tuple[str, list[str]
         )
     except Exception:
         logger.warning("os_research: mcp context read failed", exc_info=True)
+    # Research v2 (round 6): owner-provided URLs, SSRF-gated + capped in
+    # os_web_sources. Provenance names each fetched page explicitly.
+    try:
+        from backend.services.os_web_sources import fetch_web_entries
+
+        web_entries, fetched = await fetch_web_entries(urls)
+        if web_entries:
+            entries.extend(web_entries)
+            kinds.extend(f"web page ({u})" for u in fetched)
+    except Exception:
+        logger.warning("os_research: web fetch failed", exc_info=True)
 
     corpus = "\n\n".join(
         f"[{e.get('topic', 'note')}]\n{e.get('answer', '')}" for e in entries
@@ -80,19 +93,21 @@ async def gather_sources(db, client_id: str, topic: str) -> tuple[str, list[str]
     return corpus, kinds
 
 
-async def run_research(db, client_id: str, topic: str) -> dict:
+async def run_research(
+    db, client_id: str, topic: str, urls: list[str] | None = None
+) -> dict:
     """Produce a propose-only research brief run. Raises ValueError on bad
     input; returns {"run": row} or {"error": ...} on synthesis failure."""
     topic = (topic or "").strip()[:MAX_TOPIC_LEN]
     if len(topic) < 10:
         raise ValueError("research topic too short")
 
-    corpus, kinds = await gather_sources(db, client_id, topic)
+    corpus, kinds = await gather_sources(db, client_id, topic, urls)
     if not corpus.strip():
         return {
             "error": (
-                "No owned sources to research from yet - add knowledge in "
-                "Second Brain or connect a tool first."
+                "No sources to research from yet - add knowledge in "
+                "Second Brain, connect a tool, or include a web page URL."
             )
         }
 
