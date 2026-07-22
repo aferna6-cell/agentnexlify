@@ -10,6 +10,7 @@ import WizardStepKnowledgeBase from "./wizard/WizardStepKnowledgeBase";
 import WizardStepCustomize from "./wizard/WizardStepCustomize";
 // WizardStepPlan imported but NOT in the wizard sequence - used by RequirePaid gate instead.
 import WizardStepEmbed from "./wizard/WizardStepEmbed";
+import WizardStepDriveConnect from "./wizard/WizardStepDriveConnect";
 
 // AuthContext user fields:
 //   tenantId, email, plan, businessName, businessType, role, isTeamMember, name, userId
@@ -18,8 +19,8 @@ import WizardStepEmbed from "./wizard/WizardStepEmbed";
 const STORAGE_KEY = "anx_wizard";
 // Plan step removed (2026-06-15): payment gate is now at signup, not inside the wizard.
 // Steps: 0=express, 1=business, 2=auto-KB (also drafts/saves instant FAQs),
-//        3=services, 4=KB, 5=customize, 6=embed
-const TOTAL_STEPS = 6;
+//        3=services, 4=KB, 5=customize, 6=embed, 7=connect-drive (optional, #53)
+const TOTAL_STEPS = 7;
 
 function loadState() {
   try {
@@ -176,6 +177,14 @@ export default function OnboardingWizardPage() {
       wizardData={wizardData}
       token={token}
       tenantId={user?.tenantId}
+      onNext={goNext}
+    />,
+    <WizardStepDriveConnect
+      key="7"
+      token={token}
+      tenantId={user?.tenantId}
+      onDone={() => navigate("/dashboard/agent-os")}
+      onSkip={() => navigate("/dashboard/agent-os")}
     />,
   ];
 
