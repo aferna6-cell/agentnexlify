@@ -1,0 +1,17 @@
+{
+  "name": "agentnexlify-zapier",
+  "version": "1.0.0",
+  "description": "AgentNexLiFy Zapier integration — trigger a Zap when a new lead arrives. Send to Jobber, ServiceTitan, Housecall Pro, HubSpot, or any CRM Zapier connects to.",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18",
+    "npm": ">=8"
+  },
+  "dependencies": {
+    "zapier-platform-core": "^15.0.0"
+  },
+  "private": true
+}
