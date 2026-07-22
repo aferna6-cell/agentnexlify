@@ -366,6 +366,12 @@ const allNavItems = [
     roles: ["owner", "admin"],
   },
   {
+    key: "integrations_zapier",
+    icon: <Icon d="M13 3L4 14h7l-2 7 9-11h-7l2-7z" />,
+    label: "Zapier",
+    roles: ["owner", "admin"],
+  },
+  {
     key: "mcp_setup",
     icon: <Icon d="M13 10V3L4 14h7v7l9-11h-7z" />,
     label: "MCP Setup",
@@ -457,6 +463,7 @@ const NAV_GROUPS = [
       "business_page",
       "integrations",
       "integration_keys",
+      "integrations_zapier",
       "mcp_setup",
       "sms_compliance",
       "settings",
