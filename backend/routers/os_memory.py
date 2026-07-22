@@ -11,12 +11,19 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.dependencies import _get_current_tenant, require_role
+from backend.services.agent_os_gate import require_agent_os_access
 from backend.models.database import get_service_supabase
 from backend.services import os_memory as memory_service
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/os", tags=["agent-os"])
+# Stage-3 plan gate (2026-07-22, audit H1): suite surface - agent_os
+# plan (+ legacy) only; 402 upsell otherwise.
+router = APIRouter(
+    prefix="/api/v1/os",
+    tags=["agent-os"],
+    dependencies=[Depends(require_agent_os_access)],
+)
 
 _KINDS = sorted(memory_service.VALID_KINDS)
 

@@ -18,8 +18,8 @@ import { notify } from "../../utils/notify";
 const ACTIONABLE = new Set(["pending", "open"]);
 
 const CARD_STYLE = {
-  background: "#0f0f17",
-  border: "1px solid #1f1f2e",
+  background: "var(--bg-secondary, var(--card-bg))",
+  border: "1px solid var(--border)",
   borderRadius: "10px",
   padding: "14px 16px",
   marginBottom: "10px",
@@ -125,7 +125,7 @@ export default function OpportunityCards({ token }) {
               onClick={() => decide(card.id, "accepted")}
               style={{
                 ...BUTTON_BASE,
-                background: "#3b82f6",
+                background: "var(--accent, #6366f1)",
                 border: "none",
                 color: "#fff",
                 opacity: busy[card.id] ? 0.6 : 1,

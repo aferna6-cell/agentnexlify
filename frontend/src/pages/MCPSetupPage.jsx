@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { fetchDashboard } from "../utils/api/dashboard";
+import { fetchMcpKey, generateMcpKey } from "../utils/api/mcpKeys";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 const MCP_TOOLS = [
@@ -47,15 +47,20 @@ const EXAMPLE_PROMPTS = [
 ];
 
 function buildConfigJson(apiKey) {
+  // mcp-remote forwards --header values on every request; the server reads
+  // the key from Authorization: Bearer, so no key-pasting in conversations.
   return JSON.stringify(
     {
       mcpServers: {
         agentnexlify: {
           command: "npx",
-          args: ["-y", "mcp-remote", `${MCP_API_BASE}/mcp`],
-          env: {
-            API_KEY: apiKey || "YOUR_API_KEY_HERE",
-          },
+          args: [
+            "-y",
+            "mcp-remote",
+            `${MCP_API_BASE}/mcp`,
+            "--header",
+            `Authorization: Bearer ${apiKey || "YOUR_MCP_KEY_HERE"}`,
+          ],
         },
       },
     },
@@ -71,12 +76,13 @@ export default function MCPSetupPage() {
   const [error, setError] = useState(null);
   const [copiedKey, setCopiedKey] = useState(false);
   const [copiedConfig, setCopiedConfig] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user?.tenantId) return;
     try {
-      const dash = await fetchDashboard(user.tenantId, token);
-      setApiKey(dash.widget_api_key || "");
+      const res = await fetchMcpKey(user.tenantId, token);
+      setApiKey(res.mcp_api_key || "");
       setError(null);
     } catch (err) {
       console.warn("Failed to load MCP setup data:", err.message);
@@ -89,6 +95,22 @@ export default function MCPSetupPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const generateKey = async () => {
+    if (!user?.tenantId) return;
+    setGenerating(true);
+    setError(null);
+    try {
+      const res = await generateMcpKey(user.tenantId, token);
+      setApiKey(res.mcp_api_key || "");
+    } catch (err) {
+      // 402 = plan lacks the suite; the ApiError message carries the
+      // upgrade copy from the gate payload.
+      setError(err.message || "Could not generate an MCP key.");
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const copyToClipboard = async (text, setter) => {
     try {
@@ -186,8 +208,9 @@ export default function MCPSetupPage() {
             lineHeight: 1.5,
           }}
         >
-          This is the same API key used by your chat widget. You will need it to
-          authenticate your MCP connection.
+          This is your dedicated MCP key (starts with <code>mcp_</code>). It
+          only unlocks the assistant tools below - it is separate from your
+          chat widget key. Regenerating it invalidates the old one.
         </p>
         {apiKey ? (
           <div
@@ -226,20 +249,28 @@ export default function MCPSetupPage() {
             </button>
           </div>
         ) : (
-          <div
-            style={{
-              padding: "16px 20px",
-              background: "rgba(245,158,11,0.1)",
-              border: "1px solid rgba(245,158,11,0.3)",
-              borderRadius: 8,
-              color: "#f59e0b",
-              fontSize: "0.85rem",
-              lineHeight: 1.5,
-            }}
-          >
-            No API key found. Go to the{" "}
-            <strong>Widget</strong> page to configure your widget first - your
-            API key will be generated automatically.
+          <div>
+            <div
+              style={{
+                padding: "16px 20px",
+                background: "rgba(245,158,11,0.1)",
+                border: "1px solid rgba(245,158,11,0.3)",
+                borderRadius: 8,
+                color: "#f59e0b",
+                fontSize: "0.85rem",
+                lineHeight: 1.5,
+                marginBottom: 12,
+              }}
+            >
+              No MCP key yet. Generate one to connect your AI assistant.
+            </div>
+            <button
+              className="btn-primary"
+              onClick={generateKey}
+              disabled={generating}
+            >
+              {generating ? "Generating..." : "Generate MCP key"}
+            </button>
           </div>
         )}
       </div>

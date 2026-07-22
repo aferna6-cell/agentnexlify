@@ -221,6 +221,21 @@ else
     fi
 fi
 
+# CHECK 10: Migrations logged in schema-log.md (blocking). Lives here as well
+# as PR validation because team-contract commits carry [skip ci], which
+# bypassed the Actions gate (audit 2026-07-22 M4 - migrations 185/186 shipped
+# unlogged-looking and unapplied).
+echo -n "Checking migrations are logged in schema-log... "
+if python3 scripts/check_migration_schema_log.py --compare-branch origin/main > /tmp/schema_log_check.txt 2>&1; then
+    echo -e "${GREEN}OK${NC}"
+else
+    echo -e "${RED}FAILED${NC}"
+    cat /tmp/schema_log_check.txt
+    ERRORS=$((ERRORS + 1))
+fi
+
+echo ""
+
 # CHECK 7: Widget file sync (warning only)
 echo -n "Checking widget file sync... "
 if [ -f "widget/agentnexlify-widget.js" ] && [ -f "frontend/public/widget/agentnexlify-widget.js" ]; then

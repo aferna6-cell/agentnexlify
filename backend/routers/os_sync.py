@@ -18,13 +18,20 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 
 from backend.dependencies import _get_current_tenant
+from backend.services.agent_os_gate import require_agent_os_access
 from backend.models.database import get_service_supabase
 from backend.services.os_sync import all_syncs, get_sync, run_sync
 from backend.services.tenant_scope import tenant_table
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/os/sync", tags=["agent-os"])
+# Stage-3 plan gate (2026-07-22, audit H1): suite surface - agent_os
+# plan (+ legacy) only; 402 upsell otherwise.
+router = APIRouter(
+    prefix="/api/v1/os/sync",
+    tags=["agent-os"],
+    dependencies=[Depends(require_agent_os_access)],
+)
 
 
 def _now() -> str:

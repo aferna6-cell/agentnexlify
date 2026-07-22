@@ -1698,7 +1698,7 @@ degrade to phase-1 awareness) and injected into Agent OS run context. Only
 the owner-chosen tool auto-runs; arbitrary calls stay owner-invoked
 (`PATCH /api/v1/os/mcp/servers/{id}/context-tool` sets/clears it).
 
-## Migration 185 — photo_quote_feedback (#44, UNAPPLIED)
+## Migration 185 — photo_quote_feedback (#44, APPLIED 2026-07-22)
 Adds `quote_requests.tenant_feedback` (text CHECK correct|too_low|too_high|unclear)
 + `led_to_appointment` (bool default false) + partial index on rated rows. Pilot
 instrumentation for the photo-quote GA gate: tenant error rate (<5% goal) +
@@ -1706,7 +1706,7 @@ quote->appointment conversion (30% goal). Read/written fail-open by
 `backend/services/photo_quote_telemetry.py`, so shipping the code before apply
 degrades to "no feedback recorded". Apply via Supabase. client_id-scoped (mig 108).
 
-## Migration 186 — pending_automations (2026-07-22, UNAPPLIED)
+## Migration 186 — pending_automations (APPLIED 2026-07-22)
 Creates `pending_automations`, the ops-automation retry queue (#118). The enqueue
 side (#117 missed_call_gate, #119 booking_gcal) shipped writing to this table
 fail-open, but no migration ever created it (the sibling comment citing "migration

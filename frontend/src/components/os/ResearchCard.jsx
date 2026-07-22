@@ -7,49 +7,17 @@ import { createProjectFromResearch, runOsResearch } from "../../utils/api/os";
 // memory, connected tools). The brief parks at the normal approval gate,
 // and "Act on this brief" seeds a multi-department project from it.
 
-const cardStyle = {
-  background: "var(--bg-secondary, var(--card-bg))",
-  border: "1px solid var(--border)",
-  borderRadius: 12,
-  padding: "18px 22px",
-};
+import {
+  cardStyle,
+  btnStyle,
+  btnQuiet,
+  inputBaseStyle,
+  headingStyle,
+  mutedStyle,
+} from "./osStyles";
 
-const btnStyle = {
-  border: "none",
-  borderRadius: 8,
-  padding: "8px 16px",
-  cursor: "pointer",
-  fontSize: "0.85rem",
-  color: "#fff",
-  background: "var(--accent, #6366f1)",
-};
+const inputStyle = { ...inputBaseStyle, flex: 1 };
 
-const btnQuiet = {
-  ...btnStyle,
-  background: "var(--bg-primary)",
-  color: "var(--text-secondary)",
-  border: "1px solid var(--border)",
-};
-
-const inputStyle = {
-  flex: 1,
-  background: "var(--bg-primary)",
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  color: "var(--text-primary, #f1f5f9)",
-  padding: "8px 10px",
-  fontSize: "0.85rem",
-  boxSizing: "border-box",
-};
-
-const headingStyle = {
-  margin: "0 0 4px",
-  fontSize: "1rem",
-  fontWeight: 600,
-  color: "var(--text-primary, #f1f5f9)",
-};
-
-const mutedStyle = { fontSize: "0.8rem", color: "var(--text-muted)" };
 
 export default function ResearchCard({ token }) {
   const [topic, setTopic] = useState("");

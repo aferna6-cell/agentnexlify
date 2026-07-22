@@ -13,8 +13,12 @@ old contracts (CLAUDE.md "Plan names + prices" - gates include them).
 Staged rollout: stage 1 (2026-07-21) gated the six new suite routers;
 stage 2 (2026-07-22) widened to the core chat surfaces (os_threads /
 os_orchestrate / os_deliverables) once the 402 payload rendered as a real
-upsell in the dashboard. Demo tenants carry an allowed plan; inbound
-bridges and the signed email-action pages bypass routers entirely.
+upsell in the dashboard; stage 3 (2026-07-22, audit H1) covered the ten
+remaining authed os_* routers (agent_runs, backlog, files, graph,
+insights, memory, run_trace, sync, usage, usage_breakdown). Every authed
+/api/v1/os surface is now behind this gate; os_inbound webhooks and the
+signed email-action pages stay public by design. Demo tenants carry an
+allowed plan; inbound bridges call services directly.
 
 Fail-open on read errors: a DB blip must not lock paying owners out of
 their workforce; the gate only blocks on a positively-known outside plan.

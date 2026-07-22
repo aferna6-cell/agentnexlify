@@ -19,6 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 
 from backend.dependencies import _get_current_tenant
+from backend.services.agent_os_gate import require_agent_os_access
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.services.image_gen import (
@@ -33,7 +34,13 @@ from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/os", tags=["agent-os-files"])
+# Stage-3 plan gate (2026-07-22, audit H1): suite surface - agent_os
+# plan (+ legacy) only; 402 upsell otherwise.
+router = APIRouter(
+    prefix="/api/v1/os",
+    tags=["agent-os-files"],
+    dependencies=[Depends(require_agent_os_access)],
+)
 
 # ── constants ─────────────────────────────────────────────────────────────────
 

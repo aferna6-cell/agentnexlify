@@ -6,35 +6,10 @@ from unittest.mock import MagicMock, patch
 from backend.services import biz_answers, os_starter_tasks, workforce_digest
 
 
-class _Result:
-    def __init__(self, data):
-        self.data = data
-
-
-class _Query:
-    def __init__(self, rows, sink, table):
-        self._rows = rows
-        self._sink = sink
-        self._table = table
-
-    def __getattr__(self, name):
-        def _method(*args, **kwargs):
-            self._sink.append((self._table, name, args))
-            if name == "execute":
-                return _Result(self._rows)
-            return self
-
-        return _method
-
-
-def _db(rows_by_table, sink=None):
-    sink = sink if sink is not None else []
-    db = MagicMock()
-    db.table.side_effect = lambda name: _Query(
-        rows_by_table.get(name, []), sink, name
-    )
-    db._sink = sink
-    return db
+from backend.tests.fake_supabase import (
+    Query as _Query,
+    db as _db,
+)
 
 
 class TestWorkforceDigest:

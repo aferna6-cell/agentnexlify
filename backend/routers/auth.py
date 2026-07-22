@@ -127,6 +127,7 @@ def _create_token(
 
 # _get_current_tenant and require_role live in backend.dependencies - import for own use.
 from backend.dependencies import _get_current_tenant, require_role  # noqa: E402
+from backend.services.agent_os_gate import require_agent_os_access  # noqa: E402
 
 
 # ── Google OAuth helpers + endpoints moved to auth_google.py;
@@ -775,11 +776,45 @@ async def update_widget_config(
 # ── MCP API Keys ──────────────────────────────────────────
 
 
+@router.get("/mcp-key/{tenant_id}")
+async def get_mcp_key(tenant_id: str, claims: dict = Depends(require_role("owner"))):
+    """Read the tenant's MCP key state so the setup page can show it.
+
+    The key only exists after generate_mcp_key; the setup page used to show
+    the widget key (anx_...) here, which the MCP server rejects - owners
+    need the dedicated mcp_ key.
+    """
+    if claims["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_service_supabase()
+    result = (
+        db.table("tenants")
+        .select("mcp_api_key, mcp_enabled")
+        .eq("id", tenant_id)
+        .limit(1)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    row = result.data[0]
+    return {
+        "mcp_api_key": row.get("mcp_api_key"),
+        "mcp_enabled": bool(row.get("mcp_enabled")),
+    }
+
+
 @router.post("/mcp-key/{tenant_id}")
 async def generate_mcp_key(
-    tenant_id: str, claims: dict = Depends(require_role("owner"))
+    tenant_id: str,
+    claims: dict = Depends(require_role("owner")),
+    _plan: dict = Depends(require_agent_os_access),
 ):
-    """Generate or regenerate an MCP API key for the tenant."""
+    """Generate or regenerate an MCP API key for the tenant.
+
+    Connecting an outside AI assistant to business data is a full-platform
+    (agent_os) capability - same 402 upsell payload as the suite routers.
+    """
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 

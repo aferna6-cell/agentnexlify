@@ -9,13 +9,20 @@ import logging
 from fastapi import APIRouter, Depends
 
 from backend.dependencies import _get_current_tenant
+from backend.services.agent_os_gate import require_agent_os_access
 from backend.models.database import get_service_supabase
 from backend.services import usage_meter
 from backend.services.ai_usage_guard import get_ai_usage_status
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/os", tags=["agent-os"])
+# Stage-3 plan gate (2026-07-22, audit H1): suite surface - agent_os
+# plan (+ legacy) only; 402 upsell otherwise.
+router = APIRouter(
+    prefix="/api/v1/os",
+    tags=["agent-os"],
+    dependencies=[Depends(require_agent_os_access)],
+)
 
 
 @router.get("/usage")

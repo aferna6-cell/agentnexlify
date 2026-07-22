@@ -14,6 +14,9 @@ vi.mock("../utils/api/os", () => ({
   orchestrateOsTurn: vi.fn(),
   postOsMessage: vi.fn(),
   fetchOsUsage: vi.fn(),
+  // OsInsightsCard rides the api layer since audit M5; resolve null so the
+  // card renders nothing in shell tests.
+  fetchOsInsights: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock("../components/os/OpportunityCards", () => ({
