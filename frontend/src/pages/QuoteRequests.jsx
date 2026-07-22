@@ -1,9 +1,40 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useAuth } from "../context/AuthContext";
-import { fetchPhotoQuotes } from "../utils/api/photo-quotes";
+import { fetchPhotoQuotes, submitQuoteFeedback } from "../utils/api/photo-quotes";
 
 const CAP = 500;
+
+function MetricCard({ label, value, sub, danger }) {
+  return (
+    <div
+      style={{
+        flex: 1,
+        background: "var(--surface, #111827)",
+        border: "1px solid var(--border, #1f2937)",
+        borderRadius: 10,
+        padding: 16,
+      }}
+    >
+      <div style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>{label}</div>
+      <div
+        style={{
+          color: danger ? "#ef4444" : "var(--text-primary)",
+          fontSize: "1.4rem",
+          fontWeight: 700,
+          marginTop: 4,
+        }}
+      >
+        {value}
+      </div>
+      {sub ? (
+        <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", marginTop: 2 }}>
+          {sub}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function meterColor(count) {
   if (count > CAP) return "#ef4444"; // red - over cap
@@ -57,6 +88,7 @@ export default function QuoteRequests() {
 
   const [items, setItems] = useState([]);
   const [usage, setUsage] = useState(null);
+  const [telemetry, setTelemetry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [needsHumanOnly, setNeedsHumanOnly] = useState(false);
@@ -72,12 +104,26 @@ export default function QuoteRequests() {
       });
       setItems(data.items || []);
       setUsage(data.usage || null);
+      setTelemetry(data.telemetry || null);
     } catch (e) {
       setError(e?.message || "Failed to load quote requests.");
     } finally {
       setLoading(false);
     }
   }, [tenantId, token, needsHumanOnly]);
+
+  const rate = async (quoteId, feedback) => {
+    // Optimistic: mark the row locally, then persist.
+    setItems((prev) =>
+      prev.map((q) => (q.id === quoteId ? { ...q, tenant_feedback: feedback } : q)),
+    );
+    try {
+      await submitQuoteFeedback(tenantId, token, quoteId, feedback);
+    } catch (e) {
+      // Non-fatal: reload to resync on failure.
+      load();
+    }
+  };
 
   useEffect(() => {
     load();
@@ -95,6 +141,22 @@ export default function QuoteRequests() {
       </div>
 
       <UsageMeter usage={usage} />
+
+      {telemetry ? (
+        <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+          <MetricCard
+            label="Error rate (7d)"
+            value={`${Math.round((telemetry.error_rate?.error_rate || 0) * 100)}%`}
+            sub={`${telemetry.error_rate?.rated || 0} rated`}
+            danger={telemetry.error_rate?.over_threshold}
+          />
+          <MetricCard
+            label="Conversion (30d)"
+            value={`${Math.round((telemetry.conversion?.conversion_rate || 0) * 100)}%`}
+            sub={`${telemetry.conversion?.converted || 0} of ${telemetry.conversion?.total || 0}`}
+          />
+        </div>
+      ) : null}
 
       <div style={{ display: "flex", gap: 14, marginBottom: 16, alignItems: "center" }}>
         <label style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
@@ -145,6 +207,7 @@ export default function QuoteRequests() {
                 <th style={{ padding: 8 }}>Severity</th>
                 <th style={{ padding: 8 }}>Confidence</th>
                 <th style={{ padding: 8 }}>Outcome</th>
+                <th style={{ padding: 8 }}>Accuracy</th>
               </tr>
             </thead>
             <tbody>
@@ -192,6 +255,40 @@ export default function QuoteRequests() {
                       <span style={{ color: "#f59e0b" }}>Needs human</span>
                     ) : (
                       <span style={{ color: "#22c55e" }}>Quoted</span>
+                    )}
+                  </td>
+                  <td style={{ padding: 8, whiteSpace: "nowrap" }}>
+                    {q.tenant_feedback ? (
+                      <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
+                        {q.tenant_feedback.replace("_", " ")}
+                      </span>
+                    ) : (
+                      ["correct", "too_low", "too_high", "unclear"].map((f) => (
+                        <button
+                          key={f}
+                          type="button"
+                          onClick={() => rate(q.id, f)}
+                          title={`Mark ${f.replace("_", " ")}`}
+                          style={{
+                            background: "none",
+                            border: "1px solid var(--border, #1f2937)",
+                            color: "var(--text-muted)",
+                            borderRadius: 5,
+                            cursor: "pointer",
+                            fontSize: "0.7rem",
+                            padding: "2px 5px",
+                            marginRight: 3,
+                          }}
+                        >
+                          {f === "correct"
+                            ? "OK"
+                            : f === "too_low"
+                              ? "Low"
+                              : f === "too_high"
+                                ? "High"
+                                : "?"}
+                        </button>
+                      ))
                     )}
                   </td>
                 </tr>

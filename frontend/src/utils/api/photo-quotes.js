@@ -18,3 +18,11 @@ export function fetchPhotoQuotes(
     token,
   });
 }
+
+export function submitQuoteFeedback(tenantId, token, quoteId, feedback) {
+  return request(`/api/photo-quotes/${tenantId}/feedback`, {
+    method: "POST",
+    token,
+    body: { quote_id: quoteId, feedback },
+  });
+}

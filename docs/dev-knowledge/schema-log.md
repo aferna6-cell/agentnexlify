@@ -1697,3 +1697,11 @@ per server (with fixed args) whose live result is fetched at run time
 degrade to phase-1 awareness) and injected into Agent OS run context. Only
 the owner-chosen tool auto-runs; arbitrary calls stay owner-invoked
 (`PATCH /api/v1/os/mcp/servers/{id}/context-tool` sets/clears it).
+
+## Migration 185 — photo_quote_feedback (#44, UNAPPLIED)
+Adds `quote_requests.tenant_feedback` (text CHECK correct|too_low|too_high|unclear)
++ `led_to_appointment` (bool default false) + partial index on rated rows. Pilot
+instrumentation for the photo-quote GA gate: tenant error rate (<5% goal) +
+quote->appointment conversion (30% goal). Read/written fail-open by
+`backend/services/photo_quote_telemetry.py`, so shipping the code before apply
+degrades to "no feedback recorded". Apply via Supabase. client_id-scoped (mig 108).
