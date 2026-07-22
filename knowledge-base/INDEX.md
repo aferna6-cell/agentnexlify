@@ -121,6 +121,10 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ### Integrations
 - [Google Drive KB Onboarding — Folder Sync into the Widget Knowledge Base](wiki/integrations/drive-kb-onboarding.md) — Connect one Drive folder as a live KB source; OAuth `drive.readonly`, daily diff-based sync, advisory regex PII flagging, tier-gated doc limits, read-only-when-synced dashboard, multi-provider `tenant_integrations` schema. Tags: drive-kb, google-drive, oauth, knowledge-base, sync, pii, multi-provider
+- [Zapier CRM Export — new_lead Trigger via Polling API Keys](wiki/integrations/zapier.md) — Push every new lead into Jobber/ServiceTitan/Housecall Pro/6,000+ apps via a tier-gated, API-key polling endpoint returning flat, `;`-joined lead rows Zapier de-dupes on id; single-view bcrypt keys, per-key rate limit, v1-pinned schema. Tags: zapier, crm-export, api-keys, new-lead, polling, tier-gated
+- [Send AgentNexLiFy Leads to Jobber via Zapier](wiki/integrations/zapier-jobber.md) — Tenant setup guide: generate key, New Lead trigger, Jobber Create Client/Request action, field mapping. Tags: zapier, jobber, crm-export, setup-guide
+- [Send AgentNexLiFy Leads to ServiceTitan via Zapier](wiki/integrations/zapier-servicetitan.md) — Tenant setup guide: New Lead trigger into ServiceTitan Create Lead, CSR summary mapping. Tags: zapier, servicetitan, crm-export, setup-guide
+- [Send AgentNexLiFy Leads to Housecall Pro via Zapier](wiki/integrations/zapier-housecall-pro.md) — Tenant setup guide: New Lead trigger into Housecall Pro Create Customer, hands-free capture. Tags: zapier, housecall-pro, crm-export, setup-guide
 
 ### Regulations & Compliance
 - [HIPAA — Privacy Rule, Security Rule, and Covered Entities](wiki/regulations/hipaa-overview-cdc.md) — HIPAA Privacy/Security Rules bind any business associate handling PHI; defines AgentNexLiFy's exposure for dental/medical tenants. Tags: hipaa, phi, ephi, privacy-rule, security-rule, healthcare-compliance
