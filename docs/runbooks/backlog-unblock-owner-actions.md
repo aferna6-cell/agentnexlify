@@ -36,19 +36,27 @@ live against the real `pending_automations` table.
 
 ### `INTEGRATIONS_ENC_KEY` (Railway prod + GitHub Actions) — unblocks #536, #266
 A `cryptography.fernet` key. Without it the integration key vault fails closed
-and the OAuth-token encryption stays half-done.
+and new OAuth connects can't persist an encrypted token.
+
+**Prod state verified 2026-07-22 (Supabase):** `integrations` has **0 rows** (0
+plaintext tokens, 0 rows needing backfill), and `tenant_integrations` has only
+`_enc` columns (no plaintext). So the backfill (old step 4) is a **no-op** —
+there is no plaintext token anywhere to encrypt — and the sunset migration
+carries **zero current-data-loss risk**. The reader migration (#266 step 2) is
+already shipped (twilio/hubspot/etc. route through `decrypt_integration_row`).
+
+Remaining steps:
 1. Generate: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
 2. Set `INTEGRATIONS_ENC_KEY` in Railway prod env vars and as a GitHub Actions secret.
-3. Smoke-test a new OAuth connect (Google Drive or Calendar) end to end.
-4. Run the backfill: `python scripts/backfill_integration_encryption.py --dry-run`,
-   then live. Confirm `access_token_enc` is populated for every row with a
-   non-null plaintext token.
-5. Only after 1-4 are verified in prod: write + apply the sunset migration that
-   drops the plaintext `integrations.access_token` / `refresh_token` columns
-   (#266 step 4). **Do not write this migration before the backfill is verified
-   — the plaintext columns are the only token copy until the enc columns are
-   populated.**
-6. Close #536, then #266.
+3. Smoke-test a new OAuth connect (Google Drive or Calendar) end to end; confirm
+   its `_enc` column populates.
+4. Write + apply the sunset migration dropping the plaintext
+   `integrations.access_token` / `refresh_token` columns (#266 step 4). Safe to
+   do immediately after step 2 (no backfill wait — nothing to backfill). **Do
+   NOT apply it before the key is set:** with no key, `encrypt_oauth_tokens`
+   no-ops, so a NEW connect after the columns are dropped would store no token
+   at all. Key first, then sunset.
+5. Close #536, then #266.
 
 ### `ANTHROPIC_API_KEY` + `SUPABASE_ACCESS_TOKEN` (GitHub Actions) — unblocks #403
 Nightly KB compile + autopilot jobs need these. Rotate/set in
