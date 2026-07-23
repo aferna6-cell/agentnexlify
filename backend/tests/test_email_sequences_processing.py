@@ -16,7 +16,7 @@ import asyncio
 
 import pytest
 
-from backend.routers import email_sequences as es
+from backend.routers import email_crud, email_enrollment, email_processor
 
 
 class _FakeResult:
@@ -128,13 +128,13 @@ def test_count_by_sequence_id_tallies():
     db = _FakeDB(step_rows=[
         {"sequence_id": "a"}, {"sequence_id": "a"}, {"sequence_id": "b"},
     ])
-    counts = es._count_by_sequence_id(db, "email_sequence_steps", ["a", "b", "c"])
+    counts = email_crud._count_by_sequence_id(db, "email_sequence_steps", ["a", "b", "c"])
     assert counts == {"a": 2, "b": 1}
 
 
 def test_count_by_sequence_id_empty_returns_empty():
     db = _FakeDB()
-    assert es._count_by_sequence_id(db, "email_sequence_steps", []) == {}
+    assert email_crud._count_by_sequence_id(db, "email_sequence_steps", []) == {}
 
 
 # --------------------------------------------------------------------------- #
@@ -166,12 +166,12 @@ def _patch_send(monkeypatch, *, success=True, detail="boom"):
         except (KeyError, IndexError, ValueError):
             return tmpl
 
-    monkeypatch.setattr(es, "send_email", _fake_send_email)
-    monkeypatch.setattr(es, "render_template", _render)
-    monkeypatch.setattr(es, "build_unsubscribe_url", lambda lead, ten: f"http://u/{lead}")
-    monkeypatch.setattr(es, "log_activity", lambda **k: None)
-    monkeypatch.setattr(es, "_increment_runs_total", lambda *a, **k: None)
-    monkeypatch.setattr(es, "_maybe_complete_enrollment", lambda *a, **k: None)
+    monkeypatch.setattr(email_processor, "send_email", _fake_send_email)
+    monkeypatch.setattr(email_processor, "render_template", _render)
+    monkeypatch.setattr(email_processor, "build_unsubscribe_url", lambda lead, ten: f"http://u/{lead}")
+    monkeypatch.setattr(email_processor, "log_activity", lambda **k: None)
+    monkeypatch.setattr(email_processor, "_increment_runs_total", lambda *a, **k: None)
+    monkeypatch.setattr(email_processor, "_maybe_complete_enrollment", lambda *a, **k: None)
 
 
 def test_process_pending_sends_happy_path(monkeypatch):
@@ -181,7 +181,7 @@ def test_process_pending_sends_happy_path(monkeypatch):
         leads={"lead1": {"id": "lead1", "name": "Ana", "email": "a@x.com", "unsubscribed": False}},
         tenants={"ten1": {"business_name": "Biz"}},
     )
-    res = asyncio.run(es._process_pending_sends(db, [_due()]))
+    res = asyncio.run(email_processor._process_pending_sends(db, [_due()]))
     assert res == {"processed": 1, "sent": 1, "failed": 0, "skipped": 0}
     # send marked 'sent'
     assert any(t == "email_sequence_sends" and p.get("status") == "sent"
@@ -195,7 +195,7 @@ def test_process_pending_sends_unsubscribed_skips(monkeypatch):
         leads={"lead1": {"id": "lead1", "name": "Ana", "email": "a@x.com", "unsubscribed": True}},
         tenants={"ten1": {"business_name": "Biz"}},
     )
-    res = asyncio.run(es._process_pending_sends(db, [_due()]))
+    res = asyncio.run(email_processor._process_pending_sends(db, [_due()]))
     assert res == {"processed": 1, "sent": 0, "failed": 0, "skipped": 1}
     assert any(p.get("error") == "unsubscribed" for (_t, _f, p) in db.writes)
 
@@ -207,14 +207,14 @@ def test_process_pending_sends_no_email_skips(monkeypatch):
         leads={"lead1": {"id": "lead1", "name": "Ana", "email": "", "unsubscribed": False}},
         tenants={"ten1": {"business_name": "Biz"}},
     )
-    res = asyncio.run(es._process_pending_sends(db, [_due()]))
+    res = asyncio.run(email_processor._process_pending_sends(db, [_due()]))
     assert res["skipped"] == 1 and res["sent"] == 0
 
 
 def test_process_pending_sends_missing_step_skips(monkeypatch):
     _patch_send(monkeypatch, success=True)
     db = _FakeDB(leads={"lead1": {"id": "lead1", "email": "a@x.com"}})
-    res = asyncio.run(es._process_pending_sends(db, [_due()]))
+    res = asyncio.run(email_processor._process_pending_sends(db, [_due()]))
     assert res == {"processed": 1, "sent": 0, "failed": 0, "skipped": 1}
 
 
@@ -225,7 +225,7 @@ def test_process_pending_sends_send_failure_counts_failed(monkeypatch):
         leads={"lead1": {"id": "lead1", "name": "Ana", "email": "a@x.com", "unsubscribed": False}},
         tenants={"ten1": {"business_name": "Biz"}},
     )
-    res = asyncio.run(es._process_pending_sends(db, [_due()]))
+    res = asyncio.run(email_processor._process_pending_sends(db, [_due()]))
     assert res == {"processed": 1, "sent": 0, "failed": 1, "skipped": 0}
     assert any(p.get("error") == "provider down" for (_t, _f, p) in db.writes)
 
@@ -243,11 +243,11 @@ def test_run_sequence_processor_delegates(monkeypatch):
         seen["due"] = due
         return sentinel
 
-    monkeypatch.setattr(es, "get_service_supabase", lambda: _FakeDB())
-    monkeypatch.setattr(es, "_query_due_sends", lambda db: [_due("s9")])
-    monkeypatch.setattr(es, "_process_pending_sends", _fake_proc)
+    monkeypatch.setattr(email_processor, "get_service_supabase", lambda: _FakeDB())
+    monkeypatch.setattr(email_processor, "_query_due_sends", lambda db: [_due("s9")])
+    monkeypatch.setattr(email_processor, "_process_pending_sends", _fake_proc)
 
-    res = asyncio.run(es.run_sequence_processor())
+    res = asyncio.run(email_processor.run_sequence_processor())
     assert res == sentinel
     assert seen["due"] == [_due("s9")]
 
@@ -258,21 +258,21 @@ def test_process_sequences_endpoint_delegates(monkeypatch):
     async def _fake_proc(db, due):
         return sentinel
 
-    monkeypatch.setattr(es, "get_service_supabase", lambda: _FakeDB())
-    monkeypatch.setattr(es, "_query_due_sends", lambda db: [_due()])
-    monkeypatch.setattr(es, "_process_pending_sends", _fake_proc)
-    monkeypatch.setattr(es.settings, "api_secret_key", "secret")
+    monkeypatch.setattr(email_processor, "get_service_supabase", lambda: _FakeDB())
+    monkeypatch.setattr(email_processor, "_query_due_sends", lambda db: [_due()])
+    monkeypatch.setattr(email_processor, "_process_pending_sends", _fake_proc)
+    monkeypatch.setattr(email_processor.settings, "api_secret_key", "secret")
 
-    res = asyncio.run(es.process_sequences(x_internal_key="secret"))
+    res = asyncio.run(email_processor.process_sequences(x_internal_key="secret"))
     assert res == sentinel
 
 
 def test_process_sequences_endpoint_rejects_bad_key(monkeypatch):
     from fastapi import HTTPException
 
-    monkeypatch.setattr(es.settings, "api_secret_key", "secret")
+    monkeypatch.setattr(email_processor.settings, "api_secret_key", "secret")
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(es.process_sequences(x_internal_key="wrong"))
+        asyncio.run(email_processor.process_sequences(x_internal_key="wrong"))
     assert exc.value.status_code == 401
 
 
@@ -287,9 +287,9 @@ def test_list_sequences_enriches_counts(monkeypatch):
         step_rows=[{"sequence_id": "seq1"}, {"sequence_id": "seq1"}, {"sequence_id": "seq2"}],
         enroll_rows=[{"sequence_id": "seq1"}],
     )
-    monkeypatch.setattr(es, "get_service_supabase", lambda: db)
+    monkeypatch.setattr(email_crud, "get_service_supabase", lambda: db)
 
-    res = asyncio.run(es.list_sequences(claims={"tenant_id": "ten1"}))
+    res = asyncio.run(email_crud.list_sequences(claims={"tenant_id": "ten1"}))
     by_id = {s["id"]: s for s in res["sequences"]}
     assert res["total"] == 2
     assert by_id["seq1"]["step_count"] == 2
@@ -311,9 +311,9 @@ def test_list_enrollments_attaches_leads_in_bulk(monkeypatch):
             "lead2": {"id": "lead2", "name": "Bo", "email": "b@x.com", "phone": "2", "status": "won"},
         },
     )
-    monkeypatch.setattr(es, "get_service_supabase", lambda: db)
+    monkeypatch.setattr(email_enrollment, "get_service_supabase", lambda: db)
 
-    res = asyncio.run(es.list_enrollments("seq1", claims={"tenant_id": "ten1"}))
+    res = asyncio.run(email_enrollment.list_enrollments("seq1", claims={"tenant_id": "ten1"}))
     by_id = {e["id"]: e for e in res["enrollments"]}
     assert res["total"] == 3
     assert by_id["e1"]["lead"]["name"] == "Ana"
@@ -325,13 +325,13 @@ def test_list_enrollments_unknown_sequence_404(monkeypatch):
     from fastapi import HTTPException
 
     db = _FakeDB(sequences=[])  # ownership check finds nothing
-    monkeypatch.setattr(es, "get_service_supabase", lambda: db)
+    monkeypatch.setattr(email_enrollment, "get_service_supabase", lambda: db)
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(es.list_enrollments("nope", claims={"tenant_id": "ten1"}))
+        asyncio.run(email_enrollment.list_enrollments("nope", claims={"tenant_id": "ten1"}))
     assert exc.value.status_code == 404
 
 
 def test_query_due_sends_returns_pending():
     rows = [_due("s1"), _due("s2")]
     db = _FakeDB(due=rows)
-    assert es._query_due_sends(db) == rows
+    assert email_processor._query_due_sends(db) == rows
