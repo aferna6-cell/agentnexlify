@@ -140,9 +140,13 @@ export default function TermsOfService() {
               constitutes acceptance.
             </li>
             <li>
-              <strong>Failed payments:</strong> If a payment fails, we retry for
-              a short grace period. If it continues to fail, your subscription
-              may be canceled and access to paid features suspended.
+              <strong>Failed payments:</strong> If a payment fails, access to
+              paid features is suspended and we email you a payment link.
+              Stripe automatically retries the charge on its standard schedule
+              (multiple attempts over approximately four weeks). Paying the
+              outstanding invoice restores access immediately. If every retry
+              fails, we cancel your subscription; your data is retained per
+              Section 10 and you can resubscribe at any time.
             </li>
           </ul>
         </section>

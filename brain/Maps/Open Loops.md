@@ -11,7 +11,40 @@ last_updated: 2026-07-01
 
 Unfinished work + blockers (business scope). Ordered by priority.
 
-## Cold Outreach Engine (added 2026-07-13)
+## Cleanup pass 2026-07-23 (remote session)
+- **PR pile cleared:** merged #487/#488/#489/#490/#13 (Dependabot), #565 (subconscious run 100),
+  #509 (docs). Closed as superseded: #517/#521 (ops-automation — prod already runs migration 186
+  + newer retry worker with a different column contract), #537, #559. Security issue **#558
+  closed** — the H1 gate gap was already fixed on main by PR #561 (all 10 `os_*` routers gated,
+  tests in `test_suite_round7.py`). Follow-up filed: #567 (RLS policy on `pending_automations` +
+  re-cut `activity_feed_events` as migration 187).
+- **GitHub Actions is down repo-wide (#500, billing/spending limit)** — every run fails,
+  schedule and push alike. Worked around: two Claude Code cloud Routines now run the critical
+  loops without Actions, PATs, or API-key secrets — "Autopilot Issue Loop (CCR)" every 6h and
+  "KB Auto-Populate (CCR)" at 06:00/18:00 UTC (deliver work as PRs). #399 (expired PAT) and
+  #403 (missing ANTHROPIC_API_KEY) are therefore no longer day-blocking; both issues carry the
+  restore-Actions runbook for later. Pause the Routines if the Actions crons are re-enabled.
+- **Keys Koffee bookable (GH #415 closed):** seeded platform-default hours (Mon–Fri 9–5 ET,
+  `booking.DEFAULT_HOURS`) — tenant publishes no hours anywhere (corporate cold-brew/catering
+  op). Verified live: 16 slots returned for 2026-07-24. Confirmation email to owner sitting in
+  Gmail drafts.
+- **#536 de-escalated:** `INTEGRATIONS_ENC_KEY` blocks nothing today (`integrations` table has
+  0 rows; every code path fail-safes; migration 176 correctly held back). 2-minute Railway env
+  add whenever the first Drive/GBP tenant is imminent — runbook on the issue.
+- **Stripe Connect decision made (GH #217 closed as deferred):** architecture locked to Connect
+  Standard OAuth (never per-tenant secret keys); build deferred until a demand signal. See
+  `planning/decisions/2026-07-23-stripe-connect-vs-key-vault.md` for re-open criteria.
+- **ToS §4 failed-payments clause fixed (GH #330):** clause now matches actual dunning behavior
+  (immediate suspension, Stripe retry schedule, pay-link restore, cancellation + Section 10
+  retention). Most of #330's original complaints (refunds, cancellation) had already been fixed
+  in an earlier pass. Owner PR approval = the human review.
+
+## Cold Outreach Engine (added 2026-07-13; status-checked 2026-07-23)
+> 2026-07-23: both blockers below remain owner-only — `GOOGLE_PLACES_API_KEY` still not in
+> Railway, no Instantly credentials in any automated environment, so campaign completion state
+> ("Small Business CT 7/10", ~197/371 sent as of 7/13) is unverifiable from automation. Two
+> owner steps close this loop: (1) add `GOOGLE_PLACES_API_KEY` to Railway backend variables,
+> (2) say the word and a CCR Routine gets armed for the recurring Places→verify→load run.
 - **`GOOGLE_PLACES_API_KEY` not persisted** — the key works this session but lives only in an
   ephemeral `.env`/scratchpad; it vanishes on container recycle. **Add it in Railway → backend
   service → Variables** so scheduled/prod runs authenticate. Until then, Places sourcing is
@@ -24,10 +57,10 @@ Unfinished work + blockers (business scope). Ordered by priority.
   20/inbox/day cap over ~1–2 days. 0 bounces, 1 reply (System4 IPS). Monitor pings on completion.
 
 ## In progress / pending autonomous (added 2026-07-01)
-- **SMS Compliance Dashboard** — subconscious winner for 10+ days (runs 70/73/74/75, 12/12
-  council score, S effort). Backend LIVE (`backend/services/sms_compliance.py` + migration 160);
-  **frontend page never started**. Run 75 mandate: ship or de-scope to backend-only. GH issue
-  filed by nightly-review 2026-07-01. Source: commits e225b53, c3298be, 8a3b071.
+- ~~SMS Compliance Dashboard~~ — **SHIPPED IN FULL 2026-07-13 (verified 2026-07-23):** backend
+  router `backend/routers/sms_compliance.py` + frontend `frontend/src/pages/SmsCompliance.jsx`
+  wired into App.jsx + Sidebar (commit 8f48f042, GH #385 closed completed 2026-07-13). This
+  entry was stale — the run-75 "ship or de-scope" mandate was satisfied by shipping.
 - ~~Zapier plan_status enforcement (GH #107)~~ — **ALREADY SHIPPED (verified 2026-07-13):**
   issue closed 2026-06-13; gate live at `backend/routers/zapier.py:122-128` with regression
   test `test_zapier_auth.py::test_cancelled_subscription_blocked`. This entry was stale.
