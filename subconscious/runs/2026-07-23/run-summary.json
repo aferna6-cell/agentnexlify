@@ -1,0 +1,47 @@
+{
+  "run": 100,
+  "date": "2026-07-23",
+  "winner": {
+    "id": "idea_1",
+    "title": "Step 9G: KB autopopulate self-healing trigger",
+    "category": "operational",
+    "effort": "XS",
+    "confidence": "HIGH",
+    "target_file": ".claude/skills/nightly-commit-review/SKILL.md",
+    "mechanism": "bash block in SKILL.md — same channel as Steps 9B-9F",
+    "trigger_condition": "DAYS_STALE > 7",
+    "actions": [
+      "gh workflow run kb-autopopulate.yml -R aferna6-cell/agentnexlify",
+      "sleep 30",
+      "gh run list --workflow=kb-autopopulate.yml --limit=1 --json conclusion,createdAt,url",
+      "comment on GH #403 with specific diagnostic if FAILED"
+    ]
+  },
+  "mandate_check": {
+    "step_9f_in_skill_md": "PASS — 6 occurrences confirmed",
+    "step_9f_fired_nightly_2026_07_22": "PASS — confirmed in docs/dev-knowledge/nightly-reviews/2026-07-22.md",
+    "kb_stale_gh_403_comment": "PASS — nightly-2026-07-22 comment confirms",
+    "kb_still_stale": "YES — 10 days (last run 2026-07-13)",
+    "gh_399_gh_413_status": "NOT CHECKED — not in nightly scope this run",
+    "appointment_auto_complete_events": "PASS — appointment_completion.py implemented in PR #475"
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "parking_lot": [
+    "LoopHealthPage.jsx (promote when Agent OS >5 tenants)",
+    "Voice test regression audit (nightly already clean)",
+    "MCP quickstart doc (human-authored content)"
+  ],
+  "killed": [
+    "MCP Step 9H monitoring (1 tenant only, can't auth-test, premature)"
+  ],
+  "evidence_basis": {
+    "kb_staleness": "knowledge-base/log.md — last entry 2026-07-13",
+    "step_9f_fired": "docs/dev-knowledge/nightly-reviews/2026-07-22.md",
+    "agent_os_rounds": "commits e646bdc (Round 7) + 970da66 (Round 8)",
+    "mcp_activation": "commit 281156f — first MCP tenant documented"
+  },
+  "nightly_clean": true,
+  "commits_reviewed": 7,
+  "auto_fixes": 0
+}
