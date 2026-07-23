@@ -400,6 +400,9 @@ async def _automation_loop():
     from backend.services.weekly_funnel_report import send_weekly_funnel_report
     from backend.services.os_sync import run_due_syncs as _os_sync_tick
     from backend.services.os_opportunities import run_opportunity_scan as _run_opportunity_scan
+    from backend.services.automation.scheduled.tenant_silence_watch import (
+        check_tenant_silence as _check_tenant_silence,
+    )
     from backend.services.os_draft_expiry import run_draft_expiry_sweep as _run_draft_expiry_sweep
     from backend.services.drive_kb_sync import run_drive_kb_sync_due as _run_drive_sync_due
 
@@ -524,6 +527,7 @@ async def _automation_loop():
                         ),
                         _safe_run("reset_demo_tenants", reset_demo_tenants),
                         _safe_run("send_activation_nudges", send_activation_nudges),
+                        _safe_run("check_tenant_silence", _check_tenant_silence),
                         _safe_run(
                             "run_pending_enrichment", run_pending_enrichment
                         ),
