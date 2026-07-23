@@ -5,26 +5,21 @@ origin: connector
 connector: Supabase
 account: VoltOps
 project: pxserpybmajixqrmzaly
-accessed: 2026-06-22
+accessed: 2026-07-23
+last_refresh: 2026-07-23T14:38Z
 sensitivity: normal
 tags: [source, connector]
 ---
 
-# Source: Supabase schema (smoke pass)
+# Source: Supabase schema (auto-refreshed)
 
 ## What this is
-Read-only `list_tables` on the ACTIVE project `aferna6-cell's Project`
-(`pxserpybmajixqrmzaly`) under org [[VoltOps]], 2026-06-22.
+Live snapshot from `refresh_connectors.py` of project `pxserpybmajixqrmzaly` (org [[VoltOps]]).
 
-## What it proves
-- ~130 tables, **RLS enabled on every table** (confirms multi-tenant + RLS invariant).
-- Live data volumes: 12 tenants, 2 clients, 27 leads, 1051 conversations, 2706 chat_messages,
-  92 faq_entries, 9 appointments, 9 invoices, 18 pipeline_stages.
-- **Agent OS is live in prod**: `os_threads` (17), `os_messages` (77), `os_agent_runs` (14),
-  `os_memory_entries` (14, voyage-3-lite 512d), `os_graph_nodes` (9) + `os_graph_edges` (1)
-  → graph memory shipped (confirms [[Agent OS Graph Memory]]).
-- `idempotency_keys` table present (6 rows; 7-day TTL) — the webhook dedup store behind #308.
-- This is the canonical [[AgentNexLiFy Platform]] database.
+## Counts (as of 2026-07-23T14:38Z)
+- public BASE TABLE count: 136
+- RLS expected on all tables (multi-tenant invariant).
 
-## Note
-Table/row counts are operational metadata, not customer PII. No row contents were read.
+## Notes
+- This is the canonical [[AgentNexLiFy Platform]] database. No row contents read.
+- Regenerated automatically; edits here will be overwritten on next refresh.
