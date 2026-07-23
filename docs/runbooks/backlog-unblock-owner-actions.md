@@ -11,24 +11,24 @@ Last compiled: 2026-07-22. Source: session backlog sweep + morning digest #538.
 
 ---
 
-## 1. Apply the staged migrations (Supabase)
+## 1. Apply the staged migrations (Supabase) — DONE (verified 2026-07-22)
 
-All are additive and idempotent; the code that references them ships fail-open,
-so applying them turns features on without a deploy. Apply via the Supabase SQL
-editor or MCP `apply_migration`, in number order.
+**All applied and verified against prod.** `list_migrations` on the active
+project (`pxserpybmajixqrmzaly`) shows every migration through 186; a targeted
+`information_schema` + `pg_indexes` check confirmed the columns, constraints,
+indexes, and the `increment_kb_citations` RPC all exist. No action remains here.
 
-| Migration | Unblocks | What it adds |
+| Migration | Unblocks | Verified live |
 |---|---|---|
-| `180_os_scheduled_tasks.sql` | Agent OS recurring tasks | `os_scheduled_tasks` table |
-| `181_kb_article_provenance.sql` | #70 KB provenance | source URL + last-validated columns + citation RPC |
-| `182_conversation_message_memory.sql` | #69 conversation memory | widget conversation memory tier |
-| `185_photo_quote_feedback.sql` | #44 photo-quote telemetry | `tenant_feedback` + `led_to_appointment` on `quote_requests` |
-| `186_pending_automations.sql` | #118 retry queue | `pending_automations` table the drainer + enqueuers use |
+| `180_os_scheduled_tasks.sql` | Agent OS recurring tasks | `os_scheduled_tasks` table present |
+| `181_kb_article_provenance.sql` | #70 KB provenance | `kb_articles.last_validated` + `citation_count` + `increment_kb_citations` RPC |
+| `182_conversation_message_memory.sql` | #69 conversation memory | `chat_messages.message_confidence`/`_relevance_score` + partial index |
+| `185_photo_quote_feedback.sql` | #44 photo-quote telemetry | `quote_requests.tenant_feedback` + `led_to_appointment` |
+| `186_pending_automations.sql` | #118 retry queue | `pending_automations` table + status CHECK + due/tenant indexes |
 
-After each: run one representative query to confirm the table/columns resolve.
-Note: `186` is what makes the missed-call SMS / GCal-sync retry drainer
-(`backend/services/retry_worker.py`) actually persist — until it is applied the
-drainer selects fail-open and no-ops.
+The missed-call SMS / GCal-sync retry drainer
+(`backend/services/retry_worker.py`, wired into the 60s automation loop) is now
+live against the real `pending_automations` table.
 
 ---
 
@@ -123,8 +123,8 @@ zero-routes bug).
 
 ## Sequence recommendation
 
-1. Secrets first (section 2) — cheapest, unblocks the most (#536/#266, #403,
+1. ~~Migrations (section 1)~~ — DONE, verified applied 2026-07-22.
+2. Secrets first (section 2) — cheapest, unblocks the most (#536/#266, #403,
    #399, #484, #413).
-2. Migrations (section 1) — turns on shipped features (#118, #44, #69, #70).
 3. Zapier + Google submissions (section 3) — long external lead times, start early.
 4. Owner decisions (section 4) — as bandwidth allows.
