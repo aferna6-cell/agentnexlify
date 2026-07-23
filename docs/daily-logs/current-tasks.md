@@ -1,5 +1,16 @@
 # Current Task Backlog — AgentNexLiFy
 
+Updated: 2026-07-20 (subconscious run 99 complete)
+
+## Subconscious Run 99 — Action Items (2026-07-20)
+
+- [x] **PR #482 closed, superseded by PR #483** — subconscious run 99 artifacts + Step 9F SKILL.md implementation merged via #483.
+- [x] **Step 9F implemented in SKILL.md** — KB staleness check live on main (origin/main via PR #483). First nightly will run it.
+- [ ] **ROTATE AUTOPILOT_GH_TOKEN in Railway** — GH #399, Day 18+. 30 ai-ready issues blocked. (Human action)
+- [ ] **Set REFERRAL_REWARD_ENABLED=1 in Railway** — GH #413, Day 29+. Booking chain complete since PR #475. (Human action)
+
+---
+
 Updated: 2026-05-01 09:31 EDT (automated morning startup)
 
 ## Today's Top 3 Priorities
