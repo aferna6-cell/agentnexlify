@@ -286,3 +286,14 @@ _All compiled 2026-04-18 cron run._
 - [technical] raw/technical/supabase-security-2025-retro.md — https://supabase.com/blog/supabase-security-2025-retro
 - [regulations] raw/regulations/ftc-ban-kochava-subsidiary-selling-sensitive-location-data-settle-charges-they-s.md — https://www.ftc.gov/news-events/news/press-releases/2026/05/ftc-ban-kochava-subsidiary-selling-sensitive-location-data-settle-charges-they-sold-location-data
 - REJECTED birdeye/wp-json (REST endpoint, not article); ahrefs/wp-json (same); ahrefs/de (German index page); ftc horseracing budget (off-topic). URLs remain in known-urls.json to prevent retry.
+
+## Ingested 2026-07-23 — manual catch-up (CCR session)
+
+- ~~[competitors] NetPartners — GoHighLevel AI 2026 Feature Map~~ → compiled `wiki/competitors/gohighlevel-ai-feature-map-2026.md` (same run)
+- ~~[ai-llm] Releasebot — Claude Developer Platform Jun–Jul 2026~~ → compiled `wiki/ai-llm/claude-platform-releases-jun-jul-2026.md` (same run)
+- ~~[frontier_ai] AIApps — July 2026 Frontier Mega-Update~~ → compiled `wiki/ai-llm/frontier-july-2026-release-wave.md` (same run)
+- ~~[small-biz-saas] Spike — SaaS Churn Benchmarks by Segment 2026~~ → compiled `wiki/small-biz-saas/saas-churn-benchmarks-by-segment-2026-spike.md` (same run)
+- ~~[verticals] OnCrew — Plumbing Virtual Receptionist Burst-Pipe 2026~~ → compiled `wiki/verticals/plumbing-emergency-intake-ai-2026.md` (same run)
+- ~~[technical] Markaicode — Supabase pgvector Production Architecture~~ → compiled `wiki/technical/supabase-pgvector-production-architecture-2026.md` (same run)
+- ~~[regulations] ActiveProspect — TCPA Text Messages 2026~~ → compiled `wiki/regulations/tcpa-text-message-rules-2026.md` (same run)
+- ~~[growth] HubSpot — GEO for Small Business 2026~~ → compiled `wiki/growth/geo-small-business-playbook-2026.md` (same run)

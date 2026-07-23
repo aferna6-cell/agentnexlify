@@ -4,6 +4,25 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### Booking CTA rendered as unclickable plain text in widget chat (funnel audit)
+**Date:** 2026-07-23
+**Symptom:** Zero real bookings ever, platform-wide. The widget AI shared the booking-page URL as a bare string per `booking_prompt.py`; the widget renderer `_inlineMd()` only linkifies markdown `[text](url)`, so the only booking CTA the AI could offer rendered as dead text. MTOptions: 10 leads / 0 bookings with everything "configured correctly".
+**Root Cause:** Two components each correct in isolation — the prompt said "share this exact link verbatim" and the renderer supported only markdown links — with no end-to-end render check of the money path.
+**Files Changed:** `backend/services/booking_prompt.py` (markdown link + SHOW_BOOKING_PANEL token), `backend/routers/widget_chat_booking_action.py` (new), `widget/agentnexlify-widget.js` (+2 mirrors), tests `test_booking_prompt.py` + `test_widget_show_booking.py`. PRs #571, #574.
+**Fix:** Prompt emits `[Book an appointment](url)`; regression test pins the markdown form. AI can additionally open the native panel via marker → `show_booking` flag.
+**Prevention:** Any text the model is told to "share verbatim" MUST be checked against the actual renderer of the surface it lands on. For widget chat, that renderer is `_inlineMd()` — markdown links only. Money-path CTAs get an end-to-end render assertion, not just an API-shape test.
+
+---
+
+### Silent-green automation: paying tenant's widget missing for 5+ weeks, nobody noticed
+**Date:** 2026-07-23
+**Symptom:** Keys Koffee's site redeploy dropped the widget embed ~2026-06-14. Conversations flatlined to zero for a paying tenant and no system flagged it; discovered only by a manual funnel audit on 2026-07-23.
+**Root Cause:** All monitoring watched *our* surfaces (API health, workflows), none watched per-tenant outcomes. Same failure class as the KB pipeline's 63-day silent gap and the artifact-less Routine firings: a job/integration that can fail without producing any observable difference will eventually do so unnoticed.
+**Files Changed:** none yet — alert tracked as #573's companion item ("paying tenant, 0 conversations in 7 days"); Routine prompts hardened with artifact-or-fail delivery rules (2026-07-23).
+**Fix (pattern):** every automation and tenant integration needs a heartbeat that distinguishes "ran and found nothing" from "never ran": scheduled jobs always write a run log + push; tenant-level outcome metrics (conversations/7d) alert on zero for paying tenants.
+**Prevention:** When building any recurring job or tenant-facing integration, ask: "if this silently stopped, what would notice?" If the answer is "nothing", add the artifact-or-alert before shipping.
+
+
 ### Zapier API key client lookup did not enforce plan_status (issue #107)
 **Date:** 2026-04-30
 **Symptom:** `backend/services/zapier_auth.py::_get_api_key_client` resolves API keys without checking `tenants.plan_status`. Cancelled / past-due / unpaid tenants whose API keys were not revoked at cancellation time still authenticate against the Zapier endpoints, bypassing the tier gate. Found by nightly-commit-review on `8050912`.

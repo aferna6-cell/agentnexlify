@@ -44,6 +44,7 @@ from backend.services.llm_runtime import (
 )
 from backend.services.webhook_dispatcher import fire_event_background
 from backend.routers import widget_chat_effects, widget_chat_guards
+from backend.routers.widget_chat_booking_action import detect_show_booking
 from backend.routers.widget_chat_context import build_chat_context
 from backend.routers.widget_chat_fallback import (  # noqa: F401 - re-exported
     FALLBACK_MARKER,
@@ -441,6 +442,13 @@ async def widget_chat(
         )
     )
 
+    # 9d. Detect SHOW_BOOKING_PANEL marker (GH #573) — strip before the
+    # reply is saved/rendered; flag tells the widget to open its native
+    # booking panel instead of relying on the user-text keyword regex.
+    assistant_text, show_booking = detect_show_booking(
+        assistant_text, booking_enabled=bool(widget.get("booking_enabled"))
+    )
+
     # 10. Save user + assistant messages to chat_messages table
     saved_rows = _save_chat_messages(
         tenant["id"], req.session_id, req.message, assistant_text
@@ -482,4 +490,5 @@ async def widget_chat(
         show_watermark=show_watermark,
         handoff=handoff_triggered,
         ai_fallback_fired=ai_fallback_fired,
+        show_booking=show_booking,
     )

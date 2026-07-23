@@ -1633,6 +1633,12 @@
         if (inputEl) inputEl.placeholder = t('teamMemberWillRespond');
       }
 
+      // AI-triggered booking panel (GH #573): backend strips the
+      // SHOW_BOOKING_PANEL marker and sets this flag instead
+      if (data.show_booking && bookingEnabled && tenantId) {
+        setTimeout(() => showBooking("date"), 600);
+      }
+
       // Handle trial expiry
       if (data.trial_expired) {
         disableWidgetInput(t('trialExpired'));

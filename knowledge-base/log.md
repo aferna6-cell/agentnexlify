@@ -369,3 +369,15 @@ URLs kept in known-urls.json to prevent retry.
 
 ## [2026-07-13 20:00] discover (frontier_ai) | manual proof run | wiki=2 (frontier-model-landscape-2026-h2, ai-voice-agents-sub-300ms-2026) | new category frontier_ai live
 ## [2026-07-13 14:35] compile | Coffee Shop and Cafe FAQ Pack (coffee-shop-cafe-faqs) | verticals — authored direct (G8 gap for live cafe tenant), inserted+updated in prod kb_articles, INDEX.md entry added, FTS verified ('do you have oat milk')
+
+## [2026-07-23] discover+compile | manual catch-up (CCR session) | raw=8 wiki=8 deduped=4 rejected=4
+Per-category (found candidates / ingested / compiled):
+- competitors: 15/1/1 — gohighlevel-ai-feature-map-2026 (netpartners GHL AI surface map; buildberg pricing candidate deferred)
+- ai_llm: 16/1/1 — claude-platform-releases-jun-jul-2026 (Sonnet 5 launch, retirements, self-serve HIPAA, Managed Agents)
+- frontier_ai: 9/1/1 — frontier-july-2026-release-wave (GPT-5.6/Grok 4.5/Muse Spark 1.1/GPT-Live/Cowork). Rejected: Medium "Christmas in July" (login-walled redirect loop), programming-helper computer-use (403), jobsecuritymeter timeline (stale April 2026, no specifics) — all added to known-urls.json.
+- small_biz_saas: 15/1/1 — saas-churn-benchmarks-by-segment-2026-spike (segment table + vertical-SaaS row + dunning playbook)
+- verticals: 15/1/1 — plumbing-emergency-intake-ai-2026 (OnCrew burst-pipe intake + per-call pricing comparison)
+- technical: 16/1/1 — supabase-pgvector-production-architecture-2026 (HNSW sizing, PgBouncer, failure modes)
+- regulations: 14/1/1 — tcpa-text-message-rules-2026 (PEWC tiers, litigation surge, one-to-one vacatur)
+- growth: 6/1/1 — geo-small-business-playbook-2026 (HubSpot SMB GEO playbook)
+INDEX.md updated: 114 → 124 articles (8 new + 2 pre-existing orphans from 2026-07-13 frontier run indexed: frontier-model-landscape-2026-h2, ai-voice-agents-sub-300ms-2026). Embeddings SKIPPED (no credentials; FTS fallback covers retrieval). known-urls.json 420 → 432 entries (8 ingested + 4 rejected). No commit — main session commits.
