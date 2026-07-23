@@ -1,13 +1,11 @@
 {
   "version": 1,
-  "last_run": "2026-07-23",
-  "total_runs": 100,
+  "last_run": "2026-07-23-pm",
+  "total_runs": 101,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
-  "frozen_ideas": [
-    "ai_human_handoff"
-  ],
+  "frozen_ideas": ["ai_human_handoff"],
   "moratorium_config": {
     "moratorium_active": false,
     "triggered_run": 15,
@@ -203,6 +201,18 @@
     "last_run": "2026-07-20 -> 2026-07-23"
   },
   "run_101_mandate": "1. Step 9G confirmed present in .claude/skills/nightly-commit-review/SKILL.md? (grep 'Step 9G' \u2014 SHOULD PASS if human approves winner). 2. KB freshness: has kb-autopopulate.yml run successfully since 2026-07-13? Check knowledge-base/log.md last entry date. 3. If Step 9G present AND nightly fires with KB still stale: did gh workflow run succeed? Check nightly log for 'Step 9G:' line. 4. GH #403 comment: does it contain Step 9G diagnostic output? 5. Agent OS tenant count: still 2-3 (LoopHealthPage parking lot condition) or >5 (promote)? 6. MCP tenant count: still 1 (Step 9H killed condition) or >5 (revisit monitoring).",
+  "run_101_governance_corrections": {
+    "step_9g_in_skill_md": "FAIL \u2014 grep '9G' .claude/skills/nightly-commit-review/SKILL.md returns 0 matches. Carry-forward 2 fires.",
+    "kb_freshness": "PARTIAL \u2014 knowledge-base/log.md entry 2026-07-23 'manual catch-up (CCR session)' \u2014 124 wiki articles. Automated kb-autopopulate.yml still broken (ANTHROPIC_API_KEY + VOYAGE_API_KEY absent from GH Actions). Embeddings still skipped.",
+    "show_booking_panel_shipped": "LANDED \u2014 commit e9b4972 (2026-07-23). widget_chat_booking_action.py (33L) + 19 lines bug-patterns.md. Parked for run 102 wiring investigation.",
+    "email_sequences_split": "CONFIRMED \u2014 commit ab1a7c2. email_crud.py (529L) + email_enrollment.py (328L) + email_processor.py (341L). god-class eliminated.",
+    "mcp_tenant_count": 1,
+    "agent_os_tenant_count": "2-3 (LoopHealthPage threshold >5 not met)",
+    "show_booking_panel_funnel_investigation": "PARKED for run 102 \u2014 verify widget_chat_booking_action.py wiring in main.py + show_booking_flag consumed by frontend widget",
+    "total_runs": "100 -> 101",
+    "last_run": "2026-07-23 -> 2026-07-23-pm"
+  },
+  "run_102_mandate": "1. Step 9G confirmed present in .claude/skills/nightly-commit-review/SKILL.md? FAIL fires 3rd carry-forward if still absent. 2. KB freshness: did automated kb-autopopulate.yml run (not just manual CCR)? 3. SHOW_BOOKING_PANEL wiring: is widget_chat_booking_action.detect_show_booking imported + routed in main.py? Is show_booking_flag consumed by frontend widget? 4. Credential tracking: are VOYAGE_API_KEY + SUPABASE_ACCESS_TOKEN listed in ops/credential-rotation-schedule.md?",
   "active_directions": [
     {
       "title": "Step 9F: KB Autopopulate Staleness Check in nightly-commit-review SKILL.md (run 97 winner)",

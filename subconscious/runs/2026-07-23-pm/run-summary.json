@@ -1,0 +1,46 @@
+{
+  "run": 101,
+  "run_id": "2026-07-23-pm",
+  "date": "2026-07-23",
+  "period": "pm",
+  "winner": {
+    "title": "Step 9G: KB Autopopulate Self-Healing Trigger",
+    "category": "workflow_efficiency",
+    "effort": "XS",
+    "confidence": "HIGH",
+    "carry_forward_cycle": 2,
+    "target_file": ".claude/skills/nightly-commit-review/SKILL.md",
+    "action": "Add Step 9G bash block — trigger gh workflow run kb-autopopulate.yml, check status after 30s, comment on GH #403 with specific failure diagnostic"
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "ideas_killed": 2,
+  "parking_lot": [
+    "SHOW_BOOKING_PANEL funnel completeness (run 102)",
+    "Credential tracking: VOYAGE_API_KEY + SUPABASE_ACCESS_TOKEN",
+    "email_sequences split registration verification"
+  ],
+  "mandate_checks": {
+    "step_9g_in_skill_md": "FAIL — absent (carry-forward fires)",
+    "kb_freshness": "PARTIAL — ran 2026-07-23 via manual CCR, automated workflow still broken",
+    "step_9g_nightly_fire": "N/A — not in SKILL.md",
+    "gh_403_step_9g_comment": "N/A — not implemented",
+    "agent_os_tenant_count": "2-3 (threshold >5 not met)",
+    "mcp_tenant_count": "1 (281156f, 2026-07-23)"
+  },
+  "governance_updates": {
+    "total_runs": 101,
+    "last_run": "2026-07-23-pm",
+    "step_9g_status": "carry-forward-2 (absent, mandate fires again)",
+    "kb_status": "ran_manually_2026-07-23 (automated still broken)",
+    "show_booking_panel_status": "shipped (e9b4972), parked for investigation",
+    "email_sequences_split": "confirmed (ab1a7c2)",
+    "mcp_tenant_count": 1
+  },
+  "run_102_mandate": [
+    "Check Step 9G in SKILL.md — FAIL if absent (3rd carry-forward fires)",
+    "Check SHOW_BOOKING_PANEL wiring in main.py + frontend widget",
+    "Check KB freshness (automated workflow status)",
+    "Check credential tracking entries for VOYAGE_API_KEY + SUPABASE_ACCESS_TOKEN"
+  ]
+}
