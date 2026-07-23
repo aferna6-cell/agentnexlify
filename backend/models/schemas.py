@@ -383,6 +383,10 @@ class WidgetChatResponse(BaseModel):
     # frontend to show a "deep AI" badge or for telemetry. Defaults to False
     # so existing widget builds keep working without changes.
     ai_fallback_fired: bool = False
+    # True when the model emitted SHOW_BOOKING_PANEL (GH #573) — the widget
+    # opens its native booking panel. Defaults False so old widget builds
+    # ignore it.
+    show_booking: bool = False
 
 
 class WidgetConfigResponse(BaseModel):

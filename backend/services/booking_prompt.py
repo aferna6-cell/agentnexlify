@@ -32,6 +32,13 @@ def booking_prompt_suffix(
     if not booking_enabled:
         return ""
 
+    panel_instruction = (
+        " When the visitor agrees to book or asks to pick a time, append the exact "
+        "token SHOW_BOOKING_PANEL at the very end of your reply — it is stripped "
+        "before display and opens the in-chat scheduling panel where they pick a "
+        "slot. Never mention the token or the panel mechanics."
+    )
+
     slug = (business_slug or "").strip()
     if slug:
         base_url = (frontend_url or _DEFAULT_BASE_URL).rstrip("/")
@@ -44,7 +51,7 @@ def booking_prompt_suffix(
             "— then ask for their preferred day and time. Make booking the clear next step rather "
             "than waiting for them to ask. Always format it as that markdown link (the chat window "
             "renders it as a clickable button; a bare URL renders as plain text); never invent a "
-            "different URL."
+            "different URL." + panel_instruction
         )
 
     return (
@@ -52,4 +59,5 @@ def booking_prompt_suffix(
         "page is configured yet, so there is no link to share. When the visitor shows "
         "interest in scheduling, collect their name, contact info, and preferred day/time "
         "so the business can confirm the appointment directly. Do not invent a booking URL."
+        + panel_instruction
     )
