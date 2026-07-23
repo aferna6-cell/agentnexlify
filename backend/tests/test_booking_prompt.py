@@ -25,6 +25,19 @@ class TestSlugPresent:
         assert "https://app.agentnexlify.com/api/v1/book/mtoptions" in out
         assert "never invent a different URL" in out
 
+    def test_link_emitted_as_markdown_so_widget_renders_it_clickable(self):
+        # Funnel audit 2026-07-23: the widget's _inlineMd() only linkifies
+        # markdown [text](url) — a bare URL renders as unclickable plain text,
+        # which is one reason MTOptions had 10 leads / 0 bookings. The prompt
+        # must instruct the AI to emit the markdown form.
+        out = booking_prompt_suffix(
+            booking_enabled=True,
+            business_slug="mtoptions",
+            frontend_url="https://app.agentnexlify.com",
+        )
+        assert "[Book an appointment](https://app.agentnexlify.com/api/v1/book/mtoptions)" in out
+        assert "markdown link" in out
+
     def test_trailing_slash_on_base_url_normalised(self):
         out = booking_prompt_suffix(
             booking_enabled=True,

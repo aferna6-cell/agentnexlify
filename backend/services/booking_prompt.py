@@ -40,9 +40,11 @@ def booking_prompt_suffix(
             "\n\nBOOKING: This business has online booking enabled. "
             "When the visitor shows any interest in a service, pricing, or scheduling — or once "
             "they have shared their name and contact info — actively offer to book them an "
-            f"appointment and share this exact booking link: {booking_url} — then ask for their "
-            "preferred day and time. Make booking the clear next step rather than waiting for "
-            "them to ask. Share the link verbatim; never invent a different URL."
+            f"appointment and share this exact markdown link: [Book an appointment]({booking_url}) "
+            "— then ask for their preferred day and time. Make booking the clear next step rather "
+            "than waiting for them to ask. Always format it as that markdown link (the chat window "
+            "renders it as a clickable button; a bare URL renders as plain text); never invent a "
+            "different URL."
         )
 
     return (
