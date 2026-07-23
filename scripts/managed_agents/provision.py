@@ -300,23 +300,63 @@ def main() -> int:
             print(json.dumps(body, indent=2))
         return 0
 
-    client = ManagedAgentsClient()
+    try:
+        client = ManagedAgentsClient()
+    except ManagedAgentsError as exc:
+        raise SystemExit(
+            f"cannot create Managed Agents client: {exc}\n"
+            "Set ANTHROPIC_API_KEY in your environment or .env, then re-run. "
+            "(Use --print-body to inspect agent bodies without an API key.)"
+        )
 
     existing = _load_existing_env()
-    env_id = _ensure_environment(client, cfg, existing, dry_run=args.dry_run)
+    try:
+        env_id = _ensure_environment(client, cfg, existing, dry_run=args.dry_run)
+    except ManagedAgentsError as exc:
+        raise SystemExit(
+            f"environment setup failed: {exc}\n"
+            "Nothing was changed. Fix the error above and re-run — the script "
+            "is idempotent (existing environments are found by ID or name)."
+        )
 
     result: dict[str, str] = {ENV_VAR_ENVIRONMENT_ID: env_id}
 
+    failed_slug: str | None = None
+    failure: ManagedAgentsError | None = None
     for slug in selected:
-        env_var, agent_id, _version = _ensure_agent(
-            client,
-            slug,
-            agents_cfg[slug],
-            existing,
-            dry_run=args.dry_run,
-            recreate=args.recreate,
-        )
+        try:
+            env_var, agent_id, _version = _ensure_agent(
+                client,
+                slug,
+                agents_cfg[slug],
+                existing,
+                dry_run=args.dry_run,
+                recreate=args.recreate,
+            )
+        except ManagedAgentsError as exc:
+            failed_slug = slug
+            failure = exc
+            break
         result[env_var] = agent_id
+
+    if failed_slug is not None:
+        # Persist the IDs we did provision so a re-run resumes instead of
+        # re-creating (idempotency across partial failures).
+        for key, value in existing.items():
+            result.setdefault(key, value)
+        if not args.dry_run and len(result) > 1:
+            _write_env_file(result)
+            logger.info(
+                "persisted %d ID(s) provisioned before the failure", len(result) - 1,
+            )
+        raise SystemExit(
+            f"provisioning agent {failed_slug!r} failed: {failure}\n"
+            f"IDs provisioned before the failure were saved to "
+            f"{ENV_OUTPUT_PATH.name}. Fix the error above and re-run "
+            f"`python -m scripts.managed_agents.provision {failed_slug}` — "
+            "already-provisioned agents are found by ID or name and updated "
+            "in place."
+        )
 
     # Preserve any existing env values we didn't touch this run (e.g. other
     # agents that weren't selected).

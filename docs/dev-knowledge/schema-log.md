@@ -4,6 +4,16 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 188_managed_agent_runs_log.sql (2026-07-23) — NOT YET APPLIED — apply with Phase 0
+
+**What:** New service-only table `managed_agent_runs` — run log for Managed Agent runs. Columns: `id uuid pk`, `tenant_id uuid`, `agent_key text`, `status text CHECK (success|error|unavailable)`, `tokens_in`/`tokens_out int default 0`, `duration_ms int default 0`, `request_summary text default ''`, `error text null`, `created_at timestamptz`. Indexes `(tenant_id, created_at DESC)` + `(agent_key, created_at DESC)`. RLS enabled + always-true `TO service_role` policy (migration 173/187 convention).
+
+**Why:** Phase 0 of `plans/managed-agents-rollout_plan.md` — exit criteria require cost/run measured and logged before any external tenant is enabled. Written fail-open by `backend/services/managed_agent_run_log.py::record_run` (wired into `backend/routers/managed_agent_runs.py` success + unconfigured-503 paths), so shipping the code before apply degrades to "no run logged", never a 500. `tokens_in`/`tokens_out` stay 0 until usage plumbing lands; `status='error'` reserved for terminal run failures (wired later).
+
+**Applied:** NOT YET APPLIED — apply with Phase 0 via `mcp__supabase__apply_migration` (main session).
+
+---
+
 ## 187_pending_automations_rls_policy.sql (2026-07-23)
 
 **What:** Explicit `pending_automations_service_role` policy (`FOR ALL TO service_role USING (true) WITH CHECK (true)`) on `pending_automations`. No table/column changes.

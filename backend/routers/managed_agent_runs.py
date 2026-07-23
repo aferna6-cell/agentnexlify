@@ -26,6 +26,7 @@ Routes:
 """
 
 import logging
+import time
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -47,6 +48,7 @@ from backend.services.managed_agents import (
     ManagedAgentsError,
     SessionTerminalState,
 )
+from backend.services.managed_agent_run_log import record_run
 from backend.services.managed_agents_registry import (
     ManagedAgentNotConfigured,
     is_any_configured,
@@ -93,6 +95,19 @@ def _managed_agents_unavailable(exc: ManagedAgentNotConfigured) -> HTTPException
             "missing_config": exc.env_var,
         },
     )
+
+
+def _unavailable_and_log(
+    tenant_id: str, agent_key: str, exc: ManagedAgentNotConfigured,
+) -> HTTPException:
+    """Record the stubbed run (fail-open) and return the structured 503.
+
+    The 503 payload shape is the backward-compat contract from #33 —
+    ``_managed_agents_unavailable`` stays untouched; this only adds the
+    run-log side effect (migration 188 / Phase 0).
+    """
+    record_run(tenant_id, agent_key, "unavailable", error=exc.env_var)
+    return _managed_agents_unavailable(exc)
 
 
 def _managed_agents_health_payload() -> dict[str, Any]:
@@ -246,11 +261,12 @@ async def qualify_lead(
     try:
         handle = lead_qualifier()
     except ManagedAgentNotConfigured as exc:
-        raise _managed_agents_unavailable(exc)
+        raise _unavailable_and_log(tenant_id, "lead_qualifier", exc)
 
     prompt = _build_lead_qualify_prompt(body)
     client = ManagedAgentsClient()
 
+    started = time.monotonic()
     try:
         terminal, transcript = await run_in_threadpool(
             _qualify_lead_blocking,
@@ -268,6 +284,13 @@ async def qualify_lead(
             status = 502
         raise HTTPException(status_code=status, detail=str(exc))
 
+    record_run(
+        tenant_id,
+        "lead_qualifier",
+        "success",
+        duration_ms=int((time.monotonic() - started) * 1000),
+        request_summary="lead-qualify",
+    )
     return LeadQualifyResponse(
         session_id=terminal.session_id or "",
         terminated=terminal.terminated,
@@ -367,6 +390,7 @@ async def draft_document_endpoint(
     customer_dict = body.customer.model_dump(exclude_none=True)
     line_items_dicts = [li.model_dump() for li in body.line_items]
 
+    started = time.monotonic()
     try:
         persisted = await run_in_threadpool(
             draft_document,
@@ -381,8 +405,15 @@ async def draft_document_endpoint(
         logger.warning("draft_document failed for tenant %s: %s", tenant_id, exc)
         raise HTTPException(status_code=400, detail=str(exc))
     except ManagedAgentNotConfigured as exc:
-        raise _managed_agents_unavailable(exc)
+        raise _unavailable_and_log(tenant_id, "document_drafter", exc)
 
+    record_run(
+        tenant_id,
+        "document_drafter",
+        "success",
+        duration_ms=int((time.monotonic() - started) * 1000),
+        request_summary=f"draft-document {body.kind}",
+    )
     doc_id = persisted.get("id")
     metadata = persisted.get("draft_metadata") or {}
     return DraftDocumentResponse(
@@ -407,6 +438,7 @@ async def support_query_endpoint(
     """Run the tenant-scoped support agent with KB grounding."""
     _verify_tenant(claims, tenant_id)
 
+    started = time.monotonic()
     try:
         result = await run_in_threadpool(
             run_support_query,
@@ -415,7 +447,7 @@ async def support_query_endpoint(
             body.conversation_id,
         )
     except ManagedAgentNotConfigured as exc:
-        raise _managed_agents_unavailable(exc)
+        raise _unavailable_and_log(tenant_id, "support_agent", exc)
     except ManagedAgentsError as exc:
         logger.exception("support_query failed for tenant %s", tenant_id)
         status = exc.status or 502
@@ -426,6 +458,13 @@ async def support_query_endpoint(
         logger.warning("support_query invalid response for tenant %s: %s", tenant_id, exc)
         raise HTTPException(status_code=502, detail=str(exc))
 
+    record_run(
+        tenant_id,
+        "support_agent",
+        "success",
+        duration_ms=int((time.monotonic() - started) * 1000),
+        request_summary="support-query",
+    )
     return SupportQueryResponse(**result)
 
 
@@ -440,6 +479,7 @@ async def extract_endpoint(
     """Run the structured extractor managed agent for this tenant."""
     _verify_tenant(claims, tenant_id)
 
+    started = time.monotonic()
     try:
         extracted = await run_in_threadpool(
             extract_structured,
@@ -448,7 +488,7 @@ async def extract_endpoint(
             body.target_schema,
         )
     except ManagedAgentNotConfigured as exc:
-        raise _managed_agents_unavailable(exc)
+        raise _unavailable_and_log(tenant_id, "structured_extractor", exc)
     except ManagedAgentsError as exc:
         logger.exception("extract failed for tenant %s", tenant_id)
         status = exc.status or 502
@@ -460,6 +500,13 @@ async def extract_endpoint(
         status = 400 if "unsupported target_schema" in str(exc) else 502
         raise HTTPException(status_code=status, detail=str(exc))
 
+    record_run(
+        tenant_id,
+        "structured_extractor",
+        "success",
+        duration_ms=int((time.monotonic() - started) * 1000),
+        request_summary=f"extract {body.target_schema}",
+    )
     return ExtractResponse(data=extracted)
 
 
