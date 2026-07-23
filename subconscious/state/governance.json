@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-07-20",
-  "total_runs": 99,
+  "last_run": "2026-07-23",
+  "total_runs": 100,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -186,6 +186,21 @@
     "last_run": "2026-07-17-pm -> 2026-07-20"
   },
   "run_100_mandate": "1. Step 9F confirmed present in SKILL.md? (grep 'Step 9F' — SHOULD PASS: written by run 99). 2. Nightly-2026-07-21 log contains 'Step 9F:' line? (confirms nightly executes new step). 3. KB stale (>7 days by 2026-07-21)? If yes: GH #403 has new Step 9F comment? 4. GH #399 resolved? (Day 18+) — investigate secondary remediation if still open. 5. GH #413 REFERRAL_REWARD_ENABLED=1 set? (Day 10+ of issue). 6. appointment_completion.py: any auto-complete events in nightly or backend logs? 7. platform_settings: any non-boolean rows added since migration 175?",
+  "run_100_governance_corrections": {
+    "step_9f_mandate": "PASS — grep returns 6 occurrences in SKILL.md",
+    "step_9f_fired_nightly_2026_07_22": "PASS — docs/dev-knowledge/nightly-reviews/2026-07-22.md confirms 'Step 9F: KB STALE (9 days) — comment added to GH #403'",
+    "kb_stale_gh403_comment": "PASS — Step 9F comment posted on GH #403",
+    "kb_still_stale_as_of_2026_07_23": "YES — 10 days (last run 2026-07-13). Step 9G winner addresses this gap.",
+    "gh_399_status": "NOT CHECKED in nightly-2026-07-23 scope",
+    "gh_413_status": "NOT CHECKED in nightly-2026-07-23 scope",
+    "appointment_completion": "IMPLEMENTED — PR #475 (run 99 corrections confirm). Status corrected pending_autonomous → implemented.",
+    "agent_os_rounds_7_8": "LANDED — commits e646bdc (Round 7, 51 files) + 970da66 (Round 8, 8 files). calls.py split, owner MCP server, approval-loop dedupe, funnel metrics.",
+    "mcp_first_tenant": "ACTIVATED — commit 281156f, docs/dev-knowledge/mcp-owner-server.md created",
+    "nightly_2026_07_23": "CLEAN — 7 commits reviewed, 0 LOW-risk bugs auto-fixed, all critical invariants pass",
+    "total_runs": "99 -> 100",
+    "last_run": "2026-07-20 -> 2026-07-23"
+  },
+  "run_101_mandate": "1. Step 9G confirmed present in .claude/skills/nightly-commit-review/SKILL.md? (grep 'Step 9G' — SHOULD PASS if human approves winner). 2. KB freshness: has kb-autopopulate.yml run successfully since 2026-07-13? Check knowledge-base/log.md last entry date. 3. If Step 9G present AND nightly fires with KB still stale: did gh workflow run succeed? Check nightly log for 'Step 9G:' line. 4. GH #403 comment: does it contain Step 9G diagnostic output? 5. Agent OS tenant count: still 2-3 (LoopHealthPage parking lot condition) or >5 (promote)? 6. MCP tenant count: still 1 (Step 9H killed condition) or >5 (revisit monitoring).",
   "active_directions": [
     {
       "title": "Step 9F: KB Autopopulate Staleness Check in nightly-commit-review SKILL.md (run 97 winner)",
@@ -1431,7 +1446,9 @@
       "title": "Implement appointment_completion.py \u2014 auto-complete past-confirmed appointments, fire appointment_completed event (run 96 winner, carry-forward from run 95)",
       "date": "2026-07-16-pm",
       "confidence": "HIGH",
-      "status": "pending_autonomous",
+      "status": "implemented",
+      "implemented_date": "2026-07-18",
+      "implemented_by": "PR #475 (23b1da5). backend/services/automation/scheduled/appointment_jobs.py. Confirmed in run_99_governance_corrections.",
       "autonomous_executable": true,
       "requires_human": false,
       "category": "customer_value",
@@ -1443,9 +1460,37 @@
       "implementation_sketch": "subconscious/runs/2026-07-16-pm/winning-concept.md",
       "note": "Run 96 winner. AUTONOMOUS-EXECUTABLE via nightly code-change channel (same class as Steps 9B/9C/9D/9E, widget_guard LRU fix). Full implementation sketch with exact code in winning-concept.md. Schema verified: appointments table uses tenant_id (correct per schema-discipline.md). No migration required \u2014 completed_at column and completed status exist. Carry-forward from run 95: same recommendation, nightly missed it (diagnostic-focus run).",
       "run_97_check": "Verify appointment_completion.py present in backend/services/ after nightly-2026-07-17. If absent: 2nd consecutive miss \u2014 escalate with same mechanism as Steps 9E/9F (embed exact code in next winning-concept.md, which is already done)."
+    },
+    {
+      "title": "Step 9G: KB autopopulate self-healing trigger in nightly-commit-review SKILL.md (run 100 winner)",
+      "date": "2026-07-23",
+      "confidence": "HIGH",
+      "status": "recommended",
+      "autonomous_executable": true,
+      "requires_human": false,
+      "category": "operational",
+      "moratorium_override": false,
+      "source_run": 100,
+      "effort": "XS",
+      "evidence": "KB 10 days stale (last run 2026-07-13). Step 9F fired on nightly-2026-07-22 ('Step 9F: KB STALE (9 days) \u2014 comment added to GH #403') but alert alone did not trigger repair. kb-autopopulate.yml supports workflow_dispatch. Root cause of 63-day stale gap in 2026: empty ANTHROPIC_API_KEY/VOYAGE_API_KEY/SUPABASE_ACCESS_TOKEN with continue-on-error:true masking failure silently. Steps 9B-9F all implemented in 1 cycle each via same SKILL.md-edit channel.",
+      "action": "Add Step 9G bash block to .claude/skills/nightly-commit-review/SKILL.md after Step 9F. When DAYS_STALE > 7: (1) gh workflow run kb-autopopulate.yml -R aferna6-cell/agentnexlify, (2) sleep 30, (3) gh run list --workflow=kb-autopopulate.yml --limit=1 --json conclusion,createdAt,url \u2014 parse conclusion, (4) if success: log 'Step 9G: kb-autopopulate triggered \u2014 SUCCESS', (5) if failure/cancelled: comment on GH #403 'Step 9G: kb-autopopulate.yml triggered but FAILED \u2014 check ANTHROPIC_API_KEY + VOYAGE_API_KEY + SUPABASE_ACCESS_TOKEN in GH Secrets. Run URL: $RUN_URL', (6) if still running after 30s: log 'Step 9G: kb-autopopulate running \u2014 status check pending'. ~30 bash lines.",
+      "implementation_sketch": "subconscious/runs/2026-07-23/winning-concept.md",
+      "note": "Run 100 winner. AUTONOMOUS-EXECUTABLE via nightly SKILL.md-edit channel. Same class as Steps 9B-9F (all implemented in 1 cycle). Self-healing if secrets valid; surfaces diagnostic if secrets empty. All 3 live tenants' AI chat quality depends on KB freshness."
     }
   ],
   "rejected_paths": [
+    {
+      "title": "MCP adoption monitoring — Step 9H nightly tracking first-activation tenant health",
+      "reason": "Evidence too thin (1 MCP tenant activated as of 2026-07-23). Mechanism inadequate: nightly runner cannot auth-test /mcp endpoint without a tenant mcp_ prefix key — storing tenant credentials in nightly runner is a security anti-pattern. A general /health check doesn't test MCP-specific functionality. Pre-emptive observability at 1 tenant wastes nightly SKILL.md real estate. Revisit when: (a) 5+ MCP tenants activated, or (b) MCP outage is reported by a tenant.",
+      "date": "2026-07-23",
+      "times_rejected": 1,
+      "first_kill_run": 100,
+      "kill_angles": [
+        "evidence_too_thin_1_tenant",
+        "mechanism_inadequate_auth_requires_tenant_key",
+        "premature_observability"
+      ]
+    },
     {
       "title": "os_opportunities referral_activation rule \u2014 surface REFERRAL_REWARD_ENABLED activation in Agent OS suggestion cards",
       "reason": "Mechanism mismatch: os_opportunities.py is DB-query-only (deterministic-first pattern, no LLM, no env-var inspection). REFERRAL_REWARD_ENABLED is a Railway env-var, not a DB column. Adding env-var inspection would violate the service's architectural pattern. Workaround (widget_configs column) requires schema migration + numbered migration file \u2014 scope explosion from XS to M+. Additionally: human decision bottleneck (0 responses to 4 autonomous GH #413 comments over 25 days) is not addressable by adding more notification channels. Re-propose only if: (a) REFERRAL_REWARD_ENABLED is persisted to DB or widget_configs, or (b) human activates flag directly.",
