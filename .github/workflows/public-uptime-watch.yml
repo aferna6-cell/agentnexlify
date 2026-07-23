@@ -54,7 +54,7 @@ jobs:
       # open (or comment on) a pinned downtime issue.
       - name: Alert via GitHub issue on failure
         if: failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');

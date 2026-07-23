@@ -52,7 +52,7 @@ jobs:
 
       - name: File owner issue when secrets are missing
         if: steps.secrets.outputs.ok != 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const title = 'KB auto-populate blocked: set ANTHROPIC_API_KEY as an Actions secret [human-action-required]';
