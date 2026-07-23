@@ -85,7 +85,7 @@ async def _run_new_lead_followups(
         logger.error("LEAD_ALERT[/lead]: EMAIL FAILED for lead %s", lead_id, exc_info=True)
 
     try:
-        from backend.routers.email_sequences import enroll_lead_in_sequences
+        from backend.routers.email_enrollment import enroll_lead_in_sequences
         await enroll_lead_in_sequences(tenant_id, lead_id)
     except Exception:
         logger.warning("Failed to enroll lead %s in email sequences", lead_id, exc_info=True)

@@ -117,3 +117,7 @@ the last recorded state.
 ## 2026-07-14T09:18Z — refresh_connectors.py
 - github: ok — 109 open issues, 31 open PRs
 - supabase: skipped — SUPABASE_ACCESS_TOKEN not set
+
+## 2026-07-23T14:38Z — refresh_connectors.py
+- github: ok — 25 open issues, 0 open PRs (via CCR session MCP, #394 workaround)
+- supabase: ok — 136 tables (via CCR session MCP, #394 workaround)

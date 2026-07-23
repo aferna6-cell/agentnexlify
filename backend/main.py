@@ -53,7 +53,9 @@ from backend.routers import (
     csat,
     custom_fields,
     documents,
-    email_sequences,
+    email_crud,
+    email_enrollment,
+    email_processor,
     email_templates,
     faq,
     forms,
@@ -481,7 +483,7 @@ async def _automation_loop():
                         ),
                         _safe_run(
                             "run_sequence_processor",
-                            email_sequences.run_sequence_processor,
+                            email_processor.run_sequence_processor,
                         ),
                         _safe_run(
                             "schedule_automation_check", schedule_automation_check
@@ -970,7 +972,9 @@ app.include_router(billing.router)
 app.include_router(billing_usage.router)
 app.include_router(clients.router)
 app.include_router(email_templates.router)
-app.include_router(email_sequences.router)
+app.include_router(email_crud.router)
+app.include_router(email_enrollment.router)
+app.include_router(email_processor.router)
 app.include_router(leads.router)
 app.include_router(stripe_webhooks.router)
 app.include_router(resend_webhooks.router)

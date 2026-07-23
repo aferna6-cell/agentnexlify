@@ -50,7 +50,7 @@ def _mock_db():
 
 class TestEmailSequences:
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.email_sequences.get_service_supabase")
+    @patch("backend.routers.email_crud.get_service_supabase")
     def test_list_sequences(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()
@@ -69,7 +69,7 @@ class TestEmailSequences:
         assert resp.status_code == 200
 
     @patch("backend.routers.auth.settings")
-    @patch("backend.routers.email_sequences.get_service_supabase")
+    @patch("backend.routers.email_crud.get_service_supabase")
     def test_create_sequence(self, mock_db, mock_settings):
         mock_settings.api_secret_key = _TEST_SECRET
         db = _mock_db()

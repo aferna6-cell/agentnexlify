@@ -617,7 +617,7 @@ async def _capture_leads_from_session(
                 logger.warning("Failed to trigger automation for lead %s", lead_id, exc_info=True)
 
             try:
-                from backend.routers.email_sequences import enroll_lead_in_sequences
+                from backend.routers.email_enrollment import enroll_lead_in_sequences
                 await enroll_lead_in_sequences(tenant_id, lead_id)
                 logger.info("lead_capture: enroll_lead_in_sequences completed for lead %s", lead_id)
             except Exception:

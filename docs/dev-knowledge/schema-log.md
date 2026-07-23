@@ -4,6 +4,16 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 187_pending_automations_rls_policy.sql (2026-07-23)
+
+**What:** Explicit `pending_automations_service_role` policy (`FOR ALL TO service_role USING (true) WITH CHECK (true)`) on `pending_automations`. No table/column changes.
+
+**Why:** GH #567 (follow-up from the review that closed PRs #517/#521). Migration 186 enabled RLS on `pending_automations` but defined no policy — safe-by-default (zero policies = deny-all for anon/authenticated; enqueuers + retry drainer use the service key, which has BYPASSRLS) but out of line with the migration-173 convention that every service-only table carries an explicit `TO service_role` policy as documentation + belt-and-braces. The second half of #567 (`activity_feed_events` view from closed PR #517) stays deferred until GH #115 starts — no consumer exists.
+
+**Applied:** APPLIED to prod 2026-07-23 via `apply_migration` (policy verified in `pg_policy`: roles `{service_role}`, qual `true`).
+
+---
+
 ## 172_lead_attribution.sql (2026-07-14)
 
 **What:** `leads.attribution jsonb` (nullable). Pure additive `ADD COLUMN IF NOT EXISTS`.

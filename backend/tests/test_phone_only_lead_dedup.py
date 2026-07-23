@@ -106,7 +106,7 @@ async def test_phone_only_new_lead_is_created():
             side_effect=_noop_async,
         ),
         patch(
-            "backend.routers.email_sequences.enroll_lead_in_sequences",
+            "backend.routers.email_enrollment.enroll_lead_in_sequences",
             side_effect=_noop_async,
         ),
         patch(
@@ -262,7 +262,7 @@ async def test_email_and_phone_email_dedup_runs_first():
             side_effect=_noop_async,
         ),
         patch(
-            "backend.routers.email_sequences.enroll_lead_in_sequences",
+            "backend.routers.email_enrollment.enroll_lead_in_sequences",
             side_effect=_noop_async,
         ),
         patch(
