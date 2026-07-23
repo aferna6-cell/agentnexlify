@@ -1704,7 +1704,8 @@ Adds `quote_requests.tenant_feedback` (text CHECK correct|too_low|too_high|uncle
 instrumentation for the photo-quote GA gate: tenant error rate (<5% goal) +
 quote->appointment conversion (30% goal). Read/written fail-open by
 `backend/services/photo_quote_telemetry.py`, so shipping the code before apply
-degrades to "no feedback recorded". Apply via Supabase. client_id-scoped (mig 108).
+degrades to "no feedback recorded". client_id-scoped (mig 108). APPLIED + verified
+against prod 2026-07-22 (list_migrations 20260722031146; columns confirmed).
 
 ## Migration 186 — pending_automations (APPLIED 2026-07-22)
 Creates `pending_automations`, the ops-automation retry queue (#118). The enqueue
@@ -1716,4 +1717,5 @@ Columns: id, tenant_id, automation_type, payload jsonb, status
 (pending|done|failed), attempts int, scheduled_for timestamptz, created_at,
 updated_at. Indexes: (status, scheduled_for) for the drainer's hot query,
 (tenant_id). Drained by `backend/services/retry_worker.py` on the 60s tick with
-30s/2min/10min backoff, max 3 attempts. Apply via Supabase.
+30s/2min/10min backoff, max 3 attempts. APPLIED + verified against prod 2026-07-22
+(list_migrations 20260722031154; table, status CHECK, and both indexes confirmed).

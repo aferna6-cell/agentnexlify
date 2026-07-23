@@ -7,7 +7,10 @@
 -- reads them fail-open, so shipping the code before this migration is applied
 -- degrades to "no feedback recorded" rather than erroring.
 --
--- client_id-scoped table (migration 108). NOT auto-applied — apply via Supabase.
+-- client_id-scoped table (migration 108).
+-- APPLIED to prod Supabase 2026-07-22 (list_migrations version 20260722031146).
+--   Verified via information_schema: quote_requests.tenant_feedback (text) +
+--   led_to_appointment (boolean) present. Photo-quote telemetry (#44) is live.
 
 alter table quote_requests
   add column if not exists tenant_feedback text

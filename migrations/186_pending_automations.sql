@@ -6,7 +6,12 @@
 -- drainer (backend/services/retry_worker.py) has a real table to drain.
 --
 -- Column names match the shipped enqueuers: tenant_id-scoped, retry counter is
--- `attempts`. Additive + idempotent. NOT auto-applied — apply via Supabase.
+-- `attempts`. Additive + idempotent.
+-- APPLIED to prod Supabase 2026-07-22 (list_migrations version 20260722031154).
+--   Verified via information_schema + pg_indexes: table has id/tenant_id/
+--   automation_type/payload/status/attempts/scheduled_for/created_at/updated_at,
+--   the status CHECK, and both indexes (due + tenant). The retry drainer
+--   (backend/services/retry_worker.py, #118) is live against this table.
 
 CREATE TABLE IF NOT EXISTS pending_automations (
     id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
