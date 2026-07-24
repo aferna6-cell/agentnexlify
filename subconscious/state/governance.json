@@ -5,7 +5,9 @@
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
-  "frozen_ideas": ["ai_human_handoff"],
+  "frozen_ideas": [
+    "ai_human_handoff"
+  ],
   "moratorium_config": {
     "moratorium_active": false,
     "triggered_run": 15,
@@ -213,7 +215,7 @@
     "total_runs": "100 -> 101",
     "last_run": "2026-07-23 -> 2026-07-24"
   },
-  "run_102_mandate": "1. Step 9G present in .claude/skills/nightly-commit-review/SKILL.md? If STILL absent (3rd carry-forward): IMPLEMENT DIRECTLY this run (cycle 3 escalation policy established run 99). 2. If present: did Step 9G fire in nightly log? Check for 'Step 9G:' line. 3. GH #403: does it contain Step 9G diagnostic output (trigger success, failure, or in-progress)? 4. GH #399: AUTOPILOT_GH_TOKEN rotated? If yes, which automations have resumed? 5. Step 9H GH issue filed? If not, file it this run (per-tenant zero-conversation heartbeat alert, Keys Koffee class of silent failure). 6. Keys Koffee: widget conversations resuming post widget-embed fix?",
+  "run_102_mandate": "1. Step 9G present in .claude/skills/nightly-commit-review/SKILL.md? If STILL absent (3rd carry-forward): IMPLEMENT DIRECTLY this run (cycle 3 escalation policy established run 99). 2. If present: did Step 9G fire in nightly log? Check for 'Step 9G:' line. 3. GH #403: does it contain Step 9G diagnostic output (trigger success, failure, or in-progress)? 4. GH #399: AUTOPILOT_GH_TOKEN rotated? If yes, which automations have resumed? 5. Step 9H GH issue filed? If not, file it this run (per-tenant zero-conversation heartbeat alert, Keys Koffee class of silent failure). 6. Keys Koffee: widget conversations resuming post widget-embed fix? 7. GH #500 (Actions spending limit): resolved? If yes, Step 9G trigger should now work \u2014 verify on first post-resolution nightly. If still blocked, note in run 102 context.",
   "active_directions": [
     {
       "title": "Step 9G: KB Autopopulate Self-Healing Trigger in nightly-commit-review SKILL.md (run 100 winner, carry-forward 2)",

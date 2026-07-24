@@ -43,5 +43,24 @@ Step 9F's alert-only posture on KB staleness. Step 9F fires the human alarm; Ste
 - **Step 9H per-tenant zero-conversation heartbeat** — GH issue to file: "Alert when paying tenant has zero widget conversations for >7 days (Keys Koffee class of silent failure)." Requires Supabase query + baseline logic not available in headless nightly bash context. GH issue only this cycle.
 - **GH #399 token rotation** — human action required; Step 9E already handles credential-rotation alerts. No new autonomous action available.
 
+## Critical Blocker — GH #500 (Actions Spending Limit)
+**Discovered 2026-07-24 (run 101 continuation):** GH #500 reports GitHub Actions spending limit hit — ALL Actions workflows are currently disabled repo-wide. This means:
+- `gh workflow run kb-autopopulate.yml` will fail with "Resource not accessible" until #500 is resolved
+- Step 9G should add a pre-check: `gh workflow list -R aferna6-cell/agentnexlify --json state -q '.[0].state'` to verify Actions are enabled before triggering
+- If Actions disabled: comment on #403 "Step 9G: GH Actions spending limit hit (GH #500) — workflows disabled. Resolve #500 to re-enable. ANTHROPIC_API_KEY, VOYAGE_API_KEY, SUPABASE_ACCESS_TOKEN also needed (GH #403)."
+
+**Updated implementation sketch** — add GH #500 pre-check as step 0 in 9G:
+```
+0. **Pre-check Actions enabled:**
+   ACTIONS_STATE=$(gh workflow list -R aferna6-cell/agentnexlify --json state -q '.[0].state' 2>/dev/null || echo "error")
+   If ACTIONS_STATE == "error" or ACTIONS_STATE == "disabled_inactivity":
+     Add comment to GH #403: "Step 9G: GH Actions disabled (spending limit GH #500 or inactivity). Workflows cannot run. Resolve #500 first."
+     Log: "Step 9G: Actions disabled — comment added to GH #403"
+     Continue to step 10.
+```
+Then steps 1-3 as above. This makes Step 9G robust across BOTH failure classes: spending limit (GH #500) AND missing secrets (GH #403).
+
+**Timing:** Implement Step 9G now (code is ready). The Actions pre-check means Step 9G will correctly diagnose the #500 state on first fire rather than silently failing. Once #500 is resolved, Step 9G will automatically attempt the repair.
+
 ## Confidence
-**HIGH** — Same channel (SKILL.md bash block) proven across 5 prior steps (9B/9C/9D/9E/9F). `gh workflow run` uses `workflow_dispatch`; nightly has write-side GH API permissions confirmed by prior mcp__github__add_issue_comment usage. Failure surface limited: trigger failure → diagnostic comment on #403; run failure → diagnostic comment on #403; in-progress → neutral log. No silent failure path.
+**HIGH** — Same channel (SKILL.md bash block) proven across 5 prior steps (9B/9C/9D/9E/9F). GH #500 pre-check adds 3 bash lines to the sketch, well within XS budget. Failure surface now covers 3 paths: Actions disabled (#500) → diagnostic comment; trigger failure (secrets) → diagnostic comment; run failure → diagnostic comment. Zero silent failure paths.
