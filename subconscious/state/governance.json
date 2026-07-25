@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-07-25",
-  "total_runs": 101,
+  "last_run": "2026-07-25-pm",
+  "total_runs": 102,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -219,6 +219,15 @@
     "gh_actions_billing": "BLOCKED since 2026-07-20 (GH #500) \u2014 root cause of all workflow failures"
   },
   "run_102_mandate": "1. GH #500 comment posted by run 101? Verify via gh issue comments list. 2. GH Actions spending limit restored? (any successful workflow run since 2026-07-25). 3. Step 9G \u2014 IMPLEMENT DIRECTLY (3rd-carry-forward escalation). Update sketch to add billing-limit failure path. Commit directly to SKILL.md, push onto existing PR #577 (subconscious branch). 4. First KB autopopulate workflow run success? (after Actions billing fixed). 5. AUTOPILOT_GH_TOKEN rotated (closes GH #399)? 6. ANTHROPIC_API_KEY set in Actions secrets (closes GH #403)? 7. PR #575 merged? (Keys Koffee silence alert).",
+  "run_102_governance_corrections": {
+    "total_runs": "101 -> 102",
+    "last_run": "2026-07-25 -> 2026-07-25-pm",
+    "step_9g_status": "IMPLEMENTED \u2014 direct SKILL.md edit, run 102, 3rd-carry-forward escalation. ~35 bash lines inserted after Step 9F (line 305) in .claude/skills/nightly-commit-review/SKILL.md. GH #500-aware: trigger failure branches to GH #403 diagnostic comment with spending-limit as candidate cause.",
+    "gh_actions_billing": "GH #500 still active as of run 102 \u2014 Step 9G now surfaces it when kb-autopopulate.yml trigger fails",
+    "kb_freshness": "2 days (2026-07-23 \u2014 Step 9G load-bearing for next gap)",
+    "parking_lot_additions": "GH spending monitor (Step 9H candidate) merged into Step 9G failure branch. Tenant-silence alert deferred until PR #575 merges."
+  },
+  "run_103_mandate": "1. Step 9G confirmed present in .claude/skills/nightly-commit-review/SKILL.md? (grep 'Step 9G' \u2014 MUST PASS). 2. Has nightly fired with Step 9G active? Check nightly log for 'Step 9G:' line. 3. KB freshness: check knowledge-base/log.md last entry \u2014 if >7 days stale, Step 9G should have triggered. 4. GH #403: does it contain a Step 9G diagnostic comment? 5. GH #500 (Actions spending limit): resolved? Any successful workflow run since 2026-07-25? 6. GH #399 (AUTOPILOT_GH_TOKEN): rotated? 7. PR #575 merged? If yes: promote tenant-silence alert from parking lot.",
   "active_directions": [
     {
       "title": "GH #500 Actions unblock checklist \u2014 4-step fix: spending limit + AUTOPILOT_GH_TOKEN + ANTHROPIC_API_KEY + optional credentials (run 101 winner)",
@@ -235,6 +244,23 @@
       "evidence": "GH Actions spending limit hit 2026-07-20 (GH #500, OPEN, label: human-action-required). Root cause behind GH #399 (AUTOPILOT_GH_TOKEN), GH #403 (ANTHROPIC_API_KEY missing from Actions), Step 9G workflow trigger failure, all health-check workflows. 30 ai-ready issues stalled. ~60 engineering-hours queued. Prior sessions commented on symptoms (#399, #403) but never on root cause (#500) with packaged checklist.",
       "action": "Post mcp__github__add_issue_comment on GH #500 with 4-step unblock checklist. Full text in subconscious/runs/2026-07-25/winning-concept.md.",
       "note": "Run 101 winner. Comment posted by run 101 on 2026-07-25. Multiplier: unblocks ALL autonomous systems in one 15-min human action."
+    },
+    {
+      "title": "Step 9G: KB Autopopulate Self-Healing Trigger in nightly-commit-review SKILL.md (run 100 winner)",
+      "date": "2026-07-25-pm",
+      "confidence": "HIGH",
+      "status": "implemented",
+      "implemented_date": "2026-07-25-pm",
+      "implemented_by": "subconscious run 102 — direct implementation (3rd-carry-forward escalation). ~35 bash lines inserted after Step 9F (line 305) in .claude/skills/nightly-commit-review/SKILL.md.",
+      "autonomous_executable": true,
+      "requires_human": false,
+      "category": "operational",
+      "moratorium_override": false,
+      "source_run": 100,
+      "effort": "XS",
+      "evidence": "Step 9G absent from SKILL.md for 4+ consecutive cycles (runs 100, 101, 2026-07-25-am, 2026-07-25-pm). Step 9F fires alert but no repair. KB was 10 days stale when selected. GH #500 (Actions spending limit) active — trigger failure branch now GH #500-aware.",
+      "action": "Inserted Step 9G bash block after Step 9F in .claude/skills/nightly-commit-review/SKILL.md. When days_stale > 7: (1) trigger gh workflow run kb-autopopulate.yml, (2) if trigger fails: comment on GH #403 with spending-limit diagnostic. (3) After 30s: check conclusion — if failed: comment on GH #403 with secret diagnostic; if still running: log pending.",
+      "note": "Run 100 winner, implemented at run 102 (3rd-carry-forward escalation per SKILL.md precedent from run 99/Step 9F). GH #500-aware: step surfaces spending limit as candidate cause in all failure branches."
     },
     {
       "title": "Step 9F: KB Autopopulate Staleness Check in nightly-commit-review SKILL.md (run 97 winner)",
