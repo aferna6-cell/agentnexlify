@@ -1,0 +1,52 @@
+{
+  "run": 101,
+  "date": "2026-07-25",
+  "winner": "Comment on GH #500 with comprehensive 4-step GH Actions unblock checklist — packages spending-limit fix + AUTOPILOT_GH_TOKEN rotation + ANTHROPIC_API_KEY + optional credentials with verification steps. Quantifies 30 stalled ai-ready issues and ~60 engineering-hours blocked.",
+  "category": "operational",
+  "effort": "XS",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "execution_path": "mcp__github__add_issue_comment on GH #500 — same channel as GH #413, #415, #399, #403 prior comments",
+  "requires_human": true,
+  "requires_human_scope": "Execute 4-step checklist: (1) set GH Actions spending limit $5–20, (2) rotate AUTOPILOT_GH_TOKEN, (3) set ANTHROPIC_API_KEY in Actions secrets, (4) optional VOYAGE_API_KEY + SUPABASE_ACCESS_TOKEN. Estimated 15 min total.",
+  "mandate_status": "EXECUTED",
+  "mandate_items_checked": {
+    "step_9g_in_skill_md": "FAIL — grep -c 'Step 9G' SKILL.md returns 0. Carry-forward 2 confirmed. Run 102 implements directly (3rd-carry-forward escalation).",
+    "kb_freshness_since_2026_07_13": "PASS — manual catch-up 2026-07-23 (114→124 articles, FTS active, embeddings skipped: VOYAGE_API_KEY absent). KB is 2 days fresh.",
+    "step_9g_fired_nightly": "N/A — Step 9G not yet in SKILL.md",
+    "gh403_step_9g_comment": "N/A — Step 9G not yet in SKILL.md",
+    "agent_os_tenant_count": "2–3 (LoopHealthPage deferred condition unchanged)",
+    "mcp_tenant_count": "1 (first tenant activated 2026-07-23; Step 9H killed condition unchanged)"
+  },
+  "key_finding": "GH Actions spending limit hit 2026-07-20 (GH #500) is the ROOT CAUSE behind GH #399 (AUTOPILOT_GH_TOKEN), GH #403 (ANTHROPIC_API_KEY), Step 9G workflow trigger failure, and all health-check workflows. Prior autonomous sessions commented on symptoms (#399, #403) but never on the root cause (#500) with a packaged unblock checklist. New major features shipped this cycle: AI booking panel (e9b4972, 85 tests, 3-mirror widget sync), email_sequences.py god-class split (1143→3 files, ab1a7c2), migration 187 (RLS policy). KB fresh after manual catch-up.",
+  "bonus_actions": [],
+  "rejected": [
+    "Comment on PR #575 from subconscious — KILLED (morning digest already surfaces as P3, duplicate signal)"
+  ],
+  "parking_lot": [
+    "Step 9G carry-forward 2 — implement directly at run 102 (3rd-carry-forward escalation; update sketch to add billing-limit as failure cause #1)",
+    "LoopHealthPage.jsx — deferred until Agent OS >5 tenants",
+    "Owner MCP quickstart — deferred until 2nd MCP tenant",
+    "PR #575 tenant-silence merge — human action, morning digest P3",
+    "fastapi<0.136 cap removal — low urgency",
+    "conversation_enrichment_job.py scheduling — blocked by GH #399",
+    "kb_hybrid retrieval enable — blocked by GH #399 or settings UI"
+  ],
+  "governance_corrections": {
+    "total_runs": "100 -> 101",
+    "last_run": "2026-07-23 -> 2026-07-25",
+    "step_9g_status": "pending_autonomous carry-forward 2 — ABSENT, run 102 escalation mandate",
+    "email_sequences_split": "IMPLEMENTED — ab1a7c2 (2026-07-23): email_sequences.py 1143→email_crud.py 529L + email_enrollment.py 328L + email_processor.py 341L",
+    "ai_booking_panel": "IMPLEMENTED — e9b4972 (2026-07-23): SHOW_BOOKING_PANEL marker, widget_chat_booking_action.py, 85 tests, 3-mirror widget sync",
+    "kb_articles_count": "124 (manual catch-up 2026-07-23, +10 new articles)",
+    "gh_actions_billing": "BLOCKED since 2026-07-20 (GH #500) — root cause of all workflow failures"
+  },
+  "run_102_mandate": "1. GH #500 comment posted by this run? Verify via gh issue comments list. 2. GH Actions spending limit restored? (any successful workflow run since 2026-07-25). 3. Step 9G — IMPLEMENT DIRECTLY (3rd-carry-forward escalation). Update sketch to add billing-limit failure path. Commit directly to SKILL.md, push onto existing PR #577 (subconscious branch). 4. First KB autopopulate workflow run success? (after Actions billing fixed). 5. AUTOPILOT_GH_TOKEN rotated (closes GH #399)? 6. ANTHROPIC_API_KEY set in Actions secrets (closes GH #403)? 7. PR #575 merged? (Keys Koffee silence alert).",
+  "artifacts": [
+    "subconscious/runs/2026-07-25/winning-concept.md",
+    "subconscious/runs/2026-07-25/improvement-backlog.md",
+    "subconscious/runs/2026-07-25/run-summary.json",
+    "subconscious/runs/2026-07-25/ideas/ideas.md",
+    "subconscious/runs/2026-07-25/debate/debate-log.md"
+  ]
+}
