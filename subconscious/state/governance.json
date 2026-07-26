@@ -1,11 +1,13 @@
 {
   "version": 1,
-  "last_run": "2026-07-26",
-  "total_runs": 103,
+  "last_run": "2026-07-26-pm",
+  "total_runs": 104,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
-  "frozen_ideas": ["ai_human_handoff"],
+  "frozen_ideas": [
+    "ai_human_handoff"
+  ],
   "moratorium_config": {
     "moratorium_active": false,
     "triggered_run": 15,
@@ -253,15 +255,15 @@
       "confidence": "HIGH",
       "status": "implemented",
       "implemented_date": "2026-07-25-pm",
-      "implemented_by": "subconscious run 102 — direct implementation (3rd-carry-forward escalation). ~35 bash lines inserted after Step 9F (line 305) in .claude/skills/nightly-commit-review/SKILL.md.",
+      "implemented_by": "subconscious run 102 \u2014 direct implementation (3rd-carry-forward escalation). ~35 bash lines inserted after Step 9F (line 305) in .claude/skills/nightly-commit-review/SKILL.md.",
       "autonomous_executable": true,
       "requires_human": false,
       "category": "operational",
       "moratorium_override": false,
       "source_run": 100,
       "effort": "XS",
-      "evidence": "Step 9G absent from SKILL.md for 4+ consecutive cycles (runs 100, 101, 2026-07-25-am, 2026-07-25-pm). Step 9F fires alert but no repair. KB was 10 days stale when selected. GH #500 (Actions spending limit) active — trigger failure branch now GH #500-aware.",
-      "action": "Inserted Step 9G bash block after Step 9F in .claude/skills/nightly-commit-review/SKILL.md. When days_stale > 7: (1) trigger gh workflow run kb-autopopulate.yml, (2) if trigger fails: comment on GH #403 with spending-limit diagnostic. (3) After 30s: check conclusion — if failed: comment on GH #403 with secret diagnostic; if still running: log pending.",
+      "evidence": "Step 9G absent from SKILL.md for 4+ consecutive cycles (runs 100, 101, 2026-07-25-am, 2026-07-25-pm). Step 9F fires alert but no repair. KB was 10 days stale when selected. GH #500 (Actions spending limit) active \u2014 trigger failure branch now GH #500-aware.",
+      "action": "Inserted Step 9G bash block after Step 9F in .claude/skills/nightly-commit-review/SKILL.md. When days_stale > 7: (1) trigger gh workflow run kb-autopopulate.yml, (2) if trigger fails: comment on GH #403 with spending-limit diagnostic. (3) After 30s: check conclusion \u2014 if failed: comment on GH #403 with secret diagnostic; if still running: log pending.",
       "note": "Run 100 winner, implemented at run 102 (3rd-carry-forward escalation per SKILL.md precedent from run 99/Step 9F). GH #500-aware: step surfaces spending limit as candidate cause in all failure branches."
     },
     {
@@ -1246,6 +1248,14 @@
       "note": "Run 4 winner. Explicit-trigger-only v1. 1.5-2 days. Infrastructure exists. Critical gap all 7 industries.",
       "reconciled": "2026-07-23",
       "reconciliation_note": "Handoff v1 live (explicit HANDOFF_REQUESTED trigger + handoff mode + owner notify)."
+    },
+    {
+      "id": "step_9h",
+      "title": "Step 9H: GH Actions spending-limit daily heartbeat in nightly SKILL.md",
+      "status": "implemented",
+      "run": 104,
+      "date": "2026-07-26-pm",
+      "description": "Nightly detects Actions outage (>=4/5 runs failed), pings GH #500 daily, self-silences when issue closed."
     }
   ],
   "ideas_explored": [
@@ -1551,7 +1561,7 @@
       "title": "Step 9G: KB autopopulate self-healing trigger in nightly-commit-review SKILL.md (run 100 winner)",
       "date": "2026-07-23",
       "confidence": "HIGH",
-      "status": "recommended",
+      "status": "pending_autonomous",
       "autonomous_executable": true,
       "requires_human": false,
       "category": "operational",
@@ -1563,8 +1573,7 @@
       "implementation_sketch": "subconscious/runs/2026-07-23/winning-concept.md",
       "carry_forward_count": 2,
       "carry_forward_escalation": "RUN 102 MUST IMPLEMENT DIRECTLY (3rd-carry-forward escalation, same precedent as Step 9F at run 99). Do not wait for human approval.",
-      "sketch_update_needed": "Add billing-limit (#500) as failure cause #1 in Step 9G diagnostic comment — before ANTHROPIC_API_KEY.",
-      "status": "pending_autonomous",
+      "sketch_update_needed": "Add billing-limit (#500) as failure cause #1 in Step 9G diagnostic comment \u2014 before ANTHROPIC_API_KEY.",
       "note": "Run 100 winner. Carry-forward 2 (run 101 winner slot went to GH #500 root-cause comment). AUTONOMOUS-EXECUTABLE via nightly SKILL.md-edit channel. Same class as Steps 9B-9F (all implemented in 1 cycle). Run 102 implements directly (3rd-carry-forward escalation). KB fresh 2026-07-23 (124 articles) but Step 9G needed for future gaps."
     }
   ],
@@ -1836,5 +1845,15 @@
       "synthesis": "opus",
       "artifact_writing": "sonnet"
     }
-  }
+  },
+  "run_104_mandate_executed": {
+    "gh_500_resolved": "NO \u2014 still open, day 6. Step 9H now pings daily.",
+    "pr_577_merged": "NO \u2014 still draft. Step 9H added to same branch, ships with Step 9G.",
+    "managed_agents_phase0_issue": "NOT CREATED \u2014 pending human approval (governance gate).",
+    "gh_399_rotated": "NO \u2014 AUTOPILOT_GH_TOKEN still expired.",
+    "email_sequences_auth_failures": "DEFERRED \u2014 CI dark, park until Actions restored.",
+    "kb_freshness": "PASS \u2014 2026-07-23, 3 days (within 7-day threshold).",
+    "step_9h_implemented": "YES \u2014 direct SKILL.md edit, 5 occurrences in nightly SKILL.md."
+  },
+  "run_105_mandate": "1. Step 9H fired? Check nightly-2026-07-27 log for Step 9H: line. 2. GH #500 daily ping added? Check comments on #500 since 2026-07-26. 3. GH #500 resolved? (any successful Actions run). 4. PR #577 merged? (Steps 9G + 9H on main). 5. Managed Agents Phase 0 GH issue approved by owner? 6. GH #399 rotated?"
 }

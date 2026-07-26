@@ -1,0 +1,29 @@
+{
+  "run": 104,
+  "date": "2026-07-26-pm",
+  "evidence_digest": [
+    "GH #500 (Actions spending limit) open 6 days — all CI dark, no runners assigned",
+    "Step 9G on branch PR #577 (7 occurrences), not yet on main — PR still draft",
+    "3 consecutive quiet nightly windows (Jul 24-26) — only auto-log commits",
+    "KB fresh 2026-07-23 (3 days) — within 7-day threshold",
+    "Run 103 winner (Managed Agents Phase 0 GH issue) pending human approval"
+  ],
+  "winner": "Step 9H: GH Actions spending-limit daily heartbeat",
+  "winner_category": "operational",
+  "confidence": "HIGH",
+  "implemented_directly": true,
+  "implementation": "Direct SKILL.md edit — 5 Step 9H occurrences confirmed in .claude/skills/nightly-commit-review/SKILL.md",
+  "debate_summary": {
+    "Step 9H (GH Actions heartbeat)": "SURVIVES → WINNER (XS, autonomous, closes daily-alert gap on GH #500)",
+    "Managed Agents Phase 0 issue": "WEAKENED → parking lot (pending human approval per governance gate)",
+    "PR #577 merge readiness note": "WEAKENED → bonus action only"
+  },
+  "next_run_questions": [
+    "Did Step 9H fire in nightly-2026-07-27?",
+    "GH #500 resolved? Any successful Actions run?",
+    "PR #577 merged? (Steps 9G + 9H on main)",
+    "AUTOPILOT_GH_TOKEN rotated (GH #399)?",
+    "Managed Agents Phase 0 GH issue approved?"
+  ],
+  "pr": "https://github.com/aferna6-cell/agentnexlify/pull/577"
+}

@@ -337,6 +337,29 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
          Log: "Step 9G: kb-autopopulate running — status pending ($RUN_URL)"
          Continue to step 10 (CI completes on its own).
 
+9H. **GH Actions spending-limit daily heartbeat** (added run 104, 2026-07-26-pm):
+    Condition: Unconditional — runs every nightly cycle.
+    1. **Query recent run conclusions:**
+       ```bash
+       FAIL_COUNT=$(gh run list --limit=5 -R aferna6-cell/agentnexlify \
+         --json conclusion 2>/dev/null | \
+         python3 -c "import json,sys; r=json.load(sys.stdin); print(sum(1 for x in r if x.get('conclusion')=='failure'))" \
+         2>/dev/null || echo "0")
+       ```
+       Log: "Step 9H: {FAIL_COUNT}/5 recent Actions runs failed"
+    2. **If FAIL_COUNT >= 4** (spending-limit outage pattern):
+       a. Check GH #500 state:
+          ```bash
+          GH500_STATE=$(gh issue view 500 -R aferna6-cell/agentnexlify \
+            --json state -q .state 2>/dev/null || echo "unknown")
+          ```
+       b. If state == "open": Add comment via `mcp__github__add_issue_comment`:
+            issue_number: 500
+            body: "**Step 9H nightly heartbeat:** GH Actions still down as of {TODAY} ({FAIL_COUNT}/5 recent runs failed). Day {N} since 2026-07-20. Fix: github.com/settings/billing/summary → raise spending limit. If resolved, please close this issue to silence this alert."
+          Log: "Step 9H: Actions down (day {N}) — daily ping added to GH #500"
+       c. If state == "closed": Log "Step 9H: GH #500 closed — Actions restored. Heartbeat complete."
+    3. **If FAIL_COUNT < 4:** Log "Step 9H: GH Actions healthy ({FAIL_COUNT}/5 failed)"
+
 10. Commit report: `docs(nightly): review YYYY-MM-DD [auto-nightly]`
 11. Push to main
 12. If any guardrail tripped (forbidden path, >5 files, >50 LOC, test-check failed) — abort fixes, file issue only, still write report
