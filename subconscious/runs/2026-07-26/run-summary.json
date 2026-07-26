@@ -1,0 +1,37 @@
+{
+  "run": 103,
+  "date": "2026-07-26",
+  "branch": "subconscious/run-101-step-9g",
+  "total_runs_after": 103,
+  "winner": {
+    "title": "Managed Agents Phase 0 kickoff GH issue",
+    "category": "Customer Value / Operational",
+    "mechanism": "GH issue creation (human approval required)",
+    "confidence": "HIGH",
+    "effort": "15 minutes (configuration only, no code change)",
+    "carry_forward_count": 0
+  },
+  "mandate_checks": {
+    "step_9g_present": "PASS (7 occurrences on branch, NOT on main)",
+    "nightly_fired_step_9g": "NOT YET (KB fresh at 3 days)",
+    "kb_freshness": "PASS (2026-07-23, 124 articles)",
+    "gh_403_step_9g_diagnostic": "N/A (Step 9G not triggered)",
+    "gh_500_resolved": "OPEN (6+ days)",
+    "gh_399_rotated": "OPEN",
+    "pr_575_merged": "NO (draft)"
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "ideas_eliminated": 1,
+  "ideas_parked": 1,
+  "key_blocker_context": "GH #500 (Actions spending limit) blocks CI, autopilot loop, KB autopopulate, Dependabot. GH #399 (AUTOPILOT_GH_TOKEN) expired. Both human-only fixes.",
+  "artifacts_written": [
+    "subconscious/runs/2026-07-26/ideas/candidates.md",
+    "subconscious/runs/2026-07-26/debate/debate-log.md",
+    "subconscious/runs/2026-07-26/winning-concept.md",
+    "subconscious/runs/2026-07-26/improvement-backlog.md",
+    "subconscious/runs/2026-07-26/run-summary.json"
+  ],
+  "governance_updated": true,
+  "memory_appended": true
+}

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-07-25-pm",
-  "total_runs": 102,
+  "last_run": "2026-07-26",
+  "total_runs": 103,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -228,6 +228,8 @@
     "parking_lot_additions": "GH spending monitor (Step 9H candidate) merged into Step 9G failure branch. Tenant-silence alert deferred until PR #575 merges."
   },
   "run_103_mandate": "1. Step 9G confirmed present in .claude/skills/nightly-commit-review/SKILL.md? (grep 'Step 9G' \u2014 MUST PASS). 2. Has nightly fired with Step 9G active? Check nightly log for 'Step 9G:' line. 3. KB freshness: check knowledge-base/log.md last entry \u2014 if >7 days stale, Step 9G should have triggered. 4. GH #403: does it contain a Step 9G diagnostic comment? 5. GH #500 (Actions spending limit): resolved? Any successful workflow run since 2026-07-25? 6. GH #399 (AUTOPILOT_GH_TOKEN): rotated? 7. PR #575 merged? If yes: promote tenant-silence alert from parking lot.",
+  "run_103_mandate_executed": "EXECUTED 2026-07-26. Items checked: (1) Step 9G CONFIRMED present on branch subconscious/run-101-step-9g (7 occurrences). NOT on main \u2014 PR #577 still open/draft. (2) Nightly has NOT fired Step 9G yet \u2014 KB is fresh (2026-07-23, 3 days), Step 9G fires only when >7 days stale. (3) KB freshness PASS \u2014 2026-07-23, 124 articles, within threshold. (4) GH #403 Step 9G diagnostic \u2014 N/A, Step 9G hasn\u2019t triggered (KB not stale). (5) GH #500 OPEN \u2014 6+ days, all GH Actions dark, no successful workflow run since 2026-07-20. (6) GH #399 OPEN \u2014 AUTOPILOT_GH_TOKEN still expired. (7) PR #575 NOT merged \u2014 still draft. Run 103 winner: Managed Agents Phase 0 kickoff GH issue (provision environment + Railway env vars + smoke test). Debate: Step 9H parked (timing wrong\u2014add after #577 merges), Keys Koffee eliminated (premise uncertain\u2014embed may be removed), email auth failures ranked 4th. Winner selected on highest leverage: Managed Agents Phase 0 is 15-min configuration with no code change that unblocks the next product growth lane.",
+  "run_104_mandate": "1. GH #500 resolved? Any successful gh workflow run? 2. PR #577 merged? If yes: confirm Step 9G on main + add Step 9H (spending-limit heartbeat) as next SKILL.md candidate. 3. Was Managed Agents Phase 0 kickoff issue filed (run 103 winner)? Check GH issues. 4. If Phase 0 issue filed: has human actioned it? Check MANAGED_AGENTS_ENVIRONMENT_ID in Railway env. 5. GH #399 rotated? 6. email_sequences auth test failures (8): still present? If GH #500 resolved and CI green, classify and file fix issue. 7. KB freshness: check knowledge-base/log.md \u2014 if >7 days, Step 9G should have fired (confirm nightly log).",
   "active_directions": [
     {
       "title": "GH #500 Actions unblock checklist \u2014 4-step fix: spending limit + AUTOPILOT_GH_TOKEN + ANTHROPIC_API_KEY + optional credentials (run 101 winner)",
