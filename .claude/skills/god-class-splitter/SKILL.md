@@ -41,7 +41,11 @@ grep -rn "from backend.services.old_module\|import old_module" .
 ```
 Update every call site in the same pass. No exceptions. No stale references left behind.
 
-**Step 7.** Delete or thin the original file. No re-export shims (`from new_module import *`). No `# removed` comments.
+**Step 7.** Add backward-compat re-exports to the original file for all moved symbols:
+```python
+from .new_module import Symbol1, Symbol2, Symbol3  # TODO: remove when all callers updated
+```
+Name each symbol explicitly — do not use star-exports (`from new_module import *`). This prevents callers missed in Step 6 from immediately breaking. Note: re-exports do NOT fix `@patch` target paths in tests — Step 10.5 handles those separately.
 
 **Step 8.** If the split produced new router files, register them in `backend/main.py` (lines 746-813).
 

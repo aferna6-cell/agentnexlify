@@ -1,0 +1,45 @@
+{
+  "run": 106,
+  "date": "2026-07-27-pm",
+  "winner": "Update god-class-splitter SKILL.md Step 7 — replace 'No re-export shims' with named backward-compat re-export guidance. IMPLEMENTED DIRECTLY. Both recent splits (calls.py + email_sequences.py) required follow-up commits for this exact reason.",
+  "category": "workflow",
+  "effort": "XS",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "execution_path": "direct SKILL.md edit (precedent: runs 99/102/104 all implemented SKILL.md edits directly)",
+  "requires_human": false,
+  "implemented_directly": true,
+  "mandate_checks": {
+    "pr_577_merged": "NO — open/draft, 4 days",
+    "step_9h_fired_nightly_2026_07_27": "NOT YET — PR #577 not merged; Step 9H not on main",
+    "gh_500_resolved": "NO — open day 7",
+    "managed_agents_phase0_approved": "UNKNOWN — pending_approval gate respected",
+    "kb_freshness": "PASS — 2026-07-23, 4 days (within 7-day threshold)",
+    "gh_399_rotated": "NO — AUTOPILOT_GH_TOKEN still expired"
+  },
+  "ideas_debated": [
+    "god-class-splitter Step 7 backward-compat re-exports (WINNER — XS, HIGH evidence, autonomous)",
+    "feature-docs-trio skill create (WEAKENED — S-effort, invoke gap, bootstrapping order required)",
+    "feature-build docs step seed (KILLED — depends on Idea 2 which is WEAKENED)"
+  ],
+  "key_finding": "Current god-class-splitter Step 7 says 'No re-export shims' — directly contradicting both splits this week. Both calls.py and email_sequences.py splits required backward-compat re-exports in follow-up commits. skill-discovery/2026-07-27.md marks HIGH priority: 'Both omissions cause test failures immediately after the split.' Fix is XS, zero risk, autonomous. Repo idle 4 days (no human commits since 2026-07-23). GH #500 still blocking all Actions day 7.",
+  "bonus_actions": [],
+  "parking_lot_additions": [
+    "feature-docs-trio skill — 1st appearance as parking lot candidate, promote run 107 if unimplemented",
+    "email_sequences 8 auth failures GH issue — defer until CI returns (GH #500 resolved)",
+    "VOYAGE_API_KEY Step 9I — defer until key set in prod"
+  ],
+  "carry_forward_notes": {
+    "gh_500": "day 7, 4-step checklist posted by run 101, Step 9H will daily-ping once PR #577 merges",
+    "pr_577": "open draft 4 days — Steps 9G+9H on branch, CI red due to GH #500 (billing, not PR)",
+    "gh_399": "AUTOPILOT_GH_TOKEN expired, 30 ai-ready issues blocked"
+  },
+  "total_runs": 106,
+  "artifacts": [
+    "subconscious/runs/2026-07-27-pm/winning-concept.md",
+    "subconscious/runs/2026-07-27-pm/improvement-backlog.md",
+    "subconscious/runs/2026-07-27-pm/run-summary.json",
+    "subconscious/runs/2026-07-27-pm/ideas/ideas.md",
+    "subconscious/runs/2026-07-27-pm/debate/debate-log.md"
+  ]
+}
