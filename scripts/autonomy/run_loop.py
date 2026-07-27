@@ -166,32 +166,53 @@ async def _cmd_status(args) -> dict[str, Any]:
     }
 
 
+# Real defaults live here, not on the arguments — see _common_options.
+_DEFAULTS = {
+    "state_dir": DEFAULT_STATE_DIR,
+    "compare_ref": "origin/main",
+    "prs_opened_today": 0,
+}
+
+
 def _common_options() -> argparse.ArgumentParser:
     """Options accepted on both sides of the subcommand.
 
     argparse only matches a parent-level flag *before* the subcommand, and
-    `run_loop start --state-dir X` is what anyone actually types. Attaching
-    these to every subparser as well makes both orders work instead of failing
-    with an unhelpful "unrecognized arguments".
+    `run_loop start --state-dir X` is what anyone actually types — so these are
+    attached to the parent and to every subparser.
+
+    The defaults are ``SUPPRESS`` rather than real values, which is the part
+    that is easy to get wrong: when the same option is defined in both places,
+    the subparser applies its own default *after* the parent has already parsed
+    the flag, silently overwriting it. `--state-dir X start` then writes to
+    `.autonomy/` while reporting success. Suppressing means an unsupplied flag
+    sets no attribute at all, and :func:`_apply_defaults` fills it in once.
     """
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument(
         "--state-dir",
-        default=DEFAULT_STATE_DIR,
+        default=argparse.SUPPRESS,
         help=f"checkpoint directory (default {DEFAULT_STATE_DIR})",
     )
     common.add_argument(
         "--compare-ref",
-        default="origin/main",
+        default=argparse.SUPPRESS,
         help="ref the local CI gate diffs against (default origin/main)",
     )
     common.add_argument(
         "--prs-opened-today",
         type=int,
-        default=0,
+        default=argparse.SUPPRESS,
         help="PRs already opened today, for the deploy-quota guard",
     )
     return common
+
+
+def _apply_defaults(args: argparse.Namespace) -> argparse.Namespace:
+    for name, value in _DEFAULTS.items():
+        if not hasattr(args, name):
+            setattr(args, name, value)
+    return args
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -256,7 +277,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    args = _apply_defaults(build_parser().parse_args(argv))
     try:
         _emit(asyncio.run(args.func(args)))
     except Exception as exc:  # noqa: BLE001 - CLI boundary: report, never traceback
