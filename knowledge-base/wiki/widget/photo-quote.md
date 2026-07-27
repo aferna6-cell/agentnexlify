@@ -4,7 +4,7 @@ category: widget
 tags: [photo-quote, widget, vision, pricing, verticals, stripe-metered, needs-human, quote-requests, opus-vision]
 sources: ["specs/photo-quote_spec.md"]
 created: 2026-07-21
-updated: 2026-07-21
+updated: 2026-07-27
 summary: "Photo-quote lets a widget visitor upload one photo of a job and get an instant price range grounded in the tenant's per-vertical pricing rules, or a needs_human handoff when the model's confidence falls below the vertical's floor. Shipped across six trades (plumbing, roofing, hvac, auto_body, landscaping, pest) with metered billing at 500/mo + $0.15 overage."
 ---
 
@@ -16,7 +16,7 @@ The request path is deliberately thin over a tested core. `POST /api/widget/phot
 
 The pricing model is per-vertical severity, not a flat markup. Each of the six supported trades carries a confidence floor: below it, the quote is flagged `needs_human` instead of shown. Plumbing, landscaping, and pest sit at 0.7; hvac and auto_body at 0.75; roofing at 0.8 (roof damage is the hardest to price from a single photo). A tenant can override the floor with `tenant_pricing_rules.min_confidence_threshold`; otherwise the vertical default applies, and an unknown vertical falls back to a conservative 0.75 — always erring toward human review. Platform-default price ranges are seeded per trade from HomeAdvisor/Angi 2025 national averages, each with at least six damage types mapping `minor`/`major` to `{low, high}` USD bands. That JSON is stored verbatim as `tenant_pricing_rules.rules_jsonb` and injected into the vision prompt, so every price the model returns is grounded in the tenant's configured bands rather than invented. See [[design]] for the dashboard theme conventions the Quote Requests page follows.
 
-The data model is `client_id`-scoped (migration 108), matching the leads/conversations convention, not the `tenant_id` used elsewhere. A `quote_requests` row records `image_url`, `thumbnail_url`, `quote_low`, `quote_high`, `severity` (`minor`/`major`/`needs_human`), `confidence`, `claude_summary`, and `needs_human`. PII hygiene is built in: a retention cron purges the full-resolution image from Storage 30 days after upload (setting `full_image_purged_at` and nulling `image_url`) while keeping the thumbnail and all metadata permanently — the dashboard shows "image purged after 30d" instead of a dead link. Storage deletion failures never block the DB update, so a stuck object can never keep re-surfacing a row as a purge candidate.
+The data model is `client_id`-scoped (migration 108), matching the leads/conversations convention, not the `tenant_id` used elsewhere. A `quote_requests` row records `image_url`, `thumbnail_url`, `quote_low`, `quote_high`, `severity` (`minor`/`major`/`needs_human`), `confidence`, `claude_summary`, and `needs_human`. Migration 185 added two pilot telemetry columns: `tenant_feedback` (text, CHECK constraint: `correct|too_low|too_high|unclear`, nullable) and `led_to_appointment` (boolean, default false). These power the GA gate metrics — `backend/services/photo_quote_telemetry.py` computes rolling error rate (non-`correct` ratings / all rated rows, 7-day window) and quote-to-appointment conversion rate (30-day window) fail-open: if the migration has not been applied, functions degrade to zero counts rather than erroring. PII hygiene is built in: a retention cron purges the full-resolution image from Storage 30 days after upload (setting `full_image_purged_at` and nulling `image_url`) while keeping the thumbnail and all metadata permanently — the dashboard shows "image purged after 30d" instead of a dead link. Storage deletion failures never block the DB update, so a stuck object can never keep re-surfacing a row as a purge candidate.
 
 Billing is metered and fail-open. A tenant's Pro plan includes 500 quotes per calendar month, tracked in `tenant_quote_usage` keyed on `(client_id, period_start)` with automatic monthly rollover. Beyond 500, each quote increments an overage counter and reports a Stripe metered usage event at $0.15, keyed with an idempotency token of `{client_id}:{quote_request_id}` so a retried request never double-charges. If the Stripe metered price is not configured, usage is still counted locally and the visitor is never blocked — the report is a safe no-op, and billing activates the moment the SKU and `STRIPE_PHOTO_QUOTE_METERED_PRICE_ID` land in production, with no code change. This mirrors the fail-open discipline used across the automation layer.
 
@@ -45,6 +45,9 @@ Photo-quote is a widget-first differentiator: instant per-trade visual quoting i
 - `backend/services/photo_quote_service.py` — validation, response parse, `needs_human` gate
 - `backend/services/photo_quote_usage.py` — metered billing + usage summary
 - `backend/routers/widget_photo_quote.py` — the widget endpoint
-- `backend/routers/photo_quote_admin.py` — the Quote Requests dashboard API
+- `backend/routers/photo_quote_admin.py` — the Quote Requests dashboard API (also exposes `POST /{tenant_id}/feedback` and telemetry in GET response)
+- `backend/services/photo_quote_telemetry.py` — rolling error rate + conversion rate; migration 185 required
 - `.claude/rules/vision-3x.md` — higher-resolution vision input
 - `.claude/rules/schema-discipline.md` — `client_id` vs `tenant_id`
+
+Updated 2026-07-27 due to #547
