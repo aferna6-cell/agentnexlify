@@ -52,7 +52,10 @@ class WorkItem:
     """One candidate piece of work, scored by the session that fetched it."""
 
     id: str
-    title: str
+    # Optional on purpose. `id` is the identity; `title` is a human label, and
+    # a scorer that omits it should degrade to a less readable journal entry
+    # rather than crash the loop before it starts.
+    title: str = ""
     value: float = 0.0
     effort: float = 0.5
     confidence: float = 0.5
