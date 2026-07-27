@@ -1,13 +1,11 @@
 {
   "version": 1,
-  "last_run": "2026-07-26-pm",
-  "total_runs": 104,
+  "last_run": "2026-07-27",
+  "total_runs": 105,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
-  "frozen_ideas": [
-    "ai_human_handoff"
-  ],
+  "frozen_ideas": ["ai_human_handoff"],
   "moratorium_config": {
     "moratorium_active": false,
     "triggered_run": 15,
@@ -1855,5 +1853,17 @@
     "kb_freshness": "PASS \u2014 2026-07-23, 3 days (within 7-day threshold).",
     "step_9h_implemented": "YES \u2014 direct SKILL.md edit, 5 occurrences in nightly SKILL.md."
   },
-  "run_105_mandate": "1. Step 9H fired? Check nightly-2026-07-27 log for Step 9H: line. 2. GH #500 daily ping added? Check comments on #500 since 2026-07-26. 3. GH #500 resolved? (any successful Actions run). 4. PR #577 merged? (Steps 9G + 9H on main). 5. Managed Agents Phase 0 GH issue approved by owner? 6. GH #399 rotated?"
+  "run_105_mandate": "1. Step 9H fired? Check nightly-2026-07-27 log for Step 9H: line. 2. GH #500 daily ping added? Check comments on #500 since 2026-07-26. 3. GH #500 resolved? (any successful Actions run). 4. PR #577 merged? (Steps 9G + 9H on main). 5. Managed Agents Phase 0 GH issue approved by owner? 6. GH #399 rotated?",
+  "run_105_mandate_executed": {
+    "step_9h_fired_nightly_2026_07_27": "NOT YET — PR #577 not merged; Step 9H not on main. Nightly log confirms clean run (no commits reviewed, repo idle since 2026-07-23).",
+    "gh_500_daily_ping_added": "NOT YET — manual Day-7 heartbeat comment added as bonus action in run 105.",
+    "gh_500_resolved": "NO — still open, day 7.",
+    "pr_577_merged": "NO — open/draft since 2026-07-24. Run 105 winner: merge-readiness comment posted to unblock.",
+    "managed_agents_phase0_approved": "UNKNOWN — run 103 winner marked pending_approval. Gate respected, not overridden.",
+    "gh_399_rotated": "NO — AUTOPILOT_GH_TOKEN still expired.",
+    "step_9g_occurrences": "7 confirmed on branch",
+    "step_9h_occurrences": "5 confirmed on branch",
+    "kb_freshness": "PASS — 2026-07-23, 4 days (within 7-day threshold)."
+  },
+  "run_106_mandate": "1. PR #577 merged? If yes: confirm Step 9G + 9H on main branch (grep -c 'Step 9G' and 'Step 9H'). 2. Step 9H fired on nightly-2026-07-28? Check nightly log for 'Step 9H:' line. 3. GH #500 resolved? Any successful workflow run post-fix? 4. Managed Agents Phase 0 GH issue filed? (human approved run 103 winner). 5. KB freshness: check knowledge-base/log.md — if >7 days stale, Step 9G should have fired. 6. GH #399 AUTOPILOT_GH_TOKEN rotated?"
 }
