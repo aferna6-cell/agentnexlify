@@ -10,6 +10,7 @@ byte-for-byte identical to the pre-split router (captured 2026-07-23), and
 the symbols other modules import must live where the importers now point.
 """
 
+from backend.route_introspection import route_signatures
 from backend.routers import email_crud, email_enrollment, email_processor
 
 # (method, path) pairs captured from the pre-split email_sequences.router.
@@ -29,7 +30,7 @@ EXPECTED_ROUTES = {
 
 
 def _routes(router):
-    return {(m, r.path) for r in router.routes for m in r.methods}
+    return route_signatures(router)
 
 
 def test_combined_route_set_matches_pre_split():
@@ -108,9 +109,8 @@ def test_main_app_exposes_all_email_sequence_routes():
     from backend.main import app
 
     app_routes = {
-        (m, r.path)
-        for r in app.routes
-        if getattr(r, "path", "").startswith("/api/v1/email-sequences")
-        for m in getattr(r, "methods", set())
+        (method, path)
+        for method, path in route_signatures(app)
+        if path.startswith("/api/v1/email-sequences")
     }
     assert app_routes == EXPECTED_ROUTES

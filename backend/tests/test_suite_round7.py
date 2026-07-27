@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 os.environ.setdefault("TESTING", "1")
 
+from backend.route_introspection import iter_routes, route_paths
 from backend.tests.fake_supabase import db as _db
 
 
@@ -90,7 +91,7 @@ class TestCallsSplit:
     def test_all_call_routes_survive_the_split(self):
         from backend.routers import calls
 
-        paths = {r.path for r in calls.router.routes}
+        paths = set(route_paths(calls.router))
         assert {
             "/api/v1/calls/voice/call-status",
             "/api/v1/calls/voice/incoming",
@@ -212,9 +213,9 @@ class TestMcpKeyEndpoints:
 
         route = next(
             r
-            for r in app.routes
-            if getattr(r, "path", "") == "/api/v1/auth/mcp-key/{tenant_id}"
-            and "POST" in getattr(r, "methods", set())
+            for path, r in iter_routes(app)
+            if path == "/api/v1/auth/mcp-key/{tenant_id}"
+            and "POST" in (getattr(r, "methods", None) or set())
         )
         deps = [d.call for d in route.dependant.dependencies]
         assert require_agent_os_access in deps
@@ -227,9 +228,9 @@ class TestMcpKeyEndpoints:
 
         route = next(
             r
-            for r in app.routes
-            if getattr(r, "path", "") == "/api/v1/auth/mcp-key/{tenant_id}"
-            and "GET" in getattr(r, "methods", set())
+            for path, r in iter_routes(app)
+            if path == "/api/v1/auth/mcp-key/{tenant_id}"
+            and "GET" in (getattr(r, "methods", None) or set())
         )
         deps = [d.call for d in route.dependant.dependencies]
         assert require_agent_os_access not in deps
