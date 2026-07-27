@@ -37,11 +37,13 @@ from scripts.autonomy.runner import (
 
 __all__ = [
     "DEFAULT_BRANCH",
+    "DEFAULT_DEPLOY_PRESSURE_CEILING",
     "DEFAULT_MAX_PRS_PER_DAY",
     "GateResult",
     "GitState",
     "PreflightReport",
     "deploy_budget_remaining",
+    "deploy_pressure_exceeded",
     "git_state",
     "migration_number_conflict",
     "preflight",
@@ -56,6 +58,10 @@ __all__ = [
 # draft→ready transition and follow-up push rebuilds both. Budgeting 4 PRs/day
 # keeps a normal day's churn well inside the cap with room for retries.
 DEFAULT_MAX_PRS_PER_DAY = 4
+
+# Total PR volume (any author) at which the loop stands down entirely. Separate
+# from its own allowance above; see deploy_pressure_exceeded for why it is high.
+DEFAULT_DEPLOY_PRESSURE_CEILING = 60
 
 DEFAULT_BRANCH = "main"
 
@@ -177,25 +183,54 @@ def git_state(
 
 
 def deploy_budget_remaining(
-    prs_opened_today: int,
+    loop_prs_opened_today: int,
     *,
     max_prs_per_day: int = DEFAULT_MAX_PRS_PER_DAY,
 ) -> int:
-    """How many more PRs the loop may open today before it risks the deploy cap.
+    """How many more PRs THE LOOP may open today. Its own allowance, nothing else.
 
     On 2026-06-23 the loop merged eleven PRs in one session and blew Vercel's
     free-tier limit of 100 deploys/day, blocking every frontend deploy for
     roughly 24 hours. A PR is not one deploy: preview builds fire on two Vercel
     projects, and each draft→ready transition and follow-up push rebuilds both,
-    so the real multiplier is several deploys per PR and grows with review
-    churn. The default of 4 keeps a full day of loop output well under the cap
-    while leaving headroom for the retries that follow a red gate.
+    so the real multiplier is several deploys per PR. The default of 4 keeps a
+    full day of loop output well under the cap with headroom for the retries
+    that follow a red gate.
+
+    This counts only PRs the loop itself opened. Counting *every* PR was the
+    original mistake and it showed up the first time this ran for real: 20 PRs
+    had been opened that day, 18 of them Dependabot, so the loop stood down over
+    churn it neither caused nor could influence. Dependabot batches are routine
+    here, which would have made "blocked" the normal state. Total volume is a
+    real concern, but it is a different one — see
+    :func:`deploy_pressure_exceeded`.
 
     Never returns a negative number — "how many may I open" has no meaningful
     answer below zero, and a negative would silently pass a ``> 0`` check
     inverted somewhere downstream.
     """
-    return max(0, max_prs_per_day - max(0, prs_opened_today))
+    return max(0, max_prs_per_day - max(0, loop_prs_opened_today))
+
+
+def deploy_pressure_exceeded(
+    total_prs_opened_today: int,
+    *,
+    ceiling: int = DEFAULT_DEPLOY_PRESSURE_CEILING,
+) -> bool:
+    """Whether total PR volume today is close enough to the cap to stand down.
+
+    The emergency brake, separate from the loop's own allowance. It exists for
+    the case where something else — a large Dependabot batch, a human sprint —
+    has already consumed most of the day's deploys, and the marginal PR really
+    would be the one that tips it.
+
+    The ceiling is high on purpose. At roughly 2-3 deploys per PR against a
+    100/day cap, ~60 PRs is where the next one plausibly matters; anything much
+    lower re-creates the bug this split was made to fix, where ordinary bot
+    churn silences the loop. ``0`` means "unknown", not "quiet", so an unset
+    count never trips the brake.
+    """
+    return total_prs_opened_today >= ceiling
 
 
 def migration_number_conflict(
@@ -239,7 +274,8 @@ def preflight(
     *,
     runner: Runner | None = None,
     repo_root: str | Path | None = None,
-    prs_opened_today: int = 0,
+    loop_prs_opened_today: int = 0,
+    total_prs_opened_today: int = 0,
 ) -> PreflightReport:
     """Decide whether the loop may start at all, before it spends a single token.
 
@@ -270,11 +306,20 @@ def preflight(
             f"commits contain only its own work."
         )
 
-    if deploy_budget_remaining(prs_opened_today) <= 0:
+    if deploy_budget_remaining(loop_prs_opened_today) <= 0:
         blockers.append(
-            f"Deploy budget is spent: {prs_opened_today} PR(s) already opened today "
-            f"({DEFAULT_MAX_PRS_PER_DAY} allowed). Wait for the daily reset — the "
-            f"2026-06-23 incident blocked all frontend deploys for 24h."
+            f"The loop's own daily PR allowance is spent: it opened "
+            f"{loop_prs_opened_today} today ({DEFAULT_MAX_PRS_PER_DAY} allowed). "
+            f"Wait for the daily reset — the 2026-06-23 incident blocked all "
+            f"frontend deploys for 24h."
+        )
+
+    if deploy_pressure_exceeded(total_prs_opened_today):
+        blockers.append(
+            f"Total PR volume today is {total_prs_opened_today} "
+            f"(ceiling {DEFAULT_DEPLOY_PRESSURE_CEILING}); the day's Vercel deploy "
+            f"budget is close to spent regardless of who used it. Stand down until "
+            f"it resets."
         )
 
     return PreflightReport(ok=not blockers, blockers=blockers)

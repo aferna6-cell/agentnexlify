@@ -84,7 +84,10 @@ def _parse_result(raw: str) -> Any:
 
 async def _cmd_start(args) -> dict[str, Any]:
     if not args.skip_preflight:
-        report = gates.preflight(prs_opened_today=args.prs_opened_today)
+        report = gates.preflight(
+            loop_prs_opened_today=args.prs_opened_today,
+            total_prs_opened_today=args.total_prs_today,
+        )
         if not report.ok:
             # Refusing here rather than in the Routine prompt is deliberate: a
             # prompt is advice, and the whole point of the guardrail is that it
@@ -126,7 +129,7 @@ async def _cmd_start(args) -> dict[str, Any]:
         checkpointer=_checkpointer(args.state_dir),
         extras={
             "compare_ref": args.compare_ref,
-            "prs_opened_today": args.prs_opened_today,
+            "loop_prs_opened_today": args.prs_opened_today,
         },
     )
     return _response(result, extra={"candidates": len(items)})
@@ -141,7 +144,7 @@ async def _cmd_resume(args) -> dict[str, Any]:
         budget=default_budget(),
         extras={
             "compare_ref": args.compare_ref,
-            "prs_opened_today": args.prs_opened_today,
+            "loop_prs_opened_today": args.prs_opened_today,
         },
     )
     return _response(result)
@@ -171,6 +174,7 @@ _DEFAULTS = {
     "state_dir": DEFAULT_STATE_DIR,
     "compare_ref": "origin/main",
     "prs_opened_today": 0,
+    "total_prs_today": 0,
 }
 
 
@@ -200,10 +204,22 @@ def _common_options() -> argparse.ArgumentParser:
         help="ref the local CI gate diffs against (default origin/main)",
     )
     common.add_argument(
+        "--total-prs-today",
+        type=int,
+        default=argparse.SUPPRESS,
+        help=(
+            "PRs opened today by ANY author, including bots. Only trips the "
+            "high deploy-pressure ceiling; 0 means unknown, not quiet."
+        ),
+    )
+    common.add_argument(
         "--prs-opened-today",
         type=int,
         default=argparse.SUPPRESS,
-        help="PRs already opened today, for the deploy-quota guard",
+        help=(
+            "PRs the LOOP opened today — its own daily allowance. Does not "
+            "count PRs from anyone else; use --total-prs-today for those."
+        ),
     )
     return common
 

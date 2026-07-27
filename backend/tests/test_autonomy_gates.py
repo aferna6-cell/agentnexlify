@@ -26,7 +26,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from scripts.autonomy.gates import (  # noqa: E402
     DEFAULT_MAX_PRS_PER_DAY,
+    DEFAULT_DEPLOY_PRESSURE_CEILING,
     deploy_budget_remaining,
+    deploy_pressure_exceeded,
     git_state,
     migration_number_conflict,
     preflight,
@@ -408,7 +410,7 @@ def test_migration_missing_directory_still_honours_pr_claims(tmp_path):
 
 
 def test_preflight_all_good():
-    report = preflight(runner=git_runner(), prs_opened_today=0)
+    report = preflight(runner=git_runner(), loop_prs_opened_today=0)
 
     assert report.ok is True
     assert report.blockers == []
@@ -431,11 +433,39 @@ def test_preflight_blocks_on_a_dirty_tree():
     assert any("stash" in blocker for blocker in report.blockers)
 
 
-def test_preflight_blocks_when_the_deploy_budget_is_spent():
-    report = preflight(runner=git_runner(), prs_opened_today=DEFAULT_MAX_PRS_PER_DAY)
+def test_preflight_blocks_when_the_loops_own_allowance_is_spent():
+    report = preflight(runner=git_runner(), loop_prs_opened_today=DEFAULT_MAX_PRS_PER_DAY)
 
     assert report.ok is False
-    assert any("Deploy budget" in blocker for blocker in report.blockers)
+    assert any("own daily PR allowance" in blocker for blocker in report.blockers)
+
+
+def test_other_peoples_prs_do_not_spend_the_loops_allowance():
+    """Regression: the first real run stood down because 20 PRs had been opened
+    that day, 18 of them Dependabot. Bot churn the loop neither caused nor can
+    influence must not silence it — that made 'blocked' the normal state."""
+    report = preflight(runner=git_runner(), loop_prs_opened_today=0, total_prs_opened_today=20)
+
+    assert report.ok is True
+    assert report.blockers == []
+
+
+def test_preflight_blocks_when_total_deploy_pressure_is_near_the_cap():
+    report = preflight(
+        runner=git_runner(),
+        loop_prs_opened_today=0,
+        total_prs_opened_today=DEFAULT_DEPLOY_PRESSURE_CEILING,
+    )
+
+    assert report.ok is False
+    assert any("Total PR volume" in blocker for blocker in report.blockers)
+
+
+def test_deploy_pressure_ceiling_boundaries():
+    assert deploy_pressure_exceeded(0) is False
+    assert deploy_pressure_exceeded(DEFAULT_DEPLOY_PRESSURE_CEILING - 1) is False
+    assert deploy_pressure_exceeded(DEFAULT_DEPLOY_PRESSURE_CEILING) is True
+    assert deploy_pressure_exceeded(5, ceiling=4) is True
 
 
 def test_preflight_blocks_on_detached_head():
@@ -448,7 +478,7 @@ def test_preflight_blocks_on_detached_head():
 def test_preflight_reports_every_blocker_at_once():
     report = preflight(
         runner=git_runner(branch="main", status="?? scratch.py\n"),
-        prs_opened_today=99,
+        loop_prs_opened_today=99,
     )
 
     assert report.ok is False

@@ -112,7 +112,7 @@ async def drive(
     """
     graph = build()
     checkpointer = InMemoryCheckpointer()
-    extras = {"runner": runner or verifier(True), "prs_opened_today": prs_opened_today}
+    extras = {"runner": runner or verifier(True), "loop_prs_opened_today": prs_opened_today}
     answers = {**DEFAULT_REPLIES, **(replies or {})}
 
     result = await graph_run(
@@ -231,7 +231,7 @@ async def test_verify_runs_the_local_ci_mirror_against_the_compare_ref():
     graph = build()
     runner = verifier(True)
     checkpointer = InMemoryCheckpointer()
-    extras = {"runner": runner, "compare_ref": "origin/develop", "prs_opened_today": 0}
+    extras = {"runner": runner, "compare_ref": "origin/develop", "loop_prs_opened_today": 0}
 
     paused = await graph_run(
         graph,

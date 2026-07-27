@@ -428,7 +428,7 @@ def test_exclude_reaches_the_selector(capsys, state_dir, backlog):
 
 
 def blocked_preflight(*blockers):
-    def _preflight(*, runner=None, repo_root=None, prs_opened_today=0):
+    def _preflight(*, runner=None, repo_root=None, loop_prs_opened_today=0, total_prs_opened_today=0):
         return gates.PreflightReport(ok=False, blockers=list(blockers))
 
     return _preflight
@@ -519,8 +519,8 @@ def test_preflight_sees_the_deploy_quota_the_caller_passed(
 ):
     seen = {}
 
-    def _preflight(*, runner=None, repo_root=None, prs_opened_today=0):
-        seen["prs_opened_today"] = prs_opened_today
+    def _preflight(*, runner=None, repo_root=None, loop_prs_opened_today=0, total_prs_opened_today=0):
+        seen["prs_opened_today"] = loop_prs_opened_today
         return gates.PreflightReport(ok=False, blockers=["stop"])
 
     monkeypatch.setattr(gates, "preflight", _preflight)

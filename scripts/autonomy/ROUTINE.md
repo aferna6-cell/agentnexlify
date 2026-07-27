@@ -78,7 +78,14 @@ tree clean. The driver refuses to start otherwise.
 
     python3 -m scripts.autonomy.run_loop start \
       --backlog /tmp/backlog.json \
-      --prs-opened-today <count of PRs you opened in the last 24h>
+      --prs-opened-today <PRs THE LOOP opened in the last 24h> \
+      --total-prs-today <PRs opened by ANYONE in the last 24h, bots included>
+
+The two counts are different guards and conflating them is a real bug that has
+already happened once. `--prs-opened-today` is the loop's own allowance (4/day).
+`--total-prs-today` only trips a much higher deploy-pressure ceiling (60). On
+2026-07-27 the first real run stood down because 20 PRs existed that day — 18 of
+them Dependabot — which would have made "blocked" the loop's normal state.
 
 It prints one JSON object. Obey `status`:
 
@@ -146,6 +153,8 @@ cat .autonomy/<run_id>/steps.jsonl                          # per-node timing + 
 | Guardrail | Enforced by |
 |---|---|
 | Never starts on main, or over a dirty tree | `gates.preflight` in `run_loop start` |
+| The loop's own PR output is capped per day | `gates.deploy_budget_remaining` (4/day) |
+| Stands down when the day's deploys are near the cap | `gates.deploy_pressure_exceeded` (60 total) |
 | Only worthwhile work gets built | `backlog.VALUE_FLOOR` + `select()` |
 | Loop stops instead of manufacturing work | `Selection.dry` → outcome `dry` |
 | High-risk work is escalated, never done unattended | `backlog.ACTIONABLE_RISK` |

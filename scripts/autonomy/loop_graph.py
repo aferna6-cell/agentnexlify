@@ -175,7 +175,7 @@ async def _verify(ctx) -> NodeResult:
 async def _land(ctx) -> NodeResult:
     """Decide whether a green change may actually open a PR today."""
     remaining = gates.deploy_budget_remaining(
-        int(ctx.extras.get("prs_opened_today", 0))
+        int(ctx.extras.get("loop_prs_opened_today", 0))
     )
     return NodeResult(
         updates={
