@@ -200,7 +200,7 @@ result = await run(graph, inputs, checkpointer=SupabaseCheckpointer(), tenant_id
 - `graph_runs` — one row per run, updated at each superstep boundary
 - `graph_run_steps` — one row per node execution: attempts, duration, tokens, error
 
-Migration `188_graph_runs.sql`. Both tables are `tenant_id`-scoped with RLS and
+Migration `189_graph_runs.sql`. Both tables are `tenant_id`-scoped with RLS and
 a service-role policy. (Note the split convention in this repo: `automation_*`
 and this family use `tenant_id`; the `os_*` family uses `client_id`; `leads`
 and `conversations` use `client_id`.)

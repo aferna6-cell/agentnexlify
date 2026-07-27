@@ -1,4 +1,4 @@
--- Migration 188: durable storage for the agent graph runtime (backend/graph/).
+-- Migration 189: durable storage for the agent graph runtime (backend/graph/).
 --
 -- The graph runtime (spec: specs/agent-graph-runtime_spec.md) executes cyclic
 -- agent workflows as a Pregel-style superstep loop. It writes one checkpoint

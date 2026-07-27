@@ -146,7 +146,7 @@ Per node: `retries` with exponential backoff, then `on_error`:
 - Agent-node adapter over `backend/services/llm_runtime.call_claude_messages`
   with automatic token charging
 - Tool-node adapter with a name→callable registry
-- `migrations/188_graph_runs.sql`
+- `migrations/189_graph_runs.sql`
 - Tests covering validation, branching, cycles, budget exhaustion, parallel
   merge semantics, retries, interrupt/resume, and checkpoint round-trip
 - A worked example graph (bounded lead-qualification loop) that exercises

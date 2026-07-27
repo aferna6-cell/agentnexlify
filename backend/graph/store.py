@@ -1,7 +1,7 @@
 """Supabase-backed checkpointer — the durable half of :mod:`backend.graph`.
 
 Backs the :class:`~backend.graph.checkpoint.Checkpointer` protocol with the two
-tables created by ``migrations/188_graph_runs.sql``:
+tables created by ``migrations/189_graph_runs.sql``:
 
 * ``graph_runs`` — ONE row per run, upserted on ``id`` at every superstep
   boundary. It is the resume point, not a log: current state, current frontier,
