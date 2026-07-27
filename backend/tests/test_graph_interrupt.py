@@ -312,8 +312,10 @@ async def test_budget_counters_carry_across_resume_instead_of_resetting():
     checkpointer = _cp()
 
     paused = await run(graph, checkpointer=checkpointer, budget=RunBudget())
+    # gate's visit is refunded when it pauses — pausing is not a loop iteration
+    # — but its node_run stays charged, so both nodes are still counted as run.
     assert paused.budget["node_runs"] == 2
-    assert paused.budget["visits"] == {"gate": 1, "sibling": 1}
+    assert paused.budget["visits"] == {"sibling": 1}
 
     fresh_budget = RunBudget()
     resumed = await resume(
@@ -322,19 +324,50 @@ async def test_budget_counters_carry_across_resume_instead_of_resetting():
 
     # gate ran a second time and done ran once, on top of the restored counters.
     assert resumed.budget["node_runs"] == 4
-    assert resumed.budget["visits"] == {"gate": 2, "sibling": 1, "done": 1}
+    assert resumed.budget["visits"] == {"gate": 1, "sibling": 1, "done": 1}
     assert fresh_budget.node_runs == 4
 
 
-async def test_repeated_resumes_cannot_buy_a_fresh_node_visit_allowance():
+async def test_repeated_resumes_cannot_buy_a_fresh_allowance():
+    """Resuming a forever-pausing node must never be free.
+
+    Visits are refunded on pause, so the guarantee rides on ``node_runs``:
+    it grows monotonically with every execution including the ones that ended
+    in an Interrupt, which is what keeps ``max_node_runs`` a real ceiling on a
+    caller that resumes in a loop.
+    """
     graph, _ = _gated_graph(pause_on=(None, "bad"))
     checkpointer = _cp()
 
     first = await run(graph, checkpointer=checkpointer)
-    second = await resume(graph, first.run_id, "bad", checkpointer=checkpointer)
+    assert first.budget["node_runs"] == 2
 
+    second = await resume(graph, first.run_id, "bad", checkpointer=checkpointer)
     assert second.status == STATUS_AWAITING_INPUT
-    assert second.budget["visits"]["gate"] == 2
+    assert second.budget["node_runs"] == 3
+    # Still refunded — gate has paused twice and looped zero times.
+    assert "gate" not in second.budget["visits"]
 
     third = await resume(graph, first.run_id, "good", checkpointer=checkpointer)
-    assert third.budget["visits"]["gate"] == 3
+    assert third.budget["node_runs"] == 5
+    assert third.budget["visits"]["gate"] == 1
+
+
+async def test_a_pausing_node_cannot_exhaust_its_own_visit_cap():
+    """The regression that motivated the refund.
+
+    A human gate with a retry policy of N attempts used to burn 2N visits —
+    one to ask, one to resume — so a loop bounded at N attempts tripped its
+    visit cap at N/2 and escalated early.
+    """
+    graph, _ = _gated_graph(pause_on=(None, "again", "again2"))
+    checkpointer = _cp()
+    budget = RunBudget(max_node_visits=2)
+
+    result = await run(graph, checkpointer=checkpointer, budget=budget)
+    for value in ("again", "again2", "approved"):
+        result = await resume(
+            graph, result.run_id, value, checkpointer=checkpointer, budget=RunBudget(max_node_visits=2)
+        )
+
+    assert result.status == STATUS_COMPLETED, result.error

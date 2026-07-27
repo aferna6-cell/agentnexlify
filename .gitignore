@@ -80,3 +80,6 @@ pytest-of-*/
 
 # stray git worktree checkouts (never commit as gitlinks)
 .worktrees/
+
+# Autonomous engineering loop state (run checkpoints + step ledger)
+.autonomy/

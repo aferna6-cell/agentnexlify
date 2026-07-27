@@ -213,6 +213,27 @@ read is not safe.
 Default when you pass nothing is `InMemoryCheckpointer`. Use `NullCheckpointer`
 to discard.
 
+`FileCheckpointer(root)` stores JSON under `root/<run_id>/` — `current.json`
+(the resume point, written atomically), `history.jsonl`, and `steps.jsonl`. Use
+it when a run spans **separate processes**: a CLI that starts a run, exits, and
+resumes it minutes later from a different invocation cannot use in-memory
+state, and needs no database. That is exactly what
+`scripts/autonomy/run_loop.py` does.
+
+## A worked consumer: the autonomous engineering loop
+
+`scripts/autonomy/` drives AgentNexLiFy's own development on this runtime.
+Worth reading as the reference for a non-trivial graph, because it uses the
+awkward parts on purpose:
+
+- deterministic nodes decide (`select`, `verify`, `land`); handoff nodes raise
+  `Interrupt` so a Claude Code session does the work the process can't
+- the retry cycle is bounded by an attempt counter with the visit budget as
+  backstop
+- every terminal path is explicit: `pr_opened`, `parked`, `escalated`, `idle`, `dry`
+
+Entry point `scripts/autonomy/loop_graph.py`; runbook `scripts/autonomy/ROUTINE.md`.
+
 ## Agent nodes
 
 ```python

@@ -142,6 +142,7 @@ bash scripts/claude-hooks/auto-commit.sh  # manual auto-commit
 - **Issue → PR loop** — `.claude/skills/issue-to-pr-loop/SKILL.md`. Polls assigned GH issues every 15 min, Haiku classifies, Sonnet worktree implements, PR opens + feedback loop patches reviews. Replaces `autopilot-loop` (kept for reference).
 - **Nightly commit review** — `.claude/skills/nightly-commit-review/SKILL.md`. Fires daily 2:37 AM local via scheduled-tasks MCP. Haiku triages last 24h commits, Sonnet fixes LOW-risk bugs (commits + pushes), MEDIUM/HIGH → GH issue feeding issue-to-pr-loop. Manual trigger: `bash scripts/daily/nightly-commit-review.sh`. Disable: `CLAUDE_NIGHTLY_REVIEW=0`.
 - **KB auto-populate** — twice daily 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`. Log at `knowledge-base/log.md`.
+- **Autonomous engineering loop** — `scripts/autonomy/` on the `backend/graph/` runtime; deterministic policy (value floor, gates, quota, bounded retry), Claude Code session as executor, driven by a cloud Routine. Runbook: `scripts/autonomy/ROUTINE.md`. Why Routines and not Actions/cron: `planning/decisions/2026-07-27-autonomous-engineering-substrate.md`.
 
 ### Daily routine
 - Automated 8 AM / 8 PM via `scripts/daily/*`. Interactive via `/morning`, `/evening` slash commands.

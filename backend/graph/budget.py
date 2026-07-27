@@ -90,6 +90,25 @@ class RunBudget:
         self.node_runs += 1
         self.visits[node] = self.visits.get(node, 0) + 1
 
+    def refund_node_visit(self, node: str) -> None:
+        """Un-count a *visit* for a node that paused instead of looping.
+
+        ``max_node_visits`` bounds looping. A node that raises ``Interrupt``
+        has not looped — it asked a question and stopped. Without this refund a
+        human gate costs two visits per real attempt (one to ask, one to
+        resume), so a graph with an approval step hits its visit cap at roughly
+        half the retries its own policy allows.
+
+        ``node_runs`` is deliberately NOT refunded. The node body did execute,
+        and leaving that charge in place is what stops a caller from resuming a
+        forever-pausing node an unbounded number of times for free.
+        """
+        remaining = self.visits.get(node, 0) - 1
+        if remaining > 0:
+            self.visits[node] = remaining
+        else:
+            self.visits.pop(node, None)
+
     def charge_tokens(self, count: int) -> None:
         """Charge model usage. Called by the agent-node adapter, not the runtime."""
         self.tokens += max(0, count)

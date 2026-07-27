@@ -328,6 +328,11 @@ async def _drive(
 
         interrupted = [o for o in outcomes if o.interrupt is not None]
         if interrupted:
+            # A pause is not a loop iteration. Refund the visit so a human gate
+            # does not cost two visits per real attempt (one to ask, one to
+            # resume). node_runs stays charged — see RunBudget.refund_node_visit.
+            for outcome in interrupted:
+                budget.refund_node_visit(outcome.node)
             # Carry forward anything banked by an earlier interrupt in this same
             # superstep, otherwise a node that pauses twice loses the sibling
             # results the first pause preserved.
