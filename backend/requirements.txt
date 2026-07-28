@@ -1,15 +1,28 @@
-# Cap below 0.136: UNVERIFIED, not proven incompatible. The original 2026-06-14
-# note claimed include_router() "silently registers ZERO routes" on 0.136.x. That
-# was a measurement artifact — corrected in #600. 0.136 stopped flattening
-# included routers into app.routes, so len(app.routes) stopped being an endpoint
-# count; the observed drop to 15 was the count breaking, not the routes. Routes
-# are registered and served (backend/route_introspection.py, and its tests).
-# The cap stays until the router-composition behaviors that DID change are
-# proven unaffected: middleware ordering, include_router dependencies=, prefix
-# composition, and mounted sub-apps. Those are pinned by
-# backend/tests/test_router_composition_semantics.py. Lift via #265, in lockstep
-# with the starlette bump, only once that suite passes on the new pair.
-fastapi>=0.115.6,<0.136
+# The <0.136 cap is lifted here (#265). It was never a real incompatibility.
+#
+# The 2026-06-14 note claimed fastapi 0.136.x "silently registers ZERO routes"
+# against our starlette. Measured 2026-07-28 on the exact pair it named —
+# fastapi 0.136.3 with starlette 0.49.3, unchanged:
+#   len(app.routes) 626 · count_routes 626 · full backend suite 3081 passed
+# And on the current latest, fastapi 0.140.7, same starlette:
+#   len(app.routes) 145 · count_routes 626 · full backend suite 3081 passed
+#
+# That 145 is the whole story. From somewhere in 0.137-0.140, included routers
+# stay behind a wrapper instead of being flattened, so len(app.routes) stopped
+# being an endpoint count. Nothing was ever lost — the *measurement* broke, and
+# a small number got read as mass route loss. Use
+# backend.route_introspection.count_routes, never len(app.routes).
+#
+# The starlette "lockstep bump" the old note demanded is also unnecessary:
+# fastapi 0.136+ requires starlette>=0.46.0, which 0.49.x already satisfies.
+# starlette stays where it is; this is a one-sided bump.
+#
+# Guarding it: backend/tests/test_router_composition_semantics.py pins
+# middleware ordering, include_router dependencies=, prefix composition, and
+# mounted sub-apps; test_route_introspection.py asserts the real app still
+# registers >500 routes on any version. Keep the upper bound so a future major
+# lands deliberately rather than silently.
+fastapi>=0.115.6,<0.141
 starlette>=0.49.1,<0.50.0
 uvicorn[standard]==0.49.0
 anthropic>=0.95.0,<1
