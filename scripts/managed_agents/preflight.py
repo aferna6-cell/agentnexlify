@@ -15,6 +15,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from backend.config import settings  # noqa: E402
 from backend.main import app  # noqa: E402
+from backend.route_introspection import route_signatures  # noqa: E402
 from backend.services.managed_agents import (  # noqa: E402
     ManagedAgentsClient,
     ManagedAgentsError,
@@ -34,17 +35,14 @@ REQUIRED_MIGRATIONS = {
 
 
 def _registered_routes() -> set[tuple[str, str]]:
-    signatures: set[tuple[str, str]] = set()
-    for route in app.routes:
-        methods = getattr(route, "methods", None)
-        path = getattr(route, "path", None)
-        if not methods or not path:
-            continue
-        for method in methods:
-            if method in {"HEAD", "OPTIONS"}:
-                continue
-            signatures.add((method, path))
-    return signatures
+    """Every (METHOD, path) the app declares.
+
+    Delegates to backend.route_introspection because FastAPI >= 0.136 hides
+    included routes behind a wrapper — walking app.routes directly here made
+    this check report mass route loss when nothing was lost, which is the
+    misdiagnosis recorded in GH #265.
+    """
+    return route_signatures(app)
 
 
 def _check_static_contracts() -> list[str]:
