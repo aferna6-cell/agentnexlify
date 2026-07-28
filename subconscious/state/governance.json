@@ -1,13 +1,11 @@
 {
   "version": 1,
-  "last_run": "2026-07-23",
-  "total_runs": 100,
+  "last_run": "2026-07-28",
+  "total_runs": 101,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
-  "frozen_ideas": [
-    "ai_human_handoff"
-  ],
+  "frozen_ideas": ["ai_human_handoff"],
   "moratorium_config": {
     "moratorium_active": false,
     "triggered_run": 15,
@@ -203,7 +201,36 @@
     "last_run": "2026-07-20 -> 2026-07-23"
   },
   "run_101_mandate": "1. Step 9G confirmed present in .claude/skills/nightly-commit-review/SKILL.md? (grep 'Step 9G' \u2014 SHOULD PASS if human approves winner). 2. KB freshness: has kb-autopopulate.yml run successfully since 2026-07-13? Check knowledge-base/log.md last entry date. 3. If Step 9G present AND nightly fires with KB still stale: did gh workflow run succeed? Check nightly log for 'Step 9G:' line. 4. GH #403 comment: does it contain Step 9G diagnostic output? 5. Agent OS tenant count: still 2-3 (LoopHealthPage parking lot condition) or >5 (promote)? 6. MCP tenant count: still 1 (Step 9H killed condition) or >5 (revisit monitoring).",
+  "run_101_mandate_executed": "2026-07-28",
+  "run_101_governance_corrections": {
+    "step_9g_absent": "FAIL \u2014 grep 'Step 9G' .claude/skills/nightly-commit-review/SKILL.md returns 0. Not implemented by nightly review in 5 days since run 100 (2026-07-23).",
+    "step_9g_obsolete": "CRITICAL UPDATE \u2014 original Step 9G design is OBSOLETE. CCR Routine ('KB Auto-Populate (CCR)') deployed 2026-07-23 (GH #403 comment 2026-07-23T14:21:46Z) handles KB autopopulate via cloud Routine without GH Actions secrets. GH Actions broken repo-wide (#500). Implementing original Step 9G would: trigger gh workflow run (fails, #500 broken), then comment on #403 'Check ANTHROPIC_API_KEY' \u2014 incorrect diagnostic. CCR Routine is the active path.",
+    "step_9g_corrected_design": "Carry-forward to run 102 with corrected design: verify CCR Routine health by checking for recent KB PRs via 'gh pr list --search kb autopopulate'. If KB >7 days stale AND no KB PR in 48h: comment 'CCR Routine may be stalled.' False-positive risk: unmerged PRs. Dedup design needed.",
+    "kb_freshness": "PASS \u2014 last run 2026-07-23 (5 days ago). Under 7-day threshold. CCR Routine running (KB log shows 124 articles as of 2026-07-23).",
+    "gh_403_step9g_diagnostic": "N/A \u2014 Step 9G never implemented; CCR Routine workaround makes original design obsolete.",
+    "agent_os_tenant_count": "NOT CHECKED \u2014 loop health scan not available in subconscious run context.",
+    "mcp_tenant_count": "NOT CHECKED \u2014 loop health scan not available.",
+    "gh_actions_500": "OPEN \u2014 Actions broken repo-wide. Mentioned in GH #403 2026-07-23 comment as reason CCR Routine was deployed instead.",
+    "nightly_2026_07_28": "CLEAN \u2014 7 commits reviewed, 0 bugs, all invariants PASS. Agent graph runtime (d7259d4) awareness note filed.",
+    "agent_graph_runtime_landed": "d7259d4 \u2014 43 files, ~10,839 lines, autonomous engineering loop with _merge node (owner-granted, 4/day cap). Additive only. Migration 189 not applied. No Routine armed.",
+    "skill_discovery_2026_07_27": "3 proposed skills: feature-docs-trio (3x/7days), widget-ai-marker-add (2x total), round-iteration-loop (3x/7days). feature-docs-trio selected as run 101 winner.",
+    "total_runs": "100 -> 101",
+    "last_run": "2026-07-23 -> 2026-07-28"
+  },
+  "run_102_mandate": "1. feature-docs-trio SKILL.md created at .claude/skills/feature-docs-trio/SKILL.md? (confirm file exists). 2. feature-build/SKILL.md updated to reference feature-docs-trio? 3. Step 9G corrected design ready for implementation: CCR Routine health check via gh pr list \u2014 verify corrected design accounts for unmerged PRs (false positive risk). 4. KB freshness: still under 7-day threshold? 5. GH Actions #500 resolved? If yes, re-evaluate Step 9G original vs corrected.",
   "active_directions": [
+    {
+      "title": "feature-docs-trio SKILL.md (run 101 winner)",
+      "date": "2026-07-28",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "autonomous_executable": true,
+      "requires_human": false,
+      "category": "workflow",
+      "evidence": "3 occurrences in 7 days (717c7f3 photo-quote, 14ebe8e drive-kb, d50d1e8 zapier). Pattern documented by skill-discovery-2026-07-27 with full step details extracted.",
+      "implementation": "Create .claude/skills/feature-docs-trio/SKILL.md (6-step pattern: read PR, write wiki article + run kb:lint, add ADR entry, update INDEX.md, optional runbook, commit docs(feature): [skip ci]). Also update .claude/skills/feature-build/SKILL.md to reference feature-docs-trio. ~50 new lines total. No code changes.",
+      "note": "Step 9G (run 100 winner) marked OBSOLETE this run — CCR Routine deployed 2026-07-23 handles KB autopopulate without GH Actions (Actions broken, #500). Corrected Step 9G (CCR health monitor) deferred to run 102 pending false-positive dedup design. feature-docs-trio selected as fresh winner: highest evidence count (3x/7days), autonomous-executable, zero execution risk, compounds over every future feature shipped."
+    },
     {
       "title": "Step 9F: KB Autopopulate Staleness Check in nightly-commit-review SKILL.md (run 97 winner)",
       "date": "2026-07-17",
