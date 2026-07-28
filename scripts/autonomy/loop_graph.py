@@ -43,6 +43,19 @@ MAX_IMPLEMENT_ATTEMPTS = 3
 GRAPH_NAME = "autonomous_engineering"
 GRAPH_VERSION = "1"
 
+# Re-enterability, per node. Consulted by the stranded-run sweeper (#605):
+# after a crash mid-superstep, may the interrupted frontier node be safely
+# redone by a FRESH run? Deterministic nodes recompute the same answer, and
+# ``verify`` just runs the local gate again — safe. The handoff nodes act on
+# the world through the driving session: re-doing ``open_pr`` double-opens,
+# ``merge`` double-merges, ``escalate`` double-comments, and ``implement``
+# re-commits work that may already exist on the branch. Every node MUST appear
+# in exactly one set — ``test_every_loop_node_is_explicitly_classified``
+# enforces that adding a node without choosing is a test failure, not a quiet
+# default.
+REENTERABLE_NODES = frozenset({"select", "verify", "land", "park", "report_idle"})
+NON_REENTERABLE_NODES = frozenset({"implement", "open_pr", "merge", "escalate"})
+
 
 def default_budget() -> RunBudget:
     """Budget for one loop run — one task, start to disposition.
