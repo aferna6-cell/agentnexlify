@@ -148,10 +148,20 @@ Finish with: what you did, the outcome, and anything a human must decide.
 
 ```bash
 python3 -m scripts.autonomy.run_loop status --run-id <id>   # where a run stopped
+python3 -m scripts.autonomy.run_loop list                   # every run, stranded flagged
+python3 -m scripts.autonomy.run_loop sweep --dry-run        # what a sweep would resolve
+python3 -m scripts.autonomy.run_loop sweep                  # resolve crash-stranded runs to failed
 ls .autonomy/                                               # every run's state
 cat .autonomy/<run_id>/history.jsonl                        # superstep-by-superstep
 cat .autonomy/<run_id>/steps.jsonl                          # per-node timing + errors
 ```
+
+A run stuck in `running` with no activity for an hour has no process behind it
+(a crash mid-superstep — GH #605). `sweep` resolves it to `failed` with the
+reason recorded, and never re-runs a node: whether the dead run's work may be
+redone is reported (`safe_to_retry`, from the per-node re-enterability marking
+in `loop_graph.py`), not acted on. Runs paused at a handoff (`awaiting_input`)
+are live no matter how old, and are never swept.
 
 `.autonomy/` is local state, not history worth committing — it is gitignored.
 
@@ -172,6 +182,7 @@ cat .autonomy/<run_id>/steps.jsonl                          # per-node timing + 
 | Merges only its own PR, only after a green gate | `merge` node, reachable only downstream of `verify` |
 | Merge rate is capped with the PR rate | `land` charges the 4/day allowance before `open_pr`/`merge` |
 | A crash cannot lose the run | `FileCheckpointer` under `.autonomy/` |
+| A crash cannot strand a run forever | `run_loop sweep` — resolves, never re-runs (#605) |
 
 The reason `verify` runs the gate in-process rather than asking the session
 whether its own work passed is the same reason the value floor is code: the
