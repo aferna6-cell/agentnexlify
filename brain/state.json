@@ -116,10 +116,10 @@
     "no-always-on-daemon-possible (refresh runs on demand/cron, documented in Refresh The Brain)"
   ],
   "last_refresh": {
-    "at": "2026-07-23T14:38Z",
+    "at": "2026-07-28T06:31Z",
     "results": {
-      "github": "ok \u2014 25 open issues, 0 open PRs (via CCR session MCP, #394 workaround)",
-      "supabase": "ok \u2014 136 tables (via CCR session MCP, #394 workaround)"
+      "github": "ok \u2014 17 open issues, 15 open PRs (weekly CCR session refresh)",
+      "supabase": "ok \u2014 136 tables (weekly CCR session refresh)"
     }
   },
   "home": "agentnexlify/brain on branch claude/agent-nexlify-testing-28d597",
