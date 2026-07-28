@@ -33,7 +33,7 @@ Maps to `knowledge-base/raw/ai-llm/agent-field-filter-2026-04-30.md` (KB source)
 ## When NOT to Use
 - Bug fix, doc tweak, rename — adoption filter not relevant
 - Internal-only refactor — no external dependency change
-- Already in the stack (LangGraph, MCP, Anthropic SDK, Supabase, Anthropic Managed Agents) — re-eval quarterly, not per-prompt
+- Already in the stack (MCP, Anthropic SDK, Supabase, Anthropic Managed Agents, `backend/graph/`) — re-eval quarterly, not per-prompt
 - Trivially reversible (small npm dep) — just try it
 
 ## The 5 Tests
