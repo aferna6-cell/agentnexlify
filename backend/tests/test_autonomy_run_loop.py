@@ -39,6 +39,7 @@ CI_PASS = "RESULT: PASS (20 required gates green)"
 CI_FAIL = "  FAIL  migration numbering\nRESULT: FAIL (1 required gate(s) failed)"
 
 IMPLEMENT_RESULT = '{"summary": "added the column", "files_changed": ["backend/x.py"]}'
+MERGE_RESULT = json.dumps({"merged": True, "sha": "cafe1234"})
 PR_RESULT = '{"pr_url": "https://github.com/o/r/pull/7", "pr_number": 7}'
 ESCALATE_RESULT = '{"escalated": true}'
 
@@ -251,17 +252,24 @@ def test_resume_advances_a_run_started_in_a_prior_main_call(
     assert "verify: PASS" in resumed["journal"]
 
 
-def test_a_full_run_reaches_pr_opened_across_three_invocations(
+def test_a_full_run_reaches_merged_across_four_invocations(
     capsys, green_ci, state_dir, backlog
 ):
     _, started = run_cli(capsys, start_argv(state_dir, backlog))
     _, mid = run_cli(capsys, resume_argv(state_dir, started["run_id"], IMPLEMENT_RESULT))
-    code, final = run_cli(capsys, resume_argv(state_dir, mid["run_id"], PR_RESULT))
+    _, opened = run_cli(capsys, resume_argv(state_dir, mid["run_id"], PR_RESULT))
+
+    assert opened["action"] == "merge"
+
+    code, final = run_cli(
+        capsys,
+        resume_argv(state_dir, opened["run_id"], MERGE_RESULT),
+    )
 
     assert code == 0
     assert final["status"] == "completed"
-    assert final["outcome"] == "pr_opened"
-    assert final["journal"][-1] == "opened PR https://github.com/o/r/pull/7"
+    assert final["outcome"] == "merged"
+    assert final["journal"][-1] == "merged https://github.com/o/r/pull/7"
 
 
 def test_result_can_be_read_from_a_file(

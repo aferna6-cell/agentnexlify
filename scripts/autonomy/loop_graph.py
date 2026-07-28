@@ -1,6 +1,6 @@
 """The autonomous engineering loop, as a graph.
 
-    START -> select -+-> implement -> verify -+-> land -+-> open_pr -> END
+    START -> select -+-> implement -> verify -+-> land -+-> open_pr -> merge -> END
                      |        ^               |         '-> park ----> END
                      |        '---------------+ (retry, bounded)
                      |                        '-> escalate ---------> END
@@ -213,6 +213,57 @@ async def _open_pr(ctx) -> NodeResult:
     )
 
 
+async def _merge(ctx) -> NodeResult:
+    """Handoff: mark the draft ready and merge it to main.
+
+    Auto-merge is owner-granted (2026-07-28) and is the one loop action that
+    reaches production — merging triggers Railway and Vercel deploys. Two
+    things keep it bounded, and neither is negotiable from inside a run: the
+    graph only reaches this node after ``verify`` passed, and ``land`` already
+    charged the day's PR allowance, so the 4/day cap is also the merge cap.
+    That cap is what stands between this and the 2026-06-23 incident, where 11
+    merges in a day exhausted Vercel's 100-deploy limit and blocked every
+    frontend deploy for 24h.
+
+    The loop merges only the PR it opened in this run. It has no path to any
+    other PR, because ``ctx.get("pr")`` is the only reference it carries.
+    """
+    result = ctx.resume_value
+    if result is None:
+        raise Interrupt(
+            "merge",
+            payload={
+                "action": "merge",
+                "pr": ctx.get("pr"),
+                "task": ctx.get("task"),
+                "verification": ctx.get("verification"),
+                "instructions": (
+                    "Merge the PR THIS run opened — no other. Confirm its "
+                    "checks are green on GitHub first, mark it ready for "
+                    "review (a draft cannot merge), then merge. If any check "
+                    "is red or the PR is not mergeable, do NOT merge: resume "
+                    "with {\"merged\": false, \"reason\": \"...\"} and the "
+                    "run records it as still open. Resume on success with "
+                    "{\"merged\": true, \"sha\": \"...\"}."
+                ),
+            },
+        )
+    if not result.get("merged"):
+        return NodeResult(
+            updates={
+                "outcome": "pr_opened",
+                "journal": f"merge declined: {result.get('reason', 'no reason given')}",
+            }
+        )
+    return NodeResult(
+        updates={
+            "outcome": "merged",
+            "merge": result,
+            "journal": f"merged {(ctx.get('pr') or {}).get('pr_url', '?')}",
+        }
+    )
+
+
 async def _park(ctx) -> NodeResult:
     """Terminal: work is green but shipping it now would burn a capped resource."""
     return NodeResult(
@@ -288,6 +339,7 @@ def build() -> Graph:
     graph.declare("verification", reducer="last")
     graph.declare("deploy_budget_remaining", reducer="last", default=0)
     graph.declare("pr", reducer="last")
+    graph.declare("merge", reducer="last")
     graph.declare("outcome", reducer="last")
     graph.declare("journal", reducer="append", default=[])
 
@@ -309,6 +361,7 @@ def build() -> Graph:
     )
     graph.add_node("land", _land, kind="router", description="Daily budget check.")
     graph.add_node("open_pr", _open_pr, kind="agent")
+    graph.add_node("merge", _merge, kind="agent")
     graph.add_node("park", _park, kind="terminal")
     graph.add_node("escalate", _escalate, kind="human")
 
@@ -324,7 +377,8 @@ def build() -> Graph:
     )
 
     graph.add_branch("land", {"open_pr": _may_ship}, default="park")
-    graph.add_edge("open_pr", END)
+    graph.add_edge("open_pr", "merge")
+    graph.add_edge("merge", END)
     graph.add_edge("park", END)
     graph.add_edge("escalate", END)
 

@@ -105,12 +105,18 @@ It prints one JSON object. Obey `status`:
     implement → write the change on a NEW branch (never main), tests first,
                 commit with [skip ci]. Do not push, do not open a PR.
     open_pr   → push and open a DRAFT PR, pasting the gate summary as merge
-                evidence. Never merge.
+                evidence.
+    merge     → confirm the PR's checks are green on GitHub, mark it ready,
+                and merge it. ONLY the PR this run opened. If anything is red
+                or unmergeable, resume with {"merged": false, "reason": "..."}
+                and leave it open.
     escalate  → comment on the issue with what you tried, the failing gate
                 output, and the specific decision needed. Then stop.
 
 - `completed` → read `outcome`:
-    pr_opened  → done for this cycle. Stop.
+    merged     → shipped to production. Done for this cycle. Stop.
+    pr_opened  → PR is open but not merged (merge declined, or the run
+                 stopped before it). Stop.
     parked     → verified but the daily PR budget is spent. Stop.
     escalated  → handed to the owner. Stop.
     idle       → nothing cleared the value floor. Stop. Do NOT lower the bar
@@ -123,7 +129,8 @@ It prints one JSON object. Obey `status`:
 
 ## 3. Rules that override anything above
 
-- Never merge a PR. Landing is a human decision.
+- Merge ONLY the PR this run opened. Auto-merge on green is owner-granted
+  (2026-07-28); it does not extend to anyone else's PR, and never to a red one.
 - Never work directly on main. Branch first.
 - Never lower the value floor, edit scripts/autonomy/backlog.py, or hand-edit
   a checkpoint to get a different decision out of the loop. If the policy is
@@ -162,7 +169,8 @@ cat .autonomy/<run_id>/steps.jsonl                          # per-node timing + 
 | Nothing ships unverified | `verify` node runs `scripts/ci_local.sh` in-process |
 | Bounded retry, not infinite | `MAX_IMPLEMENT_ATTEMPTS` + `RunBudget.max_node_visits` |
 | Deploy quota is respected | `gates.deploy_budget_remaining` → outcome `parked` |
-| Nothing auto-merges | no node can merge; `open_pr` opens a draft |
+| Merges only its own PR, only after a green gate | `merge` node, reachable only downstream of `verify` |
+| Merge rate is capped with the PR rate | `land` charges the 4/day allowance before `open_pr`/`merge` |
 | A crash cannot lose the run | `FileCheckpointer` under `.autonomy/` |
 
 The reason `verify` runs the gate in-process rather than asking the session

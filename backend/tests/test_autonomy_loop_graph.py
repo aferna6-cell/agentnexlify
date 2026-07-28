@@ -53,6 +53,7 @@ PR_RESULT = {"pr_url": "https://github.com/o/r/pull/7", "pr_number": 7}
 ESCALATE_RESULT = {"escalated": True}
 
 DEFAULT_REPLIES = {
+    "merge": {"merged": True, "sha": "cafe1234"},
     "implement": IMPLEMENT_RESULT,
     "open_pr": PR_RESULT,
     "escalate": ESCALATE_RESULT,
@@ -171,6 +172,7 @@ def test_every_terminal_path_exists_as_a_node():
         "verify",
         "land",
         "open_pr",
+        "merge",
         "park",
         "escalate",
     }
@@ -200,12 +202,12 @@ def test_budget_headroom_sits_above_the_attempt_ceiling():
 # --------------------------------------------------------------------------
 
 
-async def test_happy_path_opens_a_pr():
+async def test_happy_path_opens_a_pr_and_merges_it():
     result, handoffs, _ = await drive([raw_item("gh-7")], runner=verifier(True))
 
     assert result.status == STATUS_COMPLETED
-    assert result.state["outcome"] == "pr_opened"
-    assert actions(handoffs) == ["implement", "open_pr"]
+    assert result.state["outcome"] == "merged"
+    assert actions(handoffs) == ["implement", "open_pr", "merge"]
     assert result.state["pr"] == PR_RESULT
     assert result.state["attempts"] == 1
 
@@ -265,6 +267,7 @@ async def test_journal_accumulates_in_order_across_the_whole_run():
         "verify: PASS",
         "deploy budget remaining: 4",
         "opened PR https://github.com/o/r/pull/7",
+        "merged https://github.com/o/r/pull/7",
     ]
 
 
@@ -276,9 +279,9 @@ async def test_journal_accumulates_in_order_across_the_whole_run():
 async def test_a_second_attempt_after_one_red_gate_still_ships():
     result, handoffs, _ = await drive([raw_item("gh-7")], runner=verifier(False, True))
 
-    assert result.state["outcome"] == "pr_opened"
+    assert result.state["outcome"] == "merged"
     assert result.state["attempts"] == 2
-    assert actions(handoffs) == ["implement", "implement", "open_pr"]
+    assert actions(handoffs) == ["implement", "implement", "open_pr", "merge"]
 
 
 async def test_the_retry_handoff_carries_the_failing_gate_summary():
@@ -410,8 +413,8 @@ async def test_one_pr_of_headroom_still_ships():
     )
 
     assert result.state["deploy_budget_remaining"] == 1
-    assert result.state["outcome"] == "pr_opened"
-    assert actions(handoffs) == ["implement", "open_pr"]
+    assert result.state["outcome"] == "merged"
+    assert actions(handoffs) == ["implement", "open_pr", "merge"]
 
 
 # --------------------------------------------------------------------------
@@ -506,17 +509,62 @@ async def test_the_implement_handoff_tells_the_session_not_to_open_a_pr():
     assert "do not open" in instructions
 
 
-async def test_the_open_pr_handoff_demands_a_draft_and_forbids_merging():
+async def test_the_open_pr_handoff_still_demands_a_draft():
+    """open_pr opens a draft even now that merging is allowed — the merge node
+    marks it ready. Keeping them separate is what makes a declined merge leave
+    a reviewable PR behind rather than nothing."""
     _, handoffs, _ = await drive([raw_item("gh-7")])
 
-    instructions = handoffs[1]["instructions"]
-    assert "DRAFT" in instructions
-    assert "Do NOT merge" in instructions
+    assert "DRAFT" in handoffs[1]["instructions"]
+
+
+async def test_merge_is_reachable_only_after_a_green_gate():
+    """The merge node sits downstream of verify, so there is no path to it that
+    skips verification. A red gate routes to escalate instead."""
+    _, handoffs, _ = await drive([raw_item("gh-7")], runner=verifier(False))
+
+    assert [h["action"] for h in handoffs] == ["implement"] * 3 + ["escalate"]
+    assert not any(h["action"] == "merge" for h in handoffs)
+
+
+async def test_a_green_run_merges_and_reports_it():
+    result, handoffs, _ = await drive([raw_item("gh-7")])
+
+    assert [h["action"] for h in handoffs] == ["implement", "open_pr", "merge"]
+    assert result.state["outcome"] == "merged"
+    assert result.state["merge"]["sha"] == "cafe1234"
+
+
+async def test_the_merge_handoff_carries_only_this_runs_pr():
+    """The loop has no reference to any PR but the one it opened, which is what
+    stops it reaching someone else's."""
+    _, handoffs, _ = await drive([raw_item("gh-7")])
+
+    merge = handoffs[2]
+    assert merge["pr"] == DEFAULT_REPLIES["open_pr"]
+    assert "THIS run opened" in merge["instructions"]
+
+
+async def test_a_declined_merge_leaves_the_pr_open():
+    result, _, _ = await drive(
+        [raw_item("gh-7")],
+        replies={"merge": {"merged": False, "reason": "vercel check red"}},
+    )
+
+    assert result.state["outcome"] == "pr_opened"
+    assert "merge declined: vercel check red" in result.state["journal"]
+
+
+async def test_a_parked_run_never_reaches_merge():
+    """No PR, no merge. The deploy cap gates both."""
+    _, handoffs, _ = await drive([raw_item("gh-7")], prs_opened_today=4)
+
+    assert not any(h["action"] == "merge" for h in handoffs)
 
 
 @pytest.mark.parametrize(
     ("prs_today", "expected"),
-    [(0, "pr_opened"), (3, "pr_opened"), (4, "parked"), (10, "parked")],
+    [(0, "merged"), (3, "merged"), (4, "parked"), (10, "parked")],
 )
 async def test_the_deploy_quota_boundary(prs_today, expected):
     result, _, _ = await drive(
