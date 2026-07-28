@@ -1,9 +1,14 @@
-# Cap below 0.136: fastapi 0.136.x is incompatible with our pinned
-# starlette>=0.49.1,<0.50.0 — its include_router() silently registers ZERO
-# routes against starlette 0.49.x (CI proof 2026-06-14: app dropped to 15 routes;
-# fresh FastAPI().include_router added 0 from a 7-route router). This keeps the
-# fastapi/starlette pair that ships to prod. Re-raise only when starlette is
-# bumped to a 0.136-compatible release in lockstep.
+# Cap below 0.136: UNVERIFIED, not proven incompatible. The original 2026-06-14
+# note claimed include_router() "silently registers ZERO routes" on 0.136.x. That
+# was a measurement artifact — corrected in #600. 0.136 stopped flattening
+# included routers into app.routes, so len(app.routes) stopped being an endpoint
+# count; the observed drop to 15 was the count breaking, not the routes. Routes
+# are registered and served (backend/route_introspection.py, and its tests).
+# The cap stays until the router-composition behaviors that DID change are
+# proven unaffected: middleware ordering, include_router dependencies=, prefix
+# composition, and mounted sub-apps. Those are pinned by
+# backend/tests/test_router_composition_semantics.py. Lift via #265, in lockstep
+# with the starlette bump, only once that suite passes on the new pair.
 fastapi>=0.115.6,<0.136
 starlette>=0.49.1,<0.50.0
 uvicorn[standard]==0.49.0
