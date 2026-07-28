@@ -26,6 +26,8 @@ split lost a route. That's the regression signal to catch.
 
 import pytest
 
+from backend.route_introspection import count_routes, route_paths
+
 
 # 14 paths — identical order/spelling to pre-split `git log --grep="split analytics"`
 # All parametrized against the same tenant_id used by the auth_headers fixture.
@@ -62,12 +64,13 @@ def test_all_analytics_routes_registered(client, auth_headers):
     """
     from backend.routers import analytics
     expected = len(ANALYTICS_ROUTES)
-    assert len(analytics.router.routes) == expected, (
+    actual = count_routes(analytics.router)
+    assert actual == expected, (
         f"Expected {expected} routes in analytics package, got "
-        f"{len(analytics.router.routes)}. A route was lost or duplicated."
+        f"{actual}. A route was lost or duplicated."
     )
     # Registered paths match the parametrized list
-    got = sorted(r.path for r in analytics.router.routes)
+    got = sorted(route_paths(analytics.router))
     want = sorted(p.format(tid="{tenant_id}") for p in ANALYTICS_ROUTES)
     assert got == want, (
         f"Route path drift post-split.\n"
