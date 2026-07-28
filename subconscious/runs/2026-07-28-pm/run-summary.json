@@ -1,0 +1,53 @@
+{
+  "run_number": 102,
+  "run_id": "run-2026-07-28-pm",
+  "date": "2026-07-28",
+  "slot": "pm",
+  "am_run": "run-2026-07-28",
+  "total_runs_after": 102,
+  "winner": {
+    "title": "god-class-splitter SKILL.md — backward-compat re-export + test patch-target patterns",
+    "type": "skill-update",
+    "target_file": ".claude/skills/god-class-splitter/SKILL.md",
+    "effort": "XS",
+    "confidence": "HIGH",
+    "evidence_commits": [
+      "calls.py split (this week)",
+      "email_sequences.py split (this week)"
+    ],
+    "evidence_source": "docs/skill-discovery/2026-07-27.md §Existing Skill Updates",
+    "time_saved_per_occurrence": "20-40 min (test failure investigation + fix + second commit)"
+  },
+  "bonus_action": {
+    "title": "Comment on PR #577 flagging obsolete Step 9G",
+    "type": "gh-comment",
+    "target": "PR #577",
+    "reason": "Step 9G in PR triggers gh workflow run kb-autopopulate.yml — obsolete since CCR Routine deployed 2026-07-23. GH Actions broken #500. Merging as-is produces wrong diagnostic on #403."
+  },
+  "ideas_generated": 5,
+  "top_3_debated": [
+    "god-class-splitter SKILL.md update",
+    "Step 9G CORRECTED — CCR Routine health monitor",
+    "PR #577 comment — obsolete Step 9G warning"
+  ],
+  "runner_up": {
+    "title": "Step 9G CORRECTED — CCR Routine health monitor",
+    "reason": "KB healthy (5 days), medium complexity, carry-forward to run 103"
+  },
+  "key_governance_events": [
+    "Run 101 AM winner (feature-docs-trio SKILL.md) confirmed in context",
+    "Run 101 AM Step 9G obsolescence confirmed — original Step 9G was run 100 winner",
+    "god-class-splitter SKILL.md update identified as highest-leverage XS win from skill-discovery-2026-07-27",
+    "PR #577 risk identified: contains obsolete Step 9G, must not merge as-is"
+  ],
+  "backlog_updates": [
+    "Step 9G CORRECTED: carry-forward to run 103 (KB healthy, medium complexity)",
+    "Step 9H silent-green heartbeat: HIGH impact, prerequisite unmet (verify Supabase env in CCR)",
+    "GH #605 autonomy sweeper: LOW urgency, HIGH impact when Routine arms",
+    "widget-ai-marker-add SKILL.md: medium-term",
+    "round-iteration-loop SKILL.md: low until agent graph Routine armed"
+  ],
+  "channel": "SKILL.md edit on existing skill",
+  "implementable_by_nightly": true,
+  "nightly_mechanism": "direct file edit of .claude/skills/god-class-splitter/SKILL.md"
+}
