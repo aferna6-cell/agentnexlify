@@ -198,8 +198,9 @@ async def _open_pr(ctx) -> NodeResult:
                 "verification": ctx.get("verification"),
                 "instructions": (
                     "Push the branch and open a DRAFT pull request. Paste the "
-                    "local gate summary as merge evidence. Do NOT merge — "
-                    "landing stays a human decision. Resume with "
+                    "local gate summary as merge evidence. Do not merge here — "
+                    "the `merge` node handles that on the next resume, so that "
+                    "landing stays downstream of a green gate. Resume with "
                     "{\"pr_url\": \"...\", \"pr_number\": N}."
                 ),
             },
