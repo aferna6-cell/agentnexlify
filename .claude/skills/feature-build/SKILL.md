@@ -49,6 +49,7 @@ effort: high
 - [ ] Verify no console errors
 - [ ] Update docs/dev-knowledge/schema-log.md if schema changed
 - [ ] Update CLAUDE.md if new table added
+- [ ] Run `feature-docs-trio` within 48h of PR merge to produce KB article + ADR + runbook (`[skip ci]` commit)
 
 ## Gotchas
 - **`from __future__ import annotations`** in any router file → every request 422s. Zero tolerance.
