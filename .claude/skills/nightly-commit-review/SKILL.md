@@ -300,9 +300,19 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
     4. **If days_stale > 7:**
        a. Add comment via `mcp__github__add_issue_comment`:
           issue_number: 403
-          body: "**KB autopopulate staleness alert (Step 9F):** {days_stale} days since last successful run (last: {last_run_date}). Check: (1) ANTHROPIC_API_KEY in GitHub Actions secrets — may need rotation. (2) SUPABASE_ACCESS_TOKEN — may be expired. Manual trigger: `bash scripts/daily/kb-autopopulate.sh`."
+          body: "**KB autopopulate staleness alert (Step 9F):** {days_stale} days since last CCR Routine run (last: {last_run_date}). The CCR Routine ('KB Auto-Populate (CCR)') handles KB autopopulate — NOT GH Actions (#500 blocked). Check if Routine is active at claude.ai/code. Step 9G will follow with a CCR health check."
        b. If GH comment fails (token expired — GH #399): log "Step 9F: GH comment failed — KB stale {days_stale} days, token may be expired" and continue.
        c. Log: "Step 9F: KB STALE ({days_stale} days) — comment added to GH #403"
+    5. **Step 9G: CCR Routine health check** (runs only if days_stale > 7 from Step 9F above):
+       a. Check recent KB commits: `git log --since="48 hours ago" --oneline -- knowledge-base/`
+       b. If output is empty (no KB commits in last 48h):
+          Add comment via `mcp__github__add_issue_comment`:
+            issue_number: 403
+            body: "**Step 9G: CCR Routine health check.** KB is {days_stale} days stale AND no KB commits found in the last 48h. The CCR Routine ('KB Auto-Populate (CCR)') may be stalled or not scheduled. Verify the Routine is active at claude.ai/code. Note: this alert fires when BOTH conditions hold — KB stale >7 days AND no recent KB commits. A PR in-flight from CCR may not yet show here."
+          If GH comment fails: log "Step 9G: comment failed (token may be expired)" and continue.
+          Log: "Step 9G: CCR stall alert posted to GH #403 — KB stale {days_stale}d, no commits in 48h"
+       c. If KB commits found: log "Step 9G: CCR healthy — KB commits found in last 48h (days_stale: {days_stale})" and skip alert.
+       Note: This is the CORRECTED Step 9G. Original design (gh workflow run kb-autopopulate.yml) is OBSOLETE — CCR Routine is the active path, GH Actions broken (#500). Implemented 2026-07-29.
 10. Commit report: `docs(nightly): review YYYY-MM-DD [auto-nightly]`
 11. Push to main
 12. If any guardrail tripped (forbidden path, >5 files, >50 LOC, test-check failed) — abort fixes, file issue only, still write report
