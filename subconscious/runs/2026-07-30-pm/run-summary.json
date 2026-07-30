@@ -1,0 +1,55 @@
+{
+  "run": 102,
+  "date": "2026-07-30-pm",
+  "session": "pm",
+  "winner": "Step 9G-Direct: KB self-repair with GH Actions fallback — add Step 9G-Direct bash block to .claude/skills/nightly-commit-review/SKILL.md: try gh workflow run kb-autopopulate.yml first, fall back to bash scripts/daily/kb-autopopulate.sh if non-zero exit, comment on GH #403 only on total failure",
+  "category": "operational",
+  "effort": "XS",
+  "confidence": "HIGH",
+  "autonomous_executable": false,
+  "requires_human": true,
+  "execution_path": "nightly-commit-review SKILL.md-edit channel — requires human PR approval. Full sketch in winning-concept.md. Can also be applied directly by nightly if escalated at run 103.",
+  "mandate_status": "EXECUTED",
+  "mandate_items_checked": {
+    "step_9h_in_skill_md": "ABSENT — PR #611 (morning run, 0 days old) not yet merged. Cycle 1 miss.",
+    "step_9h_fired_nightly": "N/A — Step 9H not in SKILL.md",
+    "step_9h_gh_issue_filed": "N/A — Step 9H not firing yet",
+    "gh_actions_spending_limit": "ACTIVE — Day 11+ (since 2026-07-19). ALL CI blocked. Owner-only action required.",
+    "pr_577_merged": "NO — DRAFT, 8+ days open. CI cannot validate due to spending limit.",
+    "kb_freshness_days": 7,
+    "kb_threshold": "HIT TODAY 2026-07-30",
+    "step_9g_carry_forward_cycle": "2 of 3 — escalation to direct implementation at run 103",
+    "autonomy_loop_full_cycle": "NOT YET — PR #599 (graph runtime) + PR #608 (sweeper) live, no full cycle completed yet",
+    "graph_runtime_lines": 516,
+    "graph_runtime_at_550_threshold": false
+  },
+  "key_finding": "Critical insight: PR #577 Step 9G fails silently when GH Actions spending limit is active — gh workflow run hits the same spending limit as CI. The fix is a two-path design: Path A (gh workflow run) → Path B fallback (bash scripts/daily/kb-autopopulate.sh). Path B is proven (ran 2026-07-23, 2026-07-13) and requires no GH Actions. This makes KB repair independent of the spending limit blocker. Step 9G-Direct is strictly better than PR #577's Step 9G.",
+  "bonus_actions": [],
+  "weakened": [
+    "Autonomy loop health check (Step 9I) — sweeper 2 days old, no incident data, parking lot 2026-08-06",
+    "graph/runtime.py god-class GH issue — 516 lines, threshold 600, check point 550",
+    "Paying tenant silence GH Actions workflow — GH Actions dark, issue #610 already filed for issue-to-pr-loop",
+    "governance.json active_directions archive — L-effort, not urgent at current size"
+  ],
+  "parking_lot": [
+    "Step 9I: Autonomy loop daily health check (revisit 2026-08-06, 7 days production data)",
+    "graph/runtime.py god-class issue (file at 550 lines)",
+    "Tenant silence alert workflow (file after GH Actions resolved, issue #610 queued)",
+    "governance.json active_directions archive (trigger at 20+ entries)"
+  ],
+  "governance_corrections": {
+    "total_runs": "101 -> 102",
+    "last_run": "2026-07-30 -> 2026-07-30-pm",
+    "step_9g_carry_forward_cycle": "1 -> 2",
+    "step_9g_direct": "new active_directions entry added",
+    "run_101_note": "Morning run did not persist governance.json or memory.jsonl. This PM run captures both runs in state update (total_runs 100->102)."
+  },
+  "run_103_mandate": "1. Step 9G-Direct in SKILL.md? (grep 'Step 9G' — SHOULD PASS: cycle 3 = direct implementation escalation). 2. Step 9H in SKILL.md? (grep 'Step 9H' — cycle 2 of 3). 3. KB freshness: last run date? (if >7 days and Steps not firing, diagnose). 4. GH Actions spending limit resolved? 5. graph/runtime.py above 550 lines? (file god-class GH issue if yes). 6. Autonomy loop: 7+ days production data? (enable Step 9I if yes). 7. PRs #577 + #611 merged?",
+  "artifacts": [
+    "subconscious/runs/2026-07-30-pm/ideas/ideas.md",
+    "subconscious/runs/2026-07-30-pm/debate/debate-log.md",
+    "subconscious/runs/2026-07-30-pm/winning-concept.md",
+    "subconscious/runs/2026-07-30-pm/improvement-backlog.md",
+    "subconscious/runs/2026-07-30-pm/run-summary.json"
+  ]
+}
