@@ -145,26 +145,35 @@ class SupabaseCheckpointer:
 
     # -- reads (must not lie) ------------------------------------------------
 
-    async def load(self, run_id: str) -> Checkpoint | None:
+    async def load(
+        self, run_id: str, tenant_id: str | None = None
+    ) -> Checkpoint | None:
         """Return the current checkpoint for ``run_id``, or ``None`` if absent.
 
         Raises on a DB error rather than returning ``None``: "no such run" and
         "could not reach the database" mean opposite things to ``resume()``, and
         conflating them would restart a live run from stale state.
+
+        ``tenant_id`` narrows the query to a single tenant when provided.
+        Callers in multi-tenant contexts MUST supply it to prevent cross-tenant
+        checkpoint access via the service-role client, which bypasses RLS.
         """
-        response = await self._run_blocking(
-            lambda: self.client.table(RUNS_TABLE)
-            .select("*")
-            .eq("id", run_id)
-            .limit(1)
-            .execute()
-        )
+
+        def _query():
+            q = self.client.table(RUNS_TABLE).select("*").eq("id", run_id)
+            if tenant_id is not None:
+                q = q.eq("tenant_id", tenant_id)
+            return q.limit(1).execute()
+
+        response = await self._run_blocking(_query)
         rows = getattr(response, "data", None) or []
         if not rows:
             return None
         return _row_to_checkpoint(rows[0])
 
-    async def history(self, run_id: str) -> list[Checkpoint]:
+    async def history(
+        self, run_id: str, tenant_id: str | None = None
+    ) -> list[Checkpoint]:
         """Return the run's current checkpoint as a single-element list.
 
         Deliberately NOT reconstructed from ``graph_run_steps``. Step rows carry
@@ -175,7 +184,7 @@ class SupabaseCheckpointer:
         ``graph_run_steps`` directly; this method answers "where is this run
         now?". Empty list when the run is unknown.
         """
-        checkpoint = await self.load(run_id)
+        checkpoint = await self.load(run_id, tenant_id)
         return [checkpoint] if checkpoint is not None else []
 
 
