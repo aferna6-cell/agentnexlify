@@ -1,0 +1,39 @@
+{
+  "run": 101,
+  "date": "2026-07-31",
+  "winner": "Step 9G: KB autopopulate self-healing trigger (direct implementation)",
+  "winner_category": "operational",
+  "winner_confidence": "HIGH",
+  "ideas_count": 5,
+  "debate_rounds": 3,
+  "implementation_mode": "direct",
+  "escalation_basis": "PR #577 open 8 days unmerged; KB 8 days stale; 2 morning-digest warnings (2026-07-29 + 2026-07-30) with no human response; 3 paying tenants affected",
+  "implementation_artifact": ".claude/skills/nightly-commit-review/SKILL.md — Step 9G block appended to Scheduled Task Prompt section",
+  "parking_lot_additions": [
+    "Nightly autonomy sweeper invocation (Step 9I candidate) — structural gap in scripts/autonomy/, sweeper is CLI-only",
+    "INTEGRATIONS_ENC_KEY escalation nightly check — GH #536 open Day 10, no comment escalation applied"
+  ],
+  "rejected": [
+    "MCP adoption monitoring — Step 9H nightly tracking (carried from run 100, still 1 MCP tenant)"
+  ],
+  "mandate_check_101": {
+    "step_9g_present_in_skill_md": "FAIL (grep=0 — winner absent from main, triggered direct implementation this run)",
+    "kb_freshness": "FAIL (8 days stale, last run 2026-07-23, threshold crossed 2026-07-30)",
+    "step_9g_nightly_fired": "UNKNOWN (first fire expected on tonight's nightly cycle)",
+    "gh_403_step9g_diagnostic": "UNKNOWN (awaiting first nightly with Step 9G)",
+    "agent_os_tenant_count": "2-3 (LoopHealthPage parking lot condition: promote at >5)",
+    "mcp_tenant_count": "1 (Step 9H killed condition holds: revisit at >5)"
+  },
+  "governance_state_after": {
+    "total_runs": 101,
+    "last_run": "2026-07-31",
+    "moratorium_active": false,
+    "step_9g_status": "implemented_direct"
+  },
+  "open_human_blockers": [
+    "GH #500: GH Actions spending limit — Day 11 (blocks CI, PR validation, scheduled workflows)",
+    "GH #536: INTEGRATIONS_ENC_KEY — Day 10, migration 176 blocked",
+    "GH #399: AUTOPILOT_GH_TOKEN expired — Day 22, issue-to-pr loop stalled",
+    "GH #394: brain-refresh[bot] credentials — Day 26"
+  ]
+}

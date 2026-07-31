@@ -303,6 +303,32 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
           body: "**KB autopopulate staleness alert (Step 9F):** {days_stale} days since last successful run (last: {last_run_date}). Check: (1) ANTHROPIC_API_KEY in GitHub Actions secrets — may need rotation. (2) SUPABASE_ACCESS_TOKEN — may be expired. Manual trigger: `bash scripts/daily/kb-autopopulate.sh`."
        b. If GH comment fails (token expired — GH #399): log "Step 9F: GH comment failed — KB stale {days_stale} days, token may be expired" and continue.
        c. Log: "Step 9F: KB STALE ({days_stale} days) — comment added to GH #403"
+9G. **(KB Autopopulate Self-Healing Trigger) When KB stale >7 days, attempt automated repair:**
+    **Precondition: Only run if days_stale > 7 (reuses variable from Step 9F)**
+    1. **Trigger kb-autopopulate workflow:**
+       ```
+       gh workflow run kb-autopopulate.yml -R aferna6-cell/agentnexlify 2>/dev/null
+       GH_TRIGGER_EXIT=$?
+       ```
+       If GH_TRIGGER_EXIT != 0: log "Step 9G: gh workflow run failed (exit $GH_TRIGGER_EXIT) — GH Actions spending limit may be exhausted or workflow not workflow_dispatch-enabled" and skip to end of 9G.
+    2. **Wait 30s for workflow to start:**
+       sleep 30
+    3. **Check run status:**
+       ```
+       RUN_JSON=$(gh run list --workflow=kb-autopopulate.yml -R aferna6-cell/agentnexlify --limit=1 --json conclusion,url 2>/dev/null)
+       CONCLUSION=$(echo "$RUN_JSON" | jq -r '.[0].conclusion // ""')
+       RUN_URL=$(echo "$RUN_JSON" | jq -r '.[0].url // "unknown"')
+       ```
+    4. **Handle result:**
+       - If CONCLUSION == "success": Log: "Step 9G: kb-autopopulate triggered — SUCCESS. Run: $RUN_URL"
+       - If CONCLUSION is "failure", "cancelled", or "timed_out":
+         Add comment via `mcp__github__add_issue_comment`:
+           issue_number: 403
+           body: "**KB autopopulate self-healing failed (Step 9G):** kb-autopopulate.yml triggered but returned conclusion=$CONCLUSION. Most likely cause: ANTHROPIC_API_KEY, VOYAGE_API_KEY, or SUPABASE_ACCESS_TOKEN missing/expired in GitHub Actions Secrets. May also indicate GH Actions spending limit exhausted. Run URL: $RUN_URL"
+         Log: "Step 9G: kb-autopopulate FAILED — diagnostic comment added to GH #403"
+       - If CONCLUSION == "" (still running after 30s):
+         Log: "Step 9G: kb-autopopulate running — status check pending. Run: $RUN_URL"
+    Log result: "Step 9G: days_stale={days_stale}, trigger_exit=$GH_TRIGGER_EXIT, conclusion=$CONCLUSION"
 10. Commit report: `docs(nightly): review YYYY-MM-DD [auto-nightly]`
 11. Push to main
 12. If any guardrail tripped (forbidden path, >5 files, >50 LOC, test-check failed) — abort fixes, file issue only, still write report
