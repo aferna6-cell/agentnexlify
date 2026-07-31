@@ -1,0 +1,9 @@
+# Idea 1: Step 9I — GH #500 Spending Limit Nightly Escalation
+
+**Evidence:** GH #500 (GH Actions spending limit) has been blocking CI, PR validation, and scheduled workflows for Day 11 as of 2026-07-31. Step 9G (implemented run 101, 2026-07-31) calls `gh workflow run kb-autopopulate.yml` — this triggers workflow_dispatch which still consumes GH Actions minutes. If the spending limit is fully exhausted, Step 9G's trigger will fail with non-zero exit code. Step 9G handles the exit code with a log line but does NOT escalate to GH #500. Zero nightly escalation comments on #500 across 11 days. Step 9D/9E patterns: automated daily pressure accelerated resolution of credential issues.
+
+**Action:** Add Step 9I bash block to `.claude/skills/nightly-commit-review/SKILL.md` immediately after Step 9G. Block: use `gh run list --workflow=kb-autopopulate.yml --limit=1 --json status,createdAt` to check last workflow run timestamp; also check `gh run list --limit=5 --json status,createdAt --repo aferna6-cell/agentnexlify` for any workflow activity in past 24h. If no successful run found in 24h, post escalation comment on GH #500 naming: (1) Step 9G trigger blocked by spending limit, (2) kb-autopopulate blocked → KB staying stale → AI chat quality degraded for 3 paying tenants, (3) CI blocked → PRs unvalidated → PRs #613/#611/#606 cannot be merged safely. Log: "Step 9I: GH #500 spending limit check — [active/blocked]".
+
+**Impact:** Daily automated pressure on the most urgent pipeline-wide blocker. Converts GH #500 from a silent stall into a daily escalation with specific named impact (Step 9G, KB staleness, 3 paying tenants). Estimated: spending limit resolved 2-5 days sooner than without pressure. Unblocks: CI, PR merges, kb-autopopulate, potentially Step 9G's kb-autopopulate trigger.
+
+**Category:** operational

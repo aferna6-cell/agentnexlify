@@ -1,0 +1,67 @@
+{
+  "run": 102,
+  "date": "2026-07-31-pm",
+  "session_type": "scheduled_automated",
+  "winner": {
+    "title": "Step 9I: GH #500 Spending Limit Nightly Escalation",
+    "category": "operational",
+    "effort": "XS",
+    "confidence": "HIGH",
+    "status": "pending_approval",
+    "implementation_path": "nightly-commit-review SKILL.md bash block (same channel as Steps 9B-9G)",
+    "description": "When no GH Actions workflow has run in the past 24 hours, post a daily escalation comment on GH #500 naming combined pipeline-wide impact: CI blocked, Step 9G (kb-autopopulate.yml) blocked, KB staying stale, 3 paying tenants on degraded AI chat.",
+    "condition_for_noop": "spending limit resolved → last run <24h → Step 9I logs 'workflows active' and posts nothing"
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "mandate_status": "partially_checked",
+  "mandate_results": {
+    "step_9g_in_skill_md": "PASS",
+    "step_9g_nightly_fired": "PENDING",
+    "kb_freshness": "FAIL (8 days stale, VOYAGE_API_KEY missing)",
+    "step_9g_diagnostic_gh403": "PENDING",
+    "autonomy_sweeper_threshold": "Day 3 < Day 7+ (PARKING LOT)",
+    "agent_os_tenant_count": "2-3 (below >5 promote condition)",
+    "mcp_tenant_count": "1 (below >5 revisit condition)"
+  },
+  "key_blockers": {
+    "GH_500": "GH Actions spending limit — Day 11, blocks CI + workflow_dispatch (affects Step 9G)",
+    "GH_536": "INTEGRATIONS_ENC_KEY missing — Day 10, migration 176 blocked",
+    "GH_399": "AUTOPILOT_GH_TOKEN expired — Day 22, 30+ ai-ready issues stalled",
+    "GH_394": "brain-refresh[bot] credentials — Day 26",
+    "VOYAGE_API_KEY": "Missing from GH Actions secrets — KB embeddings SKIPPED since 2026-07-08"
+  },
+  "debate_outcomes": {
+    "idea_1_step_9i": "SURVIVES → WINNER",
+    "idea_2_integrations_enc_key": "WEAKENED → Parking lot (Day 14+ revisit)",
+    "idea_3_step_9j_sweeper": "KILLED → Day 7+ threshold not met, zero stranded runs, env unverified",
+    "idea_4_voyage_api_key": "Not debated → Parking lot / bonus action",
+    "idea_5_close_stale_prs": "Not debated → Bonus action"
+  },
+  "bonus_actions_attempted": [
+    "Close PR #577 (Step 9G superseded by run 101 direct impl; Step 9H rejected)",
+    "File VOYAGE_API_KEY GH issue (missing secret, KB embeddings blocked)"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-07-31-pm/winning-concept.md",
+    "subconscious/runs/2026-07-31-pm/improvement-backlog.md",
+    "subconscious/runs/2026-07-31-pm/debate/debate-log.md",
+    "subconscious/runs/2026-07-31-pm/ideas/idea-1.md",
+    "subconscious/runs/2026-07-31-pm/ideas/idea-2.md",
+    "subconscious/runs/2026-07-31-pm/ideas/idea-3.md",
+    "subconscious/runs/2026-07-31-pm/ideas/idea-4.md",
+    "subconscious/runs/2026-07-31-pm/ideas/idea-5.md",
+    "subconscious/runs/2026-07-31-pm/run-summary.json",
+    "subconscious/state/memory.jsonl (appended)",
+    "subconscious/state/governance.json (updated)"
+  ],
+  "questions_for_run_103": [
+    "Step 9I fired tonight? Check nightly log for 'Step 9I:' line.",
+    "Step 9G fired? Exit code 0 (success) or non-zero (spending limit blocked)?",
+    "KB freshness: knowledge-base/log.md entry dated 2026-08-01+?",
+    "GH #500 has Step 9I escalation comment? GH #403 has Step 9G diagnostic?",
+    "Spending limit resolved? gh run list --limit=5",
+    "Autonomy sweeper Day 7 (2026-08-04): stranded runs evidence? Promote Step 9J?",
+    "VOYAGE_API_KEY issue filed? Actioned by human?"
+  ]
+}

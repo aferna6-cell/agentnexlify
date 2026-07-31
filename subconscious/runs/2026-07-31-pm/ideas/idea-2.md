@@ -1,0 +1,9 @@
+# Idea 2: INTEGRATIONS_ENC_KEY Nightly Escalation — Comment on GH #536
+
+**Evidence:** GH #536 (INTEGRATIONS_ENC_KEY not in Railway, migration 176 blocked) has been open for Day 10 as of 2026-07-31. Parking lot item from run 101 run-summary.json: "INTEGRATIONS_ENC_KEY escalation nightly check — GH #536 open Day 10, no comment escalation applied." Zero automated nightly comments have been posted on #536 across 10 days. Migration 176 is blocked, which means any integrations feature relying on encrypted credentials (INTEGRATIONS_ENC_KEY protects at-rest encryption for OAuth tokens and webhook secrets stored in the integrations table) cannot be deployed. Morning digest 2026-07-31 lists this as a top-3 priority. Pattern: Steps 9D (issue-to-pr-loop health) and 9E (credential rotation) applied nightly comment pressure on blockers; both resolved or were actively worked within days of automated pressure starting.
+
+**Action:** Add bash block to `.claude/skills/nightly-commit-review/SKILL.md` after Step 9I (or as Step 9I if spending-limit step goes to parking lot). Block: check GH #536 issue state via `gh issue view 536 --repo aferna6-cell/agentnexlify --json state,createdAt`; if OPEN and age >7 days, post escalation comment with: (1) current age in days, (2) migration 176 blocked, (3) exact fix: "Set INTEGRATIONS_ENC_KEY in Railway service Variables dashboard, then re-run migrations/176_integrations_encryption_key.sql via Supabase." Log: "Step 9I/9J: GH #536 INTEGRATIONS_ENC_KEY — Day N escalation comment posted."
+
+**Impact:** Automated daily escalation on migration 176 blocker. Prevents silent indefinite stall without human escalation. Estimated: resolution within 3-7 days of daily pressure starting. Unblocks: migration 176, integrations encrypted credential storage, any feature gated behind it.
+
+**Category:** operational
