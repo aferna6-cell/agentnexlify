@@ -111,14 +111,7 @@ function InstagramIcon({ size = 40 }) {
         stroke="#fff"
         strokeWidth="3"
       />
-      <circle
-        cx="24"
-        cy="24"
-        r="6"
-        fill="none"
-        stroke="#fff"
-        strokeWidth="3"
-      />
+      <circle cx="24" cy="24" r="6" fill="none" stroke="#fff" strokeWidth="3" />
       <circle cx="31.5" cy="16.5" r="2" fill="#fff" />
     </svg>
   );
@@ -152,8 +145,18 @@ function GmailIcon({ size = 40 }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path d="M4 12v22" stroke="#4285F4" strokeWidth="3" strokeLinecap="round" />
-      <path d="M44 12v22" stroke="#34A853" strokeWidth="3" strokeLinecap="round" />
+      <path
+        d="M4 12v22"
+        stroke="#4285F4"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M44 12v22"
+        stroke="#34A853"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -531,9 +534,7 @@ function InstagramSection({ token }) {
                 fontWeight: 600,
                 fontSize: "0.875rem",
                 cursor:
-                  connecting || !platformConfigured
-                    ? "not-allowed"
-                    : "pointer",
+                  connecting || !platformConfigured ? "not-allowed" : "pointer",
                 opacity: connecting || !platformConfigured ? 0.7 : 1,
                 transition: "opacity 0.15s",
               }}
@@ -924,8 +925,8 @@ function GmailSection({ token }) {
             )}
           </div>
           <div style={gcStyles.cardDesc}>
-            Let the Agent OS read and send email through your Gmail account
-            for outreach and inbound replies
+            Let the Agent OS read and send email through your Gmail account for
+            outreach and inbound replies
           </div>
         </div>
       </div>
@@ -1774,7 +1775,7 @@ export default function IntegrationsPage({ onNavigate }) {
           <FacebookMessengerSection token={token} />
           <InstagramSection token={token} />
           {/* M365CalendarSection + HubSpotSection deferred 2026-08-01 (owner
-              decision) — components kept below; re-add here when needed. */}
+              decision) - components kept below; re-add here when needed. */}
         </>
       )}
 
