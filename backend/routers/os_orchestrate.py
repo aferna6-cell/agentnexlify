@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
 from backend.services import agent_os_bridge, usage_meter
-from backend.services.agent_os_gate import require_agent_os_access
+from backend.services.agent_os_gate import AGENT_OS_PLANS, require_agent_os_access
 from backend.services.demo_guard import is_demo_tenant
 from backend.services.os_thread_runner import process_user_turn
 from backend.services.tenant_scope import tenant_table
@@ -66,16 +66,19 @@ def _demo_turns_exhausted(db, client_id: str) -> bool:
 
 
 def _require_agent_os_plan(db, client_id: str) -> None:
-    """The AI Workforce (Agent OS) is the agent_os plan only.
+    """The AI Workforce (Agent OS) is the agent_os plan + grandfathered legacy plans.
 
     The chatbot plan's AI Front Desk runs through the widget chat endpoint,
     not orchestrate, so a chatbot/free tenant must not reach the multi-agent
-    workforce here. Demo tenants always pass so the public sales demo works.
+    workforce here. Legacy plans (growth/autopilot/professional/enterprise)
+    are full-platform contracts still honored per CLAUDE.md "gates include
+    them" — same set as agent_os_gate.AGENT_OS_PLANS, which every other OS
+    surface uses. Demo tenants always pass so the public sales demo works.
     Reads the live plan (never stale JWT claims) and fails closed.
     """
     if is_demo_tenant(client_id):
         return
-    if usage_meter.tenant_plan(db, client_id) != "agent_os":
+    if usage_meter.tenant_plan(db, client_id) not in AGENT_OS_PLANS:
         raise HTTPException(
             status_code=402,
             detail={

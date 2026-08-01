@@ -30,13 +30,19 @@ def _patch(monkeypatch, *, plan, demo=False):
 # --- helper ---------------------------------------------------------------
 
 
-def test_helper_passes_for_agent_os(monkeypatch):
-    _patch(monkeypatch, plan="agent_os")
+@pytest.mark.parametrize(
+    "plan",
+    ["agent_os", "growth", "autopilot", "professional", "enterprise"],
+)
+def test_helper_passes_for_agent_os_and_grandfathered(monkeypatch, plan):
+    # Legacy plans are full-platform contracts still honored (CLAUDE.md
+    # "Legacy/grandfathered ... gates include them"; agent_os_gate.AGENT_OS_PLANS).
+    _patch(monkeypatch, plan=plan)
     # No raise.
     os_orchestrate._require_agent_os_plan(object(), "client-1")
 
 
-@pytest.mark.parametrize("plan", ["chatbot", "free", "", "growth", "professional"])
+@pytest.mark.parametrize("plan", ["chatbot", "free", ""])
 def test_helper_blocks_non_agent_os(monkeypatch, plan):
     _patch(monkeypatch, plan=plan)
     with pytest.raises(HTTPException) as exc:
