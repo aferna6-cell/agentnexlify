@@ -283,14 +283,34 @@ class TestNotifyOwnerAsync:
 
         sms = AsyncMock()
         email = AsyncMock()
+        push = AsyncMock(return_value=1)
         with patch(
             "backend.services.twilio_service.send_sms", new=sms
-        ), patch("backend.services.email_sender.send_email", new=email):
+        ), patch("backend.services.email_sender.send_email", new=email), patch(
+            "backend.services.os_push_notify.send_owner_push", new=push
+        ):
             asyncio.run(
                 escalations._notify_owner_async(CLIENT_ID, "wants a human")
             )
         sms.assert_awaited_once()
         email.assert_awaited_once()
+        push.assert_awaited_once()
+        assert push.await_args.kwargs["url_path"] == "/dashboard/escalations"
+
+    def test_push_failure_is_swallowed(self, mock_supabase):
+        tbl = MagicMock()
+        tbl.select.side_effect = lambda *a, **k: _Chain(
+            _result([{"business_name": "Pipe Co"}])
+        )
+        mock_supabase.table.side_effect = lambda name: tbl
+
+        push = AsyncMock(side_effect=RuntimeError("push service down"))
+        with patch(
+            "backend.services.os_push_notify.send_owner_push", new=push
+        ):
+            # No phone/email configured; push raises — must not propagate.
+            asyncio.run(escalations._notify_owner_async(CLIENT_ID, ""))
+        push.assert_awaited_once()
 
     def test_no_phone_no_email_sends_nothing(self, mock_supabase):
         tbl = MagicMock()

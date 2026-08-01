@@ -394,3 +394,22 @@ async def _notify_owner_async(client_id: str, reason: str) -> None:
             client_id,
             exc_info=True,
         )
+
+    try:
+        from backend.services.os_push_notify import send_owner_push
+
+        await send_owner_push(
+            db,
+            client_id,
+            title=f"[{biz}] Customer needs a human",
+            body=(
+                f"A customer requested to speak with a team member{detail}."
+            ),
+            url_path="/dashboard/escalations",
+        )
+    except Exception:
+        logger.warning(
+            "escalations: push notification failed client_id=%s",
+            client_id,
+            exc_info=True,
+        )
