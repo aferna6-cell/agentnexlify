@@ -282,6 +282,74 @@ def test_discover_skips_places_without_id(fake_db, monkeypatch):
     assert rows == []
 
 
+def test_discover_search_places_http_error_propagates(fake_db, monkeypatch):
+    monkeypatch.setattr(prospecting.settings, "google_places_api_key", "test-key")
+
+    async def boom(text_query, api_key, page_size):
+        raise httpx.ConnectError("boom")
+
+    monkeypatch.setattr(prospecting, "_search_places_text", boom)
+
+    with pytest.raises(httpx.HTTPError):
+        run(prospecting.discover(fake_db, client_id=_CLIENT_ID, query="plumber", location="Austin, TX"))
+
+
+def test_discover_upsert_failure_propagates(fake_db, monkeypatch):
+    monkeypatch.setattr(prospecting.settings, "google_places_api_key", "test-key")
+
+    async def fake_search(text_query, api_key, page_size):
+        return [_make_place()]
+
+    monkeypatch.setattr(prospecting, "_search_places_text", fake_search)
+
+    def boom(*a, **k):
+        raise RuntimeError("upsert boom")
+
+    monkeypatch.setattr(prospecting, "tenant_upsert", boom)
+
+    with pytest.raises(RuntimeError):
+        run(prospecting.discover(fake_db, client_id=_CLIENT_ID, query="plumber", location="Austin, TX"))
+
+
+class _FakePlacesAsyncClient:
+    """Fake httpx.AsyncClient for direct _search_places_text() coverage."""
+
+    def __init__(self, response, timeout=None):
+        self._response = response
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+    async def post(self, url, headers=None, json=None):
+        self.last_call = (url, headers, json)
+        return self._response
+
+
+class _FakePlacesResponse:
+    def __init__(self, payload):
+        self._payload = payload
+
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return self._payload
+
+
+def test_search_places_text_returns_places_list(monkeypatch):
+    fake_response = _FakePlacesResponse({"places": [{"id": "raw-place-1"}]})
+    monkeypatch.setattr(
+        prospecting.httpx,
+        "AsyncClient",
+        lambda timeout=None: _FakePlacesAsyncClient(fake_response),
+    )
+    result = run(prospecting._search_places_text("plumber Austin, TX", "key-123", 10))
+    assert result == [{"id": "raw-place-1"}]
+
+
 # ---------------------------------------------------------------------------
 # enrich_prospect() — regex extraction from fixture HTML
 # ---------------------------------------------------------------------------
@@ -380,6 +448,111 @@ def test_enrich_prospect_never_crashes_on_fetch_failure(fake_db, monkeypatch):
     assert updated["email"] is None
 
 
+def test_enrich_prospect_update_failure_propagates(fake_db, monkeypatch):
+    fake_db.seed(
+        "prospects",
+        [
+            {
+                "id": "p9",
+                "client_id": _CLIENT_ID,
+                "website": "",
+                "email": None,
+                "phone": None,
+                "enrichment": {},
+                "status": "new",
+            }
+        ],
+    )
+
+    def boom(*a, **k):
+        raise RuntimeError("update boom")
+
+    monkeypatch.setattr(prospecting, "tenant_update", boom)
+
+    with pytest.raises(RuntimeError):
+        run(prospecting.enrich_prospect(fake_db, client_id=_CLIENT_ID, prospect_id="p9"))
+
+
+# ---------------------------------------------------------------------------
+# _fetch_page_text() — direct coverage of the graceful-degrade fetch helper
+# ---------------------------------------------------------------------------
+
+
+class _FakeFetchAsyncClient:
+    def __init__(self, response=None, raises=None, timeout=None, follow_redirects=None):
+        self._response = response
+        self._raises = raises
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+    async def get(self, url, headers=None):
+        if self._raises:
+            raise self._raises
+        return self._response
+
+
+class _FakeFetchResponse:
+    def __init__(self, status_code, text):
+        self.status_code = status_code
+        self.text = text
+
+
+def test_fetch_page_text_empty_url_returns_empty_string():
+    assert run(prospecting._fetch_page_text("")) == ""
+
+
+def test_fetch_page_text_unsafe_url_skipped(monkeypatch):
+    monkeypatch.setattr(prospecting, "is_safe_url", lambda u: False)
+    assert run(prospecting._fetch_page_text("http://169.254.169.254/secret")) == ""
+
+
+def test_fetch_page_text_adds_https_prefix_and_returns_body(monkeypatch):
+    monkeypatch.setattr(prospecting, "is_safe_url", lambda u: True)
+    fake_response = _FakeFetchResponse(200, "hello from ace plumbing")
+
+    monkeypatch.setattr(
+        prospecting.httpx,
+        "AsyncClient",
+        lambda timeout=None, follow_redirects=None: _FakeFetchAsyncClient(response=fake_response),
+    )
+    text = run(prospecting._fetch_page_text("ace-plumbing.example.com"))
+    assert text == "hello from ace plumbing"
+
+
+def test_fetch_page_text_non_200_returns_empty(monkeypatch):
+    monkeypatch.setattr(prospecting, "is_safe_url", lambda u: True)
+    fake_response = _FakeFetchResponse(404, "")
+    monkeypatch.setattr(
+        prospecting.httpx,
+        "AsyncClient",
+        lambda timeout=None, follow_redirects=None: _FakeFetchAsyncClient(response=fake_response),
+    )
+    assert run(prospecting._fetch_page_text("https://down.example.com")) == ""
+
+
+def test_fetch_page_text_http_error_returns_empty(monkeypatch):
+    monkeypatch.setattr(prospecting, "is_safe_url", lambda u: True)
+    monkeypatch.setattr(
+        prospecting.httpx,
+        "AsyncClient",
+        lambda timeout=None, follow_redirects=None: _FakeFetchAsyncClient(raises=httpx.ConnectError("boom")),
+    )
+    assert run(prospecting._fetch_page_text("https://unreachable.example.com")) == ""
+
+
+def test_is_junk_email_flags_image_suffix():
+    assert prospecting._is_junk_email("logo@cdn.example.png") is True
+
+
+def test_extract_phone_normalizes_11_digit_leading_country_code():
+    phone = prospecting._extract_phone("Call 1-512-555-0199 for a quote")
+    assert phone == "(512) 555-0199"
+
+
 # ---------------------------------------------------------------------------
 # verify_email() — fail-open provider abstraction
 # ---------------------------------------------------------------------------
@@ -416,6 +589,45 @@ def test_verify_email_zerobounce_missing_key_falls_back_to_syntax(monkeypatch):
     monkeypatch.setattr(prospecting.settings, "email_verify_api_key", "")
     assert prospecting.verify_email("owner@example.com") is True
     assert prospecting.verify_email("not-an-email") is False
+
+
+class _FakeZeroBounceResponse:
+    def __init__(self, status):
+        self._status = status
+
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return {"status": self._status}
+
+
+def test_verify_email_zerobounce_valid_status_returns_true(monkeypatch):
+    monkeypatch.setattr(prospecting.settings, "email_verify_provider", "zerobounce")
+    monkeypatch.setattr(prospecting.settings, "email_verify_api_key", "zb-key")
+    monkeypatch.setattr(
+        prospecting.httpx, "get", lambda *a, **k: _FakeZeroBounceResponse("valid")
+    )
+    assert prospecting.verify_email("owner@example.com") is True
+
+
+def test_verify_email_zerobounce_invalid_status_returns_false(monkeypatch):
+    monkeypatch.setattr(prospecting.settings, "email_verify_provider", "zerobounce")
+    monkeypatch.setattr(prospecting.settings, "email_verify_api_key", "zb-key")
+    monkeypatch.setattr(
+        prospecting.httpx, "get", lambda *a, **k: _FakeZeroBounceResponse("invalid")
+    )
+    assert prospecting.verify_email("owner@example.com") is False
+
+
+def test_verify_email_syntax_only_generic_error_fails_open(monkeypatch):
+    import email_validator
+
+    def boom(*a, **k):
+        raise RuntimeError("unexpected validator crash")
+
+    monkeypatch.setattr(email_validator, "validate_email", boom)
+    assert prospecting._verify_email_syntax_only("owner@example.com") is False
 
 
 # ---------------------------------------------------------------------------
@@ -457,6 +669,12 @@ def test_score_prospect_mid_rating_scores_less_than_high_rating():
     mid = prospecting.score_prospect({**base, "enrichment": {"rating": 3.2}})
     high = prospecting.score_prospect({**base, "enrichment": {"rating": 4.5}})
     assert high > mid
+
+
+def test_score_prospect_unparseable_rating_ignored_not_crashed():
+    row = {"website": "https://x.com", "enrichment": {"rating": "not-a-number"}}
+    # website(20) counted, rating ignored (unparseable) -> no rating bonus.
+    assert prospecting.score_prospect(row) == 20.0
 
 
 # ---------------------------------------------------------------------------
@@ -559,6 +777,90 @@ def test_promote_to_lead_returns_none_for_missing_prospect(fake_db):
     assert result is None
 
 
+def test_promote_to_lead_insert_failure_propagates(fake_db, monkeypatch):
+    fake_db.seed(
+        "prospects",
+        [
+            {
+                "id": "p20",
+                "client_id": _CLIENT_ID,
+                "business_name": "Insert Boom Co",
+                "email": None,
+                "phone": None,
+                "category": None,
+                "status": "qualified",
+                "promoted_lead_id": None,
+            }
+        ],
+    )
+
+    def boom(*a, **k):
+        raise RuntimeError("insert boom")
+
+    monkeypatch.setattr(prospecting, "tenant_insert", boom)
+
+    with pytest.raises(RuntimeError):
+        run(prospecting.promote_to_lead(fake_db, client_id=_CLIENT_ID, prospect_id="p20"))
+
+
+def test_promote_to_lead_insert_returns_no_rows_returns_none(fake_db, monkeypatch):
+    fake_db.seed(
+        "prospects",
+        [
+            {
+                "id": "p21",
+                "client_id": _CLIENT_ID,
+                "business_name": "Empty Insert Co",
+                "email": None,
+                "phone": None,
+                "category": None,
+                "status": "qualified",
+                "promoted_lead_id": None,
+            }
+        ],
+    )
+
+    class _EmptyResult:
+        data = []
+
+    class _EmptyInsertQuery:
+        def execute(self):
+            return _EmptyResult()
+
+    monkeypatch.setattr(
+        prospecting, "tenant_insert", lambda db, table, client_id, rows: _EmptyInsertQuery()
+    )
+
+    result = run(prospecting.promote_to_lead(fake_db, client_id=_CLIENT_ID, prospect_id="p21"))
+    assert result is None
+
+
+def test_promote_to_lead_status_update_failure_propagates(fake_db, monkeypatch):
+    fake_db.seed(
+        "prospects",
+        [
+            {
+                "id": "p22",
+                "client_id": _CLIENT_ID,
+                "business_name": "Status Update Boom Co",
+                "email": "p22@example.com",
+                "phone": None,
+                "category": None,
+                "status": "qualified",
+                "promoted_lead_id": None,
+            }
+        ],
+    )
+
+    def boom(*a, **k):
+        raise RuntimeError("status update boom")
+
+    monkeypatch.setattr(prospecting, "tenant_update", boom)
+
+    with pytest.raises(RuntimeError):
+        run(prospecting.promote_to_lead(fake_db, client_id=_CLIENT_ID, prospect_id="p22"))
+
+
 # ---------------------------------------------------------------------------
 # run_pipeline() — orchestration + auto-promote
 # ---------------------------------------------------------------------------
@@ -616,6 +918,92 @@ def test_run_pipeline_auto_promotes_above_threshold(fake_db, monkeypatch):
     leads = [r for r in fake_db._store.get("leads", []) if r["client_id"] == _CLIENT_ID]
     assert len(leads) == 1
     assert leads[0]["source"] == "prospecting"
+
+
+def test_run_pipeline_continues_when_enrichment_step_raises(fake_db, monkeypatch):
+    monkeypatch.setattr(prospecting.settings, "google_places_api_key", "test-key")
+    monkeypatch.setattr(prospecting.settings, "email_verify_provider", "none")
+
+    async def fake_search(text_query, api_key, page_size):
+        return [_make_place()]
+
+    monkeypatch.setattr(prospecting, "_search_places_text", fake_search)
+
+    async def boom_enrich(db, *, client_id, prospect_id):
+        raise RuntimeError("enrich boom")
+
+    monkeypatch.setattr(prospecting, "enrich_prospect", boom_enrich)
+
+    summary = run(
+        prospecting.run_pipeline(
+            fake_db, client_id=_CLIENT_ID, query="plumber", location="Austin, TX", limit=5
+        )
+    )
+    assert summary["discovered"] == 1
+    assert summary["enriched"] == 1
+    assert summary["scored"] == 1
+
+
+def test_run_pipeline_continues_when_score_persist_raises(fake_db, monkeypatch):
+    monkeypatch.setattr(prospecting.settings, "google_places_api_key", "test-key")
+    monkeypatch.setattr(prospecting.settings, "email_verify_provider", "none")
+
+    async def fake_search(text_query, api_key, page_size):
+        return [_make_place()]
+
+    async def fake_fetch(url):
+        return ""
+
+    monkeypatch.setattr(prospecting, "_search_places_text", fake_search)
+    monkeypatch.setattr(prospecting, "_fetch_page_text", fake_fetch)
+
+    real_tenant_update = prospecting.tenant_update
+
+    def flaky_tenant_update(db, table, client_id, values):
+        if "score" in values:
+            raise RuntimeError("score persist boom")
+        return real_tenant_update(db, table, client_id, values)
+
+    monkeypatch.setattr(prospecting, "tenant_update", flaky_tenant_update)
+
+    summary = run(
+        prospecting.run_pipeline(
+            fake_db, client_id=_CLIENT_ID, query="plumber", location="Austin, TX", limit=5
+        )
+    )
+    assert summary["scored"] == 1
+    assert "score" in summary["prospects"][0]
+
+
+def test_run_pipeline_continues_when_auto_promote_raises(fake_db, monkeypatch):
+    monkeypatch.setattr(prospecting.settings, "google_places_api_key", "test-key")
+    monkeypatch.setattr(prospecting.settings, "email_verify_provider", "none")
+
+    async def fake_search(text_query, api_key, page_size):
+        return [_make_place()]
+
+    async def fake_fetch(url):
+        return "<p>info@ace-plumbing.example.com (512) 555-0199</p>"
+
+    monkeypatch.setattr(prospecting, "_search_places_text", fake_search)
+    monkeypatch.setattr(prospecting, "_fetch_page_text", fake_fetch)
+
+    async def boom_promote(db, *, client_id, prospect_id):
+        raise RuntimeError("promote boom")
+
+    monkeypatch.setattr(prospecting, "promote_to_lead", boom_promote)
+
+    summary = run(
+        prospecting.run_pipeline(
+            fake_db,
+            client_id=_CLIENT_ID,
+            query="plumber",
+            location="Austin, TX",
+            limit=5,
+            auto_promote_threshold=0.0,
+        )
+    )
+    assert summary["promoted"] == 0
 
 
 # ---------------------------------------------------------------------------
@@ -706,6 +1094,240 @@ def test_search_succeeds_for_agent_os_plan(
     assert resp.status_code == 200
     body = resp.json()
     assert body["discovered"] == 1
+
+
+def test_search_returns_503_on_unexpected_error(
+    prospecting_client, fake_db, monkeypatch, auth_headers_for
+):
+    fake_db.seed("tenants", [{"id": _CLIENT_ID, "plan": "agent_os"}])
+    _wire_fake_db(monkeypatch, fake_db)
+
+    async def boom(*a, **k):
+        raise RuntimeError("pipeline boom")
+
+    monkeypatch.setattr(prospecting_router, "run_pipeline", boom)
+
+    resp = prospecting_client.post(
+        f"/api/v1/prospecting/search?tenant_id={_CLIENT_ID}",
+        json={"query": "plumber", "location": "Austin, TX"},
+        headers=auth_headers_for(_CLIENT_ID),
+    )
+    assert resp.status_code == 503
+
+
+def test_list_prospects_uses_claims_tenant_id_when_omitted(
+    prospecting_client, fake_db, monkeypatch, auth_headers_for
+):
+    fake_db.seed("tenants", [{"id": _CLIENT_ID, "plan": "agent_os"}])
+    fake_db.seed(
+        "prospects",
+        [{"id": "p40", "client_id": _CLIENT_ID, "status": "new", "business_name": "Ace"}],
+    )
+    _wire_fake_db(monkeypatch, fake_db)
+
+    resp = prospecting_client.get(
+        "/api/v1/prospecting/prospects",
+        headers=auth_headers_for(_CLIENT_ID),
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 1
+    assert body["prospects"][0]["id"] == "p40"
+    assert body["page"] == 1
+    assert body["per_page"] == 50
+
+
+def test_list_prospects_status_filter_with_explicit_tenant_id(
+    prospecting_client, fake_db, monkeypatch, auth_headers_for
+):
+    fake_db.seed("tenants", [{"id": _CLIENT_ID, "plan": "agent_os"}])
+    fake_db.seed(
+        "prospects",
+        [
+            {"id": "p41", "client_id": _CLIENT_ID, "status": "new"},
+            {"id": "p42", "client_id": _CLIENT_ID, "status": "qualified"},
+        ],
+    )
+    _wire_fake_db(monkeypatch, fake_db)
+
+    resp = prospecting_client.get(
+        f"/api/v1/prospecting/prospects?tenant_id={_CLIENT_ID}&status=qualified",
+        headers=auth_headers_for(_CLIENT_ID),
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 1
+    assert body["prospects"][0]["id"] == "p42"
+
+
+def test_list_prospects_db_failure_returns_503(
+    prospecting_client, fake_db, monkeypatch, auth_headers_for
+):
+    fake_db.seed("tenants", [{"id": _CLIENT_ID, "plan": "agent_os"}])
+    _wire_fake_db(monkeypatch, fake_db)
+
+    def boom(*a, **k):
+        raise RuntimeError("select boom")
+
+    monkeypatch.setattr(prospecting_router, "tenant_select", boom)
+
+    resp = prospecting_client.get(
+        f"/api/v1/prospecting/prospects?tenant_id={_CLIENT_ID}",
+        headers=auth_headers_for(_CLIENT_ID),
+    )
+    assert resp.status_code == 503
+
+
+def test_enrich_prospect_endpoint_happy_path(
+    prospecting_client, fake_db, monkeypatch, auth_headers_for
+):
+    fake_db.seed("tenants", [{"id": _CLIENT_ID, "plan": "agent_os"}])
+    fake_db.seed(
+        "prospects",
+        [
+            {
+                "id": "p43",
+                "client_id": _CLIENT_ID,
+                "website": "",
+                "email": None,
+                "phone": None,
+                "enrichment": {},
+                "status": "new",
+            }
+        ],
+    )
+    _wire_fake_db(monkeypatch, fake_db)
+
+    resp = prospecting_client.post(
+        f"/api/v1/prospecting/prospects/p43/enrich?tenant_id={_CLIENT_ID}",
+        headers=auth_headers_for(_CLIENT_ID),
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "enriched"
+
+
+def test_enrich_prospect_endpoint_not_found_404(
+    prospecting_client, fake_db, monkeypatch, auth_headers_for
+):
+    fake_db.seed("tenants", [{"id": _CLIENT_ID, "plan": "agent_os"}])
+    _wire_fake_db(monkeypatch, fake_db)
+
+    resp = prospecting_client.post(
+        f"/api/v1/prospecting/prospects/ghost/enrich?tenant_id={_CLIENT_ID}",
+        headers=auth_headers_for(_CLIENT_ID),
+    )
+    assert resp.status_code == 404
+
+
+def test_enrich_prospect_endpoint_failure_returns_503(
+    prospecting_client, fake_db, monkeypatch, auth_headers_for
+):
+    fake_db.seed("tenants", [{"id": _CLIENT_ID, "plan": "agent_os"}])
+    _wire_fake_db(monkeypatch, fake_db)
+
+    async def boom(*a, **k):
+        raise RuntimeError("enrich boom")
+
+    monkeypatch.setattr(prospecting_router, "enrich_prospect", boom)
+
+    resp = prospecting_client.post(
+        f"/api/v1/prospecting/prospects/p1/enrich?tenant_id={_CLIENT_ID}",
+        headers=auth_headers_for(_CLIENT_ID),
+    )
+    assert resp.status_code == 503
+
+
+def test_promote_prospect_endpoint_happy_path_omitted_tenant_id(
+    prospecting_client, fake_db, monkeypatch, auth_headers_for
+):
+    fake_db.seed("tenants", [{"id": _CLIENT_ID, "plan": "agent_os"}])
+    fake_db.seed(
+        "prospects",
+        [
+            {
+                "id": "p44",
+                "client_id": _CLIENT_ID,
+                "business_name": "Delta Roofing",
+                "email": "p44@example.com",
+                "phone": None,
+                "category": None,
+                "status": "qualified",
+                "promoted_lead_id": None,
+            }
+        ],
+    )
+    _wire_fake_db(monkeypatch, fake_db)
+
+    resp = prospecting_client.post(
+        "/api/v1/prospecting/prospects/p44/promote",
+        headers=auth_headers_for(_CLIENT_ID),
+    )
+    assert resp.status_code == 200
+    assert resp.json()["email"] == "p44@example.com"
+
+
+def test_promote_prospect_endpoint_not_found_404(
+    prospecting_client, fake_db, monkeypatch, auth_headers_for
+):
+    fake_db.seed("tenants", [{"id": _CLIENT_ID, "plan": "agent_os"}])
+    _wire_fake_db(monkeypatch, fake_db)
+
+    resp = prospecting_client.post(
+        f"/api/v1/prospecting/prospects/ghost/promote?tenant_id={_CLIENT_ID}",
+        headers=auth_headers_for(_CLIENT_ID),
+    )
+    assert resp.status_code == 404
+
+
+def test_promote_prospect_endpoint_failure_returns_503(
+    prospecting_client, fake_db, monkeypatch, auth_headers_for
+):
+    fake_db.seed("tenants", [{"id": _CLIENT_ID, "plan": "agent_os"}])
+    _wire_fake_db(monkeypatch, fake_db)
+
+    async def boom(*a, **k):
+        raise RuntimeError("promote boom")
+
+    monkeypatch.setattr(prospecting_router, "promote_to_lead", boom)
+
+    resp = prospecting_client.post(
+        f"/api/v1/prospecting/prospects/p1/promote?tenant_id={_CLIENT_ID}",
+        headers=auth_headers_for(_CLIENT_ID),
+    )
+    assert resp.status_code == 503
+
+
+def test_reject_prospect_success_omitted_tenant_id(
+    prospecting_client, fake_db, monkeypatch, auth_headers_for
+):
+    fake_db.seed("tenants", [{"id": _CLIENT_ID, "plan": "agent_os"}])
+    fake_db.seed("prospects", [{"id": "p45", "client_id": _CLIENT_ID, "status": "new"}])
+    _wire_fake_db(monkeypatch, fake_db)
+
+    resp = prospecting_client.post(
+        "/api/v1/prospecting/prospects/p45/reject",
+        headers=auth_headers_for(_CLIENT_ID),
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "rejected"
+
+
+def test_reject_prospect_failure_returns_503(
+    prospecting_client, fake_db, monkeypatch, auth_headers_for
+):
+    fake_db.seed("tenants", [{"id": _CLIENT_ID, "plan": "agent_os"}])
+    _wire_fake_db(monkeypatch, fake_db)
+
+    def boom(*a, **k):
+        raise RuntimeError("reject boom")
+
+    monkeypatch.setattr(prospecting_router, "tenant_update", boom)
+
+    resp = prospecting_client.post(
+        f"/api/v1/prospecting/prospects/p1/reject?tenant_id={_CLIENT_ID}",
+        headers=auth_headers_for(_CLIENT_ID),
+    )
+    assert resp.status_code == 503
 
 
 def test_status_endpoint_reports_configured_flag(

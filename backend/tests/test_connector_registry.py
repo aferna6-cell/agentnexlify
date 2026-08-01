@@ -222,6 +222,57 @@ class TestConnectionStatus:
         assert status["gmail"] is False
         assert status["phone"] is True
 
+    def test_tenant_integrations_lookup_failure_fails_closed_for_drive_only(self):
+        broken = _chain([])
+        broken.execute.side_effect = RuntimeError("db down")
+
+        def route(name):
+            if name == "tenant_integrations":
+                return broken
+            if name == "tenants":
+                return _chain([{"twilio_number": "+15550001111"}])
+            return _chain([])
+
+        db = MagicMock()
+        db.table.side_effect = route
+        status = connector_registry.connection_status(db, tenant_id="t1")
+        assert status["drive"] is False
+        assert status["phone"] is True
+
+    def test_tenants_lookup_failure_fails_closed_for_phone_only(self):
+        broken = _chain([])
+        broken.execute.side_effect = RuntimeError("db down")
+
+        def route(name):
+            if name == "tenants":
+                return broken
+            if name == "integrations":
+                return _chain([{"provider": "hubspot"}])
+            return _chain([])
+
+        db = MagicMock()
+        db.table.side_effect = route
+        status = connector_registry.connection_status(db, tenant_id="t1")
+        assert status["phone"] is False
+        assert status["hubspot"] is True
+
+    def test_tenant_api_keys_lookup_failure_fails_closed_for_zapier_only(self):
+        broken = _chain([])
+        broken.execute.side_effect = RuntimeError("db down")
+
+        def route(name):
+            if name == "tenant_api_keys":
+                return broken
+            if name == "tenants":
+                return _chain([{"twilio_number": "+15550001111"}])
+            return _chain([])
+
+        db = MagicMock()
+        db.table.side_effect = route
+        status = connector_registry.connection_status(db, tenant_id="t1")
+        assert status["zapier"] is False
+        assert status["phone"] is True
+
 
 # ---------------------------------------------------------------------------
 # GET /api/v1/connectors/status - standalone app (router not in main.py yet)
@@ -417,3 +468,156 @@ async def test_google_callback_falls_back_to_hash_redirect_without_thread(monkey
     location = response.headers["location"]
     assert location.endswith("/#integrations")
     assert "thread=" not in location
+
+
+# ---------------------------------------------------------------------------
+# integrations.py - auth-URL generation endpoints (state JWT + provider url)
+# ---------------------------------------------------------------------------
+
+
+def test_oauth_success_response_falls_back_to_html_when_no_frontend_url(monkeypatch):
+    from fastapi.responses import HTMLResponse
+
+    from backend.routers import integrations as integrations_router
+
+    monkeypatch.setattr(integrations_router.settings, "frontend_url", "")
+    response = integrations_router._oauth_success_response(
+        provider_key="google_calendar",
+        provider_label="Google Calendar",
+        os_thread_id=None,
+        return_to=None,
+        fallback_hash="/#integrations",
+    )
+    assert isinstance(response, HTMLResponse)
+    assert b"Connected!" in response.body
+
+
+@pytest.mark.asyncio
+async def test_google_auth_generates_state_and_returns_auth_url(monkeypatch):
+    from backend.routers import integrations as integrations_router
+
+    monkeypatch.setattr(integrations_router.settings, "google_client_id", "gid")
+    monkeypatch.setattr(integrations_router.settings, "google_client_secret", "gsecret")
+    monkeypatch.setattr(
+        integrations_router.settings, "google_redirect_uri", "https://app.test/google/cb"
+    )
+    monkeypatch.setattr(
+        integrations_router,
+        "get_auth_url",
+        lambda redirect_uri, state: f"https://accounts.google.com/auth?state={state}",
+    )
+
+    result = await integrations_router.google_auth(
+        claims={"tenant_id": "tenant-1"}, os_thread_id="th-1"
+    )
+    assert "auth_url" in result
+    assert "https://accounts.google.com/auth" in result["auth_url"]
+
+
+@pytest.mark.asyncio
+async def test_m365_auth_generates_state_and_returns_auth_url(monkeypatch):
+    from backend.routers import integrations as integrations_router
+
+    monkeypatch.setattr(integrations_router.settings, "m365_client_id", "mid")
+    monkeypatch.setattr(integrations_router.settings, "m365_client_secret", "msecret")
+    monkeypatch.setattr(
+        integrations_router.settings, "m365_redirect_uri", "https://app.test/m365/cb"
+    )
+    monkeypatch.setattr(
+        integrations_router.m365_calendar,
+        "build_authorization_url",
+        lambda redirect_uri, state: f"https://login.microsoftonline.com/auth?state={state}",
+    )
+
+    result = await integrations_router.m365_auth(
+        claims={"tenant_id": "tenant-1"}, os_thread_id=None
+    )
+    assert "auth_url" in result
+    assert "https://login.microsoftonline.com/auth" in result["auth_url"]
+
+
+@pytest.mark.asyncio
+async def test_hubspot_auth_generates_state_and_returns_auth_url(monkeypatch):
+    from backend.routers import integrations as integrations_router
+
+    monkeypatch.setattr(integrations_router.settings, "hubspot_client_id", "hid")
+    monkeypatch.setattr(integrations_router.settings, "hubspot_client_secret", "hsecret")
+    monkeypatch.setattr(
+        integrations_router.settings, "hubspot_redirect_uri", "https://app.test/hubspot/cb"
+    )
+    monkeypatch.setattr(
+        integrations_router.hubspot_tenant,
+        "build_authorization_url",
+        lambda redirect_uri, state: f"https://app.hubspot.com/oauth/authorize?state={state}",
+    )
+
+    result = await integrations_router.hubspot_auth(
+        claims={"tenant_id": "tenant-1"}, os_thread_id="th-9"
+    )
+    assert "auth_url" in result
+    assert "https://app.hubspot.com/oauth/authorize" in result["auth_url"]
+
+
+# ---------------------------------------------------------------------------
+# integrations.py - m365 + hubspot callback deep-link redirects
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_m365_callback_success_redirects_to_thread(monkeypatch):
+    from backend.routers import integrations as integrations_router
+
+    monkeypatch.setattr(
+        integrations_router.m365_calendar,
+        "exchange_code",
+        lambda code, redirect_uri: {
+            "access_token": "at",
+            "refresh_token": "rt",
+            "expires_in": 3600,
+        },
+    )
+    monkeypatch.setattr(
+        integrations_router,
+        "_fetch_m365_profile",
+        lambda access_token: {"email": "x@y.com", "calendar_name": "Primary"},
+    )
+    monkeypatch.setattr(integrations_router.m365_calendar, "save_integration", lambda **kwargs: None)
+
+    state = integrations_router._encode_state("tenant-9", os_thread_id="th-5")
+    response = await integrations_router.m365_callback(code="auth-code", state=state)
+
+    assert response.status_code in (302, 303, 307, 308)
+    location = response.headers["location"]
+    assert "thread=th-5" in location
+    assert "connected=m365_calendar" in location
+
+
+@pytest.mark.asyncio
+async def test_hubspot_callback_success_redirects_to_thread(monkeypatch):
+    from backend.routers import integrations as integrations_router
+
+    monkeypatch.setattr(
+        integrations_router.hubspot_tenant,
+        "exchange_code",
+        lambda code, redirect_uri: {
+            "access_token": "at",
+            "refresh_token": "rt",
+            "expires_in": 1800,
+        },
+    )
+    monkeypatch.setattr(
+        integrations_router.hubspot_tenant,
+        "fetch_profile",
+        lambda access_token: {"portal_id": "p1"},
+    )
+    monkeypatch.setattr(
+        integrations_router.hubspot_tenant, "save_integration", lambda **kwargs: None
+    )
+
+    state = integrations_router._encode_state("tenant-9", os_thread_id="th-8")
+    response = await integrations_router.hubspot_callback(code="auth-code", state=state)
+
+    assert response.status_code in (302, 303, 307, 308)
+    location = response.headers["location"]
+    assert "thread=th-8" in location
+    assert "connected=hubspot" in location

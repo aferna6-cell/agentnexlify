@@ -313,6 +313,54 @@ class TestNotifyOwnerAsync:
         # Must not raise.
         asyncio.run(escalations._notify_owner_async(CLIENT_ID, "reason"))
 
+    def test_sms_send_failure_swallowed_email_still_sent(self, mock_supabase):
+        tbl = MagicMock()
+        tbl.select.side_effect = lambda *a, **k: _Chain(
+            _result(
+                [
+                    {
+                        "business_name": "Pipe Co",
+                        "notification_phone": "+15551234567",
+                        "sms_notifications_enabled": True,
+                        "owner_email": "owner@pipeco.test",
+                    }
+                ]
+            )
+        )
+        mock_supabase.table.side_effect = lambda name: tbl
+
+        sms = AsyncMock(side_effect=RuntimeError("sms boom"))
+        email = AsyncMock()
+        with patch(
+            "backend.services.twilio_service.send_sms", new=sms
+        ), patch("backend.services.email_sender.send_email", new=email):
+            # Must not raise even though SMS fails.
+            asyncio.run(escalations._notify_owner_async(CLIENT_ID, "wants a human"))
+        sms.assert_awaited_once()
+        email.assert_awaited_once()
+
+    def test_email_send_failure_swallowed(self, mock_supabase):
+        tbl = MagicMock()
+        tbl.select.side_effect = lambda *a, **k: _Chain(
+            _result(
+                [
+                    {
+                        "business_name": "Pipe Co",
+                        "notification_phone": None,
+                        "sms_notifications_enabled": False,
+                        "owner_email": "owner@pipeco.test",
+                    }
+                ]
+            )
+        )
+        mock_supabase.table.side_effect = lambda name: tbl
+
+        email = AsyncMock(side_effect=RuntimeError("email boom"))
+        with patch("backend.services.email_sender.send_email", new=email):
+            # Must not raise even though email send fails.
+            asyncio.run(escalations._notify_owner_async(CLIENT_ID, "wants a human"))
+        email.assert_awaited_once()
+
 
 # ---------------------------------------------------------------------------
 # resolve_escalation
@@ -444,6 +492,78 @@ class TestResolveEscalation:
             escalations.resolve_escalation(db, "esc-1", client_id=CLIENT_ID)
             is None
         )
+
+    def test_update_returns_no_rows_returns_none(self):
+        esc_row = {"id": "esc-1", "conversation_id": None, "metadata": {}}
+        db, _calls = _seed(
+            {
+                "escalations": {
+                    "select": [esc_row],
+                    "update": [],  # update executed but returned no rows
+                }
+            }
+        )
+        assert (
+            escalations.resolve_escalation(db, "esc-1", client_id=CLIENT_ID)
+            is None
+        )
+
+    def test_handoff_tag_clear_exception_is_swallowed(self):
+        """_maybe_clear_handoff_tag raising is caught by resolve_escalation's
+        own try/except — the escalation is still reported resolved."""
+        esc_row = {"id": "esc-1", "conversation_id": "conv-1", "metadata": {}}
+        db = MagicMock()
+        call_state = {"i": 0}
+
+        def _select(*a, **k):
+            call_state["i"] += 1
+            if call_state["i"] == 1:
+                return _Chain(_result([esc_row]))
+            raise RuntimeError("other_open lookup boom")
+
+        tbl = MagicMock()
+        tbl.select.side_effect = _select
+        tbl.update.side_effect = lambda *a, **k: _Chain(
+            _result([{"id": "esc-1", "status": "resolved"}])
+        )
+        db.table.side_effect = lambda name: tbl
+
+        updated = escalations.resolve_escalation(db, "esc-1", client_id=CLIENT_ID)
+        assert updated["status"] == "resolved"
+
+    def test_conversation_not_found_skips_tag_clear(self):
+        esc_row = {"id": "esc-1", "conversation_id": "conv-missing", "metadata": {}}
+        db, calls = _seed(
+            {
+                "escalations": {
+                    "select_seq": [[esc_row], []],
+                    "update": [{"id": "esc-1", "status": "resolved"}],
+                },
+                "conversations": {
+                    "select": [],  # conversation row not found
+                },
+            }
+        )
+        updated = escalations.resolve_escalation(db, "esc-1", client_id=CLIENT_ID)
+        assert updated["status"] == "resolved"
+        assert calls.get("conversations", {}).get("update", []) == []
+
+    def test_conversation_without_handoff_tag_skips_update(self):
+        esc_row = {"id": "esc-1", "conversation_id": "conv-1", "metadata": {}}
+        db, calls = _seed(
+            {
+                "escalations": {
+                    "select_seq": [[esc_row], []],
+                    "update": [{"id": "esc-1", "status": "resolved"}],
+                },
+                "conversations": {
+                    "select": [{"id": "conv-1", "tags": ["vip"]}],  # no "handoff" tag
+                },
+            }
+        )
+        updated = escalations.resolve_escalation(db, "esc-1", client_id=CLIENT_ID)
+        assert updated["status"] == "resolved"
+        assert calls.get("conversations", {}).get("update", []) == []
 
 
 # ---------------------------------------------------------------------------
@@ -580,6 +700,44 @@ class TestEscalationsRouter:
         assert resp.status_code == 200, resp.text
         assert resp.json()["escalations"][0]["conversation_session_id"] == "sess-abc"
 
+    def test_list_session_id_enrichment_failure_returns_rows_unchanged(
+        self, mock_supabase, auth_headers_for
+    ):
+        rows = [{"id": "esc-1", "status": "open", "conversation_id": "c1"}]
+        esc_tbl = MagicMock()
+        esc_tbl.select.side_effect = lambda *a, **k: _Chain(_result(rows))
+
+        conv_tbl = MagicMock()
+        conv_tbl.select.side_effect = RuntimeError("conversations lookup boom")
+
+        def _router_fn(name):
+            return conv_tbl if name == "conversations" else esc_tbl
+
+        mock_supabase.table.side_effect = _router_fn
+
+        resp = self._request(
+            "GET", "/api/v1/escalations", headers=auth_headers_for(CLIENT_ID)
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["escalations"][0]["id"] == "esc-1"
+        assert "conversation_session_id" not in body["escalations"][0]
+
+    def test_list_endpoint_returns_500_on_unexpected_error(
+        self, mock_supabase, auth_headers_for, monkeypatch
+    ):
+        from backend.routers import escalations as escalations_router
+
+        def boom(*a, **k):
+            raise RuntimeError("list boom")
+
+        monkeypatch.setattr(escalations_router, "list_escalations", boom)
+
+        resp = self._request(
+            "GET", "/api/v1/escalations", headers=auth_headers_for(CLIENT_ID)
+        )
+        assert resp.status_code == 500
+
     def test_list_status_query_param(self, mock_supabase, auth_headers_for):
         tbl = MagicMock()
         tbl.select.side_effect = lambda *a, **k: _Chain(_result([]))
@@ -617,6 +775,24 @@ class TestEscalationsRouter:
         )
         assert resp.status_code == 200, resp.text
         assert resp.json()["status"] == "resolved"
+
+    def test_resolve_endpoint_returns_500_on_unexpected_error(
+        self, mock_supabase, auth_headers_for, monkeypatch
+    ):
+        from backend.routers import escalations as escalations_router
+
+        def boom(*a, **k):
+            raise RuntimeError("resolve boom")
+
+        monkeypatch.setattr(escalations_router, "resolve_escalation", boom)
+
+        resp = self._request(
+            "POST",
+            "/api/v1/escalations/esc-1/resolve",
+            json={"resolution": "resolved"},
+            headers=auth_headers_for(CLIENT_ID),
+        )
+        assert resp.status_code == 500
 
     def test_resolve_not_found_404(self, mock_supabase, auth_headers_for):
         tbl = MagicMock()
@@ -705,6 +881,85 @@ class TestEscalationsRouter:
         resp = self._request(
             "POST",
             "/api/v1/escalations/missing/assign",
+            json={"assigned_to": "member-1"},
+            headers=auth_headers_for(CLIENT_ID),
+        )
+        assert resp.status_code == 404
+
+    def test_assign_lookup_failure_returns_500(self, mock_supabase, auth_headers_for):
+        tbl = MagicMock()
+        tbl.select.side_effect = RuntimeError("lookup boom")
+        mock_supabase.table.side_effect = lambda name: tbl
+
+        resp = self._request(
+            "POST",
+            "/api/v1/escalations/esc-1/assign",
+            json={"assigned_to": "member-1"},
+            headers=auth_headers_for(CLIENT_ID),
+        )
+        assert resp.status_code == 500
+
+    def test_assign_update_failure_returns_500(self, mock_supabase, auth_headers_for):
+        tbl = MagicMock()
+        tbl.select.side_effect = lambda *a, **k: _Chain(_result([{"id": "esc-1"}]))
+        tbl.update.side_effect = RuntimeError("update boom")
+        mock_supabase.table.side_effect = lambda name: tbl
+
+        resp = self._request(
+            "POST",
+            "/api/v1/escalations/esc-1/assign",
+            json={"assigned_to": "member-1"},
+            headers=auth_headers_for(CLIENT_ID),
+        )
+        assert resp.status_code == 500
+
+    def test_assign_refetch_failure_returns_500(self, mock_supabase, auth_headers_for):
+        call_state = {"i": 0}
+
+        def _select(*a, **k):
+            call_state["i"] += 1
+            if call_state["i"] == 1:
+                return _Chain(_result([{"id": "esc-1"}]))  # existence check
+            if call_state["i"] == 2:
+                return _Chain(
+                    _result([{"id": "esc-1", "first_response_at": None}])
+                )  # mark_first_response lookup
+            raise RuntimeError("refetch boom")
+
+        tbl = MagicMock()
+        tbl.select.side_effect = _select
+        tbl.update.side_effect = lambda *a, **k: _Chain(_result([{"id": "esc-1"}]))
+        mock_supabase.table.side_effect = lambda name: tbl
+
+        resp = self._request(
+            "POST",
+            "/api/v1/escalations/esc-1/assign",
+            json={"assigned_to": "member-1"},
+            headers=auth_headers_for(CLIENT_ID),
+        )
+        assert resp.status_code == 500
+
+    def test_assign_refetch_returns_empty_yields_404(self, mock_supabase, auth_headers_for):
+        select_seq = [
+            [{"id": "esc-1"}],  # existence check
+            [{"id": "esc-1", "first_response_at": None}],  # mark_first_response lookup
+            [],  # final re-fetch empty (row deleted concurrently)
+        ]
+        state = {"i": 0}
+        tbl = MagicMock()
+
+        def _select(*a, **k):
+            rows = select_seq[min(state["i"], len(select_seq) - 1)]
+            state["i"] += 1
+            return _Chain(_result(rows))
+
+        tbl.select.side_effect = _select
+        tbl.update.side_effect = lambda *a, **k: _Chain(_result([{"id": "esc-1"}]))
+        mock_supabase.table.side_effect = lambda name: tbl
+
+        resp = self._request(
+            "POST",
+            "/api/v1/escalations/esc-1/assign",
             json={"assigned_to": "member-1"},
             headers=auth_headers_for(CLIENT_ID),
         )
