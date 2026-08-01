@@ -34,3 +34,13 @@ export function generateSocialCampaign(tenantId, token, data) {
 export function fetchSocialAnalytics(tenantId, token) {
   return request(`/api/v1/social/${tenantId}/analytics`, { token });
 }
+
+// AI image generation for a post. Same tenant-in-path shape as the other
+// social endpoints above.
+export function generateSocialImage(tenantId, token, { prompt, platform, post_id }) {
+  return request(`/api/v1/social/${tenantId}/generate-image`, {
+    method: "POST",
+    token,
+    body: { prompt, platform, post_id },
+  });
+}

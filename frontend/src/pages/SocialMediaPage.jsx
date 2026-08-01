@@ -9,6 +9,7 @@ import {
   generateSocialContent,
   generateSocialCampaign,
   fetchSocialAnalytics,
+  generateSocialImage,
 } from "../utils/api/social";
 import SkeletonLoader from "../components/SkeletonLoader";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
@@ -510,12 +511,127 @@ export default function SocialMediaPage() {
   );
 }
 
+/* ==== Generate Image field - reused by Create + Edit post modals ==== */
+
+function ImageGenField({ tenantId, token, platform, postId, value, onChange }) {
+  const [prompt, setPrompt] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState(null);
+  const [showPrompt, setShowPrompt] = useState(false);
+
+  const handleGenerate = async () => {
+    if (!prompt.trim()) {
+      setError("Describe the image you want.");
+      return;
+    }
+    setGenerating(true);
+    setError(null);
+    try {
+      const res = await generateSocialImage(tenantId, token, {
+        prompt: prompt.trim(),
+        platform,
+        post_id: postId,
+      });
+      if (res?.url) {
+        onChange(res.url);
+        setShowPrompt(false);
+        setPrompt("");
+      } else {
+        setError("Image generation didn't return an image.");
+      }
+    } catch (e) {
+      const msg =
+        e?.status === 422
+          ? "AI image generation isn't set up for this account yet."
+          : e.message || "Image generation failed.";
+      setError(msg);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <label style={labelStyle}>Image</label>
+      {value ? (
+        <div>
+          <img
+            src={value}
+            alt="Generated post visual"
+            style={{
+              maxWidth: "100%",
+              maxHeight: 220,
+              borderRadius: 10,
+              border: "1px solid var(--border)",
+              display: "block",
+            }}
+          />
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button
+              type="button"
+              onClick={() => setShowPrompt((s) => !s)}
+              style={btnSecondary}
+            >
+              Regenerate
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              style={btnSecondary}
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowPrompt((s) => !s)}
+          style={{
+            ...btnSecondary,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <span style={{ fontSize: "1rem" }}>&#x2728;</span> Generate image
+        </button>
+      )}
+      {showPrompt && (
+        <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+          <input
+            type="text"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="Describe the image, e.g. a clean modern kitchen after renovation"
+            style={{ ...inputStyle, flex: 1 }}
+          />
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={generating}
+            style={{ ...btnPrimary, opacity: generating ? 0.6 : 1 }}
+          >
+            {generating ? "Generating..." : "Generate"}
+          </button>
+        </div>
+      )}
+      {error && (
+        <div style={{ color: "#f87171", fontSize: "0.8rem", marginTop: 6 }}>
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ==== Create Post Modal ==== */
 
 function CreatePostModal({ tenantId, token, onClose, onCreated }) {
   const [selectedPlatforms, setSelectedPlatforms] = useState(["facebook"]);
   const [content, setContent] = useState("");
   const [hashtags, setHashtags] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
   const [postNow, setPostNow] = useState(false);
@@ -543,6 +659,7 @@ function CreatePostModal({ tenantId, token, onClose, onCreated }) {
           platform,
           content: content.trim(),
           hashtags: hashtags.trim() ? hashtags.split(",").map((h) => h.trim()).filter(Boolean) : [],
+          media_urls: imageUrl ? [imageUrl] : [],
           status: postNow ? "published" : scheduleDate ? "scheduled" : "draft",
           scheduled_for: scheduleDate && scheduleTime
             ? `${scheduleDate}T${scheduleTime}:00`
@@ -601,6 +718,15 @@ function CreatePostModal({ tenantId, token, onClose, onCreated }) {
             placeholder="#marketing #business #tips"
             style={inputStyle} />
         </div>
+
+        {/* AI-generated image */}
+        <ImageGenField
+          tenantId={tenantId}
+          token={token}
+          platform={selectedPlatforms[0] || "facebook"}
+          value={imageUrl}
+          onChange={setImageUrl}
+        />
 
         {/* Schedule */}
         <div style={{ marginBottom: 16 }}>
@@ -905,6 +1031,9 @@ function CampaignGeneratorModal({ tenantId, token, onClose, onGenerated }) {
 function EditPostModal({ tenantId, token, post, onClose, onSaved, onDelete }) {
   const [content, setContent] = useState(post.content || "");
   const [hashtags, setHashtags] = useState(Array.isArray(post.hashtags) ? post.hashtags.join(", ") : post.hashtags || "");
+  const [imageUrl, setImageUrl] = useState(
+    Array.isArray(post.media_urls) ? post.media_urls[0] || "" : post.media_urls || ""
+  );
   const [scheduleDate, setScheduleDate] = useState(post.scheduled_for ? post.scheduled_for.split("T")[0] : "");
   const [scheduleTime, setScheduleTime] = useState(
     post.scheduled_for && post.scheduled_for.includes("T") ? post.scheduled_for.split("T")[1]?.slice(0, 5) : ""
@@ -922,6 +1051,7 @@ function EditPostModal({ tenantId, token, post, onClose, onSaved, onDelete }) {
       const data = {
         content: content.trim(),
         hashtags: hashtags.trim() ? hashtags.split(",").map((h) => h.trim()).filter(Boolean) : [],
+        media_urls: imageUrl ? [imageUrl] : [],
         scheduled_for: scheduleDate && scheduleTime
           ? `${scheduleDate}T${scheduleTime}:00`
           : scheduleDate ? `${scheduleDate}T09:00:00` : null,
@@ -965,6 +1095,16 @@ function EditPostModal({ tenantId, token, post, onClose, onSaved, onDelete }) {
             placeholder="#hashtag1 #hashtag2"
             style={inputStyle} />
         </div>
+
+        {/* AI-generated image */}
+        <ImageGenField
+          tenantId={tenantId}
+          token={token}
+          platform={post.platform}
+          postId={post.id}
+          value={imageUrl}
+          onChange={setImageUrl}
+        />
 
         <div style={{ marginBottom: 16 }}>
           <label style={labelStyle}>Schedule</label>

@@ -79,6 +79,23 @@ export function disconnectInstagram(tenantId, token) {
   });
 }
 
+// --- Gmail ---
+
+export function startGmailAuth(tenantId, token) {
+  return request(`/api/v1/integrations/gmail/connect`, { token });
+}
+
+export function fetchGmailStatus(tenantId, token) {
+  return request(`/api/v1/integrations/gmail/status`, { token });
+}
+
+export function disconnectGmail(tenantId, token) {
+  return request(`/api/v1/integrations/gmail/disconnect`, {
+    method: "POST",
+    token,
+  });
+}
+
 // --- Agent OS Inbound Bridges ---
 
 export function fetchBridgeConfig(token) {

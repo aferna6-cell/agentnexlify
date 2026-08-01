@@ -12,6 +12,7 @@ from backend.dependencies import _get_current_tenant, get_business_context, veri
 from backend.models.database import get_service_supabase
 from backend.services.plan_gate import require_marketing_access
 from backend.services.llm_runtime import call_claude_messages
+from backend.services.social_media_images import SocialImageGenError, generate_post_image
 from backend.services.social_media_ai import (
     PLATFORM_LIMITS,
     VALID_PLATFORMS,
@@ -80,6 +81,18 @@ class AICampaignRequest(BaseModel):
     topic: str = Field(..., min_length=1, max_length=1000)
     platforms: list[str] = Field(..., min_length=1, max_length=5)
     posts_per_week: int = Field(7, ge=1, le=21)
+
+
+class SocialImageGenerateRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, max_length=1000)
+    platform: str = Field(..., description="Target platform — controls output image size")
+    post_id: str | None = Field(None, description="If set, append the generated URL to this post's media_urls")
+
+
+class SocialImageGenerateResponse(BaseModel):
+    url: str
+    width: int
+    height: int
 
 
 # --- Post CRUD Endpoints ---
@@ -364,6 +377,70 @@ async def generate_campaign_content(
         "topic": req.topic,
         "platforms": req.platforms,
     }
+
+
+@router.post("/{tenant_id}/generate-image", response_model=SocialImageGenerateResponse)
+async def generate_post_image_endpoint(
+    tenant_id: str,
+    req: SocialImageGenerateRequest,
+    claims: dict = Depends(_get_current_tenant),
+):
+    """AI-generate a platform-sized image and upload it to storage.
+
+    When ``post_id`` is set, appends the generated URL to that post's
+    ``media_urls`` (best-effort — a failure to append does not fail the
+    request; the image is already generated and returned to the caller).
+    """
+    verify_tenant(claims, tenant_id)
+    _validate_platform(req.platform)
+
+    db = get_service_supabase()
+
+    try:
+        result = await generate_post_image(
+            db, tenant_id=tenant_id, prompt=req.prompt, platform=req.platform
+        )
+    except SocialImageGenError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except Exception:
+        logger.exception("Social media image generation failed for tenant %s", tenant_id)
+        raise HTTPException(status_code=500, detail="Image generation failed")
+
+    if req.post_id:
+        try:
+            existing = (
+                db.table("social_posts")
+                .select("media_urls")
+                .eq("id", req.post_id)
+                .eq("tenant_id", tenant_id)
+                .limit(1)
+                .execute()
+            )
+            if existing.data:
+                media_urls = list(existing.data[0].get("media_urls") or [])
+                media_urls.append(result["url"])
+                db.table("social_posts").update(
+                    {
+                        "media_urls": media_urls,
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                ).eq("id", req.post_id).eq("tenant_id", tenant_id).execute()
+            else:
+                logger.warning(
+                    "generate-image: post_id %s not found for tenant %s -- image generated but not attached",
+                    req.post_id,
+                    tenant_id,
+                )
+        except Exception:
+            logger.exception(
+                "Failed to append generated image to post %s for tenant %s",
+                req.post_id,
+                tenant_id,
+            )
+            # Image itself was generated + stored successfully -- don't fail
+            # the whole request over the media_urls append.
+
+    return SocialImageGenerateResponse(**result)
 
 
 # --- Calendar View ---

@@ -28,6 +28,7 @@ from backend.services import (
     agent_os_bridge,
     agent_sdk_client,
     connector_awareness,
+    connector_registry,
     os_approval_notify,
     os_custom_instructions,
     os_failure_notify,
@@ -299,13 +300,25 @@ async def _post_connect_prompt(
         if not fresh:
             return None
 
+        # Deep-link OAuth connectors (calendar/hubspot today) back to this
+        # thread so the connect flow can resume the conversation on success
+        # (backend/routers/integrations.py _oauth_success_response). Dedup
+        # above already ran against the base path, so appending the thread
+        # id here doesn't affect the once-per-connector-per-thread check.
+        deep_linked = [
+            {**m, "path": f"{m['path']}?os_thread_id={thread_id}"}
+            if connector_registry.is_oauth_connector(m["key"])
+            else m
+            for m in fresh
+        ]
+
         return (
             tenant_table(db, "os_messages", client_id)
             .insert(
                 {
                     "thread_id": thread_id,
                     "role": "assistant",
-                    "content": connector_awareness.connect_prompt(fresh),
+                    "content": connector_awareness.connect_prompt(deep_linked),
                 }
             )
             .execute()
