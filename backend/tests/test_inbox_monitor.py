@@ -283,6 +283,157 @@ async def test_already_ingested_message_not_counted(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_row_without_tenant_id_is_skipped(monkeypatch):
+    """A row with no tenant_id must be skipped before any polling work."""
+    db = _fake_db(
+        [
+            {"tenant_id": None, "metadata": {}},
+            {"tenant_id": TENANT_A, "metadata": {"history_id": "100"}},
+        ]
+    )
+    monkeypatch.setattr(inbox_monitor, "get_service_supabase", lambda: db)
+    monkeypatch.setattr(
+        inbox_monitor.os_inbound_bridge, "is_bridge_enabled", lambda db, t, source: True
+    )
+    monkeypatch.setattr(
+        inbox_monitor.gmail_connector, "list_history", lambda t, since: ([], "999")
+    )
+    monkeypatch.setattr(inbox_monitor.gmail_connector, "update_metadata", MagicMock())
+
+    total = await inbox_monitor.run_inbox_poll()
+
+    assert total == 0
+
+
+@pytest.mark.asyncio
+async def test_message_get_failure_is_skipped(monkeypatch):
+    """get_message returning None for one message_id must not crash the poll
+    and must not bridge that message; other messages still process."""
+    db = _fake_db([{"tenant_id": TENANT_A, "metadata": {"history_id": "100"}}])
+    monkeypatch.setattr(inbox_monitor, "get_service_supabase", lambda: db)
+    monkeypatch.setattr(
+        inbox_monitor.os_inbound_bridge, "is_bridge_enabled", lambda db, t, source: True
+    )
+    monkeypatch.setattr(
+        inbox_monitor.gmail_connector, "list_history", lambda t, since: (["m1", "m2"], "200")
+    )
+    monkeypatch.setattr(
+        inbox_monitor.gmail_connector,
+        "get_message",
+        lambda t, mid: None if mid == "m1" else _parsed_email(provider_message_id=mid),
+    )
+    monkeypatch.setattr(
+        inbox_monitor.inbound_email_verify, "is_auto_reply", lambda headers: False
+    )
+    bridge_email = AsyncMock(
+        return_value={"user_message": {"thread_id": "t1"}, "action": "answer"}
+    )
+    monkeypatch.setattr(inbox_monitor.os_inbound_bridge, "bridge_email", bridge_email)
+    monkeypatch.setattr(
+        inbox_monitor.inbox_triage, "triage_inbound_email", AsyncMock(return_value={})
+    )
+    monkeypatch.setattr(inbox_monitor.gmail_connector, "update_metadata", MagicMock())
+
+    total = await inbox_monitor.run_inbox_poll()
+
+    assert total == 1
+    bridge_email.assert_awaited_once()
+    assert bridge_email.call_args.kwargs["provider_message_id"] == "m2"
+
+
+@pytest.mark.asyncio
+async def test_bridge_email_exception_is_swallowed(monkeypatch):
+    """bridge_email raising for one message must be logged + skipped, never
+    crash the poll loop."""
+    db = _fake_db([{"tenant_id": TENANT_A, "metadata": {"history_id": "100"}}])
+    monkeypatch.setattr(inbox_monitor, "get_service_supabase", lambda: db)
+    monkeypatch.setattr(
+        inbox_monitor.os_inbound_bridge, "is_bridge_enabled", lambda db, t, source: True
+    )
+    monkeypatch.setattr(
+        inbox_monitor.gmail_connector, "list_history", lambda t, since: (["m1"], "200")
+    )
+    monkeypatch.setattr(
+        inbox_monitor.gmail_connector, "get_message", lambda t, mid: _parsed_email()
+    )
+    monkeypatch.setattr(
+        inbox_monitor.inbound_email_verify, "is_auto_reply", lambda headers: False
+    )
+    bridge_email = AsyncMock(side_effect=RuntimeError("bridge down"))
+    monkeypatch.setattr(inbox_monitor.os_inbound_bridge, "bridge_email", bridge_email)
+    triage = AsyncMock()
+    monkeypatch.setattr(inbox_monitor.inbox_triage, "triage_inbound_email", triage)
+    monkeypatch.setattr(inbox_monitor.gmail_connector, "update_metadata", MagicMock())
+
+    total = await inbox_monitor.run_inbox_poll()
+
+    assert total == 0
+    triage.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_bridged_without_os_thread_id_skips_triage(monkeypatch):
+    """A bridged message with no user_message.thread_id (not the
+    skipped_auto_reply case) still counts as ingested but skips triage."""
+    db = _fake_db([{"tenant_id": TENANT_A, "metadata": {"history_id": "100"}}])
+    monkeypatch.setattr(inbox_monitor, "get_service_supabase", lambda: db)
+    monkeypatch.setattr(
+        inbox_monitor.os_inbound_bridge, "is_bridge_enabled", lambda db, t, source: True
+    )
+    monkeypatch.setattr(
+        inbox_monitor.gmail_connector, "list_history", lambda t, since: (["m1"], "200")
+    )
+    monkeypatch.setattr(
+        inbox_monitor.gmail_connector, "get_message", lambda t, mid: _parsed_email()
+    )
+    monkeypatch.setattr(
+        inbox_monitor.inbound_email_verify, "is_auto_reply", lambda headers: False
+    )
+    bridge_email = AsyncMock(return_value={"user_message": {}, "action": "answer"})
+    monkeypatch.setattr(inbox_monitor.os_inbound_bridge, "bridge_email", bridge_email)
+    triage = AsyncMock()
+    monkeypatch.setattr(inbox_monitor.inbox_triage, "triage_inbound_email", triage)
+    monkeypatch.setattr(inbox_monitor.gmail_connector, "update_metadata", MagicMock())
+
+    total = await inbox_monitor.run_inbox_poll()
+
+    assert total == 1
+    triage.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_triage_exception_is_swallowed(monkeypatch):
+    """A raising triage call must be logged and never crash the poll loop;
+    the message still counts as ingested (triage failure != bridge failure)."""
+    db = _fake_db([{"tenant_id": TENANT_A, "metadata": {"history_id": "100"}}])
+    monkeypatch.setattr(inbox_monitor, "get_service_supabase", lambda: db)
+    monkeypatch.setattr(
+        inbox_monitor.os_inbound_bridge, "is_bridge_enabled", lambda db, t, source: True
+    )
+    monkeypatch.setattr(
+        inbox_monitor.gmail_connector, "list_history", lambda t, since: (["m1"], "200")
+    )
+    monkeypatch.setattr(
+        inbox_monitor.gmail_connector, "get_message", lambda t, mid: _parsed_email()
+    )
+    monkeypatch.setattr(
+        inbox_monitor.inbound_email_verify, "is_auto_reply", lambda headers: False
+    )
+    bridge_email = AsyncMock(
+        return_value={"user_message": {"thread_id": "t1"}, "action": "answer"}
+    )
+    monkeypatch.setattr(inbox_monitor.os_inbound_bridge, "bridge_email", bridge_email)
+    triage = AsyncMock(side_effect=RuntimeError("triage down"))
+    monkeypatch.setattr(inbox_monitor.inbox_triage, "triage_inbound_email", triage)
+    monkeypatch.setattr(inbox_monitor.gmail_connector, "update_metadata", MagicMock())
+
+    total = await inbox_monitor.run_inbox_poll()
+
+    assert total == 1
+    triage.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_per_tenant_error_isolated(monkeypatch):
     """Tenant A blows up during list_history; tenant B still gets polled."""
     db = _fake_db(

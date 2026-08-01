@@ -985,6 +985,287 @@ def test_gbp_post_spec_is_well_formed():
 
 
 # ---------------------------------------------------------------------------
+# social.facebook.post -- publish_text_post raw helper (used directly by
+# social_publisher.py, bypassing the Claude-extraction _run path above).
+# ---------------------------------------------------------------------------
+
+
+class _PostStubClient:
+    """Minimal httpx.AsyncClient stand-in for a single canned POST response,
+    or a sequence of responses (one per call) when given a list."""
+
+    def __init__(self, response_or_sequence):
+        self._responses = (
+            list(response_or_sequence)
+            if isinstance(response_or_sequence, (list, tuple))
+            else None
+        )
+        self._single = response_or_sequence if self._responses is None else None
+        self._n = 0
+
+    def __call__(self, *args, **kwargs):
+        return self
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        return False
+
+    async def post(self, url, data=None, json=None, headers=None):
+        if self._responses is not None:
+            resp = self._responses[min(self._n, len(self._responses) - 1)]
+            self._n += 1
+            return resp
+        return self._single
+
+
+def _fake_resp(status_code: int, body: dict | None = None, text: str | None = None):
+    resp = MagicMock()
+    resp.status_code = status_code
+    resp.content = b"1" if body is not None else b""
+    resp.json.return_value = body or {}
+    resp.text = text if text is not None else str(body or {})
+    return resp
+
+
+def test_facebook_publish_text_post_not_connected_returns_connector_error():
+    from backend.services.os_actions import social_facebook as fb_action
+
+    with patch.object(fb_action, "_load_fb_page", return_value=None):
+        post_id, resp = asyncio.run(fb_action.publish_text_post("tenant-1", "Hello!"))
+    assert post_id is None
+    assert resp["stage"] == "connector"
+
+
+def test_facebook_publish_text_post_succeeds_with_link():
+    from backend.services.os_actions import social_facebook as fb_action
+
+    page = {"page_id": "1234", "page_access_token": "tok"}
+    fake_resp = _fake_resp(200, {"id": "1234_999"})
+
+    with patch.object(fb_action, "_load_fb_page", return_value=page), patch.object(
+        fb_action.httpx, "AsyncClient", _PostStubClient(fake_resp)
+    ):
+        post_id, resp = asyncio.run(
+            fb_action.publish_text_post("tenant-1", "Hello!", link="https://x.test/link")
+        )
+    assert post_id == "1234_999"
+    assert resp["id"] == "1234_999"
+
+
+def test_facebook_publish_text_post_http_exception_returns_error():
+    from backend.services.os_actions import social_facebook as fb_action
+
+    page = {"page_id": "1234", "page_access_token": "tok"}
+
+    class _BoomClient:
+        def __call__(self, *a, **kw):
+            return self
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def post(self, *a, **kw):
+            raise RuntimeError("network exploded")
+
+    with patch.object(fb_action, "_load_fb_page", return_value=page), patch.object(
+        fb_action.httpx, "AsyncClient", _BoomClient()
+    ):
+        post_id, resp = asyncio.run(fb_action.publish_text_post("tenant-1", "Hello!"))
+    assert post_id is None
+    assert resp["stage"] == "fb_api"
+
+
+def test_facebook_publish_text_post_records_4xx_as_failure():
+    from backend.services.os_actions import social_facebook as fb_action
+
+    page = {"page_id": "1234", "page_access_token": "tok"}
+    fake_resp = _fake_resp(400, text="bad token")
+
+    with patch.object(fb_action, "_load_fb_page", return_value=page), patch.object(
+        fb_action.httpx, "AsyncClient", _PostStubClient(fake_resp)
+    ):
+        post_id, resp = asyncio.run(fb_action.publish_text_post("tenant-1", "Hello!"))
+    assert post_id is None
+    assert resp["status_code"] == 400
+
+
+# ---------------------------------------------------------------------------
+# social.instagram.post -- publish_image_post raw helper (two-step Graph
+# call: create container, then publish it).
+# ---------------------------------------------------------------------------
+
+
+def test_instagram_publish_image_post_not_connected_returns_connector_error():
+    from backend.services.os_actions import social_instagram as ig_action
+
+    with patch.object(ig_action, "_load_ig_account", return_value=None):
+        media_id, resp = asyncio.run(
+            ig_action.publish_image_post("tenant-1", "https://cdn.test/x.png", "caption")
+        )
+    assert media_id is None
+    assert resp["stage"] == "connector"
+
+
+def test_instagram_publish_image_post_create_container_fails():
+    from backend.services.os_actions import social_instagram as ig_action
+
+    account = {"ig_user_id": "ig1", "access_token": "tok"}
+    fake_resp = _fake_resp(400, {"error": "bad image"}, text="bad image")
+
+    with patch.object(ig_action, "_load_ig_account", return_value=account), patch.object(
+        ig_action.httpx, "AsyncClient", _PostStubClient(fake_resp)
+    ):
+        media_id, resp = asyncio.run(
+            ig_action.publish_image_post("tenant-1", "https://cdn.test/x.png", "caption")
+        )
+    assert media_id is None
+    assert resp["stage"] == "ig_create_container"
+
+
+def test_instagram_publish_image_post_publish_step_fails():
+    from backend.services.os_actions import social_instagram as ig_action
+
+    account = {"ig_user_id": "ig1", "access_token": "tok"}
+    create_resp = _fake_resp(200, {"id": "creation-1"})
+    publish_resp = _fake_resp(500, {"error": "server error"}, text="server error")
+
+    with patch.object(ig_action, "_load_ig_account", return_value=account), patch.object(
+        ig_action.httpx, "AsyncClient", _PostStubClient([create_resp, publish_resp])
+    ):
+        media_id, resp = asyncio.run(
+            ig_action.publish_image_post("tenant-1", "https://cdn.test/x.png", "caption")
+        )
+    assert media_id is None
+    assert resp["stage"] == "ig_publish"
+
+
+def test_instagram_publish_image_post_http_exception_returns_error():
+    from backend.services.os_actions import social_instagram as ig_action
+
+    account = {"ig_user_id": "ig1", "access_token": "tok"}
+
+    class _BoomClient:
+        def __call__(self, *a, **kw):
+            return self
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def post(self, *a, **kw):
+            raise RuntimeError("network exploded")
+
+    with patch.object(ig_action, "_load_ig_account", return_value=account), patch.object(
+        ig_action.httpx, "AsyncClient", _BoomClient()
+    ):
+        media_id, resp = asyncio.run(
+            ig_action.publish_image_post("tenant-1", "https://cdn.test/x.png", "caption")
+        )
+    assert media_id is None
+    assert resp["stage"] == "ig_api"
+
+
+def test_instagram_publish_image_post_succeeds():
+    from backend.services.os_actions import social_instagram as ig_action
+
+    account = {"ig_user_id": "ig1", "access_token": "tok"}
+    create_resp = _fake_resp(200, {"id": "creation-1"})
+    publish_resp = _fake_resp(200, {"id": "media-99"})
+
+    with patch.object(ig_action, "_load_ig_account", return_value=account), patch.object(
+        ig_action.httpx, "AsyncClient", _PostStubClient([create_resp, publish_resp])
+    ):
+        media_id, resp = asyncio.run(
+            ig_action.publish_image_post("tenant-1", "https://cdn.test/x.png", "caption")
+        )
+    assert media_id == "media-99"
+    assert resp["id"] == "media-99"
+
+
+# ---------------------------------------------------------------------------
+# gbp.post -- publish_post raw helper (used directly by social_publisher.py).
+# ---------------------------------------------------------------------------
+
+
+def test_gbp_publish_post_not_connected_returns_connector_error():
+    from backend.services.os_actions import gbp as gbp_action
+
+    with patch.object(gbp_action, "_load_gbp", return_value=None):
+        name, resp = asyncio.run(gbp_action.publish_post("tenant-1", "Sale today!"))
+    assert name is None
+    assert resp["stage"] == "connector"
+
+
+def test_gbp_publish_post_succeeds_normalizes_bad_topic_type_and_sets_cta():
+    from backend.services.os_actions import gbp as gbp_action
+
+    creds = {"access_token": "tok", "account_id": "acct1", "location_id": "loc1"}
+    fake_resp = _fake_resp(
+        200, {"name": "accounts/acct1/locations/loc1/localPosts/99"}
+    )
+
+    with patch.object(gbp_action, "_load_gbp", return_value=creds), patch.object(
+        gbp_action.httpx, "AsyncClient", _PostStubClient(fake_resp)
+    ):
+        name, resp = asyncio.run(
+            gbp_action.publish_post(
+                "tenant-1",
+                "Sale today!",
+                topic_type="NOT_A_REAL_TYPE",
+                cta_url="https://x.test/sale",
+            )
+        )
+    assert name == "accounts/acct1/locations/loc1/localPosts/99"
+
+
+def test_gbp_publish_post_http_exception_returns_gbp_api_error():
+    from backend.services.os_actions import gbp as gbp_action
+
+    creds = {"access_token": "tok", "account_id": "acct1", "location_id": "loc1"}
+
+    class _BoomClient:
+        def __call__(self, *a, **kw):
+            return self
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def post(self, *a, **kw):
+            raise RuntimeError("network exploded")
+
+    with patch.object(gbp_action, "_load_gbp", return_value=creds), patch.object(
+        gbp_action.httpx, "AsyncClient", _BoomClient()
+    ):
+        name, resp = asyncio.run(gbp_action.publish_post("tenant-1", "Sale today!"))
+    assert name is None
+    assert resp["stage"] == "gbp_api"
+
+
+def test_gbp_publish_post_records_4xx_as_failure():
+    from backend.services.os_actions import gbp as gbp_action
+
+    creds = {"access_token": "tok", "account_id": "acct1", "location_id": "loc1"}
+    fake_resp = _fake_resp(403, text="forbidden")
+
+    with patch.object(gbp_action, "_load_gbp", return_value=creds), patch.object(
+        gbp_action.httpx, "AsyncClient", _PostStubClient(fake_resp)
+    ):
+        name, resp = asyncio.run(gbp_action.publish_post("tenant-1", "Sale today!"))
+    assert name is None
+    assert resp["status_code"] == 403
+
+
+# ---------------------------------------------------------------------------
 # End-to-end loop: approve deliverable -> run_action -> handler -> audit row
 # ---------------------------------------------------------------------------
 

@@ -60,10 +60,16 @@ class _FakeTable:
 
     def execute(self):
         if self._op == "select":
+            if self._state.get("raise_select"):
+                raise RuntimeError("fake db select raised")
             return SimpleNamespace(data=self._state.get("select_data", []))
         if self._op == "insert":
+            if self._state.get("raise_insert"):
+                raise RuntimeError("fake db insert raised")
             return SimpleNamespace(data=self._state.get("insert_return", [{}]))
         if self._op == "update":
+            if self._state.get("raise_update"):
+                raise RuntimeError("fake db update raised")
             return SimpleNamespace(data=self._state.get("update_return", []))
         return SimpleNamespace(data=[])
 
@@ -373,6 +379,226 @@ class TestHandleInboundSms:
 
         assert result == sms_agent._CLAUDE_ERROR_FALLBACK
 
+    def test_conversation_lookup_and_insert_raise_falls_back_to_stable_session(
+        self, monkeypatch
+    ):
+        """Both the select and the insert on conversations blow up -- the
+        function must still fall back to the stable session_id/tags shape
+        and complete the turn instead of crashing."""
+        tables = _base_tables(conversations={"select_data": [], "raise_select": True, "raise_insert": True})
+        db = FakeDB(tables)
+        _patch_common(monkeypatch, claude_text="We're open weekdays 9-5.")
+        monkeypatch.setattr(sms_agent.sms_compliance, "is_suppressed", lambda *a, **k: False)
+        monkeypatch.setattr(
+            sms_agent.sms_rate_limiter, "check_sms_rate_limit", lambda *a, **k: True
+        )
+        monkeypatch.setattr(sms_agent, "_save_chat_messages", lambda *a, **k: None)
+
+        result = _run(
+            sms_agent.handle_inbound_sms(
+                db,
+                tenant=TENANT,
+                from_number=FROM_NUMBER,
+                to_number=TO_NUMBER,
+                body="What are your hours?",
+                provider_message_id="SM10",
+            )
+        )
+
+        assert result == "We're open weekdays 9-5."
+
+    def test_handoff_tag_update_exception_swallowed_ack_still_returned(self, monkeypatch):
+        """conversations.update() raising while tagging handoff must not
+        break the handoff acknowledgement reply."""
+        tables = _base_tables(conversations={"select_data": [], "raise_update": True})
+        db = FakeDB(tables)
+        _patch_common(
+            monkeypatch,
+            claude_text="Let me get a team member for you.\nHANDOFF_REQUESTED",
+        )
+        monkeypatch.setattr(sms_agent.sms_compliance, "is_suppressed", lambda *a, **k: False)
+        monkeypatch.setattr(
+            sms_agent.sms_rate_limiter, "check_sms_rate_limit", lambda *a, **k: True
+        )
+        monkeypatch.setattr(sms_agent, "_save_chat_messages", lambda *a, **k: None)
+        _install_fake_escalations(monkeypatch)
+
+        result = _run(
+            sms_agent.handle_inbound_sms(
+                db,
+                tenant=TENANT,
+                from_number=FROM_NUMBER,
+                to_number=TO_NUMBER,
+                body="I need to talk to a real person",
+                provider_message_id="SM11",
+            )
+        )
+
+        assert result == sms_agent._HANDOFF_ACK
+
+    def test_lead_lookup_finds_existing_lead_skips_insert(self, monkeypatch):
+        tables = _base_tables(
+            leads={"select_data": [{"id": "lead-99", "name": "Bob", "phone": FROM_NUMBER}]}
+        )
+        db = FakeDB(tables)
+        _patch_common(monkeypatch)
+        monkeypatch.setattr(sms_agent.sms_compliance, "is_suppressed", lambda *a, **k: False)
+        monkeypatch.setattr(
+            sms_agent.sms_rate_limiter, "check_sms_rate_limit", lambda *a, **k: True
+        )
+        monkeypatch.setattr(sms_agent, "_save_chat_messages", lambda *a, **k: None)
+
+        result = _run(
+            sms_agent.handle_inbound_sms(
+                db,
+                tenant=TENANT,
+                from_number=FROM_NUMBER,
+                to_number=TO_NUMBER,
+                body="Still there?",
+                provider_message_id="SM12",
+            )
+        )
+
+        assert result is not None
+        assert not tables["leads"].get("inserted")
+
+    def test_lead_lookup_exception_returns_none_no_insert_attempted(self, monkeypatch):
+        tables = _base_tables(leads={"select_data": [], "raise_select": True})
+        db = FakeDB(tables)
+        _patch_common(monkeypatch)
+        monkeypatch.setattr(sms_agent.sms_compliance, "is_suppressed", lambda *a, **k: False)
+        monkeypatch.setattr(
+            sms_agent.sms_rate_limiter, "check_sms_rate_limit", lambda *a, **k: True
+        )
+        monkeypatch.setattr(sms_agent, "_save_chat_messages", lambda *a, **k: None)
+
+        result = _run(
+            sms_agent.handle_inbound_sms(
+                db,
+                tenant=TENANT,
+                from_number=FROM_NUMBER,
+                to_number=TO_NUMBER,
+                body="Still there?",
+                provider_message_id="SM13",
+            )
+        )
+
+        # Lead mapping is best-effort -- the reply must still go out.
+        assert result is not None
+        assert not tables["leads"].get("inserted")
+
+    def test_lead_insert_exception_still_replies(self, monkeypatch):
+        tables = _base_tables(leads={"select_data": [], "raise_insert": True})
+        db = FakeDB(tables)
+        _patch_common(monkeypatch)
+        monkeypatch.setattr(sms_agent.sms_compliance, "is_suppressed", lambda *a, **k: False)
+        monkeypatch.setattr(
+            sms_agent.sms_rate_limiter, "check_sms_rate_limit", lambda *a, **k: True
+        )
+        monkeypatch.setattr(sms_agent, "_save_chat_messages", lambda *a, **k: None)
+
+        result = _run(
+            sms_agent.handle_inbound_sms(
+                db,
+                tenant=TENANT,
+                from_number=FROM_NUMBER,
+                to_number=TO_NUMBER,
+                body="Still there?",
+                provider_message_id="SM14",
+            )
+        )
+
+        assert result is not None
+
+    def test_widget_config_faq_hours_lookup_exceptions_still_replies(self, monkeypatch):
+        """Grounding loads are all best-effort -- a blown-up widget_configs,
+        faq_entries, or business_hours lookup must never block the reply."""
+        tables = _base_tables(
+            widget_configs={"select_data": [], "raise_select": True},
+            faq_entries={"select_data": [], "raise_select": True},
+            business_hours={"select_data": [], "raise_select": True},
+        )
+        db = FakeDB(tables)
+        _patch_common(monkeypatch, claude_text="We can help with that!")
+        monkeypatch.setattr(sms_agent.sms_compliance, "is_suppressed", lambda *a, **k: False)
+        monkeypatch.setattr(
+            sms_agent.sms_rate_limiter, "check_sms_rate_limit", lambda *a, **k: True
+        )
+        monkeypatch.setattr(sms_agent, "_save_chat_messages", lambda *a, **k: None)
+
+        result = _run(
+            sms_agent.handle_inbound_sms(
+                db,
+                tenant=TENANT,
+                from_number=FROM_NUMBER,
+                to_number=TO_NUMBER,
+                body="Do you do custom orders?",
+                provider_message_id="SM15",
+            )
+        )
+
+        assert result == "We can help with that!"
+
+    def test_kb_article_retrieval_exception_still_replies(self, monkeypatch):
+        db = FakeDB(_base_tables())
+
+        async def _fake_kb_raises(*_a, **_kw):
+            raise RuntimeError("kb search exploded")
+
+        monkeypatch.setattr(sms_agent, "_query_kb_articles", _fake_kb_raises)
+
+        async def _fake_claude(*_a, **_kw):
+            return SimpleNamespace(text="Sure, happy to help!")
+
+        monkeypatch.setattr(sms_agent, "call_claude_messages", _fake_claude)
+        monkeypatch.setattr(sms_agent.sms_compliance, "is_suppressed", lambda *a, **k: False)
+        monkeypatch.setattr(
+            sms_agent.sms_rate_limiter, "check_sms_rate_limit", lambda *a, **k: True
+        )
+        monkeypatch.setattr(sms_agent, "_save_chat_messages", lambda *a, **k: None)
+
+        result = _run(
+            sms_agent.handle_inbound_sms(
+                db,
+                tenant=TENANT,
+                from_number=FROM_NUMBER,
+                to_number=TO_NUMBER,
+                body="What's on the menu?",
+                provider_message_id="SM16",
+            )
+        )
+
+        assert result == "Sure, happy to help!"
+
+    def test_escalation_create_raising_does_not_break_handoff_ack(self, monkeypatch):
+        db = FakeDB(_base_tables())
+        _patch_common(
+            monkeypatch,
+            claude_text="Connecting you with a team member.\nHANDOFF_REQUESTED",
+        )
+        monkeypatch.setattr(sms_agent.sms_compliance, "is_suppressed", lambda *a, **k: False)
+        monkeypatch.setattr(
+            sms_agent.sms_rate_limiter, "check_sms_rate_limit", lambda *a, **k: True
+        )
+        monkeypatch.setattr(sms_agent, "_save_chat_messages", lambda *a, **k: None)
+
+        fake_mod = types.ModuleType("backend.services.escalations")
+        fake_mod.create_escalation = MagicMock(side_effect=RuntimeError("escalations down"))
+        monkeypatch.setitem(sys.modules, "backend.services.escalations", fake_mod)
+
+        result = _run(
+            sms_agent.handle_inbound_sms(
+                db,
+                tenant=TENANT,
+                from_number=FROM_NUMBER,
+                to_number=TO_NUMBER,
+                body="Get me a human please",
+                provider_message_id="SM17",
+            )
+        )
+
+        assert result == sms_agent._HANDOFF_ACK
+
 
 def _run(coro):
     """Run an async sms_agent call synchronously (no running loop in tests)."""
@@ -383,6 +609,85 @@ def _run(coro):
         return loop.run_until_complete(coro)
     finally:
         loop.close()
+
+
+# ---------------------------------------------------------------------------
+# Unit tests -- sms_agent.send_sms_agent_reply (BYO Twilio vs platform pool
+# provider dispatch order)
+# ---------------------------------------------------------------------------
+
+
+class TestSendSmsAgentReply:
+    def test_byo_connected_and_send_succeeds_skips_platform_send(self, monkeypatch):
+        monkeypatch.setattr(sms_agent.twilio_tenant, "is_connected", lambda *_a: True)
+        byo_send = AsyncMock(return_value={"success": True})
+        monkeypatch.setattr(sms_agent.twilio_tenant, "send_sms_via_tenant", byo_send)
+        platform_send = AsyncMock(return_value=True)
+        monkeypatch.setattr(sms_agent, "send_sms", platform_send)
+
+        _run(sms_agent.send_sms_agent_reply(TENANT["id"], FROM_NUMBER, "hi there"))
+
+        byo_send.assert_awaited_once_with(
+            tenant_id=TENANT["id"], to=FROM_NUMBER, body="hi there"
+        )
+        platform_send.assert_not_called()
+
+    def test_byo_connected_but_send_fails_falls_back_to_platform(self, monkeypatch):
+        monkeypatch.setattr(sms_agent.twilio_tenant, "is_connected", lambda *_a: True)
+        byo_send = AsyncMock(return_value={"success": False, "detail": "no number"})
+        monkeypatch.setattr(sms_agent.twilio_tenant, "send_sms_via_tenant", byo_send)
+        platform_send = AsyncMock(return_value=True)
+        monkeypatch.setattr(sms_agent, "send_sms", platform_send)
+
+        _run(sms_agent.send_sms_agent_reply(TENANT["id"], FROM_NUMBER, "hi there"))
+
+        byo_send.assert_awaited_once()
+        platform_send.assert_awaited_once_with(
+            to=FROM_NUMBER, body="hi there", tenant_id=TENANT["id"]
+        )
+
+    def test_byo_dispatch_raises_falls_back_to_platform(self, monkeypatch):
+        monkeypatch.setattr(sms_agent.twilio_tenant, "is_connected", lambda *_a: True)
+
+        async def _boom(*_a, **_kw):
+            raise RuntimeError("byo dispatch exploded")
+
+        monkeypatch.setattr(sms_agent.twilio_tenant, "send_sms_via_tenant", _boom)
+        platform_send = AsyncMock(return_value=True)
+        monkeypatch.setattr(sms_agent, "send_sms", platform_send)
+
+        _run(sms_agent.send_sms_agent_reply(TENANT["id"], FROM_NUMBER, "hi there"))
+
+        platform_send.assert_awaited_once()
+
+    def test_byo_not_connected_uses_platform_send_directly(self, monkeypatch):
+        monkeypatch.setattr(sms_agent.twilio_tenant, "is_connected", lambda *_a: False)
+        byo_send = AsyncMock()
+        monkeypatch.setattr(sms_agent.twilio_tenant, "send_sms_via_tenant", byo_send)
+        platform_send = AsyncMock(return_value=True)
+        monkeypatch.setattr(sms_agent, "send_sms", platform_send)
+
+        _run(sms_agent.send_sms_agent_reply(TENANT["id"], FROM_NUMBER, "hi there"))
+
+        byo_send.assert_not_called()
+        platform_send.assert_awaited_once_with(
+            to=FROM_NUMBER, body="hi there", tenant_id=TENANT["id"]
+        )
+
+    def test_platform_send_failure_does_not_raise(self, monkeypatch):
+        """A False from the platform send_sms fallback (both providers
+        exhausted) must be logged, never raised -- caller never awaits a
+        return value from this function."""
+        monkeypatch.setattr(sms_agent.twilio_tenant, "is_connected", lambda *_a: False)
+        platform_send = AsyncMock(return_value=False)
+        monkeypatch.setattr(sms_agent, "send_sms", platform_send)
+
+        result = _run(
+            sms_agent.send_sms_agent_reply(TENANT["id"], FROM_NUMBER, "hi there")
+        )
+
+        assert result is None
+        platform_send.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------

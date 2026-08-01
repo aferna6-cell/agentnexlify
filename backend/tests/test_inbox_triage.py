@@ -303,6 +303,69 @@ async def test_draft_escalate_reason_escalates_instead_of_drafting(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_persist_deliverable_failure_escalates(monkeypatch):
+    """os_agent_runs insert raising must escalate instead of crashing."""
+    db = _std_db()
+    original_table_side_effect = db.table.side_effect
+
+    def table_side_effect(name):
+        if name == "os_agent_runs":
+            chain = MagicMock()
+            chain.insert.side_effect = RuntimeError("db insert failed")
+            return chain
+        return original_table_side_effect(name)
+
+    db.table.side_effect = table_side_effect
+
+    monkeypatch.setattr(
+        inbox_triage,
+        "call_claude_messages",
+        AsyncMock(return_value=_classify_result("answerable", confidence=0.95)),
+    )
+    monkeypatch.setattr(
+        inbox_triage,
+        "_draft_reply",
+        AsyncMock(
+            return_value={"answer": "hi", "confidence": "high", "escalate_reason": None}
+        ),
+    )
+    monkeypatch.setattr(
+        inbox_triage, "resolve_deliverable_status", MagicMock(return_value="approved")
+    )
+    escalate_mock = MagicMock(return_value={"id": "esc-9"})
+    monkeypatch.setattr(inbox_triage, "_create_escalation_safe", escalate_mock)
+
+    result = await inbox_triage.triage_inbound_email(
+        db, tenant=TENANT_ID, parsed_email=_parsed_email(), os_thread_id=OS_THREAD_ID
+    )
+
+    assert result["action"] == "escalated"
+    assert result["escalation"] == {"id": "esc-9"}
+    escalate_mock.assert_called_once()
+    kwargs = escalate_mock.call_args.kwargs
+    assert kwargs["reason"] == "triage_deliverable_persist_failed"
+
+
+@pytest.mark.asyncio
+async def test_classify_invalid_category_defaults_to_escalate(monkeypatch):
+    db = _std_db()
+    monkeypatch.setattr(
+        inbox_triage,
+        "call_claude_messages",
+        AsyncMock(return_value=_classify_result("not_a_real_category")),
+    )
+    escalate_mock = MagicMock(return_value={"id": "esc-x"})
+    monkeypatch.setattr(inbox_triage, "_create_escalation_safe", escalate_mock)
+
+    result = await inbox_triage.triage_inbound_email(
+        db, tenant=TENANT_ID, parsed_email=_parsed_email(), os_thread_id=OS_THREAD_ID
+    )
+
+    assert result["category"] == "escalate"
+    escalate_mock.assert_called_once()
+
+
+@pytest.mark.asyncio
 async def test_draft_failure_escalates(monkeypatch):
     db = _std_db()
     monkeypatch.setattr(
@@ -382,3 +445,123 @@ class TestEscalationWrapper:
                 reason="test",
             )
         assert result is None
+
+
+# ---------------------------------------------------------------------------
+# _draft_reply — direct unit tests (always mocked out in the flows above)
+# ---------------------------------------------------------------------------
+
+
+class TestDraftReply:
+    @pytest.mark.asyncio
+    async def test_builds_prompt_and_parses_response(self):
+        build_prompt = MagicMock(return_value="PROMPT TEXT")
+        call_mock = AsyncMock(return_value=_draft_result())
+        parse_mock = MagicMock(
+            return_value={"answer": "hi", "confidence": "high", "escalate_reason": None}
+        )
+        with patch.object(
+            inbox_triage.support_agent, "build_support_prompt", build_prompt
+        ), patch.object(inbox_triage, "call_claude_messages", call_mock), patch.object(
+            inbox_triage.support_agent, "parse_support_reply", parse_mock
+        ):
+            result = await inbox_triage._draft_reply(TENANT_ID, _parsed_email())
+
+        build_prompt.assert_called_once_with(
+            TENANT_ID, "Hey, are you open Saturdays?"
+        )
+        call_mock.assert_awaited_once()
+        parse_mock.assert_called_once_with(call_mock.return_value.text)
+        assert result == {"answer": "hi", "confidence": "high", "escalate_reason": None}
+
+    @pytest.mark.asyncio
+    async def test_falls_back_to_subject_when_body_blank(self):
+        build_prompt = MagicMock(return_value="PROMPT")
+        call_mock = AsyncMock(return_value=_draft_result())
+        with patch.object(
+            inbox_triage.support_agent, "build_support_prompt", build_prompt
+        ), patch.object(inbox_triage, "call_claude_messages", call_mock), patch.object(
+            inbox_triage.support_agent, "parse_support_reply", MagicMock(return_value={})
+        ):
+            await inbox_triage._draft_reply(
+                TENANT_ID, _parsed_email(body_text="   ", subject="Pricing?")
+            )
+
+        question = build_prompt.call_args.args[1]
+        assert question == "(no body) Subject: Pricing?"
+
+
+# ---------------------------------------------------------------------------
+# _confidence_to_float
+# ---------------------------------------------------------------------------
+
+
+class TestConfidenceToFloat:
+    def test_numeric_clamped_to_0_1(self):
+        assert inbox_triage._confidence_to_float(0.5) == 0.5
+        assert inbox_triage._confidence_to_float(5) == 1.0
+        assert inbox_triage._confidence_to_float(-5) == 0.0
+
+    def test_string_levels(self):
+        assert inbox_triage._confidence_to_float("high") == 0.9
+        assert inbox_triage._confidence_to_float("Medium") == 0.6
+        assert inbox_triage._confidence_to_float("low") == 0.3
+
+    def test_unrecognized_value_defaults_to_half(self):
+        assert inbox_triage._confidence_to_float("garbage") == 0.5
+        assert inbox_triage._confidence_to_float(None) == 0.5
+
+
+# ---------------------------------------------------------------------------
+# _reply_subject
+# ---------------------------------------------------------------------------
+
+
+class TestReplySubject:
+    def test_blank_subject_returns_generic_reply(self):
+        assert inbox_triage._reply_subject("   ") == "Re: your message"
+
+    def test_already_prefixed_subject_is_unchanged(self):
+        assert inbox_triage._reply_subject("Re: Pricing") == "Re: Pricing"
+
+    def test_normal_subject_gets_prefixed(self):
+        assert inbox_triage._reply_subject("Pricing question") == "Re: Pricing question"
+
+
+# ---------------------------------------------------------------------------
+# _body_to_html
+# ---------------------------------------------------------------------------
+
+
+class TestBodyToHtml:
+    def test_blank_body_returns_empty_paragraph(self):
+        assert inbox_triage._body_to_html("") == "<p></p>"
+        # Whitespace-only body has no non-blank paragraph after splitting on
+        # "\n\n", so it hits the same fallback branch — original (unstripped)
+        # body is escaped into the single <p> tag.
+        assert inbox_triage._body_to_html("   ") == "<p>   </p>"
+
+    def test_multi_paragraph_body_wraps_each_paragraph(self):
+        html = inbox_triage._body_to_html("Hi there.\n\nThanks!")
+        assert html == "<p>Hi there.</p><p>Thanks!</p>"
+
+
+# ---------------------------------------------------------------------------
+# _tag_thread / _log_action_run — best-effort exception swallowing
+# ---------------------------------------------------------------------------
+
+
+class TestTagThreadExceptionSwallowed:
+    def test_db_failure_does_not_raise(self):
+        db = MagicMock()
+        db.table.side_effect = RuntimeError("db down")
+        inbox_triage._tag_thread(db, TENANT_ID, OS_THREAD_ID, "spam")
+
+
+class TestLogActionRunExceptionSwallowed:
+    def test_db_failure_does_not_raise(self):
+        db = MagicMock()
+        db.table.side_effect = RuntimeError("db down")
+        inbox_triage._log_action_run(
+            db, TENANT_ID, "deliv-1", {"success": True, "detail": "sent"}
+        )

@@ -6,8 +6,8 @@ same public callback route). Kept as its own router (not merged into
 ``integrations.py``) because Gmail is a distinct provider row + distinct
 scopes + its own registered redirect URI.
 
-Deliberately NOT registered in ``backend/main.py`` yet — wiring belongs to
-the orchestrator once the inbox-monitor automation tier lands alongside it.
+Registered in ``backend/main.py`` alongside the inbox-monitor automation
+tier (``run_inbox_poll`` on the 5-min tick).
 """
 
 import logging
