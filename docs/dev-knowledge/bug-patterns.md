@@ -4,6 +4,30 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### connector_awareness zapier status queried tenant_api_keys with wrong column (Phase 1b connector registry, 2026-08-01)
+
+`backend/services/connector_awareness.connection_status()` queried
+`tenant_api_keys` with `.eq("tenant_id", client_id)`. The table's actual
+tenant-scope column is `client_id` (migrations 110/117; confirmed against
+`backend/services/api_key_auth.py` and `backend/routers/zapier.py`, both of
+which correctly use `client_id`). Every zapier connector-status lookup in
+Agent OS chat silently reported "not connected" even for tenants with a
+live, non-revoked key — the query always returned zero rows regardless of
+data. Same failure class as the leads `client_id`/`tenant_id` mixups, just
+on a different table (`tenant_api_keys` is one of the few non-leads tables
+that uses `client_id`).
+
+**Fix:** `backend/services/connector_registry.py` (new unified registry
+that `connector_awareness.py` now delegates to) queries
+`.eq("client_id", client_id)` on `tenant_api_keys`. Regression test:
+`backend/tests/test_connector_registry.py::TestConnectionStatus::test_zapier_uses_client_id_column_not_tenant_id`.
+
+**Prevention:** before writing `.eq("tenant_id", ...)` or
+`.eq("client_id", ...)` on any table, check the table's actual migration
+file — don't assume the column name from a nearby table's convention.
+
+---
+
 ### Booking CTA rendered as unclickable plain text in widget chat (funnel audit)
 **Date:** 2026-07-23
 **Symptom:** Zero real bookings ever, platform-wide. The widget AI shared the booking-page URL as a bare string per `booking_prompt.py`; the widget renderer `_inlineMd()` only linkifies markdown `[text](url)`, so the only booking CTA the AI could offer rendered as dead text. MTOptions: 10 leads / 0 bookings with everything "configured correctly".

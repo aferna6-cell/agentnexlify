@@ -15,152 +15,63 @@ result feeds two places in ``os_thread_runner.process_user_turn``:
    message with the connect path is posted after the engine reply - once
    per connector per thread (dedup by path string in prior messages).
 
-Schema notes (schema-discipline.md):
+Phase 1b refactor (2026-08-01): this module is now a thin adapter over
+``backend/services/connector_registry.py``, the single source of truth for
+the connector catalog and status resolution across the platform (dashboard
+integrations, ``GET /api/v1/connectors/status``, and this chat-awareness
+path). This module's public functions keep their exact pre-refactor
+signatures and behavior - ``os_thread_runner`` and ``test_connector_awareness.py``
+depend on them unchanged - scoped to the five connectors this feature has
+always covered. New connectors, and the OAuth in-chat deep-link, are wired
+through the registry directly (``connector_registry.get_registry`` /
+``is_oauth_connector``) - see ``backend/routers/connectors.py`` and
+``os_thread_runner._post_connect_prompt``.
+
+Schema notes (schema-discipline.md) - full, current version lives in
+connector_registry.py. Kept here for a quick read of what this feature
+covers:
 - ``integrations``        -> tenant_id  (google_calendar / m365_calendar / hubspot)
 - ``tenant_integrations`` -> client_id  (drive)
-- ``tenant_api_keys``     -> tenant_id  (zapier)
+- ``tenant_api_keys``     -> client_id  (zapier)
 - ``tenants.twilio_number``            (dedicated AI phone line)
 """
 
 import logging
-import re
+
+from backend.services import connector_registry
 
 logger = logging.getLogger(__name__)
 
-# Connector registry. Patterns are deliberately high-precision: they must
-# name the product or the platform feature, never a bare generic word - a
-# false prompt ("connect your calendar" after someone merely said the word
-# "call") erodes trust in the agent.
-CONNECTORS: dict = {
-    "calendar": {
-        "label": "Google or Outlook calendar",
-        "path": "/dashboard/integrations",
-        "patterns": (
-            r"\bgoogle calendar\b",
-            r"\boutlook calendar\b",
-            r"\b(sync|connect|link|check|pull from|add to)\b[^.?!]{0,30}\bcalendar\b",
-            r"\bcalendar\b[^.?!]{0,20}\b(sync|synced|integration)\b",
-        ),
-    },
-    "hubspot": {
-        "label": "HubSpot",
-        "path": "/dashboard/integrations",
-        "patterns": (
-            r"\bhubspot\b",
-            r"\b(push|sync|send|export)\b[^.?!]{0,30}\bcrm\b",
-            r"\bcrm\b[^.?!]{0,20}\b(sync|integration|connect)\b",
-        ),
-    },
-    "drive": {
-        "label": "Google Drive",
-        "path": "/dashboard/knowledge",
-        "patterns": (
-            r"\bgoogle drive\b",
-            r"\bdrive folder\b",
-            r"\b(sync|connect|link)\b[^.?!]{0,20}\bdrive\b",
-        ),
-    },
-    "phone": {
-        "label": "AI phone line",
-        "path": "/dashboard/settings",
-        "patterns": (
-            r"\banswer\b[^.?!]{0,20}\b(calls|phone)\b",
-            r"\b(ai|virtual) receptionist\b",
-            r"\bphone (assistant|agent|line|number for the ai)\b",
-            r"\bvoice (assistant|agent|line)\b",
-            r"\bmissed calls?\b",
-        ),
-    },
-    "zapier": {
-        "label": "Zapier",
-        "path": "/dashboard/integrations",
-        "patterns": (r"\bzapier\b", r"\bzaps?\b"),
-    },
-}
+# The five connectors this chat-awareness feature has always covered, in
+# their historical declared order (inference results keep this ordering).
+_LEGACY_KEYS = ("calendar", "hubspot", "drive", "phone", "zapier")
 
-_COMPILED = {
-    key: tuple(re.compile(p, re.IGNORECASE) for p in cfg["patterns"])
-    for key, cfg in CONNECTORS.items()
+# {key: {"label": ..., "connect_path": ..., ...}} sourced live from the
+# registry so the two catalogs can never drift apart.
+_LEGACY = {
+    entry["key"]: entry
+    for entry in connector_registry.get_registry()
+    if entry["key"] in _LEGACY_KEYS
 }
 
 
 def infer_needed_connectors(text: str) -> list[str]:
-    """Connector keys the message appears to need. Deterministic, ordered."""
-    if not text:
-        return []
-    return [
-        key
-        for key, patterns in _COMPILED.items()
-        if any(p.search(text) for p in patterns)
-    ]
+    """Connector keys the message appears to need. Deterministic, ordered.
+
+    Scoped to the five legacy chat-awareness connectors - the registry now
+    covers more (gmail/instagram/facebook/twilio_byo), but this function's
+    contract (and its callers' dedup/prompt copy) predates them.
+    """
+    full = connector_registry.infer_needed_connectors(text)
+    return [key for key in full if key in _LEGACY_KEYS]
 
 
 def connection_status(db, client_id: str) -> dict:
     """Which connectors are live for this tenant. Best-effort per connector -
     a failed lookup reports False (prompting to connect an already-connected
     tool is annoying but harmless; the connect page shows the true state)."""
-    status = {key: False for key in CONNECTORS}
-
-    try:
-        rows = (
-            db.table("integrations")
-            .select("provider")
-            .eq("tenant_id", client_id)
-            .execute()
-        ).data or []
-        providers = {r.get("provider") for r in rows}
-        status["calendar"] = bool(providers & {"google_calendar", "m365_calendar"})
-        status["hubspot"] = "hubspot" in providers
-    except Exception:
-        logger.warning(
-            "connector_awareness: integrations lookup failed for %s",
-            client_id,
-            exc_info=True,
-        )
-
-    try:
-        rows = (
-            db.table("tenant_integrations")
-            .select("provider, enabled")
-            .eq("client_id", client_id)
-            .eq("provider", "drive")
-            .execute()
-        ).data or []
-        status["drive"] = any(r.get("enabled") for r in rows)
-    except Exception:
-        logger.warning(
-            "connector_awareness: drive lookup failed for %s", client_id, exc_info=True
-        )
-
-    try:
-        rows = (
-            db.table("tenants")
-            .select("twilio_number")
-            .eq("id", client_id)
-            .limit(1)
-            .execute()
-        ).data or []
-        status["phone"] = bool(rows and rows[0].get("twilio_number"))
-    except Exception:
-        logger.warning(
-            "connector_awareness: phone lookup failed for %s", client_id, exc_info=True
-        )
-
-    try:
-        rows = (
-            db.table("tenant_api_keys")
-            .select("id")
-            .eq("tenant_id", client_id)
-            .limit(1)
-            .execute()
-        ).data or []
-        status["zapier"] = bool(rows)
-    except Exception:
-        logger.warning(
-            "connector_awareness: zapier lookup failed for %s", client_id, exc_info=True
-        )
-
-    return status
+    full = connector_registry.connection_status(db, tenant_id=client_id, client_id=client_id)
+    return {key: full[key] for key in _LEGACY_KEYS}
 
 
 def missing_for_message(db, client_id: str, text: str) -> list[dict]:
@@ -174,7 +85,7 @@ def missing_for_message(db, client_id: str, text: str) -> list[dict]:
         return []
     status = connection_status(db, client_id)
     return [
-        {"key": key, "label": CONNECTORS[key]["label"], "path": CONNECTORS[key]["path"]}
+        {"key": key, "label": _LEGACY[key]["label"], "path": _LEGACY[key]["connect_path"]}
         for key in needed
         if not status.get(key)
     ]

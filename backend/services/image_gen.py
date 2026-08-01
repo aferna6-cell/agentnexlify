@@ -39,8 +39,14 @@ def is_configured() -> bool:
     return bool(_provider() and _api_key())
 
 
-def generate_image_png(prompt: str) -> bytes:
+def generate_image_png(prompt: str, size: str | None = None) -> bytes:
     """Generate a PNG via the configured provider. Returns raw PNG bytes.
+
+    ``size`` overrides the provider's default output size — like this:
+    ``generate_image_png(prompt, size="1024x1536")``. Callers own picking a
+    size their provider actually supports; the OpenAI provider passes it
+    straight through to the API and lets a bad value surface as
+    ``ImageGenError`` rather than silently clamping it.
 
     Raises ImageGenNotConfigured when provider/key absent.
     Raises ImageGenError on provider-side failures.
@@ -55,17 +61,17 @@ def generate_image_png(prompt: str) -> bytes:
     logger.info("image_gen.generate provider=%s prompt_len=%d", provider, len(prompt))
 
     if provider == "openai":
-        return _generate_openai(prompt, api_key)
+        return _generate_openai(prompt, api_key, size=size)
 
     raise ImageGenNotConfigured(f"Unsupported provider: {provider!r}")
 
 
-def _generate_openai(prompt: str, api_key: str) -> bytes:
+def _generate_openai(prompt: str, api_key: str, size: str | None = None) -> bytes:
     payload = {
         "model": "gpt-image-1",
         "prompt": prompt,
         "n": 1,
-        "size": "1024x1024",
+        "size": size or "1024x1024",
         "response_format": "b64_json",
     }
     try:

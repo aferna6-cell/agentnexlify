@@ -90,6 +90,14 @@ const allNavItems = [
     roles: ["owner", "admin", "member"],
   },
   {
+    key: "prospecting",
+    icon: (
+      <Icon d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" />
+    ),
+    label: "Prospecting",
+    roles: ["owner", "admin", "member"],
+  },
+  {
     key: "pipeline_automations",
     icon: <Icon d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />,
     label: "Stage Automations",
@@ -110,6 +118,13 @@ const allNavItems = [
       <Icon d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     ),
     label: "Conversations",
+  },
+  {
+    key: "escalations",
+    icon: (
+      <Icon d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01" />
+    ),
+    label: "Escalations",
   },
   {
     key: "action_items",
@@ -445,12 +460,12 @@ const NAV_GROUPS = [
   {
     key: "crm",
     label: "CRM",
-    items: ["clients", "pipeline"],
+    items: ["clients", "pipeline", "prospecting"],
   },
   {
     key: "communications",
     label: "COMMUNICATIONS",
-    items: ["conversations", "calls", "widget", "knowledge", "faq"],
+    items: ["conversations", "escalations", "calls", "widget", "knowledge", "faq"],
   },
   {
     key: "settings",

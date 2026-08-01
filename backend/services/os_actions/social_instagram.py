@@ -257,6 +257,56 @@ async def _run(ctx: ActionContext) -> ActionResult:
     )
 
 
+async def publish_image_post(
+    client_id: str, image_url: str, caption: str
+) -> tuple[str | None, dict]:
+    """Publish an image post with already-structured content.
+
+    Used by the scheduled-post publisher (``backend/services/social_publisher.py``),
+    which already has a caption + image URL from ``social_posts`` — unlike
+    ``_run`` above, which extracts them from a freeform approved deliverable
+    body via Claude. Reuses the same account lookup and Graph two-step
+    (create container, then publish) as ``_run``.
+
+    Returns ``(media_id, response_or_error_dict)``. ``media_id`` is ``None``
+    on any failure, with ``response_or_error_dict`` carrying diagnostics —
+    ``{"stage": "connector", ...}`` specifically means "no IG account linked".
+    """
+    account = _load_ig_account(client_id)
+    if not account:
+        return None, {
+            "stage": "connector",
+            "message": "instagram business account not connected for this tenant",
+        }
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            creation_id, create_body = await _create_container(
+                client,
+                account["ig_user_id"],
+                account["access_token"],
+                image_url,
+                caption[:2200],
+            )
+            if not creation_id:
+                return None, create_body
+            media_id, publish_body = await _publish_container(
+                client,
+                account["ig_user_id"],
+                account["access_token"],
+                creation_id,
+            )
+    except Exception as e:
+        logger.exception(
+            "social_instagram.publish_image_post: HTTP error client_id=%s", client_id
+        )
+        return None, {"stage": "ig_api", "message": str(e)[:300]}
+
+    if not media_id:
+        return None, publish_body
+    return media_id, publish_body
+
+
 SPEC = ActionSpec(
     name="social.instagram.post",
     worker="campaign",
