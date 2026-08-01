@@ -20,8 +20,8 @@
 
 **Impact:** KB repair fires on next nightly cycle (tonight). 3 paying tenants get fresh AI answers without human action. Closes 8-day repair gap. Demonstrates full observe→alert→self-heal arc working autonomously.
 
-**Category:** operational  
-**Effort:** XS (~30 bash lines, same template as Step 9F)  
+**Category:** operational
+**Effort:** XS (~30 bash lines, same template as Step 9F)
 **Autonomous-executable:** YES — same channel as Steps 9B-9F, all proven in 1 cycle
 
 ---
@@ -34,8 +34,8 @@
 
 **Impact:** Stranded autonomy runs detected and resolved daily. Prevents the "permanent corpse run" failure mode from accumulating between Routine firings. Graph state stays clean.
 
-**Category:** operational  
-**Effort:** XS (~15 bash lines in SKILL.md)  
+**Category:** operational
+**Effort:** XS (~15 bash lines in SKILL.md)
 **Autonomous-executable:** YES — nightly has python3 + scripts.autonomy in scope
 
 ---
@@ -48,8 +48,8 @@
 
 **Impact:** Daily pressure on #536 instead of passive listing in nightly table. Human is reminded with increasing urgency. Migration 176 unblocks in days instead of weeks.
 
-**Category:** operational  
-**Effort:** XS (~20 bash lines in SKILL.md)  
+**Category:** operational
+**Effort:** XS (~20 bash lines in SKILL.md)
 **Autonomous-executable:** YES — gh CLI is available in nightly
 
 ---
@@ -62,8 +62,8 @@
 
 **Impact:** Same escalation pressure that drove 10-item referral checklist to 10/10 completion (runs 89-93). Human action within days of daily pressure.
 
-**Category:** customer_value  
-**Effort:** XS (~15 bash lines in SKILL.md)  
+**Category:** customer_value
+**Effort:** XS (~15 bash lines in SKILL.md)
 **Autonomous-executable:** YES — gh CLI available in nightly
 
 ---
@@ -76,6 +76,6 @@
 
 **Impact:** Each Routine firing self-cleans. Stranded runs from the CURRENT cycle are swept before the next cycle starts. Complements Idea 2 (which sweeps from the nightly).
 
-**Category:** operational  
-**Effort:** XS (3-5 lines added to ROUTINE.md)  
+**Category:** operational
+**Effort:** XS (3-5 lines added to ROUTINE.md)
 **Autonomous-executable:** YES — ROUTINE.md edit is a plain text change
