@@ -47,18 +47,39 @@ def _jwt_secret() -> str:
 # ── Auth helpers ──────────────────────────────────────────────
 
 
-def _encode_state(tenant_id: str) -> str:
-    """Create a short-lived signed JWT encoding the tenant_id for OAuth state."""
+def _encode_state(
+    tenant_id: str,
+    *,
+    os_thread_id: str | None = None,
+    return_to: str | None = None,
+) -> str:
+    """Create a short-lived signed JWT encoding the tenant_id for OAuth state.
+
+    ``os_thread_id`` (optional) round-trips an Agent OS chat thread through
+    the OAuth dance so the callback can redirect the owner back into the
+    conversation that asked for the connection, instead of the generic
+    integrations page. ``return_to`` (optional) is a relative dashboard
+    path fallback used when there's no thread to return to.
+    """
     payload = {
         "tenant_id": tenant_id,
         "exp": datetime.now(timezone.utc)
         + timedelta(minutes=_STATE_TOKEN_EXPIRY_MINUTES),
     }
+    if os_thread_id:
+        payload["os_thread_id"] = os_thread_id
+    if return_to:
+        payload["return_to"] = return_to
     return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
 
 
-def _decode_state(state: str) -> str:
-    """Validate the OAuth state token and return the tenant_id."""
+def _decode_state(state: str) -> dict:
+    """Validate the OAuth state token and return its claims.
+
+    Always includes ``tenant_id``. ``os_thread_id`` / ``return_to`` are
+    ``None`` when the auth URL was requested without them (the pre-deep-link
+    behavior every existing caller still gets).
+    """
     try:
         payload = jwt.decode(state, _jwt_secret(), algorithms=[_JWT_ALGORITHM])
         tenant_id = payload.get("tenant_id")
@@ -66,18 +87,70 @@ def _decode_state(state: str) -> str:
             raise HTTPException(
                 status_code=400, detail="Invalid state: missing tenant_id"
             )
-        return tenant_id
+        return {
+            "tenant_id": tenant_id,
+            "os_thread_id": payload.get("os_thread_id"),
+            "return_to": payload.get("return_to"),
+        }
     except JWTError as exc:
         raise HTTPException(
             status_code=400, detail="Invalid or expired state parameter"
         ) from exc
 
 
+def _safe_return_to(return_to: str | None) -> str | None:
+    """Only accept a relative dashboard path - never an absolute URL,
+    which would turn ``return_to`` into an open redirect."""
+    if return_to and return_to.startswith("/") and not return_to.startswith("//"):
+        return return_to
+    return None
+
+
+def _oauth_success_response(
+    *,
+    provider_key: str,
+    provider_label: str,
+    os_thread_id: str | None,
+    return_to: str | None,
+    fallback_hash: str,
+):
+    """Redirect (or, with no frontend configured, a static HTML page) after
+    a successful OAuth connect. When the request carried an
+    ``os_thread_id`` the owner lands back in that Agent OS chat thread with
+    ``?connected=<provider>`` so the UI can post a "connected, resuming"
+    message; otherwise falls back to ``return_to`` or the provider's
+    historical ``#integrations`` hash redirect.
+    """
+    if settings.frontend_url:
+        if os_thread_id:
+            url = (
+                f"{settings.frontend_url}/dashboard/agent-os"
+                f"?thread={os_thread_id}&connected={provider_key}"
+            )
+        else:
+            safe_return_to = _safe_return_to(return_to)
+            url = f"{settings.frontend_url}{safe_return_to or fallback_hash}"
+        return RedirectResponse(url=url)
+
+    return HTMLResponse(
+        content=(
+            "<html><body style='font-family:sans-serif;text-align:center;padding:4rem'>"
+            f"<h2>Connected!</h2><p>{provider_label} has been linked. You can close this window.</p>"
+            "</body></html>"
+        ),
+    )
+
+
 # ── Endpoints ─────────────────────────────────────────────────
 
 
 @router.get("/google/auth")
-async def google_auth(claims: dict = Depends(_get_current_tenant)):
+async def google_auth(
+    claims: dict = Depends(_get_current_tenant),
+    os_thread_id: str | None = Query(
+        None, description="Agent OS thread to return to after connect"
+    ),
+):
     """Generate Google OAuth authorization URL."""
     if not (settings.google_client_id and settings.google_client_secret and settings.google_redirect_uri):
         raise HTTPException(
@@ -88,7 +161,7 @@ async def google_auth(claims: dict = Depends(_get_current_tenant)):
             },
         )
     tenant_id: str = claims["tenant_id"]
-    state = _encode_state(tenant_id)
+    state = _encode_state(tenant_id, os_thread_id=os_thread_id)
     redirect_uri = settings.google_redirect_uri
     auth_url = get_auth_url(redirect_uri, state)
     return {"auth_url": auth_url}
@@ -105,7 +178,10 @@ async def google_callback(
     is public (no JWT) because the browser arrives via a redirect from
     Google, not from the SPA.
     """
-    tenant_id = _decode_state(state)
+    state_claims = _decode_state(state)
+    tenant_id = state_claims["tenant_id"]
+    os_thread_id = state_claims["os_thread_id"]
+    return_to = state_claims["return_to"]
     redirect_uri = settings.google_redirect_uri
 
     try:
@@ -148,16 +224,12 @@ async def google_callback(
             status_code=500, detail="Failed to save integration"
         ) from exc
 
-    # Redirect to frontend integrations page
-    if settings.frontend_url:
-        return RedirectResponse(url=f"{settings.frontend_url}/#integrations")
-
-    return HTMLResponse(
-        content=(
-            "<html><body style='font-family:sans-serif;text-align:center;padding:4rem'>"
-            "<h2>Connected!</h2><p>Google Calendar has been linked. You can close this window.</p>"
-            "</body></html>"
-        ),
+    return _oauth_success_response(
+        provider_key="google_calendar",
+        provider_label="Google Calendar",
+        os_thread_id=os_thread_id,
+        return_to=return_to,
+        fallback_hash="/#integrations",
     )
 
 
@@ -232,7 +304,12 @@ def _fetch_m365_profile(access_token: str) -> dict:
 
 
 @router.get("/m365/auth")
-async def m365_auth(claims: dict = Depends(_get_current_tenant)):
+async def m365_auth(
+    claims: dict = Depends(_get_current_tenant),
+    os_thread_id: str | None = Query(
+        None, description="Agent OS thread to return to after connect"
+    ),
+):
     """Generate Microsoft 365 OAuth authorization URL."""
     if not (settings.m365_client_id and settings.m365_client_secret and settings.m365_redirect_uri):
         raise HTTPException(
@@ -243,7 +320,7 @@ async def m365_auth(claims: dict = Depends(_get_current_tenant)):
             },
         )
     tenant_id: str = claims["tenant_id"]
-    state = _encode_state(tenant_id)
+    state = _encode_state(tenant_id, os_thread_id=os_thread_id)
     redirect_uri = settings.m365_redirect_uri
     auth_url = m365_calendar.build_authorization_url(redirect_uri, state)
     return {"auth_url": auth_url}
@@ -260,7 +337,10 @@ async def m365_callback(
     Tenant identity is recovered from the signed ``state`` token, not from a
     session cookie or Authorization header.
     """
-    tenant_id = _decode_state(state)
+    state_claims = _decode_state(state)
+    tenant_id = state_claims["tenant_id"]
+    os_thread_id = state_claims["os_thread_id"]
+    return_to = state_claims["return_to"]
     redirect_uri = settings.m365_redirect_uri
 
     try:
@@ -302,15 +382,12 @@ async def m365_callback(
             status_code=500, detail="Failed to save integration"
         ) from exc
 
-    if settings.frontend_url:
-        return RedirectResponse(url=f"{settings.frontend_url}/#integrations")
-
-    return HTMLResponse(
-        content=(
-            "<html><body style='font-family:sans-serif;text-align:center;padding:4rem'>"
-            "<h2>Connected!</h2><p>Microsoft 365 has been linked. You can close this window.</p>"
-            "</body></html>"
-        ),
+    return _oauth_success_response(
+        provider_key="m365_calendar",
+        provider_label="Microsoft 365",
+        os_thread_id=os_thread_id,
+        return_to=return_to,
+        fallback_hash="/#integrations",
     )
 
 
@@ -360,7 +437,12 @@ async def m365_disconnect(claims: dict = Depends(_get_current_tenant)):
 
 
 @router.get("/hubspot/auth")
-async def hubspot_auth(claims: dict = Depends(_get_current_tenant)):
+async def hubspot_auth(
+    claims: dict = Depends(_get_current_tenant),
+    os_thread_id: str | None = Query(
+        None, description="Agent OS thread to return to after connect"
+    ),
+):
     """Generate HubSpot OAuth authorization URL."""
     tenant_id: str = claims["tenant_id"]
     if not (
@@ -372,7 +454,7 @@ async def hubspot_auth(claims: dict = Depends(_get_current_tenant)):
             status_code=503,
             detail="HubSpot OAuth not configured on this deployment",
         )
-    state = _encode_state(tenant_id)
+    state = _encode_state(tenant_id, os_thread_id=os_thread_id)
     redirect_uri = settings.hubspot_redirect_uri
     auth_url = hubspot_tenant.build_authorization_url(redirect_uri, state)
     return {"auth_url": auth_url}
@@ -388,7 +470,10 @@ async def hubspot_callback(
     Public route — browser arrives via redirect from HubSpot, not from the SPA.
     Tenant identity is recovered from the signed ``state`` token.
     """
-    tenant_id = _decode_state(state)
+    state_claims = _decode_state(state)
+    tenant_id = state_claims["tenant_id"]
+    os_thread_id = state_claims["os_thread_id"]
+    return_to = state_claims["return_to"]
     redirect_uri = settings.hubspot_redirect_uri
 
     try:
@@ -430,17 +515,12 @@ async def hubspot_callback(
             status_code=500, detail="Failed to save integration"
         ) from exc
 
-    if settings.frontend_url:
-        return RedirectResponse(
-            url=f"{settings.frontend_url}/?hubspot=connected#integrations"
-        )
-
-    return HTMLResponse(
-        content=(
-            "<html><body style='font-family:sans-serif;text-align:center;padding:4rem'>"
-            "<h2>Connected!</h2><p>HubSpot has been linked. You can close this window.</p>"
-            "</body></html>"
-        ),
+    return _oauth_success_response(
+        provider_key="hubspot",
+        provider_label="HubSpot",
+        os_thread_id=os_thread_id,
+        return_to=return_to,
+        fallback_hash="/?hubspot=connected#integrations",
     )
 
 

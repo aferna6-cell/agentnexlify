@@ -15,6 +15,7 @@ from fastapi import BackgroundTasks
 
 from backend.models.database import get_service_supabase
 from backend.models.schemas import WidgetChatRequest
+from backend.services.escalations import create_escalation
 from backend.services.os_inbound_bridge import bridge_widget, is_bridge_enabled
 from backend.services.webhook_dispatcher import fire_event_background
 from backend.routers.widget_chat_helpers import _record_response_metric
@@ -163,6 +164,33 @@ async def handle_handoff_detection(
             )
     except Exception:
         logger.warning("Failed to send handoff email notification", exc_info=True)
+
+    # Persist a first-class escalation row alongside the tag (Phase 1a of
+    # plans/nexlify-capabilities-roadmap_plan.md). notify=False: the SMS +
+    # email blocks above already notified the owner for this widget
+    # handoff — create_escalation's own notify path exists for sources
+    # (email/sms/os) that don't have an inline block like this one.
+    # source_ref=conversation_id keeps create_escalation idempotent if this
+    # detection ever fires twice for the same conversation. conversation_id
+    # can fall back to a non-UUID session_id when the conversations insert
+    # failed upstream (see widget_chat_helpers._get_or_create_conversation);
+    # only pass it through as the FK column when it's a real UUID.
+    from uuid import UUID as _UUID
+
+    try:
+        _UUID(str(conversation_id))
+        safe_conversation_id = conversation_id
+    except (ValueError, AttributeError, TypeError):
+        safe_conversation_id = None
+    create_escalation(
+        db,
+        client_id=tenant["id"],
+        source="widget",
+        source_ref=str(conversation_id),
+        conversation_id=safe_conversation_id,
+        reason=req.message[:280] if req.message else "",
+        notify=False,
+    )
 
     fire_event_background(
         tenant["id"],

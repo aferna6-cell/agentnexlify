@@ -115,6 +115,10 @@ class Settings(BaseSettings):
     google_redirect_uri: str = ""
     # Drive KB sync (specs/drive-kb-onboarding_spec.md) — separate callback path
     google_drive_redirect_uri: str = ""
+    # Gmail connector (inbox monitoring + AI triage) — separate callback path,
+    # same Google Cloud OAuth client as calendar/drive. Google requires an
+    # exact redirect_uri match per registered URI even under one client.
+    gmail_redirect_uri: str = ""
 
     # Microsoft 365 / Azure AD OAuth — calendar + mail send scopes.
     # `m365_tenant_id` is the Azure AD tenant ("common" for multi-tenant +
@@ -138,6 +142,18 @@ class Settings(BaseSettings):
     cloudflare_api_token: str = ""
     voyage_api_key: str = ""
     openrouter_api_key: str = ""
+
+    # Prospecting (specs: lead prospecting phase 5) — Google Places API (New)
+    # text search is the discovery source. Empty key => ProspectingNotConfigured,
+    # surfaced as a clean 422 by the router, never a 500.
+    google_places_api_key: str = ""
+    # Email verification provider abstraction. "none" (default) does
+    # deterministic syntax-only validation via email-validator. "zerobounce"
+    # calls the ZeroBounce HTTP API when EMAIL_VERIFY_API_KEY is set. Any
+    # provider failure fails OPEN to unverified — verification never blocks
+    # the pipeline (see prospecting.verify_email docstring).
+    email_verify_provider: str = "none"
+    email_verify_api_key: str = ""
 
     # Agent OS image generation
     image_gen_provider: str = ""  # "openai" supported

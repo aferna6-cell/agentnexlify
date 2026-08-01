@@ -16,6 +16,10 @@ class TenantScopeError(ValueError):
 _TENANT_COLUMN_OVERRIDES = {
     "conversations": "client_id",
     "leads": "client_id",
+    # Prospects feed the leads pipeline (discover -> enrich -> promote), so it
+    # shares the leads client_id scope column rather than tenant_id (migration
+    # 191). See docs/dev-knowledge/schema-log.md.
+    "prospects": "client_id",
     "tenants": "id",
     "tenant_integrations": "client_id",
     "os_threads": "client_id",
@@ -35,6 +39,7 @@ _TENANT_COLUMN_OVERRIDES = {
     "os_scheduled_tasks": "client_id",
     "os_projects": "client_id",
     "os_project_steps": "client_id",
+    "escalations": "client_id",
 }
 
 

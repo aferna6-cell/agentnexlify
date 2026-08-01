@@ -53,6 +53,8 @@ TENANT_DATA_TABLES: tuple[str, ...] = (
     "chat_messages",
     "conversations",
     "conversation_notes",
+    "escalations",
+    "prospects",
     "messages",
     "response_metrics",
     "ai_feedback",
