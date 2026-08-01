@@ -1,0 +1,27 @@
+{
+  "run": 103,
+  "date": "2026-08-01",
+  "winner": "Step 9I: GH #500 spending limit nightly escalation — daily comment on GH #500 when no workflow activity in 24h, naming cumulative day count and combined pipeline-wide impact (CI blocked, Step 9G blocked, KB stale, 3 paying tenants on degraded AI chat)",
+  "winner_category": "operational",
+  "winner_effort": "XS",
+  "winner_carry_forward": 1,
+  "carry_forward_from": "run_102",
+  "direct_implementation": false,
+  "bonus_actions": [
+    "File GH issue: VOYAGE_API_KEY missing from GH Actions Secrets (known Step 9G failure path)"
+  ],
+  "mandate_check": {
+    "step_9i_in_skill_md": "FAIL — not yet implemented (carry-forward 1)",
+    "step_9g_first_fire": "PENDING — branch not merged to main yet; nightly runs against main",
+    "kb_freshness": "FAIL — KB ~19 days stale; GH Actions spending limit blocks autopopulate",
+    "voyage_api_key_issue": "PENDING — filed as bonus action this run",
+    "gh500_resolved": "UNKNOWN — assumed still active (Day 12+)",
+    "autonomy_sweeper_day7": "NOT YET — Day 7 check target is 2026-08-04"
+  },
+  "parking_lot": [
+    "Tenant silence detection via REST API (run 105+)",
+    "PR dedup guard hardening script (run 105+)",
+    "Nightly ai-ready issue count (run 107+)"
+  ],
+  "next_run_mandate": "run_104_mandate"
+}
