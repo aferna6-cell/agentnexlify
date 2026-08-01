@@ -103,6 +103,30 @@ async def send_pending_approval_push(db, tenant_id: str, *, title: str | None) -
     not configured. Expired subscriptions (404/410 from the push service)
     are deleted so they don't accumulate.
     """
+    return await send_owner_push(
+        db,
+        tenant_id,
+        title="Approval needed",
+        body=(
+            f"{title} is waiting for your approval."
+            if title
+            else "A draft from your AI staff is waiting for your approval."
+        ),
+        url_path="/dashboard/agent-os",
+    )
+
+
+async def send_owner_push(
+    db, tenant_id: str, *, title: str, body: str, url_path: str
+) -> int:
+    """Push a notification to every browser subscribed for the tenant.
+
+    Generic fan-out behind send_pending_approval_push, also used for
+    escalation alerts. ``url_path`` is joined onto ``settings.frontend_url``
+    and opened by the service worker's notificationclick handler.
+    Same semantics: returns pushes delivered, 0 when unconfigured, prunes
+    404/410-expired subscriptions.
+    """
     if not push_configured():
         return 0
 
@@ -119,13 +143,9 @@ async def send_pending_approval_push(db, tenant_id: str, *, title: str | None) -
 
         payload = json.dumps(
             {
-                "title": "Approval needed",
-                "body": (
-                    f"{title} is waiting for your approval."
-                    if title
-                    else "A draft from your AI staff is waiting for your approval."
-                ),
-                "url": f"{settings.frontend_url}/dashboard/agent-os",
+                "title": title,
+                "body": body,
+                "url": f"{settings.frontend_url}{url_path}",
             }
         )
 
