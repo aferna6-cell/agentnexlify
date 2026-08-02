@@ -16,7 +16,7 @@ from backend.models.database import get_service_supabase
 
 logger = logging.getLogger(__name__)
 
-try:
+try:  # pragma: no cover
     from mcp.server.fastmcp import FastMCP
     from mcp.server.transport_security import TransportSecuritySettings
 
