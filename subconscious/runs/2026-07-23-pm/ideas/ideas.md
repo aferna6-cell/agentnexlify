@@ -2,7 +2,7 @@
 
 ## Idea 1 — Step 9G: KB Autopopulate Self-Healing Trigger (CARRY-FORWARD)
 
-**Category:** workflow_efficiency  
+**Category:** workflow_efficiency
 **Evidence:**
 - Run 100 mandate: "check Step 9G in SKILL.md next run" — FAIL (grep returns 0 matches)
 - nightly-2026-07-22 confirms Step 9F fires: "KB STALE (9 days) — comment added to GH #403"
@@ -20,7 +20,7 @@
 
 ## Idea 2 — Credential Tracking Gap: VOYAGE_API_KEY + SUPABASE_ACCESS_TOKEN
 
-**Category:** operational  
+**Category:** operational
 **Evidence:**
 - `ops/credential-rotation-schedule.md` tracks 2 credentials (AUTOPILOT_GH_TOKEN, Brain PAT)
 - VOYAGE_API_KEY: not tracked, not in GH Actions secrets → KB embeddings always skipped
@@ -36,7 +36,7 @@
 
 ## Idea 3 — SHOW_BOOKING_PANEL Funnel Completeness Check
 
-**Category:** code_health  
+**Category:** code_health
 **Evidence:**
 - Commit e9b4972 (2026-07-23): 19 new lines added to `docs/dev-knowledge/bug-patterns.md` for SHOW_BOOKING_PANEL
 - New file `backend/routers/widget_chat_booking_action.py` (33 lines): `detect_show_booking()` strips marker, returns `(clean_text, show_booking_flag)`
@@ -52,7 +52,7 @@
 
 ## Idea 4 — email_sequences.py Split Registration Verification
 
-**Category:** code_health  
+**Category:** code_health
 **Evidence:**
 - Commit ab1a7c2: email_sequences.py split into email_crud.py (529L) + email_enrollment.py (328L) + email_processor.py (341L)
 - Split eliminates the 1255-line god class (Rule 9 compliance)
@@ -67,7 +67,7 @@
 
 ## Idea 5 — Voice Workforce Bridge Monitoring Gap
 
-**Category:** agent_performance  
+**Category:** agent_performance
 **Evidence:**
 - Commit 9166b64 (2026-07-22) includes "voice-workforce bridge" in summary
 - No corresponding health check in nightly-commit-review Steps (9A-9F only)
