@@ -207,7 +207,7 @@ jobs:
           # This SPA does not use RSC mode — vulnerability not exploitable.
           # Exclude that advisory; fail on any other high+ severity issue.
           AUDIT=$(npm audit --json 2>/dev/null || true)
-          UNFIXED=$(echo "$AUDIT" | python3 -c "import json,sys;d=json.load(sys.stdin);e={'GHSA-qwww-vcr4-c8h2'};ids=lambda v:{a.get('url','').split('/')[-1] for a in v.get('via',[]) if isinstance(a,dict)};print(sum(1 for v in d.get('vulnerabilities',{}).values() if v.get('severity') in ('high','critical') and (not ids(v) or bool(ids(v)-e))))" 2>/dev/null || echo 999)
+          UNFIXED=$(echo "$AUDIT" | python3 -c "import json,sys;d=json.load(sys.stdin);e={'GHSA-qwww-vcr4-c8h2'};ids=set(a.get('url','').split('/')[-1] for v in d.get('vulnerabilities',{}).values() for a in v.get('via',[]) if isinstance(a,dict) and a.get('url',''));print(len(ids-e))" 2>/dev/null || echo 999)
           if [ "$UNFIXED" -gt 0 ]; then
             npm audit --audit-level=high || true
             echo "::error::Unexpected high/critical vulnerabilities found."
