@@ -9,36 +9,71 @@ Or import and mount alongside the FastAPI app.
 """
 
 import logging
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
-
-from mcp.server.fastmcp import FastMCP
-from mcp.server.transport_security import TransportSecuritySettings
 
 from backend.models.database import get_service_supabase
 
 logger = logging.getLogger(__name__)
 
-# stateless_http: production runs 4 uvicorn workers with no session
-# affinity, so every request must be self-contained. streamable_http_path
-# "/" because main.py mounts this app at /mcp - the public URL owners
-# configure is <API_BASE>/mcp (what MCPSetupPage renders).
-#
-# DNS-rebinding protection is host-allowlist based and defaults to
-# rejecting anything not localhost - prod probes got "Invalid Host
-# header" behind Railway's proxy. This is a public API server
-# authenticated by per-tenant mcp_ keys (not ambient browser
-# credentials), so rebinding protection adds nothing here; disable it.
-mcp = FastMCP(
-    "AgentNexLiFy",
-    instructions="AI-powered business automation — leads, appointments, conversations, and analytics. Authenticate with your dedicated MCP API key (Authorization: Bearer header, or pass it as the api_key argument).",
-    stateless_http=True,
-    streamable_http_path="/",
-    transport_security=TransportSecuritySettings(
-        enable_dns_rebinding_protection=False
-    ),
-)
+try:
+    from mcp.server.fastmcp import FastMCP
+    from mcp.server.transport_security import TransportSecuritySettings
+
+    # stateless_http: production runs 4 uvicorn workers with no session
+    # affinity, so every request must be self-contained. streamable_http_path
+    # "/" because main.py mounts this app at /mcp - the public URL owners
+    # configure is <API_BASE>/mcp (what MCPSetupPage renders).
+    #
+    # DNS-rebinding protection is host-allowlist based and defaults to
+    # rejecting anything not localhost - prod probes got "Invalid Host
+    # header" behind Railway's proxy. This is a public API server
+    # authenticated by per-tenant mcp_ keys (not ambient browser
+    # credentials), so rebinding protection adds nothing here; disable it.
+    mcp = FastMCP(
+        "AgentNexLiFy",
+        instructions="AI-powered business automation — leads, appointments, conversations, and analytics. Authenticate with your dedicated MCP API key (Authorization: Bearer header, or pass it as the api_key argument).",
+        stateless_http=True,
+        streamable_http_path="/",
+        transport_security=TransportSecuritySettings(
+            enable_dns_rebinding_protection=False
+        ),
+    )
+    _MCP_AVAILABLE = True
+except ImportError:
+    # mcp>=2.0.0 removed mcp.server.fastmcp; stub so tests and non-MCP imports load cleanly.
+    logger.warning(
+        "mcp.server.fastmcp unavailable (mcp>=2.0.0 installed); MCP server disabled"
+    )
+    _MCP_AVAILABLE = False
+
+    class _StubSessionManager:
+        @asynccontextmanager
+        async def run(self):
+            yield
+
+    class _StubMcp:
+        session_manager = _StubSessionManager()
+
+        def tool(self, *args, **kwargs):
+            def decorator(fn):
+                return fn
+
+            return decorator
+
+        def get_context(self):
+            return None
+
+        def streamable_http_app(self):
+            async def _noop_app(scope, receive, send):
+                pass
+
+            return _noop_app
+
+    mcp = _StubMcp()
 
 # --- Auth helpers ---
+
 
 def _header_api_key() -> str:
     """MCP key from the HTTP request headers, if this call came over HTTP.
@@ -84,6 +119,7 @@ def _get_tenant_by_api_key(api_key: str) -> dict | None:
 
 # --- Tool 1: List Recent Leads ---
 
+
 @mcp.tool()
 def list_recent_leads(api_key: str = "", days: int = 7, limit: int = 20) -> str:
     """List recent leads captured by the chat widget.
@@ -103,7 +139,9 @@ def list_recent_leads(api_key: str = "", days: int = 7, limit: int = 20) -> str:
     db = get_service_supabase()
     result = (
         db.table("leads")
-        .select("name, email, phone, status, lead_score, areas_of_interest, conversation_summary, created_at")
+        .select(
+            "name, email, phone, status, lead_score, areas_of_interest, conversation_summary, created_at"
+        )
         .eq("client_id", tenant["id"])
         .gte("created_at", since)
         .order("created_at", desc=True)
@@ -115,7 +153,9 @@ def list_recent_leads(api_key: str = "", days: int = 7, limit: int = 20) -> str:
     if not leads:
         return f"No new leads in the last {days} days for {tenant['business_name']}."
 
-    lines = [f"## {len(leads)} Recent Leads for {tenant['business_name']} (last {days} days)\n"]
+    lines = [
+        f"## {len(leads)} Recent Leads for {tenant['business_name']} (last {days} days)\n"
+    ]
     for lead in leads:
         name = lead.get("name") or "Unknown"
         email = lead.get("email") or "no email"
@@ -139,6 +179,7 @@ def list_recent_leads(api_key: str = "", days: int = 7, limit: int = 20) -> str:
 
 # --- Tool 2: List Today's Appointments ---
 
+
 @mcp.tool()
 def list_today_appointments(api_key: str = "") -> str:
     """List today's appointments.
@@ -157,7 +198,9 @@ def list_today_appointments(api_key: str = "") -> str:
     db = get_service_supabase()
     result = (
         db.table("appointments")
-        .select("customer_name, customer_email, customer_phone, start_time, end_time, status, notes")
+        .select(
+            "customer_name, customer_email, customer_phone, start_time, end_time, status, notes"
+        )
         .eq("tenant_id", tenant["id"])
         .gte("start_time", start_of_day.isoformat())
         .lt("start_time", end_of_day.isoformat())
@@ -180,12 +223,15 @@ def list_today_appointments(api_key: str = "") -> str:
             time_str = start
         status = a.get("status", "booked")
         phone = a.get("customer_phone") or ""
-        lines.append(f"- **{time_str}** — {name} ({status}){f' {phone}' if phone else ''}")
+        lines.append(
+            f"- **{time_str}** — {name} ({status}){f' {phone}' if phone else ''}"
+        )
 
     return "\n".join(lines)
 
 
 # --- Tool 3: Get Unread Conversations ---
+
 
 @mcp.tool()
 def get_unread_conversations(api_key: str = "", limit: int = 10) -> str:
@@ -225,6 +271,7 @@ def get_unread_conversations(api_key: str = "", limit: int = 10) -> str:
 
 
 # --- Tool 4: Get Action Items ---
+
 
 @mcp.tool()
 def get_action_items(api_key: str = "", status: str = "pending") -> str:
@@ -268,6 +315,7 @@ def get_action_items(api_key: str = "", status: str = "pending") -> str:
 
 # --- Tool 5: Get Analytics Summary ---
 
+
 @mcp.tool()
 def get_analytics_summary(api_key: str = "", days: int = 30) -> str:
     """Get a summary of business analytics — leads, conversations, appointments.
@@ -284,15 +332,33 @@ def get_analytics_summary(api_key: str = "", days: int = 30) -> str:
     db = get_service_supabase()
 
     # Count leads
-    leads = db.table("leads").select("id", count="exact").eq("client_id", tenant["id"]).gte("created_at", since).execute()
+    leads = (
+        db.table("leads")
+        .select("id", count="exact")
+        .eq("client_id", tenant["id"])
+        .gte("created_at", since)
+        .execute()
+    )
     lead_count = leads.count or 0
 
     # Count conversations
-    convos = db.table("conversations").select("id", count="exact").eq("client_id", tenant["id"]).gte("created_at", since).execute()
+    convos = (
+        db.table("conversations")
+        .select("id", count="exact")
+        .eq("client_id", tenant["id"])
+        .gte("created_at", since)
+        .execute()
+    )
     convo_count = convos.count or 0
 
     # Count appointments
-    appts = db.table("appointments").select("id", count="exact").eq("tenant_id", tenant["id"]).gte("start_time", since).execute()
+    appts = (
+        db.table("appointments")
+        .select("id", count="exact")
+        .eq("tenant_id", tenant["id"])
+        .gte("start_time", since)
+        .execute()
+    )
     appt_count = appts.count or 0
 
     # Conversion rate
@@ -308,6 +374,7 @@ def get_analytics_summary(api_key: str = "", days: int = 30) -> str:
 
 
 # --- Tool 6: Reply to Conversation ---
+
 
 @mcp.tool()
 def reply_to_conversation(session_id: str, message: str, api_key: str = "") -> str:
@@ -328,12 +395,14 @@ def reply_to_conversation(session_id: str, message: str, api_key: str = "") -> s
     db = get_service_supabase()
 
     # Insert into chat_messages as an assistant (team reply)
-    db.table("chat_messages").insert({
-        "tenant_id": tenant["id"],
-        "session_id": session_id,
-        "role": "assistant",
-        "content": message.strip(),
-    }).execute()
+    db.table("chat_messages").insert(
+        {
+            "tenant_id": tenant["id"],
+            "session_id": session_id,
+            "role": "assistant",
+            "content": message.strip(),
+        }
+    ).execute()
 
     return f"Reply sent to conversation {session_id}: \"{message[:50]}{'...' if len(message) > 50 else ''}\""
 
