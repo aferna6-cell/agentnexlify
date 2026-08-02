@@ -1,13 +1,11 @@
 {
   "version": 1,
-  "last_run": "2026-07-23",
-  "total_runs": 100,
+  "last_run": "2026-08-02",
+  "total_runs": 101,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
-  "frozen_ideas": [
-    "ai_human_handoff"
-  ],
+  "frozen_ideas": ["ai_human_handoff"],
   "moratorium_config": {
     "moratorium_active": false,
     "triggered_run": 15,
@@ -203,7 +201,36 @@
     "last_run": "2026-07-20 -> 2026-07-23"
   },
   "run_101_mandate": "1. Step 9G confirmed present in .claude/skills/nightly-commit-review/SKILL.md? (grep 'Step 9G' \u2014 SHOULD PASS if human approves winner). 2. KB freshness: has kb-autopopulate.yml run successfully since 2026-07-13? Check knowledge-base/log.md last entry date. 3. If Step 9G present AND nightly fires with KB still stale: did gh workflow run succeed? Check nightly log for 'Step 9G:' line. 4. GH #403 comment: does it contain Step 9G diagnostic output? 5. Agent OS tenant count: still 2-3 (LoopHealthPage parking lot condition) or >5 (promote)? 6. MCP tenant count: still 1 (Step 9H killed condition) or >5 (revisit monitoring).",
+  "run_101_governance_corrections": {
+    "step_9g_mandate_check": "ABSENT \u2014 grep -c 'Step 9G' .claude/skills/nightly-commit-review/SKILL.md returns 0. Winner: add Step 9G. Nightly will implement on next run after human approves PR.",
+    "kb_freshness_check": "STALE \u2014 knowledge-base/log.md last entry 2026-07-23, currently 10 days old (>7d threshold). Step 9G would have self-healed this if present.",
+    "nightly_2026_08_02": "CLEAN \u2014 5 commits reviewed: b67710c (capabilities phases 1-5, 62 files, no bugs), c5a5a62 (PWA, no bugs), 2869124 (AI Workforce gate fix, no bugs), 9f711ea (defer M365/HubSpot UI, no bugs). 1 LOW auto-fixed (stale docstring in connectors.py).",
+    "capabilities_sprint_b67710c": "REVIEWED \u2014 62 files, 13916 insertions. All invariants pass: client_id on leads/conversations, tenant_id on social_posts/push_subscriptions/widget_configs, no __future__ annotations, status not lead_stage. RLS on new tables confirmed (migrations 190/191/193). New services with test coverage: sms_agent, prospecting, inbox_monitor, inbox_triage, social_publisher, escalations, gmail_connector, connector_registry.",
+    "ideas_invalidated": [
+      "EscalationsPage.jsx already exists",
+      "sms_agent.py has rate limiter at line 385",
+      "prospecting.py uses client_id via tenant_select/tenant_update helpers"
+    ],
+    "total_runs": "100 -> 101",
+    "last_run": "2026-07-23 -> 2026-08-02"
+  },
+  "run_102_mandate": "1. Step 9G confirmed present in SKILL.md? (SHOULD PASS if PR merged). 2. Nightly-2026-08-03 log contains 'Step 9G:' line? (confirms nightly executes new step). 3. KB freshness: did kb-autopopulate.yml run after Step 9G was added? knowledge-base/log.md entry after 2026-08-02? 4. Connector token expiry (Idea 2): schema verified? gmail_integrations columns confirmed? If yes and GH queue unblocked: promote to run 102 winner. 5. Inbox triage cost guard (Idea 3): any prod data yet from inbox_triage.py (>1 week live)? If yes: promote to run 102 winner. 6. GH #399 and #403 status: still open?",
   "active_directions": [
+    {
+      "title": "Step 9G: KB Self-Healing Trigger in nightly-commit-review SKILL.md (run 101 winner)",
+      "date": "2026-08-02",
+      "confidence": "HIGH",
+      "status": "pending_autonomous",
+      "autonomous_executable": true,
+      "requires_human": false,
+      "category": "workflow",
+      "moratorium_override": false,
+      "source_run": 101,
+      "effort": "XS",
+      "evidence": "Step 9G ABSENT from SKILL.md (grep -c returns 0). KB stale 10 days as of 2026-08-02 (last run 2026-07-23, threshold 7d). Step 9F fires alert but GH #403 has no human action after 10 days. Self-healing mechanism: gh workflow run kb-autopopulate.yml (proven workflow, same token as nightly gh calls). Run_101_mandate item 1 confirms ABSENT.",
+      "action": "Add Step 9G block to .claude/skills/nightly-commit-review/SKILL.md immediately after Step 9F block. Logic: if Step 9F detected staleness AND gh run list --workflow=kb-autopopulate.yml --status=in_progress --limit 1 returns empty, then gh workflow run kb-autopopulate.yml. Log result. Full spec in subconscious/runs/2026-08-02-pm/winning-concept.md.",
+      "note": "Run 100 winner (carry-forward). Run 101 winner (carry-forward — Step 9G still ABSENT confirmed). KB currently 10 days stale. Zero new infrastructure: gh workflow run uses same AUTOPILOT_GH_TOKEN as Steps 9B-9E. Double-trigger guard: check in_progress before firing. Nightly should implement in 1 cycle after PR merge."
+    },
     {
       "title": "Step 9F: KB Autopopulate Staleness Check in nightly-commit-review SKILL.md (run 97 winner)",
       "date": "2026-07-17",
