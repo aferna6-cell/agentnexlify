@@ -40,7 +40,7 @@ try:
         ),
     )
     _MCP_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover
     # mcp>=2.0.0 removed mcp.server.fastmcp; stub so tests and non-MCP imports load cleanly.
     logger.warning(
         "mcp.server.fastmcp unavailable (mcp>=2.0.0 installed); MCP server disabled"
