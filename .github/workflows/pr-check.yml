@@ -202,7 +202,32 @@ jobs:
       - name: Audit frontend JS dependencies
         run: |
           cd frontend
-          npm audit --audit-level=high
+          # GHSA-qwww-vcr4-c8h2: react-router RSC Mode CSRF in >=7.12.0 <8.3.0.
+          # react-router-dom 7.x has no patched release; the fix lives in react-router
+          # v8.3.0 which requires a breaking v8 migration. This project is a SPA and
+          # does not use RSC mode, so the vulnerability is not exploitable. Exclude
+          # this advisory and fail on any other high+ severity issue.
+          RESULT=$(npm audit --json 2>/dev/null || true)
+          UNFIXED=$(echo "$RESULT" | python3 -c "
+import json, sys
+EXCLUDED = {'GHSA-qwww-vcr4-c8h2'}
+data = json.load(sys.stdin)
+count = 0
+for name, v in data.get('vulnerabilities', {}).items():
+    if v.get('severity') not in ('high', 'critical'):
+        continue
+    via_ids = {a.get('url', '').split('/')[-1] for a in v.get('via', []) if isinstance(a, dict)}
+    if via_ids and not (via_ids - EXCLUDED):
+        continue
+    count += 1
+print(count)
+" 2>/dev/null || echo "999")
+          if [ "$UNFIXED" -gt 0 ]; then
+            npm audit --audit-level=high || true
+            echo "::error::Unexpected high/critical vulnerabilities found."
+            exit 1
+          fi
+          echo "Audit passed (GHSA-qwww-vcr4-c8h2 excluded: RSC mode not used in this SPA)."
 
       - name: Frontend build check
         run: |
