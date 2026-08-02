@@ -1,11 +1,10 @@
 """Unified connector status — read-side surface over
 ``backend/services/connector_registry.py``.
 
-Phase 1b of ``plans/nexlify-capabilities-roadmap_plan.md``. Intentionally
-NOT registered in ``backend/main.py`` yet — the dashboard "connect card"
-that consumes this endpoint is a separate follow-up lane; this router ships
-the API surface so that lane, and the in-chat deep-link work, can build
-against a stable contract.
+Phase 1b of ``plans/nexlify-capabilities-roadmap_plan.md``. Registered in
+``backend/main.py`` alongside the capabilities phase 1–5 endpoints
+(commit b67710c). The dashboard "connect card" UI lane builds against
+this stable API contract.
 """
 
 import logging
