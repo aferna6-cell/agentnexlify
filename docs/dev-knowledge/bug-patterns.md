@@ -18757,3 +18757,23 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Author:** aferna6-cell
 **Files Changed:** .github/workflows/daily-business-digest.yml
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### ops: nightly-commit-review 2026-08-02 [auto-nightly]
+
+Fix stale docstring in backend/routers/connectors.py (LOW risk): module
+said "NOT registered in main.py yet" but router has been registered since
+b67710c. No runtime impact.
+
+5 commits reviewed: 2 LOW (no code), 3 MEDIUM (plan-gate fix, PWA push,
+capabilities phases 1-5). No MEDIUM/HIGH bugs. All client_id/status schema
+invariants and FastAPI annotation rules respected across new services.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01TYhtKNxVi4HHoSGJBNhLUg
+**Date:** 2026-08-02
+**Commit:** 4ed5ad3
+**Author:** Claude
+**Files Changed:** backend/routers/connectors.py,ops/routines/logs/nightly-commit-review-2026-08-02.md
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
