@@ -125,3 +125,7 @@ the last recorded state.
 ## 2026-07-28T06:31Z — refresh_connectors.py
 - github: ok — 17 open issues, 15 open PRs (weekly CCR session refresh)
 - supabase: ok — 136 tables (weekly CCR session refresh)
+
+## 2026-08-03T09:03Z — refresh_connectors.py
+- github: ok (session MCP)
+- supabase: ok (session MCP)

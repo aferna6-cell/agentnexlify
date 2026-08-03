@@ -5,8 +5,8 @@ origin: connector
 connector: Supabase
 account: VoltOps
 project: pxserpybmajixqrmzaly
-accessed: 2026-07-28
-last_refresh: 2026-07-28T06:31Z
+accessed: 2026-08-03
+last_refresh: 2026-08-03T09:03Z
 sensitivity: normal
 tags: [source, connector]
 ---
@@ -16,8 +16,8 @@ tags: [source, connector]
 ## What this is
 Live snapshot from `refresh_connectors.py` of project `pxserpybmajixqrmzaly` (org [[VoltOps]]).
 
-## Counts (as of 2026-07-28T06:31Z)
-- public BASE TABLE count: 136
+## Counts (as of 2026-08-03T09:03Z)
+- public BASE TABLE count: 138
 - RLS expected on all tables (multi-tenant invariant).
 
 ## Notes
