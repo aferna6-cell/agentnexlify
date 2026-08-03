@@ -37,6 +37,7 @@ from backend.graph import (
 from scripts.autonomy import gates
 from scripts.autonomy.backlog import load_items
 from scripts.autonomy.loop_graph import build, default_budget
+from scripts.autonomy.sweeper import DEFAULT_STALE_AFTER_SECONDS, find_stranded, sweep
 
 DEFAULT_STATE_DIR = ".autonomy"
 
@@ -169,6 +170,61 @@ async def _cmd_status(args) -> dict[str, Any]:
     }
 
 
+async def _cmd_list(args) -> dict[str, Any]:
+    """Every run in the state dir, with stranded ones flagged.
+
+    Half of #605 was that a dead run could only be found by already knowing
+    its id. This is the discovery surface: no ids required.
+    """
+    root = Path(args.state_dir)
+    store = _checkpointer(args.state_dir)
+    # to_thread because the sweeper is synchronous and drives the checkpointer
+    # with its own asyncio.run — calling it directly from inside this event
+    # loop would nest loops and crash.
+    found = await asyncio.to_thread(
+        find_stranded, root, stale_after_seconds=args.stale_after
+    )
+    stranded_ids = {r.run_id for r in found}
+    runs = []
+    if root.is_dir():
+        for run_dir in sorted(p for p in root.iterdir() if p.is_dir()):
+            checkpoint = await store.load(run_dir.name)
+            if checkpoint is None:
+                continue
+            runs.append(
+                {
+                    "run_id": checkpoint.run_id,
+                    "status": checkpoint.status,
+                    "outcome": checkpoint.state.get("outcome"),
+                    "frontier": checkpoint.frontier,
+                    "stranded": checkpoint.run_id in stranded_ids,
+                }
+            )
+    return {"runs": runs, "stranded": sorted(stranded_ids)}
+
+
+async def _cmd_sweep(args) -> dict[str, Any]:
+    # Same nested-event-loop consideration as _cmd_list.
+    swept = await asyncio.to_thread(
+        sweep,
+        Path(args.state_dir),
+        stale_after_seconds=args.stale_after,
+        dry_run=args.dry_run,
+    )
+    return {
+        "swept" if not args.dry_run else "would_sweep": [
+            {
+                "run_id": r.run_id,
+                "frontier": r.frontier,
+                "age_seconds": int(r.age_seconds),
+                "safe_to_retry": r.safe_to_retry,
+            }
+            for r in swept
+        ],
+        "dry_run": args.dry_run,
+    }
+
+
 # Real defaults live here, not on the arguments — see _common_options.
 _DEFAULTS = {
     "state_dir": DEFAULT_STATE_DIR,
@@ -288,6 +344,35 @@ def build_parser() -> argparse.ArgumentParser:
     )
     status.add_argument("--run-id", required=True)
     status.set_defaults(func=_cmd_status)
+
+    listing = sub.add_parser(
+        "list", help="show every run; flag stranded ones", parents=[common]
+    )
+    listing.add_argument(
+        "--stale-after",
+        type=float,
+        default=DEFAULT_STALE_AFTER_SECONDS,
+        help="seconds of silence before a 'running' run counts as stranded",
+    )
+    listing.set_defaults(func=_cmd_list)
+
+    sweep_cmd = sub.add_parser(
+        "sweep",
+        help="resolve stranded 'running' runs to failed (never re-runs a node)",
+        parents=[common],
+    )
+    sweep_cmd.add_argument(
+        "--stale-after",
+        type=float,
+        default=DEFAULT_STALE_AFTER_SECONDS,
+        help="seconds of silence before a 'running' run counts as stranded",
+    )
+    sweep_cmd.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="report what would be swept without writing anything",
+    )
+    sweep_cmd.set_defaults(func=_cmd_sweep)
 
     return parser
 

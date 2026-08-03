@@ -4,6 +4,30 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### connector_awareness zapier status queried tenant_api_keys with wrong column (Phase 1b connector registry, 2026-08-01)
+
+`backend/services/connector_awareness.connection_status()` queried
+`tenant_api_keys` with `.eq("tenant_id", client_id)`. The table's actual
+tenant-scope column is `client_id` (migrations 110/117; confirmed against
+`backend/services/api_key_auth.py` and `backend/routers/zapier.py`, both of
+which correctly use `client_id`). Every zapier connector-status lookup in
+Agent OS chat silently reported "not connected" even for tenants with a
+live, non-revoked key — the query always returned zero rows regardless of
+data. Same failure class as the leads `client_id`/`tenant_id` mixups, just
+on a different table (`tenant_api_keys` is one of the few non-leads tables
+that uses `client_id`).
+
+**Fix:** `backend/services/connector_registry.py` (new unified registry
+that `connector_awareness.py` now delegates to) queries
+`.eq("client_id", client_id)` on `tenant_api_keys`. Regression test:
+`backend/tests/test_connector_registry.py::TestConnectionStatus::test_zapier_uses_client_id_column_not_tenant_id`.
+
+**Prevention:** before writing `.eq("tenant_id", ...)` or
+`.eq("client_id", ...)` on any table, check the table's actual migration
+file — don't assume the column name from a nearby table's convention.
+
+---
+
 ### Booking CTA rendered as unclickable plain text in widget chat (funnel audit)
 **Date:** 2026-07-23
 **Symptom:** Zero real bookings ever, platform-wide. The widget AI shared the booking-page URL as a bare string per `booking_prompt.py`; the widget renderer `_inlineMd()` only linkifies markdown `[text](url)`, so the only booking CTA the AI could offer rendered as dead text. MTOptions: 10 leads / 0 bookings with everything "configured correctly".
@@ -18732,4 +18756,24 @@ Co-authored-by: Claude <noreply@anthropic.com>
 **Commit:** 6391bd3
 **Author:** aferna6-cell
 **Files Changed:** .github/workflows/daily-business-digest.yml
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### ops: nightly-commit-review 2026-08-02 [auto-nightly]
+
+Fix stale docstring in backend/routers/connectors.py (LOW risk): module
+said "NOT registered in main.py yet" but router has been registered since
+b67710c. No runtime impact.
+
+5 commits reviewed: 2 LOW (no code), 3 MEDIUM (plan-gate fix, PWA push,
+capabilities phases 1-5). No MEDIUM/HIGH bugs. All client_id/status schema
+invariants and FastAPI annotation rules respected across new services.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01TYhtKNxVi4HHoSGJBNhLUg
+**Date:** 2026-08-02
+**Commit:** 4ed5ad3
+**Author:** Claude
+**Files Changed:** backend/routers/connectors.py,ops/routines/logs/nightly-commit-review-2026-08-02.md
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.

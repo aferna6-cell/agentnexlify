@@ -71,6 +71,8 @@ const ClientProfile = lazy(() => import("../pages/Dashboard/ClientProfile"));
 const Calendar = lazy(() => import("../pages/Calendar"));
 const Availability = lazy(() => import("../pages/Availability"));
 const ConversationsPage = lazy(() => import("../pages/ConversationsPage"));
+const EscalationsPage = lazy(() => import("../pages/EscalationsPage"));
+const ProspectingPage = lazy(() => import("../pages/ProspectingPage"));
 const WidgetPage = lazy(() => import("../pages/WidgetPage"));
 const FaqManagerPage = lazy(() => import("../pages/FaqManagerPage"));
 const BillingPage = lazy(() => import("../pages/BillingPage"));
@@ -133,6 +135,8 @@ const pages = {
   calendar: Calendar,
   availability: Availability,
   conversations: ConversationsPage,
+  escalations: EscalationsPage,
+  prospecting: ProspectingPage,
   calls: CallsPage,
   widget: WidgetPage,
   faq: FaqManagerPage,
@@ -184,6 +188,8 @@ const PAGE_TO_PATH = {
   calendar: "/dashboard/calendar",
   availability: "/dashboard/availability",
   conversations: "/dashboard/conversations",
+  escalations: "/dashboard/escalations",
+  prospecting: "/dashboard/prospecting",
   calls: "/dashboard/calls",
   widget: "/dashboard/widget",
   faq: "/dashboard/faq",

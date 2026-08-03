@@ -203,6 +203,69 @@ async def _run(ctx: ActionContext) -> ActionResult:
     )
 
 
+async def publish_post(
+    client_id: str,
+    summary: str,
+    topic_type: str = "STANDARD",
+    cta_url: str | None = None,
+) -> tuple[str | None, dict]:
+    """Publish a local update with already-structured content.
+
+    Used by the scheduled-post publisher (``backend/services/social_publisher.py``),
+    which already has post content from ``social_posts`` — unlike ``_run``
+    above, which extracts it from a freeform approved deliverable body via
+    Claude. Reuses the same credential lookup and localPosts call as ``_run``.
+
+    Returns ``(post_name, response_or_error_dict)``. ``post_name`` is
+    ``None`` on any failure, with ``response_or_error_dict`` carrying
+    diagnostics — ``{"stage": "connector", ...}`` specifically means "GBP
+    not connected or location_id missing".
+    """
+    if topic_type not in {"STANDARD", "EVENT", "OFFER"}:
+        topic_type = "STANDARD"
+
+    creds = _load_gbp(client_id)
+    if not creds:
+        return None, {
+            "stage": "connector",
+            "message": "google_business_profile not connected or location_id missing",
+        }
+
+    api_body: dict = {
+        "languageCode": "en-US",
+        "summary": summary[:1500],
+        "topicType": topic_type,
+    }
+    if cta_url:
+        api_body["callToAction"] = {"actionType": "LEARN_MORE", "url": cta_url}
+
+    url = (
+        f"{_GBP_BASE}/accounts/{creds['account_id']}"
+        f"/locations/{creds['location_id']}/localPosts"
+    )
+    headers = {
+        "Authorization": f"Bearer {creds['access_token']}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.post(url, json=api_body, headers=headers)
+    except Exception as e:
+        logger.exception("gbp.publish_post: HTTP error client_id=%s", client_id)
+        return None, {"stage": "gbp_api", "message": str(e)[:300]}
+
+    if resp.status_code >= 400:
+        return None, {
+            "stage": "gbp_api",
+            "status_code": resp.status_code,
+            "message": resp.text[:500],
+        }
+
+    body = resp.json() if resp.content else {}
+    return body.get("name"), body
+
+
 SPEC = ActionSpec(
     name="gbp.post",
     worker="campaign",

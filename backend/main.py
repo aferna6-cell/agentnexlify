@@ -150,6 +150,10 @@ from backend.routers import (
     status_page,
     bot_health,
     intake_ai,
+    escalations as escalations_router,
+    connectors as connectors_router,
+    gmail_integration,
+    prospecting as prospecting_router,
 )
 
 # --- JSON logging ---
@@ -481,6 +485,7 @@ async def _automation_loop():
                         _safe_run(
                             "process_scheduled_campaigns", _process_scheduled_campaigns
                         ),
+                        _safe_run("run_inbox_poll", _run_inbox_poll, timeout=240.0),
                         _safe_run(
                             "recover_stalled_campaigns", _recover_stalled_campaigns
                         ),
@@ -528,6 +533,9 @@ async def _automation_loop():
                         _safe_run("reset_demo_tenants", reset_demo_tenants),
                         _safe_run("send_activation_nudges", send_activation_nudges),
                         _safe_run("check_tenant_silence", _check_tenant_silence),
+                        _safe_run(
+                            "ingest_social_engagement", _ingest_social_engagement
+                        ),
                         _safe_run(
                             "run_pending_enrichment", run_pending_enrichment
                         ),
@@ -603,74 +611,40 @@ async def _recover_stalled_campaigns():
 async def _process_scheduled_posts():
     """Auto-publish social media posts whose scheduled_for has passed.
 
-    Posts with status='scheduled' and scheduled_for <= now() are updated to
-    status='published' with published_at set. When platform OAuth is connected
-    in the future, this is where the actual API publish call will go.
+    Delegates to social_publisher, which dispatches each due post to the
+    real platform publish handler (Instagram/Facebook/Google Business) and
+    marks it published (with external_post_id) or failed (with a reason) —
+    replacing the old status-flip-only behavior.
     """
-    from datetime import datetime, timezone
-    from backend.models.database import get_service_supabase
+    from backend.services.social_publisher import process_scheduled_posts
 
-    db = get_service_supabase()
-    now_iso = datetime.now(timezone.utc).isoformat()
     try:
-        due_posts = (
-            db.table("social_posts")
-            .select("id, tenant_id, platform, content")
-            .eq("status", "scheduled")
-            .lte("scheduled_for", now_iso)
-            .limit(100)
-            .execute()
-        )
-        if not due_posts.data:
-            return 0
-
-        # Batch-update all due posts in a single query — avoids the N+1 pattern
-        # (up to 100 individual UPDATEs every 5 min). Fall back to per-post
-        # updates only if the batch fails (e.g. a constraint trips on one row).
-        post_ids = [post["id"] for post in due_posts.data]
-        try:
-            db.table("social_posts").update(
-                {
-                    "status": "published",
-                    "published_at": now_iso,
-                }
-            ).in_("id", post_ids).execute()
-            for post in due_posts.data:
-                logger.info(
-                    "Auto-published scheduled social post %s (%s) for tenant %s",
-                    post["id"],
-                    post["platform"],
-                    post["tenant_id"],
-                )
-            return len(post_ids)
-        except Exception:
-            logger.warning(
-                "Batch publish of %d scheduled posts failed; retrying individually",
-                len(post_ids),
-            )
-            published = 0
-            for post in due_posts.data:
-                try:
-                    db.table("social_posts").update(
-                        {
-                            "status": "published",
-                            "published_at": now_iso,
-                        }
-                    ).eq("id", post["id"]).execute()
-                    published += 1
-                    logger.info(
-                        "Auto-published scheduled social post %s (%s) for tenant %s",
-                        post["id"],
-                        post["platform"],
-                        post["tenant_id"],
-                    )
-                except Exception:
-                    logger.exception(
-                        "Failed to auto-publish social post %s", post["id"]
-                    )
-            return published
+        return await process_scheduled_posts()
     except Exception:
         logger.exception("_process_scheduled_posts failed")
+        return 0
+
+
+async def _run_inbox_poll():
+    """Poll connected Gmail inboxes and feed new mail through the OS bridge
+    + triage loop (classify, draft/auto-send replies, escalate)."""
+    from backend.services.inbox_monitor import run_inbox_poll
+
+    try:
+        return await run_inbox_poll()
+    except Exception:
+        logger.exception("_run_inbox_poll failed")
+        return 0
+
+
+async def _ingest_social_engagement():
+    """Pull basic engagement metrics for recently published IG/FB posts."""
+    from backend.services.social_engagement import ingest_engagement
+
+    try:
+        return await ingest_engagement()
+    except Exception:
+        logger.exception("_ingest_social_engagement failed")
         return 0
 
 
@@ -1093,6 +1067,10 @@ app.include_router(status_page.router)
 app.include_router(review_responder.router)
 app.include_router(bot_health.router)
 app.include_router(intake_ai.router)
+app.include_router(escalations_router.router)
+app.include_router(connectors_router.router)
+app.include_router(gmail_integration.router)
+app.include_router(prospecting_router.router)
 
 
 # --- Static files (widget) ---

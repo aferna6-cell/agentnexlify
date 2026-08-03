@@ -174,6 +174,56 @@ async def _run(ctx: ActionContext) -> ActionResult:
     )
 
 
+async def publish_text_post(
+    client_id: str, message: str, link: str | None = None
+) -> tuple[str | None, dict]:
+    """Publish a feed post with already-structured content.
+
+    Used by the scheduled-post publisher (``backend/services/social_publisher.py``),
+    which already has post content from ``social_posts`` — unlike ``_run``
+    above, which extracts it from a freeform approved deliverable body via
+    Claude. Reuses the same page lookup and Graph feed-post call as ``_run``.
+
+    Returns ``(post_id, response_or_error_dict)``. ``post_id`` is ``None``
+    on any failure, with ``response_or_error_dict`` carrying diagnostics —
+    ``{"stage": "connector", ...}`` specifically means "no Page linked".
+    """
+    page = _load_fb_page(client_id)
+    if not page:
+        return None, {
+            "stage": "connector",
+            "message": "facebook page not connected for this tenant",
+        }
+
+    api_body: dict[str, Any] = {
+        "message": message[:5000],
+        "access_token": page["page_access_token"],
+    }
+    if link:
+        api_body["link"] = link
+
+    url = f"{_FB_GRAPH_BASE}/{page['page_id']}/feed"
+
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.post(url, data=api_body)
+    except Exception as e:
+        logger.exception(
+            "social_facebook.publish_text_post: HTTP error client_id=%s", client_id
+        )
+        return None, {"stage": "fb_api", "message": str(e)[:300]}
+
+    if resp.status_code >= 400:
+        return None, {
+            "stage": "fb_api",
+            "status_code": resp.status_code,
+            "message": resp.text[:500],
+        }
+
+    body = resp.json() if resp.content else {}
+    return body.get("id"), body
+
+
 SPEC = ActionSpec(
     name="social.facebook.post",
     worker="campaign",

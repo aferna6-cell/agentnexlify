@@ -1739,3 +1739,39 @@ updated_at. Indexes: (status, scheduled_for) for the drainer's hot query,
 (tenant_id). Drained by `backend/services/retry_worker.py` on the 60s tick with
 30s/2min/10min backoff, max 3 attempts. APPLIED + verified against prod 2026-07-22
 (list_migrations 20260722031154; table, status CHECK, and both indexes confirmed).
+
+## Migration 190 — escalations (APPLIED 2026-08-01)
+First-class escalation records replacing the `"handoff"` tags-array magic
+string (Phase 1a, plans/nexlify-capabilities-roadmap_plan.md). client_id-scoped
+(anchored to conversations like leads). Columns: id, client_id, source
+(widget|email|sms|os), source_ref, conversation_id FK, os_thread_id FK, reason,
+priority (low|normal|high|urgent), status (open|in_progress|resolved|dismissed),
+assigned_to, metadata jsonb, created_at, first_response_at, resolved_at.
+UNIQUE (client_id, source, source_ref) idempotency arbiter (os_messages.source_ref
+pattern). Indexes: (client_id, status) + partial (conversation_id). RLS +
+service_role policy per migration 173 convention. Written/read by
+backend/services/escalations.py; created from widget handoff, SMS agent handoff,
+and inbox triage. APPLIED + verified against prod 2026-08-01 (tables, policies,
+representative count query confirmed).
+
+## Migration 191 — prospects (APPLIED 2026-08-01)
+Productized lead prospecting (Phase 5, nexlify-capabilities-roadmap). client_id
+scope (promotes straight into client_id-scoped leads; avoids a translation
+layer). Columns: business identity fields + email_verified, score numeric,
+status (new|enriched|qualified|promoted|rejected), enrichment jsonb,
+promoted_lead_id FK->leads. UNIQUE (client_id, source, external_ref) upsert
+arbiter. GOTCHA found at apply time: prod has NO shared public updated_at
+trigger function (001's update_updated_at / update_updated_at_column only
+exists in Supabase's internal `storage` schema) — migration defines
+public.set_updated_at() itself, CREATE OR REPLACE, reusable by future tables.
+RLS + service_role policy. APPLIED + verified against prod 2026-08-01.
+
+## Migration 193 — tenants.sms_agent_enabled (APPLIED 2026-08-01)
+Boolean default false, opt-in gate for the multi-turn SMS conversation agent
+(Phase 3). Flag off = POST /api/v1/twilio/sms-reply keeps its prior 410
+behavior byte-identical. No conversations/leads changes needed —
+conversations.channel (mig 057) + the sms_<digits> session_id convention
+(backend/routers/sms.py) already cover SMS session mapping. APPLIED +
+verified against prod 2026-08-01. NOTE: 188 and 192 intentionally unused
+(188 pre-existing gap; 192 reserved for gmail but integrations table needed
+no schema change).

@@ -28,7 +28,11 @@ import {
   fetchBridgeConfig,
   toggleBridge,
   saveBridgeConfig,
+  startGmailAuth,
+  fetchGmailStatus,
+  disconnectGmail,
 } from "../utils/api/integrations";
+import { fetchConnectorsStatus } from "../utils/api/connectors";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 /* ── Inline SVG: Google Calendar logo ── */
@@ -116,6 +120,40 @@ function InstagramIcon({ size = 40 }) {
         strokeWidth="3"
       />
       <circle cx="31.5" cy="16.5" r="2" fill="#fff" />
+    </svg>
+  );
+}
+
+/* ── Inline SVG: Gmail envelope ── */
+function GmailIcon({ size = 40 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <rect
+        x="4"
+        y="10"
+        width="40"
+        height="28"
+        rx="4"
+        fill="#fff"
+        stroke="#E0E0E0"
+        strokeWidth="1"
+      />
+      <path
+        d="M4 14l20 14 20-14"
+        stroke="#EA4335"
+        strokeWidth="3"
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M4 12v22" stroke="#4285F4" strokeWidth="3" strokeLinecap="round" />
+      <path d="M44 12v22" stroke="#34A853" strokeWidth="3" strokeLinecap="round" />
     </svg>
   );
 }
@@ -807,6 +845,227 @@ function M365CalendarSection({ token }) {
             {connecting ? "Connecting..." : "Connect"}
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Gmail Section ── */
+function GmailSection({ token }) {
+  const { user } = useAuth();
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [error, setError] = useState(null);
+
+  const loadStatus = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await fetchGmailStatus(user?.tenantId, token);
+      setStatus(data);
+    } catch (err) {
+      console.error("Failed to load Gmail status", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.tenantId, token]);
+
+  useEffect(() => {
+    loadStatus();
+  }, [loadStatus]);
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    setError(null);
+    try {
+      const data = await startGmailAuth(user?.tenantId, token);
+      if (data.auth_url)
+        window.open(data.auth_url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      setError("Failed to start Gmail authorization.");
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!confirmDisconnect) {
+      setConfirmDisconnect(true);
+      return;
+    }
+    setDisconnecting(true);
+    setError(null);
+    try {
+      await disconnectGmail(user?.tenantId, token);
+      setConfirmDisconnect(false);
+      await loadStatus();
+    } catch (err) {
+      setError("Failed to disconnect.");
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  const connected = status?.connected;
+
+  return (
+    <div style={{ ...gcStyles.card, marginTop: "1rem" }}>
+      <div style={gcStyles.cardTop}>
+        <div style={gcStyles.iconWrap}>
+          <GmailIcon size={40} />
+        </div>
+        <div style={gcStyles.cardInfo}>
+          <div style={gcStyles.cardTitle}>
+            Gmail
+            {connected && (
+              <span style={gcStyles.connectedBadge}>Connected</span>
+            )}
+          </div>
+          <div style={gcStyles.cardDesc}>
+            Let the Agent OS read and send email through your Gmail account
+            for outreach and inbound replies
+          </div>
+        </div>
+      </div>
+      {loading && (
+        <div
+          style={{
+            marginTop: "0.75rem",
+            color: "var(--text-muted)",
+            fontSize: "0.8125rem",
+          }}
+        >
+          Checking connection status...
+        </div>
+      )}
+      {!loading && connected && status?.email_address && (
+        <div style={gcStyles.details}>
+          <div style={gcStyles.detailRow}>
+            <span style={gcStyles.detailLabel}>Account</span>
+            <span style={gcStyles.detailValue}>{status.email_address}</span>
+          </div>
+        </div>
+      )}
+      {error && (
+        <div className="error-banner" style={{ marginTop: "0.75rem" }}>
+          {error}
+        </div>
+      )}
+      <div style={gcStyles.cardActions}>
+        {!loading && connected ? (
+          <button
+            className="btn-danger"
+            onClick={handleDisconnect}
+            disabled={disconnecting}
+          >
+            {disconnecting
+              ? "Disconnecting..."
+              : confirmDisconnect
+                ? "Confirm disconnect?"
+                : "Disconnect"}
+          </button>
+        ) : (
+          !loading && (
+            <button
+              className="btn-primary"
+              onClick={handleConnect}
+              disabled={connecting}
+            >
+              {connecting ? "Opening..." : "Connect Gmail"}
+            </button>
+          )
+        )}
+        {!loading && connected && confirmDisconnect && (
+          <button
+            className="btn-secondary"
+            onClick={() => setConfirmDisconnect(false)}
+            style={{ fontSize: "0.8125rem" }}
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Connectors status strip - registry-driven, additive to the hardcoded
+   cards above. Only renders once data loads and the registry isn't empty,
+   so it never adds a blank card to the page. ── */
+function ConnectorsStrip({ token }) {
+  const [connectors, setConnectors] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchConnectorsStatus(token)
+      .then((res) => {
+        if (cancelled) return;
+        const list = Array.isArray(res) ? res : res?.connectors || [];
+        setConnectors(list);
+      })
+      .catch((err) => console.error("Failed to load connector registry", err))
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  if (loading || connectors.length === 0) return null;
+
+  return (
+    <div style={{ ...gcStyles.card, marginBottom: "1rem" }}>
+      <div
+        style={{
+          fontSize: "0.8125rem",
+          fontWeight: 600,
+          color: "var(--text-primary)",
+          marginBottom: "0.75rem",
+        }}
+      >
+        All Connectors
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {connectors.map((c) => (
+          <div
+            key={c.key}
+            onClick={() => {
+              if (c.connected || !c.connect_path) return;
+              if (/^https?:\/\//.test(c.connect_path)) {
+                window.open(c.connect_path, "_blank", "noopener,noreferrer");
+              } else {
+                window.location.href = c.connect_path;
+              }
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "5px 12px",
+              borderRadius: 16,
+              border: "1px solid var(--border)",
+              background: "var(--bg-secondary)",
+              fontSize: "0.78rem",
+              color: "var(--text-secondary)",
+              cursor: c.connected ? "default" : "pointer",
+            }}
+          >
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: c.connected ? "var(--green)" : "var(--text-muted)",
+                flexShrink: 0,
+              }}
+            />
+            {c.label || c.key}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -1508,12 +1767,14 @@ export default function IntegrationsPage({ onNavigate }) {
       {/* Services Tab */}
       {activeTab === "services" && (
         <>
+          <ConnectorsStrip token={token} />
           <InboundBridgesSection token={token} />
           <GoogleCalendarSection token={token} />
-          <M365CalendarSection token={token} />
-          <HubSpotSection token={token} />
+          <GmailSection token={token} />
           <FacebookMessengerSection token={token} />
           <InstagramSection token={token} />
+          {/* M365CalendarSection + HubSpotSection deferred 2026-08-01 (owner
+              decision) — components kept below; re-add here when needed. */}
         </>
       )}
 

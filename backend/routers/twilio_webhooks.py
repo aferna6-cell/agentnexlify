@@ -16,7 +16,7 @@ from fastapi.responses import PlainTextResponse
 from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
-from backend.services import missed_call_gate, sms_compliance
+from backend.services import missed_call_gate, sms_agent, sms_compliance
 from backend.services.activity import log_activity
 from backend.services.twilio_service import format_textback_message, send_sms
 
@@ -76,7 +76,8 @@ def _verify_twilio_signature(request: Request, body: bytes) -> bool:
 _TENANT_PHONE_SELECT = (
     "id, business_name, notification_phone, twilio_number, "
     "sms_notifications_enabled, plan, "
-    "textback_enabled, textback_message, textback_quiet_start, textback_quiet_end"
+    "textback_enabled, textback_message, textback_quiet_start, textback_quiet_end, "
+    "sms_agent_enabled"
 )
 _TENANT_PHONE_INDEX: dict[str, dict] = {}
 _TENANT_PHONE_INDEX_AT: float = 0.0
@@ -522,18 +523,22 @@ async def handle_missed_call(request: Request):
 @router.post("/sms-reply")
 @limiter.limit("60/minute")
 async def handle_inbound_sms(request: Request):
-    """DEPRECATED — migrated to ``POST /api/v1/os/inbound/sms``.
+    """Inbound SMS reply webhook.
 
-    Returns 410 Gone after signature verification. Tenants must update
-    their Twilio Messaging webhook URL to point at
-    ``/api/v1/os/inbound/sms`` so inbound SMS flows through the Agent OS
-    (``os_messages`` + orchestrator) instead of the legacy
-    ``chat_messages`` AI-reply path.
+    Default (no matching tenant, or ``tenants.sms_agent_enabled=False``):
+    DEPRECATED — returns 410 Gone after signature verification, unchanged
+    from the migration to ``POST /api/v1/os/inbound/sms``. Tenants must
+    update their Twilio Messaging webhook URL to point there so inbound SMS
+    flows through the Agent OS (``os_messages`` + orchestrator) instead of
+    the legacy ``chat_messages`` AI-reply path.
 
-    Signature verification stays in place so the deprecation surface is
-    not exposed to forged probes. Every hit is logged with caller +
-    destination numbers for operational visibility into which tenants
-    still need to migrate.
+    When the destination tenant has ``sms_agent_enabled=True`` (migration
+    193), the multi-turn SMS conversation agent
+    (``backend.services.sms_agent.handle_inbound_sms``) answers instead of
+    the 410 — STOP/opt-out, suppression, rate-limit, and handoff-lockout are
+    all enforced inside that call before any AI reply is generated.
+
+    Signature verification always runs first, unchanged.
     """
     body = await request.body()
 
@@ -548,12 +553,40 @@ async def handle_inbound_sms(request: Request):
     except Exception:
         params = {}
 
+    from_number = params.get("From", "")
+    to_number = params.get("To", "")
+    body_text = params.get("Body", "")
+    message_sid = params.get("MessageSid", "")
+
+    tenant = _find_tenant_by_phone(to_number) if to_number else None
+
+    if tenant and tenant.get("sms_agent_enabled"):
+        try:
+            reply_text = await sms_agent.handle_inbound_sms(
+                get_service_supabase(),
+                tenant=tenant,
+                from_number=from_number,
+                to_number=to_number,
+                body=body_text,
+                provider_message_id=message_sid,
+            )
+        except Exception:
+            logger.exception(
+                "sms_agent.handle_inbound_sms raised tenant=%s", tenant.get("id")
+            )
+            reply_text = None
+
+        if reply_text:
+            await sms_agent.send_sms_agent_reply(tenant["id"], from_number, reply_text)
+
+        return PlainTextResponse("OK")
+
     logger.warning(
         "LEGACY /api/v1/twilio/sms-reply hit — tenant must migrate to "
         "/api/v1/os/inbound/sms (from=%s to=%s sid=%s)",
-        params.get("From", ""),
-        params.get("To", ""),
-        params.get("MessageSid", ""),
+        from_number,
+        to_number,
+        message_sid,
     )
 
     raise HTTPException(

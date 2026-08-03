@@ -43,10 +43,16 @@ def candidate_paths() -> List[Path]:
 
 
 def preferred_python() -> Path:
+    # Do NOT Path.resolve() the winner: on POSIX a venv's bin/python is a
+    # symlink chain out to the base interpreter, and resolving it escapes the
+    # venv entirely (no pyvenv.cfg context -> system site-packages, missing
+    # backend deps — the exact failure this wrapper exists to prevent).
+    # Windows venvs use a real python.exe, which is why this never showed
+    # there. Absolute-ize without following symlinks.
     for path in candidate_paths():
         if path.exists():
-            return path.resolve()
-    return Path(sys.executable).resolve()
+            return path if path.is_absolute() else (Path.cwd() / path)
+    return Path(sys.executable)
 
 
 def main(argv: List[str]) -> int:
