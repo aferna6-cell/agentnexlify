@@ -32,6 +32,15 @@ export async function uploadKbDocuments(tenantId, token, files) {
   return res.json();
 }
 
+// Typed knowledge note - same title saves over the existing note.
+export function addKbNote(tenantId, token, title, content) {
+  return request(`/api/v1/kb/${tenantId}/notes`, {
+    method: "POST",
+    token,
+    body: { title, content },
+  });
+}
+
 // Long-lived (180d) scoped token for the local folder-sync CLI.
 export function createKbSyncToken(tenantId, token) {
   return request(`/api/v1/kb/${tenantId}/sync-token`, {
