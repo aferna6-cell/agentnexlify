@@ -1,0 +1,37 @@
+{
+  "run": 101,
+  "date": "2026-08-04-pm",
+  "run_type": "scheduled_headless",
+  "total_runs_after": 101,
+  "evidence_summary": "5 open draft subconscious PRs (#625/#626/#613/#611/#606), 2 competing on Step 9G KB self-heal. grep confirms Step 9G absent from SKILL.md despite 2 PRs claiming to implement it. KB stale 12 days (last run 2026-07-23). VOYAGE_API_KEY missing — embeddings FTS-only. Typed KB notes (4853c31) shipped cleanly with all invariants passing. Morning digest Priority 1: resolve Step 9G PR duplication.",
+  "ideas_count": 5,
+  "ideas_debated": 3,
+  "winner": "Strengthen subconscious SKILL.md Phase 8 dedup guard with mandatory STEP 0 tool-call pre-flight (mcp__github__list_pull_requests)",
+  "winner_category": "workflow",
+  "winner_effort": "XS",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "requires_human": false,
+  "debate_results": {
+    "idea_1_dedup_guard": "SURVIVES → WINNER",
+    "idea_3_typed_kb_retrieval": "WEAKENED → run_102_mandate item 2",
+    "idea_4_loop_health_noise": "WEAKENED → parking lot (revisit at 5+ Agent OS tenants)"
+  },
+  "run_101_mandate_results": {
+    "step_9g_in_skill_md": "FAIL — grep returns 0",
+    "kb_freshness": "FAIL — stale 12 days (last run 2026-07-23)",
+    "step_9g_fired": "N/A — step absent",
+    "gh_403_step_9g_comment": "N/A — step absent",
+    "agent_os_tenant_count": "2-3 (below 5-tenant promote threshold)",
+    "mcp_tenant_count": "1 (below 5-tenant revisit threshold)"
+  },
+  "parking_lot_additions": [
+    "Resolve #625 vs #626 Step 9G competition (human action)",
+    "VOYAGE_API_KEY alert Step 9J (pending Step 9G merge)",
+    "Consolidate stale subconscious PRs (human action: close #606/#611/#613)",
+    "Agent OS loop-health noise (revisit at 5+ tenants)"
+  ],
+  "rejected": [],
+  "pr_target": "existing open subconscious PR (PR #625 or #626)",
+  "artifacts_path": "subconscious/runs/2026-08-04-pm/"
+}

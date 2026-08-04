@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-08-04",
-  "total_runs": 104,
+  "last_run": "2026-08-04-pm",
+  "total_runs": 105,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -245,7 +245,22 @@
     "last_run": "2026-08-03 -> 2026-08-04"
   },
   "run_105_mandate": "1. Step 9G fired on nightly-2026-08-04: check nightly log for 'Step 9G:' line. 2. KB freshness: did kb-autopopulate.yml trigger successfully? Check knowledge-base/log.md. 3. Security audit GH issue filed? (capabilities phases 1-5, labels: security + human-action-required). 4. agent-os-extension skill implemented? 5. GH #536 INTEGRATIONS_ENC_KEY: provisioned? 6. GH #399 resolved?",
+  
+  "run_105_mandate_executed": "EXECUTED 2026-08-04-pm. All 6 items checked: (1) Step 9G ABSENT from SKILL.md \u2014 grep returns 0. Two competing PRs #625/#626 unmerged. (2) KB stale 12 days \u2014 last log entry 2026-07-23. VOYAGE_API_KEY missing, embeddings FTS-only. (3) Step 9G cannot fire \u2014 absent from SKILL.md. (4) GH #403 has no Step 9G comment. (5) Agent OS tenant count 2-3 \u2014 below 5-tenant promote threshold. (6) MCP tenant count 1 \u2014 below 5-tenant revisit threshold. Run 101 winner: strengthen SKILL.md dedup guard with mandatory STEP 0 tool-call pre-flight.",
+  "run_105_governance_corrections": {
+    "step_9g_status": "ABSENT from SKILL.md \u2014 grep -c 'Step 9G' returns 0. PRs #625 and #626 both claim to implement it but neither merged.",
+    "kb_stale_days": 12,
+    "kb_last_run": "2026-07-23",
+    "voyage_api_key": "MISSING \u2014 embeddings skipped, FTS fallback active for all 3 live tenants",
+    "typed_kb_notes": "SHIPPED cleanly (4853c31, 2026-08-04) \u2014 all invariants pass. Run 102 mandate: verify retrieval path includes source='note'.",
+    "open_subconscious_prs": "5 \u2014 #625 (Step 9G), #626 (Step 9G duplicate), #613 (Step 9G+9I), #611 (Step 9H), #606 (feature-docs-trio). Morning digest Priority 1.",
+    "total_runs": "100 -> 101",
+    "last_run": "2026-07-23 -> 2026-08-04-pm"
+  },
+  "run_106_mandate": "1. Dedup guard STEP 0 present in .claude/skills/subconscious/SKILL.md? grep for 'STEP 0' or 'mcp__github__list_pull_requests' in Phase 8. SHOULD PASS if run 101 winner was committed to existing open PR and merged. 2. Typed KB notes retrieval audit: grep backend/services/ and backend/routers/tenant_kb.py for tenant_kb_documents queries; verify no source= filter excludes source='note' from chat retrieval path. File LOW-risk GH issue if filter found. 3. Step 9G still absent from nightly SKILL.md? If still 0: escalate to human-action GH issue with exact implementation sketch from subconscious/runs/2026-07-23/winning-concept.md. 4. VOYAGE_API_KEY diagnostic: knowledge-base/log.md last entry \u2014 still shows SKIPPED? If yes: note for Step 9J consideration. 5. Open subconscious PRs: should be \u22641 after dedup guard lands and human resolves #625/#626.",
+  
   "active_directions": [
+
     {
       "title": "Step 9G: KB Autopopulate Self-Heal Trigger in nightly-commit-review SKILL.md (run 100 winner → runs 101-102-103 carry-forward → IMPLEMENTED run 103)",
       "date": "2026-08-02",
@@ -262,6 +277,22 @@
       "evidence": "Step 9F fires correctly (nightly-2026-07-22 confirmed: KB STALE 9 days, comment posted to GH #403). KB stale 11 days as of 2026-08-03 (last run 2026-07-23). Alert-only posture insufficient — GH #403 has received multiple staleness comments with zero human action. Step 9G adds self-repair: gh workflow run + 30s status check + targeted diagnostic comment if secrets fail.",
       "action": "COMPLETED. Step 9G bash block added to .claude/skills/nightly-commit-review/SKILL.md after Step 9F. When DAYS_STALE>7: trigger gh workflow run kb-autopopulate.yml; sleep 30; check conclusion via gh run list; if failure/cancelled: comment on GH #403 with specific secret diagnostic (ANTHROPIC_API_KEY + VOYAGE_API_KEY + SUPABASE_ACCESS_TOKEN). All conclusion branches handled (success/failure/cancelled/in-progress).",
       "note": "Run 100 winner. 4th-cycle carry-forward (runs 101, 102, 103 all absent). Direct implementation authorized by run_103_mandate (same pattern as run 99 implementing Step 9F on 3rd carry-forward). Will fire on next nightly cycle — KB 11 days stale at time of implementation."
+    },
+
+    {
+      "title": "Strengthen subconscious SKILL.md Phase 8 dedup guard — mandatory STEP 0 tool-call pre-flight (run 101 winner)",
+      "date": "2026-08-04-pm",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "autonomous_executable": true,
+      "requires_human": false,
+      "category": "workflow",
+      "moratorium_override": false,
+      "source_run": 101,
+      "effort": "XS",
+      "evidence": "5 open draft subconscious PRs, 2 competing on Step 9G (morning digest Priority 1). Prose-only dedup guard added run 100 ignored twice by headless sessions. grep -c 'Step 9G' nightly SKILL.md = 0 despite 2 PRs claiming to implement it.",
+      "action": "In .claude/skills/subconscious/SKILL.md Phase 8, insert STEP 0 at top: call mcp__github__list_pull_requests (state=open), filter head.ref starts with 'subconscious', if found: fetch+checkout that branch, commit artifacts, push, do NOT open new PR. If not found: proceed to create new branch + PR. Full block in subconscious/runs/2026-08-04-pm/winning-concept.md.",
+      "note": "Run 101 winner. Structural fix: replaces prose guidance with tool-call enforcement. Same SKILL.md-edit channel proven for Steps 9A-9F, moratorium-sprint skill, god-class-splitter. Closes PR proliferation root cause."
     },
     {
       "title": "Step 9F: KB Autopopulate Staleness Check in nightly-commit-review SKILL.md (run 97 winner)",
