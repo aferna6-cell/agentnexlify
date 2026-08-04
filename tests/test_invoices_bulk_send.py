@@ -6,6 +6,7 @@ Uses the same JWT + mock-supabase pattern as test_documents.py.
 """
 
 import os
+
 os.environ["TESTING"] = "1"
 
 import sys
@@ -20,9 +21,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 def _make_jwt(tenant_id="t1", role="owner", secret="test-secret-key-for-jwt"):
     from jose import jwt
+
     payload = {
-        "tenant_id": tenant_id, "sub": tenant_id, "email": "o@e.com",
-        "plan": "professional", "business_name": "Test Biz", "role": role,
+        "tenant_id": tenant_id,
+        "sub": tenant_id,
+        "email": "o@e.com",
+        "plan": "professional",
+        "business_name": "Test Biz",
+        "role": role,
         "is_team_member": False,
         "exp": datetime.now(timezone.utc) + timedelta(days=1),
     }
@@ -47,8 +53,26 @@ def _counting_table_mock(db_mock, table_responses):
             current_data = data[idx]
         else:
             current_data = data
-        for m in ["select", "insert", "update", "delete", "eq", "neq", "gte", "lte",
-                  "gt", "lt", "limit", "order", "ilike", "in_", "is_", "or_", "contains", "not_"]:
+        for m in [
+            "select",
+            "insert",
+            "update",
+            "delete",
+            "eq",
+            "neq",
+            "gte",
+            "lte",
+            "gt",
+            "lt",
+            "limit",
+            "order",
+            "ilike",
+            "in_",
+            "is_",
+            "or_",
+            "contains",
+            "not_",
+        ]:
             getattr(table, m).return_value = table
         result = MagicMock()
         result.data = current_data
@@ -70,8 +94,8 @@ def test_client(mock_settings):
         patch("backend.routers.auth.get_service_supabase", return_value=db_mock),
         patch("backend.routers.auth.settings", mock_settings),
         patch("backend.routers.invoices.get_service_supabase", return_value=db_mock),
-        patch("backend.routers.invoices.send_email", new_callable=AsyncMock),
-        patch("backend.routers.invoices.send_sms", new_callable=AsyncMock),
+        patch("backend.services.invoice_send.send_email", new_callable=AsyncMock),
+        patch("backend.services.invoice_send.send_sms", new_callable=AsyncMock),
     ]
     started = [p.start() for p in patches]
     send_email_mock = started[4]
@@ -80,6 +104,7 @@ def test_client(mock_settings):
     send_sms_mock.return_value = True
     from backend.main import app
     from fastapi.testclient import TestClient
+
     client = TestClient(app)
     yield client, db_mock, send_email_mock, send_sms_mock
     for p in patches:
@@ -88,8 +113,11 @@ def test_client(mock_settings):
 
 def _invoice(inv_id, lead_id, status="draft", number="INV-1"):
     return {
-        "id": inv_id, "lead_id": lead_id, "status": status,
-        "invoice_number": number, "total": 100.0,
+        "id": inv_id,
+        "lead_id": lead_id,
+        "status": status,
+        "invoice_number": number,
+        "total": 100.0,
         "stripe_payment_link": "https://pay.example/x",
     }
 
@@ -97,18 +125,26 @@ def _invoice(inv_id, lead_id, status="draft", number="INV-1"):
 class TestBulkSend:
     def test_sends_all_with_batched_queries(self, test_client):
         client, db, send_email_mock, _ = test_client
-        counts = _counting_table_mock(db, {
-            "tenants": [{"business_name": "Test Biz"}],
-            "invoices": [
-                # 1st call: batched select; 2nd call: batched status update
-                [_invoice("inv1", "lead1", number="INV-1"), _invoice("inv2", "lead2", number="INV-2")],
-                [{"id": "inv1"}, {"id": "inv2"}],
-            ],
-            "leads": [
-                [{"id": "lead1", "name": "A", "email": "a@e.com", "phone": None},
-                 {"id": "lead2", "name": "B", "email": "b@e.com", "phone": None}],
-            ],
-        })
+        counts = _counting_table_mock(
+            db,
+            {
+                "tenants": [{"business_name": "Test Biz"}],
+                "invoices": [
+                    # 1st call: batched select; 2nd call: batched status update
+                    [
+                        _invoice("inv1", "lead1", number="INV-1"),
+                        _invoice("inv2", "lead2", number="INV-2"),
+                    ],
+                    [{"id": "inv1"}, {"id": "inv2"}],
+                ],
+                "leads": [
+                    [
+                        {"id": "lead1", "name": "A", "email": "a@e.com", "phone": None},
+                        {"id": "lead2", "name": "B", "email": "b@e.com", "phone": None},
+                    ],
+                ],
+            },
+        )
 
         resp = client.post(
             "/api/v1/invoices/t1/bulk-send",
@@ -127,13 +163,16 @@ class TestBulkSend:
 
     def test_missing_and_paid_invoices_reported(self, test_client):
         client, db, send_email_mock, _ = test_client
-        _counting_table_mock(db, {
-            "tenants": [{"business_name": "Test Biz"}],
-            "invoices": [
-                [_invoice("inv1", "lead1", status="paid", number="INV-1")],
-            ],
-            "leads": [],
-        })
+        _counting_table_mock(
+            db,
+            {
+                "tenants": [{"business_name": "Test Biz"}],
+                "invoices": [
+                    [_invoice("inv1", "lead1", status="paid", number="INV-1")],
+                ],
+                "leads": [],
+            },
+        )
 
         resp = client.post(
             "/api/v1/invoices/t1/bulk-send",
@@ -152,11 +191,14 @@ class TestBulkSend:
 
     def test_invoice_without_contact_info_fails(self, test_client):
         client, db, _, _ = test_client
-        _counting_table_mock(db, {
-            "tenants": [{"business_name": "Test Biz"}],
-            "invoices": [[_invoice("inv1", "lead1", number="INV-9")]],
-            "leads": [[{"id": "lead1", "name": "A", "email": None, "phone": None}]],
-        })
+        _counting_table_mock(
+            db,
+            {
+                "tenants": [{"business_name": "Test Biz"}],
+                "invoices": [[_invoice("inv1", "lead1", number="INV-9")]],
+                "leads": [[{"id": "lead1", "name": "A", "email": None, "phone": None}]],
+            },
+        )
 
         resp = client.post(
             "/api/v1/invoices/t1/bulk-send",

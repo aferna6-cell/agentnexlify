@@ -303,6 +303,22 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
           body: "**KB autopopulate staleness alert (Step 9F):** {days_stale} days since last successful run (last: {last_run_date}). Check: (1) ANTHROPIC_API_KEY in GitHub Actions secrets — may need rotation. (2) SUPABASE_ACCESS_TOKEN — may be expired. Manual trigger: `bash scripts/daily/kb-autopopulate.sh`."
        b. If GH comment fails (token expired — GH #399): log "Step 9F: GH comment failed — KB stale {days_stale} days, token may be expired" and continue.
        c. Log: "Step 9F: KB STALE ({days_stale} days) — comment added to GH #403"
+9G. (KB Autopopulate Self-Heal Trigger) If KB staleness > 7 days (uses DAYS_STALE from Step 9F):
+    1. **Trigger workflow:**
+       Run: `gh workflow run kb-autopopulate.yml -R aferna6-cell/agentnexlify`
+       If command fails: log "Step 9G: workflow dispatch failed — check GH token permissions" and continue.
+    2. **Wait and check conclusion:**
+       Sleep 30 seconds, then:
+       `gh run list --workflow=kb-autopopulate.yml --limit=1 --json conclusion,url`
+       Parse `conclusion` and `url` fields.
+    3. **Log outcome:**
+       a. If conclusion == "success": log "Step 9G: kb-autopopulate triggered — SUCCESS"
+       b. If conclusion == "failure" or "cancelled":
+          Add comment via `mcp__github__add_issue_comment`:
+            issue_number: 403
+            body: "**Step 9G: kb-autopopulate.yml triggered but FAILED** (conclusion: {conclusion}). Check GH Actions Secrets: ANTHROPIC_API_KEY + VOYAGE_API_KEY + SUPABASE_ACCESS_TOKEN. Run URL: {url}"
+          Log: "Step 9G: kb-autopopulate FAILED — diagnostic comment posted on GH #403"
+       c. If conclusion is empty (run still in progress after 30s): log "Step 9G: kb-autopopulate running — status check pending"
 10. Commit report: `docs(nightly): review YYYY-MM-DD [auto-nightly]`
 11. Push to main
 12. If any guardrail tripped (forbidden path, >5 files, >50 LOC, test-check failed) — abort fixes, file issue only, still write report
