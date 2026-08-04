@@ -11,10 +11,10 @@
 ## Parking Lot — Ranked by Impact
 
 ### 1. Security Audit Request — Capabilities Phases 1-5
-**Category:** security / code_health  
-**Effort:** XS (file GH issue)  
-**Labels:** `security`, `human-action-required`, `audit`  
-**Why parked:** No concrete bug found; attack surfaces are structural properties. Belongs in human-action-required queue, not ai-ready.  
+**Category:** security / code_health
+**Effort:** XS (file GH issue)
+**Labels:** `security`, `human-action-required`, `audit`
+**Why parked:** No concrete bug found; attack surfaces are structural properties. Belongs in human-action-required queue, not ai-ready.
 **Specific risks:**
 - SSRF via `connector_registry.py` (tenant-supplied OAuth URLs — no allowlist confirmed)
 - Gmail OAuth scope creep (does it request read-all vs least-privilege?)
@@ -24,22 +24,22 @@
 **Promote condition:** Run this as bonus action in run 102 if no higher-priority winner.
 
 ### 2. INTEGRATIONS_ENC_KEY (GH #536) — Security Gap Escalation
-**Category:** security / operational  
-**Effort:** XS (GH comment reframe)  
-**Why parked:** Confidence on specific claim ("tokens stored unencrypted") is 65-70%, below 80% threshold. Comment-posting pattern hasn't moved the needle on similar issues. Security concern captured in item 1 above.  
+**Category:** security / operational
+**Effort:** XS (GH comment reframe)
+**Why parked:** Confidence on specific claim ("tokens stored unencrypted") is 65-70%, below 80% threshold. Comment-posting pattern hasn't moved the needle on similar issues. Security concern captured in item 1 above.
 **Promote condition:** Read `connector_registry.py` to confirm fallback behavior — if unencrypted storage confirmed, escalate to direct comment on GH #536.
 
 ### 3. GH #399 Economic Escalation (AUTOPILOT_GH_TOKEN)
-**Category:** operational  
-**Effort:** XS (GH comment)  
-**Why parked:** Day 26+ open, 30 ai-ready issues stalled. Comment fatigue documented. New framing: capabilities phases 1-5 will generate additional ai-ready issues, compounding the backlog further.  
+**Category:** operational
+**Effort:** XS (GH comment)
+**Why parked:** Day 26+ open, 30 ai-ready issues stalled. Comment fatigue documented. New framing: capabilities phases 1-5 will generate additional ai-ready issues, compounding the backlog further.
 **Promote condition:** Post economic escalation comment (26d × 30 issues × 2h/issue = 60 engineering-hours queued; 5-min Railway fix) as bonus action at any run.
 
 ### 4. Capabilities Phases 1-5 Test Coverage Report
-**Category:** code_health  
-**Effort:** XS (grep + count + conditional GH issue)  
-**Why parked:** 156 tests passing aggregate but coverage distribution unknown for 5 new high-risk routers.  
-**Investigation path:** `python3 -m pytest backend/tests/ --co -q 2>/dev/null | grep -E "gmail|escalat|prospect|social|connector" | wc -l`  
+**Category:** code_health
+**Effort:** XS (grep + count + conditional GH issue)
+**Why parked:** 156 tests passing aggregate but coverage distribution unknown for 5 new high-risk routers.
+**Investigation path:** `python3 -m pytest backend/tests/ --co -q 2>/dev/null | grep -E "gmail|escalat|prospect|social|connector" | wc -l`
 **Promote condition:** If count < 10 per new router, file GH issue with ai-ready label.
 
 ---
