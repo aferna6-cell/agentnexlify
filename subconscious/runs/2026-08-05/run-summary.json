@@ -1,0 +1,34 @@
+{
+  "run": 103,
+  "date": "2026-08-05",
+  "winner": {
+    "title": "KB Notes End-to-End Widget Retrieval Test",
+    "category": "code_health",
+    "confidence": "HIGH",
+    "effort": "S",
+    "action": "Add backend/tests/test_tenant_kb_widget_retrieval.py — integration test: insert note via POST /api/v1/kb/{tenant_id}/notes → KB search → assert note in results → assert note in widget context assembly",
+    "evidence": "Feature 4853c31 (2026-08-02): typed KB notes ship with 8 insert-path tests, 0 retrieval/context tests. Booking CTA bug (2026-07-23) is exact precedent — works in isolation, fails end-to-end. All 3 live tenants depend on KB-backed AI chat."
+  },
+  "ideas_generated": 5,
+  "top_3_debated": [
+    "Step 9G PR merge (WEAKENED — human already knows, 5th consecutive recommendation adds no signal)",
+    "Step 9F validation (WEAKENED — cannot verify without GH #403 access; Step 9G supersedes)",
+    "KB Notes e2e widget retrieval test (SURVIVES → WINNER)"
+  ],
+  "governance_mandate_status": {
+    "step_9g_on_main": false,
+    "step_9g_grep_hits": 0,
+    "open_step_9g_prs": ["#625", "#626"],
+    "kb_days_stale": 23,
+    "last_kb_automated_run": "2026-07-13",
+    "consecutive_step_9g_recommendations": 7,
+    "governance_stuck_flag": true
+  },
+  "parking_lot": [
+    "Step 9F silent-failure diagnostic (needs GH #403 access)",
+    "Expand client_id guard audit to all Supabase call sites",
+    "Cross-phase widget→backend→KB→AI integration test audit"
+  ],
+  "branch": "subconscious/run-101-step9g",
+  "pr": "#626"
+}
