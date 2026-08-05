@@ -1,4 +1,4 @@
-# Debate Log — Run 101 (2026-08-05-pm)
+# Debate Log — Run 104 (2026-08-05-pm)
 
 Top 3 debated: Idea A (Step 9J), Idea C (PR tombstoning), Idea E (merge readiness reporter).
 
