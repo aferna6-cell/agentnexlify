@@ -1,11 +1,13 @@
 {
   "version": 1,
-  "last_run": "2026-08-05",
-  "total_runs": 103,
+  "last_run": "2026-08-05-pm",
+  "total_runs": 104,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
-  "frozen_ideas": ["ai_human_handoff"],
+  "frozen_ideas": [
+    "ai_human_handoff"
+  ],
   "moratorium_config": {
     "moratorium_active": false,
     "triggered_run": 15,
@@ -229,8 +231,8 @@
       "source_run": 103,
       "effort": "S",
       "evidence": "Feature 4853c31 (2026-08-02): typed KB notes ship with 8 insert-path tests, 0 retrieval/context tests. Booking CTA bug (2026-07-23) exact precedent: insert worked, widget presentation failed. 3 live tenants depend on KB-backed AI chat. source='note' rows could be silently excluded from KB search.",
-      "action": "Add backend/tests/test_tenant_kb_widget_retrieval.py: insert note via POST /api/v1/kb/{tenant_id}/notes → call KB search function → assert note content in retrieval results → simulate widget context injection → assert note text present in assembled context. Test must fail when source='note' rows are excluded.",
-      "note": "Run 103 winner. Complements existing insert-path tests in test_tenant_kb.py. Closes retrieval/context test gap for feature 4853c31. Deterministic — no LLM call needed."
+      "action": "Add backend/tests/test_tenant_kb_widget_retrieval.py: insert note via POST /api/v1/kb/{tenant_id}/notes \u2192 call KB search function \u2192 assert note content in retrieval results \u2192 simulate widget context injection \u2192 assert note text present in assembled context. Test must fail when source='note' rows are excluded.",
+      "note": "Run 103 winner. Complements existing insert-path tests in test_tenant_kb.py. Closes retrieval/context test gap for feature 4853c31. Deterministic \u2014 no LLM call needed."
     },
     {
       "title": "Step 9G: KB Self-Healing Trigger in nightly-commit-review SKILL.md (run 101 winner)",
@@ -1229,6 +1231,22 @@
       "note": "Run 4 winner. Explicit-trigger-only v1. 1.5-2 days. Infrastructure exists. Critical gap all 7 industries.",
       "reconciled": "2026-07-23",
       "reconciliation_note": "Handoff v1 live (explicit HANDOFF_REQUESTED trigger + handoff mode + owner notify)."
+    },
+    {
+      "title": "Step 9J: Accumulated-issue auto-closer in nightly-commit-review SKILL.md (run 104 winner)",
+      "date": "2026-08-05",
+      "confidence": "HIGH",
+      "status": "recommended",
+      "autonomous_executable": true,
+      "requires_human": false,
+      "category": "operational",
+      "moratorium_override": false,
+      "source_run": 104,
+      "effort": "XS",
+      "evidence": "Issues #633 and #635 both open (loop-health label) as of 2026-08-05, both from consecutive nightly runs with no auto-close. Morning digest issue #634 also open from yesterday. 3 accumulating issues signal a structural gap: no close-before-open primitive in any nightly step 9A-9G. Steps 9B-9F confirmed autonomous-executable via SKILL.md-edit channel.",
+      "action": "Add Step 9J sub-step to .claude/skills/nightly-commit-review/SKILL.md Scheduled Task Prompt, placed before Step 9D. Load mcp__github__ tools, list open loop-health issues (state=OPEN), for each: add 'Superseded by today's check (DATE)' comment then close (state=CLOSED, state_reason=not_planned). Log count. ~15 lines.",
+      "implementation_sketch": "subconscious/runs/2026-08-05-pm/winning-concept.md",
+      "note": "Run 104 winner. AUTONOMOUS-EXECUTABLE via nightly SKILL.md-edit channel. Idempotent: 0 open issues \u2192 no-op. GH history preserved. Addresses close-before-open gap absent from all prior steps 9A-9G."
     }
   ],
   "ideas_explored": [
@@ -1836,5 +1854,11 @@
     "connector_token_expiry": "PARKING LOT \u2014 GH #536 status unverified from repo-local evidence.",
     "inbox_triage_cost_guard": "PARKING LOT \u2014 promote after 2026-08-16 with prod data."
   },
-  "run_104_mandate": "1. Step 9G merged? grep 'Step 9G' .claude/skills/nightly-commit-review/SKILL.md. 2. If merged: nightly 'Step 9G:' line in log? KB autopopulate triggered? 3. KB freshness: knowledge-base/log.md last entry date. 4. KB notes e2e test: backend/tests/test_tenant_kb_widget_retrieval.py present? Filed as GH issue? 5. Connector token expiry (Step 9H candidate): GH #536 resolved? Migration 176 applied? If yes: promote to run 104 winner. 6. Inbox triage cost guard: prod data after 2026-08-16?"
+  "run_104_mandate": "1. Step 9J in SKILL.md? (grep 'Step 9J' \u2014 SHOULD PASS if this run's winner approved). 2. loop-health open issues <= 1 after next nightly? 3. Step 9J log line: 'closed N prior loop-health issues'? 4. Step 9G: still unmerged? If days since PR creation > 21 (2026-08-23), raise P1 'subconscious-stalled' issue. 5. KB freshness: still stale? Manual trigger recommended. 6. Agent OS tenant count > 5?",
+  "run_104_governance_corrections": {
+    "total_runs": "103 -> 104",
+    "last_run": "2026-08-05 -> 2026-08-05-pm",
+    "step_9g_still_absent_main": "4th cycle on main \u2014 PRs #625/#626 unmerged",
+    "loop_health_accumulation": "issues #633/#635/#634 all open \u2014 evidence for Step 9J"
+  }
 }
