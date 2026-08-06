@@ -26,6 +26,8 @@ import TodayAppointments from "./TodayAppointments";
 import ActionItemsWidget from "./ActionItemsWidget";
 import AIInsightsWidget from "./AIInsightsWidget";
 import FrontDeskHealthCard from "./FrontDeskHealthCard";
+import DailyFocusCard from "./DailyFocusCard";
+import ResponseScoreCard from "./ResponseScoreCard";
 import RecoveryStatsWidget from "./RecoveryStatsWidget";
 import SkeletonLoader from "../../components/SkeletonLoader";
 
@@ -474,6 +476,8 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
               token={token}
               onNavigate={onNavigate}
             />
+            <DailyFocusCard tenantId={user.tenantId} token={token} />
+            <ResponseScoreCard tenantId={user.tenantId} token={token} />
             <AIInsightsWidget tenantId={user.tenantId} token={token} />
             <FrontDeskHealthCard tenantId={user.tenantId} token={token} />
             <WidgetEmbed

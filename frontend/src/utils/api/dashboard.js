@@ -86,10 +86,12 @@ export function fetchKpiDeltas(tenantId, token) {
 }
 
 // --- AI Usage (for billing usage meter) ---
-// Returns the nested ai_usage object from GET /api/v1/os/usage.
-// Shape: { total_tokens, hard_limit, alert_threshold, alert_reached, hard_limit_reached, period_month }
+// Returns the nested ai_usage object from GET /api/v1/billing/ai-usage.
+// Same snapshot as /api/v1/os/usage but ungated: chatbot-plan tenants burn
+// widget AI tokens too and must see the meter (os/usage 402s for them).
+// Shape: { limit_units, used_units, remaining_units, pct_used, period_month, alert_reached, hard_limit_reached }
 export function fetchAiUsage(token) {
-  return request("/api/v1/os/usage", { token }).then((data) => data?.ai_usage ?? null);
+  return request("/api/v1/billing/ai-usage", { token }).then((data) => data?.ai_usage ?? null);
 }
 
 // POST /api/v1/billing/buy-usage - purchase additional usage credits.

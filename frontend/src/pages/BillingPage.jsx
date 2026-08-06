@@ -468,6 +468,60 @@ export default function BillingPage() {
           <div className="billing-usage-text">
             {used} conversations
           </div>
+          {!aiUsageLoading && aiUsage && aiUsage.limit_units > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: 4 }}>
+                <span>AI allowance</span>
+                <span>
+                  {aiUsage.used_units.toLocaleString()} / {aiUsage.limit_units.toLocaleString()} units
+                </span>
+              </div>
+              <div style={{ height: 8, borderRadius: 4, background: "var(--bg-primary)", border: "1px solid var(--border)", overflow: "hidden" }}>
+                <div
+                  style={{
+                    width: `${Math.min(100, aiUsage.pct_used)}%`,
+                    height: "100%",
+                    background: aiUsage.pct_used >= 80 ? "#f59e0b" : "var(--accent, #6366f1)",
+                    transition: "width 0.3s ease",
+                  }}
+                />
+              </div>
+              {aiUsage.pct_used >= 80 && (
+                <div style={{ marginTop: 8, fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                  {aiUsage.hard_limit_reached
+                    ? "Monthly AI allowance used up. Top up to keep your assistant replying."
+                    : `${Math.round(aiUsage.pct_used)}% of your monthly AI allowance used.`}
+                  <button
+                    disabled={buyingUsage}
+                    onClick={async () => {
+                      setBuyingUsage(true);
+                      try {
+                        const res = await buyMoreUsage(token);
+                        if (res?.checkout_url) window.location.href = res.checkout_url;
+                      } catch (err) {
+                        console.warn("Buy usage failed:", err?.message);
+                        notify.error(err.message || "Could not open the checkout. Try again in a moment.");
+                      } finally {
+                        setBuyingUsage(false);
+                      }
+                    }}
+                    style={{
+                      marginLeft: 8,
+                      padding: "4px 10px",
+                      borderRadius: 6,
+                      border: "1px solid var(--border)",
+                      background: "var(--bg-primary)",
+                      color: "var(--text-primary)",
+                      cursor: buyingUsage ? "wait" : "pointer",
+                      fontSize: "0.75rem",
+                    }}
+                  >
+                    {buyingUsage ? "Opening checkout..." : "Buy more usage"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

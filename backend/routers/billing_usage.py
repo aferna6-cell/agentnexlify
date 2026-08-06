@@ -13,7 +13,7 @@ from backend.config import settings
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
 from backend.services.stripe_service import USAGE_PACK_PRICE_ID, ensure_stripe_configured
-from backend.services.ai_usage_guard import current_period_month
+from backend.services.ai_usage_guard import current_period_month, get_ai_usage_status
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,23 @@ router = APIRouter(
 # pack is profit-positive and is the top-up valve once a plan hits its cap.
 USAGE_PACK_PRICE_USD = 24.99
 USAGE_PACK_TOKENS = 1_000_000  # 1 million tokens per pack
+
+
+@router.get("/ai-usage")
+async def get_ai_usage(claims: dict = Depends(_get_current_tenant)):
+    """AI usage meter for the billing page — available on every plan.
+
+    GET /api/v1/os/usage carries the same snapshot but sits behind the
+    agent_os gate (402 for chatbot tenants); chatbot tenants still burn AI
+    tokens in the widget and need to see the meter before they hit the cap.
+    Response nests under ai_usage to match the /os/usage shape the
+    frontend already unwraps.
+    """
+    tenant_id = claims.get("tenant_id")
+    if not tenant_id:
+        raise HTTPException(status_code=401, detail="Unauthenticated")
+    db = get_service_supabase()
+    return {"ai_usage": get_ai_usage_status(db, tenant_id)}
 
 
 @router.post("/buy-usage")
