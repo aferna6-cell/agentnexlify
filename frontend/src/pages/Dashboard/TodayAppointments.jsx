@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { fetchAppointments } from "../../utils/api/appointments";
+import { fetchAppointmentBrief } from "../../utils/api/insights";
 
 function formatTime(isoStr, tz) {
   try {
@@ -15,6 +16,8 @@ export default function TodayAppointments({ tenantId, token, onNavigate }) {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [bizTz, setBizTz] = useState(null);
+  // briefs: { [appointmentId]: { status: "loading" | "ready" | "error", text } }
+  const [briefs, setBriefs] = useState({});
 
   useEffect(() => {
     if (!tenantId || !token) return;
@@ -25,6 +28,24 @@ export default function TodayAppointments({ tenantId, token, onNavigate }) {
       .catch((err) => { console.warn("Appointments fetch failed:", err?.message); setAppointments([]); })
       .finally(() => setLoading(false));
   }, [tenantId, token]);
+
+  const loadBrief = async (appointmentId) => {
+    const current = briefs[appointmentId];
+    if (current?.status === "loading") return;
+    if (current?.status === "ready") {
+      // second click toggles the brief closed
+      setBriefs(prev => { const next = { ...prev }; delete next[appointmentId]; return next; });
+      return;
+    }
+    setBriefs(prev => ({ ...prev, [appointmentId]: { status: "loading" } }));
+    try {
+      const res = await fetchAppointmentBrief(tenantId, appointmentId, token);
+      setBriefs(prev => ({ ...prev, [appointmentId]: { status: "ready", text: res.brief } }));
+    } catch (err) {
+      console.warn("Brief fetch failed:", err?.message);
+      setBriefs(prev => ({ ...prev, [appointmentId]: { status: "error" } }));
+    }
+  };
 
   const upcoming = appointments.filter(a => new Date(a.start_time) >= new Date()).slice(0, 5);
 
@@ -41,12 +62,50 @@ export default function TodayAppointments({ tenantId, token, onNavigate }) {
       ) : (
         <div className="today-appts-list">
           {upcoming.map(a => (
-            <div key={a.id} className="today-appt-item">
+            <div key={a.id} className="today-appt-item" style={{ flexWrap: "wrap" }}>
               <div className="today-appt-time">{formatTime(a.start_time, bizTz)}</div>
               <div className="today-appt-info">
                 <div className="today-appt-name">{a.customer_name}</div>
                 <div className="today-appt-email">{a.customer_email}</div>
               </div>
+              <button
+                onClick={() => loadBrief(a.id)}
+                title="Walk in prepared: who they are, what they asked about, talking points"
+                style={{
+                  marginLeft: "auto",
+                  padding: "2px 8px",
+                  fontSize: "0.7rem",
+                  borderRadius: 6,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-primary)",
+                  color: "var(--text-primary)",
+                  cursor: "pointer",
+                }}
+              >
+                {briefs[a.id]?.status === "loading" ? "Prepping..." : briefs[a.id]?.status === "ready" ? "Hide brief" : "Brief me"}
+              </button>
+              {briefs[a.id]?.status === "ready" && (
+                <div
+                  style={{
+                    flexBasis: "100%",
+                    marginTop: 6,
+                    padding: "8px 10px",
+                    borderRadius: 8,
+                    background: "var(--bg-primary)",
+                    border: "1px solid var(--border)",
+                    fontSize: "0.75rem",
+                    color: "var(--text-primary)",
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {briefs[a.id].text}
+                </div>
+              )}
+              {briefs[a.id]?.status === "error" && (
+                <div style={{ flexBasis: "100%", marginTop: 4, fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                  Couldn't build a brief for this one — try again in a moment.
+                </div>
+              )}
             </div>
           ))}
         </div>
