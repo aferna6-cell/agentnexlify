@@ -49,7 +49,7 @@ export default function DailyFocusCard({ tenantId, token }) {
       <h3>Today's Focus</h3>
       {picks.length === 0 ? (
         <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-          All clear — no new leads waiting, nothing going cold. Nice work.
+          All clear: no new leads waiting, nothing going cold. Nice work.
         </p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>

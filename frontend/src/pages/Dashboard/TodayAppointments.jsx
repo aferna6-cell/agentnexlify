@@ -103,7 +103,7 @@ export default function TodayAppointments({ tenantId, token, onNavigate }) {
               )}
               {briefs[a.id]?.status === "error" && (
                 <div style={{ flexBasis: "100%", marginTop: 4, fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                  Couldn't build a brief for this one — try again in a moment.
+                  Couldn't build a brief for this one. Try again in a moment.
                 </div>
               )}
             </div>

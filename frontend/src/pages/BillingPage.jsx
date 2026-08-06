@@ -489,15 +489,20 @@ export default function BillingPage() {
               {aiUsage.pct_used >= 80 && (
                 <div style={{ marginTop: 8, fontSize: "0.8rem", color: "var(--text-muted)" }}>
                   {aiUsage.hard_limit_reached
-                    ? "Monthly AI allowance used up — top up to keep your assistant replying."
+                    ? "Monthly AI allowance used up. Top up to keep your assistant replying."
                     : `${Math.round(aiUsage.pct_used)}% of your monthly AI allowance used.`}
                   <button
+                    disabled={buyingUsage}
                     onClick={async () => {
+                      setBuyingUsage(true);
                       try {
                         const res = await buyMoreUsage(token);
                         if (res?.checkout_url) window.location.href = res.checkout_url;
                       } catch (err) {
                         console.warn("Buy usage failed:", err?.message);
+                        notify.error(err.message || "Could not open the checkout. Try again in a moment.");
+                      } finally {
+                        setBuyingUsage(false);
                       }
                     }}
                     style={{
@@ -507,11 +512,11 @@ export default function BillingPage() {
                       border: "1px solid var(--border)",
                       background: "var(--bg-primary)",
                       color: "var(--text-primary)",
-                      cursor: "pointer",
+                      cursor: buyingUsage ? "wait" : "pointer",
                       fontSize: "0.75rem",
                     }}
                   >
-                    Buy more usage
+                    {buyingUsage ? "Opening checkout..." : "Buy more usage"}
                   </button>
                 </div>
               )}

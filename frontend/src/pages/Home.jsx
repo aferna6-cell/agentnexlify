@@ -679,7 +679,7 @@ export default function Home() {
             <div className="lp-stat reveal">
               <div className="lp-stat-number">Seconds</div>
               <p className="lp-stat-text">
-                how fast your AI front desk replies — nights and weekends
+                how fast your AI front desk replies, nights and weekends
                 included
               </p>
             </div>
