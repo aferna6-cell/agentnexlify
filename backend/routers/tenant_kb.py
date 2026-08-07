@@ -10,12 +10,13 @@ Do NOT add 'from __future__ import annotations' — breaks Pydantic on FastAPI.
 """
 
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from jose import jwt
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
@@ -25,6 +26,7 @@ from backend.services.tenant_kb import (
     count_active_documents,
     doc_limit_for_plan,
     ingest_file,
+    upsert_document,
 )
 
 logger = logging.getLogger(__name__)
@@ -85,6 +87,27 @@ class DocumentListResponse(BaseModel):
 class UploadResponse(BaseModel):
     results: list[dict]
     compiled: dict
+
+
+class NoteRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    content: str = Field(..., min_length=1, max_length=100_000)
+
+
+class NoteResponse(BaseModel):
+    filename: str
+    status: str
+    chars: int
+    compiled: dict
+
+
+_NOTE_SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _note_external_id(title: str) -> str:
+    """Stable per-title ID so retyping the same title updates the note."""
+    slug = _NOTE_SLUG_RE.sub("-", title.strip().lower()).strip("-")
+    return slug[:120] or "note"
 
 
 def _require_tenant(claims: dict, tenant_id: str) -> None:
@@ -181,6 +204,66 @@ async def upload_documents(
 
     compiled = await run_in_threadpool(compile_tenant_kb, tenant_id)
     return UploadResponse(results=results, compiled=compiled)
+
+
+@router.post("/{tenant_id}/notes", response_model=NoteResponse)
+async def add_note(
+    tenant_id: str,
+    note: NoteRequest,
+    claims: dict = Depends(_get_kb_claims),
+):
+    """Add or update a typed knowledge note.
+
+    Same ingest spine as file uploads: the note lands in tenant_kb_documents
+    (source='note', external_id = title slug, so saving the same title again
+    updates that note in place) and the KB recompiles immediately. The plan
+    document limit applies only to NEW notes — editing an existing note is
+    always allowed, even at the limit."""
+    _require_tenant(claims, tenant_id)
+    title = note.title.strip()
+    content = note.content.strip()
+    if not title or not content:
+        raise HTTPException(status_code=400, detail="Title and content are required")
+
+    external_id = _note_external_id(title)
+    filename = f"{external_id}.md"
+    content_md = f"# {title}\n\n{content}"
+
+    def _ingest() -> str:
+        db = get_service_supabase()
+        existing = (
+            db.table("tenant_kb_documents")
+            .select("id")
+            .eq("client_id", tenant_id)
+            .eq("source", "note")
+            .eq("external_id", external_id)
+            .eq("status", "active")
+            .limit(1)
+            .execute()
+        )
+        if not existing.data:
+            limit = doc_limit_for_plan(_resolve_plan(claims, tenant_id))
+            if count_active_documents(tenant_id) >= limit:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"plan document limit reached ({limit})",
+                )
+        return upsert_document(
+            tenant_id,
+            source="note",
+            external_id=external_id,
+            filename=filename,
+            content_md=content_md,
+        )
+
+    outcome = await run_in_threadpool(_ingest)
+    compiled = await run_in_threadpool(compile_tenant_kb, tenant_id)
+    return NoteResponse(
+        filename=filename,
+        status=outcome,
+        chars=len(content_md),
+        compiled=compiled,
+    )
 
 
 @router.delete("/{tenant_id}/documents/{doc_id}")

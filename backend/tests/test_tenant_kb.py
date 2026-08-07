@@ -279,6 +279,111 @@ class TestUploadEndpoint:
         assert "limit" in resp.json()["results"][0]["reason"]
 
 
+class TestNotesEndpoint:
+    def test_requires_auth(self, client):
+        resp = client.post(f"{BASE}/notes", json={"title": "Hours", "content": "9-5"})
+        assert resp.status_code in (401, 422)
+
+    def test_cross_tenant_forbidden(self, client, mock_supabase):
+        resp = client.post(
+            f"{BASE}/notes",
+            headers=_auth_headers("00000000-0000-0000-0000-000000000002"),
+            json={"title": "Hours", "content": "9-5"},
+        )
+        assert resp.status_code == 403
+
+    def test_empty_content_rejected(self, client, mock_supabase):
+        resp = client.post(
+            f"{BASE}/notes",
+            headers=_auth_headers(),
+            json={"title": "Hours", "content": ""},
+        )
+        assert resp.status_code == 422  # Pydantic min_length
+
+    def test_whitespace_only_rejected(self, client, mock_supabase):
+        resp = client.post(
+            f"{BASE}/notes",
+            headers=_auth_headers(),
+            json={"title": "   ", "content": "  \n "},
+        )
+        assert resp.status_code == 400
+
+    def test_note_saved_as_note_source_and_compiles(self, client, mock_supabase):
+        mock_supabase.table.return_value = _chain([])
+        with patch(
+            "backend.routers.tenant_kb.upsert_document", return_value="added"
+        ) as upsert:
+            resp = client.post(
+                f"{BASE}/notes",
+                headers=_auth_headers(),
+                json={"title": "Cancellation Policy!", "content": "24h notice."},
+            )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["status"] == "added"
+        assert body["filename"] == "cancellation-policy.md"
+        assert "compiled" in body
+        kwargs = upsert.call_args.kwargs
+        assert kwargs["source"] == "note"
+        assert kwargs["external_id"] == "cancellation-policy"
+        # Title becomes a markdown heading so the compiled KB stays readable
+        assert kwargs["content_md"] == "# Cancellation Policy!\n\n24h notice."
+
+    def test_new_note_blocked_at_plan_limit(self, client, mock_supabase):
+        # Free-plan token; tenant already at the 10-doc limit; no existing note
+        from jose import jwt as jose_jwt
+        from datetime import datetime, timedelta, timezone
+        from backend.config import settings
+
+        token = jose_jwt.encode(
+            {
+                "tenant_id": TENANT_ID,
+                "email": "o@t.co",
+                "plan": "free",
+                "business_name": "T",
+                "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+            },
+            settings.api_secret_key,
+            algorithm="HS256",
+        )
+        chain = _chain([])
+        chain.execute.return_value.count = 10  # count_active_documents -> 10
+        mock_supabase.table.return_value = chain
+        resp = client.post(
+            f"{BASE}/notes",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"title": "One more", "content": "text"},
+        )
+        assert resp.status_code == 400
+        assert "limit" in resp.json()["detail"]
+
+    def test_existing_note_updates_even_at_limit(self, client, mock_supabase):
+        # Same title already stored -> update path skips the limit check
+        chain = _chain([{"id": "d1"}])
+        chain.execute.return_value.count = 10
+        mock_supabase.table.return_value = chain
+        with patch(
+            "backend.routers.tenant_kb.upsert_document", return_value="updated"
+        ):
+            resp = client.post(
+                f"{BASE}/notes",
+                headers=_auth_headers(),
+                json={"title": "Cancellation Policy!", "content": "48h notice now."},
+            )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["status"] == "updated"
+
+
+class TestNoteSlug:
+    def test_slug_shapes(self):
+        from backend.routers.tenant_kb import _note_external_id
+
+        assert _note_external_id("Cancellation Policy!") == "cancellation-policy"
+        assert _note_external_id("  Hours & Parking  ") == "hours-parking"
+        assert _note_external_id("???") == "note"
+        assert len(_note_external_id("x" * 500)) <= 120
+
+
 class TestListAndDelete:
     def test_list_documents_with_provenance(self, client, mock_supabase):
         rows = [
