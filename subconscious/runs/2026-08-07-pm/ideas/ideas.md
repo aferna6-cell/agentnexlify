@@ -20,8 +20,8 @@
 ---
 
 ## Idea A — feature-docs-trio Skill
-**Category:** workflow  
-**Effort:** S  
+**Category:** workflow
+**Effort:** S
 **Source:** mandate item #5
 
 Create `.claude/skills/feature-docs-trio/SKILL.md` — a skill that auto-generates three lightweight docs when a feature ships with zero documentation: (1) a feature summary for the ops log, (2) a QA checklist, (3) a customer-facing change note. Triggered by nightly when commits have >10 file insertions with no corresponding `docs/` change.
@@ -31,8 +31,8 @@ Evidence: e0e9be6 shipped 22 files (Nexlify Score, appointment briefs, daily foc
 ---
 
 ## Idea B — Appointment Brief AI Usage Guard
-**Category:** security/operational  
-**Effort:** S  
+**Category:** security/operational
+**Effort:** S
 **Source:** evidence (grep-confirmed gap on production main)
 
 **Clarified finding (post-read):**
@@ -47,8 +47,8 @@ Parallel: same class as `block_demo_role` missing on `buy-usage` endpoint (night
 ---
 
 ## Idea C — Grandfathered Plan Gate Audit
-**Category:** code health  
-**Effort:** XS (grep + report)  
+**Category:** code health
+**Effort:** XS (grep + report)
 **Source:** mandate item #6
 
 Grep all plan gate calls in `backend/` for `agent_os` patterns that do NOT include grandfathered plan names (`growth`, `autopilot`, `professional`, `enterprise`). Tenants on grandfathered plans must not be silently blocked from features they're paying for.
@@ -58,8 +58,8 @@ Produces a list of gating call sites with missing grandfathered-plan coverage. A
 ---
 
 ## Idea D — Step 9H PR Pile Alerter (Redesigned, Idempotent)
-**Category:** operational  
-**Effort:** XS  
+**Category:** operational
+**Effort:** XS
 **Source:** run 101 mandate (re-raised)
 
 Add Step 9H to nightly-commit-review SKILL.md: when ≥3 open subconscious draft PRs AND last Step 9H alert was >7 days ago (check last GH comment on loop-health issue), post one digest comment listing open PR numbers. Idempotent — does not re-fire on consecutive nights.
@@ -69,8 +69,8 @@ Evidence: 7 open subconscious PRs (#606, #611, #613, #626, #629, #630, #631). PR
 ---
 
 ## Idea E — Nightly ai_usage_guard Scanner (Meta-Prevention)
-**Category:** operational/code health  
-**Effort:** S  
+**Category:** operational/code health
+**Effort:** S
 **Source:** new pattern from e0e9be6 finding
 
 Add a check to nightly-commit-review SKILL.md that scans new Python files in `backend/services/` and `backend/routers/` for calls to `client.messages.create` or `anthropic.` without a corresponding `ai_usage_guard` or `check_usage` reference. Post finding when gap detected.
