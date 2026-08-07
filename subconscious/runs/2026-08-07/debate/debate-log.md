@@ -6,7 +6,7 @@ Top 3 by impact: Idea 1 (Step 9G amendment, XS), Idea 3 (feature-docs-trio, S), 
 
 ## Round 1: Idea 1 vs Idea 2 (observer vs source fix)
 
-**Idea 1** — Extend Step 9G SKILL.md to detect success-but-stale  
+**Idea 1** — Extend Step 9G SKILL.md to detect success-but-stale
 **Idea 2** — Fix kb-autopopulate.yml to exit 1 when KB not updated
 
 **Challenge against Idea 1:** "SKILL.md is treating the symptom. The real fix is inside the workflow. If kb-autopopulate.yml exits 0 on failure, fix it to exit 1 — then Step 9G's existing failure handler already posts GH #403. Idea 1 duplicates the alerting layer when Idea 2 fixes the source."
