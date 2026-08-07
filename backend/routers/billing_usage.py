@@ -12,8 +12,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from backend.config import settings
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
-from backend.services.stripe_service import USAGE_PACK_PRICE_ID, ensure_stripe_configured
-from backend.services.ai_usage_guard import current_period_month, get_ai_usage_status
+from backend.services.stripe_service import (
+    USAGE_PACK_PRICE_ID,
+    ensure_stripe_configured,
+)
+from backend.services.ai_usage_guard import get_ai_usage_status
 
 logger = logging.getLogger(__name__)
 
