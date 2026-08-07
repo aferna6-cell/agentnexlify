@@ -1,0 +1,45 @@
+{
+  "run": 102,
+  "date": "2026-08-07",
+  "run_id": "2026-08-07",
+  "winner": "Step 9G success-but-stale amendment",
+  "winner_category": "operational",
+  "winner_effort": "XS",
+  "winner_confidence": "HIGH",
+  "autonomous_executable": true,
+  "requires_human": false,
+  "implementation_channel": "nightly-commit-review SKILL.md edit",
+  "target_file": ".claude/skills/nightly-commit-review/SKILL.md",
+  "target_lines": "318-319",
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "ideas_killed": ["Idea 2 (workflow fix → parking lot as GH issue)"],
+  "parking_lot": [
+    "Idea 2: kb-autopopulate.yml exit-1 verification (human-action GH issue)",
+    "Idea 3: feature-docs-trio skill (run 103 candidate)",
+    "Idea 4: grandfathered plan gate audit (run 103 candidate)",
+    "Idea 5: typed KB notes discovery banner (low priority)"
+  ],
+  "mandate_check": {
+    "step_9g_fired": "PASS — nightly-2026-08-07 confirms Step 9G triggered, 204 No Content",
+    "kb_freshness": "FAIL — 15 days stale (last: 2026-07-23), Step 9G got pending status",
+    "gh_403_step9g_comment": "PARTIAL — pending status doesn't trigger comment; success-but-stale also doesn't trigger (this run's winner fixes the latter)",
+    "pr_pile_up": "UNCHANGED — 4 open subconscious PRs (#626, #613, #611, #606)",
+    "agent_os_tenants": "2-3 (below >5 promote threshold)",
+    "mcp_tenants": "1 (below >5 Step 9H revisit threshold)"
+  },
+  "key_evidence": [
+    "nightly-2026-08-07: GH Actions runs #269-#271 all conclusion=success, KB unchanged since 2026-07-23",
+    "SKILL.md line 318-319: Step 9G success branch logs SUCCESS without KB freshness check",
+    "kb-autopopulate.yml cron: 0 6 31 2 * (disabled, Feb 31 never fires)",
+    "Nightly diagnosis: continue-on-error:true masks ANTHROPIC_API_KEY / VOYAGE_API_KEY / SUPABASE_ACCESS_TOKEN failures"
+  ],
+  "run_103_mandate": [
+    "1. Step 9G amendment present in SKILL.md? (grep 'SUCCESS-BUT-STALE' or 'success-but-stale')",
+    "2. Next nightly after amendment: does it fire the silent-green check? Check nightly log for 'Step 9G: kb-autopopulate SUCCESS-BUT-STALE' or 'SUCCESS (KB freshness confirmed)'",
+    "3. GH #403: does it now have a Step 9G success-but-stale diagnostic comment?",
+    "4. feature-docs-trio skill: propose as run 103 winner if operational gap is closed",
+    "5. Grandfathered plan gate audit: propose as run 103 winner alternative"
+  ],
+  "notes": "Run 102 mandate fully executed. Silent-green gap in Step 9G success branch identified and recommendation authored. Winner is a 4-5 line amendment to existing SKILL.md block. Bonus action: file GH issue requesting kb-autopopulate.yml workflow fix (Idea 2, human-reviewable)."
+}
