@@ -33,7 +33,7 @@ Owner-approved merge. 22 files, 1528 insertions. New routers: `appointment_brief
 - `billing_usage.py` `buy-usage` endpoint creates a $24.99 Stripe Checkout session with no demo guard
 - Demo-role users can call the endpoint and reach Stripe
 - Filed: **GH #640** (`nightly-review`, `security`, `medium-risk`)
-- Suggested fix in issue: add `dependencies=[Depends(block_demo_role)]` to the route
+- **Fixed directly** (pre-push hook blocked push until resolved): added `dependencies=[Depends(block_demo_role)]` to `@router.post("/buy-usage")` + import
 
 **Issue found — LOW: Unused import `current_period_month` in `billing_usage.py:16`**
 - `current_period_month` imported from `ai_usage_guard` but never referenced in the file
@@ -75,8 +75,9 @@ Adds Step 9G to `nightly-commit-review/SKILL.md` (KB self-healing trigger). Subc
 
 **Fixes committed this run:**
 - `backend/routers/billing_usage.py`: removed unused `current_period_month` import
+- `backend/routers/billing_usage.py`: added `block_demo_role` guard to `POST /buy-usage` (pre-push hook required this before push)
 
 **Issues filed:**
-- GH #640 — MEDIUM: `buy-usage` missing `block_demo_role` guard
+- GH #640 — MEDIUM: `buy-usage` missing `block_demo_role` guard (fixed in same run)
 
 **KB:** autopopulate triggered (15d stale), status pending

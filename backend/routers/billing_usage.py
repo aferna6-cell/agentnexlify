@@ -10,7 +10,7 @@ import stripe
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.config import settings
-from backend.dependencies import _get_current_tenant
+from backend.dependencies import _get_current_tenant, block_demo_role
 from backend.models.database import get_service_supabase
 from backend.services.stripe_service import (
     USAGE_PACK_PRICE_ID,
@@ -51,7 +51,7 @@ async def get_ai_usage(claims: dict = Depends(_get_current_tenant)):
     return {"ai_usage": get_ai_usage_status(db, tenant_id)}
 
 
-@router.post("/buy-usage")
+@router.post("/buy-usage", dependencies=[Depends(block_demo_role)])
 async def buy_usage(claims: dict = Depends(_get_current_tenant)):
     """Create a Stripe Checkout session (one-time payment) for a usage pack.
 
