@@ -1,0 +1,40 @@
+{
+  "run": 103,
+  "date": "2026-08-07-pm",
+  "winner": "Appointment Brief AI Usage Guard",
+  "winner_category": "security/operational",
+  "winner_effort": "S",
+  "winner_confidence": "HIGH",
+  "autonomous_executable": false,
+  "requires_human": true,
+  "implementation_channel": "GH issue → issue-to-pr-loop",
+  "target_files": [
+    "backend/routers/appointment_briefs.py",
+    "backend/services/appointment_brief.py"
+  ],
+  "mandate_check": {
+    "step_9g_amendment_in_skill_md": "NOT YET — lines 318-319 unchanged. Run 102 amendment is a recommendation, not yet applied.",
+    "nightly_after_amendment": "N/A — amendment not yet applied",
+    "gh_403_success_but_stale_comment": "N/A — dependent on amendment application",
+    "kb_freshness": "PASS — knowledge-base/log.md shows fresh compile 2026-08-07, 114→124 articles",
+    "feature_docs_trio_candidate": "EVALUATED — parking lot (run 104 candidate)",
+    "grandfathered_plan_gate_audit": "EVALUATED — parking lot (run 104 mandate item)"
+  },
+  "key_evidence": [
+    "appointment_brief.py: call_claude_messages x2 (lines 119, 150), BRIEF_MODEL='claude-sonnet-5'",
+    "appointment_briefs.py router: grep for ai_usage_guard/block_demo/plan_check → zero results",
+    "response_score.py, daily_focus.py: deterministic, no LLM — no guard needed",
+    "billing_usage.py fix pattern: Depends(block_demo_role) + ai_usage_guard — same channel",
+    "nightly-2026-08-07: Step 9G fired, KB now fresh (Step 9G success confirmed)"
+  ],
+  "parking_lot_additions": [
+    "Nightly ai_usage_guard scanner for new LLM-calling services (run 104 candidate, SKILL.md channel)",
+    "feature-docs-trio skill (run 104 candidate, mandate item)",
+    "Grandfathered plan gate audit (run 104 candidate, mandate item)"
+  ],
+  "killed": [
+    "Step 9H PR pile alerter — human attention problem, 3rd proposal, no new mechanism"
+  ],
+  "open_subconscious_prs": 7,
+  "step_9g_amendment_status": "pending_human_approval"
+}
