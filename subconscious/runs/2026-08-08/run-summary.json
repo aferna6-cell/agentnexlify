@@ -1,0 +1,58 @@
+{
+  "run": 102,
+  "date": "2026-08-08",
+  "run_time_cadence": "2:37 AM automated (subconscious loop)",
+  "winner": {
+    "title": "Nightly detached HEAD guard — add step 1.5 to SKILL.md Scheduled Task Prompt",
+    "category": "operational",
+    "effort": "XS",
+    "autonomous_executable": true,
+    "requires_human": false,
+    "delivery_channel": "SKILL.md-edit (proven autonomous channel — Steps 9A-9G all delivered in 1 nightly cycle)"
+  },
+  "mandate_check_results": {
+    "step_9g_in_skill": "PASS — 7 occurrences in .claude/skills/nightly-commit-review/SKILL.md",
+    "step_9g_fired_nightly_2026_08_07": "PASS — KB 15d stale, gh workflow run kb-autopopulate.yml queued (204 No Content)",
+    "kb_freshness": "FAIL — 16 days stale (last: 2026-07-23). Workflow runs #269-#271 show conclusion:success but KB not updated (continue-on-error masks missing secrets)",
+    "gh_403_step9g_comment": "LIKELY POSTED — nightly-08-07 attempted; silent failure pattern may mean failure comment also triggered",
+    "pr_pile": "4 open subconscious draft PRs: #626 (subconscious/run-101-step9g), #613, #611, #606. #625 closed/merged.",
+    "agent_os_tenant_count": "2-3 — below >5 LoopHealthPage promote threshold",
+    "mcp_tenant_count": "1 — below >5 Step 9H revisit condition"
+  },
+  "new_finding": "nightly-2026-08-07 ran on detached HEAD. 3 commits (97e1044 nightly log, cbbaae5 billing_usage.py block_demo_role + import fix, 7dff08b morning digest) orphaned — never pushed to origin/main. Production MEDIUM security bug (billing_usage.py missing block_demo_role guard on POST /api/v1/billing/buy-usage) unpatched for 24h. Caught and re-applied by nightly-2026-08-08.",
+  "ideas_generated": 5,
+  "ideas": [
+    "Nightly detached HEAD guard (WINNER)",
+    "Step 9F/9G zero-commit path coverage (WEAKENED)",
+    "Grandfathered plan gate audit (WEAKENED)",
+    "response_score.py ai_usage_guard routing audit (parking lot)",
+    "Step 9H redesign: idempotent PR pile-up alerter (parking lot)"
+  ],
+  "debate_top_3": [
+    { "idea": "Detached HEAD guard", "result": "SURVIVES -> WINNER" },
+    { "idea": "Zero-commit 9F/9G path", "result": "WEAKENED -> parking lot" },
+    {
+      "idea": "Grandfathered plan gate audit",
+      "result": "WEAKENED -> parking lot"
+    }
+  ],
+  "pr_dedup_guard": {
+    "existing_branch": "subconscious/run-101-step9g",
+    "existing_pr": 626,
+    "action": "push subconscious run 102 commit onto existing branch — no new PR opened"
+  },
+  "governance_updates": {
+    "total_runs": "101 -> 102",
+    "last_run": "2026-08-06-pm -> 2026-08-08",
+    "run_102_mandate_executed": "added",
+    "run_103_mandate": "added",
+    "new_active_direction": "Nightly detached HEAD guard (run 102 winner, pending_autonomous)"
+  },
+  "parking_lot_items": [
+    "Step 9F/9G zero-commit path coverage",
+    "Grandfathered plan gate audit",
+    "response_score.py ai_usage_guard routing audit",
+    "Step 9H redesign: idempotent PR pile-up alerter",
+    "Typed KB notes discovery banner (KnowledgeSourcesPage.jsx)"
+  ]
+}
