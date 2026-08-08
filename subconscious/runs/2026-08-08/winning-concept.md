@@ -2,10 +2,10 @@
 
 ## Winner: Nightly Detached HEAD Guard
 
-**Category:** operational  
-**Effort:** XS (~10 lines bash in SKILL.md)  
-**Delivery channel:** SKILL.md-edit (autonomous, same class as Steps 9A–9G)  
-**Requires human approval:** No  
+**Category:** operational
+**Effort:** XS (~10 lines bash in SKILL.md)
+**Delivery channel:** SKILL.md-edit (autonomous, same class as Steps 9A–9G)
+**Requires human approval:** No
 **Moratorium impact:** None (SKILL.md-edit does not add to human pending queue)
 
 ---
