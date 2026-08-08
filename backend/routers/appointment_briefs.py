@@ -8,13 +8,37 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.dependencies import _get_current_tenant
+from backend.dependencies import _get_current_tenant, block_demo_role
 from backend.models.database import get_service_supabase
 from backend.services import appointment_brief
+from backend.services.agent_os_gate import require_agent_os_access
+from backend.services.ai_usage_guard import get_ai_usage_status
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/appointments", tags=["appointment-briefs"])
+# GH #643: both endpoints drive Claude calls, so they carry the full guard
+# stack — demo block + agent_os plan gate at the router, usage cap per call.
+router = APIRouter(
+    prefix="/api/v1/appointments",
+    tags=["appointment-briefs"],
+    dependencies=[Depends(block_demo_role), Depends(require_agent_os_access)],
+)
+
+
+def _check_ai_budget(db, tenant_id: str) -> None:
+    """429 when the tenant's monthly AI hard limit is spent; fail-open on errors."""
+    try:
+        status = get_ai_usage_status(db, tenant_id)
+    except Exception:
+        logger.warning(
+            "ai usage check failed tenant=%s - failing open", tenant_id, exc_info=True
+        )
+        return
+    if status.get("hard_limit_reached"):
+        raise HTTPException(
+            status_code=429,
+            detail="Monthly AI usage limit reached — add a usage pack or wait for the next cycle",
+        )
 
 
 def _business_name(db, tenant_id: str) -> str:
@@ -42,6 +66,7 @@ async def get_appointment_brief(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
     db = get_service_supabase()
+    _check_ai_budget(db, tenant_id)
     try:
         return await appointment_brief.generate_brief(
             db, tenant_id, appointment_id, _business_name(db, tenant_id)
@@ -65,6 +90,7 @@ async def get_followup_draft(
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
     db = get_service_supabase()
+    _check_ai_budget(db, tenant_id)
     try:
         return await appointment_brief.draft_followup(
             db, tenant_id, appointment_id, _business_name(db, tenant_id)

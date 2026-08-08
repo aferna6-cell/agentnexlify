@@ -147,3 +147,14 @@ def test_campaign_send_plans_share_marketing_source_of_truth():
     from backend.routers.marketing_campaigns import _CAMPAIGN_SEND_PLANS
     from backend.services.plan_gate import MARKETING_PLANS
     assert _CAMPAIGN_SEND_PLANS is MARKETING_PLANS
+
+
+def test_appointment_briefs_router_carries_full_guard_stack():
+    # GH #643: both brief endpoints call Claude; the router must carry the
+    # demo block + agent_os plan gate (chatbot/free get 402 from the gate).
+    from backend.dependencies import block_demo_role
+    from backend.routers.appointment_briefs import router
+    from backend.services.agent_os_gate import require_agent_os_access
+    deps = [d.dependency for d in router.dependencies]
+    assert block_demo_role in deps
+    assert require_agent_os_access in deps
