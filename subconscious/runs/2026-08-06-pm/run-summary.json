@@ -1,0 +1,45 @@
+{
+  "run_id": "2026-08-06-pm",
+  "run_number": 101,
+  "date": "2026-08-06",
+  "slot": "pm",
+  "winner": {
+    "title": "Step 9G: KB autopopulate self-healing trigger",
+    "category": "operational",
+    "confidence": "HIGH",
+    "escalation": "DIRECT_IMPLEMENTATION",
+    "escalation_reason": "6 PR-channel cycles (threshold: 3). Run 99 precedent. KB 14 days stale.",
+    "implementation_channel": "nightly-commit-review SKILL.md bash block",
+    "autonomous_executable": true
+  },
+  "mandate_check": {
+    "step_9g_in_skill_md": "FAIL → FIXED (direct implementation this run)",
+    "kb_freshness": "FAIL (14 days stale, last: 2026-07-23)",
+    "step_9g_workflow_trigger": "N/A before this run",
+    "gh_403_step_9g_diagnostic": "N/A before this run",
+    "agent_os_tenant_count": "2-3 (below >5 LoopHealthPage promote threshold)",
+    "mcp_tenant_count": "1 (below >5 Step 9H revisit condition)"
+  },
+  "ideas_count": 5,
+  "debate_rounds": 3,
+  "top_3_debated": [
+    "Step 9G direct implementation (WINNER — SURVIVES)",
+    "Step 9H PR pile-up alerter (WEAKENED — redesign needed)",
+    "Nexlify Score token-burn guard (WEAKENED — nightly Step 5 vehicle)"
+  ],
+  "parking_lot": [
+    "Step 9H (redesign required)",
+    "Nexlify Score guard (nightly Step 5)",
+    "Typed KB discovery banner (customer_value)",
+    "Grandfathered plan gate audit (code_health)"
+  ],
+  "pr_dedup": {
+    "existing_pr": "#625 (subconscious/run-101)",
+    "action": "updated PR #625 body — no new PR created",
+    "open_subconscious_prs": ["#625", "#626", "#613", "#611", "#606"]
+  },
+  "kb_stale_days": 14,
+  "open_prs_count": 15,
+  "subconscious_prs_count": 7,
+  "autopilot_stalled_days": 33
+}

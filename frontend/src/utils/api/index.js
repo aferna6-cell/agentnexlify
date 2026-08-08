@@ -18,6 +18,7 @@ export * from "./documents";
 export * from "./escalations";
 export * from "./faq";
 export * from "./inbox";
+export * from "./insights";
 export * from "./integrations";
 export * from "./invoices";
 export * from "./leads";

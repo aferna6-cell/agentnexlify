@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import {
+  addKbNote,
   createKbSyncToken,
   deleteKbDocument,
   disconnectDrive,
@@ -42,6 +43,7 @@ const SOURCE_LABELS = {
   upload: "Uploaded",
   drive: "Google Drive",
   local_sync: "Local sync",
+  note: "Typed note",
 };
 
 function formatDate(d) {
@@ -70,6 +72,8 @@ export default function KnowledgeSourcesPage() {
   const [syncCmd, setSyncCmd] = useState(null);
   const [copied, setCopied] = useState(false);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [noteTitle, setNoteTitle] = useState("");
+  const [noteContent, setNoteContent] = useState("");
   const fileInputRef = useRef(null);
 
   // Spec Resolved-Q7-D: while a Drive folder is actively syncing, the KB
@@ -122,6 +126,34 @@ export default function KnowledgeSourcesPage() {
       load();
     } catch (e) {
       setMessage(e.message || "Upload failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveNote() {
+    const title = noteTitle.trim();
+    const content = noteContent.trim();
+    if (!title || !content) {
+      setMessage("A note needs both a title and some text.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await addKbNote(tenantId, token, title, content);
+      setMessage(
+        res.status === "updated"
+          ? `Updated "${title}". Knowledge compiled - your AI answers from it now.`
+          : `Saved "${title}". Knowledge compiled - your AI answers from it now.`,
+      );
+      setNoteTitle("");
+      setNoteContent("");
+      load();
+    } catch (e) {
+      const detail = e.body?.detail;
+      setMessage(
+        (typeof detail === "string" && detail) || e.message || "Could not save the note",
+      );
     } finally {
       setBusy(false);
     }
@@ -323,6 +355,68 @@ export default function KnowledgeSourcesPage() {
             e.target.value = "";
           }}
         />
+      </div>
+
+      {/* Typed note card */}
+      <div style={{ ...cardStyle, marginBottom: 20, opacity: syncActive ? 0.5 : 1 }}>
+        <h3 style={{ margin: 0, fontSize: "1rem" }}>Type it in</h3>
+        <p style={{ margin: "4px 0 12px", fontSize: "0.83rem", color: "var(--text-muted)" }}>
+          No document handy? Type what your AI should know - pricing, policies,
+          service details. Saving the same title again updates that note.
+        </p>
+        <input
+          type="text"
+          value={noteTitle}
+          onChange={(e) => setNoteTitle(e.target.value)}
+          placeholder='Title, e.g. "Cancellation policy"'
+          maxLength={200}
+          disabled={busy || syncActive}
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+            padding: "8px 12px",
+            fontSize: "0.85rem",
+            color: "var(--text-primary)",
+            background: "var(--bg-primary)",
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            marginBottom: 8,
+          }}
+        />
+        <textarea
+          value={noteContent}
+          onChange={(e) => setNoteContent(e.target.value)}
+          placeholder="Appointments can be cancelled up to 24 hours in advance for a full refund…"
+          rows={5}
+          maxLength={100000}
+          disabled={busy || syncActive}
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+            padding: "8px 12px",
+            fontSize: "0.85rem",
+            fontFamily: "inherit",
+            color: "var(--text-primary)",
+            background: "var(--bg-primary)",
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            resize: "vertical",
+          }}
+        />
+        <div style={{ marginTop: 10, display: "flex", justifyContent: "flex-end" }}>
+          <button
+            onClick={saveNote}
+            disabled={busy || syncActive || !noteTitle.trim() || !noteContent.trim()}
+            title={syncActive ? "Disconnect Drive sync to edit documents" : undefined}
+            style={{
+              ...btnStyle,
+              opacity: busy || syncActive || !noteTitle.trim() || !noteContent.trim() ? 0.5 : 1,
+              cursor: syncActive ? "not-allowed" : "pointer",
+            }}
+          >
+            Save to knowledge
+          </button>
+        </div>
       </div>
 
       {/* Drive connect card */}

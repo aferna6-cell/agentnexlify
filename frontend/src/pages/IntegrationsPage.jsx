@@ -1774,7 +1774,7 @@ export default function IntegrationsPage({ onNavigate }) {
           <FacebookMessengerSection token={token} />
           <InstagramSection token={token} />
           {/* M365CalendarSection + HubSpotSection deferred 2026-08-01 (owner
-              decision) — components kept below; re-add here when needed. */}
+              decision) - components kept below; re-add here when needed. */}
         </>
       )}
 

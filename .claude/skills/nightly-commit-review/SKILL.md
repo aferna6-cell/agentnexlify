@@ -303,6 +303,31 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
           body: "**KB autopopulate staleness alert (Step 9F):** {days_stale} days since last successful run (last: {last_run_date}). Check: (1) ANTHROPIC_API_KEY in GitHub Actions secrets — may need rotation. (2) SUPABASE_ACCESS_TOKEN — may be expired. Manual trigger: `bash scripts/daily/kb-autopopulate.sh`."
        b. If GH comment fails (token expired — GH #399): log "Step 9F: GH comment failed — KB stale {days_stale} days, token may be expired" and continue.
        c. Log: "Step 9F: KB STALE ({days_stale} days) — comment added to GH #403"
+9G. (KB Autopopulate Self-Healing) When Step 9F flags staleness > 7 days, trigger the autopopulate workflow:
+    1. **Reuse Step 9F staleness signal:**
+       If days_stale <= 7: skip this step entirely (Step 9F already logged clean state).
+       If days_stale > 7: proceed.
+    2. **Trigger workflow:**
+       Run: `gh workflow run kb-autopopulate.yml -R aferna6-cell/agentnexlify`
+       If command fails (exit non-zero): log "Step 9G: gh workflow run failed — check GH token or workflow name" and continue to step 10.
+    3. **Wait for initial status:**
+       `sleep 30`
+       Run: `gh run list --workflow=kb-autopopulate.yml -R aferna6-cell/agentnexlify --limit=1 --json conclusion,url`
+       Parse `conclusion` and `url` from JSON output.
+    4. **Report outcome:**
+       a. If conclusion == "success":
+          Log: "Step 9G: kb-autopopulate triggered — SUCCESS"
+       b. If conclusion == "failure" or "cancelled" or "timed_out":
+          Add comment via `mcp__github__add_issue_comment`:
+            issue_number: 403
+            body: "**Step 9G: kb-autopopulate.yml triggered but FAILED.** Check ANTHROPIC_API_KEY + VOYAGE_API_KEY + SUPABASE_ACCESS_TOKEN in GitHub Actions Secrets. Run URL: {url}"
+          If GH comment fails: log "Step 9G: comment failed — kb-autopopulate run FAILED, check GH #403 manually"
+       c. If conclusion == "" or "in_progress" (still running after 30s):
+          Log: "Step 9G: kb-autopopulate running — status pending (CI will complete on its own)"
+       d. If gh run list fails or returns no output:
+          Log: "Step 9G: could not read run status — trigger may have succeeded, check GH Actions manually"
+    5. **Log:**
+       Log: "Step 9G: kb-autopopulate trigger attempted — conclusion: {conclusion}"
 10. Commit report: `docs(nightly): review YYYY-MM-DD [auto-nightly]`
 11. Push to main
 12. If any guardrail tripped (forbidden path, >5 files, >50 LOC, test-check failed) — abort fixes, file issue only, still write report

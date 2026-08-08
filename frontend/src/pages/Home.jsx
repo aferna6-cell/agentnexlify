@@ -650,6 +650,47 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ============ SPEED-TO-LEAD STATS ============ */}
+      <section className="section lp-stats-band">
+        <div className="container">
+          <h2 className="lp-stats-headline reveal">
+            Speed wins the customer. Every time.
+          </h2>
+          <div className="lp-stats-grid">
+            <div className="lp-stat reveal">
+              <div className="lp-stat-number">78%</div>
+              <p className="lp-stat-text">
+                of customers buy from the business that responds first
+              </p>
+            </div>
+            <div className="lp-stat reveal">
+              <div className="lp-stat-number">21&times;</div>
+              <p className="lp-stat-text">
+                more likely to qualify a lead when you reply within 5 minutes
+                instead of 30
+              </p>
+            </div>
+            <div className="lp-stat reveal">
+              <div className="lp-stat-number">47 hrs</div>
+              <p className="lp-stat-text">
+                the average business takes nearly two days to answer a new lead
+              </p>
+            </div>
+            <div className="lp-stat reveal">
+              <div className="lp-stat-number">Seconds</div>
+              <p className="lp-stat-text">
+                how fast your AI front desk replies, nights and weekends
+                included
+              </p>
+            </div>
+          </div>
+          <p className="lp-stats-source reveal">
+            Sources: Harvard Business Review lead-response study (2.2M+ leads);
+            InsideSales.com Lead Response Management research.
+          </p>
+        </div>
+      </section>
+
       {/* ============ HOW IT WORKS ============ */}
       <section className="section lp-how-section" id="how-it-works">
         <div className="container">

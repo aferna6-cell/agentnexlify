@@ -26,6 +26,7 @@ from backend.routers import (
     action_items,
     analytics,
     appointments,
+    appointment_briefs,
     appointment_reminders,
     auth,
     auth_billing,
@@ -60,6 +61,7 @@ from backend.routers import (
     faq,
     forms,
     gbp,
+    insights,
     instant_kb,
     integrations,
     invoices,
@@ -937,7 +939,9 @@ app.add_middleware(RequestContextMiddleware)
 # --- Routers ---
 app.include_router(analytics.router)
 app.include_router(appointments.router)
+app.include_router(appointment_briefs.router)
 app.include_router(appointment_reminders.router)
+app.include_router(insights.router)
 app.include_router(auth.router)
 app.include_router(auth_billing.router)
 app.include_router(auth_google.router)
