@@ -1,0 +1,62 @@
+{
+  "run": 106,
+  "date": "2026-08-09-pm",
+  "evidence_digest": {
+    "step_9g_confirmed": true,
+    "step_9g_fired": "nightly-2026-08-07",
+    "step_9g_conclusion": "pending (workflow queued but still running at 30s check)",
+    "kb_staleness_days": 17,
+    "kb_last_entry": "2026-07-23",
+    "open_subconscious_prs": 4,
+    "open_prs": ["#606", "#611", "#613", "#626"],
+    "oldest_pr_age_days": 12,
+    "blocking_issues_open": [
+      "GH #399 (AUTOPILOT_GH_TOKEN)",
+      "GH #403 (ANTHROPIC_API_KEY)",
+      "GH #500 (Actions billing limit)"
+    ],
+    "nexlify_score_false_premise_resolved": true,
+    "client_id_sentinel_gap": "tenant_api_keys table not covered — 4th recurrence hit production 2026-08-01"
+  },
+  "ideas_count": 5,
+  "ideas": [
+    "Step 9H — Idempotent PR Pile Alerter",
+    "GH #500 Diagnostic Comment",
+    "Extend client_id sentinel to tenant_api_keys",
+    "Step 9I — Next-nightly KB completion verification",
+    "Grandfathered plan gate audit for e0e9be6"
+  ],
+  "debate": {
+    "top_3_debated": [
+      "Step 9H (SURVIVES)",
+      "GH #500 diagnostic (WEAKENED)",
+      "client_id sentinel (SURVIVES)"
+    ],
+    "not_debated": [
+      "Step 9I (parking lot — lower priority vs mandate)",
+      "Grandfathered gate audit (parking lot — post-sprint)"
+    ]
+  },
+  "winner": "Step 9H — Idempotent PR Pile Alerter",
+  "winner_category": "workflow",
+  "winner_effort": "XS",
+  "winner_channel": "nightly-commit-review SKILL.md bash block (proven: Steps 9A-9G)",
+  "confidence": "HIGH",
+  "parking_lot": [
+    "Extend client_id sentinel to tenant_api_keys (code_health — prevents 5th recurrence)",
+    "GH #500 diagnostic comment (operational — one-shot, bonus action)",
+    "Step 9I next-nightly KB completion verification (operational)",
+    "Grandfathered plan gate audit for e0e9be6 sprint (customer_value/code_health)"
+  ],
+  "rejected": [
+    "Nexlify Score token-burn guard (false premise — response_score.py is fully deterministic, no LLM calls)"
+  ],
+  "governance_mandate": "run_102_mandate — all 6 items verified; Step 9H re-raise condition MET (4 open PRs, oldest 12 days)",
+  "artifacts": [
+    "subconscious/runs/2026-08-09-pm/ideas/ideas.md",
+    "subconscious/runs/2026-08-09-pm/debate/debate-log.md",
+    "subconscious/runs/2026-08-09-pm/winning-concept.md",
+    "subconscious/runs/2026-08-09-pm/improvement-backlog.md",
+    "subconscious/runs/2026-08-09-pm/run-summary.json"
+  ]
+}
