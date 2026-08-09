@@ -25,28 +25,34 @@ if str(REPO_ROOT) not in sys.path:
 
 # --- agent_os unlocks every premium gate -----------------------------------
 
+
 def test_agent_os_allowed_zapier_api_keys():
     from backend.services.api_key_auth import _ALLOWED_PLANS
+
     assert "agent_os" in _ALLOWED_PLANS
 
 
 def test_agent_os_unlimited_sms():
     from backend.services.sms_rate_limiter import _UNLIMITED_PLANS
+
     assert "agent_os" in _UNLIMITED_PLANS
 
 
 def test_agent_os_eligible_document_drafting():
     from backend.services.document_drafting import _ELIGIBLE_PLANS
+
     assert "agent_os" in _ELIGIBLE_PLANS
 
 
 def test_agent_os_eligible_lead_qualification():
     from backend.services.lead_qualification import _ELIGIBLE_PLANS
+
     assert "agent_os" in _ELIGIBLE_PLANS
 
 
 def test_agent_os_can_white_label_branding():
     from backend.services.branding_helpers import _filter_branding_for_plan
+
     full = {
         "primary_color": "#111",
         "logo_url": "https://x/logo.png",
@@ -62,11 +68,13 @@ def test_agent_os_can_white_label_branding():
 
 # --- chatbot is the widget/chat entry tier ----------------------------------
 
+
 def test_chatbot_excluded_from_premium_backoffice_gates():
     from backend.services.api_key_auth import _ALLOWED_PLANS
     from backend.services.sms_rate_limiter import _UNLIMITED_PLANS
     from backend.services.document_drafting import _ELIGIBLE_PLANS
     from backend.services.lead_qualification import _ELIGIBLE_PLANS as LQ
+
     # chatbot ($19.99) is "widget/chat only" — not the premium back-office set.
     assert "chatbot" not in _ALLOWED_PLANS
     assert "chatbot" not in _UNLIMITED_PLANS
@@ -80,12 +88,14 @@ def test_reconciliation_baseline_tokens_match_canonical():
     # mis-state caps for chatbot/agent_os tenants (GH #293 issue 2).
     from backend.services.ai_usage_guard import PLAN_BASELINE_TOKENS
     from backend.services.billing_reconciliation import _PLAN_BASELINE_AI_TOKENS
+
     assert _PLAN_BASELINE_AI_TOKENS["chatbot"] == PLAN_BASELINE_TOKENS["chatbot"]
     assert _PLAN_BASELINE_AI_TOKENS["agent_os"] == PLAN_BASELINE_TOKENS["agent_os"]
 
 
 def test_chatbot_gets_widget_branding_but_no_white_label():
     from backend.services.branding_helpers import _filter_branding_for_plan
+
     full = {
         "primary_color": "#111",
         "widget_title": "Chat with us",
@@ -102,24 +112,29 @@ def test_chatbot_gets_widget_branding_but_no_white_label():
 
 # --- Agent OS suite gate (round-3, 2026-07-21) ------------------------------
 
+
 def test_agent_os_in_suite_gate():
     from backend.services.agent_os_gate import AGENT_OS_PLANS
+
     assert "agent_os" in AGENT_OS_PLANS
 
 
 def test_legacy_plans_grandfathered_in_suite_gate():
     from backend.services.agent_os_gate import AGENT_OS_PLANS
+
     for plan in ("growth", "autopilot", "professional", "enterprise"):
         assert plan in AGENT_OS_PLANS
 
 
 def test_chatbot_and_free_excluded_from_suite_gate():
     from backend.services.agent_os_gate import AGENT_OS_PLANS
+
     assert "chatbot" not in AGENT_OS_PLANS
     assert "free" not in AGENT_OS_PLANS
 
 
 # --- Marketing gate aligned with the suite gate (round-4, 2026-07-21) -------
+
 
 def test_marketing_plans_match_suite_gate():
     # Marketing is surfaced through the Agent OS marketing department, so the
@@ -128,17 +143,20 @@ def test_marketing_plans_match_suite_gate():
     # wrongly 402-ing grandfathered contracts (CLAUDE.md: gates include them).
     from backend.services.agent_os_gate import AGENT_OS_PLANS
     from backend.services.plan_gate import MARKETING_PLANS
+
     assert MARKETING_PLANS == set(AGENT_OS_PLANS)
 
 
 def test_legacy_plans_grandfathered_in_marketing_gate():
     from backend.services.plan_gate import MARKETING_PLANS
+
     for plan in ("growth", "autopilot", "professional", "enterprise"):
         assert plan in MARKETING_PLANS
 
 
 def test_chatbot_and_free_still_excluded_from_marketing_gate():
     from backend.services.plan_gate import MARKETING_PLANS
+
     assert "chatbot" not in MARKETING_PLANS
     assert "free" not in MARKETING_PLANS
 
@@ -146,4 +164,25 @@ def test_chatbot_and_free_still_excluded_from_marketing_gate():
 def test_campaign_send_plans_share_marketing_source_of_truth():
     from backend.routers.marketing_campaigns import _CAMPAIGN_SEND_PLANS
     from backend.services.plan_gate import MARKETING_PLANS
+
     assert _CAMPAIGN_SEND_PLANS is MARKETING_PLANS
+
+
+# --- Demo-role guard on buy-usage Stripe endpoint (GH #640) -----------------
+
+
+def test_buy_usage_has_block_demo_role_guard():
+    """POST /buy-usage must block demo users from reaching $24.99 Stripe checkout."""
+    from backend.routers.billing_usage import router
+    from backend.dependencies import block_demo_role
+
+    buy_usage_route = next(
+        r
+        for r in router.routes
+        if getattr(r, "path", None) == "/buy-usage"
+        and "POST" in getattr(r, "methods", set())
+    )
+    dep_callables = [d.dependency for d in buy_usage_route.dependencies]
+    assert (
+        block_demo_role in dep_callables
+    ), "block_demo_role missing from POST /buy-usage — demo users can reach Stripe checkout"
