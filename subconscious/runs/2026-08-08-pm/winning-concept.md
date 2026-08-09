@@ -1,5 +1,5 @@
 # Winning Concept — Run 102
-**Date:** 2026-08-08-pm  
+**Date:** 2026-08-08-pm
 **Winner:** Idea 3 — Orchestrator Grandfathered Plan Gap
 
 ---
@@ -14,7 +14,7 @@ if plan in ("professional", "enterprise", "agent_os"):
 
 The grandfathered plans `growth` and `autopilot` are missing. They appear in every other canonical plan-gate file:
 - `backend/services/agent_os_gate.py` ✓
-- `backend/services/plan_gate.py` ✓  
+- `backend/services/plan_gate.py` ✓
 - `backend/services/ai_usage_guard.py` ✓
 - `backend/services/automation/orchestrator.py` ✗ ← missing
 

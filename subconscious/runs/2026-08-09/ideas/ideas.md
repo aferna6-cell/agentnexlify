@@ -27,7 +27,7 @@
 ## Idea 4: Nexlify Score Token-Burn Guard (response_score + nightly Step 5 criteria)
 **Evidence:** memory.jsonl run 101 parking lot: "Nexlify Score token-burn guard (response_score.py ai_usage_guard routing — add to nightly Step 5 criteria)." The `response_score.py` service was added in e0e9be6 (2026-08-06). Nightly Step 5 reviews AI-touching code for plan gate gaps. Adding response_score.py to Step 5's scan pattern would make future AI additions auto-caught.
 **Action:** Add `response_score.py` to the nightly Step 5 pattern list in SKILL.md so the nightly review specifically checks it on each run for plan gate presence. This is additive to Idea 2 (Idea 2 fixes the gap; Idea 4 adds monitoring to prevent recurrence).
-**Impact:** Prevents future AI service files being added without plan gates by making the detection systematic rather than one-off. 
+**Impact:** Prevents future AI service files being added without plan gates by making the detection systematic rather than one-off.
 **Category:** workflow
 
 ---
