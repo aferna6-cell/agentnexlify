@@ -186,6 +186,7 @@ No-op when moratorium is inactive.
 You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to review.
 
 1. cd /home/aidan/agentnexlify
+1.5. **Detached HEAD guard:** Run `git symbolic-ref HEAD 2>/dev/null || echo DETACHED`. If output is "DETACHED", run `git checkout main` before proceeding. This prevents commits from being orphaned on a detached HEAD (incident: 2026-08-07, fixed 2026-08-08).
 2. git pull origin main --rebase
 3. Run: git log --since="1 day ago" --oneline --no-merges
 4. If zero commits: write empty report, exit.
@@ -328,6 +329,29 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
           Log: "Step 9G: could not read run status — trigger may have succeeded, check GH Actions manually"
     5. **Log:**
        Log: "Step 9G: kb-autopopulate trigger attempted — conclusion: {conclusion}"
+9H. (KB Autopopulate Outcome Monitor) On the nightly run after Step 9G triggered, verify whether the workflow actually refreshed the KB. Fires even when Step 9G "succeeded" — catches false-success from `continue-on-error: true`.
+    1. **Check whether Step 9G ran recently:**
+       Parse `knowledge-base/log.md` for the last KB populate date. Compute `days_stale = today - last_kb_date`.
+       If days_stale <= 7: log "Step 9H: KB is fresh — skipping outcome check." and skip remaining sub-steps.
+       If days_stale > 7: proceed.
+    2. **Check for a recent kb-autopopulate run (last 48h):**
+       Run: `gh run list --workflow=kb-autopopulate.yml -R aferna6-cell/agentnexlify --limit=3 --json conclusion,status,createdAt,url`
+       If no runs within 48h: log "Step 9H: no recent kb-autopopulate run found — Step 9G may not have triggered yet." and skip.
+    3. **Evaluate outcome of most recent run:**
+       a. If conclusion == "success" AND days_stale <= 7:
+          Log: "Step 9H: kb-autopopulate succeeded — KB is now fresh."
+       b. If conclusion == "success" AND days_stale > 7:
+          Log: "Step 9H: FALSE SUCCESS — workflow exited 0 but KB not updated ({days_stale}d stale). Check ANTHROPIC_API_KEY + VOYAGE_API_KEY + SUPABASE_ACCESS_TOKEN in GitHub Actions Secrets."
+          Add comment via `mcp__github__add_issue_comment`:
+            issue_number: 403
+            body: "**Step 9H: FALSE SUCCESS detected.** kb-autopopulate.yml exited 0 (conclusion: success) but `knowledge-base/log.md` was NOT updated — KB is still {days_stale} days stale. Root cause: `continue-on-error: true` masks missing-secret failures as success. **Action required:** verify ANTHROPIC_API_KEY, VOYAGE_API_KEY, SUPABASE_ACCESS_TOKEN are set in repo Settings → Secrets → Actions. Run URL: {url}"
+       c. If conclusion == "failure" or "cancelled" or "timed_out":
+          Log: "Step 9H: kb-autopopulate run FAILED (conclusion: {conclusion}). Filing on GH #403."
+          Add comment via `mcp__github__add_issue_comment`:
+            issue_number: 403
+            body: "**Step 9H: kb-autopopulate.yml FAILED** (conclusion: {conclusion}). KB is {days_stale} days stale. Check workflow run: {url}"
+       d. If conclusion == "" or "in_progress":
+          Log: "Step 9H: kb-autopopulate run still in progress — will re-check on next nightly."
 10. Commit report: `docs(nightly): review YYYY-MM-DD [auto-nightly]`
 11. Push to main
 12. If any guardrail tripped (forbidden path, >5 files, >50 LOC, test-check failed) — abort fixes, file issue only, still write report
