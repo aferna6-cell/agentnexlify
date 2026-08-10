@@ -77,5 +77,5 @@ Precedent: Subconscious runs 99 (Step 9F) and 101 (Step 9G) implemented directly
 Verified: grep "^9H\." .claude/skills/nightly-commit-review/SKILL.md — PASS (line 332)
 Verified: grep "^1\.5\." .claude/skills/nightly-commit-review/SKILL.md — PASS (line 189)
 Verified: grep "^10\." .claude/skills/nightly-commit-review/SKILL.md → still present at line 355 — PASS
-Verified: wc -l .claude/skills/nightly-commit-review/SKILL.md — 390 lines (was 363, +27 lines for 9H block + 1 line for 1.5) — PASS
+Verified: wc -l .claude/skills/nightly-commit-review/SKILL.md — 387 lines (was 363, +24 lines for 9H block + 1 line for 1.5 guard) — PASS
 ```
