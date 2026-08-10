@@ -1,6 +1,6 @@
 # Subconscious Run 107 — Winning Concept
-**Date:** 2026-08-10  
-**Run:** 107  
+**Date:** 2026-08-10
+**Run:** 107
 **Status:** DIRECT IMPLEMENTATION (dual — two SKILL.md changes written this session)
 
 ---
@@ -18,12 +18,12 @@ Both are independent SKILL.md additions. No conflicts. Both implemented.
 
 ## Implementation 1: Step 1.5 — Detached HEAD Guard
 
-**File:** `.claude/skills/nightly-commit-review/SKILL.md`  
+**File:** `.claude/skills/nightly-commit-review/SKILL.md`
 **Inserted:** After step 1 (`cd /home/aidan/agentnexlify`), before step 2 (`git pull origin main --rebase`)
 
 ```
-1.5. **Detached HEAD guard:** Run `git symbolic-ref HEAD 2>/dev/null || echo DETACHED`. 
-     If output is "DETACHED", run `git checkout main` before proceeding. This prevents 
+1.5. **Detached HEAD guard:** Run `git symbolic-ref HEAD 2>/dev/null || echo DETACHED`.
+     If output is "DETACHED", run `git checkout main` before proceeding. This prevents
      commits from being orphaned on a detached HEAD (incident: 2026-08-07, fixed 2026-08-08).
 ```
 
@@ -35,7 +35,7 @@ Both are independent SKILL.md additions. No conflicts. Both implemented.
 
 ## Implementation 2: Step 9H — KB Autopopulate Outcome Monitor
 
-**File:** `.claude/skills/nightly-commit-review/SKILL.md`  
+**File:** `.claude/skills/nightly-commit-review/SKILL.md`
 **Inserted:** After Step 9G block, before Step 10 (`Commit report`)
 
 **Logic:**

@@ -1,6 +1,6 @@
 # Subconscious Run 107 — Candidate Ideas
-**Date:** 2026-08-10  
-**Run:** 107  
+**Date:** 2026-08-10
+**Run:** 107
 **Evidence window:** 2026-08-07 → 2026-08-10
 
 ---
@@ -23,7 +23,7 @@
 
 ## Idea 1 — Step 9H: KB Autopopulate Outcome Monitor (DIRECT IMPLEMENTATION)
 
-**Category:** automation / correctness  
+**Category:** automation / correctness
 **Escalation trigger:** 2+ cycles labeled "DIRECT IMPLEMENTATION" without SKILL.md write (2026-08-09 = cycle 1, this run = cycle 2 → escalation threshold met)
 
 **Evidence:**
@@ -42,7 +42,7 @@
 
 ## Idea 2 — Nightly Detached HEAD Guard (DIRECT IMPLEMENTATION)
 
-**Category:** reliability / correctness  
+**Category:** reliability / correctness
 **Escalation trigger:** 1 cycle labeled "DIRECT IMPLEMENTATION" without SKILL.md write (2026-08-08 = cycle 1). Combined with the real incident (2026-08-07 orphaned commits), escalation is justified.
 
 **Evidence:**
@@ -66,7 +66,7 @@ git pull origin main --rebase
 
 ## Idea 3 — Step 9F/9G Regression: Staleness Check Missing from Recent Nightlies
 
-**Category:** reliability / regression detection  
+**Category:** reliability / regression detection
 **Escalation trigger:** Recommendation only (cycle 1)
 
 **Evidence:**
@@ -84,7 +84,7 @@ git pull origin main --rebase
 
 ## Idea 4 — Step 9H (Alternate): Idempotent PR Pile Alerter
 
-**Category:** operations / housekeeping  
+**Category:** operations / housekeeping
 **Escalation trigger:** Recommendation only (carry-forward from run 106 — cycle 1)
 
 **Evidence:**
@@ -101,7 +101,7 @@ git pull origin main --rebase
 
 ## Idea 5 — GH #500 Actions Billing Limit Diagnostic Comment
 
-**Category:** unblocking / operations  
+**Category:** unblocking / operations
 **Escalation trigger:** Recommendation only (cycle 1)
 
 **Evidence:**

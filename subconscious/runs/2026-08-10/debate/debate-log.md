@@ -1,5 +1,5 @@
 # Subconscious Run 107 — Debate Log
-**Date:** 2026-08-10  
+**Date:** 2026-08-10
 **Top 3 candidates:** Idea 1 (Step 9H KB Monitor), Idea 2 (Detached HEAD Guard), Idea 3 (9F/9G Staleness Compliance)
 
 ---
