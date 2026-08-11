@@ -1,0 +1,52 @@
+{
+  "run_id": "2026-08-11-pm",
+  "run_number": 102,
+  "timestamp": "2026-08-11T00:00:00Z",
+  "winner": {
+    "title": "Create route-security-guard-audit SKILL.md",
+    "category": "code_health",
+    "effort": "S",
+    "confidence": "HIGH",
+    "action": "Write .claude/skills/route-security-guard-audit/SKILL.md with 6-step audit checklist for block_demo_role guard pattern"
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "ideas_killed": 2,
+  "parking_lot": [
+    "pr-backlog-triage SKILL.md",
+    "feature-build 5-file pattern update"
+  ],
+  "killed": [
+    "GH #643 implementation sketch comment (superseded by winner)",
+    "response_score.py ai_usage_guard (unverified assumption)"
+  ],
+  "mandate_status": {
+    "step_9g_in_nightly": "PASS",
+    "kb_freshness": "FAIL - still 19d stale, blocked on #403",
+    "gh403_step9g_comment": "PARTIAL - nightly commented with diagnostics",
+    "pr_pileup": "UNCHANGED - 5 subconscious drafts, #626 unmerged 9d",
+    "agent_os_tenants": "2-3 (below threshold)",
+    "mcp_tenants": "1 (below threshold)"
+  },
+  "evidence_sources": [
+    "docs/skill-discovery/2026-08-10.md",
+    "ops/routines/logs/nightly-commit-review-2026-08-11.md",
+    "ops/routines/logs/morning-digest-2026-08-11.md",
+    "docs/dev-knowledge/bug-patterns.md",
+    "subconscious/state/memory.jsonl (runs 97-101)",
+    "subconscious/state/governance.json"
+  ],
+  "key_observations": [
+    "block_demo_role guard applied 3 times in 48h (cbbaae5+c204af2+228203d) - recurrence confirmed",
+    "GH #643 open 4d, autopilot loop stalled (AUTOPILOT_GH_TOKEN expired)",
+    "KB 19 days stale - Step 9G triggered but blocked on ANTHROPIC_API_KEY missing in GH Actions",
+    "10 open PRs: 5 stale subconscious drafts + 4 Dependabot-ready",
+    "Detached HEAD guard added to nightly SKILL.md in this session's nightly run"
+  ],
+  "next_run_mandates": [
+    "Verify response_score.py ai_usage_guard presence",
+    "PR pile-up update: has #626 merged or been closed?",
+    "KB staleness update: still blocked on #403?",
+    "route-security-guard-audit: has human approved and created the file?"
+  ]
+}
