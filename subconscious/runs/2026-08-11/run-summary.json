@@ -1,0 +1,52 @@
+{
+  "run_id": "2026-08-11",
+  "run_number": 102,
+  "timestamp": "2026-08-11T00:00:00Z",
+  "phase": "complete",
+  "winner": {
+    "id": "step-9g-v2",
+    "title": "Amend Step 9G to use mcp__github__actions_run_trigger as primary trigger",
+    "category": "operational",
+    "channel": "nightly-commit-review SKILL.md edit",
+    "effort": "XS",
+    "file": ".claude/skills/nightly-commit-review/SKILL.md",
+    "section": "Step 9G — KB Autopopulate Self-Healing"
+  },
+  "debate_outcomes": {
+    "idea-2-step-9g-mcp": "SURVIVES — WINNER",
+    "idea-1-pr-backlog-triage": "SURVIVES — parking lot",
+    "idea-3-route-security-guard-audit": "WEAKENED — parking lot",
+    "idea-4-appointment-briefs-direct-fix": "KILLED — wrong channel",
+    "idea-5-step-9h-dependabot": "KILLED — overlaps with pr-backlog-triage"
+  },
+  "evidence_summary": {
+    "kb_staleness_days": 19,
+    "kb_last_updated": "2026-07-23",
+    "step_9g_status": "implemented but broken — gh CLI unavailable in nightly headless sessions",
+    "nightly_2026_08_11_step_9g_log": "TRIGGERED — kb-autopopulate.yml queued on main (via MCP, gh CLI not available)",
+    "open_prs": 10,
+    "dependabot_prs_ready_to_merge": 3,
+    "autopilot_token_expired": true,
+    "loop_consecutive_failures": 5
+  },
+  "mandate_check": {
+    "step_9g_in_skill": "PASS",
+    "kb_freshness": "FAIL — 19 days stale",
+    "gh_403_comment": "PARTIAL — Step 9G triggered but KB not updated; failure comment path unclear",
+    "pr_pile_resolved": "FAIL — 10 open PRs including #626 (8d old)",
+    "agent_os_tenant_count": "UNCHANGED — 2-3 tenants",
+    "mcp_tenant_count": "UNCHANGED — 1 tenant"
+  },
+  "parking_lot": [
+    "pr-backlog-triage skill",
+    "route-security-guard-audit skill"
+  ],
+  "frozen_ideas": ["ai_human_handoff"],
+  "artifacts": [
+    "ideas/ideas.md",
+    "debate/debate-log.md",
+    "winning-concept.md",
+    "improvement-backlog.md",
+    "run-summary.json"
+  ]
+}
