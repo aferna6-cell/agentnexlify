@@ -113,6 +113,7 @@ Only commits in last 24h. Skip merge commits.
 5. **Must run existing pre-push hook** (doesn't skip with `--no-verify`)
 6. **One commit per fix** — not batched
 7. **Commit message format:** `fix(nightly): <one-line> [auto-nightly-YYYY-MM-DD]`
+8. **Detached HEAD guard (CRITICAL)** — before any commit, verify on a branch. Commits on detached HEAD are orphaned and never reach main. Run: `BRANCH=$(git symbolic-ref HEAD 2>/dev/null); if [ -z "$BRANCH" ]; then git checkout main && git pull origin main; fi`. Verify after: `git symbolic-ref HEAD` must output `refs/heads/main`.
 
 ## Output Artifacts
 Every run writes a report:
@@ -186,6 +187,7 @@ No-op when moratorium is inactive.
 You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to review.
 
 1. cd /home/aidan/agentnexlify
+1.5. **Detached HEAD guard:** `BRANCH=$(git symbolic-ref HEAD 2>/dev/null); if [ -z "$BRANCH" ]; then git checkout main && git pull origin main; fi`
 2. git pull origin main --rebase
 3. Run: git log --since="1 day ago" --oneline --no-merges
 4. If zero commits: write empty report, exit.
