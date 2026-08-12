@@ -31,7 +31,7 @@ Without a SKILL.md, every session that encounters the pile-up reinvents classifi
 ## Trigger
 - Morning digest or nightly shows 5+ open PRs
 - Dependabot PRs aging >3 days without action
-- Subconscious draft PRs aging >7 days without human review  
+- Subconscious draft PRs aging >7 days without human review
 - User invokes `/pr-triage` or asks "clean up pull requests"
 
 ## What this skill does
@@ -107,7 +107,7 @@ To enable autonomous Dependabot merge (Class A only):
 - After merge: post summary comment listing merged PRs and reason
 
 To enable autonomous stale-close (Class D):
-- Set: `TRIAGE_AUTOCLOSE_STALE=true`  
+- Set: `TRIAGE_AUTOCLOSE_STALE=true`
 - When set: post close-comment + close PRs with age >14d and no recent activity
 - Comment format: "Closing stale PR — reopen if active again. Last commit [date]."
 

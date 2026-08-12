@@ -23,7 +23,7 @@ The opt-in env gate assumption is unverified. We don't know if the MCP GitHub to
 ### Round 2 Defense
 Conceded: MCP merge scope is unverified. The SKILL.md should document this uncertainty explicitly in an "Anti-patterns" or "Prerequisites" section. The primary value — triage classification table and conservative summary output — requires only `pull_requests:read` (list PRs, check CI), which the nightly already uses successfully (Step 9D). The autonomous merge gate can be labeled "future" with prerequisites listed.
 
-### Round 3 Challenge  
+### Round 3 Challenge
 The evidence for recurring cost is thin. The nightly and morning digest each spend <2 minutes on PR inventory. The "20 min/triage saved" estimate from skill-discovery has no empirical basis — it's speculative.
 
 ### Round 3 Defense
