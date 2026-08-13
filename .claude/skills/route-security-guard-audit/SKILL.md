@@ -1,3 +1,12 @@
+---
+name: route-security-guard-audit
+description: Audits FastAPI billing/payment/account-mutation routes for mandatory block_demo_role guards; adds missing guards and structural test assertions.
+triggers:
+  - New FastAPI billing/payment/account-mutation endpoint added or modified
+  - Nightly review flags missing security dependency on payment route
+  - GH issue labeled security + ai-ready references block_demo_role
+  - Any router file in backend/routers/ touched in a PR that adds AI usage
+---
 # Route Security Guard Audit
 
 ## Trigger
