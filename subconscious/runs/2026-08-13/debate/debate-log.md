@@ -36,7 +36,7 @@ The challenge about authority is valid — Dependabot merge requires explicit hu
 > "This is an XS edit to an existing SKILL.md. What prevents the next nightly session from ignoring the guard if the skill isn't invoked? SKILL.md files are guidance, not enforcement. The underlying fix is a pre-commit hook, not a skill update. Also, the cbbaae5 incident was 6 days ago and the next nightly session could simply be told to check `git symbolic-ref HEAD` before committing — no skill update needed."
 
 ### Defense
-The challenge about hooks vs skills is valid. However, the existing `nightly-commit-review` SKILL.md IS the protocol that nightly sessions follow — it is invoked by every nightly session. Adding the guard to the skill IS the enforcement mechanism. A pre-commit hook would need separate infrastructure and permission prompts. The skill update is faster, lower risk, and sufficient given that nightly sessions follow the SKILL.md faithfully (evidence: all prior runs cited skill steps in their logs). 
+The challenge about hooks vs skills is valid. However, the existing `nightly-commit-review` SKILL.md IS the protocol that nightly sessions follow — it is invoked by every nightly session. Adding the guard to the skill IS the enforcement mechanism. A pre-commit hook would need separate infrastructure and permission prompts. The skill update is faster, lower risk, and sufficient given that nightly sessions follow the SKILL.md faithfully (evidence: all prior runs cited skill steps in their logs).
 
 XS effort + confirmed incident + explicit skill-discovery proposal = strong candidate. But Idea 1 wins on escalation grounds — governance mandate takes priority over new recommendations.
 

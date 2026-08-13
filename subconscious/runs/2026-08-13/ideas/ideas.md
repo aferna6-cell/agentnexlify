@@ -15,8 +15,8 @@
 
 ## Idea 1 — route-security-guard-audit SKILL.md [ESCALATION]
 
-**Category**: code_health  
-**Effort**: XS (~10 min — content drafted in run 102 winning-concept.md, copy + adjust)  
+**Category**: code_health
+**Effort**: XS (~10 min — content drafted in run 102 winning-concept.md, copy + adjust)
 **Escalation**: Cycle 3 — governance mandate says CREATE DIRECTLY (no human approval needed)
 
 ### What
@@ -36,8 +36,8 @@ SKILL.md creation is documentation-only. No backend code touched. No implementat
 
 ## Idea 2 — pr-backlog-triage SKILL.md [ESCALATION PENDING]
 
-**Category**: workflow_efficiency  
-**Effort**: S (~20 min)  
+**Category**: workflow_efficiency
+**Effort**: S (~20 min)
 **Escalation**: Cycle 2 — recommend again; next run (105) triggers direct creation if still missing
 
 ### What
@@ -56,7 +56,7 @@ Cycle 2 — governance rules allow one more recommendation before escalation. Ca
 
 ## Idea 3 — nightly-commit-review Detached HEAD Guard
 
-**Category**: code_health  
+**Category**: code_health
 **Effort**: XS (~10 min — 4-line bash snippet added to existing SKILL.md)
 
 ### What
@@ -81,7 +81,7 @@ Regardless of run 104 winner, run 103's winner was already documented in PR #653
 
 ## Idea 4 — Step 9E Credential Rotation Warning Threshold Reduction
 
-**Category**: operational  
+**Category**: operational
 **Effort**: XS (~5 min — change one number in SKILL.md)
 
 ### What
@@ -100,7 +100,7 @@ Doesn't solve the current failure (token still needs rotation). Prevents the NEX
 
 ## Idea 5 — feature-build SKILL.md 5-File Pattern Documentation
 
-**Category**: workflow_efficiency  
+**Category**: workflow_efficiency
 **Effort**: XS (~10 min — add one section to existing SKILL.md)
 
 ### What
