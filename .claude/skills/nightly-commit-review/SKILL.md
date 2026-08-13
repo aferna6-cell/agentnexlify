@@ -239,9 +239,16 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
 9D. (Issue-to-PR Loop Health Check) Check for stalled ai-ready issues and loop health:
     1. **Check for stalled ai-ready issues:**
        List open ai-ready issues: `mcp__github__list_issues` with `labels: ["ai-ready"], state: OPEN`
-       For each open ai-ready issue, search for linked PR:
-         `mcp__github__search_pull_requests` query: `repo:aferna6-cell/agentnexlify is:pr <issue_number>`
-       Flag any ai-ready issue that has been open >24h with no linked PR as stalled.
+       Find issues with a formally linked PR (closing reference), in ONE query:
+         `mcp__github__search_issues` query: `repo:aferna6-cell/agentnexlify is:issue is:open label:ai-ready linked:pr`
+       (Do NOT lexically search PRs for the bare issue number — `search_pull_requests`
+        with query `<issue_number>` misses `#N` references in PR bodies and produced
+        3 consecutive false "no linked PR" alarms on #643, 2026-08-11..13.)
+       For any candidate still unmatched, read its comments (`issue_read` get_comments):
+         a comment claiming the issue for a named open PR (e.g. "rides in PR #575")
+         counts as linked after verifying that PR is still open.
+       Flag any ai-ready issue that has been open >24h with no linked PR (per the
+       two checks above) as stalled.
     2. **Check loop execution health:**
        List recent runs: `mcp__github__actions_list` method=list_workflow_runs,
          resource_id=autopilot-issue-loop.yml, per_page=5
