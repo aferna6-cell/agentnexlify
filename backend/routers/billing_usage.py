@@ -89,7 +89,7 @@ async def buy_usage(claims: dict = Depends(_get_current_tenant)):
         "line_items": [{"price": USAGE_PACK_PRICE_ID, "quantity": 1}],
         "success_url": (
             f"{settings.frontend_url}/billing?usage_pack_success=1"
-            "&session_id={{CHECKOUT_SESSION_ID}}"
+            "&session_id={CHECKOUT_SESSION_ID}"
         ),
         "cancel_url": f"{settings.frontend_url}/billing",
         "metadata": {
