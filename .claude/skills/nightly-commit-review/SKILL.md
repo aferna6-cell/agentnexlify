@@ -238,6 +238,16 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
       c. If labeled issue FOUND: log "brain connector failure already escalated (issue #N open) — skipping duplicate"
     If consecutive_failures < 3:
       Log: "brain connector check PASS — last entry shows success or < 3 consecutive failures"
+    ### Step 9C age gate (brain connector staleness)
+    After the consecutive-failures check, also check age of last successful entry:
+    1. Parse timestamp of last successful INGESTION-LOG.md entry (format: `YYYY-MM-DDTHH:MMZ`)
+    2. Compute days_since_last_run = today - last_success_date
+    3. If days_since_last_run > 14:
+       - Surface as WARNING in nightly summary: "Brain connector {N} days since last run (threshold: 14 days). Last run: {date}."
+       - Check if #394 or #399 are open (search: "repo:aferna6-cell/agentnexlify brain connector credentials state:open")
+       - If open issue exists: add comment with current staleness count + last-run date. Log: "brain connector staleness escalated via comment on #N"
+       - If no existing open issue: create via mcp__github__issue_write: title "Brain connector {N} days stale — last run {date}", labels: ["human-action-required", "brain-connector", "operational"]
+    4. If days_since_last_run <= 14: PASS (age gate OK)
 9D. (Issue-to-PR Loop Health Check) Check for stalled ai-ready issues and loop health:
     1. **Check for stalled ai-ready issues:**
        List open ai-ready issues: `mcp__github__list_issues` with `labels: ["ai-ready"], state: OPEN`
