@@ -19,3 +19,8 @@ After rotating any credential:
 - SUPABASE_ACCESS_TOKEN: set in Railway Variables for brain connector. Voyage API key also required.
 - Step 9E in .claude/skills/nightly-commit-review/SKILL.md reads this file nightly.
   Files a GH issue if any credential is >=76 days since last rotation (14-day warning before 90-day expiry).
+
+### SUPABASE_ACCESS_TOKEN — Action Required
+- Last rotated: unknown — confirm in Supabase dashboard (Settings → API → Service Role Key or Personal Access Tokens)
+- Required for: brain connector (GH #394), KB autopopulate GH Action (GH #403), nightly Supabase MCP
+- Human action: log the rotation date in the table after confirming with Supabase dashboard
