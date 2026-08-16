@@ -16,9 +16,9 @@
 
 ## Idea 1 — Write route-security-guard-audit SKILL.md (3rd-cycle escalation)
 
-**Category:** code_health  
-**Effort:** XS (content fully specified in run 102 winning-concept.md)  
-**Confidence:** MAXIMUM  
+**Category:** code_health
+**Effort:** XS (content fully specified in run 102 winning-concept.md)
+**Confidence:** MAXIMUM
 **Autonomous-executable:** YES — 3rd carry-forward triggers direct implementation per subconscious precedent
 
 **Evidence:**
@@ -35,9 +35,9 @@
 
 ## Idea 2 — Add Step 9I: nightly grep scan for missing block_demo_role
 
-**Category:** code_health  
-**Effort:** S  
-**Confidence:** HIGH  
+**Category:** code_health
+**Effort:** S
+**Confidence:** HIGH
 
 **Evidence:** 2 confirmed instances (appointment_briefs.py + scoring_config.py) in 9 days. Systematic scan would detect the full set. GH #661 just filed — scan would catch any new gaps proactively.
 
@@ -47,9 +47,9 @@
 
 ## Idea 3 — Add block_demo_role to scoring_config.py (GH #661)
 
-**Category:** security  
-**Effort:** S  
-**Confidence:** HIGH  
+**Category:** security
+**Effort:** S
+**Confidence:** HIGH
 
 **Evidence:** GH #661 filed today. 4 mutating endpoints at /api/v1/scoring missing block_demo_role. Demo tenants can manipulate scoring factors.
 
@@ -59,9 +59,9 @@
 
 ## Idea 4 — Comment on GH #394 with exact brain connector recovery checklist
 
-**Category:** operational  
-**Effort:** XS  
-**Confidence:** MEDIUM  
+**Category:** operational
+**Effort:** XS
+**Confidence:** MEDIUM
 
 **Evidence:** GH #394 open 23+ days. SUPABASE_ACCESS_TOKEN now in credential-rotation-schedule.md with Action Required note. Human needs specific steps to recover brain connector.
 
@@ -71,9 +71,9 @@
 
 ## Idea 5 — Push orphaned commits to PR #653 branch (operational necessity)
 
-**Category:** operational  
-**Effort:** XS  
-**Confidence:** HIGH  
+**Category:** operational
+**Effort:** XS
+**Confidence:** HIGH
 
 **Evidence:** 6 commits in detached HEAD (ddd8e77, 00940d9, cf68720, 60499dd, 430f08a, 2a76ae2) never reach origin. This run's artifacts also need pushing. PR dedup guard requires push to subconscious/run-103 branch (PR #653).
 
