@@ -1,13 +1,11 @@
 {
   "version": 1,
-  "last_run": "2026-08-16",
-  "total_runs": 106,
+  "last_run": "2026-08-16-pm",
+  "total_runs": 107,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
-  "frozen_ideas": [
-    "ai_human_handoff"
-  ],
+  "frozen_ideas": ["ai_human_handoff"],
   "moratorium_config": {
     "moratorium_active": false,
     "triggered_run": 15,
@@ -216,7 +214,27 @@
   "run_105_branch_mandate_executed": "EXECUTED 2026-08-13-pm (run 105). All 6 items checked: (1) response_score.py ai_usage_guard: RESOLVED \u2014 file is backend/services/response_score.py (service layer, not router). No route-level guard needed at service layer. Mandate P2 closed. (2) PR pile-up: UNCHANGED \u2014 #626 open 10+ days, dependabot PRs #649/#629/#630/#631 still pending 9-10 days. AUTOPILOT_GH_TOKEN NOT rotated. (3) KB staleness: STILL BLOCKED \u2014 21 days stale. Step 9G triggers kb-autopopulate.yml but ANTHROPIC_API_KEY missing (#403). (4) route-security-guard-audit SKILL.md: NOT CREATED \u2014 human has NOT merged PR #653 (2 days open, cycle 2 carry-forward). (5) GH #643: STILL OPEN \u2014 7 days, no linked PR, ai-ready+security labels. Autopilot 5/5 failures. (6) Dependabot PRs: STILL PENDING \u2014 all 4 aging 9-10 days. Winner: Fix appointment_briefs.py \u2014 add block_demo_role + ai_usage_guard + structural test (AUTONOMOUS-EXECUTABLE).",
   "run_106_branch_mandate_executed": "EXECUTED 2026-08-14 (run 106). All 6 items checked: (1) Nightly did NOT apply appointment_briefs.py fix \u2014 nightly operates on main, PR #653 unmerged, standard channel blocked. Fix applied DIRECTLY by subconscious run 106 (AUTONOMOUS-EXECUTABLE, 2nd consecutive clear). (2) GH #643 not yet closed \u2014 requires human to merge PR #653. (3) pr-backlog-triage SKILL.md: cycle 2 PENDING \u2014 parking lot (autopilot still blocked by #399). (4) AUTOPILOT_GH_TOKEN: STILL EXPIRED \u2014 #399 open 41+ days. Step 9E now fires at 45d (was 76d, changed by Bonus B). (5) KB staleness: 22 days, #403 still unresolved. (6) Dependabot PRs: STILL PENDING. Fix applied: block_demo_role at router level + structural test in test_plan_gating_new_plans.py. Bonus B: Step 9E threshold 76d \u2192 45d.",
   "run_107_branch_mandate": "1. GH #643 closed? (requires human to merge PR #653 which contains this fix). 2. Step 9E now fires at 45d \u2014 did nightly report AUTOPILOT_GH_TOKEN as approaching_expiry? (it's 41d+, now within new 45d threshold). 3. AUTOPILOT_GH_TOKEN rotated (#399)? 4. ANTHROPIC_API_KEY set in GH Actions (#403)? KB staleness update. 5. Dependabot PRs #649/#629/#630/#631 merged? 6. ai_usage_guard + plan gate in appointment_briefs.py \u2014 cycle 1 (follow-up from run 106 scope exclusion). Consider adding reserve_ai_tokens() in appointment_brief.py service layer where Claude API is called.",
+  "run_107_mandate": "1. scoring_config.py block_demo_role: has human merged PR #653 enabling issue-to-pr-loop to pick up GH #661? Or has it been fixed directly? Confirm block_demo_role present in backend/routers/scoring_config.py. 2. GH #643 closed? (requires merge of PR #653). 3. AUTOPILOT_GH_TOKEN rotated (#399)? Now 41+ days; Step 9E fires at 45d (4 days). If rotated: confirm ai-ready loop running. 4. ANTHROPIC_API_KEY set in GH Actions (#403)? KB still 24+ days stale. 5. ops/credential-rotation-schedule.md AUTOPILOT_GH_TOKEN threshold: still says 76d? Should be 45d (run 106 Bonus B updated SKILL.md but not schedule doc). 6. ai_usage_guard in appointment_briefs.py service layer: verify reserve_ai_tokens() signature dict keys vs _get_current_tenant() return shape. If compatible, this is cycle 2 candidate.",
   "active_directions": [
+    {
+      "title": "Fix scoring_config.py missing block_demo_role \u2014 close GH #661 (run 107 winner)",
+      "date": "2026-08-16-pm",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "autonomous_executable": true,
+      "requires_human": false,
+      "category": "code_health",
+      "moratorium_override": false,
+      "source_run": 107,
+      "effort": "XS",
+      "evidence": "GH #661 filed 2026-08-16 by nightly review. backend/routers/scoring_config.py \u2014 4 mutating endpoints (PUT, POST, DELETE, POST /reset) lack block_demo_role. Demo tenants can corrupt scoring factor weights. Same class as appointment_briefs.py (GH #643, fixed run 106). route-security-guard-audit SKILL.md (commit 60d132f) guides implementation.",
+      "action": "1. Add block_demo_role import to backend/routers/scoring_config.py. 2. Add dependencies=[Depends(block_demo_role)] to APIRouter constructor. 3. Syntax verify. 4. Commit: fix(security): add block_demo_role to scoring_config router \u2014 closes #661. Reference: appointment_briefs.py pattern + .claude/skills/route-security-guard-audit/SKILL.md.",
+      "debate_verdict": "SURVIVES \u2014 confirmed bug, proven pattern, SKILL.md guide exists, zero blast radius for non-demo tenants",
+      "parking_lot_displaced": [
+        "Step 9I zero-conversation alert (blocked by GH #403)",
+        "ai_usage_guard appointment_briefs (dict key verification needed)"
+      ]
+    },
     {
       "title": "Write route-security-guard-audit SKILL.md (run 105 winner \u2014 DIRECT IMPLEMENTATION)",
       "date": "2026-08-15-pm",

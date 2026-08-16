@@ -1,0 +1,51 @@
+{
+  "run": "2026-08-16-pm",
+  "run_number": 107,
+  "date": "2026-08-16",
+  "winner": "Fix scoring_config.py missing block_demo_role — close GH #661",
+  "winner_category": "code_health",
+  "winner_effort": "XS",
+  "winner_confidence": "HIGH",
+  "winner_autonomous_executable": true,
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "debate_verdicts": {
+    "scoring_config_block_demo_role": "SURVIVES — primary candidate",
+    "step_9i_zero_conversation_alert": "WEAKENED — GH #403 blocks infrastructure",
+    "ai_usage_guard_appointment_briefs": "WEAKENED — dict key verification needed"
+  },
+  "evidence_sources_checked": [
+    "governance.json (total_runs=106, run_107_branch_mandate)",
+    "subconscious/state/memory.jsonl (last 5 entries)",
+    "ops/routines/logs/nightly-commit-review-2026-08-16.md",
+    "backend/routers/scoring_config.py (block_demo_role ABSENT)",
+    "backend/routers/appointment_briefs.py (block_demo_role PRESENT — run 106 fix)",
+    ".claude/skills/route-security-guard-audit/SKILL.md (commit 60d132f)",
+    "ops/credential-rotation-schedule.md",
+    "knowledge-base/log.md (staleness check)"
+  ],
+  "carry_forwards": {
+    "scoring_config_fix": "NOW WINNER — first cycle as primary candidate",
+    "step_9i_alert": "Parking lot cycle 3 — blocked by GH #403",
+    "ai_usage_guard": "Parking lot cycle 2 — dict key verification required"
+  },
+  "pr_status": "PR #653 (subconscious/run-103) still draft, 12+ days. CI: git diff --check PASS. All test failures pre-existing base-branch regressions.",
+  "human_blockers": [
+    "GH #399: AUTOPILOT_GH_TOKEN rotation (41+ days expired, 4 days from Step 9E alert)",
+    "GH #403: ANTHROPIC_API_KEY in GH Actions (KB 24+ days stale)",
+    "Merge PR #653 to deliver runs 102-107 work to main"
+  ],
+  "governance_updates": {
+    "total_runs": "106 -> 107",
+    "last_run": "2026-08-16 -> 2026-08-16-pm",
+    "active_direction_added": "Fix scoring_config.py missing block_demo_role (run 107 winner)",
+    "run_107_mandate_added": true
+  },
+  "artifacts": [
+    "subconscious/runs/2026-08-16-pm/ideas/ideas.md",
+    "subconscious/runs/2026-08-16-pm/debate/debate-log.md",
+    "subconscious/runs/2026-08-16-pm/winning-concept.md",
+    "subconscious/runs/2026-08-16-pm/improvement-backlog.md",
+    "subconscious/runs/2026-08-16-pm/run-summary.json"
+  ]
+}
