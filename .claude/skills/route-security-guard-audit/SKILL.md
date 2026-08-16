@@ -1,157 +1,94 @@
 ---
 name: route-security-guard-audit
-description: Audit FastAPI routers for missing block_demo_role and ai_usage_guard dependencies. 6-step checklist: grep inventory, identify gaps, add guard, add structural test, verify syntax, commit.
-version: 1.0.0
-origin: agentnexlify
-user-invocable: true
+description: Audits FastAPI billing/payment/account-mutation routes for mandatory block_demo_role guards; adds missing guards and structural test assertions.
 triggers:
-  - route security audit
-  - block_demo_role audit
-  - demo guard audit
-  - security guard audit
-  - audit routers
-paths:
-  - "backend/routers/**/*.py"
+  - New FastAPI billing/payment/account-mutation endpoint added or modified
+  - Nightly review flags missing security dependency on payment route
+  - GH issue labeled security + ai-ready references block_demo_role
+  - Any router file in backend/routers/ touched in a PR that adds AI usage
 ---
-
 # Route Security Guard Audit
 
-Systematic audit of FastAPI routers for missing `block_demo_role` and `ai_usage_guard` guards. Prevents demo tenants from mutating billing, payment, subscription, scoring, and AI-usage-critical endpoints.
-
-## When to Use
-
+## Trigger
 - New FastAPI billing/payment/account-mutation endpoint added or modified
-- Nightly review flags missing security dependency on a payment/scoring/AI route
+- Nightly review flags missing security dependency on payment route
 - GH issue labeled `security` + `ai-ready` references `block_demo_role`
-- Any router file in `backend/routers/` touched in a PR that adds AI usage or mutating endpoints
-- Manual audit: user says "audit security guards", "check block_demo_role coverage"
+- Any router file in `backend/routers/` touched in a PR that adds AI usage
 
-## Background
+## What this skill does
+Audits payment-adjacent routers for mandatory security guards, adds missing guards,
+adds structural assertions to the test suite to prevent silent regression.
 
-`block_demo_role` prevents demo tenants from calling mutating endpoints. Without it, demo accounts can:
-- Create/modify scoring factors (scoring_config.py — GH #661)
-- Create/delete appointment briefs (appointment_briefs.py — GH #643)
-- Modify any payment-adjacent resource
-
-Canonical reference: `backend/routers/billing.py:33`
-
-```python
-from backend.dependencies import _get_current_tenant, require_role, block_demo_role
-```
-
-Confirmed-guarded routers: `billing.py`, `billing_usage.py`, `account_deletion.py`, `auth_billing.py`, `phone.py`
-
-Known-unguarded (as of 2026-08-16): `appointment_briefs.py` (GH #643), `scoring_config.py` (GH #661)
-
----
-
-## Step 1 — Build Guard Inventory
-
+## Step 1 — Build guard inventory
 ```bash
 grep -rn "block_demo_role" backend/routers/
 ```
-
-Record which files import and use `block_demo_role`. These are GUARDED.
-
-```bash
-grep -rn "ai_usage_guard" backend/routers/
-```
-
-Record which files call `ai_usage_guard`. These have AI usage protection.
-
----
-
-## Step 2 — Identify Missing Guards
-
-For each file in `backend/routers/` that:
-- Has mutating endpoints (POST, PUT, DELETE, PATCH)
-- Calls `stripe_service`, modifies subscriptions, creates/updates/deletes records, or calls the Claude API
-
-Check whether `block_demo_role` is in the route dependencies. If not: FLAG.
-
-Priority target list:
-- `appointment_briefs.py` (GH #643 — known gap)
-- `scoring_config.py` (GH #661 — known gap)
-- Any router added after 2026-08-06 (Nexlify Score sprint)
-- Any router with `ai_usage_guard` calls but no `block_demo_role`
-
----
-
-## Step 3 — Add Guard
-
-For each flagged endpoint:
-
+Compare output against billing.py:33 (canonical reference pattern):
 ```python
-from backend.dependencies import _get_current_tenant, require_role, block_demo_role
-
 @router.post("/endpoint", dependencies=[Depends(block_demo_role)])
-async def create_thing(
-    payload: ThingCreate,
-    tenant: dict = Depends(_get_current_tenant),
-):
-    ...
 ```
 
-For AI-usage-critical routes, also add `ai_usage_guard` call before Claude API invocation:
+## Step 2 — Identify missing guards
+For each billing/payment/account endpoint (typically in: billing.py, billing_usage.py,
+appointment_briefs.py, scoring_config.py, any router that calls stripe_service,
+ai_usage_guard, or modifies subscriptions): verify `block_demo_role` is in the
+route's `dependencies`.
 
+If missing: proceed to Step 3.
+
+## Step 3 — Add guard
+In the router file:
+1. Add import if missing:
+   ```python
+   from backend.dependencies import block_demo_role
+   ```
+2. Add to route decorator:
+   ```python
+   @router.post("/endpoint", dependencies=[Depends(block_demo_role)])
+   ```
+3. For routes that also handle AI token usage, add `ai_usage_guard` call inside the handler before any Claude API call:
+   ```python
+   await ai_usage_guard(client_id=client_id, estimated_tokens=500)
+   ```
+
+## Step 4 — Add structural test assertion
+In `backend/tests/test_plan_gating_new_plans.py`, add an assertion that introspects
+the route's `dependencies` list:
 ```python
-from backend.dependencies import ai_usage_guard
-
-# Before calling Claude:
-await ai_usage_guard(tenant_id=tenant["client_id"], operation="thing_create")
-```
-
----
-
-## Step 4 — Add Structural Test
-
-Add assertion in `backend/tests/test_plan_gating_new_plans.py`:
-
-```python
-def test_block_demo_role_guard_on_<endpoint_name>():
-    """Demo tenants must not reach mutating endpoints on <router>."""
+def test_block_demo_role_guard_on_<endpoint>():
     app_routes = {route.path: route for route in app.routes}
-    route = app_routes.get("/api/v1/<path>")
-    assert route is not None, "Route /api/v1/<path> not found — was it removed?"
+    route = app_routes.get("/api/<endpoint-path>")
+    assert route is not None, "Route not found"
     dep_funcs = [dep.dependency for dep in (route.dependencies or [])]
     assert block_demo_role in dep_funcs, (
-        "block_demo_role missing from /api/v1/<path> — demo tenants can mutate this endpoint"
+        "block_demo_role guard missing from /api/<endpoint-path>"
     )
 ```
 
----
-
-## Step 5 — Syntax Verification
-
+## Step 5 — Syntax verification
 ```bash
-python -c "import ast; ast.parse(open('backend/routers/<file>.py').read()); print('PASS')"
+python -c "import ast; ast.parse(open('backend/routers/<file>.py').read())"
 ```
-
-Also verify no `from __future__ import annotations` introduced (forbidden in FastAPI files — causes Pydantic 422 errors on all requests).
-
----
+Must succeed with no output (clean parse).
 
 ## Step 6 — Commit
+Two commits:
+1. `fix: add block_demo_role guard to <endpoint>`
+2. `test: assert block_demo_role guard on <endpoint>`
 
-```
-fix(security): add block_demo_role to <router> endpoints
-```
+Or one combined: `fix(security): add block_demo_role + ai_usage_guard to <endpoint> + structural test`
 
-Include in commit body: GH issue reference if one exists, list of endpoints now guarded.
+## Canonical reference
+`backend/routers/billing.py:33` — the original correct pattern. When in doubt, match exactly.
 
----
-
-## Guardrails
-
-- Never add `block_demo_role` to GET/read-only endpoints — read access for demo tenants is acceptable
-- Never import `from __future__ import annotations` in FastAPI router files
-- Never modify test to make it pass — if test fails, the code is wrong
-- Check `client_id` not `tenant_id` in any new query (schema discipline rule)
+## Anti-patterns
+- Never add guard after business logic executes — must be in `dependencies=[]`, not inside the handler
+- Never mock `block_demo_role` in tests that are asserting its presence
+- Never skip the structural test — it prevents the guard from being silently removed
 
 ## Cross-refs
-
-- `backend/routers/billing.py:33` — canonical guard pattern
-- `backend/dependencies.py` — block_demo_role, ai_usage_guard definitions
-- `backend/tests/test_plan_gating_new_plans.py` — structural test file
-- `.claude/rules/security-rules.md`
-- GH #643 (appointment_briefs.py), GH #661 (scoring_config.py)
+- `backend/dependencies.py` — `block_demo_role` definition
+- `backend/tests/test_plan_gating_new_plans.py` — canonical test file
+- GH #643 — first incident (appointment_briefs.py)
+- GH #661 — second incident (scoring_config.py)
+- `.claude/rules/schema-discipline.md` — invariants context

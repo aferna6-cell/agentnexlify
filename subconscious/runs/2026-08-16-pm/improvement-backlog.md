@@ -1,67 +1,20 @@
-# Run 105 — Improvement Backlog (2026-08-16-pm)
+# Improvement Backlog — 2026-08-16-pm
 
-## Status key
-- AUTONOMOUS-EXECUTABLE — nightly can apply without human approval
-- PENDING-APPROVAL — human must approve before execution
-- IN-PROGRESS — being worked on
-- BLOCKED — external dependency (e.g., expired token, missing secret)
-- CARRY-FORWARD — won a prior run, not yet implemented
+## Active
+- Fix `scoring_config.py` block_demo_role — add router-level `dependencies=[Depends(block_demo_role)]` to close GH #661. Pattern: appointment_briefs.py run 106. Guide: route-security-guard-audit SKILL.md.
 
----
+## Parking Lot (survived debate but not chosen)
+- **Step 9I nightly paying-tenant zero-conversation alert** — WEAKENED this run (GH #403 blocks infrastructure). Revisit run 108 after ANTHROPIC_API_KEY is set in GH Actions.
+- **ai_usage_guard in appointment_briefs.py** — WEAKENED (dict key verification needed before implementing). Check `reserve_ai_tokens()` signature vs `_get_current_tenant()` return shape. Implement after verification.
+- **Update ops/credential-rotation-schedule.md AUTOPILOT_GH_TOKEN threshold 76d→45d** — XS doc fix, did not debate but low leverage vs Idea 1. Owner should update when rotating the token (GH #399).
+- **Step 9H v2 subconscious PR pile alerter** — Valid, low priority. PR #653 already 12+ days draft. Good candidate for run 109 if #653 still open.
 
-## Active backlog (ranked by implementation readiness)
+## Rejected This Run
+None killed — all ideas survived debate to varying degrees. Two WEAKENED (timing, verification risk), one SURVIVES as winner.
 
-| # | Title | Category | Effort | Status | Source |
-|---|-------|----------|--------|--------|--------|
-| 1 | Create route-security-guard-audit SKILL.md | code_health | S | IMPLEMENTED (run 105 direct escalation) | Run 102 winner → Run 105 escalation |
-| 2 | Add Step 9J: orphaned-commits detector to nightly | operational | XS | AUTONOMOUS-EXECUTABLE (run 106 bonus) | Run 105 runner-up |
-| 3 | scoring_config.py add block_demo_role | security | XS | PENDING-APPROVAL (GH #661 filed) | Run 104 security finding |
-| 4 | appointment_briefs.py add block_demo_role | security | XS | PENDING-APPROVAL (GH #643 open 8d) | GH #643 |
-| 5 | Step 9K: draft PR staleness alerter | operational | XS | RECOMMENDED (parking lot) | Run 105 idea 5 |
-| 6 | Wire PR #653 draft → ready-for-review | operational | XS | BONUS-ACTION (one-off) | Run 103+104 carry |
-
----
-
-## Blocked (human-action-required)
-
-| # | Title | Blocker | Issue |
-|---|-------|---------|-------|
-| B1 | Resume brain connector | GitHub PAT + SUPABASE_ACCESS_TOKEN rotation needed | #394 (24d open) |
-| B2 | Resume autopilot issue-to-PR loop | AUTOPILOT_GH_TOKEN expired | #399 (38d open) |
-| B3 | KB autopopulate resume | ANTHROPIC_API_KEY missing in GH Actions | #403 (38d open) |
-| B4 | Close GH #643 (appointment_briefs.py security) | PR #653 needs human review + merge | #643 (8d open) |
-| B5 | Close GH #661 (scoring_config.py security) | Needs human review (security code) | #661 (0d open) |
-| B6 | Provision INTEGRATIONS_ENC_KEY | Railway migration 176 blocked | #536 |
-| B7 | Recover orphaned commits | 7 commits in detached HEAD not on origin/main | Structural finding from nightly-2026-08-16 |
-
----
-
-## Frozen
-
-| Title | Reason |
-|-------|--------|
-| AI-to-human handoff | Frozen per governance — not in scope this phase |
-| Widget drift | FORBIDDEN from subconscious permanently (widget_drift_topic_retired: true) |
-
----
-
-## Parking lot (not yet ready to ideate)
-
-- **Step 9I paying-tenant 0-conversation alert**: Supabase MCP availability in headless nightly sessions unconfirmed. Monitor before writing the step.
-- **Step 9J orphaned-commits detector**: RUNNER-UP this run. XS effort. Recommended for run 106 nightly bonus action. Evidence: 7 commits orphaned 2026-08-16.
-- **Step 9K draft-PR staleness alerter**: Parked pending Step 9J. Multiple subconscious PRs >14d draft.
-- **Lead Source Analytics dashboard**: Blocked on GH #399 (AUTOPILOT_GH_TOKEN). ai-ready issue exists.
-- **Schedule conversation_enrichment_job.py**: Blocked on GH #399. Re-evaluate after AUTOPILOT_GH_TOKEN rotation.
-
----
-
-## Completed (last 5 runs)
-
-| Run | Winner | Status |
-|-----|--------|--------|
-| 100 | Step 9G KB autopopulate self-healing trigger | IMPLEMENTED (commit in nightly SKILL.md) |
-| 101 | Step 9G direct escalation | IMPLEMENTED (subconscious run 101, 2026-08-06) |
-| 102 | Create route-security-guard-audit SKILL.md | CARRY-FORWARD → IMPLEMENTED at run 105 |
-| 103 | Add brain-connector age gate to Step 9C | IMPLEMENTED same-day (commit 60499dd) |
-| 104 | Add SUPABASE_ACCESS_TOKEN to rotation schedule | IMPLEMENTED (nightly-2026-08-16, commit ddd8e77) |
-| 105 | Create route-security-guard-audit SKILL.md | IMPLEMENTED (run 105 direct escalation, 2026-08-16) |
+## Questions for Next Run
+1. Has GH #661 been merged? If yes, run the full route-security-guard-audit SKILL.md to find any remaining missing block_demo_role guards across all routers.
+2. Has ANTHROPIC_API_KEY been added to GH Actions (GH #403)? If yes, Step 9I is unblocked for nightly addition.
+3. Has AUTOPILOT_GH_TOKEN been rotated (GH #399)? If yes at 45+ days, Step 9E threshold change is validated.
+4. Is PR #653 still draft? If open 19+ days, escalate Step 9H v2 to winning candidate.
+5. What is `reserve_ai_tokens()` signature shape? Verify dict keys match `_get_current_tenant()` return before implementing ai_usage_guard in appointment_briefs.py.

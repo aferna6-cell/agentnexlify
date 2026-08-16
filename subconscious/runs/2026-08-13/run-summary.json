@@ -1,0 +1,47 @@
+{
+  "run": 104,
+  "date": "2026-08-13",
+  "winner": "route-security-guard-audit SKILL.md",
+  "winner_status": "EXECUTED",
+  "escalation_cycle": 3,
+  "category": "code_health",
+  "effort": "XS",
+  "confidence": "HIGH",
+  "created_file": ".claude/skills/route-security-guard-audit/SKILL.md",
+  "bonus_fix": {
+    "file": "backend/routers/billing_usage.py",
+    "line": 92,
+    "bug": "Single-brace {CHECKOUT_SESSION_ID} in f-string success_url — Stripe never received the placeholder, checkout success redirect was broken",
+    "fix": "Changed to double-brace {{CHECKOUT_SESSION_ID}} matching auth_billing.py canonical pattern",
+    "detected_by": "PreToolUse:Bash hook (anti-desperation guard)"
+  },
+  "pr_dedup_guard": "FIRED — committed to existing branch subconscious/run-103 (PR #653). No new PR opened.",
+  "mandate_checks": {
+    "route_guard_skill": "CREATED (escalation cycle 3, governance mandate executed)",
+    "pr_backlog_triage_skill": "MISSING — cycle 2. Run 105 = cycle 3 → create directly",
+    "response_score_ai_usage_guard": "NOT VERIFIED — file not found in routers (no response_score.py)",
+    "kb_staleness": "Step 9G triggered 2026-08-13, partial (FTS only, embeddings blocked by #403)",
+    "autopilot_token_399": "NOT ROTATED — loop failing 33+ days",
+    "gh_643": "OPEN 7 days, no linked PR",
+    "dependabot_prs": "4 PRs open 10+ days (#649/#629/#630/#631)"
+  },
+  "secondary_recommendations": [
+    {
+      "idea": "pr-backlog-triage SKILL.md",
+      "status": "pending_approval_cycle2",
+      "note": "Run 105 escalation pending"
+    },
+    {
+      "idea": "nightly-commit-review Detached HEAD Guard",
+      "status": "new_recommendation",
+      "effort": "XS",
+      "note": "Add 4-line bash snippet to existing SKILL.md"
+    }
+  ],
+  "open_human_blockers": [
+    "#399 — Rotate AUTOPILOT_GH_TOKEN",
+    "#403 — Set GitHub Secrets (ANTHROPIC_API_KEY etc.)",
+    "#643 — Fix appointment_briefs.py block_demo_role guard",
+    "PR #653 — Merge subconscious/run-103 branch"
+  ]
+}

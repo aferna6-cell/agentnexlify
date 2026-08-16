@@ -284,9 +284,9 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
        Read `ops/credential-rotation-schedule.md` line by line.
        For each credential row: parse "Last rotated" date field.
        Compute days_since_rotation = (today - last_rotated_date).
-       Flag as approaching_expiry if days_since_rotation >= 76 (= 90 days - 14-day warning window).
+       Flag as approaching_expiry if days_since_rotation >= 45 (= 90 days - 45-day warning window).
        If last_rotated is "unknown" or "not yet set": flag as unknown_state, log separately.
-    3. **If any credential approaching expiry (days_since_rotation >= 76):**
+    3. **If any credential approaching expiry (days_since_rotation >= 45):**
        a. Search open GH issues with label `credential-rotation`:
           `mcp__github__list_issues` with labels: ["credential-rotation"], state: OPEN
        b. If NO open credential-rotation issue exists:
@@ -297,7 +297,7 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
        c. If open credential-rotation issue FOUND:
           Add comment via `mcp__github__add_issue_comment` with updated days_since_rotation.
     4. **Log result:**
-       Add to nightly commit log: "Step 9E: {N} credentials checked, {M} approaching expiry (>=76 days), {K} unknown state"
+       Add to nightly commit log: "Step 9E: {N} credentials checked, {M} approaching expiry (>=45 days), {K} unknown state"
 9F. (KB Autopopulate Staleness Check) Check when knowledge base was last successfully populated:
     1. **Read KB log:**
        Read `knowledge-base/log.md`.
