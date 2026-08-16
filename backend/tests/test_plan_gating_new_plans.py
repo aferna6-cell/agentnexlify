@@ -197,3 +197,34 @@ def test_appointment_briefs_router_carries_full_guard_stack():
     deps = [d.dependency for d in router.dependencies]
     assert block_demo_role in deps
     assert require_agent_os_access in deps
+
+
+def test_scoring_config_mutating_routes_block_demo_role():
+    # GH #660: PUT/POST/DELETE/reset carry explicit block_demo_role
+    # (require_role("owner","admin") already rejects "demo"; this pins the
+    # invariant structurally so a future require_role loosening can't reopen it).
+    from backend.dependencies import block_demo_role
+    from backend.routers.scoring_config import router
+
+    mutating, guarded = 0, 0
+    for r in router.routes:
+        methods = getattr(r, "methods", set()) or set()
+        if methods & {"POST", "PUT", "DELETE"}:
+            mutating += 1
+            deps = [d.dependency for d in r.dependencies]
+            if block_demo_role in deps:
+                guarded += 1
+    assert mutating == 4
+    assert guarded == 4
+
+
+def test_scoring_config_get_routes_stay_open_to_demo():
+    # Read-only scoring routes stay demo-accessible (sandbox UX) per #660.
+    from backend.dependencies import block_demo_role
+    from backend.routers.scoring_config import router
+
+    for r in router.routes:
+        methods = getattr(r, "methods", set()) or set()
+        if methods == {"GET"}:
+            deps = [d.dependency for d in r.dependencies]
+            assert block_demo_role not in deps

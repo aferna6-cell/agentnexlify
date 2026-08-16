@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.models.database import get_service_supabase
-from backend.dependencies import _get_current_tenant, require_role
+from backend.dependencies import _get_current_tenant, block_demo_role, require_role
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ async def list_scoring_factors(
     return {"factors": result.data or []}
 
 
-@router.put("/{tenant_id}/{factor_id}")
+@router.put("/{tenant_id}/{factor_id}", dependencies=[Depends(block_demo_role)])
 async def update_scoring_factor(
     tenant_id: str,
     factor_id: str,
@@ -105,7 +105,7 @@ async def update_scoring_factor(
     return result.data[0]
 
 
-@router.post("/{tenant_id}")
+@router.post("/{tenant_id}", dependencies=[Depends(block_demo_role)])
 async def create_scoring_factor(
     tenant_id: str,
     req: ScoringFactorCreate,
@@ -134,7 +134,7 @@ async def create_scoring_factor(
     return result.data[0]
 
 
-@router.delete("/{tenant_id}/{factor_id}")
+@router.delete("/{tenant_id}/{factor_id}", dependencies=[Depends(block_demo_role)])
 async def delete_scoring_factor(
     tenant_id: str,
     factor_id: str,
@@ -147,7 +147,7 @@ async def delete_scoring_factor(
     return {"deleted": True}
 
 
-@router.post("/{tenant_id}/reset")
+@router.post("/{tenant_id}/reset", dependencies=[Depends(block_demo_role)])
 async def reset_to_defaults(
     tenant_id: str,
     claims: dict = Depends(require_role("owner", "admin")),
