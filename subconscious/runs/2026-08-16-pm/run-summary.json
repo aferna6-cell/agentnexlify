@@ -1,0 +1,61 @@
+{
+  "run": 105,
+  "run_id": "2026-08-16-pm",
+  "date": "2026-08-16",
+  "winner": "Create route-security-guard-audit SKILL.md",
+  "category": "code_health",
+  "effort": "S",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "implemented_directly": true,
+  "implementation_path": "3rd carry-forward → direct escalation per run 99/Step 9F precedent",
+  "file_created": ".claude/skills/route-security-guard-audit/SKILL.md",
+  "mandate_status": {
+    "supabase_access_token_added": "PASS — nightly-2026-08-16 applied (commit ddd8e77)",
+    "route_security_guard_skill": "IMPLEMENTED this run — direct escalation (3rd carry-forward)",
+    "scoring_config_gh_issue": "PASS — GH #661 filed by nightly-2026-08-16",
+    "kb_staleness": "FAIL — 24+ days stale; Step 9G triggered but ANTHROPIC_API_KEY missing (#403)",
+    "pr_653_status": "OPEN draft — will push SKILL.md to this branch",
+    "supabase_access_token_date": "UNKNOWN — human action needed (Supabase dashboard)"
+  },
+  "key_findings": [
+    "route-security-guard-audit SKILL.md created (3rd carry-forward, run 99 precedent confirmed)",
+    "CRITICAL: 7 commits orphaned in detached HEAD — not on origin/main (nightly-2026-08-16 structural finding)",
+    "GH #661 filed 2026-08-16 for scoring_config.py missing block_demo_role (2nd confirmed security gap)",
+    "Run 104 winner (SUPABASE_ACCESS_TOKEN) implemented same-day by nightly — fastest turnaround this cycle",
+    "PR #653 (branch subconscious/run-103) is active subconscious PR — pushing to this branch"
+  ],
+  "bonus_actions": [
+    "Push all run 105 artifacts to subconscious/run-103 branch (PR #653 — PR dedup guard applied)"
+  ],
+  "runner_up": "Add Step 9J orphaned-commits detector to nightly SKILL.md (RECOMMENDED for run 106 bonus)",
+  "killed": [
+    "Idea 3 (appointment_briefs.py fix) — security code, PENDING-APPROVAL, GH #643 filed",
+    "Idea 5 (Step 9K staleness alerter) — parking lot"
+  ],
+  "parking_lot": [
+    "Step 9J orphaned-commits detector — XS effort, AUTONOMOUS-EXECUTABLE, direct evidence from nightly-2026-08-16",
+    "Step 9I paying-tenant 0-conversation alert — headless Supabase MCP unconfirmed",
+    "Step 9K draft-PR staleness alerter — parked pending Step 9J"
+  ],
+  "governance_corrections": {
+    "total_runs": "104 -> 105",
+    "last_run": "2026-08-15 -> 2026-08-16",
+    "route_security_skill": "carry-forward (3rd cycle) -> implemented (run 105 direct escalation)",
+    "supabase_access_token_rotation": "recommended -> implemented (nightly-2026-08-16)"
+  },
+  "run_106_mandate": "1. route-security-guard-audit SKILL.md: verify file exists + triggers work. 2. appointment_briefs.py (GH #643): merged or still open? 3. scoring_config.py (GH #661): human reviewed? 4. PR #653: merged or still draft? 5. Orphaned commits (7 from detached HEAD): has human run git branch recover-orphans 00940d9? 6. KB staleness: did Step 9G succeed after ANTHROPIC_API_KEY restored? 7. Step 9J (orphaned commits detector): implement as bonus nightly action (XS effort, AUTONOMOUS-EXECUTABLE, direct evidence from run 105). 8. SUPABASE_ACCESS_TOKEN last-rotated: human confirmed date yet?",
+  "artifacts": [
+    "subconscious/runs/2026-08-16-pm/ideas/ideas.md",
+    "subconscious/runs/2026-08-16-pm/debate/debate-log.md",
+    "subconscious/runs/2026-08-16-pm/winning-concept.md",
+    "subconscious/runs/2026-08-16-pm/improvement-backlog.md",
+    "subconscious/runs/2026-08-16-pm/run-summary.json",
+    ".claude/skills/route-security-guard-audit/SKILL.md"
+  ],
+  "pr_dedup": {
+    "existing_pr": 653,
+    "branch": "subconscious/run-103",
+    "action": "push to existing branch, no new PR created"
+  }
+}
