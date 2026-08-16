@@ -186,3 +186,18 @@ def test_buy_usage_has_block_demo_role_guard():
     assert (
         block_demo_role in dep_callables
     ), "block_demo_role missing from POST /buy-usage — demo users can reach Stripe checkout"
+
+
+# --- block_demo_role guard on appointment-briefs endpoints (GH #643) ---------
+
+
+def test_appointment_briefs_router_has_block_demo_role_guard():
+    """appointment-briefs router must block demo tenants from AI-generated content (GH #643)."""
+    from backend.routers.appointment_briefs import router
+    from backend.dependencies import block_demo_role
+
+    router_dep_callables = [d.dependency for d in (router.dependencies or [])]
+    assert block_demo_role in router_dep_callables, (
+        "block_demo_role missing from appointment_briefs router — "
+        "demo tenants can consume AI tokens via /brief and /follow-up-draft"
+    )

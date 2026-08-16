@@ -1,0 +1,50 @@
+{
+  "run_id": "2026-08-12-pm",
+  "run_number": 103,
+  "timestamp": "2026-08-12T00:00:00Z",
+  "winner": {
+    "title": "Create pr-backlog-triage SKILL.md",
+    "category": "workflow_efficiency",
+    "effort": "S",
+    "confidence": "HIGH",
+    "status": "RECOMMENDED",
+    "requires_approval": true,
+    "file_to_create": ".claude/skills/pr-backlog-triage/SKILL.md"
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "ideas_killed": 1,
+  "ideas_carried_forward": 3,
+  "mandate_checks": {
+    "response_score_py_ai_usage_guard": "N/A - file does not exist",
+    "pr_pile_up": "UNCHANGED - 4 Dependabot PRs aging 2-9d, AUTOPILOT_GH_TOKEN not rotated",
+    "kb_staleness": "STILL BLOCKED - 20 days stale, GH #403 blocks compile",
+    "route_security_guard_audit_approved": "NO - SKILL dir missing, run 104 = escalation threshold",
+    "gh_643_status": "STALLED - no PR linked, autopilot blocked by GH #399",
+    "dependabot_prs_merged": "NO - #649 #629 #630 #631 still open"
+  },
+  "governance_corrections": [
+    "response_score.py mandate marked N/A (file does not exist)",
+    "Dependabot Step 9H killed - subsumed by pr-backlog-triage opt-in gate"
+  ],
+  "escalation_watch": {
+    "route_security_guard_audit": {
+      "cycle": 2,
+      "escalation_at_cycle": 3,
+      "run_104_action": "create file directly if still missing"
+    }
+  },
+  "parking_lot": {
+    "P1": "route-security-guard-audit SKILL.md (escalation pending at run 104)",
+    "P2": "Dependabot safe-merge gate (killed - subsumed by pr-backlog-triage)",
+    "P3": "feature-build SKILL.md 5-file pattern update"
+  },
+  "velocity_signal": "LOW - ops/logs only in 3d git window, no feature code",
+  "open_blockers_for_human": [
+    "#399 - Rotate AUTOPILOT_GH_TOKEN (blocking autopilot loop and GH #643)",
+    "#403 - Set ANTHROPIC_API_KEY + SUPABASE_ACCESS_TOKEN in GH Actions (KB 20d stale)",
+    "#643 - appointment_briefs.py missing block_demo_role guards (5d open, autopilot stalled)",
+    "run 102 - route-security-guard-audit SKILL.md awaiting approval (cycle 2, escalation at cycle 3)",
+    "run 103 - pr-backlog-triage SKILL.md awaiting approval"
+  ]
+}

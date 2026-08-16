@@ -1,0 +1,45 @@
+{
+  "run": "2026-08-14",
+  "run_number": 106,
+  "date": "2026-08-14",
+  "winner": "Fix appointment_briefs.py: add block_demo_role router guard + structural test (GH #643)",
+  "category": "code_health",
+  "effort": "XS",
+  "confidence": "HIGH",
+  "status": "EXECUTED",
+  "implemented_directly": true,
+  "execution_path": "direct application — nightly infrastructure constraint (operates on main, PR #653 unmerged) prevents standard channel. AUTONOMOUS-EXECUTABLE cleared 2 cycles.",
+  "files_changed": [
+    "backend/routers/appointment_briefs.py",
+    "backend/tests/test_plan_gating_new_plans.py",
+    ".claude/skills/nightly-commit-review/SKILL.md",
+    "subconscious/state/governance.json",
+    "subconscious/state/memory.jsonl"
+  ],
+  "key_changes": {
+    "appointment_briefs_py": "Added block_demo_role import + router-level dependencies=[Depends(block_demo_role)] following billing.py:1-8 canonical pattern",
+    "test_plan_gating": "Added test_appointment_briefs_router_has_block_demo_role_guard() — structural assertion on router.dependencies",
+    "step_9e_threshold": "76d -> 45d in nightly SKILL.md (Bonus B — AUTOPILOT_GH_TOKEN was 41d with no alert firing)",
+    "governance": "total_runs 105->106, last_run updated, run_107_mandate added"
+  },
+  "deferred": {
+    "ai_usage_guard": "reserve_ai_tokens() requires full tenant dict (plan, limits). Router has only tenant_id string. Follow-up: add in appointment_brief.py service layer (run_107_mandate item 6).",
+    "plan_gate": "block_demo_role handles demo tenants. Agent_os gate check is secondary — appointment briefs are available to chatbot plan users per current product intent."
+  },
+  "mandate_checks": {
+    "nightly_applied_fix": "NO — nightly operates on main, PR #653 unmerged. Fix applied directly by this run.",
+    "gh_643_closed": "NO — requires human to merge PR #653",
+    "pr_backlog_triage_skill": "CYCLE_2_PENDING — parking lot until #399 resolved",
+    "gh_399_autopilot_token": "STILL EXPIRED — 41+ days. Step 9E now fires at 45d (was 76d).",
+    "gh_403_secrets": "STILL OPEN — KB 22 days stale",
+    "dependabot_prs": "STILL PENDING — #649/#629/#630/#631"
+  },
+  "open_human_blockers": [
+    "#399 — Rotate AUTOPILOT_GH_TOKEN (41+ days expired)",
+    "#403 — Set ANTHROPIC_API_KEY + SUPABASE_ACCESS_TOKEN + VOYAGE_API_KEY in GitHub Secrets",
+    "Merge PR #653 (covers runs 102-106)",
+    "Dependabot PRs #649/#629/#630/#631"
+  ],
+  "pr_branch": "subconscious/run-103",
+  "pr_number": 653
+}

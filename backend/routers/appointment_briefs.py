@@ -8,13 +8,17 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.dependencies import _get_current_tenant
+from backend.dependencies import _get_current_tenant, block_demo_role
 from backend.models.database import get_service_supabase
 from backend.services import appointment_brief
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/appointments", tags=["appointment-briefs"])
+router = APIRouter(
+    prefix="/api/v1/appointments",
+    tags=["appointment-briefs"],
+    dependencies=[Depends(block_demo_role)],
+)
 
 
 def _business_name(db, tenant_id: str) -> str:

@@ -1,0 +1,48 @@
+{
+  "run_id": "2026-08-13-pm",
+  "run_number": 105,
+  "timestamp": "2026-08-13T00:00:00Z",
+  "winner": {
+    "title": "Fix appointment_briefs.py: block_demo_role + ai_usage_guard + structural test",
+    "category": "code_health",
+    "effort": "XS",
+    "confidence": "HIGH",
+    "status": "AUTONOMOUS-EXECUTABLE",
+    "autonomous_channel": "nightly-code-edit",
+    "target_files": [
+      "backend/routers/appointment_briefs.py",
+      "backend/tests/test_plan_gating_new_plans.py"
+    ],
+    "closes_issue": "#643"
+  },
+  "mandate_checks": {
+    "response_score_ai_usage_guard": "RESOLVED — file is service not router, no guard needed",
+    "pr_pile_up": "UNCHANGED — #626 open 10d, dependabot PRs #649/#629/#630/#631 still pending",
+    "kb_staleness": "STILL_BLOCKED — 21 days stale, ANTHROPIC_API_KEY missing (#403)",
+    "route_security_guard_audit_skill": "NOT_CREATED — PR #653 open 2 days, awaiting human merge",
+    "gh_643_status": "STILL_OPEN — 7 days, no linked PR, autopilot 5/5 failures",
+    "dependabot_prs": "STILL_PENDING — all 4 aging 9-10 days"
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "parking_lot": [
+    "route-security-guard-audit SKILL.md (cycle 2)",
+    "SUPABASE_ACCESS_TOKEN Step 9E tracking (weakened)",
+    "feature-build 5-file pattern update",
+    "pr-backlog-triage SKILL.md"
+  ],
+  "run_104_mandates": [
+    "Check if nightly applied appointment_briefs.py fix (AUTONOMOUS-EXECUTABLE)",
+    "Confirm GH #643 closed after fix",
+    "PR #653 status — if still open = cycle 3, escalate to direct implementation",
+    "AUTOPILOT_GH_TOKEN rotation status (#399)",
+    "ANTHROPIC_API_KEY GH Actions status (#403)",
+    "Dependabot PRs #649/#629/#630/#631 merged?"
+  ],
+  "key_evidence": [
+    "appointment_briefs.py: block_demo_role absent (confirmed via grep)",
+    "GH #643 open 7 days, no linked PR, autopilot stalled",
+    "c204af2: identical fix applied to billing_usage.py — proven execution path",
+    "nightly-2026-08-13 Step 9D: #643 confirmed top open blocker"
+  ]
+}
