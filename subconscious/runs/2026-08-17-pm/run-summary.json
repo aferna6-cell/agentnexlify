@@ -1,0 +1,45 @@
+{
+  "run": "2026-08-17-pm",
+  "run_number": 106,
+  "date": "2026-08-17",
+  "phase": "pm",
+  "winner": {
+    "title": "Step 9I: Add nightly demo-role security sweep to nightly-commit-review SKILL.md",
+    "category": "code_health",
+    "effort": "S",
+    "confidence": "HIGH",
+    "status": "pending_approval",
+    "autonomous_executable": true,
+    "escalation_run": 108
+  },
+  "mandate_results": {
+    "item_1_git_push_in_skill_md": "PASS",
+    "item_2_route_security_skill_in_origin": "PASS",
+    "item_3_kb_staleness": "FAIL — 25 days, GH #403 unresolved",
+    "item_4_gh_661_pr": "FAIL — no PR, GH #399 stalls loop",
+    "item_5_supabase_token_last_rotated": "FAIL — human has not filled in date",
+    "item_6_step_9i_triggered": "PASS — route-security-guard-audit verified, Step 9I proposed"
+  },
+  "bonus_actions": [
+    "Post targeted comment on GH #403 with exact ANTHROPIC_API_KEY setup steps"
+  ],
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "debate_verdicts": {
+    "Step 9I nightly demo-role sweep": "SURVIVES — WINNER",
+    "GH #403 targeted comment": "WEAKENED — Bonus action",
+    "dependabot-merge-runner SKILL.md": "WEAKENED — Parking lot"
+  },
+  "parking_lot_additions": [
+    "dependabot-merge-runner SKILL.md",
+    "stale-autonomy-pr-closer SKILL.md",
+    "GH #660 fix sketch comment"
+  ],
+  "implemented_this_run": [],
+  "open_blockers": {
+    "GH_399": "AUTOPILOT_GH_TOKEN expired, Day 37+, stalls issue-to-pr-loop",
+    "GH_403": "ANTHROPIC_API_KEY missing in GH Actions, 25-day KB staleness",
+    "GH_394": "brain connector staleness"
+  },
+  "run_107_mandate": "1. Verify Step 9I implemented (grep 'Step 9I' SKILL.md). 2. KB staleness check. 3. GH #661 PR status. 4. SUPABASE_ACCESS_TOKEN last_rotated. 5. GH #403 bonus comment posted? 6. Dependabot PR count."
+}
