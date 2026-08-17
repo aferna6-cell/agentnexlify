@@ -1,0 +1,46 @@
+{
+  "run": 105,
+  "date": "2026-08-17",
+  "evidence_summary": "nightly-2026-08-16 filed MEDIUM structural finding: 6 commits (ddd8e77-fad41c2) not in origin/main. Cloud containers ephemeral; SKILL.md Phase 8 had no git push. route-security-guard-audit 3rd carry-forward triggered autonomous-executable mandate. GH #661 filed for scoring_config.py missing block_demo_role. SUPABASE_ACCESS_TOKEN added to credential schedule by nightly (human action still needed for date). KB 25 days stale, GH #403 (ANTHROPIC_API_KEY) unresolved. GH #399 (AUTOPILOT_GH_TOKEN) Day 37+.",
+  "ideas_count": 5,
+  "winner": "Add git push origin HEAD to subconscious SKILL.md Phase 8 (prevent orphaned commits in cloud containers)",
+  "winner_category": "workflow",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "implemented_this_run": true,
+  "bonus_implemented": "route-security-guard-audit SKILL.md (3rd carry-forward escalation mandate)",
+  "debate": {
+    "idea_1": "SURVIVES — WINNER (git push, XS effort, structural evidence)",
+    "idea_2": "SURVIVES — Bonus autonomous-executable (route-security-guard-audit, mandate)",
+    "idea_3": "WEAKENED — parking lot (GH #403 comment, tactical)",
+    "idea_4": "WEAKENED — parking lot (Step 9I, depends on Idea 2 first)",
+    "idea_5": "KILLED — frozen pattern + GH #399 blocker"
+  },
+  "rejected": [
+    "AI-to-human handoff scope (frozen + blocked)",
+    "Step 9I nightly sweep (premature — Idea 2 must be verified first)"
+  ],
+  "files_written": [
+    "subconscious/runs/2026-08-17/ideas/ideas.md",
+    "subconscious/runs/2026-08-17/debate/debate-log.md",
+    "subconscious/runs/2026-08-17/winning-concept.md",
+    "subconscious/runs/2026-08-17/improvement-backlog.md",
+    "subconscious/runs/2026-08-17/run-summary.json",
+    ".claude/skills/route-security-guard-audit/SKILL.md",
+    ".claude/skills/subconscious/SKILL.md (Phase 8 edit)"
+  ],
+  "mandate_items_checked": 6,
+  "mandate_items_passed": 3,
+  "mandate_items_failed": 3,
+  "mandate_pass_items": [
+    "SUPABASE_ACCESS_TOKEN added to credential schedule by nightly-2026-08-16",
+    "GH #661 filed for scoring_config.py block_demo_role",
+    "Step 9C age gate confirmed in nightly-2026-08-15 (60499dd)"
+  ],
+  "mandate_fail_items": [
+    "KB staleness: 25 days, GH #403 unresolved",
+    "PR #653 still draft, GH #399 still open",
+    "SUPABASE_ACCESS_TOKEN last_rotated: human has not filled in date"
+  ],
+  "run_106_mandate_set": true
+}
