@@ -5,8 +5,8 @@ origin: connector
 connector: GitHub
 account: aferna6-cell
 repo: aferna6-cell/agentnexlify
-accessed: 2026-08-10
-last_refresh: 2026-08-10T09:03Z
+accessed: 2026-08-17
+last_refresh: 2026-08-17T09:02Z
 sensitivity: normal
 tags: [source, connector]
 ---
@@ -16,27 +16,27 @@ tags: [source, connector]
 ## What this is
 Live snapshot from `refresh_connectors.py` of `aferna6-cell/agentnexlify`.
 
-## Counts (as of 2026-08-10T09:03Z)
-- Open issues: 40
-- Open PRs: 26
+## Counts (as of 2026-08-17T09:02Z)
+- Open issues: 55
+- Open PRs: 28
 - Recent closed issues sampled: 0
 
 ## Top open issues (non-digest)
+  - #663 Agent OS loop health -- 2026-08-17
+  - #662 Agent OS loop health -- 2026-08-16
+  - #661 security: scoring_config.py missing block_demo_role on mutating endpoints
+  - #660 fix(security): scoring_config.py missing block_demo_role on 4 mutating routes (/api/v1/scoring)
+  - #659 Agent OS loop health -- 2026-08-15
+  - #657 Agent OS loop health -- 2026-08-14
+  - #655 Agent OS loop health -- 2026-08-13
+  - #652 Agent OS loop health -- 2026-08-12
+  - #650 Agent OS loop health -- 2026-08-11
+  - #646 Agent OS loop health -- 2026-08-10
   - #645 Agent OS loop health -- 2026-08-09
   - #644 Agent OS loop health -- 2026-08-08
   - #643 MEDIUM: appointment_briefs.py missing block_demo_role + plan gate + ai_usage_guard
   - #641 Agent OS loop health -- 2026-08-07
   - #637 Agent OS loop health -- 2026-08-06
-  - #635 Agent OS loop health -- 2026-08-05
-  - #633 Agent OS loop health -- 2026-08-04
-  - #628 Agent OS loop health -- 2026-08-03
-  - #624 Agent OS loop health -- 2026-08-02
-  - #623 Security: SSRF via redirect bypass in prospecting.py enrichment fetch
-  - #618 ops: provision VOYAGE_API_KEY in GH Actions Secrets — required for kb-autopopulate embeddings
-  - #617 Agent OS loop health -- 2026-08-01
-  - #616 KB auto-populate blocked: set ANTHROPIC_API_KEY as an Actions secret [human-action-required]
-  - #615 VOYAGE_API_KEY missing from GH Actions secrets — KB embeddings blocked since 2026-07-08
-  - #610 Monitoring: paying tenant silence detection — wire conversations/7d alert per client_id
 
 ## Notes
 - Autonomous-dev cadence: morning-digest / nightly-commit-review / subconscious loop.

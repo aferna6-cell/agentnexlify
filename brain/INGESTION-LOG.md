@@ -133,3 +133,7 @@ the last recorded state.
 ## 2026-08-10T09:03Z — refresh_connectors.py
 - github: ok (session MCP)
 - supabase: ok (session MCP)
+
+## 2026-08-17T09:02Z — refresh_connectors.py
+- github: ok (session MCP)
+- supabase: ok (session MCP)
