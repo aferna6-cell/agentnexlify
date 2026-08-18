@@ -1,0 +1,36 @@
+{
+  "run_id": "2026-08-18",
+  "run_number": 107,
+  "timestamp": "2026-08-18T00:00:00Z",
+  "winner": {
+    "title": "Step 9I — nightly demo-role security sweep in SKILL.md",
+    "category": "Workflow Automation",
+    "confidence": "HIGH",
+    "status": "PENDING_HUMAN_APPROVAL",
+    "carry_forward_count": 1,
+    "escalation_at_run": 108,
+    "autonomous_executable": false,
+    "action": "Edit .claude/skills/nightly-commit-review/SKILL.md, add Step 9I block after Step 9H"
+  },
+  "candidates_generated": 5,
+  "candidates_debated": 3,
+  "killed": ["GH #399 escalation comment — mechanism exhausted"],
+  "parking_lot": [
+    "dependabot-merge-runner skill",
+    "stale-autonomy-pr-closer skill"
+  ],
+  "mandate_items_checked": {
+    "step_9I_in_skillmd": "NOT FOUND — carry-forward 1",
+    "kb_freshness": "OK — 124 articles, GH Actions path blocked (#403) but local session runs",
+    "gh_661_pr": "PR #660 ai-ready — needs merge",
+    "supabase_access_token_last_rotated": "NOT FILLED — human action required",
+    "gh_403_comment": "Skipped — mechanism exhausted at 38d+",
+    "dependabot_prs": "4 PRs aging 7-14d, noted in parking lot"
+  },
+  "project_invariants": "ALL PASS",
+  "product_code_changes": 0,
+  "bugs_fixed": 0,
+  "issues_filed": 0,
+  "commits_reviewed": 7,
+  "pr_target": "PR #653 (existing open subconscious draft PR)"
+}
