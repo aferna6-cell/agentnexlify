@@ -1,51 +1,56 @@
-# Winning Concept — 2026-08-18 (Run 107)
+# Winning Concept — 2026-08-18
 
 ## Recommendation
-Extend Step 9E in `.claude/skills/nightly-commit-review/SKILL.md` to detect credentials with `unknown` or empty `last_rotated` dates in `ops/credential-rotation-schedule.md`, and auto-file a GH issue with `ops-reminder` label when found (with dedup).
+Add Step 9I to `.claude/skills/nightly-commit-review/SKILL.md`: a nightly automated sweep that greps `backend/routers/` for mutating endpoints (POST/PUT/DELETE/PATCH) missing `Depends(block_demo_role)`, then auto-files a GitHub issue with `security` + `ai-ready` labels when violations are found that have no existing open issue.
 
 ## Why This, Why Now
-SUPABASE_ACCESS_TOKEN has had `last_rotated: unknown` for **4 consecutive runs** (runs 104-107). Step 9E already fires rotation alerts — but it parses only credentials with known dates. A credential with `unknown` last_rotated is invisible to alerting: it could be rotating daily or never, and the system has no visibility either way. This extension closes that blind spot and generalizes to any future credential added without a date.
+- **Mandate-triggered:** `governance.json` `run_107_mandate` item 1 requires verifying Step 9I in SKILL.md. It is NOT there. This run is the first carry-forward.
+- **Escalation clock running:** Autonomous-executable at run 108 if not approved by human. One run left.
+- **Same-class bug filed twice in 6 days:** GH #643 (appointment_briefs.py, 2026-08-11) + GH #661 (scoring_config.py, 2026-08-16). Both caught by humans reading nightly logs. No automated detection exists.
+- **Logic proven in the wild:** nightly-2026-08-18 ran the exact Step 9I sweep informally. Found 100+ pre-existing violations, correctly applied skip rules (admin/, webhook routes, public widget routes), correctly applied dedup logic (no bulk issue filing), correctly identified that the two known violations (#643, #661) already have open issues.
 
-The channel is proven: Step 9E is already in SKILL.md (added run 86/87), and every subsequent Step 9C/9E/9F/9G/9H/route-security-guard-audit was delivered via the same SKILL.md-edit channel without human approval. This qualifies as **AUTONOMOUS-EXECUTABLE** immediately.
-
-## Why Not Step 9I (1st carry)
-Step 9I remains the active direction and is tracked. Its 2nd carry fires at run 108, which is the escalation to autonomous-executable. It did not win this run's debate because it requires human approval before implementation and the nightly review already manually ran the sweep this cycle (finding 100+ pre-existing gaps). The autonomous slot this run goes to the Step 9E extension, which is lower-risk and immediately deployable.
-
-## Why Not `dependabot-merge-runner`
-Parking-lot conditions not yet met: PR count (5) below the 10+ threshold, and the GH #399 token dependency needs validation before a merge-capable skill is implemented. Elevating to run 108 debate with a stronger evidence base.
-
-## Implementation
-Edit `.claude/skills/nightly-commit-review/SKILL.md` — add to the end of the Step 9E block (after existing rotation-alert logic):
+## Implementation Sketch
+Edit `.claude/skills/nightly-commit-review/SKILL.md` — add after existing Step 9H (or as the final numbered step):
 
 ```markdown
-**9E.2 — Unknown last_rotated detection:**
+## Step 9I — Demo-Role Security Sweep
 
-After parsing credential rows, also check for rows where `last_rotated` is empty or matches `unknown`:
+Check `backend/routers/` for mutating endpoints missing `block_demo_role`:
 
 ```bash
-grep -i "unknown\|last_rotated:$\|last_rotated: $" ops/credential-rotation-schedule.md
+for f in backend/routers/*.py; do
+  if grep -qE "@router\.(post|put|patch|delete)" "$f"; then
+    if ! grep -q "block_demo_role" "$f"; then
+      echo "MISSING: $f"
+    fi
+  fi
+done
 ```
 
-For each match, extract the credential name (left-most non-empty column). Then check for an existing open GH issue with title containing `[ops] credential last_rotated unknown: {name}`. If no open issue found, file one:
+For each file that outputs MISSING:
+1. Check whether an open GH issue already exists (search issues with label `security` and the filename in title/body)
+2. If open issue exists: skip (dedup)
+3. If no open issue: file one via mcp__github__issue_write:
+   - title: `[security] {filename}: mutating endpoints missing block_demo_role`
+   - body: `Nightly sweep found POST/PUT/DELETE/PATCH endpoints in {filename} not protected by Depends(block_demo_role). Demo tenants can currently write/delete data. Reference: route-security-guard-audit SKILL.md for fix pattern.`
+   - labels: `["security", "ai-ready"]`
 
-- Title: `[ops] credential last_rotated unknown: {name} — fill in rotation date to enable alerts`
-- Body: `Nightly sweep found credential '{name}' in ops/credential-rotation-schedule.md with last_rotated unknown or empty. Step 9E credential rotation alerts are blind to this credential until last_rotated is set. Fix: add the actual rotation date to the schedule file. If date is unknown, estimate from when Railway/GitHub/Supabase issued the token.`
-- Labels: `ops-reminder`
-- One issue per credential with unknown date, dedup by open-issue title prefix search.
+**Skip conditions (do NOT flag these files):**
+- Files with ONLY GET routes (no `@router.post`, `.put`, `.patch`, `.delete`)
+- Files under `backend/routers/admin/` prefix
+- `stripe_webhooks.py`, `twilio_webhooks.py`, `resend_webhooks.py` — external webhooks
+- `widget_chat.py`, `widget_lead.py`, `widget_config.py` — public widget routes
+- `auth.py`, `auth_google.py`, `auth_password_reset.py` — auth routes predate the guard pattern
 ```
 
 ## What This Replaces
-Run 106 winner (Step 9I) remains in active_directions as 2nd carry. This is a fresh autonomous-executable win.
+Run 106 proposed this same winner. This is carry-forward 1. Run 106 winner (Step 9I) is PENDING_HUMAN_APPROVAL. This run confirms the recommendation and advances the escalation clock.
+
+## Parking Lot (for run 108)
+**`dependabot-merge-runner` skill:** 4 Dependabot PRs (#629, #630, #631, #649) aging 7-14 days, CI green, safe to merge. Morning digest flags them every day. Skill-discovery-2026-08-17 formally proposed this skill. No blockers. Promote to run 108 if Step 9I is approved/implemented.
 
 ## Confidence
-HIGH — proven channel (SKILL.md edit Step 9E), zero new dependencies, 4-run evidence of the gap, generalizes beyond SUPABASE_ACCESS_TOKEN to all future credentials.
+HIGH — mandate-triggered, logic proven in nightly-2026-08-18, channel proven (Steps 9C/9E/9F/9G/9H all implemented via SKILL.md edit same channel), implementation is pure SKILL.md text edit (~30 lines), zero product code changes, zero regression risk.
 
 ## Autonomous-Executable Status
-**AUTONOMOUS-EXECUTABLE** — qualifies immediately under established precedent (same channel as 9C/9E/9F/9G/9H). Nightly-commit-review should implement this SKILL.md edit in the next run without waiting for human approval.
-
-## Bonus Action (can execute without approval)
-Post targeted comment on GH #403 with exact ANTHROPIC_API_KEY setup steps:
-- Railway: agentnexlify backend service → Variables tab → ANTHROPIC_API_KEY
-- GitHub: repo Settings → Secrets and variables → Actions → New repository secret → Name: `ANTHROPIC_API_KEY`
-- Estimated time: 5 minutes
-- What it unblocks: KB autopopulate (26 days stale, threshold: 7 days), autopilot loop
+PENDING_HUMAN_APPROVAL. If not approved or implemented by run 108 (next run), escalates to autonomous-executable per governance escalation protocol (same pattern as runs 97-99 → Step 9F, runs 100-101 → Step 9G, runs 102-104 → route-security-guard-audit SKILL.md).

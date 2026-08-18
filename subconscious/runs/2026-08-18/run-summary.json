@@ -1,57 +1,36 @@
 {
-  "run": 107,
-  "date": "2026-08-18",
-  "session": "2026-08-18",
+  "run_id": "2026-08-18",
+  "run_number": 107,
+  "timestamp": "2026-08-18T00:00:00Z",
   "winner": {
-    "title": "Step 9E Extension: Alert on credentials with unknown last_rotated date",
-    "category": "operational",
-    "channel": "SKILL.md edit (autonomous-executable)",
+    "title": "Step 9I — nightly demo-role security sweep in SKILL.md",
+    "category": "Workflow Automation",
     "confidence": "HIGH",
-    "effort": "XS",
-    "autonomous_executable": true,
-    "requires_human": false
+    "status": "PENDING_HUMAN_APPROVAL",
+    "carry_forward_count": 1,
+    "escalation_at_run": 108,
+    "autonomous_executable": false,
+    "action": "Edit .claude/skills/nightly-commit-review/SKILL.md, add Step 9I block after Step 9H"
   },
-  "carry_forward": {
-    "title": "Step 9I: Add nightly demo-role security sweep",
-    "carry_count": 2,
-    "source_run": 106,
-    "escalates_at": "run 108 (autonomous-executable)",
-    "precedent": "runs 97-99/Step 9F, runs 100-101/Step 9G, runs 102-104/route-security-guard-audit"
+  "candidates_generated": 5,
+  "candidates_debated": 3,
+  "killed": ["GH #399 escalation comment — mechanism exhausted"],
+  "parking_lot": [
+    "dependabot-merge-runner skill",
+    "stale-autonomy-pr-closer skill"
+  ],
+  "mandate_items_checked": {
+    "step_9I_in_skillmd": "NOT FOUND — carry-forward 1",
+    "kb_freshness": "OK — 124 articles, GH Actions path blocked (#403) but local session runs",
+    "gh_661_pr": "PR #660 ai-ready — needs merge",
+    "supabase_access_token_last_rotated": "NOT FILLED — human action required",
+    "gh_403_comment": "Skipped — mechanism exhausted at 38d+",
+    "dependabot_prs": "4 PRs aging 7-14d, noted in parking lot"
   },
-  "ideas_generated": 5,
-  "ideas_debated": 3,
-  "mandate_items_checked": 6,
-  "mandate_items_passed": 0,
-  "mandate_items_failed": 6,
-  "bonus_actions": [
-    "GH #403 targeted comment with exact ANTHROPIC_API_KEY steps"
-  ],
-  "parking_lot_additions": [
-    "dependabot-merge-runner SKILL.md",
-    "stale-autonomy-pr-closer SKILL.md"
-  ],
-  "evidence_sources": [
-    "ops/routines/logs/nightly-commit-review-2026-08-18.md",
-    "ops/routines/logs/morning-digest-2026-08-18.md",
-    "docs/skill-discovery/2026-08-17.md",
-    "ops/credential-rotation-schedule.md",
-    "knowledge-base/log.md",
-    "subconscious/state/governance.json"
-  ],
-  "key_findings": [
-    "Step 9I absent from SKILL.md — 2nd carry, escalates to autonomous-executable at run 108",
-    "KB 26 days stale — GH #403 unresolved 38d+",
-    "SUPABASE_ACCESS_TOKEN last_rotated still unknown after 4 runs",
-    "5 Dependabot PRs aging (#629/#630/#631 at 15d, #665/#666 at 1d)",
-    "5 stale draft subconscious PRs accumulating",
-    "Nightly-2026-08-18 manually ran block_demo_role sweep: 100+ pre-existing gaps, no new issues filed"
-  ],
-  "total_runs": 107,
-  "artifacts": [
-    "subconscious/runs/2026-08-18/ideas/ideas.md",
-    "subconscious/runs/2026-08-18/debate/debate-log.md",
-    "subconscious/runs/2026-08-18/winning-concept.md",
-    "subconscious/runs/2026-08-18/improvement-backlog.md",
-    "subconscious/runs/2026-08-18/run-summary.json"
-  ]
+  "project_invariants": "ALL PASS",
+  "product_code_changes": 0,
+  "bugs_fixed": 0,
+  "issues_filed": 0,
+  "commits_reviewed": 7,
+  "pr_target": "PR #653 (existing open subconscious draft PR)"
 }
