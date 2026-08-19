@@ -340,6 +340,55 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
           Log: "Step 9G: could not read run status — trigger may have succeeded, check GH Actions manually"
     5. **Log:**
        Log: "Step 9G: kb-autopopulate trigger attempted — conclusion: {conclusion}"
+9I. (Demo-Role Security Sweep) Check backend/routers/ for mutating endpoints missing block_demo_role:
+    1. **Find files with mutating routes:**
+       ```bash
+       grep -rln "@router\.\(post\|put\|delete\|patch\)" backend/routers/ --include="*.py"
+       ```
+       This returns all .py files that define POST/PUT/DELETE/PATCH endpoints.
+    2. **Filter: skip known exceptions:**
+       Remove from the list:
+       - auth.py, auth_google.py, auth_password_reset.py (auth routes predate the guard)
+       - stripe_webhooks.py, twilio_webhooks.py, resend_webhooks.py (external webhooks)
+       - widget_chat.py, widget_lead.py, widget_config.py (public widget routes, no auth)
+       - Any file under backend/routers/admin/ (admin-scoped paths)
+    3. **Check block_demo_role presence in each remaining file:**
+       For each file from step 2:
+       ```bash
+       grep -l "block_demo_role" <file> 2>/dev/null
+       ```
+       If block_demo_role NOT found in file: flag as candidate violation.
+    4. **Dedup against existing open GH issues:**
+       For each candidate violation (filename):
+         Search: `mcp__github__search_issues` with query
+           "repo:aferna6-cell/agentnexlify {basename} block_demo_role state:open"
+         If open issue found: log "Step 9I: {basename} already tracked GH #{N} — skip"
+         If NOT found: proceed to file new issue.
+    5. **File new GH issue for each untracked violation:**
+       `mcp__github__issue_write`:
+         title: "[security] {basename}: mutating endpoints missing Depends(block_demo_role)"
+         body: |
+           Nightly sweep (Step 9I, {DATE}) found POST/PUT/DELETE/PATCH endpoints in
+           `backend/routers/{basename}` not protected by `Depends(block_demo_role)`.
+           Demo tenants can write/delete data through these endpoints.
+
+           **Fix pattern:**
+           ```python
+           from backend.dependencies import block_demo_role
+           from fastapi import Depends
+
+           @router.post("/endpoint")
+           async def create_thing(
+               ...,
+               _: None = Depends(block_demo_role),
+           ):
+           ```
+
+           See `.claude/skills/route-security-guard-audit/SKILL.md` for full audit checklist.
+         labels: ["security", "ai-ready"]
+    6. **Log result:**
+       Add to nightly report: "Step 9I: {N} files scanned, {M} violations found,
+       {K} new issues filed, {J} already tracked in open issues"
 10. Commit report: `docs(nightly): review YYYY-MM-DD [auto-nightly]`
 11. Push to main
 12. If any guardrail tripped (forbidden path, >5 files, >50 LOC, test-check failed) — abort fixes, file issue only, still write report

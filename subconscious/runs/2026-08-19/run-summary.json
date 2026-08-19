@@ -1,0 +1,43 @@
+{
+  "run": "2026-08-19",
+  "run_number": 107,
+  "date": "2026-08-19",
+  "winner": "Step 9I: Add nightly demo-role security sweep to nightly-commit-review SKILL.md",
+  "status": "IMPLEMENTED",
+  "implementation_channel": "autonomous-executable — 1st carry-forward escalation, same channel as Steps 9C/9E/9F/9G",
+  "category": "code_health",
+  "effort": "S",
+  "confidence": "HIGH",
+  "files_changed": [
+    ".claude/skills/nightly-commit-review/SKILL.md",
+    "subconscious/state/governance.json",
+    "subconscious/state/memory.jsonl",
+    "subconscious/runs/2026-08-19/ideas/ideas.md",
+    "subconscious/runs/2026-08-19/debate/debate-log.md",
+    "subconscious/runs/2026-08-19/winning-concept.md",
+    "subconscious/runs/2026-08-19/improvement-backlog.md",
+    "subconscious/runs/2026-08-19/run-summary.json"
+  ],
+  "mandate_check": {
+    "step_9i_present": "FAIL — 0 occurrences, 1st carry-forward. ESCALATED: implemented this run.",
+    "kb_staleness": "FAIL — 27 days stale (last: 2026-07-23). GH #403 (ANTHROPIC_API_KEY) unresolved 39d+.",
+    "gh_661_pr": "PR #660 ai-ready NOT merged. GH #399 blocking loop (39d+).",
+    "supabase_token_date": "NOT filled in by human.",
+    "gh_403_comment": "EXECUTED this run (bonus action) — exact Railway→GitHub setup steps.",
+    "dependabot_prs": "Still aging: #629/#630/#631 (15d+), #649, #665/#666 (1d+)."
+  },
+  "bonus_action": "Posted targeted comment on GH #403 with 5-step ANTHROPIC_API_KEY Railway→GitHub path.",
+  "next_run_mandate": "run_108_mandate: (1) Verify Step 9I fires in next nightly — grep 'Step 9I:' in nightly log. (2) KB freshness: did GH #403 comment prompt human action? (3) GH #399 AUTOPILOT_GH_TOKEN resolved? (4) Dependabot PRs still aging? → Step 9J candidate. (5) SUPABASE_ACCESS_TOKEN filled in?",
+  "parking_lot": [
+    "Step 9J: Dependabot PR auto-merge in nightly (run 108 primary candidate)",
+    "stale-autonomy-pr-closer SKILL.md (run 109+)",
+    "GH #399 AUTOPILOT_GH_TOKEN (human-only)"
+  ],
+  "human_blockers": [
+    "GH #399 — AUTOPILOT_GH_TOKEN expired (39d+, 30 ai-ready issues blocked)",
+    "GH #403 — ANTHROPIC_API_KEY missing from GH Actions (KB 27d stale)",
+    "PR #660 — scoring_config.py block_demo_role fix (ai-ready, needs merge)",
+    "PR #653 — appointment_briefs.py block_demo_role fix (draft, needs review+merge)",
+    "SUPABASE_ACCESS_TOKEN last_rotated unknown (ops/credential-rotation-schedule.md)"
+  ]
+}
