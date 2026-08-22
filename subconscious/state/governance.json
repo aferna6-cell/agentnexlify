@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_run": "2026-08-22",
+  "last_run": "2026-08-22-pm",
   "total_runs": 109,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
@@ -223,7 +223,7 @@
       "status": "implemented",
       "implemented": true,
       "implemented_date": "2026-08-22",
-      "implemented_by": "subconscious run 109 — 1st carry-forward autonomous-executable escalation. Step 9J block inserted into .claude/skills/nightly-commit-review/SKILL.md after Step 9I (before step 10). grep -c 'Step 9J' returns 7. Next nightly executes Step 9J automatically.",
+      "implemented_by": "subconscious run 109 — 1st carry-forward autonomous-executable escalation. Step 9J block inserted into .claude/skills/nightly-commit-review/SKILL.md after Step 9I (before step 10). Checks mergeable_state=clean + no review requests + no blocking labels, merges via squash. grep -c 'Step 9J' confirms present. Next nightly executes Step 9J automatically.",
       "autonomous_executable": true,
       "requires_human": false,
       "category": "operational",
