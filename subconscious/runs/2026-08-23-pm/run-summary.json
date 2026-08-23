@@ -1,0 +1,53 @@
+{
+  "run_number": 109,
+  "run_id": "subconscious-2026-08-23-pm",
+  "date": "2026-08-23",
+  "time_slot": "pm",
+  "winner": {
+    "title": "Step 9J — Dependabot auto-merge with major-version safety gate",
+    "category": "Workflow Efficiency / Operational",
+    "status": "autonomous-executable",
+    "trigger": "carry-forward mandate (1st carry-forward — run 108 winner, not approved before run 109)",
+    "implemented": true,
+    "implementation_file": ".claude/skills/nightly-commit-review/SKILL.md",
+    "key_refinement": "Added major-version bump detection (step 2a) vs run 108 spec. Skips react 18→19, stripe v11→v15, actions/checkout 4→7 etc. Targets patch/minor only."
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "parking_lot": ["Step 9K — stale subconscious PR closer (run 110 candidate)"],
+  "rejected": [
+    "Middleware-level block_demo_role guard (wrong channel, M-effort)",
+    "Semver-aware Dependabot PR labeler (over-engineers Step 9J)"
+  ],
+  "open_blockers": [
+    {
+      "issue": "GH #399",
+      "description": "AUTOPILOT_GH_TOKEN expired — Day 41+, needs human action"
+    },
+    {
+      "issue": "GH #403",
+      "description": "KB autopopulate 31 days stale — secrets missing from GH Actions, needs human action"
+    },
+    {
+      "issue": "GH #669",
+      "description": "97/97 routers missing block_demo_role — needs human architectural decision"
+    }
+  ],
+  "evidence_signals": {
+    "dependabot_prs_open": 19,
+    "major_version_prs_to_skip": 5,
+    "subconscious_prs_open": 6,
+    "kb_staleness_days": 31,
+    "gh_399_day_count": "41+",
+    "gh_403_day_count": "29+",
+    "step_9j_in_skill_before_run": false,
+    "step_9j_in_skill_after_run": true,
+    "pr_dedup_guard_applied": true,
+    "existing_pr": "#674"
+  },
+  "next_run_mandate": {
+    "primary": "Step 9K — stale subconscious PR closer (1st mandate, run 110 carry-forward at run 111)",
+    "check": "Confirm Step 9J fired correctly in first nightly after this commit — check nightly log for Step 9J summary line",
+    "check_gh_669": "Check if any PR opened for GH #669 block_demo_role (needs GH #399 resolved first)"
+  }
+}
