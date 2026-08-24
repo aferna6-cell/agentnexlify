@@ -1,8 +1,17 @@
 name: Daily Health Check
 
 on:
-  schedule:
-    - cron: '0 6 * * *'
+  # NO `schedule:` — Actions have been dark since 2026-07-20 (GH #500,
+  # spending limit): jobs die in ~1s before checkout, so this monitored
+  # nothing while still reporting red. Uniform red hides the next real
+  # failure, so the schedule is removed rather than left to fail on a timer.
+  # `workflow_dispatch` is retained — this is still runnable by hand.
+  #
+  # UNOWNED — no replacement is running. Previous cron: "0 6 * * *".
+  # Issues-API only → backend `_automation_loop` %30 tier. Partially
+  # overlapped by the live "morning-digest" Routine (0 11 * * 1-5), which
+  # already reports commits/issues/PRs but runs none of these health probes.
+  # Tracked in: planning/decisions/2026-08-24-actions-replacement-substrate.md
   workflow_dispatch:
 
 jobs:

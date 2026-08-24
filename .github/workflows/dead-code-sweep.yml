@@ -1,6 +1,7 @@
 name: Dead Code Sweep
 
-# Weekly sweep for unused code across frontend and backend.
+# Sweep for unused code across frontend and backend. Manual-only since the
+# weekly cron was removed — see the note on the `on:` block.
 #
 # Frontend: knip - finds unused files, exports, dependencies in React/Vite project
 # Backend:  flake8 F401 - unused imports (low false-positive rate for FastAPI)
@@ -9,8 +10,15 @@ name: Dead Code Sweep
 # Both jobs run in parallel; issue is created in a dependent job.
 
 on:
-  schedule:
-    - cron: "0 10 * * 0"   # Sunday 10 AM UTC
+  # NO `schedule:` — Actions have been dark since 2026-07-20 (GH #500,
+  # spending limit): jobs die in ~1s before checkout, so this monitored
+  # nothing while still reporting red. Uniform red hides the next real
+  # failure, so the schedule is removed rather than left to fail on a timer.
+  # `workflow_dispatch` is retained — this is still runnable by hand.
+  #
+  # UNOWNED — no replacement is running. Previous cron: "0 10 * * 0".
+  # Issues-API only → backend `_automation_loop` %30 tier.
+  # Tracked in: planning/decisions/2026-08-24-actions-replacement-substrate.md
   workflow_dispatch: {}
 
 jobs:

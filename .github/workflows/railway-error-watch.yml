@@ -1,8 +1,10 @@
 name: Railway Error Watch
 
-# Polls Railway deploy logs every 10 minutes for WARNING/ERROR levelname
+# Polls Railway deploy logs for WARNING/ERROR levelname
 # entries and emails new ones to the owner via Resend. Opt-in, set the
-# required repository secrets and this workflow starts firing on the schedule.
+# required repository secrets and run it by hand — it no longer has a cron
+# (see the `on:` block). The "every 10 minutes" cadence this file used to
+# describe was already gone: it was re-throttled to daily on 2026-07-20.
 #
 # Required secrets:
 #   RAILWAY_TOKEN     project token (https://railway.com/account/tokens)
@@ -13,8 +15,17 @@ name: Railway Error Watch
 # emailing) or by deleting this file.
 
 on:
-  schedule:
-    - cron: "20 8 * * *"   # daily — re-throttled 2026-07-20 from */4 (GH #500: minutes exhausted). Real-time error capture belongs on Sentry, not log polling.
+  # NO `schedule:` — Actions have been dark since 2026-07-20 (GH #500,
+  # spending limit): jobs die in ~1s before checkout, so this monitored
+  # nothing while still reporting red. Uniform red hides the next real
+  # failure, so the schedule is removed rather than left to fail on a timer.
+  # `workflow_dispatch` is retained — this is still runnable by hand.
+  #
+  # UNOWNED — no replacement is running. Previous cron: "20 8 * * *"
+  # (itself re-throttled 2026-07-20 from */4 after #500 exhausted minutes).
+  # The original note still stands and is the better end state: real-time
+  # error capture belongs on Sentry, not on polling Railway logs from a cron.
+  # Tracked in: planning/decisions/2026-08-24-actions-replacement-substrate.md
   workflow_dispatch: {}
 
 concurrency:

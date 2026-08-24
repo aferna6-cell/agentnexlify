@@ -14,7 +14,7 @@ The repository has a multi-layered AI-assisted development system that makes dev
 
 ### Layer 3: Automated Enforcement
 - **Git hooks** — pre-commit and pre-push checks that run automatically.
-- **GitHub Actions** — CI/CD checks on PRs, daily health checks, auto bug logging.
+- **GitHub Actions** — PR/push checks and auto bug logging. No workflow is scheduled any more, and the estate has been dark since 2026-07-20 (GH #500); `scripts/ci_local.sh` stands in as the real gate.
 - **Claude Code hooks** — pre-edit and post-edit checks that run during Claude Code sessions.
 
 ---
@@ -94,8 +94,10 @@ Run automatically during Claude Code sessions:
 - Warns on tenant_id usage in leads-related code
 - Reminds to update schema-log.md after migration edits
 
-### Daily Health Check (`.github/workflows/health-check.yml`)
-Runs daily at 6 AM UTC. Checks:
+### Health Check (`.github/workflows/health-check.yml`)
+Manual-only (`workflow_dispatch`) — the 6 AM UTC cron was removed; see the note
+on the workflow's `on:` block and
+`planning/decisions/2026-08-24-actions-replacement-substrate.md`. Checks:
 - Dangerous imports in routers
 - Silent error handling (bare excepts)
 - Hardcoded secrets
