@@ -77,6 +77,27 @@ migration_numbering() {
   return $ok
 }
 
+hooks_installed() {
+  # GitHub Actions have been dark since 2026-07-20 (GH #500), so the pre-push
+  # hook is not a belt-and-braces extra any more — it is the only thing between
+  # a bad commit and `main`. It is easy to miss because a fresh clone has no
+  # hooks at all: .git/hooks ships only *.sample files.
+  local hook_dir
+  hook_dir="$(git rev-parse --git-path hooks 2>/dev/null || echo .git/hooks)"
+  local missing=()
+  for h in pre-commit pre-push prepare-commit-msg; do
+    [ -x "$hook_dir/$h" ] || missing+=("$h")
+  done
+  if [ ${#missing[@]} -gt 0 ]; then
+    echo "ERROR: git hooks not installed: ${missing[*]}"
+    echo "  Fix: bash scripts/install-hooks.sh"
+    echo "  Why it matters: Actions are dark (GH #500); these hooks are the gate."
+    return 1
+  fi
+  echo "All git hooks installed."
+  return 0
+}
+
 js_coverage() {
   # Only needed when JS/TS sources changed — the coverage gate skips otherwise.
   if git diff --name-only "$COMPARE_REF" HEAD | grep -qE '^(frontend/src/|demo-platform/src/|widget/|chrome-extension/).*\.(js|jsx|ts|tsx)$'; then
@@ -96,7 +117,13 @@ run_gate "JS/TS test quality lint" 1 npm run lint:test-quality --silent
 run_gate "Python test quality lint" 1 python scripts/lint_python_test_quality.py
 run_gate "local Python test refs" 1 python scripts/check_test_local_refs.py
 run_gate "managed agents preflight" 1 python scripts/managed_agents/preflight.py
-run_gate "backend tests + coverage" 1 python -m pytest backend/tests/ -q --cov=backend --cov-report=xml:coverage-python.xml
+# `tests/` as well as `backend/tests/`. pr-check.yml runs `tests` plus an
+# explicit ~90-file list; this used to run backend/tests/ alone, so the root
+# `tests/` directory (admin analytics, widget API, marketing infra, stripe
+# webhook, …) was covered by CI but NOT by the local gate that is supposed to
+# stand in for it while Actions are dark. That is the parity gap most likely
+# to let a real regression through.
+run_gate "backend tests + coverage" 1 python -m pytest backend/tests/ tests/ -q --cov=backend --cov-report=xml:coverage-python.xml
 run_gate "key vault 100% coverage" 1 python -m pytest backend/tests/test_integration_key_vault.py -q \
   --cov=backend.services.integration_key_vault --cov-branch --cov-fail-under=100
 run_gate "JS coverage (when JS changed)" 1 js_coverage
@@ -105,6 +132,13 @@ run_gate "changed-lines coverage >=85% py / >=80% js" 1 python scripts/check_cha
   --python-report coverage-python.xml --python-fail-under 85 \
   --js-report frontend/coverage/lcov.info --js-fail-under 80
 run_gate "migration numbering" 1 migration_numbering
+# Blocking in pr-check.yml and in scripts/hooks/pre-push (CHECK 10), but was
+# missing here — so it was enforced only for people who had installed the hook.
+run_gate "migrations logged in schema-log" 1 python scripts/check_migration_schema_log.py \
+  --compare-branch "$COMPARE_REF"
+# Actions are dark (GH #500), so this local gate is the real gate. If the
+# pre-push hook is not installed, nothing catches a bad push before it lands.
+run_gate "git hooks installed" 1 hooks_installed
 if git diff --name-only "$COMPARE_REF" HEAD | grep -q '^frontend/'; then
   run_gate "frontend tests" 1 sh -c "cd frontend && npm run test -- --run"
   run_gate "frontend build" 1 sh -c "cd frontend && npm run build"
@@ -115,6 +149,8 @@ run_gate "AgentShield config scan" 1 npm run agent-config:scan --silent
 run_gate "semgrep appsec scan (optional)" 0 sh -c "command -v semgrep >/dev/null && semgrep scan --config auto --error -q"
 run_gate "pip-audit backend deps (optional)" 0 sh -c "command -v pip-audit >/dev/null && pip-audit -r backend/requirements.txt --progress-spinner off"
 run_gate "npm audit frontend (optional)" 0 sh -c "cd frontend && npm audit --audit-level=high"
+# pr-check.yml audits the ROOT package too; this gate was missing here.
+run_gate "npm audit root (optional)" 0 npm audit --audit-level=high
 
 echo ""
 echo "==================== CI LOCAL SUMMARY ===================="

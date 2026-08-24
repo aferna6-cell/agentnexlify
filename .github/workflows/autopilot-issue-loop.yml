@@ -1,11 +1,20 @@
 name: Autopilot Issue Loop
 
 on:
-  schedule:
-    # cron parked 2026-07-20: AUTOPILOT_GH_TOKEN expired (#399) so every run
-    # failed AND burned minutes (#500). Feb 31 never fires — restore
-    # "0 */4 * * *" after rotating the token.
-    - cron: "0 6 31 2 *" # never fires (Feb 31)
+  # NO `schedule:` — this job is owned by a Claude Code Routine, not by Actions.
+  #
+  # History: parked 2026-07-20 on "0 6 31 2 *" (Feb 31) because
+  # AUTOPILOT_GH_TOKEN had expired (#399) and every run burned minutes (#500).
+  # That comment used to say 'restore "0 */4 * * *" after rotating the token'.
+  # DO NOT DO THAT. On 2026-07-23 a Routine took this job over, so restoring
+  # the cron would give two autopilot loops racing for the same `ai-ready`
+  # issue and opening competing PRs.
+  #
+  # A parked cron is also not inert — see kb-autopopulate.yml for the observed
+  # dispatch-despite-Feb-31 behaviour. Removing `schedule:` is the actual fix.
+  #
+  # Owner: Routine "Autopilot Issue Loop (CCR self-bind)", cron 28 */6 * * *.
+  # Rationale: planning/decisions/2026-08-24-actions-replacement-substrate.md
   workflow_dispatch:
 
 concurrency:

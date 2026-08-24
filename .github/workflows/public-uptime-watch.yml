@@ -1,8 +1,22 @@
 name: Public Uptime Watch
 
 on:
-  schedule:
-    - cron: "0 */6 * * *"  # every 6h — re-throttled 2026-07-20 from */2 (GH #500: minutes exhausted). Uptime belongs on an external monitor (UptimeRobot free tier: 50 monitors @ 5-min interval) — move it there and disable this.
+  # NO `schedule:` — this job is owned by a Claude Code Routine, not by Actions.
+  #
+  # This was the one genuinely LIVE duplicate: the cron here ("0 */6 * * *",
+  # itself re-throttled 2026-07-20 from */2 after #500 exhausted minutes) ran
+  # alongside the Routine "Prod Uptime Watch (CCR — replaces Actions
+  # public-uptime-watch)" on 56 * * * *. Both file/comment on the same
+  # "DOWNTIME: public uptime probe failing" issue, so a real outage would have
+  # produced duplicate alerts from two sources.
+  #
+  # The original comment's advice still stands and is the better end state:
+  # uptime belongs on an external monitor (UptimeRobot free tier: 50 monitors
+  # @ 5-min interval), which keeps probing even when GitHub or Anthropic is
+  # the thing that is down. The Routine is the interim owner, not the ideal one.
+  #
+  # Owner: Routine "Prod Uptime Watch (CCR)", cron 56 * * * *.
+  # Rationale: planning/decisions/2026-08-24-actions-replacement-substrate.md
   workflow_dispatch: {}
 
 concurrency:

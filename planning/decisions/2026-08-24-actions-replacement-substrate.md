@@ -1,7 +1,32 @@
 # GitHub Actions replacement substrate
 
-Date: 2026-08-24 · Status: proposed · Related: GH #500, #399, #403, #394 ·
-Supersedes nothing · Builds on `2026-07-27-autonomous-engineering-substrate.md`
+Date: 2026-08-24 · Status: **partially implemented** · Related: GH #500, #399,
+#403, #394 · Builds on `2026-07-27-autonomous-engineering-substrate.md`
+
+## What this PR actually changed
+
+Three of the problems below are fixed in code here, not just described:
+
+1. **The parked workflows no longer register a schedule.** `schedule:` blocks
+   deleted from `kb-autopopulate.yml`, `autopilot-issue-loop.yml`,
+   `refresh-brain.yml` and `public-uptime-watch.yml`. `workflow_dispatch`
+   remains, so all four are still runnable by hand. This is what stops the
+   dispatch-despite-Feb-31 behaviour described below — an impossible date was
+   never enough, because the schedule was still registered.
+2. **The stale restore instructions are gone.** Each of those files now carries
+   a `DO NOT DO THAT` block naming the Routine that owns the job and its cron,
+   instead of a 2026-07-20 comment telling the reader to un-park a schedule
+   that would race its own replacement.
+3. **The local gate is closer to being a real gate.** `ci_local.sh` gained the
+   root `tests/` directory in its pytest scope (the largest parity hole),
+   `check_migration_schema_log.py`, a root `npm audit`, and a new
+   **`git hooks installed`** gate that fails loudly when `.git/hooks` has no
+   pre-push hook — which was the actual state of this checkout.
+
+Still **not** done, deliberately: no Routine created, no scheduled deployment
+provisioned, and the six Issues-API jobs have not been moved into the backend
+loop. Those change which substrate owns production automation and want an
+owner's decision, not an audit's side effect.
 
 ## The finding that matters
 
