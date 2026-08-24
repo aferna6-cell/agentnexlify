@@ -4,8 +4,19 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-  schedule:
-    - cron: "15 6 * * *"
+  # NO `schedule:` — Actions have been dark since 2026-07-20 (GH #500,
+  # spending limit): jobs die in ~1s before checkout, so this monitored
+  # nothing while still reporting red. Uniform red hides the next real
+  # failure, so the schedule is removed rather than left to fail on a timer.
+  # `workflow_dispatch` is retained — this is still runnable by hand.
+  #
+  # OWNED ELSEWHERE — do not restore. The Routine "Prod Uptime Watch (CCR)"
+  # (cron 56 * * * *) names this workflow explicitly in its own prompt:
+  # "replaces the GitHub Actions public-uptime-watch/public-smoke
+  # workflows". Restoring "15 6 * * *" gives two probes alerting on the
+  # same outage from two sources — the duplicate-writer trap already
+  # defused for public-uptime-watch in #680.
+  # Tracked in: planning/decisions/2026-08-24-actions-replacement-substrate.md
 
 concurrency:
   group: public-smoke-${{ github.ref }}

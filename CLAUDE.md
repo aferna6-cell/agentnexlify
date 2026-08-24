@@ -134,7 +134,7 @@ bash scripts/claude-hooks/auto-commit.sh  # manual auto-commit
 ### Automation
 - **Pre-commit hook** — blocks secrets, `from __future__ import annotations`, bare-except blocks
 - **Pre-push hook** — frontend build + schema consistency check
-- **GitHub Actions** — daily health check, PR validation, auto bug logging, AI auto-improve
+- **GitHub Actions** — PR validation + push triggers only; **no workflow has a cron** and all are dark since 2026-07-20 (GH #500). Scheduled work lives on Claude Code Routines and the backend loop. `scripts/ci_local.sh` is the real gate.
 - **Agent system guardrail** - `scripts/check_agent_system.py` runs in PR validation and proves CLAUDE.md, Everything Claude Code agents, Claude Code 2.1.98 pin, and issue-to-PR workflows are intact.
 - **Instruction budget** - `scripts/check_instruction_budget.py` keeps `CLAUDE.md` under 200 lines and blocks unconditional UserPromptSubmit prompt-injection sprawl.
 - **Agent config security** - `npm run agent-config:scan` runs pinned baseline-gated AgentShield on Claude/Codex agents, hooks, MCP config, and project instruction files; CI triggers on those paths.

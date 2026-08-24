@@ -23,10 +23,36 @@ Three of the problems below are fixed in code here, not just described:
    **`git hooks installed`** gate that fails loudly when `.git/hooks` has no
    pre-push hook — which was the actual state of this checkout.
 
+### Follow-up: the remaining 11 (this change)
+
+The four above left **11 workflows still registering a cron** against a dark
+estate. All 11 are now unscheduled the same way — `schedule:` removed,
+`workflow_dispatch` kept, each carrying a block that names its owner or states
+plainly that it has none. **No workflow in the repo registers a schedule any
+more** (20/20 verified by parsing every file).
+
+That surfaced a second live duplicate missed the first time: **`public-smoke`**.
+The "Prod Uptime Watch (CCR)" Routine prompt names it in its own text —
+*"replaces the GitHub Actions public-uptime-watch/public-smoke workflows"* — so
+its `15 6 * * *` cron was the same trap already defused for
+`public-uptime-watch`, one file over.
+
+Merge-gating triggers were deliberately left alone: `lead-qualifier-eval` keeps
+its `pull_request` trigger, `schema-sync-check` and `public-smoke` keep their
+`push` triggers. Only timers were removed.
+
+Stale prose that advertised the removed crons was corrected in the same pass
+(`dead-code-sweep`, `dependency-audit`, `field-monitor-weekly`,
+`railway-error-watch`, `schema-sync-check`) — `railway-error-watch` still
+claimed a "every 10 minutes" cadence that had been re-throttled to daily on
+2026-07-20 and was already wrong before this change.
+
 Still **not** done, deliberately: no Routine created, no scheduled deployment
 provisioned, and the six Issues-API jobs have not been moved into the backend
 loop. Those change which substrate owns production automation and want an
-owner's decision, not an audit's side effect.
+owner's decision, not an audit's side effect. Turning a timer **off** is
+reversible in one line and stops active harm; turning one **on** bills
+recurring Claude usage forever.
 
 ## The finding that matters
 
@@ -244,11 +270,19 @@ or a Routine already covers most cases.
 
 ## Not done here
 
-**Nothing was armed.** No Routine was created, no workflow disabled, no
-deployment provisioned. Creating live recurring jobs that commit to the
-repository is consequential and outward-facing, and the routing above changes
-which substrate owns production automation — that is the owner's call, not a
-side effect of an audit.
+**Nothing was armed.** Every scheduled workflow is now unscheduled (the
+subtractive half), but no Routine was created and no deployment provisioned —
+the additive half. Creating live recurring jobs that commit to the repository
+is consequential and outward-facing, and the routing above changes which
+substrate owns production automation — that is the owner's call, not a side
+effect of an audit.
+
+**What this leaves running, honestly:** the 10 live Routines, the backend
+`_automation_loop`, and the `push`/`pull_request` Actions triggers (which are
+themselves dark until billing returns). Ten jobs listed in the routing table
+now run nowhere on a timer. They already ran nowhere — they were failing in
+~1s — so nothing regressed; the difference is that this is now visible in the
+files instead of hidden behind ~150 red runs a day.
 
 The mechanism exists and is proven; what remains is a decision about which jobs
 matter enough to keep.

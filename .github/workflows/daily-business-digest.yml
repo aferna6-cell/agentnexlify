@@ -12,8 +12,16 @@ name: Daily Business Digest
 # Workflows exit 0 silently when secrets are missing.
 
 on:
-  schedule:
-    - cron: "0 8 * * *"   # 8 AM UTC daily
+  # NO `schedule:` — Actions have been dark since 2026-07-20 (GH #500,
+  # spending limit): jobs die in ~1s before checkout, so this monitored
+  # nothing while still reporting red. Uniform red hides the next real
+  # failure, so the schedule is removed rather than left to fail on a timer.
+  # `workflow_dispatch` is retained — this is still runnable by hand.
+  #
+  # UNOWNED — no replacement is running. Previous cron: "0 8 * * *".
+  # Issues-API only, no working tree needed → belongs on the backend
+  # `_automation_loop` %30 tier, which already runs 24/7 at zero marginal cost.
+  # Tracked in: planning/decisions/2026-08-24-actions-replacement-substrate.md
   workflow_dispatch: {}
 
 # Every job files deduped tracking issues via github-script. The default

@@ -1,6 +1,7 @@
 name: Field Monitor Weekly Digest
 
-# Runs the Claude Managed Agents Field Monitor every Monday at 8 AM ET
+# Runs the Claude Managed Agents Field Monitor. Manual-only since the Monday
+# 8 AM ET cron was removed (see the `on:` block)
 # (12:00 UTC) and commits the generated Markdown digest to
 # knowledge-base/raw/. The kb-compile pipeline then promotes the raw
 # file to the wiki with embeddings.
@@ -22,8 +23,16 @@ name: Field Monitor Weekly Digest
 # viable designs.
 
 on:
-  schedule:
-    - cron: "0 12 * * 1"
+  # NO `schedule:` — Actions have been dark since 2026-07-20 (GH #500,
+  # spending limit): jobs die in ~1s before checkout, so this monitored
+  # nothing while still reporting red. Uniform red hides the next real
+  # failure, so the schedule is removed rather than left to fail on a timer.
+  # `workflow_dispatch` is retained — this is still runnable by hand.
+  #
+  # UNOWNED — no replacement is running. Previous cron: "0 12 * * 1".
+  # Commits the digest to the working tree, so a sandboxed Managed Agents
+  # deployment cannot host it (it cannot `git push`). Routine or nothing.
+  # Tracked in: planning/decisions/2026-08-24-actions-replacement-substrate.md
   workflow_dispatch:
     inputs:
       topic:

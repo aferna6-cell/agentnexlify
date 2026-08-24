@@ -5,7 +5,8 @@ name: Schema Sync Check
 #
 # Triggers:
 #   - Push to main touching migrations/ or schema-log.md
-#   - Daily at 7 AM UTC
+#   - Manual (workflow_dispatch). The daily 7 AM UTC sweep was removed —
+#     see the note on the `on:` block below.
 #
 # Opens a GH issue when:
 #   - Any CRITICAL pending migration exists, OR
@@ -17,8 +18,17 @@ on:
     paths:
       - "migrations/**"
       - "docs/dev-knowledge/schema-log.md"
-  schedule:
-    - cron: "0 7 * * *"   # 7 AM UTC daily
+  # NO `schedule:` — Actions have been dark since 2026-07-20 (GH #500,
+  # spending limit): jobs die in ~1s before checkout, so this monitored
+  # nothing while still reporting red. Uniform red hides the next real
+  # failure, so the schedule is removed rather than left to fail on a timer.
+  # `workflow_dispatch` is retained — this is still runnable by hand.
+  #
+  # UNOWNED on a timer — no replacement is running. Previous cron: "0 7 * * *".
+  # The `push` trigger above is untouched and still the real gate for
+  # schema drift on main; only the daily sweep is removed.
+  # Issues-API only → backend `_automation_loop` %30 tier.
+  # Tracked in: planning/decisions/2026-08-24-actions-replacement-substrate.md
   workflow_dispatch: {}
 
 # The audit step opens a GH issue when critical migrations are pending.
