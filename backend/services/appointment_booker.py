@@ -349,6 +349,7 @@ class AppointmentBooker:
                 status="needs_human",
             )
 
+        # inp.client_id holds the tenant UUID — appointments.tenant_id stores the same value
         if not _appointment_row_exists(db, appointment_id, inp.client_id):
             logger.warning(
                 "appointment_booker: lead %s — agent claimed appointment %s but no "
