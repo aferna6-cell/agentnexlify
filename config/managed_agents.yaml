@@ -35,7 +35,7 @@ agents:
   lead_qualifier:
     env_var: LEAD_QUALIFIER_AGENT_ID
     name: AgentNexLiFy Lead Qualifier
-    model: claude-sonnet-4-6
+    model: claude-sonnet-5
     description: >-
       Qualifies inbound leads for AgentNexLiFy tenants. Researches the
       prospect's business online, scores fit, recommends next action.
@@ -86,7 +86,7 @@ agents:
   document_drafter:
     env_var: DOCUMENT_DRAFTER_AGENT_ID
     name: AgentNexLiFy Document Drafter
-    model: claude-opus-4-7
+    model: claude-opus-4-8
     description: >-
       Drafts client-facing documents (quotes, invoices, proposals) as
       real DOCX / XLSX / PDF files using the Anthropic document skills.
@@ -164,7 +164,7 @@ agents:
   codebase_reviewer:
     env_var: CODEBASE_REVIEWER_AGENT_ID
     name: AgentNexLiFy Codebase Reviewer
-    model: claude-opus-4-7
+    model: claude-opus-4-8
     description: >-
       Reviews branches of the agentnexlify repo for bugs, schema
       discipline violations, missing tests, and security issues.
@@ -211,7 +211,7 @@ agents:
   support_agent:
     env_var: SUPPORT_AGENT_ID
     name: AgentNexLiFy Support Agent
-    model: claude-sonnet-4-6
+    model: claude-sonnet-5
     description: >-
       Answers customer questions using only tenant-provided business
       context, knowledge-base snippets, and recent conversation history.
@@ -323,7 +323,7 @@ agents:
   deep_researcher:
     env_var: DEEP_RESEARCHER_AGENT_ID
     name: AgentNexLiFy Deep Researcher
-    model: claude-opus-4-7
+    model: claude-opus-4-8
     description: >-
       Produces multi-step research briefs with source citations and open
       questions for strategic work.
@@ -375,7 +375,7 @@ agents:
   field_monitor:
     env_var: FIELD_MONITOR_AGENT_ID
     name: AgentNexLiFy Field Monitor
-    model: claude-sonnet-4-6
+    model: claude-sonnet-5
     description: >-
       Tracks the weekly AI, automation, and SMB SaaS news that matters
       to AgentNexLiFy.
@@ -432,7 +432,7 @@ agents:
   data_analyst:
     env_var: DATA_ANALYST_AGENT_ID
     name: AgentNexLiFy Data Analyst
-    model: claude-opus-4-7
+    model: claude-opus-4-8
     description: >-
       Analyzes tenant exports and structured files with reproducible
       Python scripts, tables, and chart artifacts.

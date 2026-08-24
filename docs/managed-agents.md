@@ -537,8 +537,10 @@ path.
 - **No SSE reconnect / replay.** `ManagedAgentsClient.stream_events` opens a
   single SSE connection and does not retry or de-dupe events after a TCP
   drop. If the connection dies mid-session the client hangs waiting for
-  events that will never arrive. Anthropic's `shared/managed-agents-client-patterns.md`
-  pattern 1 ("SSE reconnect with replay") describes the fix: call
+  events that will never arrive. The fix (from Anthropic's client-patterns
+  handout, `shared/managed-agents-client-patterns.md` — an external document
+  that was never vendored into this repo, so do not go looking for it here)
+  is: call
   `list_events(session_id)` on reconnect, dedupe by event ID, then resume
   `stream_events`. We will add this when we have a flow that runs long
   enough to care. Until then, treat any flow > ~60s as best-effort.
@@ -591,9 +593,8 @@ lists both `.env` and `.env.managed_agents`.
 You tried to cleanup a session the moment it went idle. The SSE stream's
 `session.status_idle` event arrives a few hundred ms before the status
 write lands. Poll `get_session(session_id)` until `status != "running"`
-before archiving. See
-`shared/managed-agents-client-patterns.md` pattern 6 in the
-`claude-api` skill.
+before archiving. (Pattern 6 of Anthropic's external client-patterns
+handout; not a file in this repo.)
 
 **`HTTP 400 invalid_request_error: agent field …`**
 You passed `model` / `system` / `tools` on the session body. Those all
@@ -606,23 +607,26 @@ The SSE stream has no replay. If the TCP connection drops while an
 `agent.tool_use` is waiting on your `user.tool_confirmation`, the session
 deadlocks. On reconnect, call `client.list_events(session_id)` first to
 catch up, dedupe by event ID, then continue tailing
-`stream_events(session_id)`. See
-`shared/managed-agents-client-patterns.md` pattern 1.
+`stream_events(session_id)`. (Pattern 1 of Anthropic's external
+client-patterns handout; not a file in this repo.)
 
 **Need to upgrade the Anthropic SDK**
-Our client uses raw HTTP via httpx specifically so we don't have to
-upgrade the pinned `anthropic==0.42.0` SDK in
-`backend/requirements.txt` (newer SDKs break
-`backend/services/llm_runtime.py` contracts). If you eventually want to
-swap the httpx client for `client.beta.agents.*`, the wrapper interface
-was designed to be swappable — every method maps 1:1 to an SDK call.
+Historically our client used raw HTTP via httpx to avoid upgrading a pinned
+`anthropic==0.42.0` SDK that predated the beta agent bindings. **That pin is
+long gone** — `backend/requirements.txt` now pins `anthropic>=0.95.0,<1`,
+which does expose `client.beta.agents.*`. The httpx wrapper is kept because
+it works and is tested, not because the SDK can't do it. If you want to swap
+it, the wrapper interface was designed to be swappable — every method maps
+1:1 to an SDK call.
 
 ---
 
 ## References
 
-- Skill docs (loaded via `/claude-api` skill in Claude Code):
-  `shared/managed-agents-*.md`
+- Anthropic client-patterns handouts, referenced as `shared/managed-agents-*.md`
+  and surfaced through the `claude-api` skill in Claude Code. **External — these
+  are not files in this repo.** The patterns we rely on are written out in this
+  document instead.
 - API reference:
   https://platform.claude.com/docs/en/managed-agents/overview
 - Live Anthropic CLI (another way to provision via YAML):

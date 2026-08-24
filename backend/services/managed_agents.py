@@ -1,11 +1,15 @@
 """Claude Managed Agents client for AgentNexLiFy.
 
 Thin wrapper around the Anthropic Managed Agents REST API. We talk to the
-API over raw HTTP via httpx rather than the anthropic SDK because the
-currently-pinned SDK version (0.42.0) predates the `client.beta.agents`
-bindings, and upgrading the SDK in place would risk regressing the existing
-Claude integration in `backend/services/llm_runtime.py`. This wrapper can be
-swapped for the SDK later without changing callers.
+API over raw HTTP via httpx rather than the anthropic SDK.
+
+NOTE (2026-08-24): the original reason given here was that the pinned SDK
+was 0.42.0 and predated the `client.beta.agents` bindings. That is no longer
+true — `backend/requirements.txt` pins `anthropic>=0.95.0,<1`, which does
+expose the beta agent bindings. The wrapper is kept because it is working,
+tested (`backend/tests/test_managed_agents.py`), and decoupled from the SDK's
+beta surface, NOT because the SDK is incapable. Swapping to the SDK is a
+viable cleanup whenever someone wants it; callers would not change.
 
 API reference:
 - Overview: https://platform.claude.com/docs/en/managed-agents/overview
@@ -51,6 +55,37 @@ _DEFAULT_TIMEOUT = httpx.Timeout(connect=10.0, read=60.0, write=60.0, pool=30.0)
 _STREAM_TIMEOUT = httpx.Timeout(connect=10.0, read=None, write=60.0, pool=30.0)
 
 _RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504, 529})
+
+
+def build_budget(cents: int) -> dict[str, Any]:
+    """Build a session `budget` object capping spend at `cents` US cents.
+
+    This is a HARD cap enforced by the platform, and is a different thing from
+    the Messages API `task_budget` (advisory, token-denominated, the model
+    paces itself against it). See .claude/rules/task-budgets.md.
+
+    Semantics worth knowing before you pick a number:
+      - The cap is checked BETWEEN model requests, not mid-request, so the
+        in-flight request finishes. A session capped at 50 can settle at 53.
+        Size the cap with that one-request margin in mind.
+      - Reaching the cap makes the session go idle with
+        stop_reason.type == "budget_reached". It is NOT terminated; history
+        and sandbox survive. Raising the budget resumes it automatically.
+      - Removing a budget is ONE-WAY. A session created without one can never
+        be given one, and one whose budget was removed can never get it back.
+        Change the budget instead of removing it.
+      - Multiagent sessions share ONE budget across every thread, advisor
+        consultations included.
+
+    `amount` is sent as a string of whole cents on purpose — the API rejects
+    decimal forms like "25.00", and a string avoids any float rounding.
+    """
+    if cents <= 0:
+        raise ValueError(f"budget must be a positive number of cents, got {cents!r}")
+    return {
+        "type": "limit",
+        "max_list_cost": {"amount": str(int(cents)), "currency": "USD"},
+    }
 
 
 class ManagedAgentsError(Exception):
@@ -192,6 +227,26 @@ class ManagedAgentsClient:
         assert last_exc is not None
         raise last_exc
 
+    def request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json_body: Any = None,
+        params: dict[str, Any] | None = None,
+        extra_beta: str | None = None,
+    ) -> dict[str, Any]:
+        """Public escape hatch for endpoints implemented in sibling modules.
+
+        Same retry/backoff/error-envelope handling as every built-in method.
+        Used by `managed_agents_deployments.py` so that module doesn't have to
+        reach into `_request`. Prefer a named method on this class for anything
+        that becomes load-bearing.
+        """
+        return self._request(
+            method, path, json_body=json_body, params=params, extra_beta=extra_beta
+        )
+
     # ------------------------------------------------------------------
     # environments
     # ------------------------------------------------------------------
@@ -231,14 +286,39 @@ class ManagedAgentsClient:
         self,
         *,
         name: str,
-        model: str,
+        model: str | dict[str, Any],
         system: str | None = None,
         tools: list[dict[str, Any]] | None = None,
         mcp_servers: list[dict[str, Any]] | None = None,
         skills: list[dict[str, Any]] | None = None,
         description: str | None = None,
         metadata: dict[str, str] | None = None,
+        multiagent: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        """Create a persistent, versioned agent.
+
+        `model` accepts either a plain ID string (`"claude-opus-4-8"`) or the
+        object form, which is the only way to set effort / speed / geo:
+
+            model={"id": "claude-opus-4-8", "effort": "high"}
+
+        `multiagent` declares a coordinator roster. Two useful shapes:
+
+            # delegate to other provisioned agents
+            {"type": "coordinator",
+             "agents": [{"type": "agent", "id": REVIEWER_AGENT_ID}]}
+
+            # native advisor — a stronger model this agent can consult mid-turn
+            {"type": "coordinator",
+             "agents": [{"type": "advisor", "model": "claude-opus-4-8"}]}
+
+        On the advisor: at most one advisor entry per roster, and the agent's
+        own model must not be more capable than the advisor's. Prefer Opus 4.8
+        over Opus 5 here — Opus 5 is a redacted-result advisor, so the advice
+        reaches your event stream as a `{"type": "redacted"}` placeholder
+        (the agent still reads it server-side) and you lose the ability to
+        read the brief in traces.
+        """
         body: dict[str, Any] = {"name": name, "model": model}
         if system:
             body["system"] = system
@@ -248,6 +328,8 @@ class ManagedAgentsClient:
             body["mcp_servers"] = mcp_servers
         if skills:
             body["skills"] = skills
+        if multiagent:
+            body["multiagent"] = multiagent
         if description:
             body["description"] = description
         if metadata:
@@ -285,9 +367,16 @@ class ManagedAgentsClient:
         resources: list[dict[str, Any]] | None = None,
         vault_ids: list[str] | None = None,
         metadata: dict[str, str] | None = None,
+        budget_cents: int | None = None,
     ) -> dict[str, Any]:
         """Start a new session. Pass `agent_version` to pin to a specific
         version for reproducibility, or omit it to use the latest.
+
+        `budget_cents` sets a HARD platform-enforced spend ceiling on this
+        session (see `build_budget`). Set it on every non-interactive session
+        — anything autonomous, scheduled, or batch. Leave it off for
+        user-facing interactive paths (widget chat), where correctness beats
+        cost pacing. A budget can only be attached at creation time.
         """
         agent_ref: Any
         if agent_version is not None:
@@ -307,6 +396,8 @@ class ManagedAgentsClient:
             body["vault_ids"] = vault_ids
         if metadata:
             body["metadata"] = metadata
+        if budget_cents is not None:
+            body["budget"] = build_budget(budget_cents)
         return self._request("POST", "/v1/sessions", json_body=body)
 
     def get_session(self, session_id: str) -> dict[str, Any]:
@@ -397,8 +488,13 @@ class ManagedAgentsClient:
         limit: int = 1000,
     ) -> list[dict[str, Any]]:
         """Return the first page of session events. For reconnect flows you
-        want to call this BEFORE tailing stream_events() and dedupe by id —
-        see shared/managed-agents-client-patterns.md pattern 1.
+        want to call this BEFORE tailing stream_events() and dedupe by id.
+
+        See docs/managed-agents.md, "Known limitations" → "No SSE reconnect /
+        replay". (Earlier versions of this docstring cited an Anthropic
+        workshop handout, `shared/managed-agents-client-patterns.md`, which was
+        never vendored into this repo — the pattern it described is written out
+        in docs/managed-agents.md instead.)
         """
         resp = self._request(
             "GET",
@@ -412,7 +508,7 @@ class ManagedAgentsClient:
         """Tail the SSE event stream, yielding each event as a dict.
 
         The caller is responsible for the break condition. The correct gate
-        (see shared/managed-agents-client-patterns.md pattern 5) is:
+        (see docs/managed-agents.md, "Using an agent from code") is:
 
             for event in client.stream_events(session_id):
                 ...

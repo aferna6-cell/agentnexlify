@@ -188,7 +188,7 @@ def _message_chars(messages: list[dict[str, Any]]) -> int:
 # in doubt about a new reasoning model, add it here rather than risk a 400 on
 # the live widget path.
 _SAMPLING_OMISSION_MODELS = frozenset(
-    {"claude-opus-4-7", "claude-opus-4-8", "claude-sonnet-5"}
+    {"claude-opus-4-7", "claude-opus-4-8", "claude-opus-5", "claude-sonnet-5"}
 )
 
 

@@ -7,6 +7,40 @@
 
 ---
 
+## Resolution status (updated 2026-08-24, same PR)
+
+All seven findings were acted on in this branch. One finding was **corrected** on
+closer reading — see G5.
+
+| # | Finding | Status |
+|---|---|---|
+| G1 | GAN loop specified but never run | **Fixed** — `/gan` command + `scripts/gan/init_harness.py` now drive it; `gan-harness/` gitignored as per-run state |
+| G2 | Fleet on legacy models | **Fixed** — all 8 provisioned agents and all 60 `.claude/agents/` pins on current IDs; `model-routing.md` made the single canonical table |
+| G3 | No spend ceiling; `task_budget` documented but absent | **Fixed** — hard session budgets implemented and applied by default to every script-launched session; the rule now states plainly that task budgets are *not* implemented |
+| G4 | Platform primitives unused | **Partly fixed** — `multiagent`/advisor, session budgets, `effort` (model object form), and deployments are now reachable. Vaults and memory stores deliberately **not** implemented — see "What NOT to do" |
+| G5 | Field monitor burns runner minutes | **Corrected + partly fixed** — see below |
+| G6 | Control-plane drift | **Fixed** — counts corrected and now CI-guarded; 6 dead skills restored; 3 phantom commands created; advisor `max_tokens` drift closed |
+| G7 | Stale claims in the client | **Fixed** — SDK-version claim corrected, ghost doc pointer redirected |
+
+**Correction to G5.** The original finding said the runner existed "purely to
+invoke an agent that runs on Anthropic's infrastructure." That was wrong, and
+reading the workflow end-to-end is what showed it: the runner has a *second*
+responsibility a deployment cannot take over — it `git commit`s and `git push`es
+the digest into `knowledge-base/raw/` so the kb-compile pipeline can promote it.
+A deployment session runs in Anthropic's sandbox and cannot push to git. Cutting
+the cron over without first solving output persistence would have silently
+stopped the digest from ever landing.
+
+What shipped instead: the deployment capability and an idempotent provisioner
+(so jobs that *don't* write back can migrate), a hard per-run spend cap on the
+field-monitor job, and the migration criterion plus two viable designs recorded
+in `scripts/managed_agents/provision_deployments.py`. The cron stays until one
+of those designs exists. A command-injection sink found while editing that
+workflow (`github.event.inputs.topic` interpolated straight into `run:`) was
+fixed in passing.
+
+---
+
 ## 0. Sourcing caveat — read this first
 
 The prompt referenced "a 37 minute Anthropic video on how to use managed agents." **I could not uniquely identify that video**, and I won't pretend otherwise:
