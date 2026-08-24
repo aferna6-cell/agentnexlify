@@ -576,11 +576,12 @@ path.
   template agents in `config/managed_agents.yaml` this is fine — none
   need credentials.
 - **No SDK swap-in.** `backend/services/managed_agents.py` is a raw-HTTP
-  wrapper intentionally kept independent of `anthropic==0.42.0`, which is
-  pinned by `llm_runtime.py`. When we eventually upgrade the SDK and get
-  `client.beta.agents.*`, the wrapper interface is designed to swap 1:1 —
-  but the swap hasn't happened and the risks of upgrading the pinned SDK
-  are owned by `llm_runtime.py`, not this module.
+  wrapper. It was originally kept independent of an `anthropic==0.42.0` pin
+  that predated `client.beta.agents.*`; **that pin is gone** —
+  `backend/requirements.txt` now pins `anthropic>=0.95.0,<1`, which does
+  expose those bindings. So the blocker is no longer capability, just that
+  nobody has done the swap. The wrapper interface is designed to swap 1:1
+  whenever someone wants to.
 
 ## Troubleshooting
 
