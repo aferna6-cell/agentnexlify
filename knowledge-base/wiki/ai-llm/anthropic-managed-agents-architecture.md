@@ -4,7 +4,7 @@ category: ai-llm
 tags: [managed-agents, anthropic, agent-architecture, session-durability, sandbox-isolation]
 sources: ["raw/ai-llm/anthropic-managed-agents-engineering.md"]
 created: 2026-04-14
-updated: 2026-04-14
+updated: 2026-08-24
 summary: "Anthropic's Managed Agents decouple harness, session, and sandbox into independent interfaces — cutting p50 TTFT by 60% and enabling multi-brain, multi-hand orchestration that directly mirrors AgentNexLiFy's advisor-executor pattern."
 ---
 
@@ -41,3 +41,5 @@ The session-as-context-object pattern solves context window exhaustion in long-r
 ## Relevance to AgentNexLiFy
 
 AgentNexLiFy's advisor-executor pattern (`backend/services/advisor_executor.py`) is a direct instance of the brain/hands decomposition described here. The Opus advisor is a read-only brain that produces a brief; the Sonnet executor is the hands that implement it. Adopting the session durability pattern — storing tenant chat sessions as append-only event logs rather than in-context message arrays — would enable longer conversations without context window pressure and provide crash recovery for the lead qualifier agent. The credential isolation model should inform how we handle tenant API keys: they should never be accessible from the sandbox where Claude generates responses to end users.
+
+Two patterns from this architecture are now concretely implemented (PRs #677 and #678, 2026-08-24). First, **hard session budget caps**: `managed_agents.py` now exports `DEFAULT_SESSION_BUDGET_CENTS = 500` and `default_session_budget_cents()`, applied to every non-interactive agent session (lead qualification, document drafting, appointment booking, structured extraction, advisor-executor). The one deliberate exception is `support_agent.py` — the widget chat path where a customer is watching and a budget-truncated answer is worse than the marginal spend. `scripts/check_project_invariants.py` enforces this via `check_agent_sessions_are_budgeted()`, a CI gate that fails any new `create_session()` call that omits `budget_cents`. Second, **fail-closed booking verification**: `appointment_booker.py` now validates every agent-claimed appointment UUID against the `appointments` table before reporting status `booked` — a DB lookup error or missing row returns `needs_human` rather than confirming an appointment that doesn't exist.
