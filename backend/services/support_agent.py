@@ -131,7 +131,15 @@ def _normalize_confidence(value: Any) -> str:
         if value >= 0.45:
             return "medium"
         return "low"
-    return "medium"
+    # Unrecognized or missing -> "low", NOT "medium".
+    #
+    # This value is the entire release gate on text shown to a tenant's
+    # customer: widget_chat_fallback.py ships the answer when confidence is
+    # high or medium, and hands off to a human when it is low. Defaulting an
+    # absent or malformed confidence to "medium" made the gate fail OPEN — a
+    # model that simply omitted the field had its answer shipped unchecked.
+    # A quality gate on customer-facing text fails closed.
+    return "low"
 
 
 def _format_hours(hours_row: dict[str, Any] | None) -> str:
@@ -403,6 +411,12 @@ def run_support_query(
 
     handle = support_agent()
     client = _CapturingManagedAgentClient(ManagedAgentsClient())
+    # Deliberately NOT budget-capped, unlike every other product agent session.
+    # This is the interactive widget path: a customer is watching, and it
+    # already runs under an 8s wall-clock timeout that bounds spend far more
+    # tightly than a dollar cap would. A budget-truncated answer mid-sentence
+    # is worse for the customer than the marginal cost. See
+    # `.claude/rules/task-budgets.md` "Where NOT to".
     session = client.create_session(
         agent_id=handle.agent_id,
         environment_id=handle.environment_id,

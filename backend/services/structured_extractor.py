@@ -16,7 +16,11 @@ import logging
 import re
 from typing import Any
 
-from backend.services.managed_agents import ManagedAgentsClient, SessionTerminalState
+from backend.services.managed_agents import (
+    ManagedAgentsClient,
+    SessionTerminalState,
+    default_session_budget_cents,
+)
 from backend.services.managed_agents_registry import structured_extractor
 
 logger = logging.getLogger(__name__)
@@ -194,6 +198,8 @@ def extract_structured(
             "flow": "structured_extractor",
             "target_schema": target_schema,
         },
+        # Non-interactive path — cap the spend (no customer is waiting).
+        budget_cents=default_session_budget_cents(),
     )
     session_id = session["id"]
     logger.info(

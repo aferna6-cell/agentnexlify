@@ -51,6 +51,7 @@ from backend.services.managed_agents import (
     ManagedAgentsClient,
     ManagedAgentsError,
     SessionTerminalState,
+    default_session_budget_cents,
     get_default_client,
 )
 from backend.services.managed_agents_registry import ManagedAgentHandle
@@ -279,6 +280,8 @@ class AdvisorExecutorRunner:
             resources=resources,
             vault_ids=vault_ids,
             metadata=metadata,
+            # Advisor->executor loop runs unattended; cap it.
+            budget_cents=default_session_budget_cents(),
         )
         session_id = session.get("id")
         if not isinstance(session_id, str):
