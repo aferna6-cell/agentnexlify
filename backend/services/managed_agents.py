@@ -5,11 +5,14 @@ API over raw HTTP via httpx rather than the anthropic SDK.
 
 NOTE (2026-08-24): the original reason given here was that the pinned SDK
 was 0.42.0 and predated the `client.beta.agents` bindings. That is no longer
-true — `backend/requirements.txt` pins `anthropic>=0.95.0,<1`, which does
-expose the beta agent bindings. The wrapper is kept because it is working,
-tested (`backend/tests/test_managed_agents.py`), and decoupled from the SDK's
-beta surface, NOT because the SDK is incapable. Swapping to the SDK is a
-viable cleanup whenever someone wants it; callers would not change.
+true. VERIFIED against `anthropic` 0.125.0 (inside the current
+`backend/requirements.txt` pin of `>=0.95.0,<1`): `client.beta.agents`,
+`.sessions`, `.deployments`, `.vaults`, and `.memory_stores` all exist.
+
+The wrapper is kept because it is working, tested
+(`backend/tests/test_managed_agents.py`), and decoupled from the SDK's beta
+surface — NOT because the SDK is incapable. Swapping to the SDK is a viable
+cleanup whenever someone wants it; callers would not change.
 
 API reference:
 - Overview: https://platform.claude.com/docs/en/managed-agents/overview
@@ -33,6 +36,7 @@ resources. See scripts/managed_agents/provision.py for the one-time bootstrap.
 
 import json
 import logging
+import os
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -55,6 +59,38 @@ _DEFAULT_TIMEOUT = httpx.Timeout(connect=10.0, read=60.0, write=60.0, pool=30.0)
 _STREAM_TIMEOUT = httpx.Timeout(connect=10.0, read=None, write=60.0, pool=30.0)
 
 _RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504, 529})
+
+# $5. Well above a normal qualification / draft / extraction run, so it only
+# bites on a genuine runaway loop. See default_session_budget_cents().
+DEFAULT_SESSION_BUDGET_CENTS = 500
+
+
+def default_session_budget_cents() -> int | None:
+    """Central hard spend cap (US cents) for non-interactive product sessions.
+
+    One knob, not a number copied across call sites
+    (`.claude/rules/task-budgets.md`: "never hardcode budgets in dozens of
+    places"). Override with MANAGED_AGENTS_SESSION_BUDGET_CENTS; set it to 0
+    to disable the cap entirely.
+
+    Apply this to every agent session a customer is not sitting and waiting
+    on — background tasks, threadpool work, HTTP-triggered batch runs. Leave
+    interactive paths (widget chat) uncapped: there, a truncated answer is
+    worse than the marginal spend.
+    """
+    raw = os.environ.get("MANAGED_AGENTS_SESSION_BUDGET_CENTS", "").strip()
+    if not raw:
+        return DEFAULT_SESSION_BUDGET_CENTS
+    try:
+        return int(raw) or None
+    except ValueError:
+        logger.warning(
+            "managed_agents: MANAGED_AGENTS_SESSION_BUDGET_CENTS=%r is not an "
+            "integer; using the %d-cent default.",
+            raw,
+            DEFAULT_SESSION_BUDGET_CENTS,
+        )
+        return DEFAULT_SESSION_BUDGET_CENTS
 
 
 def build_budget(cents: int) -> dict[str, Any]:

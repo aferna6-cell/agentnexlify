@@ -46,6 +46,7 @@ from backend.services.managed_agents import (
     ManagedAgentsClient,
     ManagedAgentsError,
     SessionTerminalState,
+    default_session_budget_cents,
 )
 from backend.services.managed_agents_registry import (
     ManagedAgentNotConfigured,
@@ -150,6 +151,8 @@ def _qualify_lead_blocking(
         environment_id=environment_id,
         title=f"lead-qualify {tenant_id}",
         metadata={"tenant_id": tenant_id, "flow": "lead_qualify"},
+        # Non-interactive path — cap the spend (no customer is waiting).
+        budget_cents=default_session_budget_cents(),
     )
     session_id = session["id"]
     logger.info("managed_agents: created session %s for tenant %s", session_id, tenant_id)

@@ -38,6 +38,7 @@ from backend.services.managed_agents import (
     ManagedAgentsClient,
     ManagedAgentsError,
     SessionTerminalState,
+    default_session_budget_cents,
 )
 from backend.services.managed_agents_registry import (
     ManagedAgentNotConfigured,
@@ -197,6 +198,8 @@ def _run_qualifier_session(
             "lead_id": lead_id,
             "flow": "lead_qualification",
         },
+        # Background task — nobody is waiting on it, so cap the spend.
+        budget_cents=default_session_budget_cents(),
     )
     session_id = session["id"]
     logger.info(

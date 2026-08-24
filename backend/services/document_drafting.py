@@ -49,6 +49,7 @@ from backend.services.managed_agents import (
     ManagedAgentsClient,
     ManagedAgentsError,
     SessionTerminalState,
+    default_session_budget_cents,
 )
 from backend.services.managed_agents_registry import (
     ManagedAgentNotConfigured,
@@ -235,6 +236,8 @@ def _run_drafter_session(
             "kind": kind,
             "flow": "document_drafting",
         },
+        # Non-interactive path — cap the spend (no customer is waiting).
+        budget_cents=default_session_budget_cents(),
     )
     session_id = session["id"]
     logger.info(
