@@ -460,10 +460,26 @@ def main() -> int:
     )
 
     issue_loop = read_text(".github/workflows/autopilot-issue-loop.yml")
-    # Assert the loop is scheduled, not a fixed cadence. The cron was throttled
-    # 2026-06-18 (*/15 -> hourly) to conserve GitHub Actions minutes; the
-    # cadence is a tunable, the schedule itself is the invariant.
-    check("cron:" in issue_loop, "autopilot issue loop is scheduled (cron)", failures)
+    # Assert the loop is scheduled, not a fixed cadence or a fixed substrate.
+    # The cron was throttled 2026-06-18 (*/15 -> hourly) to conserve Actions
+    # minutes; the cadence is a tunable, the schedule itself is the invariant.
+    #
+    # 2026-08-24: the substrate is a tunable too. GitHub Actions have been dark
+    # since 2026-07-20 (#500) and a Claude Code Routine now owns this loop, so
+    # the `schedule:` block was removed from the workflow. Requiring a literal
+    # `cron:` here would have forced the schedule back onto a dead substrate —
+    # and, worse, into a race with the Routine that replaced it.
+    #
+    # The invariant that actually matters is unchanged: the loop must not be
+    # silently unscheduled. So accept EITHER an Actions cron OR an explicit
+    # declaration naming the Routine that owns it. Deleting both still fails.
+    scheduled_by_actions = "cron:" in issue_loop
+    scheduled_by_routine = "Owner: Routine" in issue_loop
+    check(
+        scheduled_by_actions or scheduled_by_routine,
+        "autopilot issue loop is scheduled (Actions cron or a named Routine owner)",
+        failures,
+    )
     check("workflow_dispatch" in issue_loop, "autopilot issue loop can run manually", failures)
     check("classify_and_dispatch.py" in issue_loop, "issue loop dispatch script is wired", failures)
     check("AUTOPILOT_MAX_TOKENS_PER_RUN" in issue_loop, "issue loop token budget is wired", failures)

@@ -6,11 +6,24 @@ name: KB Auto-Populate
 # Subconscious run 82 winner (2026-07-07-pm) — autonomous_executable: true.
 
 on:
-  schedule:
-    # cron disabled 2026-07-20: ANTHROPIC_API_KEY missing in Actions (#403) so
-    # every run failed AND burned minutes (#500). Restore "0 6,18 * * *" after
-    # setting the secret.
-    - cron: "0 6 31 2 *" # never fires (Feb 31)
+  # NO `schedule:` — this job is owned by a Claude Code Routine, not by Actions.
+  #
+  # History: the cron was parked 2026-07-20 on "0 6 31 2 *" (Feb 31) because
+  # ANTHROPIC_API_KEY was missing in Actions (#403) and every run burned
+  # minutes (#500). That comment used to say 'Restore "0 6,18 * * *" after
+  # setting the secret'. DO NOT DO THAT. On 2026-07-23 — three days later — a
+  # Routine took this job over on exactly that schedule, so following the old
+  # instruction would run two agents compiling the KB and pushing to main on
+  # the same cron.
+  #
+  # A parked cron is also not inert: GitHub kept dispatching this workflow on
+  # `event: schedule` while it sat on Feb 31 (observed 2026-08-24, ~every
+  # 25-30 min, each failing in 1-3s). Deleting the `schedule:` block is what
+  # actually stops that; an impossible date is not enough.
+  #
+  # Owner: Routine "KB Auto-Populate (CCR — replaces Actions kb-autopopulate)",
+  # cron 0 6,18 * * *. To change the schedule, change the Routine.
+  # Rationale: planning/decisions/2026-08-24-actions-replacement-substrate.md
   workflow_dispatch: {}
 
 permissions:
