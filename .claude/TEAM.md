@@ -14,7 +14,7 @@ Tailored agent team built for the AgentNexLiFy stack: FastAPI + React/Vite + Sup
 
 Plus project-scoped: Supabase, Railway, Vercel, Gmail, Google Calendar.
 
-## Agent Team (16 agents)
+## Agent Team (16 core agents; 60 total in `.claude/agents/`)
 
 ### Tier 1 — Always Engaged
 | Agent | Model | When to Use |
@@ -29,7 +29,7 @@ Plus project-scoped: Supabase, Railway, Vercel, Gmail, Google Calendar.
 |-------|-------|-------------|
 | `widget-specialist` | sonnet | Chat widget behavior, CORS, embed script, cross-origin |
 | `code-reviewer` | sonnet | Post-implementation quality check |
-| `security-reviewer` | opus | Auth, payments, webhooks, tenant isolation |
+| `security-reviewer` | sonnet | Auth, payments, webhooks, tenant isolation |
 | `devops` | sonnet | Deploy prep, Railway/Vercel config, CI/CD |
 
 ### Tier 3 — Architecture
@@ -43,8 +43,8 @@ Plus project-scoped: Supabase, Railway, Vercel, Gmail, Google Calendar.
 | Agent | Model | When to Use |
 |-------|-------|-------------|
 | `gan-planner` | opus | Expand feature spec into full product plan |
-| `gan-generator` | sonnet | Implement features per spec |
-| `gan-evaluator` | sonnet | Test live app via Playwright, score against rubric |
+| `gan-generator` | opus | Implement features per spec |
+| `gan-evaluator` | opus | Test live app via Playwright, score against rubric |
 
 ### Tier 5 — Cross-Cutting
 | Agent | Model | When to Use |

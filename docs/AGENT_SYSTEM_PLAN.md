@@ -146,6 +146,14 @@ and uses `scripts/teamctl.py`; `.claude/agent-comms/` is same-session scratch on
 - `gan-generator`
 - `gan-evaluator`
 
+Runnable as of 2026-08-24 via `/gan` (`.claude/commands/gan.md`), which scaffolds
+`gan-harness/` with `scripts/gan/init_harness.py` and sequences planner →
+generator ↔ evaluator to the rubric's 7.0 PASS threshold. Before that the three
+agents had no driver and the loop had never been run. Still experimental and
+still not the default path — it is a greenfield UI-quality harness and it is
+expensive (three Opus agents plus browser automation, up to 5 rounds).
+`coordinator` remains the canonical orchestrator.
+
 ## Model Routing Policy
 
 Detailed routing policy now lives in:

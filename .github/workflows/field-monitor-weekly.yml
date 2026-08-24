@@ -7,6 +7,19 @@ name: Field Monitor Weekly Digest
 #
 # Manual trigger is also available via workflow_dispatch for ad-hoc
 # mid-week runs or backfills.
+#
+# WHY THIS STILL USES A RUNNER (reviewed 2026-08-24)
+# A Managed Agents *scheduled deployment* would run this agent on Anthropic's
+# infrastructure with no runner at all, and support for that now exists
+# (backend/services/managed_agents_deployments.py,
+# scripts/managed_agents/provision_deployments.py). This job cannot migrate
+# yet: the runner's second responsibility is `git commit` + `git push` of the
+# digest into knowledge-base/raw/ so the kb-compile pipeline can promote it,
+# and a deployment session runs in Anthropic's sandbox and cannot push to git.
+# Moving the schedule without first solving output persistence would silently
+# stop the digest from ever landing. See the "Which jobs can actually migrate"
+# section in scripts/managed_agents/provision_deployments.py for the two
+# viable designs.
 
 on:
   schedule:
@@ -50,8 +63,16 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          # Hard per-session spend ceiling (cents). This job runs unattended on
+          # a schedule; without a cap a runaway tool loop bills unbounded.
+          # Consumed by scripts/managed_agents/_smoke_common.py.
+          MANAGED_AGENTS_SESSION_BUDGET_CENTS: "300"
+          # Untrusted workflow_dispatch input reaches the shell through the
+          # environment, never through ${{ }} interpolation inside `run:`.
+          # Interpolating it directly is a command-injection sink.
+          TOPIC_INPUT: ${{ github.event.inputs.topic }}
         run: |
-          TOPIC="${{ github.event.inputs.topic }}"
+          TOPIC="$TOPIC_INPUT"
           if [ -z "$TOPIC" ]; then
             TOPIC="AI, automation, and SMB SaaS relevant to service-business automation"
           fi

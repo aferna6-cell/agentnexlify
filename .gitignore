@@ -83,3 +83,8 @@ pytest-of-*/
 
 # Autonomous engineering loop state (run checkpoints + step ledger)
 .autonomy/
+
+# GAN harness working state (spec, rubric, generator notes, evaluator feedback).
+# Per-run scratch, same as .autonomy/ — scaffolded by scripts/gan/init_harness.py
+# and driven by /gan. Commit the artifact the loop produces, not the loop's state.
+gan-harness/

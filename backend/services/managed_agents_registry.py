@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 from backend.config import settings
 
-DEFAULT_OPUS_ADVISOR_MODEL = "claude-opus-4-7"
+DEFAULT_OPUS_ADVISOR_MODEL = "claude-opus-4-8"
 
 
 class ManagedAgentNotConfigured(RuntimeError):

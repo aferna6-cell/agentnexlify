@@ -1,6 +1,7 @@
 ---
 name: devops
 description: "DevOps and infrastructure specialist. Delegates to this agent for deployment preparation, CI/CD configuration, GitHub Actions, environment variable management, Vercel/Railway configuration, monitoring, and pre-deploy checks."
+model: sonnet
 tools:
   - Read
   - Write

@@ -3,10 +3,12 @@ paths:
   - "**/*"
 ---
 
-# Advisor Consult — Opus 4.7 Intelligence Boost on Doubt
+# Advisor Consult — Opus Intelligence Boost on Doubt
 
 ## Rule
-When running as **Sonnet 4.6** or **Haiku 4.5** and confidence drops below **80%** on a non-trivial decision, invoke the `opus-advisor` agent for a short written brief before acting. Near-Opus intelligence at ~1.3x Sonnet cost, not 5x.
+When running as **Sonnet** or **Haiku** and confidence drops below **80%** on a non-trivial decision, invoke the `opus-advisor` agent for a short written brief before acting. Near-Opus intelligence at ~1.3x Sonnet cost, not 5x.
+
+Model IDs come from `.claude/rules/model-routing.md`, never from this file. The runtime advisor default is `DEFAULT_ADVISOR_MODEL` in `backend/services/advisor_executor.py`.
 
 ## Trigger conditions (any one → consult)
 1. **Ambiguous decomposition** — request maps to 2+ valid architectures and user hasn't chosen
@@ -44,7 +46,7 @@ Brief saved to `.claude/agent-comms/advisor-brief-{timestamp}.md`. Sonnet execut
 - Pure Opus baseline (no advisor): ~$2-5 per task
 - **Savings: 65-80% vs pure Opus**
 
-Advisor's `max_tokens` must stay tight (≤1200) or cost model breaks. New tokenizer on 4.7 is up to 1.35x prior count — old 800 budget became 600 effective, bumped to 1200 for headroom.
+Advisor's `max_tokens` must stay tight (≤1200) or cost model breaks. The 4.7+ tokenizer is up to 1.35x the prior count — the old 800 budget became ~600 effective. Code now matches this rule: `advisor_executor.py` `DEFAULT_ADVISOR_MAX_TOKENS = 1200` (was 800 until 2026-08-24; the rule and the code had drifted apart).
 
 ## Confidence signaling (when to escalate)
 | Confidence | Action |
@@ -60,8 +62,9 @@ Advisor's `max_tokens` must stay tight (≤1200) or cost model breaks. New token
 - Executor failure bubbles up normally.
 - Pattern already enforced in `backend/services/advisor_executor.py:297-312`.
 
-## Opus 4.7 specifics (critical)
-- Model ID: `claude-opus-4-7`
+## Reasoning-model specifics (critical)
+These apply to every Opus since 4.7, including the current `claude-opus-4-8` default.
+- Model ID: see `.claude/rules/model-routing.md` (canonical)
 - **Do not pass** `temperature`, `top_p`, `top_k` — returns 400 error
 - **Do not prefill assistant messages** — returns 400 error
 - Extended thinking `thinking: {type: enabled, budget_tokens}` removed → use `thinking: {type: adaptive}` + `output_config.effort` when SDK supports it

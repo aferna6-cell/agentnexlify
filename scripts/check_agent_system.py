@@ -6,6 +6,7 @@ the repo brain, Everything Claude Code agents, Claude Code pin, and issue-to-PR 
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -101,6 +102,42 @@ def check(condition: bool, label: str, failures: list[str]) -> None:
 
 def file_exists(path: str) -> bool:
     return (ROOT / path).is_file()
+
+
+def count_agents() -> int:
+    return len(list((ROOT / ".claude" / "agents").glob("*.md")))
+
+
+def count_skills() -> int:
+    """Count top-level entries in .claude/skills/.
+
+    A skill is either a real directory or a symlink into .agents/skills/.
+    Symlinks are counted without resolving them so the total stays stable when
+    a link target has not been materialized yet.
+    """
+    return sum(
+        1
+        for path in (ROOT / ".claude" / "skills").iterdir()
+        if path.is_symlink() or path.is_dir()
+    )
+
+
+def count_commands() -> int:
+    return len(list((ROOT / ".claude" / "commands").glob("*.md")))
+
+
+def count_hooks(settings: dict) -> int:
+    return sum(
+        len(block.get("hooks", []))
+        for blocks in settings.get("hooks", {}).values()
+        for block in blocks
+    )
+
+
+def documented_count(text: str, pattern: str) -> int:
+    """First capture group of `pattern` as an int, or -1 when absent."""
+    match = re.search(pattern, text)
+    return int(match.group(1)) if match else -1
 
 
 def main() -> int:
@@ -357,6 +394,39 @@ def main() -> int:
     settings_text = read_text(".claude/settings.json")
     check("WebFetch|WebSearch" in settings_text, "WebFetch/WebSearch block is configured", failures)
     check("git push" in settings_text, "pre-push review hook is configured", failures)
+
+    # Documented inventory counts drift silently and then mislead every session
+    # that reads them. Pin each asserted number to the real file count.
+    real_agents = count_agents()
+    real_skills = count_skills()
+    real_commands = count_commands()
+    real_hooks = count_hooks(settings)
+    team_md = read_text(".claude/TEAM.md")
+    execution_layers = read_text(".claude/rules/claude-execution-layers.md")
+
+    check(
+        documented_count(claude_md, r"(\d+) agents in `\.claude/agents/`") == real_agents,
+        f"CLAUDE.md agent count matches .claude/agents/ ({real_agents})",
+        failures,
+    )
+    check(
+        documented_count(team_md, r"(\d+) total in `\.claude/agents/`") == real_agents,
+        f".claude/TEAM.md agent count matches .claude/agents/ ({real_agents})",
+        failures,
+    )
+    layer_row = re.search(
+        r"(\d+) skills, (\d+) commands, (\d+) hooks, (\d+) agents",
+        execution_layers,
+    )
+    check(
+        layer_row is not None
+        and [int(group) for group in layer_row.groups()]
+        == [real_skills, real_commands, real_hooks, real_agents],
+        "claude-execution-layers.md workflow counts match reality "
+        f"({real_skills} skills, {real_commands} commands, "
+        f"{real_hooks} hooks, {real_agents} agents)",
+        failures,
+    )
 
     agent_config_security = read_text(".github/workflows/agent-config-security.yml")
     check("npm run agent-config:scan" in agent_config_security, "AgentShield workflow runs repo script", failures)

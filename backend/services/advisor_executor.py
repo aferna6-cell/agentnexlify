@@ -58,12 +58,15 @@ from backend.services.managed_agents_registry import ManagedAgentHandle
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_ADVISOR_MODEL = "claude-opus-4-7"
-DEFAULT_ADVISOR_MAX_TOKENS = 800
+DEFAULT_ADVISOR_MODEL = "claude-opus-4-8"
+# 1200, not 800: the Opus 4.7+ tokenizer maps the same text to up to 1.35x the
+# token count of 4.6, so the original 800 budget became ~600 effective and
+# truncated briefs. See .claude/rules/advisor-consult.md "Cost model".
+DEFAULT_ADVISOR_MAX_TOKENS = 1200
 DEFAULT_ADVISOR_TEMPERATURE: float | None = None
 DEFAULT_ADVISOR_OUTPUT_CONFIG = {"effort": "xhigh"}
 
-_ADVISOR_SYSTEM_PROMPT = """You are an Opus 4.7 Planning Advisor in the Advisor-Executor pattern.
+_ADVISOR_SYSTEM_PROMPT = """You are the Planning Advisor in the Advisor-Executor pattern.
 
 Your role is planning. Produce a short written brief that a Sonnet or Haiku
 executor agent will follow to perform the work.
