@@ -5,11 +5,14 @@ API over raw HTTP via httpx rather than the anthropic SDK.
 
 NOTE (2026-08-24): the original reason given here was that the pinned SDK
 was 0.42.0 and predated the `client.beta.agents` bindings. That is no longer
-true — `backend/requirements.txt` pins `anthropic>=0.95.0,<1`, which does
-expose the beta agent bindings. The wrapper is kept because it is working,
-tested (`backend/tests/test_managed_agents.py`), and decoupled from the SDK's
-beta surface, NOT because the SDK is incapable. Swapping to the SDK is a
-viable cleanup whenever someone wants it; callers would not change.
+true. VERIFIED against `anthropic` 0.125.0 (inside the current
+`backend/requirements.txt` pin of `>=0.95.0,<1`): `client.beta.agents`,
+`.sessions`, `.deployments`, `.vaults`, and `.memory_stores` all exist.
+
+The wrapper is kept because it is working, tested
+(`backend/tests/test_managed_agents.py`), and decoupled from the SDK's beta
+surface — NOT because the SDK is incapable. Swapping to the SDK is a viable
+cleanup whenever someone wants it; callers would not change.
 
 API reference:
 - Overview: https://platform.claude.com/docs/en/managed-agents/overview

@@ -6,12 +6,22 @@ fixtures — uses the existing _stub_supabase_singletons autouse.
 NOTE ON THE REWRITTEN HAPPY PATH (2026-08-24): the previous version of
 `test_happy_path_returns_booked` asserted that the agent replying
 `"apt-uuid-1234"` produced `status="booked"` with that string as the
-appointment_id. That test encoded a bug, not a contract: `AppointmentBooker.run`
-documents `booked` as "agent confirmed AND an appointment row exists", and the
-code never checked the second half. Any prose the agent emitted became a
-customer-facing "Appointment confirmed. Reference: ..." with no appointment
-behind it. The happy path now uses a real UUID and mocks the row lookup; the
-cases the old test would have passed are pinned below as needs_human.
+appointment_id. That test encoded a bug, not a contract.
+
+The evidence, so nobody has to take this on faith (`user-rules.md` Rule 10
+requires it before an existing assertion is changed):
+
+  1. `migrations/005_appointments.sql:31` declares
+     `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`. `"apt-uuid-1234"` is not
+     a UUID, so it could never have been a real appointment id in that table.
+     The old test asserted an outcome that was impossible in production.
+  2. `AppointmentBooker.run` documents `booked` as "agent confirmed AND an
+     appointment row exists". The code never checked the second half.
+
+Together: any prose the agent emitted became a customer-facing "Appointment
+confirmed. Reference: ..." with no appointment behind it. The happy path now
+uses a real UUID and mocks the row lookup; the cases the old test would have
+passed are pinned below as needs_human.
 """
 
 from unittest.mock import MagicMock, patch

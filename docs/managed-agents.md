@@ -614,11 +614,12 @@ client-patterns handout; not a file in this repo.)
 **Need to upgrade the Anthropic SDK**
 Historically our client used raw HTTP via httpx to avoid upgrading a pinned
 `anthropic==0.42.0` SDK that predated the beta agent bindings. **That pin is
-long gone** — `backend/requirements.txt` now pins `anthropic>=0.95.0,<1`,
-which does expose `client.beta.agents.*`. The httpx wrapper is kept because
-it works and is tested, not because the SDK can't do it. If you want to swap
-it, the wrapper interface was designed to be swappable — every method maps
-1:1 to an SDK call.
+long gone** — `backend/requirements.txt` now pins `anthropic>=0.95.0,<1`.
+Verified 2026-08-24 against `anthropic` 0.125.0: `client.beta.agents`,
+`.sessions`, `.deployments`, `.vaults` and `.memory_stores` all exist. The
+httpx wrapper is kept because it works and is tested, not because the SDK
+can't do it. If you want to swap it, the wrapper interface was designed to be
+swappable — every method maps 1:1 to an SDK call.
 
 ---
 
