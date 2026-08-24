@@ -1,0 +1,39 @@
+{
+  "run": "2026-08-24-pm",
+  "run_number": 110,
+  "timestamp": "2026-08-24T21:00:00Z",
+  "winner": "Add major-version safety gate to Step 9J (nightly-commit-review SKILL.md)",
+  "category": "code_health",
+  "effort": "XS",
+  "autonomous_executable": true,
+  "channel": "nightly_skillmd",
+  "urgency": "CRITICAL",
+  "file_edited": ".claude/skills/nightly-commit-review/SKILL.md",
+  "mandate_check_run_109": {
+    "step_9j_in_skill_md": "PASS — confirmed lines 392-411",
+    "step_9j_major_version_gate": "FAIL — absent despite PR #674 claiming it was included",
+    "step_9j_fired_in_nightly": "NOT YET — first execution 2026-08-25 02:37 AM",
+    "gh_669_middleware_pr": "FAIL — PR #653 open 12d, not merged",
+    "gh_403_kb_freshness": "FAIL — 32+ days stale, ANTHROPIC_API_KEY missing",
+    "gh_399_resolved": "FAIL — Day 46+, AUTOPILOT_GH_TOKEN expired",
+    "step_9k_condition": "PASS — #575 (32d) + #626 (22d) open; run-110 branch adds 1 more"
+  },
+  "governance_corrections": {
+    "memory_line_108_false_claim": "Run 109 second memory entry stated 'major-version safety gate from prior iterations confirmed' — INCORRECT. Direct SKILL.md read proves gate absent.",
+    "pr_674_description_vs_code": "PR #674 body described major-version gate but edit never landed in SKILL.md. PR body was aspirational/copy-pasted from prior winning-concept.md."
+  },
+  "run_111_mandate": [
+    "Verify Step 9J fired in nightly-commit-review-2026-08-25 log",
+    "Confirm react 18→19 PRs (#586/#591/#593) logged as major-version-bump SKIP",
+    "Confirm stripe v11→v15 (#598) logged as major-version-bump SKIP",
+    "Count: PRs checked, merged, skipped (CI/review/label), skipped (major-version)",
+    "GH #669: block_demo_role middleware PR (#653) merged?",
+    "GH #399: AUTOPILOT_GH_TOKEN still expired?",
+    "Step 9K if ≥3 open subconscious PRs",
+    "Step 9L if ops/routines/logs/ has 2+ days of baseline data"
+  ],
+  "parking_lot": [
+    "Step 9K: stale subconscious PR report (run 111 candidate)",
+    "Step 9L: replacement substrate health monitor (run 112+ — needs baseline)"
+  ]
+}

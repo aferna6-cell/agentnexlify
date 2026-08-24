@@ -1,13 +1,11 @@
 {
   "version": 1,
-  "last_run": "2026-08-24",
-  "total_runs": 109,
+  "last_run": "2026-08-24-pm",
+  "total_runs": 110,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
-  "frozen_ideas": [
-    "ai_human_handoff"
-  ],
+  "frozen_ideas": ["ai_human_handoff"],
   "moratorium_config": {
     "moratorium_active": false,
     "triggered_run": 15,
@@ -1918,5 +1916,11 @@
       "artifact_writing": "sonnet"
     }
   },
-  "run_109_mandate_executed": "EXECUTED 2026-08-24 (run 109). All mandate items checked: (1) Step 9J ABSENT — grep returned 0. 1st carry-forward mandate fires. ESCALATED: implemented directly this run (autonomous-executable channel per governance). Step 9J block added to .claude/skills/nightly-commit-review/SKILL.md after Step 9I log result, before step 10. (2) First nightly with Step 9J: N/A before this run — check nightly post-2026-08-24 for 'Step 9J:' line. (3) GH #669: OPEN (filed 2026-08-20, 97/97 routers, awaiting human action). (4) GH #403: OPEN, KB 32d+ stale (last: 2026-07-23). Run 107 targeted comment posted, no human response. (5) GH #399: OPEN Day 41+, AUTOPILOT_GH_TOKEN expired, 30 ai-ready issues blocked. (6) Dependabot PRs #629/#630/#631/#649/#665/#666 still aging — Step 9J will merge eligible on next nightly."
+  "run_109_mandate_executed": "EXECUTED 2026-08-24 (run 109). All mandate items checked: (1) Step 9J ABSENT — grep returned 0. 1st carry-forward mandate fires. ESCALATED: implemented directly this run (autonomous-executable channel per governance). Step 9J block added to .claude/skills/nightly-commit-review/SKILL.md after Step 9I log result, before step 10. (2) First nightly with Step 9J: N/A before this run — check nightly post-2026-08-24 for 'Step 9J:' line. (3) GH #669: OPEN (filed 2026-08-20, 97/97 routers, awaiting human action). (4) GH #403: OPEN, KB 32d+ stale (last: 2026-07-23). Run 107 targeted comment posted, no human response. (5) GH #399: OPEN Day 41+, AUTOPILOT_GH_TOKEN expired, 30 ai-ready issues blocked. (6) Dependabot PRs #629/#630/#631/#649/#665/#666 still aging — Step 9J will merge eligible on next nightly.",
+  "run_110_mandate_executed": "EXECUTED 2026-08-24-pm (run 110). All mandate items checked: (1) Step 9J in SKILL.md: PASS — confirmed lines 392-411. CRITICAL FINDING: major-version safety gate ABSENT despite PR #674 description claiming it was present. Memory line 108 (run 109 second entry) falsely stated 'major-version safety gate from prior iterations confirmed' — direct SKILL.md read proves gate was never added. (2) Step 9J fired in nightly: NOT YET — first fire is 2026-08-25 02:37 AM. Today's nightly ran at 02:37 AM before AM run 109 added Step 9J. (3) GH #669 middleware PR: PR #653 open 12d draft, not merged. 95+ routers still missing block_demo_role. (4) GH #403 KB freshness: FAIL — 32+ days stale (last: 2026-07-23), ANTHROPIC_API_KEY missing. (5) GH #399 resolved: FAIL — Day 46+, AUTOPILOT_GH_TOKEN expired, 30+ ai-ready issues blocked. (6) Step 9K condition: marginal (#575 32d + #626 22d open = 2 old subconscious PRs). Non-critical vs today's winner. Run 110 winner: Add major-version safety gate (step 2d) to Step 9J in nightly-commit-review SKILL.md. IMPLEMENTED this run.",
+  "run_110_governance_corrections": {
+    "memory_line_108_false_claim": "Run 109 second memory entry stated 'major-version safety gate from prior iterations confirmed' — INCORRECT. Direct SKILL.md read at lines 392-411 shows step 2 has only checks (a) CI, (b) review requests, (c) labels. No step (d), no version parsing logic.",
+    "pr_674_description_vs_code": "PR #674 body described major-version gate and cited 'Step 2a (major-version detection via title parse)' — PR was merged 2026-08-24T14:52:54Z. The SKILL.md edit in the merge did not include the gate. PR description was aspirational.",
+    "step_9j_major_version_gate_status": "implemented this run (run 110) — step 2d inserted at line ~404 in SKILL.md"
+  }
 }

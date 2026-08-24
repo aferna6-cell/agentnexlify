@@ -401,6 +401,15 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
           If non-empty: log "Step 9J: PR #{N} — has review request — skip" and skip.
        c. Blocking labels: from PR read, check `labels` array.
           If labels contain "do-not-merge" or "hold": log "Step 9J: PR #{N} — blocked label — skip" and skip.
+       d. Major-version bump: from PR `title`, extract version strings.
+          Dependabot titles follow: "Bump {pkg} from {old} to {new}" or "build(deps): bump {pkg} from {old} to {new}".
+          If title does not contain both " from " and " to ":
+          log "Step 9J: PR #{N} — title unparseable — SKIP (manual review)" and skip.
+          Otherwise: old_ver = segment between " from " and " to ". new_ver = segment after last " to ".
+          old_major = integer part before first dot in old_ver (or whole token if no dot).
+          new_major = integer part before first dot in new_ver (or whole token if no dot).
+          If int(new_major) > int(old_major):
+          log "Step 9J: PR #{N} — major-version bump ({old_ver}→{new_ver}) — SKIP (human review required)" and skip.
     3. **Merge eligible PRs:**
        For each PR passing all checks:
        `mcp__github__merge_pull_request` with pull_number={N}, merge_method="squash",
@@ -408,7 +417,7 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
        On success: log "Step 9J: merged Dependabot PR #{N}"
        On failure: log "Step 9J: merge failed PR #{N} — {error}" and continue to next PR.
     4. **Log result:**
-       Add to nightly report: "Step 9J: {N} Dependabot PRs checked, {M} merged, {K} skipped (CI/review/label)"
+       Add to nightly report: "Step 9J: {N} Dependabot PRs checked, {M} merged, {K} skipped (CI/review/label/major-version/unparseable)"
 10. Commit report: `docs(nightly): review YYYY-MM-DD [auto-nightly]`
 11. Push to main
 12. If any guardrail tripped (forbidden path, >5 files, >50 LOC, test-check failed) — abort fixes, file issue only, still write report
