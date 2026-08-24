@@ -1,0 +1,36 @@
+{
+  "run": "2026-08-22",
+  "run_number": 109,
+  "winner": "Step 9J: Add Dependabot auto-merge to nightly-commit-review SKILL.md (1st carry-forward, AUTONOMOUS-EXECUTABLE)",
+  "category": "operational",
+  "effort": "S",
+  "confidence": "HIGH",
+  "action": "Inserted Step 9J block into .claude/skills/nightly-commit-review/SKILL.md after Step 9I block (before step 10). Block: list open Dependabot PRs via mcp__github__list_pull_requests, check mergeable_state=clean + no review requests + no blocking labels per PR, merge eligible PRs via squash, log summary count.",
+  "evidence": "Step 9J ABSENT from SKILL.md (grep=0, 1st carry-forward from run 108). Governance: 'Autonomous-executable if not approved by run 109'. nightly-2026-08-21 + nightly-2026-08-22 both flagged it as unexecuted. Morning digests 2026-08-11/12/17/18 flagged same 4-6 Dependabot PRs safe to merge — zero action across 4 weeks. 6 PRs aging: #629/#630/#631/#649/#665/#666. Channel proven by Steps 9C/9E/9F/9G/9I (all implemented via same path).",
+  "mandate_status": {
+    "step_9j_in_skill_md": "FAIL pre-run → IMPLEMENTED this run (grep returns 7 post-edit)",
+    "first_nightly_with_step_9j": "Check nightly-2026-08-23 for 'Step 9J:' line and merge count",
+    "gh_669_human_ack": "NOT CHECKED — nightly logs show it filed 2026-08-20, no PR yet",
+    "gh_403_kb_freshness": "FAIL — 30d stale (last: 2026-07-23). GH Actions blocked on ANTHROPIC_API_KEY. Two targeted comments (runs 107/108) had zero effect in 72h+",
+    "gh_399_resolved": "FAIL — Day 41+, AUTOPILOT_GH_TOKEN still expired, 30 ai-ready issues blocked",
+    "step_9k_candidate": "Confirmed — run_109_mandate named it. 4-5 draft subconscious PRs aging. Run 110 candidate."
+  },
+  "implemented_this_run": true,
+  "bonus_action": null,
+  "parking_lot": [
+    "Step 9K: stale autonomy PR closer (run 110 candidate — named in mandate)",
+    "KB autopopulate direct-compile fallback (needs ANTHROPIC_API_KEY env var verification first)",
+    "GH #399 Step 9L escalation (deferred — 4+ prior comments zero effect)"
+  ],
+  "killed": [
+    "GH #669 middleware spec comment — one-off, not structural",
+    "Step 9L age-pressure for GH #399 — marginal value, risk of noise"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-08-22/winning-concept.md",
+    "subconscious/runs/2026-08-22/improvement-backlog.md",
+    "subconscious/runs/2026-08-22/ideas/ideas.md",
+    "subconscious/runs/2026-08-22/debate/debate-log.md",
+    "subconscious/runs/2026-08-22/run-summary.json"
+  ]
+}
