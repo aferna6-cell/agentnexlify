@@ -15,8 +15,15 @@ _warned_placeholder_prices = False
 _PLACEHOLDER_PRICE_IDS = {
     "price_chatbot_monthly",
     "price_agent_os_monthly",
+    "price_chatbot_annual",
+    "price_agent_os_annual",
     "price_usage_pack",
 }
+
+# Billing intervals a checkout may request. Annual is prepay with 2 months
+# free (chatbot $199.90/yr, agent_os $999.90/yr) and is only purchasable once
+# the STRIPE_PRICE_*_ANNUAL env vars hold real Stripe price IDs.
+BILLING_INTERVALS: tuple[str, ...] = ("monthly", "annual")
 
 
 def _price_id(env_value: str, fallback: str) -> str:
@@ -33,19 +40,37 @@ def _price_id(env_value: str, fallback: str) -> str:
 #   agent_os  — $99.99/mo  (full platform)
 # "free" is the internal lapsed/no-active-subscription state only; never sold.
 PLAN_PRICES: dict[str, dict[str, str]] = {
-    "chatbot": {"monthly": _price_id(settings.stripe_price_chatbot_monthly, "price_chatbot_monthly")},
-    "agent_os": {"monthly": _price_id(settings.stripe_price_agent_os_monthly, "price_agent_os_monthly")},
+    "chatbot": {
+        "monthly": _price_id(settings.stripe_price_chatbot_monthly, "price_chatbot_monthly"),
+        "annual": _price_id(settings.stripe_price_chatbot_annual, "price_chatbot_annual"),
+    },
+    "agent_os": {
+        "monthly": _price_id(settings.stripe_price_agent_os_monthly, "price_agent_os_monthly"),
+        "annual": _price_id(settings.stripe_price_agent_os_annual, "price_agent_os_annual"),
+    },
 }
 
 # One-time usage-pack price (overage top-up)
 USAGE_PACK_PRICE_ID: str = _price_id(settings.stripe_price_usage_pack, "price_usage_pack")
 
 
-def ensure_plan_prices_configured(plan: str) -> dict[str, str]:
-    """Return Stripe price IDs for a plan, or raise if placeholders remain."""
+def ensure_plan_prices_configured(plan: str, interval: str = "monthly") -> dict[str, str]:
+    """Return Stripe price IDs for a plan, or raise if placeholders remain.
+
+    Only the requested billing ``interval`` (plus any one-time ``setup`` price
+    the plan carries) is validated — an unconfigured annual price must not
+    block monthly checkout, and vice versa.
+    """
+    if interval not in BILLING_INTERVALS:
+        raise RuntimeError(
+            f"Unknown billing interval '{interval}'. Must be one of: "
+            + ", ".join(BILLING_INTERVALS)
+        )
     prices = PLAN_PRICES[plan]
+    required_kinds = [interval] + (["setup"] if "setup" in prices else [])
+
     placeholder_kinds = [
-        kind for kind, price in prices.items() if price in _PLACEHOLDER_PRICE_IDS
+        kind for kind in required_kinds if prices.get(kind) in _PLACEHOLDER_PRICE_IDS
     ]
     if placeholder_kinds:
         raise RuntimeError(
@@ -54,7 +79,9 @@ def ensure_plan_prices_configured(plan: str) -> dict[str, str]:
         )
 
     malformed_kinds = [
-        kind for kind, price in prices.items() if not price.startswith("price_")
+        kind
+        for kind in required_kinds
+        if not (prices.get(kind) or "").startswith("price_")
     ]
     if malformed_kinds:
         raise RuntimeError(

@@ -15,6 +15,8 @@ const PLANS = [
     name: PLAN_DISPLAY.chatbot,
     price: "$19.99",
     period: "/mo",
+    annualPrice: "$199.90",
+    annualPeriod: "/yr",
     description: "AI chat widget + lead capture for your website.",
   },
   {
@@ -22,6 +24,8 @@ const PLANS = [
     name: PLAN_DISPLAY.agent_os,
     price: "$99.99",
     period: "/mo",
+    annualPrice: "$999.90",
+    annualPeriod: "/yr",
     popular: true,
     description: "Full platform - AI staff, marketing, CRM, and everything.",
   },
@@ -99,6 +103,8 @@ export default function BillingPage() {
   const [aiUsage, setAiUsage] = useState(null);
   const [aiUsageLoading, setAiUsageLoading] = useState(true);
   const [buyingUsage, setBuyingUsage] = useState(false);
+  // "monthly" | "annual" (annual is prepay with 2 months free)
+  const [billingInterval, setBillingInterval] = useState("monthly");
 
   const load = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -151,7 +157,7 @@ export default function BillingPage() {
   const handleUpgrade = async (planKey) => {
     setUpgrading(planKey);
     try {
-      const res = await billingCheckout(token, { plan: planKey });
+      const res = await billingCheckout(token, { plan: planKey, billing_interval: billingInterval });
       if (res.checkout_url) {
         window.location.href = res.checkout_url;
       }
@@ -179,10 +185,12 @@ export default function BillingPage() {
   };
 
   const handleChangePlan = async (planKey) => {
-    if (planKey === currentPlan) return;
+    // Same plan + annual selected = a monthly -> annual interval switch, which
+    // the backend supports; same plan + monthly stays a no-op.
+    if (planKey === currentPlan && billingInterval === "monthly") return;
     setChangingPlan(planKey);
     try {
-      await changePlan(token, planKey);
+      await changePlan(token, planKey, billingInterval);
       await load();
     } catch (err) {
       const detail = err.body?.detail || err.message || "";
@@ -527,6 +535,37 @@ export default function BillingPage() {
 
       {/* Plan Comparison Matrix */}
       <h3 style={{ marginTop: "2rem", marginBottom: "1rem" }}>Plan Comparison</h3>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1rem" }}>
+        <div style={{
+          display: "inline-flex",
+          border: "1px solid var(--border)",
+          borderRadius: 8,
+          overflow: "hidden",
+        }}>
+          {["monthly", "annual"].map((interval) => (
+            <button
+              key={interval}
+              onClick={() => setBillingInterval(interval)}
+              style={{
+                padding: "6px 14px",
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                border: "none",
+                cursor: "pointer",
+                background: billingInterval === interval ? "var(--accent, #00bfff)" : "var(--bg-primary)",
+                color: billingInterval === interval ? "#0b1220" : "var(--text-secondary)",
+              }}
+            >
+              {interval === "monthly" ? "Monthly" : "Annual"}
+            </button>
+          ))}
+        </div>
+        {billingInterval === "annual" && (
+          <span style={{ fontSize: "0.8rem", color: "var(--green, #22c55e)", fontWeight: 600 }}>
+            2 months free: pay for 10, get 12
+          </span>
+        )}
+      </div>
       <div style={{ overflowX: "auto", marginBottom: "2rem" }}>
         <table style={{
           width: "100%",
@@ -596,7 +635,9 @@ export default function BillingPage() {
                       color: "var(--text-muted)",
                       marginTop: 2,
                     }}>
-                      {plan.price}<span style={{ fontSize: "0.7rem" }}>{plan.period}</span>
+                      {billingInterval === "annual" && plan.annualPrice
+                        ? <>{plan.annualPrice}<span style={{ fontSize: "0.7rem" }}>{plan.annualPeriod}</span></>
+                        : <>{plan.price}<span style={{ fontSize: "0.7rem" }}>{plan.period}</span></>}
                     </div>
                     {plan.trial && (
                       <div style={{
@@ -678,7 +719,13 @@ export default function BillingPage() {
               {PLANS.map((plan) => {
                 const isCurrent = plan.key === currentPlan;
                 let btn;
-                if (isCurrent) {
+                if (isCurrent && billingInterval === "annual") {
+                  // Current plan but annual selected: offer the interval switch
+                  // (backend prorates monthly -> annual on the same plan).
+                  btn = <button className="btn-primary" onClick={() => handleChangePlan(plan.key)} disabled={changingPlan === plan.key} style={{ width: "100%", fontSize: "0.8rem", padding: "8px 0" }}>
+                    {changingPlan === plan.key ? "Switching..." : "Switch to Annual"}
+                  </button>;
+                } else if (isCurrent) {
                   btn = <button className="btn-secondary" disabled style={{ width: "100%", fontSize: "0.8rem", padding: "8px 0" }}>Current Plan</button>;
                 } else if (plan.key === "free") {
                   btn = currentPlan !== "free"

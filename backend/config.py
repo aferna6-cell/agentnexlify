@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = ""
     stripe_price_chatbot_monthly: str = ""
     stripe_price_agent_os_monthly: str = ""
+    # Annual prepay prices (2 months free: chatbot $199.90/yr, agent_os $999.90/yr).
+    # Empty => annual checkout is unavailable; monthly keeps working unchanged.
+    stripe_price_chatbot_annual: str = ""
+    stripe_price_agent_os_annual: str = ""
     stripe_price_usage_pack: str = ""
     # Metered price for photo-quote overage (>500/mo). Empty => reporting is a
     # no-op (usage is still counted locally). See services/photo_quote_usage.py.

@@ -19,6 +19,7 @@ from backend.services.activity import log_activity
 from backend.services.fraud_guard import guard_checkout_for_fraud
 from backend.services.idempotency import check_and_record, delete_key, record_response
 from backend.services.stripe_service import (
+    BILLING_INTERVALS,
     PLAN_PRICES,
     ensure_plan_prices_configured,
     ensure_stripe_configured,
@@ -142,8 +143,14 @@ async def create_checkout(req: CreateCheckoutRequest, _=Depends(_verify_secret))
             status_code=400,
             detail=f"Invalid plan '{req.plan}'. Must be one of: {', '.join(PLAN_PRICES)}",
         )
+    interval = req.billing_interval or "monthly"
+    if interval not in BILLING_INTERVALS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid billing_interval '{interval}'. Must be one of: {', '.join(BILLING_INTERVALS)}",
+        )
     try:
-        prices = ensure_plan_prices_configured(req.plan)
+        prices = ensure_plan_prices_configured(req.plan, interval)
         ensure_stripe_configured()
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
@@ -160,11 +167,12 @@ async def create_checkout(req: CreateCheckoutRequest, _=Depends(_verify_secret))
         business_name=tenant.get("business_name"),
     )
 
-    # Build line items — plans may have setup fee + monthly
+    # Build line items — plans may have setup fee + the recurring price for
+    # the requested interval (monthly or annual prepay)
     line_items = []
     if "setup" in prices:
         line_items.append({"price": prices["setup"], "quantity": 1})
-    line_items.append({"price": prices["monthly"], "quantity": 1})
+    line_items.append({"price": prices[interval], "quantity": 1})
 
     success_path = (
         f"{settings.frontend_url}/onboarding?step=6&session_id={{CHECKOUT_SESSION_ID}}"
@@ -180,9 +188,9 @@ async def create_checkout(req: CreateCheckoutRequest, _=Depends(_verify_secret))
         "line_items": line_items,
         "success_url": success_path,
         "cancel_url": f"{settings.frontend_url}/billing/cancel",
-        "metadata": {"tenant_id": req.tenant_id, "plan": req.plan},
+        "metadata": {"tenant_id": req.tenant_id, "plan": req.plan, "billing_interval": interval},
         "subscription_data": {
-            "metadata": {"tenant_id": req.tenant_id, "plan": req.plan},
+            "metadata": {"tenant_id": req.tenant_id, "plan": req.plan, "billing_interval": interval},
         },
     }
     # Attach promo code if provided
@@ -305,6 +313,9 @@ AMOUNT_TO_PLAN: dict[int, str] = {
     # Current pricing (2026-06-15 repricing)
     1999: "chatbot",         # $19.99/mo chatbot plan
     9999: "agent_os",        # $99.99/mo agent_os plan
+    # Annual prepay (2026-08-25, 2 months free = 10x monthly)
+    19990: "chatbot",        # $199.90/yr chatbot annual
+    99990: "agent_os",       # $999.90/yr agent_os annual
 }
 
 # Keywords to match in product/price descriptions
