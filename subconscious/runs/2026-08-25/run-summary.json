@@ -1,0 +1,52 @@
+{
+  "run": 110,
+  "date": "2026-08-25",
+  "mandate_source": "run_109_winning-concept.md",
+  "mandate_checks": {
+    "step_9j_first_nightly": "PASS — nightly-2026-08-25 executed Step 9J: 19 PRs found, 0 merged (mergeable_state=unknown — GH Actions dark by design per fix(ci) 4c45e67). Safety gates correct: 6 major-version bumps blocked.",
+    "step_9j_merge_root_cause": "GH Actions dark since 2026-07-20 (GH #500) — not a Step 9J bug",
+    "gh_669_block_demo_role": "OPEN — 97/97 routers still missing. PR #653 (middleware) 12d draft, no merge.",
+    "gh_403_kb_stale": "33 days stale (last: 2026-07-23). Step 9F/9F alerting correctly. GH Actions dark blocks Step 9G.",
+    "gh_399_autopilot_token": "OPEN Day 41+ — AUTOPILOT_GH_TOKEN expired",
+    "subconscious_pr_count": "4 open (threshold >=3 met): #575 (32d), #626 (22d), #653 (12d), #674 (1d)"
+  },
+  "evidence_sources": [
+    "nightly-commit-review-2026-08-25.md",
+    "git log --since='3 days ago'",
+    "docs/dev-knowledge/bug-patterns.md",
+    "subconscious/runs/2026-08-24/winning-concept.md",
+    "subconscious/state/governance.json",
+    "subconscious/state/memory.jsonl (last 5)"
+  ],
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "winner": "Step 9K: Stale subconscious PR closer in nightly-commit-review SKILL.md",
+  "winner_category": "workflow",
+  "winner_confidence": "HIGH",
+  "winner_effort": "S",
+  "winner_autonomous_executable": true,
+  "debate_verdicts": {
+    "idea_4_block_demo_role_middleware": "WEAKENED — PR #653 already encodes this; re-recommending adds no new signal without autonomous execution path",
+    "idea_1_step_9k": "SURVIVES → WINNER",
+    "idea_2_memory_dedup": "SURVIVES → Parking Lot (XS impact, save for lower-leverage run)"
+  },
+  "parking_lot_additions": [
+    "memory.jsonl dedup guard",
+    "Step 9J GH-Actions-dark fallback",
+    "Block_demo_role middleware (re-elevate when GH #399 resolved)"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-08-25/ideas/ideas.md",
+    "subconscious/runs/2026-08-25/debate/debate-log.md",
+    "subconscious/runs/2026-08-25/winning-concept.md",
+    "subconscious/runs/2026-08-25/improvement-backlog.md",
+    "subconscious/runs/2026-08-25/run-summary.json"
+  ],
+  "governance_updates": {
+    "last_run": "2026-08-25",
+    "total_runs": 110,
+    "run_110_mandate_added": true,
+    "run_110_mandate_executed_added": true,
+    "new_active_direction": "Step 9K"
+  }
+}
