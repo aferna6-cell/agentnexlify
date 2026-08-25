@@ -5,8 +5,8 @@ origin: connector
 connector: GitHub
 account: aferna6-cell
 repo: aferna6-cell/agentnexlify
-accessed: 2026-08-17
-last_refresh: 2026-08-17T09:02Z
+accessed: 2026-08-25
+last_refresh: 2026-08-25T06:30Z
 sensitivity: normal
 tags: [source, connector]
 ---
@@ -16,12 +16,13 @@ tags: [source, connector]
 ## What this is
 Live snapshot from `refresh_connectors.py` of `aferna6-cell/agentnexlify`.
 
-## Counts (as of 2026-08-17T09:02Z)
-- Open issues: 55
-- Open PRs: 28
+## Counts (as of 2026-08-25T06:30Z)
+- Open issues: 62
+- Open PRs: 29
 - Recent closed issues sampled: 0
 
 ## Top open issues (non-digest)
+  - #669 [security] Class-wide: 95 routers missing Depends(block_demo_role) on mutating endpoints
   - #663 Agent OS loop health -- 2026-08-17
   - #662 Agent OS loop health -- 2026-08-16
   - #661 security: scoring_config.py missing block_demo_role on mutating endpoints
@@ -36,7 +37,6 @@ Live snapshot from `refresh_connectors.py` of `aferna6-cell/agentnexlify`.
   - #644 Agent OS loop health -- 2026-08-08
   - #643 MEDIUM: appointment_briefs.py missing block_demo_role + plan gate + ai_usage_guard
   - #641 Agent OS loop health -- 2026-08-07
-  - #637 Agent OS loop health -- 2026-08-06
 
 ## Notes
 - Autonomous-dev cadence: morning-digest / nightly-commit-review / subconscious loop.
