@@ -1,0 +1,41 @@
+{
+  "run": 111,
+  "date": "2026-08-25-pm",
+  "evidence_summary": "Revenue sprint 10acf83 (today, 46 files) added partners.py WITHOUT block_demo_role. billing_addons.py in same sprint has it correctly. Step 9J: 0 merges (GH Actions dark, mergeable_state=unknown). Step 9I will catch partners.py on next nightly (dedup will find 0 existing issues for partners.py). 97 accumulated block_demo_role violations in GH #669.",
+  "ideas_count": 5,
+  "winner": "Pre-commit block_demo_role detection hook for new router files",
+  "winner_category": "security",
+  "winner_effort": "M",
+  "winner_channel": "human-approve-implement",
+  "winner_confidence": "HIGH",
+  "bonus_a": "Annual plan guard audit — verify ai_usage_guard.py PLAN_BASELINE_TOKENS covers annual plan names from 10acf83",
+  "rejected": [
+    "Step 9J: lower merge threshold when GH Actions dark (HIGH merge risk, policy decision)"
+  ],
+  "weakened": [
+    "Step 9J consecutive-0-merge escalation (GH #500 is right tracker, not new issue)",
+    "Annual plan guard audit (moved to BONUS A — valid but XS, not compounding enough to win)"
+  ],
+  "parking_lot": [
+    "Step 9D: GH Actions dark escalation issue after 30+ days (run 112 candidate)",
+    "Step 9J: comment on GH #500 after consecutive 0-merge nights"
+  ],
+  "mandate_checks": {
+    "step_9j_first_nightly": "PASS — 19 Dependabot PRs found, 0 merged (GH Actions dark, expected)",
+    "step_9j_root_cause": "GH Actions dark since 2026-07-20 (36 days). mergeable_state=unknown for all minor/patch candidates.",
+    "step_9k_status": "PENDING — run 110 AM session winner (PR #683). Awaiting human approval.",
+    "gh_669_block_demo_role": "OPEN — 97/97 routers. PR #653 (13d draft) proposes middleware. No merge.",
+    "gh_403_kb_stale": "33 days stale. ANTHROPIC_API_KEY missing from GH Actions secrets. Human action required.",
+    "gh_399_autopilot_token": "OPEN Day 41+. Human action required.",
+    "partners_py_guard": "MISSING — confirmed by grep on 10acf83 revenue sprint. Step 9I will file issue on 2026-08-26 nightly.",
+    "revenue_sprint_test_coverage": "Adequate per file counts (94-386 lines per new module)"
+  },
+  "run_112_mandate": [
+    "Pre-commit hook implemented? scripts/claude-hooks/check-router-guards.sh exists?",
+    "Step 9K fired in first nightly? grep 'Step 9K:' nightly log — count closed/escalated/skipped",
+    "Annual guard audit: grep PLAN_BASELINE ai_usage_guard.py for annual plan coverage",
+    "partners.py: Step 9I filed GH issue for it in 2026-08-26 nightly?",
+    "GH #669 PR #653: still open? any merge/review?",
+    "Step 9D GH Actions dark: escalation issue filed after 37 days? (parking lot candidate)"
+  ]
+}
