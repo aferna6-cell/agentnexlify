@@ -70,7 +70,21 @@ Skipped — GH Actions dark (GH #500). Manual trigger: `bash scripts/daily/kb-au
 - Already tracked under GH #669 (class-wide). No new issues filed.
 
 ### Step 9J — Dependabot Auto-Merge
-Skipped — GH Actions dark (GH #500); `mcp__github__list_pull_requests` not invoked in this run (would require live GH MCP tooling). Log: Step 9J deferred to interactive session.
+19 open Dependabot PRs found via `mcp__github__list_pull_requests`.
+
+**Major-version bumps skipped (safety gate):**
+- #598 — stripe 11.x → 15.x (4 major versions)
+- #591 — react 18.x → 19.x
+- #593 — react-dom 18.x → 19.x
+- #586 — react 18.x → 19.x (demo-platform)
+- #588 — @testing-library/jest-dom 6.x → 7.x
+- #587 — jsdom 29.x → 30.x
+
+**Minor/patch candidates checked:**
+- #679 — eslint 10.7.0 → 10.9.0: `mergeable_state: "unknown"` → skip
+- #666 — @typescript-eslint/parser 8.64.0 → 8.67.0: `mergeable_state: "unknown"` → skip
+
+**Result:** 0 PRs merged. All minor/patch candidates have `mergeable_state: "unknown"` (CI not clean or not yet evaluated). No action taken.
 
 ---
 
