@@ -15,6 +15,7 @@ discoverability.
 """
 
 import logging
+import os
 import sys
 import time
 from dataclasses import dataclass, field
@@ -66,6 +67,43 @@ class SessionRunError(RuntimeError):
     """Raised by run_agent_session on transport / configuration failures."""
 
 
+# Hard per-session spend ceiling, in US cents, for every non-interactive
+# managed-agent session started from scripts/ (smokes and runners alike).
+# These run unattended — a prompt-loop or a runaway tool cycle would otherwise
+# bill unbounded. 500 cents ($5) is far above a normal digest or smoke run and
+# only bites on genuine runaway.
+#
+# This is the platform's HARD cap, not the advisory Messages-API `task_budget`;
+# see backend/services/managed_agents.build_budget and
+# .claude/rules/task-budgets.md for the distinction.
+#
+# Degradation is safe: a session that hits the cap goes idle with
+# stop_reason.type == "budget_reached", which run_until_idle already treats as
+# terminal (it is not "requires_action"), so the caller gets a short reply
+# rather than a hang.
+DEFAULT_SESSION_BUDGET_CENTS = 500
+
+
+def _resolve_budget_cents(explicit: int | None) -> int | None:
+    """Per-call value wins, then MANAGED_AGENTS_SESSION_BUDGET_CENTS, then the
+    default. Set the env var to 0 to disable the cap entirely."""
+    if explicit is not None:
+        return explicit or None
+    raw = os.environ.get("MANAGED_AGENTS_SESSION_BUDGET_CENTS", "").strip()
+    if not raw:
+        return DEFAULT_SESSION_BUDGET_CENTS
+    try:
+        return int(raw) or None
+    except ValueError:
+        logging.getLogger(__name__).warning(
+            "MANAGED_AGENTS_SESSION_BUDGET_CENTS=%r is not an integer; "
+            "falling back to the %d-cent default.",
+            raw,
+            DEFAULT_SESSION_BUDGET_CENTS,
+        )
+        return DEFAULT_SESSION_BUDGET_CENTS
+
+
 def run_agent_session(
     *,
     handle_factory: Callable[[], ManagedAgentHandle],
@@ -75,6 +113,7 @@ def run_agent_session(
     metadata: dict[str, Any],
     logger_name: str,
     max_events_logged: int = 20,
+    budget_cents: int | None = None,
 ) -> SmokeResult:
     """Run one session end-to-end and return the captured result.
 
@@ -105,12 +144,17 @@ def run_agent_session(
         agent_label,
     )
 
+    resolved_budget = _resolve_budget_cents(budget_cents)
+    if resolved_budget is not None:
+        logger.info("session spend cap: %d cents (hard)", resolved_budget)
+
     try:
         session = client.create_session(
             agent_id=handle.agent_id,
             environment_id=handle.environment_id,
             title=session_title,
             metadata=metadata,
+            budget_cents=resolved_budget,
         )
     except ManagedAgentsError as exc:
         raise SessionRunError(
@@ -175,6 +219,19 @@ def run_agent_session(
                     else None
                 )
                 if stop_type != "requires_action":
+                    if stop_type == "budget_reached":
+                        # Not a crash: the platform stopped issuing model
+                        # requests at the hard cap. The reply below is
+                        # whatever the agent had produced by then, so treat it
+                        # as truncated rather than final.
+                        logger.warning(
+                            "session %s hit its spend cap (%s cents) and paused; "
+                            "reply is TRUNCATED. Raise "
+                            "MANAGED_AGENTS_SESSION_BUDGET_CENTS if this agent "
+                            "legitimately needs more.",
+                            session_id,
+                            resolved_budget,
+                        )
                     terminal = SessionTerminalState(
                         terminated=False,
                         stop_reason_type=stop_type,

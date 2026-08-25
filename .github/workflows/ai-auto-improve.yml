@@ -1,8 +1,17 @@
 name: AI Auto Improve
 
 on:
-  schedule:
-    - cron: "17 5 * * *"
+  # NO `schedule:` — Actions have been dark since 2026-07-20 (GH #500,
+  # spending limit): jobs die in ~1s before checkout, so this monitored
+  # nothing while still reporting red. Uniform red hides the next real
+  # failure, so the schedule is removed rather than left to fail on a timer.
+  # `workflow_dispatch` is retained — this is still runnable by hand.
+  #
+  # UNOWNED — no replacement is running. Previous cron: "17 5 * * *".
+  # Needs PR creation, so a Claude Code Routine is the only substrate that
+  # fits (see the routing rule in the decision doc). Not provisioned:
+  # a Routine bills recurring Claude usage and that is the owner's call.
+  # Tracked in: planning/decisions/2026-08-24-actions-replacement-substrate.md
   workflow_dispatch:
     inputs:
       open_pr:

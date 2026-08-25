@@ -1,8 +1,18 @@
 name: Lead Qualifier Eval
 
 on:
-  schedule:
-    - cron: "0 9 * * 1" # Monday 9 AM UTC
+  # NO `schedule:` — Actions have been dark since 2026-07-20 (GH #500,
+  # spending limit): jobs die in ~1s before checkout, so this monitored
+  # nothing while still reporting red. Uniform red hides the next real
+  # failure, so the schedule is removed rather than left to fail on a timer.
+  # `workflow_dispatch` is retained — this is still runnable by hand.
+  #
+  # UNOWNED on a timer — no replacement is running. Previous cron: "0 9 * * 1".
+  # The `pull_request` trigger below is untouched — it is the real gate and
+  # fires on changes to the qualifier and its golden set. Only the weekly
+  # sweep is removed. LLM work with no working tree → a Managed Agents
+  # scheduled deployment is the right host when someone arms one.
+  # Tracked in: planning/decisions/2026-08-24-actions-replacement-substrate.md
   pull_request:
     paths:
       - "backend/services/lead_qualification.py"

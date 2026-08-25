@@ -53,7 +53,7 @@ Dashboard (React/Vite) ─────────→ FastAPI /api/* ───�
 - **Retired names, never use**: `foundation`, `operations`.
 
 ### Agents + skills
-- 57 agents in `.claude/agents/` — backend-dev, frontend-dev, schema-guardian, widget-specialist, devops, opus-advisor, sonnet-executor, vertical-checker, qa-tester, gan-*, + 39 from `everything-claude-code` (per-language reviewers, build resolvers, loop-operator, etc.). Load lazily; don't burn context unless invoked.
+- 60 agents in `.claude/agents/` — backend-dev, frontend-dev, schema-guardian, widget-specialist, devops, opus-advisor, sonnet-executor, vertical-checker, qa-tester, gan-*, + 39 from `everything-claude-code` (per-language reviewers, build resolvers, loop-operator, etc.). Load lazily; don't burn context unless invoked.
 - Everything Claude Code source is pinned in `.claude/everything-claude-code.lock.json`; do not load the full plugin surface by default.
 - Skills in `.claude/skills/` — caveman-mode, schema-guard, widget-test, karpathy-guidelines, compound-engineering, tdd-workflow, issue-to-pr-loop, feature-build, + research-backed additions (supabase-postgres-best-practices, vercel-react-best-practices, skill-creator, mcp-builder, churn-prevention, email-sequence, seo-audit-marketing) + **planning/quality additions (2026-04-15)**: grill-me, write-prd, prd-to-plan, prd-to-issues, triage-issue, ubiquitous-language, dependency-auditor, edit-article, api-docs-generator, systematic-debugging.
 - Rules in `.claude/rules/` — domain + behavioral + security hardening. Index below.
@@ -134,7 +134,7 @@ bash scripts/claude-hooks/auto-commit.sh  # manual auto-commit
 ### Automation
 - **Pre-commit hook** — blocks secrets, `from __future__ import annotations`, bare-except blocks
 - **Pre-push hook** — frontend build + schema consistency check
-- **GitHub Actions** — daily health check, PR validation, auto bug logging, AI auto-improve
+- **GitHub Actions** — PR validation + push triggers only; **no workflow has a cron** and all are dark since 2026-07-20 (GH #500). Scheduled work lives on Claude Code Routines and the backend loop. `scripts/ci_local.sh` is the real gate.
 - **Agent system guardrail** - `scripts/check_agent_system.py` runs in PR validation and proves CLAUDE.md, Everything Claude Code agents, Claude Code 2.1.98 pin, and issue-to-PR workflows are intact.
 - **Instruction budget** - `scripts/check_instruction_budget.py` keeps `CLAUDE.md` under 200 lines and blocks unconditional UserPromptSubmit prompt-injection sprawl.
 - **Agent config security** - `npm run agent-config:scan` runs pinned baseline-gated AgentShield on Claude/Codex agents, hooks, MCP config, and project instruction files; CI triggers on those paths.

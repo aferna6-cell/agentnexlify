@@ -1,4 +1,58 @@
-# Task Budgets - Opus 4.7 API Feature
+# Budgets — two different primitives, do not confuse them
+
+| | Session budget | Task budget |
+|---|---|---|
+| Enforced by | The platform, **hard** | The model, **advisory** |
+| Denominated in | US cents (dollars) | Tokens |
+| Scope | One Managed Agents session | One Messages-API agentic loop |
+| Model can see it | No | Yes — it paces itself |
+| Status in this repo | **IMPLEMENTED** (2026-08-24) | **NOT IMPLEMENTED** |
+
+**A task budget cannot stop a runaway** — the model may ignore it. Only a
+session budget is a real ceiling. Reach for the session budget on anything
+autonomous; reach for the task budget only to improve pacing/quality.
+
+---
+
+## Session budgets (hard cap) — IMPLEMENTED
+
+`backend/services/managed_agents.build_budget(cents)` builds the object;
+`ManagedAgentsClient.create_session(..., budget_cents=N)` attaches it.
+`scripts/managed_agents/_smoke_common.run_agent_session` applies
+`DEFAULT_SESSION_BUDGET_CENTS = 500` ($5) to **every** script-launched session,
+overridable per call or via `MANAGED_AGENTS_SESSION_BUDGET_CENTS` (`0` disables).
+
+Semantics that bite if you don't know them:
+- The cap is checked **between** model requests, so the in-flight request
+  finishes and a 50-cent cap can settle at 53. Size with that margin.
+- Hitting the cap makes the session go **idle**, not terminated —
+  `stop_reason.type == "budget_reached"`, history and sandbox preserved.
+  Raising the budget resumes it automatically.
+- **Removing a budget is one-way.** A session created without one can never be
+  given one; one whose budget was removed can never get it back. Change it,
+  don't remove it.
+- Multiagent sessions share **one** budget across all threads, advisor
+  consultations included.
+- A budgeted session whose model has no public list price is rejected (400).
+
+Where to apply: every non-interactive session — cron, batch, autonomous loops,
+smokes. Where NOT to: user-facing interactive paths (widget chat), where
+correctness beats cost pacing.
+
+Deployments take the same `budget` object and copy it onto **each run**, so it
+bounds every firing separately rather than cumulative spend. See
+`backend/services/managed_agents_deployments.create_deployment`.
+
+---
+
+## Task budgets (advisory) — NOT IMPLEMENTED
+
+> **Status check, 2026-08-24.** The call-site table below describes an
+> *intended* design. `grep -rn "task_budget\|task-budgets-2026-03-13" backend/`
+> returns nothing: neither the parameter nor its beta header exists anywhere in
+> this codebase. Treat this section as a proposal, not as documentation of
+> shipped behavior. If you are here to control spend on an autonomous loop, use
+> a **session budget** above — that one is real.
 
 ## What it is
 Public-beta API parameter introduced with Opus 4.7 (2026-04-16). It lets Claude see an advisory token budget for a full agentic loop so it can prioritize work and finish gracefully as the budget is consumed.

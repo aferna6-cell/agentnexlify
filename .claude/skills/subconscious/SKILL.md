@@ -195,7 +195,10 @@ Run artifacts: subconscious/runs/{date}/
 ```bash
 git add subconscious/
 git commit -m "subconscious: run {date} — {winning concept title}"
+git push origin HEAD
 ```
+
+**Push is required** — cloud containers are ephemeral. Commits not pushed are lost when the container is reclaimed. `git push origin HEAD` pushes to the current tracking branch regardless of branch name (main or a subconscious/ branch). Added run 105 (2026-08-17) after nightly-2026-08-16 found 6 orphaned commits spanning runs 101-104.
 
 **PR dedup guard (added 2026-07-20 — run 99 opened 4 duplicate draft PRs across
 4 days because each headless run invented a fresh branch):**

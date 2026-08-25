@@ -13,7 +13,7 @@ paths:
 - All new pip packages need `--break-system-packages` flag
 
 ## Claude API Model IDs
-Valid model IDs (July 2026): `claude-sonnet-5`, `claude-opus-4-8`, `claude-haiku-4-5-20251001`. Legacy-but-still-valid: `claude-sonnet-4-6`, `claude-opus-4-7` (many background call sites still use these; fine to keep). NEVER use a model ID not on this list. See `.claude/rules/model-routing.md` for the canonical routing table.
+Valid model IDs: `claude-sonnet-5`, `claude-opus-4-8`, `claude-opus-5`, `claude-haiku-4-5-20251001`. Legacy-but-still-valid: `claude-sonnet-4-6`, `claude-opus-4-7` (a few background call sites may still use these; fine to keep, but do not add new ones). NEVER use a model ID not on this list. `.claude/rules/model-routing.md` is the canonical routing table — if this list and that one ever disagree, that one wins and this one is the bug.
 
 ## Model Selection for AI Features
 - Widget chat responses: `claude-sonnet-5` (near-Opus reasoning at Sonnet cost, 2026-06-30), `stream=True`. Resolved via `resolve_string_setting("widget_chat_model", MODEL)` — per-tenant DB override wins. NOTE: Sonnet 5's tokenizer maps text to ~1.0-1.35x more tokens than 4.6. Re-baselined 2026-07-22 against tenant_ai_usage_monthly: heaviest tenant-month ever is 363k tokens vs the 800k chatbot floor - tier values unchanged, but legacy plans (growth/autopilot/professional/enterprise) were added to `PLAN_BASELINE_TOKENS` (they silently fell to the chatbot default before).

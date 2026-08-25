@@ -1,9 +1,16 @@
-# Claude Opus 4.7 — Canonical Reference
+# Claude Opus 4.7 — Historical Release Record
+
+> **Not a routing authority.** `.claude/rules/model-routing.md` is the single canonical
+> table for which model to use. This file is kept because the *features* Opus 4.7
+> introduced — self-verification, `/ultrareview`, task budgets, 3x vision, `xhigh`
+> effort — are still how we work, and the migration notes below still apply to every
+> reasoning model since. Superseded as a model choice: no agent in this repo runs on
+> 4.7 as of 2026-08-24.
 
 Released 2026-04-16. Source: https://www.anthropic.com/news/claude-opus-4-7
 
 ## Model ID
-`claude-opus-4-7` — direct upgrade to `claude-opus-4-6`, same pricing ($5/M input, $25/M output).
+`claude-opus-4-7` — legacy. Was a direct upgrade to `claude-opus-4-6`, same pricing ($5/M input, $25/M output). Superseded by `claude-opus-4-8`, then `claude-opus-5`.
 
 ## Feature summary
 
@@ -16,11 +23,10 @@ Released 2026-04-16. Source: https://www.anthropic.com/news/claude-opus-4-7
 | xhigh effort | New level between high and max | Default in Claude Code on Opus 4.7. Start here for agentic work. | — |
 | Auto mode | Permissions option — Claude decides on your behalf | Long autonomous runs where user can't approve every step | — |
 
-## Valid model IDs (updated 2026-04-16)
-- `claude-opus-4-7` — planning, architecture, critical review, complex decomposition (self-verifying)
-- `claude-opus-4-6` — legacy; only keep when you need behavior parity with pre-4.7 prompts
-- `claude-sonnet-4-6` — code, debug, multi-file edits, most Agent executions
-- `claude-haiku-4-5-20251001` — grammar, formatting, renames, quick classification
+## Valid model IDs — SUPERSEDED, do not read this list
+The 2026-04-16 list that used to live here named `claude-opus-4-7` / `claude-opus-4-6` /
+`claude-sonnet-4-6` as current. All three are now legacy. Read
+`.claude/rules/model-routing.md` instead — it is the only list kept up to date.
 
 ## Migration notes (Opus 4.6 → 4.7)
 

@@ -11,25 +11,29 @@ paths:
 |-------|-----|---------|
 | **Haiku** | `claude-haiku-4-5-20251001` | grammar, formatting, lookups, bullet lists, renames, translations, quick classification, hook scanners |
 | **Sonnet 5** | `claude-sonnet-5` | **NEW DEFAULT FOR SONNET** (2026-06-30) - code, debug, API calls, multi-file edits, most Agent executions, default implementation, widget chat runtime. Near-Opus reasoning at Sonnet cost. New tokenizer = ~1.0-1.35x tokens vs 4.6. |
-| **Opus 4.8** | `claude-opus-4-8` | **NEW DEFAULT FOR OPUS** (2026-06-30) - planning, architecture, security design, critical review, ambiguous decomposition, advisor passes. Self-verifies outputs. Default effort: `xhigh` in Claude Code. |
+| **Opus 4.8** | `claude-opus-4-8` | **PRODUCTION DEFAULT FOR OPUS** - planning, architecture, security design, critical review, ambiguous decomposition, advisor passes. Self-verifies outputs. Default effort: `xhigh` in Claude Code. |
+| **Opus 5** | `claude-opus-5` | Newest Opus tier (Claude 5 family). Not yet used by any provisioned agent — **verify workspace access before promoting a production agent to it**, then move the Opus roles here. Already added to `_SAMPLING_OMISSION_MODELS` in `llm_runtime.py` so it cannot 400 on sampling params if adopted. |
 
-Legacy-but-valid (many background call sites still use these; no need to churn them all at once): `claude-sonnet-4-6`, `claude-opus-4-7`. See `rules/opus-4-7.md` for 4.7-era feature notes (self-verification, ultrareview, task-budgets carry forward to 4.8).
+**This table is the single canonical source for model IDs in this repo.** Any other doc that names a model defers to it.
 
-## Opus 4.7 feature invoke-regularly rules
+Legacy-but-valid (safe to leave in place; do not introduce new call sites): `claude-sonnet-4-6`, `claude-opus-4-7`, `claude-opus-4-6`. As of 2026-08-24 every agent in `config/managed_agents.yaml` and every `.claude/agents/*.md` pin is on a current ID; `rules/opus-4-7.md` is retained as a historical record of the 4.7 release, not as a routing authority.
+
+## Reasoning-model feature invoke-regularly rules
+(Introduced with Opus 4.7; they carry forward to 4.8 and Opus 5.)
 - **Self-verification** required on every task completion (`rules/self-verification.md`)
 - **/ultrareview** required before merging >20 LOC changes (`rules/ultrareview.md`)
 - **Task budgets** required on any long-running/cron agent (`rules/task-budgets.md`)
 - **3x vision** for screenshot/diagram/design inputs (`rules/vision-3x.md`)
 
 ## Pattern for non-trivial tasks
-**Opus 4.7 plans + self-verifies → Sonnet executes → Haiku cleans up.**
+**Opus plans + self-verifies → Sonnet executes → Haiku cleans up.**
 
 ## Advisor-on-uncertainty rule
 
 When a Sonnet or Haiku executor is unsure, it must not spend retries guessing.
 If confidence is below 80%, evidence conflicts, the contract is ambiguous, two
 implementations look similarly plausible, or the path touches security/data
-integrity/cost, route through Opus 4.7 as an advisor first. Keep costs near
+integrity/cost, route through Opus as an advisor first. Keep costs near
 Sonnet levels by asking Opus for a compact plan/risks/test-gates brief, then
 let the Sonnet or Haiku executor perform the work.
 
@@ -88,14 +92,14 @@ When NOT to spawn at all:
 ## Never
 - Never Opus for mechanical work (rename, format, lookup)
 - Never Haiku for architecture or security design
-- Never default to Opus execution when Sonnet fits - use Opus 4.7 as the advisor boost for uncertainty
+- Never default to Opus execution when Sonnet fits - use Opus as the advisor boost for uncertainty
 - Never spawn deeper than 2 tiers; return to parent instead
 - Never let Haiku spawn subagents
 
 ## Hook agent model delegation
 - Security scanner on auth/payment file edit → Haiku
 - Pre-push code review → Haiku
-- Plan/architecture review → Opus 4.7
+- Plan/architecture review → Opus
 - Bulk refactor execution → Sonnet
 
 ## Cost awareness

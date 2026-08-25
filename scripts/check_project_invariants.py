@@ -399,9 +399,63 @@ def check_anthropic_sdk_usage(failures: list[str]) -> None:
     )
 
 
+# Agent sessions a customer is actively waiting on. These are deliberately
+# uncapped: a budget-truncated answer mid-sentence is worse for the customer
+# than the marginal spend, and they already run under a wall-clock timeout.
+# Everything else must carry a hard cap. See .claude/rules/task-budgets.md.
+_INTERACTIVE_SESSION_FILES = {
+    "backend/services/support_agent.py",  # widget chat second tier, 8s timeout
+}
+
+
+def check_agent_sessions_are_budgeted(failures: list[str]) -> None:
+    """Every non-interactive create_session() must pass budget_cents.
+
+    An unattended agent session with no ceiling bills unbounded if it loops.
+    Adding the parameter once is easy; remembering it at every future call
+    site is not — so this pins it. A budget can only be attached at session
+    creation, so a missed call site cannot be fixed after the fact.
+    """
+    issues: list[str] = []
+    call_pattern = re.compile(r"\.create_session\s*\(")
+
+    for path in iter_backend_py_files():
+        rel_path = rel(path)
+        if rel_path in _INTERACTIVE_SESSION_FILES:
+            continue
+        try:
+            text = read_text(path)
+        except OSError as exc:
+            issues.append(f"{rel_path}: unreadable ({exc})")
+            continue
+
+        lines = text.splitlines()
+        for lineno, line in enumerate(lines, start=1):
+            if not call_pattern.search(line):
+                continue
+            # A thin delegate — `def create_session(self, **kwargs)` and its
+            # `return self._inner.create_session(**kwargs)` body — forwards
+            # whatever it is given. Transparent, so not a call site to police.
+            stripped = line.lstrip()
+            if stripped.startswith("def ") or "**kwargs" in line:
+                continue
+            # Look ahead to the end of the call for the budget kwarg.
+            window = "\n".join(lines[lineno - 1 : lineno + 25])
+            if "budget_cents" not in window:
+                issues.append(f"{rel_path}:{lineno}: {line.strip()}")
+
+    check(
+        "non-interactive agent sessions carry a hard spend cap",
+        not issues,
+        failures,
+        issues[:10],
+    )
+
+
 def main() -> int:
     failures: list[str] = []
     check_router_future_imports(failures)
+    check_agent_sessions_are_budgeted(failures)
     check_live_schema_fields(failures)
     check_retired_plan_names(failures)
     check_widget_assets(failures)

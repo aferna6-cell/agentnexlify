@@ -1,6 +1,7 @@
 ---
 name: vertical-checker
 description: "Cross-cutting auditor for the compound engineering pipeline. Checks schema integrity, security surface, performance, RLS/tenant isolation, widget sync, frontend build, and integration correctness. The 5th and final gate."
+model: sonnet
 tools:
   - Read
   - Bash

@@ -1,12 +1,20 @@
 name: Dependency Security Audit
 
-# Runs every Monday morning. Opens a GH issue if HIGH or CRITICAL
+# Manual-only since the Monday cron was removed (see the `on:` block).
+# Opens a GH issue if HIGH or CRITICAL
 # vulnerabilities are found in Python (pip-audit) or Node (npm audit).
 # No secrets required.
 
 on:
-  schedule:
-    - cron: "0 9 * * 1"   # Monday 9 AM UTC
+  # NO `schedule:` — Actions have been dark since 2026-07-20 (GH #500,
+  # spending limit): jobs die in ~1s before checkout, so this monitored
+  # nothing while still reporting red. Uniform red hides the next real
+  # failure, so the schedule is removed rather than left to fail on a timer.
+  # `workflow_dispatch` is retained — this is still runnable by hand.
+  #
+  # UNOWNED — no replacement is running. Previous cron: "0 9 * * 1".
+  # Issues-API only → backend `_automation_loop` %30 tier.
+  # Tracked in: planning/decisions/2026-08-24-actions-replacement-substrate.md
   workflow_dispatch: {}
 
 jobs:

@@ -30,7 +30,7 @@ Source: Suryansh Tiwari migration post (2026-04-17). Four moves not already cove
 **Why:** 4.7 treats negative rules as token cost without behavior lock-in. Positive examples anchor output shape. Faster, cheaper, more reliable.
 
 **Audit targets:**
-- `.claude/agents/*.md` — 57 agents; grep for "never", "don't", "do not", "avoid"
+- `.claude/agents/*.md` — 60 agents; grep for "never", "don't", "do not", "avoid"
 - `.claude/skills/*/SKILL.md` — especially `.claude/skills/caveman-mode`, `.claude/skills/karpathy-guidelines`
 - Inline prompts in `backend/services/advisor_executor.py`, `backend/services/llm_runtime.py`, `backend/services/managed_agents_registry.py`
 

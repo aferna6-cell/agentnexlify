@@ -1,0 +1,40 @@
+{
+  "run_date": "2026-08-20",
+  "run_number": 108,
+  "winner": "Step 9J — Dependabot auto-merge in nightly-commit-review SKILL.md",
+  "category": "operational",
+  "effort": "S",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "mandate_triggered": true,
+  "mandate_source": "run_108_mandate",
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "debate_winner": "Step 9J (Dependabot auto-merge)",
+  "debate_runner_up": "Middleware-level block_demo_role guard (parking lot — GH #669)",
+  "debate_killed": "GH #399 Day-40 escalation comment (non-structural)",
+  "bonus_action": "GH #403 SUPABASE_URL diagnostic comment",
+  "key_evidence": [
+    "run_108_mandate explicitly named Step 9J as primary candidate",
+    "Morning digests 2026-08-11/12/17/18 all flagged same 4-6 Dependabot PRs — zero action taken",
+    "Skill discovery 2026-08-17 proposed dependabot-merge-runner with 4+ weeks evidence",
+    "Step 9I first execution found 97/97 routers missing block_demo_role — GH #669 filed",
+    "6 Dependabot PRs aging: #629/#630/#631/#649/#665/#666",
+    "GH #399 Day 40+ — 30 ai-ready issues blocked",
+    "GH #403 28d stale — KB autopopulate dark, run 107 comment had no effect in 24h+"
+  ],
+  "mandate_checks": {
+    "step_9i_in_skill_md": "PASS",
+    "step_9i_first_nightly": "PASS — GH #669 filed (97/97 violations)",
+    "gh_403_human_action": "FAIL — 28d stale, no human action after run 107 comment",
+    "gh_399_resolved": "FAIL — Open Day 40+",
+    "dependabot_prs_aging": "6 PRs aging — Step 9J mandate condition MET"
+  },
+  "artifacts": [
+    "subconscious/runs/2026-08-20/ideas/ideas.md",
+    "subconscious/runs/2026-08-20/debate/debate-log.md",
+    "subconscious/runs/2026-08-20/winning-concept.md",
+    "subconscious/runs/2026-08-20/improvement-backlog.md",
+    "subconscious/runs/2026-08-20/run-summary.json"
+  ]
+}
