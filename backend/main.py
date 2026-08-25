@@ -36,6 +36,7 @@ from backend.routers import (
     automations,
     bids,
     billing,
+    billing_addons,
     billing_usage,
     booking_page,
     business_page,
@@ -120,6 +121,7 @@ from backend.routers import (
     admin_tenant_health,
     funnel,
     onboarding_presets,
+    partners,
     referral,
     zapier,
     os_threads,
@@ -947,6 +949,7 @@ app.include_router(conversations.router)
 app.include_router(faq.router)
 app.include_router(automations.router)
 app.include_router(billing.router)
+app.include_router(billing_addons.router)
 app.include_router(billing_usage.router)
 app.include_router(clients.router)
 app.include_router(email_templates.router)
@@ -1018,6 +1021,7 @@ app.include_router(admin_voice_test.router)
 app.include_router(admin_promotions.router)
 app.include_router(funnel.router)
 app.include_router(admin_tenant_health.router)
+app.include_router(partners.router)
 app.include_router(referral.router)
 app.include_router(invoices.router)
 app.include_router(documents.router)

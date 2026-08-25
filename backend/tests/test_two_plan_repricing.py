@@ -25,9 +25,11 @@ class TestPlanPrices:
         assert "agent_os" in PLAN_PRICES
         assert "monthly" in PLAN_PRICES["agent_os"]
 
-    def test_only_two_purchasable_plans(self):
+    def test_only_purchasable_plans(self):
+        # Contract updated 2026-08-25: agent_os_managed added as a third
+        # sellable tier (owner-directed; mirrors plan_catalog.CURRENT_PAID_PLANS).
         from backend.services.stripe_service import PLAN_PRICES
-        assert set(PLAN_PRICES.keys()) == {"chatbot", "agent_os"}
+        assert set(PLAN_PRICES.keys()) == {"chatbot", "agent_os", "agent_os_managed"}
 
     def test_usage_pack_price_id_exists(self):
         from backend.services.stripe_service import USAGE_PACK_PRICE_ID

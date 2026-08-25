@@ -28,6 +28,7 @@ PLAN_BASELINE_TOKENS: dict[str, int] = {
     "free": 100_000,
     "chatbot": 800_000,
     "agent_os": 5_000_000,
+    "agent_os_managed": 8_000_000,
     "growth": 1_000_000,
     "autopilot": 1_200_000,
     "professional": 2_000_000,

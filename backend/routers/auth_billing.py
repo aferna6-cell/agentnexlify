@@ -19,6 +19,7 @@ from backend.dependencies import require_role, block_demo_role
 from backend.models.database import get_service_supabase as _get_service_supabase
 from backend.services.activity import log_activity
 from backend.services.stripe_service import (
+    BILLING_INTERVALS,
     PLAN_PRICES,
     ensure_plan_prices_configured,
     ensure_stripe_configured,
@@ -54,8 +55,14 @@ async def billing_checkout(
             status_code=400,
             detail=f"Invalid plan. Must be one of: {', '.join(PLAN_PRICES)}",
         )
+    interval = body.get("billing_interval") or "monthly"
+    if interval not in BILLING_INTERVALS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid billing_interval. Must be one of: {', '.join(BILLING_INTERVALS)}",
+        )
     try:
-        prices = ensure_plan_prices_configured(plan)
+        prices = ensure_plan_prices_configured(plan, interval)
         ensure_stripe_configured()
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
@@ -81,7 +88,7 @@ async def billing_checkout(
     line_items = []
     if "setup" in prices:
         line_items.append({"price": prices["setup"], "quantity": 1})
-    line_items.append({"price": prices["monthly"], "quantity": 1})
+    line_items.append({"price": prices[interval], "quantity": 1})
 
     source = body.get("source")  # "wizard" | None
     if source == "wizard":
@@ -107,14 +114,14 @@ async def billing_checkout(
         "line_items": line_items,
         "success_url": success_url,
         "cancel_url": cancel_url,
-        "metadata": {"tenant_id": tenant_id, "plan": plan},
+        "metadata": {"tenant_id": tenant_id, "plan": plan, "billing_interval": interval},
         # No trial: the first charge happens immediately at checkout. The
         # subscription is "active" once payment succeeds, which is_pay_gated()
         # treats as paid, so the dashboard unlocks right away. (Existing
         # "trialing" subscriptions created before this change keep working —
         # is_pay_gated() still treats "trialing" as paid until they convert.)
         "subscription_data": {
-            "metadata": {"tenant_id": tenant_id, "plan": plan},
+            "metadata": {"tenant_id": tenant_id, "plan": plan, "billing_interval": interval},
         },
     }
 
@@ -170,7 +177,12 @@ async def billing_change_plan(
     request: Request,
     claims: dict = Depends(require_role("owner")),
 ):
-    """Change subscription plan (upgrade/downgrade) with proration."""
+    """Change subscription plan (upgrade/downgrade) with proration.
+
+    Accepts optional billing_interval ("monthly" default | "annual") so an
+    existing subscriber can also switch to annual prepay: the subscription
+    item is moved to the interval's price with proration.
+    """
     body = await request.json()
     new_plan = body.get("plan")
     tenant_id = claims["tenant_id"]
@@ -180,8 +192,14 @@ async def billing_change_plan(
             status_code=400,
             detail=f"Invalid plan. Must be one of: {', '.join(PLAN_PRICES)}",
         )
+    interval = body.get("billing_interval") or "monthly"
+    if interval not in BILLING_INTERVALS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid billing_interval. Must be one of: {', '.join(BILLING_INTERVALS)}",
+        )
     try:
-        new_price_id = ensure_plan_prices_configured(new_plan)["monthly"]
+        new_price_id = ensure_plan_prices_configured(new_plan, interval)[interval]
         ensure_stripe_configured()
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
@@ -205,7 +223,10 @@ async def billing_change_plan(
         )
 
     current_plan = tenant.get("plan") or "free"
-    if current_plan == new_plan:
+    # Same plan + monthly is a no-op. Same plan + annual is a real change
+    # (monthly -> annual interval switch); the price-id comparison below
+    # catches an actual no-op once the live subscription is loaded.
+    if current_plan == new_plan and interval == "monthly":
         raise HTTPException(status_code=400, detail="Already on this plan")
 
     # Find the live subscription. Legacy "trialing" subscriptions (created
@@ -224,13 +245,17 @@ async def billing_change_plan(
         )
 
     subscription = subs.data[0]
-    sub_item_id = subscription["items"]["data"][0]["id"]
+    sub_item = subscription["items"]["data"][0]
+    sub_item_id = sub_item["id"]
+    current_price_id = (sub_item.get("price") or {}).get("id") if isinstance(sub_item, dict) else None
+    if current_price_id == new_price_id:
+        raise HTTPException(status_code=400, detail="Already on this plan")
     # Modify subscription with proration
     updated = stripe.Subscription.modify(
         subscription.id,
         items=[{"id": sub_item_id, "price": new_price_id}],
         proration_behavior="create_prorations",
-        metadata={"tenant_id": tenant_id, "plan": new_plan},
+        metadata={"tenant_id": tenant_id, "plan": new_plan, "billing_interval": interval},
     )
 
     # Update tenant plan immediately (webhook will also fire)

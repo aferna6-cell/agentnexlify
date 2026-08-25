@@ -60,7 +60,7 @@ describe("BillingPage upgrade funnel", () => {
     expect(screen.getByText(/AI Front Desk \$19.99/)).toBeInTheDocument();
     fireEvent.click(suiteBtn);
     await waitFor(() =>
-      expect(billingCheckout).toHaveBeenCalledWith("jwt", { plan: "agent_os" }),
+      expect(billingCheckout).toHaveBeenCalledWith("jwt", { plan: "agent_os", billing_interval: "monthly" }),
     );
   });
 
@@ -74,7 +74,7 @@ describe("BillingPage upgrade funnel", () => {
     const switchBtn = await screen.findByText("Switch Plan");
     fireEvent.click(switchBtn);
     await waitFor(() =>
-      expect(billingCheckout).toHaveBeenCalledWith("jwt", { plan: "agent_os" }),
+      expect(billingCheckout).toHaveBeenCalledWith("jwt", { plan: "agent_os", billing_interval: "monthly" }),
     );
     expect(notify.error).not.toHaveBeenCalled();
     // The page recovers to its idle state - the switch button is back,

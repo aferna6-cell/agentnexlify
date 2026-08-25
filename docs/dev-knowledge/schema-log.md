@@ -1765,3 +1765,15 @@ conversations.channel (mig 057) + the sms_<digits> session_id convention
 verified against prod 2026-08-01. NOTE: 188 and 192 intentionally unused
 (188 pre-existing gap; 192 reserved for gmail but integrations table needed
 no schema change).
+
+## Migration 194 — tenants.voice_addon_active (APPLIED 2026-08-25)
+Boolean NOT NULL default false. Per-tenant flag for the $49.99/mo voice
+receptionist add-on subscription (Stripe metadata addon='voice'; checkout in
+backend/routers/billing_addons.py, webhook handlers in billing.py). Grants
+the live AI call loop (`voice_phone_routing._ai_voice_mode`) regardless of
+plan tier — its market is chatbot-plan tenants; agent_os tiers include voice
+and the checkout refuses them. voice_ai_enabled must also be on. APPLIED +
+verified against prod 2026-08-25. Same session (no migration needed):
+kb_articles salon-spa-faqs + plumber-hvac-faqs content roughly doubled (+10
+depth Q&As each, appended via UPDATE; content_tsv is a generated column so
+FTS reindexed automatically — verified with live tsquery probes).

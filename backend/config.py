@@ -59,7 +59,18 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = ""
     stripe_price_chatbot_monthly: str = ""
     stripe_price_agent_os_monthly: str = ""
+    # Annual prepay prices (2 months free: chatbot $199.90/yr, agent_os $999.90/yr).
+    # Empty => annual checkout is unavailable; monthly keeps working unchanged.
+    stripe_price_chatbot_annual: str = ""
+    stripe_price_agent_os_annual: str = ""
+    # Managed done-for-you tier (2026-08-25): $299.99/mo + one-time $199 setup.
+    # Sales-led; sold via checkout link. Empty => managed checkout unavailable.
+    stripe_price_agent_os_managed_monthly: str = ""
+    stripe_price_agent_os_managed_setup: str = ""
     stripe_price_usage_pack: str = ""
+    # Voice receptionist add-on ($49.99/mo subscription, metadata addon=voice).
+    # Empty => add-on checkout unavailable; plan-included voice unaffected.
+    stripe_price_voice_addon_monthly: str = ""
     # Metered price for photo-quote overage (>500/mo). Empty => reporting is a
     # no-op (usage is still counted locally). See services/photo_quote_usage.py.
     stripe_photo_quote_metered_price_id: str = ""

@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 
 AGENT_OS_PLANS = {
     "agent_os",
+    "agent_os_managed",
     # Legacy/grandfathered (still honored on old contracts)
     "growth",
     "autopilot",

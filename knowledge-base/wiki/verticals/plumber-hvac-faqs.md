@@ -71,6 +71,36 @@ Clear access to the area that needs work, like the space around your water heate
 **What payment methods do you accept?**
 Most companies take cards and many take digital payments, plus cash or check. Larger jobs may offer financing. Check the specific location for its accepted methods and any deposit on big installs.
 
+**Are you licensed and insured?**
+Reputable plumbing and HVAC companies are licensed for their trade and carry liability insurance, and many list license numbers on their site. If you want the license details for your records, ask and we will have the office send them over.
+
+**My water heater is leaking or has no hot water. Is that urgent?**
+A leaking tank is urgent — shut off the water supply to the heater and, for electric units, the breaker; for gas units, turn the gas control to off. No hot water without a leak is usually a same-day or next-day visit. Tell us which situation you have and we will route it accordingly.
+
+**Should I repair or replace my water heater or AC?**
+A common rule: if the unit is past two-thirds of its expected life and the repair costs more than a third of a new one, replacement usually wins. Water heaters commonly last 8 to 12 years and AC systems 12 to 15. A technician can give you both numbers so you can decide.
+
+**My drain is clogged. Can I use store-bought drain cleaner first?**
+Chemical drain cleaners can damage pipes and make the clog worse, and technicians often have to work through the chemicals afterward. A plunger or a drain snake is safer to try. For repeat clogs or slow drains through the whole house, book a visit — that pattern often means a main-line problem.
+
+**My AC is running but not cooling. What should I check before you come out?**
+Check that the thermostat is set to cool and below room temperature, and look at the air filter — a clogged filter is the most common cause. If the outdoor unit is iced over, turn the system off so it can thaw before the visit. If those don't fix it, book a diagnostic.
+
+**My furnace keeps turning on and off. Is that a problem?**
+Short cycling usually points to a dirty filter, a thermostat issue, or an oversized or failing component, and it wastes energy while wearing the unit out. It is worth a diagnostic visit before heating season peaks.
+
+**Do I need a permit for a water heater or HVAC replacement?**
+Many towns require permits for water heater, furnace, and AC replacements, and the installing company usually pulls the permit as part of the job. Ask us and we will confirm how permits are handled for your job and area.
+
+**When should I schedule seasonal maintenance?**
+Book AC tune-ups in spring before the first heat wave and heating tune-ups in early fall before the first cold snap. Those are also the easiest times to get an appointment. A maintenance plan handles the scheduling for you.
+
+**My sump pump is running constantly or not at all. What should I do?**
+A sump pump that never shuts off or never turns on ahead of rain is worth a prompt visit — the failure usually shows up during the storm, when it floods the basement. Tell us which symptom you have and we can get you on the schedule quickly.
+
+**What about low water pressure in the whole house?**
+Whole-house low pressure can be a failing pressure regulator, a partially closed main valve, or sediment in the lines; a single slow fixture is usually just that fixture. Whole-house pressure drops are worth a diagnostic, especially in older homes.
+
 ## Key Concepts
 
 - **Emergency triage**: Burst pipes, active flooding, gas smell, no heat in winter, and no cooling in extreme heat are flagged urgent and routed to the fastest available help. This is the highest-value behavior in the vertical.
