@@ -11,6 +11,9 @@ export const PLAN_DISPLAY = {
   free: "Free",
   chatbot: "AI Front Desk",
   agent_os: "AI Workforce",
+  // Managed done-for-you tier (2026-08-25). Sales-led; sold via checkout
+  // link rather than the self-serve plan grid, so it only needs a label here.
+  agent_os_managed: "Managed AI Workforce",
   // Legacy / grandfathered plans - still honored on old contracts.
   growth: "Growth",
   autopilot: "Autopilot",
@@ -23,6 +26,7 @@ export const PLAN_COLOR = {
   free: "var(--green)",
   chatbot: "var(--accent)",
   agent_os: "var(--purple, #8b5cf6)",
+  agent_os_managed: "var(--purple, #8b5cf6)",
   growth: "var(--accent)",
   autopilot: "var(--yellow, #f59e0b)",
   professional: "var(--purple, #8b5cf6)",

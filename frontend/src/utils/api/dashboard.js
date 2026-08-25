@@ -67,6 +67,10 @@ export function submitContactForm(data) {
   return request("/api/v1/support/contact", { method: "POST", body: data });
 }
 
+export function submitPartnerInquiry(data) {
+  return request("/api/v1/partners/inquiry", { method: "POST", body: data });
+}
+
 // --- Notifications ---
 
 export function fetchNotifications(tenantId, token) {

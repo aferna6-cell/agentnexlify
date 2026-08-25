@@ -256,6 +256,8 @@ async def stripe_webhook(request: Request):
                 _handle_invoice_payment(db, data)
             elif metadata.get("kind") == "usage_pack":
                 _handle_usage_pack_completed(db, data)
+            elif _is_voice_addon(data):
+                _handle_voice_addon_completed(db, data)
             elif _is_legacy_marketing_addon(data):
                 logger.info("Ignoring legacy marketing add-on checkout event (add-on retired 2026-06-10)")
             else:
@@ -277,12 +279,16 @@ async def stripe_webhook(request: Request):
                         referred_tenant_id=activation["tenant_id"],
                     )
         elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
-            if _is_legacy_marketing_addon(data):
+            if _is_voice_addon(data):
+                _handle_voice_addon_subscription_updated(db, data)
+            elif _is_legacy_marketing_addon(data):
                 logger.info("Ignoring legacy marketing add-on subscription event (add-on retired 2026-06-10)")
             else:
                 _handle_subscription_updated(db, data)
         elif event_type == "customer.subscription.deleted":
-            if _is_legacy_marketing_addon(data):
+            if _is_voice_addon(data):
+                _handle_voice_addon_deleted(db, data)
+            elif _is_legacy_marketing_addon(data):
                 logger.info("Ignoring legacy marketing add-on subscription event (add-on retired 2026-06-10)")
             else:
                 _handle_subscription_deleted(db, data)
@@ -316,10 +322,17 @@ AMOUNT_TO_PLAN: dict[int, str] = {
     # Annual prepay (2026-08-25, 2 months free = 10x monthly)
     19990: "chatbot",        # $199.90/yr chatbot annual
     99990: "agent_os",       # $999.90/yr agent_os annual
+    # Managed done-for-you tier (2026-08-25)
+    29999: "agent_os_managed",  # $299.99/mo renewal
+    49899: "agent_os_managed",  # $299.99 first month + $199.00 one-time setup
 }
 
-# Keywords to match in product/price descriptions
+# Keywords to match in product/price descriptions. Order matters — the more
+# specific "managed" keys must be checked before the generic agent_os ones,
+# and dict iteration preserves insertion order.
 PLAN_KEYWORDS: dict[str, str] = {
+    "agent_os_managed": "agent_os_managed",
+    "managed": "agent_os_managed",
     "chatbot": "chatbot",
     "agent_os": "agent_os",
     "agent os": "agent_os",
@@ -331,7 +344,7 @@ def _resolve_plan(session: dict) -> str | None:
     metadata = session.get("metadata", {})
     plan = metadata.get("plan")
     logger.info("_resolve_plan: metadata.plan=%s", plan)
-    if plan and plan in {"free", "chatbot", "agent_os"}:
+    if plan and plan in {"free", "chatbot", "agent_os", "agent_os_managed"}:
         return plan
 
     # Try amount_total (in cents)
@@ -359,6 +372,89 @@ def _resolve_plan(session: dict) -> str | None:
 
     logger.warning("_resolve_plan: could not determine plan from session")
     return None
+
+
+def _is_voice_addon(obj: dict) -> bool:
+    """True for events belonging to the $49.99/mo voice add-on subscription.
+
+    Add-on events must NEVER reach the plan handlers — they would overwrite
+    the tenant's primary plan/plan_status (same isolation the retired
+    marketing add-on needed). Recognized by metadata.addon == 'voice', set by
+    backend/routers/billing_addons.py on both the checkout session and the
+    subscription it creates."""
+    metadata = obj.get("metadata") or {}
+    if metadata.get("addon") == "voice":
+        return True
+    sub_meta = (obj.get("subscription_data") or {}).get("metadata") or {}
+    return sub_meta.get("addon") == "voice"
+
+
+def _voice_addon_tenant(db, obj: dict) -> str | None:
+    """Resolve tenant for a voice-addon event: metadata first, customer second."""
+    tenant_id = (obj.get("metadata") or {}).get("tenant_id")
+    if tenant_id:
+        return str(tenant_id)
+    return _resolve_tenant_from_subscription(db, obj)
+
+
+def _handle_voice_addon_completed(db, session: dict) -> None:
+    """Checkout for the voice add-on completed: switch live AI voice on."""
+    tenant_id = _voice_addon_tenant(db, session)
+    if not tenant_id:
+        logger.warning(
+            "voice_addon: checkout completed but tenant unresolvable (session=%s)",
+            session.get("id"),
+        )
+        return
+    db.table("tenants").update(
+        {"voice_addon_active": True, "voice_ai_enabled": True}
+    ).eq("id", tenant_id).execute()
+    logger.info("voice_addon: activated for tenant %s", tenant_id)
+    try:
+        log_activity(
+            tenant_id=tenant_id,
+            activity_type="voice_addon_activated",
+            description="Voice receptionist add-on activated",
+            metadata={"session_id": session.get("id")},
+        )
+    except Exception:
+        logger.warning("voice_addon: log_activity failed", exc_info=True)
+
+
+def _handle_voice_addon_subscription_updated(db, subscription: dict) -> None:
+    """Keep voice_addon_active in sync with the add-on subscription status."""
+    tenant_id = _voice_addon_tenant(db, subscription)
+    if not tenant_id:
+        logger.warning(
+            "voice_addon: subscription event but tenant unresolvable (customer=%s)",
+            subscription.get("customer"),
+        )
+        return
+    active = subscription.get("status") in ("active", "trialing")
+    db.table("tenants").update({"voice_addon_active": active}).eq(
+        "id", tenant_id
+    ).execute()
+    logger.info(
+        "voice_addon: tenant %s addon status=%s -> active=%s",
+        tenant_id,
+        subscription.get("status"),
+        active,
+    )
+
+
+def _handle_voice_addon_deleted(db, subscription: dict) -> None:
+    """Add-on subscription cancelled: clear the flag; plan tier gate remains."""
+    tenant_id = _voice_addon_tenant(db, subscription)
+    if not tenant_id:
+        logger.warning(
+            "voice_addon: delete event but tenant unresolvable (customer=%s)",
+            subscription.get("customer"),
+        )
+        return
+    db.table("tenants").update({"voice_addon_active": False}).eq(
+        "id", tenant_id
+    ).execute()
+    logger.info("voice_addon: deactivated for tenant %s", tenant_id)
 
 
 def _is_legacy_marketing_addon(obj: dict) -> bool:

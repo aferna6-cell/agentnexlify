@@ -4,6 +4,13 @@ Two-plan repricing (2026-06-15):
   1999  -> chatbot   ($19.99/mo widget/chatbot features only)
   9999  -> agent_os  ($99.99/mo full platform)
 
+Managed tier added 2026-08-25 (owner-directed revenue session):
+  29999 -> agent_os_managed  ($299.99/mo done-for-you tier, renewal)
+  49899 -> agent_os_managed  (first checkout: $299.99 + $199.00 setup)
+
+Annual prepay amounts (19990 / 99990) map to the same chatbot / agent_os
+plan names — interval changes the price, never the plan identity.
+
 "free" is NOT a purchasable plan — it is the internal lapsed/no-active-subscription
 state set when a subscription is cancelled.
 """
@@ -22,10 +29,16 @@ class TestAmountToPlanMapping:
     def test_agent_os_pricing(self):
         assert AMOUNT_TO_PLAN[9999] == "agent_os"
 
-    def test_only_two_purchasable_plans(self):
-        """Exactly two purchasable plan values in the map."""
+    def test_only_purchasable_plans_in_map(self):
+        """Exactly the three purchasable plan values in the map.
+
+        Contract updated 2026-08-25: the 06-15 two-plan repricing gained the
+        sales-led agent_os_managed tier ($299.99/mo + $199 setup) — a
+        deliberate product addition, not gate drift. plan_catalog.py
+        CURRENT_PAID_PLANS is the canonical source this mirrors.
+        """
         plan_values = set(AMOUNT_TO_PLAN.values())
-        assert plan_values == {"chatbot", "agent_os"}
+        assert plan_values == {"chatbot", "agent_os", "agent_os_managed"}
 
     def test_free_not_in_amount_map(self):
         """free is an internal state, never sold via checkout."""

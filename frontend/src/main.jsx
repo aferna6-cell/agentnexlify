@@ -22,6 +22,7 @@ const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const HelpPage = lazy(() => import("./pages/HelpPage"));
 const Contact = lazy(() => import("./pages/Contact"));
+const Partners = lazy(() => import("./pages/Partners"));
 const IntercomAlternative = lazy(() => import("./pages/IntercomAlternative"));
 const LiveChatAlternative = lazy(() => import("./pages/LiveChatAlternative"));
 const TidioAlternative = lazy(() => import("./pages/TidioAlternative"));
@@ -124,6 +125,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/help" element={<HelpPage />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/partners" element={<Partners />} />
             {/* Vertical chatbot pages (canonical URLs) */}
             <Route path="/dental-chatbot" element={<DentalChatbot />} />
             <Route path="/auto-shop-chatbot" element={<AutoShopChatbot />} />

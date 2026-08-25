@@ -34,6 +34,7 @@ _TIER_DEFAULTS: dict[str, int] = {
     # Current sellable plans (repriced 2026-06-15)
     "chatbot": 120,      # AI Front Desk — widget/chat entry tier
     "agent_os": 480,     # AI Workforce — full platform
+    "agent_os_managed": 480,  # Managed AI Workforce — same platform surface
     # Legacy / grandfathered
     "growth": 120,
     "autopilot": 240,

@@ -17,7 +17,10 @@ _PLACEHOLDER_PRICE_IDS = {
     "price_agent_os_monthly",
     "price_chatbot_annual",
     "price_agent_os_annual",
+    "price_agent_os_managed_monthly",
+    "price_agent_os_managed_setup",
     "price_usage_pack",
+    "price_voice_addon_monthly",
 }
 
 # Billing intervals a checkout may request. Annual is prepay with 2 months
@@ -48,10 +51,29 @@ PLAN_PRICES: dict[str, dict[str, str]] = {
         "monthly": _price_id(settings.stripe_price_agent_os_monthly, "price_agent_os_monthly"),
         "annual": _price_id(settings.stripe_price_agent_os_annual, "price_agent_os_annual"),
     },
+    # Managed done-for-you tier: $299.99/mo + one-time $199 setup fee. The
+    # "setup" price rides the existing setup-fee support in both checkout
+    # endpoints (a one-time line item added ahead of the recurring one).
+    "agent_os_managed": {
+        "monthly": _price_id(
+            settings.stripe_price_agent_os_managed_monthly,
+            "price_agent_os_managed_monthly",
+        ),
+        "setup": _price_id(
+            settings.stripe_price_agent_os_managed_setup,
+            "price_agent_os_managed_setup",
+        ),
+    },
 }
 
 # One-time usage-pack price (overage top-up)
 USAGE_PACK_PRICE_ID: str = _price_id(settings.stripe_price_usage_pack, "price_usage_pack")
+
+# Voice receptionist add-on — $49.99/mo subscription on top of any paid plan
+# (its market is chatbot tenants; agent_os already includes voice).
+VOICE_ADDON_PRICE_ID: str = _price_id(
+    settings.stripe_price_voice_addon_monthly, "price_voice_addon_monthly"
+)
 
 
 def ensure_plan_prices_configured(plan: str, interval: str = "monthly") -> dict[str, str]:

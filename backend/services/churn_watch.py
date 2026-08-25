@@ -38,6 +38,7 @@ _PAID_STATUSES = ("active", "trialing")
 _PLAN_MRR: dict[str, str] = {
     "chatbot": "$19.99/mo",
     "agent_os": "$99.99/mo",
+    "agent_os_managed": "$299.99/mo",
 }
 
 

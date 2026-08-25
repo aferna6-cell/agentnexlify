@@ -34,7 +34,7 @@ from backend.services.internal_tenants import is_internal_tenant
 logger = logging.getLogger(__name__)
 
 # Plans that are considered paid (not free/lapsed)
-_PAID_PLANS = {"chatbot", "agent_os", "growth", "autopilot", "professional", "enterprise"}
+_PAID_PLANS = {"chatbot", "agent_os", "agent_os_managed", "growth", "autopilot", "professional", "enterprise"}
 _PAID_STATUSES = {"active", "trialing"}
 
 

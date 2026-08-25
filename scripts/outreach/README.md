@@ -39,11 +39,33 @@ python scripts/outreach/instantly_lead_engine.py \
 
 ## Sourcing candidates
 
-`ct_sources.txt` lists high-yield directory pages (inven.ai, expertise.com)
-that show many businesses with real domains per page. The scheduled driver
-(below) fetches those, extracts `company | domain` pairs, writes a
-`candidates.csv`, then runs the engine. Rotate cities/verticals in
-`ct_sources.txt` to keep finding fresh businesses.
+Two sources, either produces the same `candidates.csv`:
+
+1. **Keyless (default, 2026-08-25): `osm_lead_source.py`** — pulls businesses
+   from OpenStreetMap via the public Overpass API. No API key at all, which
+   removes the `GOOGLE_PLACES_API_KEY` blocker that stalled the loop
+   (Open Loops 2026-07-13). Only businesses publishing a real `website` tag
+   are emitted (aggregator/social hosts filtered), so every row is
+   role-email-able. Presets cover all 13 launched verticals.
+
+   ```bash
+   python3 scripts/outreach/osm_lead_source.py \
+       --vertical salon --area "Connecticut" \
+       --out scripts/outreach/candidates/salon-ct.csv --limit 300
+   python3 scripts/outreach/osm_lead_source.py \
+       --vertical plumber_hvac --area "Connecticut" \
+       --out scripts/outreach/candidates/plumber-ct.csv --limit 300
+   ```
+
+   Three Overpass mirrors are tried in order. Sandboxed CI environments may
+   block or catch mirrors mid-outage — run from any normal machine or a
+   Routine with standard egress. Data (c) OpenStreetMap contributors (ODbL).
+
+2. **Directory pages: `ct_sources.txt`** — high-yield directory pages
+   (inven.ai, expertise.com) that show many businesses with real domains per
+   page. The scheduled driver fetches those, extracts `company | domain`
+   pairs, and writes `candidates.csv`. Rotate cities/verticals to keep
+   finding fresh businesses.
 
 ## Automated schedule
 
@@ -59,8 +81,10 @@ this repo. Without it the engine exits with a clear error and sends nothing.
 ## Tests
 
 ```bash
-python -m pytest scripts/outreach/test_instantly_lead_engine.py
+python -m pytest scripts/outreach/test_instantly_lead_engine.py \
+                 scripts/outreach/test_osm_lead_source.py
 ```
 
-Covers the pure helpers (domain normalization, email building, dedupe).
-Network paths are not exercised in tests.
+Covers the pure helpers (domain normalization, email building, dedupe,
+Overpass query building, tag extraction). Network paths are not exercised
+in tests.
