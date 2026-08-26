@@ -381,3 +381,8 @@ Per-category (found candidates / ingested / compiled):
 - regulations: 14/1/1 — tcpa-text-message-rules-2026 (PEWC tiers, litigation surge, one-to-one vacatur)
 - growth: 6/1/1 — geo-small-business-playbook-2026 (HubSpot SMB GEO playbook)
 INDEX.md updated: 114 → 124 articles (8 new + 2 pre-existing orphans from 2026-07-13 frontier run indexed: frontier-model-landscape-2026-h2, ai-voice-agents-sub-300ms-2026). Embeddings SKIPPED (no credentials; FTS fallback covers retrieval). known-urls.json 420 → 432 entries (8 ingested + 4 rejected). No commit — main session commits.
+
+## [2026-08-25 08:15] compile | GoHighLevel AI Employee — Agency Packaging (2026)
+## [2026-08-25 08:20] compile | GoHighLevel Real Cost After Usage Fees — Carrier Surcharges, A2P 10DLC, and Rebilling Margin (2026)
+## [2026-08-25 08:25] compile | Claude Managed Agents Pricing — The $0.08 Session-Hour on Top of Token Cost (2026)
+## [2026-08-25 08:30] compile | Prompt Caching in Production — 65% Average Savings Across Three Measured Workloads (2026)
