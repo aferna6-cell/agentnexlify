@@ -3,7 +3,7 @@
 Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 
 ## Statistics
-- Total articles: 127 (plus 1 in `_outputs/`)
+- Total articles: 128 (plus 1 in `_outputs/`)
 - Last compiled: 2026-08-25
 - Auto-populate: every 6 AM + 6 PM via `scripts/daily/kb-autopopulate.sh`
 
@@ -94,6 +94,7 @@ Master catalog of all compiled wiki articles. Auto-maintained by `/kb-compile`.
 - [Claude Developer Platform June–July 2026 — Sonnet 5 Launch, Model Retirements, and Managed Agents Maturity](wiki/ai-llm/claude-platform-releases-jun-jul-2026.md) — Sonnet 5 at $2/$10 intro pricing until Aug 31 with manual extended-thinking removed; Sonnet 4/Opus 4 retired, Opus 4.1 dies Aug 5, Opus 4.7 fast mode dies July 24; self-serve HIPAA configuration live; Managed Agents gain effort params + webhooks. Tags: anthropic, claude-sonnet-5, model-retirement, managed-agents, hipaa, api-changes
 - [July 2026 Frontier Release Wave — GPT-5.6, Grok 4.5, Muse Spark 1.1, and the Office-Work Pivot](wiki/ai-llm/frontier-july-2026-release-wave.md) — Ten July days shipped GPT-5.6 Sol/Terra/Luna ($5/$30), Grok 4.5 (83.3% Terminal-Bench at $2/$6), Muse Spark 1.1 (1M context, $1.25/$4.25, computer use), full-duplex GPT-Live voice (no API), and Claude Cowork; agentic office work is the new battleground. Tags: frontier-models, gpt-5-6, grok-4-5, muse-spark, fable-5, computer-use, voice
 - [Claude Managed Agents Pricing — The $0.08 Session-Hour on Top of Token Cost (2026)](wiki/ai-llm/claude-managed-agents-session-hour-pricing-2026.md) — Two-component billing: standard token rates plus $0.08 per active session-hour with idle time free; a 1-hour Opus 5 session costs $0.705 and Batch/fast-mode discounts do not carry over. Tags: anthropic, managed-agents, pricing, session-hours, claude-opus-5
+- [Prompt Caching in Production — 65% Average Savings Across Three Measured Workloads (2026)](wiki/ai-llm/prompt-caching-production-savings-2026.md) — Three measured workloads cut Claude spend 60-71%: break-even is 3 reads on the 5-min TTL, 5 on the 1-hour, and five prompt-construction anti-patterns account for nearly all misses. Tags: anthropic, prompt-caching, cost-optimization, rag, ttl, cache-hit-rate
 
 ### Small Business SaaS
 - [SaaS Churn Benchmarks — 2026 Segment and Vertical Baselines](wiki/small-biz-saas/saas-churn-benchmarks-2026.md) — SMB SaaS averages 7.5% annual churn vs 3.8% enterprise; monthly >2% is a fire; churn compounds multiplicatively. Tags: churn, smb-saas, benchmarks, retention, nrr, pricing
