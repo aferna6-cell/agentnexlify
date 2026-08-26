@@ -304,10 +304,10 @@ _All compiled 2026-04-18 cron run._
 - ~~[competitors] RevenueGeeks — GoHighLevel Real Cost After Usage Fees (2026) → `raw/competitors/gohighlevel-real-cost-after-usage-fees-2026.md`~~ COMPILED 2026-08-25 → `wiki/competitors/ghl-usage-fees-a2p-10dlc-rebilling-2026.md`
 - ~~[ai_llm] TrueFoundry — Claude Managed Agents Pricing (session-hour billing) → `raw/ai-llm/claude-managed-agents-pricing-2026.md`~~ COMPILED 2026-08-25 → `wiki/ai-llm/claude-managed-agents-session-hour-pricing-2026.md`
 - ~~[ai_llm] AI Magicx — Prompt Caching for Claude: Cut API Bill 60% in Production → `raw/ai-llm/prompt-caching-claude-production-cost-2026.md`~~ COMPILED 2026-08-25 → `wiki/ai-llm/prompt-caching-production-savings-2026.md`
-- [frontier_ai] Digital Applied — Frontier Model Q3 2026 Release Forecast → `raw/frontier-ai/frontier-model-q3-2026-release-forecast.md`
-- [frontier_ai] AI Release Tracker — August 2026 frontier releases → `raw/frontier-ai/ai-release-tracker-august-2026.md`
-- [small_biz_saas] Artisan Growth — SaaS Churn Benchmarks 2026 (500+ companies) → `raw/small-biz-saas/saas-churn-benchmarks-2026-500-companies.md`
-- [small_biz_saas] SaaS Mag — Vertical AI Agents Are Eating Horizontal SaaS → `raw/small-biz-saas/vertical-ai-agents-eating-horizontal-saas-2026.md`
+- ~~[frontier_ai] Digital Applied — Frontier Model Q3 2026 Release Forecast → `raw/frontier-ai/frontier-model-q3-2026-release-forecast.md`~~ COMPILED 2026-08-26 → `wiki/ai-llm/frontier-model-q3-2026-release-forecast.md`
+- ~~[frontier_ai] AI Release Tracker — August 2026 frontier releases → `raw/frontier-ai/ai-release-tracker-august-2026.md`~~ COMPILED 2026-08-26 → `wiki/ai-llm/ai-release-tracker-august-2026.md`
+- ~~[small_biz_saas] Artisan Growth — SaaS Churn Benchmarks 2026 (500+ companies) → `raw/small-biz-saas/saas-churn-benchmarks-2026-500-companies.md`~~ COMPILED 2026-08-26 → `wiki/small-biz-saas/saas-churn-benchmarks-2026-500-companies.md`
+- ~~[small_biz_saas] SaaS Mag — Vertical AI Agents Are Eating Horizontal SaaS → `raw/small-biz-saas/vertical-ai-agents-eating-horizontal-saas-2026.md`~~ COMPILED 2026-08-26 → `wiki/small-biz-saas/vertical-ai-agents-eating-horizontal-saas-2026.md`
 - [verticals] Augmented Trades — AI Receptionist Software for Plumbers (2026) → `raw/verticals/ai-receptionist-plumbers-missed-call-2026.md`
 - [verticals] Enamly — HIPAA-Compliant AI Receptionist for Dental Practices → `raw/verticals/hipaa-compliant-ai-dental-receptionist-checklist-2026.md`
 - [technical] OneUptime — Row-Level Security in PostgreSQL: Multi-Tenant Implementation → `raw/technical/postgres-rls-multi-tenant-implementation-2026.md`
