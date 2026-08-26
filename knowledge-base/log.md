@@ -388,3 +388,5 @@ INDEX.md updated: 114 → 124 articles (8 new + 2 pre-existing orphans from 2026
 ## [2026-08-25 08:30] compile | Prompt Caching in Production — 65% Average Savings Across Three Measured Workloads (2026)
 
 ## [2026-08-26 08:18] discover+compile | cron 18:00 | commits=9 raw=19 wiki=4
+
+## [2026-08-26 19:28] discover+compile | cron 18:00 | commits=2 raw=16 wiki=4
