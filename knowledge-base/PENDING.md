@@ -320,3 +320,24 @@ _All compiled 2026-04-18 cron run._
 - ERRORED (fetch failed, recorded to prevent retry): `https://hookray.com/blog/stripe-webhook-best-practices-2026` (HTTP 503); `https://which-50.com/live-chat-engagement-rate-benchmarks/` (HTTP 500). Both substituted with alternate picks above. URLs added to known-urls.json.
 - Deduped (already in known-urls.json, skipped): flowful.ai voice-agents-2026, markaicode vector-database-architecture-with-supabase, hooklistener stripe-webhook-security-guide, activeprospect tcpa-text-messages, searchengineland generative-engine-optimization-2026, tidio live-chat-statistics.
 - Fetcher: WebFetch (agent-browser CLI not installed on this host).
+
+## Ingested 2026-08-26 — cron autopop
+- [competitors] NextGen Channels — GoHighLevel AI Employee Review 2026 → `raw/competitors/gohighlevel-ai-employee-review-2026-nextgenchannels.md`
+- [competitors] Buildberg — GoHighLevel Pricing in 2026: The Plan Math an Agency Actually Runs → `raw/competitors/gohighlevel-pricing-2026-agency-plan-math-buildberg.md`
+- [ai_llm] OpsLyft — Anthropic Managed Agents: Pricing and Real Costs Explained → `raw/ai-llm/anthropic-managed-agents-pricing-real-costs-opslyft.md`
+- [ai_llm] Iron Mind — Prompt Caching: How We Cut Claude API Costs by 90% in Production → `raw/ai-llm/prompt-caching-claude-90-percent-production-iron-mind.md`
+- [frontier_ai] Axis Intelligence — AI Model Release Tracker 2026 → `raw/frontier-ai/ai-model-release-tracker-2026-axis-intelligence.md`
+- [frontier_ai] Build Fast with AI — GPT-5.5 Review 2026 (benchmarks vs Opus 4.7) → `raw/frontier-ai/gpt-5-5-review-benchmarks-2026-buildfastwithai.md`
+- [small_biz_saas] Livmo — SaaS Churn Rate Benchmarks 2026: Buyer Guide → `raw/small-biz-saas/saas-churn-benchmarks-valuation-2026-livmo.md`
+- [small_biz_saas] SaaS Rise — Vertical SaaS M&A and VC Report 2026 → `raw/small-biz-saas/vertical-saas-ma-vc-report-2026-saasrise.md`
+- [verticals] Kordless — Best AI Receptionist for Plumbing Businesses in 2026 (vendor-authored) → `raw/verticals/best-ai-receptionist-plumbing-2026-kordless.md`
+- [verticals] California Dental Association — AI in Dentistry: HIPAA Violation Risks → `raw/verticals/ai-in-dentistry-hipaa-violation-risks-cda.md`
+- [technical] Anthropic docs — Structured Outputs (output_config.format + strict tools) → `raw/technical/claude-structured-outputs-docs-anthropic.md`
+- [technical] Supabase — pgvector 0.4.0 Performance (2023 — historical IVFFlat baseline, flagged in file) → `raw/technical/supabase-pgvector-0-4-0-performance-benchmarks.md`
+- [regulations] Troutman / CFS Law Monitor — FTC Proposed Policy Statement on AI Accuracy (Jul 2026) → `raw/regulations/ftc-proposed-policy-statement-ai-accuracy-2026-07.md`
+- [regulations] ATTN Agency — SMS Marketing Compliance in 2026: TCPA, Opt-In Rules → `raw/regulations/sms-marketing-compliance-tcpa-2026-attnagency.md`
+- [growth] TagMaster — Tracking inside an embedded widget (iframe/postMessage/GA4) → `raw/growth/tracking-inside-embedded-widget-iframe-tagmaster.md`
+- [growth] Digital Applied — GEO Guide 2026: Generative Engine Optimization → `raw/growth/geo-guide-generative-engine-optimization-2026-digitalapplied.md`
+- Deduped (already in known-urls.json, skipped): automatethejourney GHL pricing; getautomized GHL AI Employee; gohighlevel.ai updates-2026; platform.claude.com release-notes/overview; platform.claude.com prompt-caching; vantainsights saas-churn-rate; medium (dikhyantkrishnadalai) vector search.
+- Rejected + added to known-urls.json (off-topic / homepage-only): crunchbase drillbit profile; supabase.com/modules/vector (product page); getviva.ai, smarterpractice.ai, savvyagents.ai (vendor homepages). Also rejected without recording (arxiv PDFs, Wikipedia, Givebutter/Rebuy/TrackingMore help pages, agentzap.ai, Drillbit job-board profiles, Cambridge Core reader).
+- Fetcher: WebFetch (agent-browser CLI not installed on this host).
