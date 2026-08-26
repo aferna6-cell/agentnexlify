@@ -1,0 +1,48 @@
+{
+  "run": 112,
+  "date": "2026-08-26",
+  "phases_completed": [
+    "load",
+    "gather",
+    "ideate",
+    "debate",
+    "synthesize",
+    "persist"
+  ],
+  "mandate_source": "run_111_mandate",
+  "mandate_items_checked": {
+    "pre_commit_hook_implemented": "UNKNOWN — pending human approval (run 111 winner)",
+    "step_9k_nightly_result": "Step 9K implemented run 110. First full nightly expected 2026-08-27.",
+    "annual_guard_audit": "DEFERRED — not checked this run",
+    "partners_py_step_9i": "partners.py in 10acf83 (3d old). Step 9I will sweep on next eligible nightly. GH #669 class tracker covers.",
+    "gh_669_pr_653_review": "PR #653 still open draft, 12+ days. Not reviewed.",
+    "step_9d_escalation": "GH #500 dark 37+ days. No escalation action this run. Parking lot candidate for run 113."
+  },
+  "ideas_generated": 5,
+  "debate_correction": "Step 9K (preliminary winner) already implemented run 110. Revised winner: runner-up Idea 3.",
+  "winner": {
+    "title": "Step 9J retry on mergeable_state:unknown with 30s delay",
+    "category": "operational",
+    "effort": "XS",
+    "channel": "autonomous-executable",
+    "file": ".claude/skills/nightly-commit-review/SKILL.md",
+    "insert_after": "Step 9J step 2c (blocking labels check)",
+    "lines_to_add": 4,
+    "confidence": "HIGH"
+  },
+  "backlog_parking_lot_count": 5,
+  "open_structural_issues": [
+    "GH #399",
+    "GH #403",
+    "GH #500",
+    "GH #669",
+    "GH #684",
+    "GH #687"
+  ],
+  "pr_dedup_guard": {
+    "existing_pr": 683,
+    "existing_branch": "subconscious/run-110",
+    "action": "commit onto existing branch (PR #683)"
+  },
+  "next_run_mandate": "run_113_mandate in memory.jsonl"
+}

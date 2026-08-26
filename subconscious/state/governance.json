@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-08-25-pm",
-  "total_runs": 111,
+  "last_run": "2026-08-26",
+  "total_runs": 112,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -1352,6 +1352,15 @@
       "note": "Run 111 winner. M-effort: scripts/claude-hooks/check-router-guards.sh + install-hooks.sh update. Evidence: partners.py committed without guard in same 10acf83 sprint as billing_addons.py which has it correctly.",
       "effort": "M",
       "channel": "human-approve-implement"
+    },
+    {
+      "run": 112,
+      "date": "2026-08-26",
+      "winner": "Step 9J retry on mergeable_state:unknown (30s delay)",
+      "category": "operational",
+      "channel": "autonomous-executable",
+      "status": "pending_implementation",
+      "effort": "XS"
     }
   ],
   "ideas_explored": [
@@ -1956,5 +1965,6 @@
   },
   "run_110_mandate_executed": "EXECUTED 2026-08-25 (run 110, session 2 \u2014 Step 9K). All mandate items checked: (1) Step 9J first nightly execution VERIFIED (nightly-2026-08-25): 19 PRs found, 0 merged \u2014 all minor/patch candidates have mergeable_state=unknown (GH Actions dark per fix(ci) 4c45e67). Safety gates correct: 6 major-version bumps blocked. Step 9J working as designed. (2) Step 9J 0-merge root cause: GH Actions dark since 2026-07-20 (#500) \u2014 mergeable_state stays unknown. Not a Step 9J bug. (3) GH #669 (block_demo_role): OPEN, 97/97 routers. PR #653 (middleware draft) 12d old, no merge. (4) GH #403 KB staleness: 33 days (last: 2026-07-23). Targeted SUPABASE_URL comment (run 107) had no human response. (5) GH #399 AUTOPILOT_GH_TOKEN: OPEN Day 41+. (6) Subconscious PR count: 4 (>= 3 threshold). Winner: Step 9K stale-PR closer. 5 ideas generated, top 3 debated. Idea 4 (middleware) WEAKENED (PR already exists), Idea 2 (dedup guard) parking lot, Step 9K SURVIVES \u2192 WINNER.",
   "run_111_mandate_executed": "EXECUTED 2026-08-25-pm (run 111, PM session). Evidence: 10acf83 revenue sprint added partners.py WITHOUT block_demo_role (billing_addons.py in same commit has it correctly). Step 9J: 0 merges (GH Actions dark 36 days). Step 9I will catch partners.py on next nightly automatically. Winner: Pre-commit block_demo_role detection hook. M-effort, human-approve-implement channel. Bonus A: annual plan guard audit. Parking lot: Step 9D GH Actions dark escalation (37+ days, run 112 candidate).",
-  "run_111_mandate": "1. Pre-commit hook implemented? scripts/claude-hooks/check-router-guards.sh exists? scripts/install-hooks.sh calls it? 2. Step 9K fired in first nightly after approval: grep Step 9K nightly log \u2014 count closed/escalated/skipped. 3. Annual guard audit: grep PLAN_BASELINE ai_usage_guard.py for annual plan coverage. 4. partners.py: Step 9I filed specific GH issue on 2026-08-26 nightly? 5. GH #669 PR #653: still open? any review/merge? 6. Step 9D GH Actions dark escalation issue filed? (37+ days dark, parking lot candidate run 112)."
+  "run_111_mandate": "1. Pre-commit hook implemented? scripts/claude-hooks/check-router-guards.sh exists? scripts/install-hooks.sh calls it? 2. Step 9K fired in first nightly after approval: grep Step 9K nightly log \u2014 count closed/escalated/skipped. 3. Annual guard audit: grep PLAN_BASELINE ai_usage_guard.py for annual plan coverage. 4. partners.py: Step 9I filed specific GH issue on 2026-08-26 nightly? 5. GH #669 PR #653: still open? any review/merge? 6. Step 9D GH Actions dark escalation issue filed? (37+ days dark, parking lot candidate run 112).",
+  "run_112_mandate": "1. Verify Step 9J retry block in SKILL.md (grep: 'retry' in Step 9J section). 2. Nightly-2026-08-27: did retry log appear? Did any minor/patch Dependabot PR resolve and merge? 3. Pre-commit block_demo_role hook: implemented? (run 111 winner, human-approve channel). 4. GH #399: AUTOPILOT_GH_TOKEN still expired? (Day 48+). 5. Step 9D: file escalation comment on GH #500 if still dark (37+ days, parking lot candidate). 6. partners.py: did Step 9I file a new issue or dedup under GH #669? Check nightly log."
 }
