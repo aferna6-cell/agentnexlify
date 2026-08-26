@@ -1,13 +1,11 @@
 {
   "version": 1,
-  "last_run": "2026-08-26",
-  "total_runs": 112,
+  "last_run": "2026-08-26-pm",
+  "total_runs": 113,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
-  "frozen_ideas": [
-    "ai_human_handoff"
-  ],
+  "frozen_ideas": ["ai_human_handoff"],
   "moratorium_config": {
     "moratorium_active": false,
     "triggered_run": 15,
@@ -218,6 +216,21 @@
   "run_109_mandate": "1. Verify Step 9J present in .claude/skills/nightly-commit-review/SKILL.md: grep 'Step 9J' \u2014 SHOULD PASS if nightly implemented. 2. First nightly with Step 9J: how many Dependabot PRs merged? How many skipped? Log line: 'Step 9J: {N} checked, {M} merged, {K} skipped'. 3. GH #669: did human acknowledge middleware-level fix as priority? Has any PR been opened? 4. GH #403: did bonus comment (SUPABASE_URL diagnostic) prompt action? KB freshness: check log.md. 5. GH #399: resolved? (Day 40+). 6. Step 9K (stale autonomy PR closer) is run 109 candidate if subconscious PR count still \u22653.",
   "run_110_mandate": "1. Step 9K present in .claude/skills/nightly-commit-review/SKILL.md? grep 'Step 9K' \u2014 SHOULD PASS if human approves or 1st carry-forward autonomous escalation fires. 2. First nightly with Step 9K: how many PRs closed (superseded)? How many escalated (21d+)? Log line: 'Step 9K: {N} checked, {M} closed, {K} escalated, {J} skipped'. 3. PR #575 and #626 closed? 4. Step 9J results: are minor/patch Dependabot PRs now reaching mergeable_state=clean after GH Actions resume? 5. GH #669 (block_demo_role): PR #653 reviewed or merged? 6. KB staleness: has ANTHROPIC_API_KEY been rotated in GH Actions? 7. memory.jsonl dedup bug (run 110 parking lot): if no higher-leverage idea in run 111, pick this.",
   "active_directions": [
+    {
+      "title": "Fix Step 9J: switch to commit check-run conclusions instead of mergeable_state (run 113 winner)",
+      "date": "2026-08-26-pm",
+      "confidence": "HIGH",
+      "status": "pending_approval",
+      "autonomous_executable": true,
+      "requires_human": false,
+      "category": "operational",
+      "source_run": 113,
+      "effort": "S",
+      "file_to_edit": ".claude/skills/nightly-commit-review/SKILL.md",
+      "action": "Remove mergeable_state != 'clean' skip check. Replace with: get PR head SHA, list check runs, skip if any status != completed OR conclusion not in [success, skipped], skip if no check runs. Keep all other guards (major-version bump, review requests, blocking labels).",
+      "implementation_sketch": "subconscious/runs/2026-08-26-pm/winning-concept.md",
+      "escalation_condition": "Autonomous-executable if not approved by run 114 (1st carry-forward mandate)"
+    },
     {
       "title": "Step 9K: Stale subconscious PR closer in nightly-commit-review SKILL.md (run 110 winner)",
       "date": "2026-08-25",

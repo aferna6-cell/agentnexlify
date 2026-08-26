@@ -1,0 +1,43 @@
+{
+  "run": 110,
+  "date": "2026-08-26-pm",
+  "total_runs_after": 110,
+  "winner": {
+    "title": "Fix Step 9J: switch from mergeable_state to commit check-run conclusions",
+    "category": "operational",
+    "effort": "S",
+    "confidence": "HIGH",
+    "autonomous_executable": true,
+    "requires_human": false,
+    "file_to_edit": ".claude/skills/nightly-commit-review/SKILL.md"
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "mandate_check": {
+    "step_9j_fired": true,
+    "step_9j_merges": 0,
+    "root_cause": "mergeable_state=unknown GitHub API laziness on inactive PRs",
+    "kb_freshness": "RESOLVED — ran 2026-08-26 08:18 (4 articles, embeddings skipped)",
+    "gh_687_filed": true,
+    "gh_669_status": "OPEN — 97 routers, no middleware PR",
+    "gh_399_status": "OPEN Day 41+"
+  },
+  "debate_verdicts": {
+    "fix_step_9j_check_runs": "SURVIVES → WINNER",
+    "block_demo_role_middleware": "WEAKENED → parking lot",
+    "step_9k_stale_pr_report": "WEAKENED → parking lot"
+  },
+  "parking_lot": [
+    "block_demo_role FastAPI middleware (GH #669) — run 111 when GH #399 unblocks",
+    "Step 9K stale subconscious PR report — run 111 paired SKILL.md edit",
+    "Voice addon double-billing fix (GH #687) — needs implementation sketch",
+    "churn_watch.py daily trigger — needs endpoint/CLI path verification"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-08-26-pm/ideas/ideas.md",
+    "subconscious/runs/2026-08-26-pm/debate/debate-log.md",
+    "subconscious/runs/2026-08-26-pm/winning-concept.md",
+    "subconscious/runs/2026-08-26-pm/improvement-backlog.md",
+    "subconscious/runs/2026-08-26-pm/run-summary.json"
+  ]
+}
