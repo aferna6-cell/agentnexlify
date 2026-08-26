@@ -386,3 +386,5 @@ INDEX.md updated: 114 → 124 articles (8 new + 2 pre-existing orphans from 2026
 ## [2026-08-25 08:20] compile | GoHighLevel Real Cost After Usage Fees — Carrier Surcharges, A2P 10DLC, and Rebilling Margin (2026)
 ## [2026-08-25 08:25] compile | Claude Managed Agents Pricing — The $0.08 Session-Hour on Top of Token Cost (2026)
 ## [2026-08-25 08:30] compile | Prompt Caching in Production — 65% Average Savings Across Three Measured Workloads (2026)
+
+## [2026-08-26 08:18] discover+compile | cron 18:00 | commits=9 raw=19 wiki=4
