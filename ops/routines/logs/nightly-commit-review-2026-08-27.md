@@ -100,8 +100,13 @@ No new issues filed (all violations already tracked in open issues).
 **Step 9I: ~95 files scanned, violations tracked in #669 + #660, 0 new issues filed.**
 
 ### Step 9J — Dependabot Auto-Merge
-19+ open Dependabot PRs (oldest from 2026-07-27). Mergeable state not retrieved (would require per-PR API calls). Not processed this run.
-**Step 9J: 19+ Dependabot PRs open, 0 merged (state not checked — many PRs, context budget).**
+19+ open Dependabot PRs (oldest from 2026-07-27). Checked 3 most recent PRs:
+- #679 — eslint 10.7→10.9: `mergeable_state: unknown`
+- #666 — @typescript-eslint/parser 8.64→8.67: `mergeable_state: unknown`
+- #629 — @playwright/test 1.61.1→1.62.1: `mergeable_state: unknown`
+
+All three returned `unknown` (GitHub hasn't computed mergeability, typical for stale-base PRs). Skill requires `"clean"` state — 0 merged.
+**Step 9J: 3 PRs checked (#679, #666, #629), all `mergeable_state: unknown`, 0 merged.**
 
 ## Next action
 - **Brain connector (#684)**: NEEDS HUMAN — rotate GitHub PAT + set SUPABASE_ACCESS_TOKEN in Railway (35 days stale).
