@@ -1,0 +1,45 @@
+{
+  "run": 114,
+  "date": "2026-08-27",
+  "winner": "Fix Step 9J — Allow merge when mergeable_state: unknown (CI dark)",
+  "winner_category": "operational",
+  "winner_effort": "XS",
+  "winner_channel": "autonomous-executable",
+  "bonus_a": "Step 9K stale PR closer — pending human approval of PR #683",
+  "evidence_sources": [
+    "ops/routines/logs/nightly-commit-review-2026-08-27.md",
+    "knowledge-base/log.md",
+    "backend/services/agent_escalation.py",
+    ".claude/skills/nightly-commit-review/SKILL.md"
+  ],
+  "key_findings": {
+    "step_9j_first_execution": "3 PRs checked, 0 merged — all mergeable_state: unknown",
+    "root_cause": "GH Actions dark since 2026-07-20 (GH #500) — CI never runs, mergeable_state never reaches clean",
+    "dependabot_prs_aging": "19+ PRs, oldest 2026-07-27 (31 days)",
+    "kb_status": "HEALTHY — last run 2026-08-26",
+    "brain_connector": "35d stale — GH #684 open, human action required",
+    "ai_ready_issues": "3 open (#643=20d, #660=12d, #669=7d), 0 linked PRs",
+    "agent_escalation_py": "88 LOC, 0 router callers — dead code risk",
+    "open_subconscious_prs": 6
+  },
+  "mandate_from_run_109": {
+    "step_9j_verified_firing": "PASS — fired 2026-08-27, 0 merges (root cause: CI dark)",
+    "gh_669_middleware_pr": "OPEN — no PR filed",
+    "gh_403_kb_freshness": "RESOLVED — KB ran 2026-08-26",
+    "gh_399_status": "OPEN — Day 54+",
+    "step_9k_condition_met": true,
+    "subconscious_pr_count": 6
+  },
+  "run_111_mandate": [
+    "Verify Step 9J merges at least 1 Dependabot PR on 2026-08-28 nightly",
+    "Check Step 9K in nightly log — '9K:' line present?",
+    "GH #399: Day 60 escalation if still open",
+    "brain connector GH #684: PAT rotation done?",
+    "agent_escalation.py: still 0 router callers? → Step 9L candidate",
+    "GH #669: any middleware PR opened by human?"
+  ],
+  "ideas_generated": 5,
+  "ideas_advanced_to_debate": 3,
+  "moratorium_active": false,
+  "pending_human_approvals": 1
+}
