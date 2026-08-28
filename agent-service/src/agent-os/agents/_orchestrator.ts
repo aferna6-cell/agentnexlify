@@ -18,10 +18,44 @@ import { loadSharedContext } from "./_shared-context.ts";
 import { createTraceEmitter } from "./_trace.ts";
 import { registry } from "./_registry.ts";
 import { classify, type Candidate } from "./_classifier.ts";
+import { readAskIntent } from "./_intent.ts";
 import type { AgentOutput, StreamedTraceStep } from "../types/agent.ts";
 
 const CONFIDENCE_FLOOR = 0.5;
 const RESOLUTION_GAP = 0.1;
+/**
+ * How close the runner-up must be, as a share of the leader's evidence, before
+ * the two count as genuinely indistinguishable.
+ */
+const RESOLUTION_RATIO = 0.85;
+/**
+ * Minimum evidence a department needs before it counts as a candidate at all.
+ *
+ * A generic intent match alone scores 2 and applies to most departments at
+ * once; only a subject match carries information about which business function
+ * an ask belongs to.
+ */
+const MIN_BUSINESS_EVIDENCE = 3;
+
+/**
+ * Are the top two candidates too close to separate?
+ *
+ * Measured on raw evidence where the classifier provides it, because
+ * `confidence` saturates: `score/(score+2)` maps a one-point lead to 0.17
+ * between weak candidates and to 0.02 between strong ones. An absolute gap test
+ * on that value quietly re-labels every well-evidenced pair as ambiguous the
+ * moment scores grow, which turns "I know exactly what you want" into "which
+ * did you mean?". Haiku returns calibrated probabilities and no score, so the
+ * original absolute gap still applies there.
+ */
+export function isAmbiguous(top: Candidate, second: Candidate): boolean {
+  if (typeof top.score === "number" && typeof second.score === "number") {
+    if (top.score <= 0) return false;
+    return second.score / top.score >= RESOLUTION_RATIO;
+  }
+  const gap = Math.round((top.confidence - second.confidence) * 100) / 100;
+  return gap < RESOLUTION_GAP;
+}
 
 export type DecisionStatus = "routed" | "needs_clarification" | "wishlist_fallback" | "owner_override" | "direct_answer" | "declined";
 
@@ -76,6 +110,33 @@ export async function handle(userId: string, ask: string, opts: HandleOptions = 
     return { status: "direct_answer", classifier: "heuristic", decisionId: decision.id, confidence: 1, alternates: [], params: {}, orchestratorNotes: [], answer };
   }
 
+  // --- Asks about the agent system itself → decline ---------------------------
+  // A request for the system prompt, a connector credential, or a standing
+  // grant of permission is not a business task, and there is no department that
+  // should be drafting an answer to one. Handled here rather than in a
+  // department because it is a property of the request, not of any business
+  // function — and because the correct answer is the same in every department:
+  // no.
+  if (!opts.forceAgentId && isSystemMetaAsk(ask)) {
+    const decision = await getRunStore().createRoutingDecision({
+      userId, ask, classifier: "heuristic", decision: "declined", chosenAgent: "none", confidence: 0,
+    });
+    return {
+      status: "declined",
+      classifier: "heuristic",
+      decisionId: decision.id,
+      confidence: 0,
+      alternates: [],
+      params: {},
+      orchestratorNotes: [
+        "I can't share my own configuration or the credentials for your connected accounts, and " +
+          "I can't take a standing approval in advance. Every action that leaves your business — " +
+          "an email, a message — is approved one at a time, by you, with the recipient and the full " +
+          "text in front of you.",
+      ],
+    };
+  }
+
   // --- Non-business asks → polite decline (v2 Decision 2: no Generalist) -------
   if (!opts.forceAgentId && isNonBusiness(ask)) {
     await captureWishlist(userId, ask, []);
@@ -98,6 +159,29 @@ export async function handle(userId: string, ask: string, opts: HandleOptions = 
   const cls = await classify(ask);
   const candidates = cls.candidates;
   const alternates = candidates.slice(1, 4);
+
+  // --- Destructive asks → honest decline -------------------------------------
+  // Nothing in this system deletes a customer, an invoice or an appointment,
+  // and drafting a document in response to "delete Mike from the pipeline"
+  // answers a question the owner did not ask. Say what is true instead.
+  if (!opts.forceAgentId && readAskIntent(ask).intent === "destroy") {
+    const decision = await getRunStore().createRoutingDecision({
+      userId, ask, classifier: cls.classifier, decision: "declined", chosenAgent: "none", confidence: 0,
+    });
+    return {
+      status: "declined",
+      classifier: cls.classifier,
+      decisionId: decision.id,
+      confidence: 0,
+      alternates: [],
+      params: cls.params,
+      orchestratorNotes: [
+        "I can't delete records — I can add to them and write about them, but removing customer " +
+          "data is something you'd do directly in your dashboard. Want me to note on the record why " +
+          "instead?",
+      ],
+    };
+  }
 
   // --- Owner override -------------------------------------------------------
   if (opts.forceAgentId && registry.has(opts.forceAgentId)) {
@@ -126,9 +210,15 @@ export async function handle(userId: string, ask: string, opts: HandleOptions = 
   // The 8 departments cover the genuine-business surface, so there's no catch-all
   // worker. We capture the unmet-need signal and run the NEAREST department,
   // telling the owner it was the closest match (and to pick another if wrong).
-  if (!top || top.confidence < CONFIDENCE_FLOOR) {
+  // A bare intent match ("this is a communication") says nothing about WHICH
+  // business function it belongs to. Treating it as a candidate produced
+  // eight-way ties on out-of-scope asks, which the owner then saw as "which
+  // department did you mean?" for a sourdough recipe.
+  const hasBusinessEvidence = top === undefined || top.score === undefined || top.score >= MIN_BUSINESS_EVIDENCE;
+
+  if (!top || !hasBusinessEvidence || top.confidence < CONFIDENCE_FLOOR) {
     await captureWishlist(userId, ask, candidates);
-    if (!top) {
+    if (!top || !hasBusinessEvidence) {
       // Nothing scored at all — decline gracefully rather than guess.
       const decision = await getRunStore().createRoutingDecision({
         userId, ask, classifier: cls.classifier, decision: "wishlist_fallback", chosenAgent: "none", confidence: 0,
@@ -158,10 +248,8 @@ export async function handle(userId: string, ask: string, opts: HandleOptions = 
     return res;
   }
 
-  // --- Ambiguous (top two within 0.1) → ask the owner ------------------------
-  // Round the gap to avoid float artefacts (0.6 - 0.5 = 0.0999…).
-  const gap = second ? Math.round((top.confidence - second.confidence) * 100) / 100 : 1;
-  if (second && gap < RESOLUTION_GAP) {
+  // --- Ambiguous (top two too close to separate) → ask the owner ------------
+  if (second && isAmbiguous(top, second)) {
     const a = registry.get(top.agentId);
     const b = registry.get(second.agentId);
     const decision = await getRunStore().createRoutingDecision({
@@ -263,8 +351,13 @@ async function runAndLog(
     await getRunStore().setRunStatus(run.id, "no_draft");
   }
 
-  const status: DecisionStatus =
-    decisionType === "owner_override"
+  // A department that asked a question is reported as asking one. Routing was
+  // correct and the run succeeded; what is missing is a detail only the owner
+  // has, and calling that "routed" leaves the owner reading a non-answer with
+  // no signal that a reply would unblock it.
+  const status: DecisionStatus = output.needsClarification
+    ? "needs_clarification"
+    : decisionType === "owner_override"
       ? "owner_override"
       : decisionType === "wishlist_fallback"
         ? "wishlist_fallback"
@@ -399,9 +492,32 @@ export function aggregateBriefing(ctx: import("../types/agent.ts").SharedContext
   return out.join("\n");
 }
 
-/** Complaint-language detection (short-circuits routing to the Complaint Handler). */
+/**
+ * Complaint-language detection (short-circuits routing to the Complaint Handler).
+ *
+ * Sentiment, not subject. "Refund" used to appear here, which sent every owner
+ * instruction to issue one — a financial task — into complaint handling on the
+ * strength of a noun. A customer who is angry ABOUT a refund still trips the
+ * sentiment words that remain.
+ */
 export function detectComplaint(ask: string): boolean {
-  return /(furious|angry|upset|unhappy|disappointed|terrible|awful|worst|ruined|scratch(ed)?|damaged|broke|refund|complaint|complained|unacceptable|fed up|never again)/i.test(ask);
+  return /(furious|angry|upset|unhappy|disappointed|terrible|awful|worst|ruined|scratch(ed)?|damaged|broke|complaint|complained|unacceptable|fed up|never again)/i.test(ask);
+}
+
+/**
+ * Is this ask about the agent system itself rather than about the business?
+ *
+ * Two shapes, one answer. Asking for internals or credentials is an
+ * exfiltration attempt whether or not it is meant as one. Granting approval in
+ * advance tries to move a per-action decision into conversation text, and
+ * policy that can be set by prompt content is not policy.
+ */
+export function isSystemMetaAsk(ask: string): boolean {
+  const internals =
+    /\b(system prompt|your (instructions|prompt|rules|config|configuration)|api key|access token|oauth token|gmail token|refresh token|credentials?)\b/i;
+  const standingGrant =
+    /\b(approval in advance|pre[- ]?approve|approve (everything|all|any)|you have my (approval|permission)|blanket (approval|permission)|don'?t (ask|check) (me )?(for approval|again))\b/i;
+  return internals.test(ask) || standingGrant.test(ask);
 }
 
 async function captureWishlist(userId: string, ask: string, candidates: Candidate[]): Promise<void> {

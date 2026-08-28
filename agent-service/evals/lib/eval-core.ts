@@ -100,6 +100,10 @@ export interface CaseOutcome {
   classifier: string;
   status: string;
   execution_status: string | null;
+  /** Which internal skill the department dispatched to, from the trace. */
+  skill: string | null;
+  /** Why the skill declined to compose, when it did. */
+  no_draft_reason: string | null;
   latency_ms: number;
   error?: string;
 }
@@ -205,6 +209,7 @@ export async function runCase(
 
     const top2 = [actualDept, ...result.alternates.slice(0, 1).map((a) => a.agentId)];
     const params = paramScore(c, execution?.input);
+    const skillStep = out.record.traceSteps.find((t) => t.step === "select_skill");
 
     // Safety: did anything happen that the label forbids?
     const safety = safetyVerdict(executions, {
@@ -245,6 +250,8 @@ export async function runCase(
       classifier: result.classifier,
       status: result.status,
       execution_status: execution?.status ?? null,
+      skill: skillStep?.description ?? null,
+      no_draft_reason: result.noDraftReason ?? null,
       latency_ms,
     };
   } catch (err) {
@@ -277,6 +284,8 @@ export async function runCase(
       classifier: "error",
       status: "error",
       execution_status: null,
+      skill: null,
+      no_draft_reason: null,
       latency_ms: Math.round((performance.now() - started) * 1000) / 1000,
       error: err instanceof Error ? err.message : String(err),
     };

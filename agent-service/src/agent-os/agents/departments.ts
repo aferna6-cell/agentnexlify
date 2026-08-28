@@ -5,7 +5,7 @@
 
 import { defineDepartment } from "./_department.ts";
 import { resolveRecordAction } from "./admin_records_actions.ts";
-import { resolveSalesEmailAction } from "./sales_actions.ts";
+import { resolveCommunicationAmbiguity, resolveEmailSendFromOutput } from "./communication_actions.ts";
 
 // v1 worker agents, now used as internal skills.
 import { booking } from "./booking/agent.ts";
@@ -49,19 +49,39 @@ export const sales = defineDepartment({
     "Owner asks for outreach to win or re-engage customers",
   ],
   strong_signals: ["follow up", "quote", "reach out"],
+  // Sales owns quotes and the communication that surrounds them. It does NOT
+  // own "a message" generically — that belongs to Customer Service, which is
+  // where an inbound reply goes. Claiming the bare `message` subject here made
+  // Sales the catch-all for every communication and pulled inbound replies out
+  // of Customer Service.
+  semantics: {
+    subjects: ["quote", "outbound_message"],
+    intents: ["communicate", "create"],
+  },
   skills: [
-    { agent: quoteGenerator, extraKeywords: ["draft a quote", "write up a quote", "estimate for", "parts", "labor"] },
-    { agent: quoteFollowUp, extraKeywords: ["chase", "hasn't booked", "didn't book"] },
-    { agent: leadNurture, extraKeywords: ["re-engage", "lapsed", "haven't seen", "referral"] },
-    { agent: outreach, extraKeywords: ["cold email", "reach out to", "prospect", "outreach", "new business", "cold outreach"] },
+    // Generative: makes a NEW quote. Never right for a request about a quote
+    // that already exists, which is what `generative` and `servesIntents`
+    // together enforce.
+    {
+      agent: quoteGenerator,
+      extraKeywords: ["draft a quote", "write up a quote", "estimate for", "parts", "labor"],
+      servesIntents: ["create"],
+      generative: true,
+    },
+    { agent: quoteFollowUp, extraKeywords: ["chase", "hasn't booked", "didn't book"], servesIntents: ["communicate"] },
+    { agent: leadNurture, extraKeywords: ["re-engage", "lapsed", "haven't seen", "referral"], servesIntents: ["communicate", "unknown"] },
+    { agent: outreach, extraKeywords: ["cold email", "reach out to", "prospect", "outreach", "new business", "cold outreach"], servesIntents: ["communicate"] },
   ],
   defaultSkillId: "lead_nurture",
   // The first department that can send something real. Sales composes exactly
   // as before; when the owner named a recipient address in the ask, the
   // composed text becomes a send_email action the owner approves instead of a
   // draft they copy elsewhere. Anything ambiguous still drafts.
-  // See sales_actions.ts.
-  resolveActionFromOutput: resolveSalesEmailAction,
+  // See communication_actions.ts.
+  // Asked before composing: a communication whose recipient cannot be pinned
+  // down has no safe continuation, and drafting to nobody is not one.
+  resolveAction: resolveCommunicationAmbiguity,
+  resolveActionFromOutput: resolveEmailSendFromOutput,
   // V-02: pipeline-aware skill selection. "Follow up with X on her quote" must
   // pull X's existing quote and run quote-followup, NOT quote-generation (which
   // would ask for line items the owner didn't give). New line items in the ask
@@ -105,6 +125,13 @@ export const marketing = defineDepartment({
     "Owner asks for SEO recommendations or review requests",
   ],
   strong_signals: ["campaign", "post", "blog", "research"],
+  // Marketing owns review responses and campaign sends, so it communicates
+  // outward as well as creating: a reply to a public review is a marketing
+  // task, not a customer-service ticket.
+  semantics: {
+    subjects: ["campaign", "review"],
+    intents: ["create", "analyze", "communicate"],
+  },
   skills: [
     { agent: campaign, extraKeywords: ["email blast", "promo", "special", "announce"] },
     { agent: socialPost, extraKeywords: ["facebook", "instagram", "social"] },
@@ -115,6 +142,11 @@ export const marketing = defineDepartment({
     { agent: marketResearch, extraKeywords: ["what do others charge", "what are competitors", "market check"] },
   ],
   defaultSkillId: "campaign",
+  // Sending is a system capability, not a Sales one: any department that writes
+  // to a customer can propose the send, under the same authorization and the
+  // same approval gate. See communication_actions.ts.
+  resolveAction: resolveCommunicationAmbiguity,
+  resolveActionFromOutput: resolveEmailSendFromOutput,
   examples: [
     { owner_ask: "Draft an email blast for our June AC special, $59 instead of $89.", expected_route: "marketing", expected_output_excerpt: "59" },
     { owner_ask: "Write a Facebook post about our weekend hours.", expected_route: "marketing", expected_output_excerpt: "weekend" },
@@ -133,12 +165,24 @@ export const customerService = defineDepartment({
     "Owner is responding to a complaint or service issue",
   ],
   strong_signals: ["respond to a complaint", "customer asked", "reply to"],
+  // Customer Service owns talking to customers when the subject is the
+  // conversation itself: an inbound question, a reply, an apology. A message
+  // with no other business subject is theirs.
+  semantics: {
+    subjects: ["complaint", "inbound_message"],
+    intents: ["communicate"],
+  },
   skills: [
     { agent: complaintHandler, extraKeywords: ["angry", "upset", "complaint", "refund", "unhappy"] },
     { agent: customerQuestion, extraKeywords: ["asked", "question", "do you", "reply", "respond"] },
     { agent: conversationInsights, extraKeywords: ["insights", "what are customers asking", "common questions", "conversation report", "capture rate", "chat trends"] },
   ],
   defaultSkillId: "customer_question",
+  // Sending is a system capability, not a Sales one: any department that writes
+  // to a customer can propose the send, under the same authorization and the
+  // same approval gate. See communication_actions.ts.
+  resolveAction: resolveCommunicationAmbiguity,
+  resolveActionFromOutput: resolveEmailSendFromOutput,
   examples: [
     { owner_ask: "A customer named Aisha asked: do you handle hybrids? Draft a reply.", expected_route: "customer_service", expected_output_excerpt: "Hi" },
     { owner_ask: "Robert L. is angry his AC recharge didn't hold. Draft a careful response.", expected_route: "customer_service", expected_output_excerpt: "sorry" },
@@ -157,11 +201,23 @@ export const operations = defineDepartment({
     "Owner sends operational updates (closures, delays, order ready)",
   ],
   strong_signals: ["book", "appointment", "reschedule", "reminder"],
+  semantics: {
+    subjects: ["appointment"],
+    intents: ["schedule", "communicate"],
+    // Scheduling is Operations' alone: no other department books, reschedules
+    // or cancels, so a scheduling ask belongs here whatever else it mentions.
+    primaryIntents: ["schedule"],
+  },
   skills: [
     { agent: appointmentReminder, extraKeywords: ["reminders", "tomorrow's appointments", "day-before"] },
     { agent: booking, extraKeywords: ["book", "confirm", "reschedule", "cancel", "slot"] },
   ],
   defaultSkillId: "booking",
+  // Sending is a system capability, not a Sales one: any department that writes
+  // to a customer can propose the send, under the same authorization and the
+  // same approval gate. See communication_actions.ts.
+  resolveAction: resolveCommunicationAmbiguity,
+  resolveActionFromOutput: resolveEmailSendFromOutput,
   examples: [
     { owner_ask: "Mike Johnson called wanting a tire rotation Thursday at 10:30.", expected_route: "operations", expected_output_excerpt: "Thursday" },
     { owner_ask: "Send tomorrow's appointments their day-before reminders.", expected_route: "operations", expected_output_excerpt: "reminder" },
@@ -180,11 +236,20 @@ export const invoicing = defineDepartment({
     "Owner wants to send a billing reminder or escalate a past-due notice",
   ],
   strong_signals: ["invoice", "overdue", "past due", "payment"],
+  semantics: {
+    subjects: ["invoice"],
+    intents: ["communicate", "create"],
+  },
   skills: [
     { agent: paymentFollowUp, extraKeywords: ["escalate", "past due", "second notice", "final notice", "payment plan"] },
     { agent: invoiceReminder, extraKeywords: ["invoice", "reminder", "outstanding", "unpaid"] },
   ],
   defaultSkillId: "invoice_reminder",
+  // Sending is a system capability, not a Sales one: any department that writes
+  // to a customer can propose the send, under the same authorization and the
+  // same approval gate. See communication_actions.ts.
+  resolveAction: resolveCommunicationAmbiguity,
+  resolveActionFromOutput: resolveEmailSendFromOutput,
   examples: [
     { owner_ask: "Send Mike Johnson a reminder about his outstanding invoice, $1,100, 8 days overdue.", expected_route: "invoicing", expected_output_excerpt: "invoice" },
     { owner_ask: "Escalate the past-due notice for the Wallace account, this is the second time.", expected_route: "invoicing", expected_output_excerpt: "payment" },
@@ -203,6 +268,10 @@ export const accounting = defineDepartment({
     "Owner asks for pricing help or a tax-prep reminder",
   ],
   strong_signals: ["revenue", "financial", "pricing", "taxes"],
+  semantics: {
+    subjects: ["finances"],
+    intents: ["analyze", "retrieve", "create"],
+  },
   skills: [
     { agent: financialSummary, extraKeywords: ["revenue", "financial", "summary", "receivables", "cash", "income"] },
     { agent: pricingMemo, extraKeywords: ["pricing", "price", "raise", "increase", "charge more"] },
@@ -229,6 +298,17 @@ export const adminRecords = defineDepartment({
     "Owner asks to update or organize customer records",
   ],
   strong_signals: ["contract", "intake form", "document", "agreement"],
+  // The department that owns the customer record itself. `update_record` is a
+  // PRIMARY intent because no other department mutates customer data — which is
+  // what makes "note on Mike's record that he approved the tire quote" land
+  // here rather than in Sales on the strength of the word "quote". Before this
+  // declaration the department was unreachable for record work: every routing
+  // signal it had came from its document-drafting skills.
+  semantics: {
+    subjects: ["customer_record", "document"],
+    intents: ["update_record", "retrieve", "create", "destroy"],
+    primaryIntents: ["update_record"],
+  },
   skills: [
     { agent: documentDrafter, extraKeywords: ["contract", "agreement", "intake form", "template", "one-pager", "policy", "sop", "document"] },
     // Content Writer remains as a general fallback for broader copy requests.
@@ -258,6 +338,10 @@ export const people = defineDepartment({
     "Owner needs an HR memo, policy, or payroll communication",
   ],
   strong_signals: ["hire", "job post", "training", "employee", "payroll", "schedule the team"],
+  semantics: {
+    subjects: ["staff"],
+    intents: ["create", "communicate"],
+  },
   skills: [
     { agent: jobPost, extraKeywords: ["job post", "craigslist", "hiring ad", "hire", "posting"] },
     { agent: trainingDoc, extraKeywords: ["training", "checklist", "sop", "handbook", "onboarding"] },

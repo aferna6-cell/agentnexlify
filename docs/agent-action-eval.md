@@ -35,6 +35,7 @@ npm run eval:actions -- --limit 20   # smoke a subset while iterating
 npm run eval:actions:gate         # exit non-zero on a SAFETY regression
 
 npm run eval:validation           # the editable validation split (35 cases)
+npm run eval:errors               # stage-based error taxonomy (add --cases for detail)
 npm run eval:inspect -- "Email sarah.chen@example.com about her quote"
 npm run eval:inspect -- --case act_email_001
 
@@ -160,38 +161,33 @@ per-case outcome list.
 
 ### Baseline — 2026-08-28, frozen test split, offline engine
 
-```
-cases:                  215
-department accuracy:    51.6%   (top-2 53.5%, macro F1 0.5804)
-behavior accuracy:      45.1%
-tool accuracy:           3.6%   (84 scored)
-approval accuracy:     100.0%   (3 scored)
-param exact match:       3.9%   (field-level 3.1%)
-missed-action rate:     92.9%   (84 action cases)
-UNSAFE ACTIONS:            0    (59 safety-labelled cases)
-latency:                median 0.18ms, p95 1.32ms
-```
+Two measurements exist. The first is the honest starting point recorded at
+`9c3ac4a`; the second is after the Milestone 4 pipeline repairs
+(`docs/agent-decision-pipeline-error-analysis.md`).
 
-This is a poor baseline and it is reported as one. Two root causes account for
-almost all of it, both confirmed by direct probe rather than inferred:
+| Metric | `9c3ac4a` baseline | After pipeline fixes |
+|---|---|---|
+| Department accuracy | 51.6% | 80.5% |
+| Department top-2 | 53.5% | 83.3% |
+| Department macro F1 | 0.5804 | 0.7051 |
+| Behavior accuracy | 45.1% | 80.0% |
+| Tool accuracy | 3.6% | 66.7% |
+| Approval accuracy | 100% (3 scored) | 100% (56 scored) |
+| Parameter exact match | 3.9% | 70.1% |
+| Missed-action rate | 92.9% | 29.8% |
+| **Unsafe actions** | **0 / 59** | **0 / 59** |
 
-1. **Note asks do not reach Admin & Records.** Forcing the department makes
-   `add_customer_note` succeed end to end; the free classifier routes
-   `"add an internal note to Sarah Chen's record"` to `operations` on the word
-   "appointments" and lands in a wishlist fallback. Confusion matrix:
-   `admin_records → none: 30`.
-2. **Sales routes correctly but produces no draft to act on.** `quote_generator`
-   refuses with `"no line items provided"`, so `resolveActionFromOutput` — which
-   converts a composed draft into a `send_email` proposal — has nothing to
-   convert. Hence 3.6% tool accuracy against 57 correctly-routed sales cases.
+The original baseline was poor and was reported as poor. Two root causes
+accounted for nearly all of it, both confirmed by direct probe: routing signals
+were derived only from a department's drafting skills, so a department was
+unreachable for any capability its skills did not describe; and task intent was
+never separated from business subject, so a communication request about a quote
+was scored as a request to produce one. Both are fixed and analysed in full in
+`docs/agent-decision-pipeline-error-analysis.md`.
 
-Neither is fixed in this change. The instruction was an honest baseline first,
-and a routing rule edited to satisfy a benchmark stops measuring anything.
-
-The one number that is already where it must be is the safety one: **zero unsafe
-actions across 59 safety-labelled cases**, including every approval-bypass
-attempt, forged system turn, pre-granted-permission claim and cross-tenant
-probe.
+Remaining failures are now 68.9% routing, and 24 of those 42 are cases where no
+department scored any evidence at all — a lexicon-recall problem rather than a
+discrimination one.
 
 ## The regression gate
 

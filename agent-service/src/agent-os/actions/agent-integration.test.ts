@@ -154,14 +154,27 @@ test("note text is taken from the owner's own words", () => {
   assert.equal(extractNoteText("Add a note for Sarah"), undefined);
 });
 
-test("the resolver refuses asks that are not clearly an action", () => {
+test("the resolver acts only on an authorized record mutation", () => {
   const context = h.context;
-  const ask = (a: string) => resolveRecordAction({ ownerAsk: a, params: extractParams(a), context });
+  const ask = (a: string) =>
+    resolveRecordAction({ ownerAsk: a, params: extractParams(a), context, intent: readAskIntent(a) });
 
-  assert.equal(ask("Write a one-pager on our refund policy."), undefined);
-  assert.equal(ask("Add a note saying she prefers texts."), undefined, "no customer named");
-  assert.equal(ask("Add a note to Sarah Chen's record."), undefined, "no note text");
-  assert.ok(ask("Add a note to Sarah Chen's record saying she prefers texts."));
+  assert.equal(ask("Write a one-pager on our refund policy."), undefined, "not a record mutation");
+  assert.equal(
+    ask("Should I be noting things like this on customer records?"),
+    undefined,
+    "a question about the practice is never the act",
+  );
+
+  // Under-specified asks now produce a question rather than silently drafting:
+  // the owner clearly wants a record updated, they just left something out.
+  const noCustomer = ask("Add a note saying she prefers texts.");
+  assert.ok(noCustomer && "clarify" in noCustomer, "no customer named -> ask which one");
+  const noText = ask("Add a note to Sarah Chen's record.");
+  assert.ok(noText && "clarify" in noText, "no note text -> ask what it should say");
+
+  const action = ask("Add a note to Sarah Chen's record saying she prefers texts.");
+  assert.ok(action && "toolId" in action && action.toolId === "add_customer_note");
 });
 
 // --- Sales: composing an email, then proposing the send -----------------------
@@ -172,7 +185,8 @@ test("the resolver refuses asks that are not clearly an action", () => {
 // they copy somewhere.
 
 import { sales } from "../agents/departments.ts";
-import { soleRecipient, wantsSend } from "../agents/sales_actions.ts";
+import { soleRecipient } from "../agents/communication_actions.ts";
+import { authorizesAction, readAskIntent } from "../agents/_intent.ts";
 
 function runSales(ask: string, userId: string | null = "tenantA"): Promise<AgentOutput> {
   const emitTrace = createTraceEmitter("run_1", { persist: false, onStep: (s) => steps.push(s) });
@@ -237,6 +251,13 @@ test("a recipient is only ever taken from the owner's own words", () => {
   assert.equal(soleRecipient("Email sarah@example.com about the quote"), "sarah@example.com");
   assert.equal(soleRecipient("Email Sarah about the quote"), undefined);
   assert.equal(soleRecipient("Email a@x.com and b@y.com"), undefined);
-  assert.equal(wantsSend("Draft a follow-up for Sarah"), false);
-  assert.equal(wantsSend("Email sarah@example.com"), true);
+  // Authorization is read off the permission axis, not off a send verb: an ask
+  // for words never authorizes an act, however many send verbs it contains.
+  assert.equal(authorizesAction(readAskIntent("Draft a follow-up for Sarah")), false);
+  assert.equal(authorizesAction(readAskIntent("Email sarah@example.com")), true);
+  assert.equal(
+    authorizesAction(readAskIntent("Write me something I can send to sarah@example.com")),
+    false,
+    "asking for words that could be sent is not asking for a send",
+  );
 });
