@@ -143,6 +143,80 @@ def test_an_unknown_risk_level_is_stored_as_the_highest():
     assert db.rows("os_tool_executions")[0]["risk_level"] == 3
 
 
+def test_a_note_missing_its_target_is_reported_not_applied():
+    """An incomplete note is never written, and says why."""
+    db = _db_with_lead()
+
+    outcomes = svc.apply_customer_notes(db, CLIENT, [_note(customerId=None)])
+
+    assert outcomes[0]["applied"] is False
+    assert outcomes[0]["detail"] == "incomplete note"
+    assert db.rows("leads")[0]["notes"] is None
+
+
+def test_a_failing_database_leaves_the_note_unapplied_rather_than_half_written():
+    """A read/write error is reported honestly, never as a successful write."""
+
+    class ExplodingLeads(FakeSupabase):
+        def table(self, name):
+            if name == "leads":
+                raise RuntimeError("connection reset")
+            return super().table(name)
+
+    db = ExplodingLeads({"os_tool_executions": [], "leads": []})
+    record = {"toolExecutions": [_execution()], "customerNotes": [_note()]}
+
+    svc.persist_tool_executions(db, CLIENT, RUN_ID, record)
+
+    row = db.rows("os_tool_executions")[0]
+    assert row["status"] == "verification_failed"
+    assert "could not read" in row["verification_detail"]
+
+
+def test_a_silently_dropped_write_is_caught_by_the_read_back():
+    """The point of the read-back: a write that no-ops must not read as success."""
+
+    class SwallowingUpdate(FakeSupabase):
+        def table(self, name):
+            table = super().table(name)
+            if name == "leads":
+                original_update = table.update
+                table.update = lambda values: original_update({})  # write goes nowhere
+            return table
+
+    db = SwallowingUpdate(
+        {
+            "leads": [{"id": "lead_1", "client_id": CLIENT, "name": "Sarah Chen", "notes": None}],
+            "os_tool_executions": [],
+        }
+    )
+    record = {"toolExecutions": [_execution()], "customerNotes": [_note()]}
+
+    svc.persist_tool_executions(db, CLIENT, RUN_ID, record)
+
+    row = db.rows("os_tool_executions")[0]
+    assert row["status"] == "verification_failed"
+    assert "not present when the record was read back" in row["verification_detail"]
+
+
+def test_a_note_with_no_matching_execution_is_left_alone():
+    """Downgrading only ever touches the execution that produced the note."""
+    db = _db_with_lead()
+    record = {
+        "toolExecutions": [_execution(result={"noteId": "some_other_note"})],
+        "customerNotes": [_note(customerId="lead_missing")],
+    }
+
+    svc.persist_tool_executions(db, CLIENT, RUN_ID, record)
+
+    assert db.rows("os_tool_executions")[0]["status"] == "succeeded"
+
+
+def test_recording_an_outcome_for_a_row_that_is_gone_returns_nothing():
+    db = FakeSupabase({"os_tool_executions": []})
+    assert svc.record_execution_outcome(db, CLIENT, _execution()) is None
+
+
 # --- the at-most-once claim ----------------------------------------------------
 
 
@@ -366,6 +440,52 @@ def test_approving_an_execution_that_does_not_exist_is_a_404():
         _teardown()
 
     assert resp.status_code == 404
+
+
+def test_rejecting_through_the_api_denies_the_action():
+    db = _pending_db()
+    client = _client()
+    try:
+        with patch.object(router_mod, "get_service_supabase", return_value=db):
+            resp = client.post(
+                f"/api/v1/os/tool-executions/{EXEC_ID}/reject",
+                json={"reason": "wrong customer"},
+            )
+    finally:
+        _teardown()
+
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "denied"
+    assert resp.json()["rejection_reason"] == "wrong customer"
+
+
+def test_rejecting_an_action_that_already_ran_is_a_conflict():
+    db = _pending_db()
+    svc.claim_for_execution(db, CLIENT, EXEC_ID)
+    svc.record_execution_outcome(db, CLIENT, _execution(status="succeeded"))
+    client = _client()
+    try:
+        with patch.object(router_mod, "get_service_supabase", return_value=db):
+            resp = client.post(f"/api/v1/os/tool-executions/{EXEC_ID}/reject", json={})
+    finally:
+        _teardown()
+
+    assert resp.status_code == 409
+
+
+def test_rejecting_and_reading_an_unknown_execution_are_404s():
+    client = _client()
+    try:
+        with patch.object(
+            router_mod, "get_service_supabase", return_value=FakeSupabase({"os_tool_executions": []})
+        ):
+            reject = client.post(f"/api/v1/os/tool-executions/{EXEC_ID}/reject", json={})
+            read = client.get(f"/api/v1/os/tool-executions/{EXEC_ID}")
+    finally:
+        _teardown()
+
+    assert reject.status_code == 404
+    assert read.status_code == 404
 
 
 def test_the_history_is_readable_and_filterable():
