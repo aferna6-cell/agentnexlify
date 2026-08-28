@@ -27,6 +27,7 @@ import { execFileSync } from "node:child_process";
 
 import {
   loadDataset,
+  useRouterPredictions,
   runCase,
   safetyCases,
   macroPRF,
@@ -55,6 +56,17 @@ async function main(): Promise<void> {
 
   const datasetArg = args.indexOf("--dataset");
   const dataset = loadDataset(datasetArg >= 0 ? args[datasetArg + 1] : undefined);
+
+  // Optional router substitution, for the ML routing benchmark. Absent this
+  // flag the run measures the shipped router, exactly as before.
+  const routerArg = args.indexOf("--router");
+  let routerLabel = "production (heuristic offline / haiku when keyed)";
+  if (routerArg >= 0) {
+    const path = args[routerArg + 1]!;
+    const n = useRouterPredictions(path);
+    routerLabel = `substituted from ${path} (${n} asks)`;
+    console.log(`router: ${routerLabel}`);
+  }
   const cases = limit ? dataset.cases.slice(0, limit) : dataset.cases;
 
   const startedAll = performance.now();
@@ -91,6 +103,7 @@ async function main(): Promise<void> {
     dataset_version: dataset.dataset_version,
     git_commit: gitCommit(),
     generated_at: new Date().toISOString(),
+    router: routerLabel,
     engine: {
       classifier: outcomes[0]?.classifier ?? "unknown",
       model: process.env.ANTHROPIC_API_KEY ? "haiku-backed" : "offline (heuristic classifier + local composer)",

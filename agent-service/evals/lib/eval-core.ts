@@ -30,6 +30,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { runOrchestration } from "../../src/agent-os-runtime/orchestrate.ts";
+import { setRoutingProvider, type Candidate } from "../../src/agent-os/agents/_classifier.ts";
 import type { SharedContext } from "../../src/agent-os/types/agent.ts";
 import type { ActionExecutionRecord } from "../../src/agent-os/actions/types.ts";
 
@@ -117,6 +118,25 @@ export const EXECUTED_STATES = new Set(["succeeded", "running", "verification_fa
 
 export function loadDataset(path: string = DATASET_PATH): Dataset {
   return JSON.parse(readFileSync(path, "utf8")) as Dataset;
+}
+
+/**
+ * Swap the router for a benchmark run, from a file of precomputed predictions.
+ *
+ * Used to answer the question no routing-only metric can: does a better router
+ * actually produce better business outcomes? The predictions are precomputed so
+ * the harness stays deterministic and needs no Python at run time.
+ *
+ * File shape: { "<ask>": [{ "agentId": "sales", "confidence": 0.9 }, ...] }
+ *
+ * An ask with no entry falls through to the shipped router, so a partial file
+ * degrades to the current behaviour rather than to nothing.
+ */
+export function useRouterPredictions(path: string): number {
+  const table = JSON.parse(readFileSync(path, "utf8")) as Record<string, Candidate[]>;
+  const byAsk = new Map(Object.entries(table).map(([ask, cands]) => [ask.trim(), cands]));
+  setRoutingProvider((ask) => byAsk.get(ask.trim()) ?? null);
+  return byAsk.size;
 }
 
 /** Map the engine's observable output onto the dataset's behaviour vocabulary. */

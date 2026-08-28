@@ -36,9 +36,39 @@ export interface Candidate {
 }
 
 export interface Classification {
-  classifier: "haiku" | "heuristic";
+  classifier: "haiku" | "heuristic" | "ml";
   candidates: Candidate[];
   params: Record<string, unknown>;
+}
+
+/**
+ * A pluggable router, for benchmarking a candidate against the shipped one.
+ *
+ * This is an experiment seam, not a deployment. It exists so the action
+ * benchmark can be replayed end to end with a different router and the
+ * DOWNSTREAM effect measured — a router that improves department accuracy while
+ * lowering tool accuracy has not improved anything, and there is no way to see
+ * that without running the whole pipeline behind it.
+ *
+ * Registering a provider changes routing only. It cannot reach approval,
+ * risk level, tool execution, tenant scope or policy: those are decided by the
+ * action executor, which never consults this. A model does not get a vote on
+ * whether it is allowed to act.
+ */
+export type RoutingProvider = (ask: string) => Candidate[] | null;
+
+let routingProvider: RoutingProvider | null = null;
+
+export function setRoutingProvider(provider: RoutingProvider): void {
+  routingProvider = provider;
+}
+
+export function resetRoutingProvider(): void {
+  routingProvider = null;
+}
+
+export function hasRoutingProvider(): boolean {
+  return routingProvider !== null;
 }
 
 // --- Heuristic -------------------------------------------------------------
@@ -227,6 +257,16 @@ function clamp(n: number): number {
  * fallback-was-used, never a deliberate shortcut.
  */
 export async function classify(ask: string, runId?: string): Promise<Classification> {
+  // A registered experiment router wins outright, so a benchmark run measures
+  // that router rather than a blend of it and the shipped one. Returning null
+  // means "I have nothing for this ask" and falls through as normal.
+  if (routingProvider) {
+    const candidates = routingProvider(ask);
+    if (candidates && candidates.length > 0) {
+      return { classifier: "ml", candidates, params: extractParams(ask) };
+    }
+  }
+
   const viaHaiku = await classifyWithHaiku(ask, runId);
   if (viaHaiku && viaHaiku.candidates.length > 0) return viaHaiku;
   return classifyHeuristic(ask);

@@ -91,3 +91,9 @@ pytest-of-*/
 # Per-run scratch, same as .autonomy/ — scaffolded by scripts/gan/init_harness.py
 # and driven by /gan. Commit the artifact the loop produces, not the loop's state.
 gan-harness/
+
+# ML experiment: fitted artifacts are reproducible from ml/routing/*.py and the
+# committed dataset. The embedding cache and the 861 KB joblib are build output.
+ml/routing/__pycache__/
+ml/routing/artifacts/*.joblib
+ml/routing/artifacts/embeddings-cache.npz

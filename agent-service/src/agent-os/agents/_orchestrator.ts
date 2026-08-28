@@ -61,7 +61,7 @@ export type DecisionStatus = "routed" | "needs_clarification" | "wishlist_fallba
 
 export interface HandleResult {
   status: DecisionStatus;
-  classifier: "haiku" | "heuristic";
+  classifier: "haiku" | "heuristic" | "ml";
   decisionId: string;
   runId?: string;
   agentId?: string;
@@ -291,7 +291,7 @@ async function runAndLog(
   agentId: string,
   confidence: number,
   candidates: Candidate[],
-  classifier: "haiku" | "heuristic",
+  classifier: "haiku" | "heuristic" | "ml",
   params: Record<string, unknown>,
   decisionType: DecisionStatus | "wishlist_fallback",
   onStep?: (step: StreamedTraceStep) => void,

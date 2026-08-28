@@ -13,6 +13,8 @@
     "vendor:agent-os": "bash scripts/vendor-agent-os.sh",
     "eval:actions": "node --experimental-strip-types evals/run-action-eval.ts",
     "eval:actions:gate": "node --experimental-strip-types evals/run-action-eval.ts --gate",
+    "eval:export-llm": "node --experimental-strip-types evals/export-llm-predictions.ts",
+    "eval:export-heuristic": "node --experimental-strip-types evals/export-heuristic-predictions.ts",
     "eval:errors": "node --experimental-strip-types evals/analyze-errors.ts --dataset evals/datasets/validation/validation-v1.json",
     "eval:inspect": "node --experimental-strip-types evals/inspect.ts",
     "eval:validation": "node --experimental-strip-types evals/run-action-eval.ts --dataset evals/datasets/validation/validation-v1.json --report"
