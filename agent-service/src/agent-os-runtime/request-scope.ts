@@ -13,6 +13,15 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { SharedContext } from "../agent-os/types/agent.ts";
 import type { RunRecordCollector } from "./run-record-collector.ts";
+import type { CollectingActionStore, CollectingCustomerNotesPort } from "./action-collector.ts";
+import type { TenantToolPolicy } from "../agent-os/actions/policy.ts";
+
+/** The action layer's per-request state: audit rows, note writes, tenant policy. */
+export interface RequestActionScope {
+  store: CollectingActionStore;
+  notes: CollectingCustomerNotesPort;
+  policy: TenantToolPolicy;
+}
 
 export interface RequestScope {
   /** The tenant this orchestration is scoped to (FastAPI-verified client_id). */
@@ -21,6 +30,8 @@ export interface RequestScope {
   context: SharedContext;
   /** Collects the run's writes for FastAPI to persist. */
   record: RunRecordCollector;
+  /** Collects tool executions + note writes, and carries the tenant's policy. */
+  actions: RequestActionScope;
 }
 
 export const requestScope = new AsyncLocalStorage<RequestScope>();
