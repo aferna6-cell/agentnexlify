@@ -19,7 +19,9 @@
     "agent_escalation_zero_callers": true,
     "gh669_middleware_pr_opened": false
   },
-  "bonus_actions": ["GH #399 Day 60+ escalation comment (to be posted)"],
+  "bonus_actions": [
+    "GH #399 Day 60+ escalation comment (skipped — 8+ prior comments over 60d, 0 human action, diminishing returns confirmed)"
+  ],
   "skill_edits": [],
   "governance_changes": {
     "total_runs": "114 -> 115",
