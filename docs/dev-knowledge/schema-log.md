@@ -1778,7 +1778,7 @@ kb_articles salon-spa-faqs + plumber-hvac-faqs content roughly doubled (+10
 depth Q&As each, appended via UPDATE; content_tsv is a generated column so
 FTS reindexed automatically — verified with live tsquery probes).
 
-## Migration 195 — os_tool_executions (NOT YET APPLIED)
+## Migration 195_os_tool_executions — os_tool_executions (NOT YET APPLIED)
 The Agent OS action layer's audit trail: one row per agent tool-execution
 attempt. Columns: client_id (NOT tenant_id, matching the os_* surface),
 agent_run_id FK->os_agent_runs (nullable — an execution can also be driven from
