@@ -503,3 +503,50 @@ def test_the_history_is_readable_and_filterable():
     assert listed.json()["items"][0]["tool_id"] == "add_customer_note"
     assert one.json()["id"] == EXEC_ID
     assert bad.status_code == 400
+
+
+# --- the turn tells the truth when the audit write fails ---------------------
+
+
+def test_a_turn_that_cannot_record_a_level_two_action_says_so_instead_of_promising_approval():
+    """The owner must never be told an email is queued when nothing recorded it."""
+    from backend.services import agent_os_bridge
+
+    class NoAuditTable(FakeSupabase):
+        def table(self, name):
+            if name == "os_tool_executions":
+                raise RuntimeError("audit table unavailable")
+            return super().table(name)
+
+    db = NoAuditTable({"os_agent_runs": [], "os_messages": [], "os_threads": [], "tenants": []})
+    out = {
+        "result": {
+            "status": "routed",
+            "agentId": "sales",
+            "orchestratorNotes": ["I've written this email to sarah@example.com."],
+        },
+        "record": {
+            "runs": [{"id": "engine-run-1", "agentId": "sales", "status": "completed"}],
+            "drafts": [],
+            "traceSteps": [],
+            "toolExecutions": [
+                {
+                    "id": EXEC_ID,
+                    "accountId": CLIENT,
+                    "toolId": "send_email",
+                    "riskLevel": 2,
+                    "mutating": True,
+                    "requiresApproval": True,
+                    "status": "pending_approval",
+                    "input": {"to": "sarah@example.com", "subject": "Hi", "body": "Hello"},
+                }
+            ],
+        },
+    }
+
+    persisted = agent_os_bridge.persist_orchestration(db, CLIENT, "thread-1", out)
+
+    reply = persisted["assistant_message"]["content"]
+    assert "couldn't save it for approval" in reply
+    assert "nothing was sent" in reply
+    assert "sarah@example.com" not in reply, "no promise about an email that is not queued"

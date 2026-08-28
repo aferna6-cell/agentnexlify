@@ -1778,7 +1778,7 @@ kb_articles salon-spa-faqs + plumber-hvac-faqs content roughly doubled (+10
 depth Q&As each, appended via UPDATE; content_tsv is a generated column so
 FTS reindexed automatically — verified with live tsquery probes).
 
-## Migration 195_os_tool_executions — os_tool_executions (NOT YET APPLIED)
+## Migration 195_os_tool_executions — os_tool_executions (APPLIED 2026-08-28)
 The Agent OS action layer's audit trail: one row per agent tool-execution
 attempt. Columns: client_id (NOT tenant_id, matching the os_* surface),
 agent_run_id FK->os_agent_runs (nullable — an execution can also be driven from
@@ -1804,3 +1804,9 @@ result. Writers: backend/services/os_tool_executions.py (from the engine's
 /orchestrate record bundle) and backend/routers/os_tool_executions.py (approve /
 reject). Engine side: agent-service/src/agent-os/actions/. Design doc:
 docs/agent-os-action-layer.md.
+
+APPLIED + verified against prod (pxserpybmajixqrmzaly) 2026-08-28 via
+mcp apply_migration: 30 columns, 4 indexes (pkey + client/status + agent_run +
+the partial-unique idempotency index), RLS enabled with the deny-public policy,
+0 rows. The audit table must exist before any Level-2 external tool can run —
+`send_email` fails closed when its execution row cannot be written.

@@ -152,7 +152,7 @@ export async function executeAction(input: ExecuteActionInput): Promise<ActionOu
         requiresApproval: false,
         status: "denied",
         approvalState: "not_required",
-        input: sanitizeRecord(input.input),
+        input: sanitizeRecord(input.input, { shorten: false }),
         policyReason: `unknown tool "${input.toolId}"`,
         idempotencyKey: input.idempotencyKey,
         error: { code: "unknown_tool", message: `unknown tool "${input.toolId}"` },
@@ -180,7 +180,7 @@ export async function executeAction(input: ExecuteActionInput): Promise<ActionOu
         requiresApproval: tool.requiresApproval,
         status: "failed",
         approvalState: "not_required",
-        input: sanitizeRecord(input.input),
+        input: sanitizeRecord(input.input, { shorten: false }),
         policyReason: "input rejected by the tool's schema — nothing was executed",
         idempotencyKey: input.idempotencyKey,
         error: { code: "invalid_input", message: sanitizeErrorMessage(message) },
@@ -207,7 +207,9 @@ export async function executeAction(input: ExecuteActionInput): Promise<ActionOu
     riskLevel: evaluation.riskLevel,
     mutating: tool.mutating,
     requiresApproval: evaluation.requiresApproval,
-    input: sanitizeRecord(parsed.data),
+    // Verbatim (secret keys still redacted): a parked action is executed from
+    // exactly these bytes, and the owner approves exactly these bytes.
+    input: sanitizeRecord(parsed.data, { shorten: false }),
     policyReason: evaluation.reason,
     idempotencyKey: input.idempotencyKey,
   };
@@ -234,6 +236,15 @@ export async function executeAction(input: ExecuteActionInput): Promise<ActionOu
   const record = await store.create(
     baseRecord({ ...common, status: "approved", approvalState: "not_required" }),
   );
+
+  // A data-plane tool is never run here, even when policy allows it: this
+  // process holds no credentials and no audit database. The row is left
+  // `approved` for the data plane to pick up and execute.
+  if (tool.implementation === "data_plane") {
+    await trace?.work("tool_handoff", `${tool.displayName} runs in the data plane`);
+    return outcomeOf(record);
+  }
+
   return runApproved(record, tool, parsed.data, input.sharedContext, trace);
 }
 
@@ -268,6 +279,21 @@ export async function approveAction(input: ApproveActionInput): Promise<ActionOu
     const failed = await store.update(approved.id, {
       status: "failed",
       error: { code: "unknown_tool", message: `tool "${approved.toolId}" is no longer registered` },
+      finishedAt: nowIso(),
+    });
+    return outcomeOf(failed);
+  }
+
+  // A data-plane tool must never execute in this process. Reaching here means
+  // a caller pointed the engine at an action whose body lives in the data
+  // plane; refuse rather than silently reporting a success nothing performed.
+  if (tool.implementation === "data_plane") {
+    const failed = await store.update(approved.id, {
+      status: "failed",
+      error: {
+        code: "wrong_execution_plane",
+        message: `tool "${tool.id}" runs in the data plane and cannot be executed by the engine`,
+      },
       finishedAt: nowIso(),
     });
     return outcomeOf(failed);
@@ -360,6 +386,17 @@ async function runApproved(
 ): Promise<ActionOutcome> {
   const store = getActionStore();
 
+  if (!tool.execute) {
+    // Structurally impossible for a well-formed registry (defineTool enforces
+    // it), so this is the last line rather than the first.
+    const failed = await store.update(record.id, {
+      status: "failed",
+      error: { code: "no_engine_body", message: `tool "${tool.id}" has no engine body to run` },
+      finishedAt: nowIso(),
+    });
+    return outcomeOf(failed);
+  }
+
   const running = await store.transition(record.id, ["approved"], "running", {
     startedAt: nowIso(),
     attempts: record.attempts + 1,
@@ -386,7 +423,7 @@ async function runApproved(
 
   let output: unknown;
   try {
-    output = await tool.execute({ input: parsedInput, context });
+    output = await tool.execute!({ input: parsedInput, context });
   } catch (err) {
     const code = err instanceof ToolExecutionError ? err.code : "tool_error";
     const message = err instanceof Error ? err.message : String(err);

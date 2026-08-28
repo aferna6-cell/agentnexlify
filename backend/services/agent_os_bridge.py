@@ -425,10 +425,46 @@ def persist_orchestration(
         except Exception:
             logger.warning("agent_os_bridge: usage metering failed", exc_info=True)
 
+    # Action layer: persist the turn's tool executions (the audit trail) and
+    # apply the internal writes they made.
+    #
+    # Level 0-1 executions are best-effort — the work already happened inside
+    # the engine and a failed audit write must not break the owner's turn.
+    # Level 2+ executions are different: they are proposals, and the row is
+    # what makes approval, idempotency and verification possible. When one of
+    # those cannot be written, persist_tool_executions raises and the turn says
+    # so, rather than promising an approval that nothing can fulfil. Nothing
+    # external has been sent at this point — the send only ever happens from
+    # the approval endpoint, against a row that exists.
+    audit_failure: str | None = None
+    try:
+        os_tool_executions.persist_tool_executions(
+            db, client_id, agent_run_id, record
+        )
+    except os_tool_executions.AuditUnavailableError as exc:
+        audit_failure = str(exc)
+        logger.error(
+            "agent_os_bridge: mandatory tool-execution audit failed", exc_info=True
+        )
+    except Exception:
+        logger.warning(
+            "agent_os_bridge: tool execution persist failed", exc_info=True
+        )
+
+    reply = reply_text(result)
+    if audit_failure:
+        # Correct the agent's own words: it believes it queued an action for
+        # approval, and that did not happen. Never let the turn imply an email
+        # is waiting to go out when no record of it exists.
+        reply = (
+            "I prepared that, but I couldn't save it for approval, so there is "
+            "nothing queued and nothing was sent. Please try again."
+        )
+
     message_row: dict = {
         "thread_id": thread_id,
         "role": "assistant",
-        "content": reply_text(result),
+        "content": reply,
     }
     if agent_run_id:
         message_row["agent_run_id"] = agent_run_id
@@ -442,19 +478,6 @@ def persist_orchestration(
         _persist_telemetry(db, client_id, agent_run_id, record)
     except Exception:
         logger.warning("agent_os_bridge: telemetry persist failed", exc_info=True)
-
-    # Action layer: persist the turn's tool executions (the audit trail) and
-    # apply the internal writes they made. Best-effort like telemetry — a
-    # failure here must not break the owner's turn — but logged loudly, because
-    # a missing audit row matters even when the turn itself succeeded.
-    try:
-        os_tool_executions.persist_tool_executions(
-            db, client_id, agent_run_id, record
-        )
-    except Exception:
-        logger.warning(
-            "agent_os_bridge: tool execution persist failed", exc_info=True
-        )
 
     tenant_table(db, "os_threads", client_id).update({"updated_at": _now()}).eq(
         "id", thread_id

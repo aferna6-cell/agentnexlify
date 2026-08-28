@@ -16,6 +16,7 @@ import { ToolRegistry } from "./registry.ts";
 import { resetToolPolicyProvider } from "./policy.ts";
 import { getBusinessProfile } from "./tools/get_business_profile.ts";
 import { addCustomerNote } from "./tools/add_customer_note.ts";
+import { sendEmail } from "./tools/send_email.ts";
 import type { SharedContext } from "../types/agent.ts";
 
 export interface Harness {
@@ -63,6 +64,7 @@ export function harness(): Harness {
   const registry = new ToolRegistry();
   registry.register(getBusinessProfile);
   registry.register(addCustomerNote);
+  registry.register(sendEmail);
   for (const tool of fixtureTools(calls)) registry.register(tool);
 
   return { store, ports, notes, registry, context: sampleContext(), calls };

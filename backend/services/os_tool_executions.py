@@ -60,6 +60,17 @@ class ToolExecutionStateError(RuntimeError):
         self.status = status
 
 
+class AuditUnavailableError(RuntimeError):
+    """The execution record could not be written, so nothing may be executed.
+
+    The safety principle this enforces: no real external side effect may
+    happen unless its execution record can be durably tracked. Raised BEFORE
+    any side effect, and never swallowed on a mutating external action — a
+    send we cannot record is a send we cannot tell the owner about, cannot
+    verify, and cannot stop from repeating.
+    """
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -108,6 +119,18 @@ def to_row(execution: dict, client_id: str, agent_run_id: str | None) -> dict:
     }
 
 
+#: Risk level at or above which an execution row is MANDATORY. A level-0 read
+#: or a level-1 internal note losing its audit row is bad; an external
+#: communication or a financial action losing one is unacceptable, because the
+#: row is the only thing that can gate, dedupe and verify it.
+MANDATORY_AUDIT_RISK_LEVEL = 2
+
+
+def requires_mandatory_audit(execution: dict) -> bool:
+    """True when this execution must not proceed without a durable record."""
+    return _int_or(execution.get("riskLevel"), 3) >= MANDATORY_AUDIT_RISK_LEVEL
+
+
 def persist_tool_executions(
     db: Any,
     client_id: str,
@@ -116,10 +139,19 @@ def persist_tool_executions(
 ) -> list[dict]:
     """Persist a turn's tool executions and apply the writes they made.
 
-    Returns the inserted rows. Best-effort by contract — the caller wraps this
-    so an audit-write failure never breaks the owner's turn — but it logs
-    loudly, because a missing audit row is a real problem even when the turn
-    succeeded.
+    Returns the inserted rows.
+
+    Two different contracts, on purpose:
+
+    * Level 0-1 executions are best-effort. The caller wraps this so a
+      failure to write the audit row never breaks the owner's turn — the work
+      already happened inside the engine and the turn is still useful.
+    * Level 2+ executions are NOT best-effort. They are proposals that have
+      not happened yet, and the row is what makes approval, idempotency and
+      verification possible. If one cannot be written, this raises
+      ``AuditUnavailableError`` so the caller surfaces it instead of telling
+      the owner an email is "waiting for approval" that nothing can ever
+      approve — and, critically, nothing external has been sent at that point.
     """
     executions = record.get("toolExecutions") or []
     if not executions:
@@ -129,10 +161,40 @@ def persist_tool_executions(
     if not rows:
         return []
 
-    inserted = (
-        tenant_table(db, "os_tool_executions", client_id).insert(rows).execute().data
-        or []
-    )
+    mandatory = [e for e in executions if e.get("id") and requires_mandatory_audit(e)]
+
+    try:
+        inserted = (
+            tenant_table(db, "os_tool_executions", client_id).insert(rows).execute().data
+            or []
+        )
+    except Exception as exc:
+        if mandatory:
+            logger.error(
+                "os_tool_executions: MANDATORY audit write failed client_id=%s tools=%s "
+                "- the action(s) cannot be approved and nothing was sent",
+                client_id,
+                [e.get("toolId") for e in mandatory],
+                exc_info=True,
+            )
+            raise AuditUnavailableError(
+                "the action could not be recorded, so it was not queued for approval"
+            ) from exc
+        raise
+
+    if mandatory and len(inserted) < len(rows):
+        # The insert reported fewer rows than we sent. A level-2 proposal that
+        # is not in the table cannot be approved, deduped or verified.
+        logger.error(
+            "os_tool_executions: MANDATORY audit write incomplete client_id=%s "
+            "(%d of %d rows)",
+            client_id,
+            len(inserted),
+            len(rows),
+        )
+        raise AuditUnavailableError(
+            "the action could not be fully recorded, so it was not queued for approval"
+        )
 
     notes = record.get("customerNotes") or []
     if notes:
@@ -308,6 +370,18 @@ def record_execution_outcome(
         tenant_table(db, "os_tool_executions", client_id)
         .update(patch)
         .eq("id", execution.get("id"))
+        .execute()
+        .data
+    )
+    return updated[0] if updated else None
+
+
+def patch_execution(db: Any, client_id: str, execution_id: str, patch: dict) -> dict | None:
+    """Write an arbitrary outcome patch onto one tenant-scoped execution row."""
+    updated = (
+        tenant_table(db, "os_tool_executions", client_id)
+        .update(patch)
+        .eq("id", execution_id)
         .execute()
         .data
     )

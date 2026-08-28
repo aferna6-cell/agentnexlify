@@ -14,6 +14,7 @@ import type { TenantToolPolicy } from "./policy.ts";
 import { RISK_LABELS, type ErasedTool, type RiskLevel, type ToolDefinition, type ToolMetadata } from "./types.ts";
 import { getBusinessProfile } from "./tools/get_business_profile.ts";
 import { addCustomerNote } from "./tools/add_customer_note.ts";
+import { sendEmail } from "./tools/send_email.ts";
 
 export type AnyTool = ErasedTool;
 
@@ -98,6 +99,7 @@ export function describeTool(tool: ErasedTool | ToolDefinition<never, never>): T
     description: tool.description,
     department: tool.department,
     requiredConnectors: tool.requiredConnectors,
+    implementation: tool.implementation,
     riskLevel: tool.riskLevel,
     riskLabel: RISK_LABELS[tool.riskLevel],
     mutating: tool.mutating,
@@ -110,3 +112,4 @@ export function describeTool(tool: ErasedTool | ToolDefinition<never, never>): T
 export const toolRegistry = new ToolRegistry();
 toolRegistry.register(getBusinessProfile);
 toolRegistry.register(addCustomerNote);
+toolRegistry.register(sendEmail);

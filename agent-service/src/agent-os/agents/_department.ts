@@ -39,6 +39,12 @@ export interface DepartmentActionRequest {
   input: Record<string, unknown>;
   /** Turns a successful result into the line the owner reads. */
   describe?: (result: unknown) => string;
+  /**
+   * What to tell the owner while the action waits for their approval. Say what
+   * will happen and to whom — an approval prompt that hides the recipient is
+   * not an approval.
+   */
+  describePending?: (input: Record<string, unknown>) => string;
 }
 
 export interface DepartmentSkill {
@@ -82,6 +88,22 @@ export interface DepartmentSpec {
     ownerAsk: string;
     params: Record<string, unknown>;
     context: SharedContext;
+  }) => DepartmentActionRequest | undefined;
+  /**
+   * Optional: decide that what the skill just COMPOSED should be performed
+   * rather than handed over as a draft — e.g. Sales writing a follow-up the
+   * owner asked to email to a named address.
+   *
+   * Runs after the skill, so the content the owner approves is the content the
+   * agent actually wrote. Returning undefined keeps the draft, which is the
+   * behaviour that existed before any of this: an ask that is incomplete or
+   * ambiguous produces a draft, never an action.
+   */
+  resolveActionFromOutput?: (args: {
+    ownerAsk: string;
+    params: Record<string, unknown>;
+    context: SharedContext;
+    output: AgentOutput;
   }) => DepartmentActionRequest | undefined;
   examples: { owner_ask: string; expected_route: string; expected_output_excerpt: string }[];
 }
@@ -159,6 +181,21 @@ export function defineDepartment(spec: DepartmentSpec): DepartmentAgent {
 
       const out = await skill.agent.run(args);
       out.orchestratorNotes = out.orchestratorNotes ?? [];
+
+      // The composed draft may itself be the thing to perform (e.g. an email
+      // the owner asked to send to a named address). The action carries the
+      // composed text, so what gets approved is exactly what was written.
+      const composedRequest = spec.resolveActionFromOutput?.({
+        ownerAsk: args.ownerAsk,
+        params: args.input,
+        context: args.context,
+        output: out,
+      });
+      if (composedRequest) {
+        const performed = await runAction(composedRequest, args, spec);
+        if (performed) return performed;
+      }
+
       return out;
     },
   );
@@ -179,6 +216,21 @@ async function maybeRunAction(spec: DepartmentSpec, args: AgentRunArgs): Promise
   const request = spec.resolveAction({ ownerAsk: args.ownerAsk, params: args.input, context: args.context });
   if (!request) return undefined;
 
+  return runAction(request, args, spec);
+}
+
+/**
+ * Put one tool request through the action executor and turn the outcome into
+ * the owner's answer.
+ *
+ * Returns undefined when the action layer is not available in this host, so
+ * the department falls back to drafting rather than pretending.
+ */
+async function runAction(
+  request: DepartmentActionRequest,
+  args: AgentRunArgs,
+  spec: DepartmentSpec,
+): Promise<AgentOutput | undefined> {
   // The action layer needs a tenant to act for and a host that wired its seams.
   // Where either is missing (e.g. a unit test running an agent in isolation) the
   // department falls back to drafting and says so in the trace rather than
@@ -208,7 +260,9 @@ async function maybeRunAction(spec: DepartmentSpec, args: AgentRunArgs): Promise
       break;
     case "pending_approval":
       notes.push(
-        "That needs your approval before I run it, so I've queued it for review. Approve it and I'll finish the job.",
+        request.describePending
+          ? request.describePending(request.input)
+          : "That needs your approval before I run it, so I've queued it for review. Approve it and I'll finish the job.",
       );
       break;
     case "denied":

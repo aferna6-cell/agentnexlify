@@ -45,9 +45,9 @@ function truncate(value: string): string {
   return `${value.slice(0, MAX_STRING_LENGTH)}…[truncated ${value.length - MAX_STRING_LENGTH} chars]`;
 }
 
-function walk(value: unknown, depth: number): unknown {
+function walk(value: unknown, depth: number, shorten: boolean): unknown {
   if (value === null || value === undefined) return value ?? null;
-  if (typeof value === "string") return truncate(value);
+  if (typeof value === "string") return shorten ? truncate(value) : value;
   if (typeof value === "number" || typeof value === "boolean") return value;
   if (typeof value === "bigint") return value.toString();
   if (value instanceof Date) return value.toISOString();
@@ -55,7 +55,7 @@ function walk(value: unknown, depth: number): unknown {
   if (depth >= MAX_DEPTH) return "[max depth]";
 
   if (Array.isArray(value)) {
-    const kept = value.slice(0, MAX_ARRAY_LENGTH).map((v) => walk(v, depth + 1));
+    const kept = value.slice(0, MAX_ARRAY_LENGTH).map((v) => walk(v, depth + 1, shorten));
     if (value.length > MAX_ARRAY_LENGTH) kept.push(`[+${value.length - MAX_ARRAY_LENGTH} more]`);
     return kept;
   }
@@ -63,7 +63,7 @@ function walk(value: unknown, depth: number): unknown {
   if (typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
-      out[key] = isSecretKey(key) ? REDACTED : walk(v, depth + 1);
+      out[key] = isSecretKey(key) ? REDACTED : walk(v, depth + 1, shorten);
     }
     return out;
   }
@@ -73,12 +73,25 @@ function walk(value: unknown, depth: number): unknown {
 
 /** Redact + bound an arbitrary value for persistence. */
 export function sanitize(value: unknown): unknown {
-  return walk(value, 0);
+  return walk(value, 0, true);
 }
 
-/** Same, narrowed to an object (what execution `input` always is). */
-export function sanitizeRecord(value: unknown): Record<string, unknown> {
-  const cleaned = sanitize(value);
+/**
+ * Same, narrowed to an object (what execution `input` always is).
+ *
+ * `shorten: false` keeps string values verbatim. That matters for an action's
+ * INPUT: a parked send_email is executed later from exactly these bytes, so
+ * truncating a long body here would mean the owner approves one email and a
+ * different, silently cut-off one goes out. Inputs are already bounded by the
+ * tool's own schema (validated before this runs), so nothing is unbounded —
+ * only results and errors, which are records of what happened rather than
+ * instructions for what will happen, get shortened.
+ */
+export function sanitizeRecord(
+  value: unknown,
+  { shorten = true }: { shorten?: boolean } = {},
+): Record<string, unknown> {
+  const cleaned = walk(value, 0, shorten);
   if (cleaned && typeof cleaned === "object" && !Array.isArray(cleaned)) {
     return cleaned as Record<string, unknown>;
   }

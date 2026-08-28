@@ -5,6 +5,7 @@
 
 import { defineDepartment } from "./_department.ts";
 import { resolveRecordAction } from "./admin_records_actions.ts";
+import { resolveSalesEmailAction } from "./sales_actions.ts";
 
 // v1 worker agents, now used as internal skills.
 import { booking } from "./booking/agent.ts";
@@ -55,6 +56,12 @@ export const sales = defineDepartment({
     { agent: outreach, extraKeywords: ["cold email", "reach out to", "prospect", "outreach", "new business", "cold outreach"] },
   ],
   defaultSkillId: "lead_nurture",
+  // The first department that can send something real. Sales composes exactly
+  // as before; when the owner named a recipient address in the ask, the
+  // composed text becomes a send_email action the owner approves instead of a
+  // draft they copy elsewhere. Anything ambiguous still drafts.
+  // See sales_actions.ts.
+  resolveActionFromOutput: resolveSalesEmailAction,
   // V-02: pipeline-aware skill selection. "Follow up with X on her quote" must
   // pull X's existing quote and run quote-followup, NOT quote-generation (which
   // would ask for line items the owner didn't give). New line items in the ask

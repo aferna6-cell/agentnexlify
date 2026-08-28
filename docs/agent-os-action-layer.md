@@ -37,11 +37,104 @@ bypasses the security model.
 | Capability ports | `actions/ports.ts` |
 | Executor | `actions/executor.ts` |
 | Reference tools | `actions/tools/` |
+| Data-plane tool bodies | `backend/services/os_tools/` |
 | Redaction before persistence | `actions/sanitize.ts` |
 | Request-scoped store/ports (agent-service) | `src/agent-os-runtime/action-collector.ts`, `scoped-providers.ts` |
 | Approval execution entry point | `src/agent-os-runtime/approve-action.ts`, `POST /actions/approve` |
 | Persistence + approval API (data plane) | `backend/services/os_tool_executions.py`, `backend/routers/os_tool_executions.py` |
 | Table | `migrations/195_os_tool_executions.sql` |
+
+## The first real external tool: `send_email`
+
+`send_email` sends from the business's own connected Gmail. It is level 2, so
+the agent may PREPARE it and only the owner can send it.
+
+```
+Sales composes the follow-up (its existing skills, unchanged)
+  → the owner named a recipient address in the ask, so the composed text
+    becomes a send_email proposal instead of a draft
+  → executeAction() validates it and policy classifies it level 2
+  → status: pending_approval, durably recorded in os_tool_executions
+  → the owner sees recipient, subject, body and which agent asked
+  → owner approves  →  conditional UPDATE out of pending_approval (the gate)
+  → backend/services/os_tools/send_email.py sends via gmail_connector
+  → the sent message is fetched back and compared
+  → status: succeeded + verification: passed
+```
+
+Rejecting sets `denied`, and a later approval of a denied row does nothing —
+there is no path from `denied` to a send.
+
+### Where the body runs, and why
+
+A tool declares `implementation: "engine"` or `"data_plane"`.
+
+The engine holds no database handle and no OAuth tokens, by design. So a tool
+that needs a tenant's credentials cannot run there. `send_email` declares
+`data_plane`: the engine owns the id, the Zod input schema, the risk level and
+the approval gate, and `defineTool` refuses to let a data-plane tool carry an
+`execute()` at all — the engine physically cannot run it. The body lives in
+`backend/services/os_tools/send_email.py`, and the approve endpoint dispatches
+there.
+
+`ToolSpec` in the data plane re-declares the risk level and approval
+requirement rather than trusting what the engine wrote, and a parity test
+(`backend/tests/test_os_tools_send_email.py`) asserts the two declarations
+agree.
+
+### Idempotency — exactly what is guaranteed
+
+Four layers, in order:
+
+1. **The approval claim.** `status = 'pending_approval' → 'running'` is a
+   conditional UPDATE, executed *before* anything external is touched. A
+   double-clicked button, a retried request and two operators approving at
+   once all collapse to one winner; everyone else gets `already_decided`.
+2. **The idempotency key** (optional, engine-side): a partial unique index on
+   `(client_id, tool_id, idempotency_key)` means a repeated *proposal* returns
+   the existing execution instead of creating a second approvable action.
+3. **A Message-ID fingerprint.** Every message carries
+   `Message-ID: <aos-<execution_id>@actions.agentnexlify>` — stable across
+   retries of the same action, unique across different ones. Before sending,
+   the tool asks Gmail `rfc822msgid:<that id>`; a hit means this exact action
+   already sent, and it adopts that message rather than sending again.
+4. **No automatic retry.** An unknown outcome leaves the row non-terminal with
+   `send_outcome_unknown`. Nothing re-drives it on its own.
+
+**What this is not:** exactly-once. Gmail exposes no idempotency key, so a
+window remains where Gmail accepts a message and the response is lost before we
+record it. In that window our record says *unknown*, never "sent" — and layer 3
+closes it on the next attempt. The honest label is **at-most-once with a
+resolvable unknown**.
+
+### Verification — separate from execution
+
+`execution_status` and `verification_status` are separate columns and separate
+claims. "The API returned 200" is not verification.
+
+The verifier fetches the sent message back by the id Gmail returned and
+compares the recipient and subject against what was approved. A message that
+cannot be read back, or that is addressed to someone else, ends
+`status = succeeded, verification_state = failed` → the row's overall status
+becomes `verification_failed`. That combination is deliberately representable:
+the send happened and we could not confirm it, which the owner is told in those
+words.
+
+Providers that cannot support this are not used by this tool. Resend and the
+M365 Graph path return no fetchable message id, so `send_email` refuses to run
+without Gmail rather than silently sending somewhere it cannot check. The
+existing `email.send` deliverable action still covers those providers.
+
+### Two kinds of "action" in this repo
+
+| | `os_action_runs` (migration 126) | `os_tool_executions` (migration 195) |
+|---|---|---|
+| What triggers it | the owner approves a **deliverable** (a drafted SMS/email) | an **agent** selects a tool mid-run |
+| Chosen by | the draft's channel → `action_type` | the agent, from the typed registry |
+| Has a risk level | no | yes (0-3) |
+| Input schema | none (extracted from the draft) | Zod + Pydantic, validated on both planes |
+| Verification | none | independent read-back |
+| Still in use | yes, unchanged | yes |
 
 ## Risk levels
 
@@ -177,9 +270,11 @@ never presented as "verified".
 The Tool interface is the seam future capabilities implement, without the
 executor, policy, registry or audit trail changing:
 
-- **Gmail / Outlook, Google / Microsoft Calendar, CRM, invoicing** — new ports
-  plus level-2/3 tools; the approval gate already blocks them until an owner says
-  yes.
+- **Gmail** — done: `send_email`, the first real external action.
+- **Outlook, Google / Microsoft Calendar, CRM, invoicing** — the same shape:
+  declare the tool in the engine with `implementation: "data_plane"`, add a
+  module to `backend/services/os_tools/`, and the gate, the audit row and the
+  two-axis verification come for free.
 - **MCP tools** — one adapter that turns an MCP tool descriptor into a
   `ToolDefinition` (its JSON Schema becomes the Zod input schema, its risk level
   is declared by us, not by the server).
@@ -196,6 +291,8 @@ executor, policy, registry or audit trail changing:
 | Agent → tool → executor → verification, end to end | `agent-service/src/agent-os/actions/agent-integration.test.ts` |
 | Request scoping, tenant isolation, approval round trip | `agent-service/src/agent-os-runtime/action-runtime.test.ts` |
 | Persistence, note application, approval API | `backend/tests/test_os_tool_executions.py` |
+| `send_email`: gate, idempotency, provider failures, verification, tenant isolation | `backend/tests/test_os_tools_send_email.py` |
+| The owner's approval surface | `frontend/src/components/os/ToolApprovalCard.test.jsx` |
 
 Run them with `cd agent-service && npm run typecheck && npm test`, and
 `python -m pytest backend/tests/test_os_tool_executions.py`. Both run in CI

@@ -11,6 +11,7 @@ with ``eq``, ``limit``, ``order`` and ``execute``.
 """
 
 import copy
+import uuid
 
 
 class _Result:
@@ -50,7 +51,13 @@ class _Query:
 
         if self._op == "insert":
             payload = self._payload if isinstance(self._payload, list) else [self._payload]
-            added = [copy.deepcopy(r) for r in payload]
+            added = []
+            for row in payload:
+                new_row = copy.deepcopy(row)
+                # Postgres defaults the primary key (gen_random_uuid()); callers
+                # read `.data[0]["id"]` straight back, so the fake must too.
+                new_row.setdefault("id", str(uuid.uuid4()))
+                added.append(new_row)
             rows.extend(added)
             return _Result([copy.deepcopy(r) for r in added])
 

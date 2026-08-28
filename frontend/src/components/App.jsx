@@ -8,7 +8,10 @@ import {
 } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchTrialStatus } from "../utils/api/dashboard";
-import { fetchOsPendingDeliverables } from "../utils/api/os";
+import {
+  fetchOsPendingDeliverables,
+  fetchOsToolExecutions,
+} from "../utils/api/os";
 import DemoBanner from "./DemoBanner";
 import LoginPage from "./LoginPage";
 import MarketingUpsell, {
@@ -328,15 +331,28 @@ export default function App() {
   // current from any page. Cheap GET - count + lightweight summary only.
   // Skipped for plans outside the suite gate (stage-2, 2026-07-22): the
   // backend would 402 and every poll would pop the upgrade banner passively.
+  //
+  // Two queues, one badge: drafts waiting for approval (deliverables) and
+  // ACTIONS waiting for approval (tool executions - an agent asking to send a
+  // real email). An owner who never opens the chat would otherwise have no way
+  // to know a send is parked, which is the one thing that must not be quiet.
   useEffect(() => {
     if (!token) return;
     if (!hasAgentOsAccess(activePlan || user?.plan)) return;
     let cancelled = false;
     const refresh = () => {
-      fetchOsPendingDeliverables(token)
-        .then((res) => {
+      // A failed badge poll must not surface an error to the owner; null means
+      // "no fresh number" and the last known count is kept below.
+      Promise.all([
+        fetchOsPendingDeliverables(token).catch(() => null), // ok-silent-catch
+        fetchOsToolExecutions(token, { status: "pending_approval" }).catch(
+          () => null, // ok-silent-catch
+        ),
+      ])
+        .then(([drafts, actions]) => {
           if (cancelled) return;
-          setPendingApprovalCount(res?.count ?? 0);
+          if (!drafts && !actions) return; // both failed - keep last known value
+          setPendingApprovalCount((drafts?.count ?? 0) + (actions?.count ?? 0));
         })
         .catch(() => {
           // Silent - badge just stays at last known value

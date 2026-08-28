@@ -145,7 +145,7 @@ test("a customer id from another tenant's pipeline cannot be written to", async 
 test("the shipped registry exposes honest metadata", () => {
   const meta = toolRegistry.metadata();
   const ids = meta.map((m) => m.id).sort();
-  assert.deepEqual(ids, ["add_customer_note", "get_business_profile"]);
+  assert.deepEqual(ids, ["add_customer_note", "get_business_profile", "send_email"]);
 
   const read = meta.find((m) => m.id === "get_business_profile")!;
   assert.equal(read.riskLevel, 0);
@@ -158,13 +158,26 @@ test("the shipped registry exposes honest metadata", () => {
   assert.equal(note.mutating, true);
   assert.equal(note.verifiable, true);
   assert.equal(note.department, "admin_records");
+  assert.equal(note.implementation, "engine");
+
+  // The first external tool. Its metadata is what an owner is shown before
+  // approving, so every field here is load-bearing.
+  const email = meta.find((m) => m.id === "send_email")!;
+  assert.equal(email.riskLevel, 2);
+  assert.equal(email.riskLabel, "external_communication");
+  assert.equal(email.mutating, true);
+  assert.equal(email.requiresApproval, true);
+  assert.equal(email.implementation, "data_plane");
+  assert.deepEqual(email.requiredConnectors, ["gmail"]);
 });
 
 test("availableFor honours a tenant's allow-list", () => {
   const allowed = toolRegistry.availableFor({ enabledToolIds: ["get_business_profile"] });
   assert.deepEqual(allowed.map((t) => t.id), ["get_business_profile"]);
 
-  const none = toolRegistry.availableFor({ disabledToolIds: ["get_business_profile", "add_customer_note"] });
+  const none = toolRegistry.availableFor({
+    disabledToolIds: ["get_business_profile", "add_customer_note", "send_email"],
+  });
   assert.deepEqual(none, []);
 });
 
@@ -195,4 +208,37 @@ test("the sanitizer bounds runaway payloads", () => {
   const big = sanitize(Array.from({ length: 60 }, (_, i) => i)) as unknown[];
   assert.equal(big.length, 51);
   assert.equal(big[50], "[+10 more]");
+});
+
+test("a long email body is recorded verbatim, not truncated into a different email", async () => {
+  // The bug this pins: the audit sanitizer shortens long strings, and a parked
+  // action is later SENT from its recorded input. Truncating it would mean the
+  // owner approves one email and a clipped one goes out.
+  const body = `Hi Sarah,\n\n${"This is the part of the message that must survive. ".repeat(120)}\n\nThanks!`;
+  assert.ok(body.length > MAX_STRING_LENGTH, "the fixture must exceed the shortening cap");
+
+  const outcome = await run("send_email", {
+    to: "sarah@example.com",
+    subject: "Following up",
+    body,
+  });
+
+  assert.equal(outcome.status, "pending_approval");
+  assert.equal(outcome.record.input["body"], body);
+  assert.ok(!String(outcome.record.input["body"]).includes("truncated"));
+});
+
+test("results are still shortened — they are a record, not an instruction", () => {
+  const long = sanitize({ detail: "x".repeat(MAX_STRING_LENGTH + 10) }) as Record<string, string>;
+  assert.ok(long["detail"]!.includes("[truncated 10 chars]"));
+});
+
+test("secret-looking keys are redacted in an action's input even when kept verbatim", async () => {
+  const outcome = await run("fixture_read_only", {
+    query: "hours",
+    api_key: "sk-live-should-never-persist",
+  });
+
+  assert.equal(outcome.record.input["query"], "hours");
+  assert.equal(outcome.record.input["api_key"], REDACTED);
 });

@@ -189,6 +189,24 @@ export interface ToolInvocationContext {
   declareEffect(effect: EffectProvenance): void;
 }
 
+/**
+ * Where a tool's body runs.
+ *
+ *  - "engine": in this process, over the SharedContext and the ports the host
+ *    registered. Reads and internal writes that need no credentials.
+ *  - "data_plane": in the FastAPI data plane, because the capability needs the
+ *    tenant's credentials, connectors or database — things the engine holds
+ *    none of, by design. The engine still owns the declaration: the id, the
+ *    input schema, the risk level and the approval requirement. It validates
+ *    and records the request, and never executes it.
+ *
+ * This is the seam every real integration arrives through — Gmail today,
+ * calendar and CRM next, and eventually a browser or computer-use driver. What
+ * the rest of the system sees is identical either way: one tool id, one typed
+ * input, one policy decision, one audit row.
+ */
+export type ToolImplementation = "engine" | "data_plane";
+
 /** The registry entry for one tool. Built by `defineTool` — never by hand. */
 export interface ToolDefinition<TInput = unknown, TOutput = unknown> {
   /** Unique, stable, snake_case. Persisted on every execution row. */
@@ -199,6 +217,8 @@ export interface ToolDefinition<TInput = unknown, TOutput = unknown> {
   department?: string;
   /** Integrations this tool needs, for later per-tenant availability gating. */
   requiredConnectors: string[];
+  /** Where the body runs. Defaults to "engine". */
+  implementation: ToolImplementation;
   riskLevel: RiskLevel;
   /** False for pure reads. True for anything that changes state anywhere. */
   mutating: boolean;
@@ -206,7 +226,12 @@ export interface ToolDefinition<TInput = unknown, TOutput = unknown> {
   requiresApproval: boolean;
   inputSchema: import("zod").ZodType<TInput>;
   outputSchema: import("zod").ZodType<TOutput>;
-  execute(args: ToolExecuteArgs<TInput>): Promise<TOutput>;
+  /**
+   * The tool's body. Present only for `implementation: "engine"` tools — a
+   * data-plane tool has no body here, which is what makes it impossible for
+   * the engine to run one by accident.
+   */
+  execute?(args: ToolExecuteArgs<TInput>): Promise<TOutput>;
   /** Optional independent check that the effect actually landed. */
   verify?(args: ToolVerifyArgs<TInput, TOutput>): Promise<VerificationOutcome>;
 }
@@ -235,12 +260,13 @@ export interface ErasedTool {
   description: string;
   department?: string;
   requiredConnectors: string[];
+  implementation: ToolImplementation;
   riskLevel: RiskLevel;
   mutating: boolean;
   requiresApproval: boolean;
   inputSchema: ErasedSchema;
   outputSchema: ErasedSchema;
-  execute(args: { input: unknown; context: ToolInvocationContext }): Promise<unknown>;
+  execute?(args: { input: unknown; context: ToolInvocationContext }): Promise<unknown>;
   verify?(args: {
     input: unknown;
     output: unknown;
@@ -255,6 +281,7 @@ export interface ToolMetadata {
   description: string;
   department?: string;
   requiredConnectors: string[];
+  implementation: ToolImplementation;
   riskLevel: RiskLevel;
   riskLabel: string;
   mutating: boolean;

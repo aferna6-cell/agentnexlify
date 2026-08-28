@@ -83,6 +83,43 @@ export function fetchOsPendingDeliverables(token) {
   return request("/api/v1/os/deliverables/pending", { token });
 }
 
+// --- Agent tool executions (the action layer) -------------------------------
+//
+// Distinct from deliverables above. A deliverable is a draft the owner
+// approves and a channel handler then sends. A tool execution is an action an
+// AGENT selected mid-run (e.g. send_email), carrying its own risk level,
+// approval state and verification result. Approving one is what actually
+// performs it, so the UI must show the owner the full input first.
+
+export function fetchOsToolExecutions(token, { status, limit } = {}) {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  if (limit) params.set("limit", String(limit));
+  const query = params.toString();
+  return request(`/api/v1/os/tool-executions${query ? `?${query}` : ""}`, { token });
+}
+
+export function getOsToolExecution(token, executionId) {
+  return request(`/api/v1/os/tool-executions/${executionId}`, { token });
+}
+
+// Owner-only. Idempotent: a repeated approval returns the current state with
+// already_decided=true instead of performing the action twice.
+export function approveOsToolExecution(token, executionId) {
+  return request(`/api/v1/os/tool-executions/${executionId}/approve`, {
+    method: "POST",
+    token,
+  });
+}
+
+export function rejectOsToolExecution(token, executionId, reason) {
+  return request(`/api/v1/os/tool-executions/${executionId}/reject`, {
+    method: "POST",
+    token,
+    body: { reason },
+  });
+}
+
 // Poll one action run to learn whether the real send (SMS/email/widget)
 // actually succeeded. Approval schedules the send as a background task, so
 // deliverable_status flips to "approved" before the send resolves; the true

@@ -16,7 +16,7 @@
  */
 
 import { z } from "zod";
-import { RISK_LEVELS, type RiskLevel, type ToolDefinition } from "./types.ts";
+import { RISK_LEVELS, type RiskLevel, type ToolDefinition, type ToolImplementation } from "./types.ts";
 
 const MetaSchema = z.object({
   id: z.string().regex(/^[a-z][a-z0-9_]*$/, "tool id must be snake_case"),
@@ -24,6 +24,7 @@ const MetaSchema = z.object({
   description: z.string().min(1),
   department: z.string().min(1).optional(),
   requiredConnectors: z.array(z.string().min(1)).default([]),
+  implementation: z.enum(["engine", "data_plane"]).default("engine"),
   riskLevel: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
   mutating: z.boolean(),
   requiresApproval: z.boolean(),
@@ -36,12 +37,15 @@ export interface ToolSpec<TInput, TOutput> {
   description: string;
   department?: string;
   requiredConnectors?: string[];
+  /** Where the body runs. Defaults to "engine". */
+  implementation?: ToolImplementation;
   riskLevel: RiskLevel;
   mutating: boolean;
   requiresApproval: boolean;
   inputSchema: z.ZodType<TInput>;
   outputSchema: z.ZodType<TOutput>;
-  execute: ToolDefinition<TInput, TOutput>["execute"];
+  /** Required for an engine tool; forbidden for a data-plane one. */
+  execute?: ToolDefinition<TInput, TOutput>["execute"];
   verify?: ToolDefinition<TInput, TOutput>["verify"];
 }
 
@@ -52,6 +56,7 @@ export function defineTool<TInput, TOutput>(spec: ToolSpec<TInput, TOutput>): To
     description: spec.description,
     department: spec.department,
     requiredConnectors: spec.requiredConnectors ?? [],
+    implementation: spec.implementation ?? "engine",
     riskLevel: spec.riskLevel,
     mutating: spec.mutating,
     requiresApproval: spec.requiresApproval,
@@ -77,8 +82,23 @@ export function defineTool<TInput, TOutput>(spec: ToolSpec<TInput, TOutput>): To
   if (spec.verify && !meta.mutating) {
     throw new Error(`[${meta.id}] verify() is only meaningful for a mutating tool`);
   }
-  if (typeof spec.execute !== "function") {
-    throw new Error(`[${meta.id}] execute must be a function`);
+  if (meta.implementation === "engine" && typeof spec.execute !== "function") {
+    throw new Error(`[${meta.id}] an engine tool must provide execute()`);
+  }
+  if (meta.implementation === "data_plane") {
+    // A data-plane tool must carry no body here. If it did, the executor could
+    // run a credentialed action inside a process that holds no credentials and
+    // no audit database — the exact thing this split prevents.
+    if (spec.execute) {
+      throw new Error(
+        `[${meta.id}] a data_plane tool must not define execute() in the engine — its body lives in backend/services/os_tools/`,
+      );
+    }
+    if (spec.verify) {
+      throw new Error(
+        `[${meta.id}] a data_plane tool must not define verify() in the engine — its verifier lives in backend/services/os_tools/`,
+      );
+    }
   }
 
   return {
@@ -87,6 +107,7 @@ export function defineTool<TInput, TOutput>(spec: ToolSpec<TInput, TOutput>): To
     description: meta.description,
     department: meta.department,
     requiredConnectors: meta.requiredConnectors,
+    implementation: meta.implementation as ToolImplementation,
     riskLevel: meta.riskLevel as RiskLevel,
     mutating: meta.mutating,
     requiresApproval: meta.requiresApproval,

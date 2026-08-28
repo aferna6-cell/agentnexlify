@@ -463,6 +463,113 @@ def get_message(tenant_id: str, message_id: str) -> ParsedEmail | None:
     return _normalize_message(data)
 
 
+def find_message_id_by_rfc822_msgid(tenant_id: str, rfc822_msgid: str) -> str | None:
+    """Find a message in this mailbox by its RFC 5322 ``Message-ID`` header.
+
+    This is the pre-send duplicate check that makes an approved send safe to
+    re-drive: we stamp every outgoing message with a Message-ID derived from
+    its execution id, so asking Gmail "does a message with this id already
+    exist?" answers "did this exact send already happen?" without depending on
+    our own record of it.
+
+    Gmail's ``rfc822msgid:`` search operator matches the header exactly.
+    Returns the Gmail message id, or ``None`` when there is no match, no
+    credentials, or the search fails — callers must treat ``None`` as
+    "unknown", never as "definitely not sent".
+    """
+    if not rfc822_msgid:
+        return None
+    bare = rfc822_msgid.strip().strip("<>")
+    try:
+        data = _api_get(
+            tenant_id,
+            "/messages",
+            params={"q": f"rfc822msgid:{bare}", "maxResults": 1},
+        )
+    except GmailApiError:
+        logger.warning(
+            "gmail_connector: rfc822msgid lookup failed tenant=%s", tenant_id, exc_info=True
+        )
+        return None
+    if not data:
+        return None
+    messages = data.get("messages") or []
+    return messages[0].get("id") if messages else None
+
+
+def send_message(
+    db: Any,
+    tenant_id: str,
+    *,
+    to: str,
+    subject: str,
+    body_html: str,
+    rfc822_msgid: str | None = None,
+    thread_id: str | None = None,
+    in_reply_to: str | None = None,
+    references: str | None = None,
+) -> dict[str, Any]:
+    """Send a NEW message through the tenant's Gmail mailbox.
+
+    Sibling of ``send_reply`` (which requires an existing thread) for the
+    action layer's ``send_email`` tool, sharing the same credentials, the same
+    ``_api_post`` transport and the same return contract. ``db`` is accepted
+    for signature parity with the other outbound senders.
+
+    ``rfc822_msgid`` sets an explicit RFC 5322 ``Message-ID`` header. Callers
+    derive it from the action's execution id so the sent message carries a
+    stable, unique fingerprint: ``find_message_id_by_rfc822_msgid`` can then
+    tell whether a send already happened before retrying one whose outcome is
+    unknown. Gmail assigns its own Message-ID when this is omitted, which
+    makes that check impossible — so the tool always passes one.
+
+    Returns ``{"success": bool, "detail": str, "message_id": str,
+    "thread_id": str}`` — never raises.
+    """
+    message = MIMEText(body_html, "html")
+    message["to"] = to
+    message["subject"] = subject
+    if rfc822_msgid:
+        message["Message-ID"] = (
+            rfc822_msgid if rfc822_msgid.startswith("<") else f"<{rfc822_msgid}>"
+        )
+    if in_reply_to:
+        ref_header = in_reply_to if in_reply_to.startswith("<") else f"<{in_reply_to}>"
+        message["In-Reply-To"] = ref_header
+        message["References"] = references or ref_header
+
+    raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
+    body: dict[str, Any] = {"raw": raw}
+    if thread_id:
+        body["threadId"] = thread_id
+
+    try:
+        data = _api_post(tenant_id, "/messages/send", body)
+    except GmailApiError as e:
+        return {
+            "success": False,
+            "detail": f"gmail api error {e.status_code}",
+            "status_code": e.status_code,
+        }
+
+    if not data:
+        # No credentials, or a transport failure _api_post swallowed. The
+        # outcome of a transport failure is genuinely unknown — the caller
+        # resolves it with find_message_id_by_rfc822_msgid, never by resending
+        # blindly.
+        return {"success": False, "detail": "no gmail credentials or send failed"}
+
+    logger.info(
+        "gmail_connector: message sent tenant=%s message_id=%s", tenant_id, data.get("id")
+    )
+    return {
+        "success": True,
+        "detail": "sent",
+        "message_id": data.get("id", ""),
+        "thread_id": data.get("threadId", ""),
+    }
+
+
 def send_reply(
     db: Any,
     tenant_id: str,

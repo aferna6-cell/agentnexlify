@@ -397,3 +397,85 @@ test("one tenant cannot approve another tenant's action", async () => {
   assert.equal(h.calls["fixture_external_message"], undefined);
   assert.equal(await getActionExecution("tenantB", parked.executionId), null);
 });
+
+// --- data-plane tools ---------------------------------------------------------
+//
+// The first real external tool (send_email) runs in the FastAPI data plane,
+// where the tenant's credentials are. The engine declares and gates it; these
+// tests pin the half of that contract the engine is responsible for.
+
+test("a data-plane tool parks for approval and is never executed by the engine", async () => {
+  const outcome = await run("send_email", {
+    to: "sarah@example.com",
+    subject: "Following up",
+    body: "Hi Sarah",
+  });
+
+  assert.equal(outcome.status, "pending_approval");
+  assert.equal(outcome.record.riskLevel, 2);
+  assert.equal(outcome.record.approvalState, "pending");
+  assert.equal(outcome.output, undefined);
+  // The engine holds no Gmail credentials, so "not executed here" is the point.
+  assert.equal(outcome.record.startedAt, undefined);
+  assert.equal(outcome.record.attempts, 0);
+});
+
+test("the engine refuses to run a data-plane tool even when approved", async () => {
+  const parked = await run("send_email", {
+    to: "sarah@example.com",
+    subject: "Following up",
+    body: "Hi Sarah",
+  });
+
+  const approved = await approveAction({
+    accountId: "tenantA",
+    executionId: parked.executionId,
+    approvedBy: "owner@sunsetauto.com",
+    sharedContext: h.context,
+    registry: h.registry,
+  });
+
+  assert.equal(approved.status, "failed");
+  assert.equal(approved.record.error?.code, "wrong_execution_plane");
+  assert.equal(approved.record.attempts, 0, "nothing ran");
+});
+
+test("a data-plane tool's input is still validated before anything is recorded as sendable", async () => {
+  const bad = await run("send_email", { to: "not-an-email", subject: "hi", body: "hi" });
+
+  assert.equal(bad.status, "failed");
+  assert.equal(bad.record.error?.code, "invalid_input");
+  assert.equal(bad.record.status, "failed", "a malformed send never reaches pending_approval");
+});
+
+test("defineTool refuses to give a data-plane tool an engine body", () => {
+  const base = {
+    displayName: "X",
+    description: "d",
+    riskLevel: 2 as const,
+    mutating: true,
+    requiresApproval: true,
+    inputSchema: z.object({}),
+    outputSchema: z.object({}),
+  };
+
+  assert.throws(
+    () =>
+      defineTool({
+        ...base,
+        id: "bad_data_plane",
+        implementation: "data_plane",
+        execute: async () => ({}),
+      }),
+    /must not define execute\(\)/,
+  );
+  assert.throws(
+    () =>
+      defineTool({
+        ...base,
+        id: "bad_engine_tool",
+        implementation: "engine",
+      }),
+    /must provide execute\(\)/,
+  );
+});

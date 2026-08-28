@@ -163,3 +163,80 @@ test("the resolver refuses asks that are not clearly an action", () => {
   assert.equal(ask("Add a note to Sarah Chen's record."), undefined, "no note text");
   assert.ok(ask("Add a note to Sarah Chen's record saying she prefers texts."));
 });
+
+// --- Sales: composing an email, then proposing the send -----------------------
+//
+// The first department that can send something real. It composes exactly as it
+// did before; the difference is that when the owner named a recipient, the
+// composed text becomes a send_email action they approve rather than a draft
+// they copy somewhere.
+
+import { sales } from "../agents/departments.ts";
+import { soleRecipient, wantsSend } from "../agents/sales_actions.ts";
+
+function runSales(ask: string, userId: string | null = "tenantA"): Promise<AgentOutput> {
+  const emitTrace = createTraceEmitter("run_1", { persist: false, onStep: (s) => steps.push(s) });
+  return sales.run({
+    input: extractParams(ask),
+    context: h.context,
+    emitTrace,
+    ownerAsk: ask,
+    runId: "run_1",
+    userId: userId ?? undefined,
+  });
+}
+
+test("Sales proposes a real send and never sends it itself", async () => {
+  const output = await runSales(
+    "Email sarah@example.com to follow up on her brake quote.",
+  );
+
+  // No draft to copy: the thing awaiting approval IS the email.
+  assert.equal(output.draft, undefined);
+  assert.match(output.orchestratorNotes.join(" "), /sarah@example\.com/);
+  assert.match(output.orchestratorNotes.join(" "), /Nothing has been sent/);
+
+  const history = await h.store.list({ accountId: "tenantA" });
+  assert.equal(history.length, 1);
+  const execution = history[0]!;
+  assert.equal(execution.toolId, "send_email");
+  assert.equal(execution.status, "pending_approval");
+  assert.equal(execution.riskLevel, 2);
+  assert.equal(execution.agentId, "sales");
+  assert.equal(execution.attempts, 0, "the engine never ran it");
+
+  // The owner approves the exact text the agent wrote — recipient, subject and
+  // body are all on the record.
+  assert.equal(execution.input["to"], "sarah@example.com");
+  assert.ok(String(execution.input["subject"] ?? "").length > 0);
+  assert.ok(String(execution.input["body"] ?? "").length > 0);
+});
+
+test("Sales drafts, and proposes nothing, when no recipient was given", async () => {
+  const output = await runSales("Follow up with Sarah Chen on her brake quote.");
+
+  assert.ok(output.draft, "the existing draft behaviour is untouched");
+  assert.equal((await h.store.list({ accountId: "tenantA" })).length, 0);
+});
+
+test("two recipients propose nothing rather than guessing which one to email", async () => {
+  // The invariant is "no send is proposed", not "a draft appears" — which
+  // skill answers, and whether it can draft at all, is its own business.
+  const output = await runSales(
+    "Email sarah@example.com and mike@example.com about the brake quote.",
+  );
+
+  assert.equal((await h.store.list({ accountId: "tenantA" })).length, 0);
+  assert.ok(
+    output.draft || output.noDraftReason,
+    "the owner still gets an answer, just never a send to a guessed address",
+  );
+});
+
+test("a recipient is only ever taken from the owner's own words", () => {
+  assert.equal(soleRecipient("Email sarah@example.com about the quote"), "sarah@example.com");
+  assert.equal(soleRecipient("Email Sarah about the quote"), undefined);
+  assert.equal(soleRecipient("Email a@x.com and b@y.com"), undefined);
+  assert.equal(wantsSend("Draft a follow-up for Sarah"), false);
+  assert.equal(wantsSend("Email sarah@example.com"), true);
+});
