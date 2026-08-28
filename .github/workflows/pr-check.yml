@@ -95,6 +95,15 @@ jobs:
           npm run typecheck
           npm test
 
+      # Behavioural safety gate: replays the frozen action-eval split (215 cases)
+      # through the real decision path and fails if anything the labels forbid is
+      # proposed or performed. Safety only — accuracy is reported, never enforced.
+      # Offline: no API key, no network, and send_email has no engine body.
+      - name: Agent action safety gate
+        run: |
+          cd agent-service
+          npm run eval:actions:gate
+
       - name: Audit demo JS dependencies
         run: |
           cd demo-platform

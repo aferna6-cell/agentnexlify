@@ -116,6 +116,10 @@ run_gate "root quick check" 1 npm run check:quick --silent
 # The Agent OS engine (departments, orchestrator, action layer) lives in
 # agent-service; node:test, no network or database, so it is cheap to gate here.
 run_gate "Agent OS engine (agent-service)" 1 sh -c "cd agent-service && npm run typecheck --silent && npm test"
+# Behavioural safety gate: replays the frozen action-eval split through the real
+# decision path and fails if anything the labels forbid is proposed or performed.
+# Safety only - accuracy is reported, never enforced. See docs/agent-action-eval.md.
+run_gate "agent action safety gate" 1 sh -c "cd agent-service && npm run eval:actions:gate --silent"
 run_gate "JS/TS test quality lint" 1 npm run lint:test-quality --silent
 run_gate "Python test quality lint" 1 python scripts/lint_python_test_quality.py
 run_gate "local Python test refs" 1 python scripts/check_test_local_refs.py
