@@ -1,0 +1,28 @@
+{
+  "run": 115,
+  "date": "2026-08-28-pm",
+  "winner": "Step 9L: Dead service detector — flag zero-caller backend service files in nightly",
+  "winner_category": "code_health",
+  "winner_effort": "S",
+  "winner_status": "recommended_this_run",
+  "autonomous_executable": false,
+  "carry_forward": 0,
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "mandate_items_checked": 7,
+  "mandate_results": {
+    "step9j_skill_fix_in_place": true,
+    "nightly_20260828_dependabot_merged": "no_am_run_today",
+    "precommit_block_demo_role_implemented": false,
+    "gh399_day60_resolved": false,
+    "gh684_brain_connector_pat_rotated": false,
+    "agent_escalation_zero_callers": true,
+    "gh669_middleware_pr_opened": false
+  },
+  "bonus_actions": ["GH #399 Day 60+ escalation comment (to be posted)"],
+  "skill_edits": [],
+  "governance_changes": {
+    "total_runs": "114 -> 115",
+    "last_run": "2026-08-28"
+  }
+}
