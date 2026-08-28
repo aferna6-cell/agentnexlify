@@ -117,7 +117,15 @@ Website widget -> FastAPI backend -> LLM runtime wrapper -> Supabase
                                   -> notifications and integrations
 Dashboard frontend -> API routes -> CRM, conversations, onboarding, billing
 Agent system -> skills, checks, autopilot workflow, local verification
+Agent OS engine (agent-service) -> departments -> action layer -> tools
 ```
+
+The Agent OS engine lives in `agent-service/src/agent-os/` (pure compute; the
+FastAPI data plane assembles its context and persists its results). When an
+agent needs to *do* something rather than draft something, it goes through the
+action layer: a typed tool registry, a central risk/approval policy, one
+executor, verification, and an audit row per attempt. See
+[Agent OS action layer](docs/agent-os-action-layer.md).
 
 ## Key Commands
 

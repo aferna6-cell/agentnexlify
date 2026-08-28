@@ -113,6 +113,9 @@ run_gate "agent system guardrails" 1 python scripts/check_agent_system.py
 run_gate "project invariants" 1 python scripts/check_project_invariants.py
 run_gate "instruction budget" 1 python scripts/check_instruction_budget.py
 run_gate "root quick check" 1 npm run check:quick --silent
+# The Agent OS engine (departments, orchestrator, action layer) lives in
+# agent-service; node:test, no network or database, so it is cheap to gate here.
+run_gate "Agent OS engine (agent-service)" 1 sh -c "cd agent-service && npm run typecheck --silent && npm test"
 run_gate "JS/TS test quality lint" 1 npm run lint:test-quality --silent
 run_gate "Python test quality lint" 1 python scripts/lint_python_test_quality.py
 run_gate "local Python test refs" 1 python scripts/check_test_local_refs.py

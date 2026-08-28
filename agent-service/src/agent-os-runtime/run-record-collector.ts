@@ -19,6 +19,8 @@ import type {
   TraceStepCreate,
   ModelCallCreate,
 } from "../agent-os/lib/providers/run-store.ts";
+import type { ActionExecutionRecord } from "../agent-os/actions/types.ts";
+import type { CustomerNoteRecord } from "../agent-os/actions/ports.ts";
 
 export interface CollectedDecision extends RoutingDecisionCreate {
   id: string;
@@ -39,6 +41,16 @@ export interface RunRecordBundle {
   traceSteps: TraceStepCreate[];
   modelCalls: ModelCallCreate[];
   wishlist: { userId: string; request: string; consideredAgents: string }[];
+  /**
+   * Tool executions the engine performed or parked this turn (the action-layer
+   * audit trail). FastAPI persists them into `os_tool_executions`.
+   */
+  toolExecutions: ActionExecutionRecord[];
+  /**
+   * Internal customer notes a tool wrote this turn. FastAPI applies them to the
+   * tenant's customer records.
+   */
+  customerNotes: CustomerNoteRecord[];
 }
 
 export class RunRecordCollector implements RunStore {
@@ -49,6 +61,8 @@ export class RunRecordCollector implements RunStore {
     traceSteps: [],
     modelCalls: [],
     wishlist: [],
+    toolExecutions: [],
+    customerNotes: [],
   };
 
   async createRoutingDecision(input: RoutingDecisionCreate): Promise<{ id: string }> {
@@ -94,7 +108,19 @@ export class RunRecordCollector implements RunStore {
     this.bundle.modelCalls.push({ ...input });
   }
 
+  /**
+   * The run bundle. The action layer keeps its own collectors (they implement
+   * different seams), so orchestrate.ts folds those in via `withActions`.
+   */
   toBundle(): RunRecordBundle {
     return this.bundle;
+  }
+
+  /** Return the bundle with this request's action-layer output attached. */
+  withActions(
+    toolExecutions: ActionExecutionRecord[],
+    customerNotes: CustomerNoteRecord[],
+  ): RunRecordBundle {
+    return { ...this.bundle, toolExecutions, customerNotes };
   }
 }

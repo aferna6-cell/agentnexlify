@@ -151,3 +151,61 @@ def orchestrate_sync(
     except Exception:
         logger.warning("agent_sdk_client: error calling %s", endpoint, exc_info=True)
         return None
+
+
+def approve_action_sync(
+    account_id: str,
+    execution: dict[str, Any],
+    context: dict[str, Any],
+    *,
+    approved_by: str,
+    tool_policy: dict[str, Any] | None = None,
+    existing_notes: list[dict[str, Any]] | None = None,
+    timeout: float = _DEFAULT_ORCHESTRATE_TIMEOUT_S,
+) -> dict[str, Any] | None:
+    """Call agent-service POST /actions/approve for an approved tool execution.
+
+    The engine is stateless, so the stored ``os_tool_executions`` row travels
+    back with a freshly assembled SharedContext; the engine runs it through the
+    same executor an agent uses and returns
+    ``{"execution": ActionExecutionRecord, "customerNotes": [...]}`` for the
+    caller to persist.
+
+    Returns None when the service is unconfigured or does not answer. The caller
+    must treat that as an UNKNOWN outcome and never retry blindly — a lost
+    response cannot be distinguished from a lost request.
+
+    Must be called from a threadpool — this is blocking.
+    """
+    if not _AGENT_SERVICE_URL:
+        return None
+
+    endpoint = f"{_AGENT_SERVICE_URL}/actions/approve"
+    body: dict[str, Any] = {
+        "accountId": account_id,
+        "execution": execution,
+        "context": context,
+        "approvedBy": approved_by,
+    }
+    if tool_policy:
+        body["toolPolicy"] = tool_policy
+    if existing_notes:
+        body["existingNotes"] = existing_notes
+    try:
+        resp = httpx.post(endpoint, json=body, headers=_auth_headers(), timeout=timeout)
+        resp.raise_for_status()
+        return resp.json()
+    except httpx.TimeoutException:
+        logger.warning("agent_sdk_client: timeout calling %s", endpoint)
+        return None
+    except httpx.HTTPStatusError as exc:
+        logger.warning(
+            "agent_sdk_client: HTTP %s from %s: %s",
+            exc.response.status_code,
+            endpoint,
+            exc.response.text[:200],
+        )
+        return None
+    except Exception:
+        logger.warning("agent_sdk_client: error calling %s", endpoint, exc_info=True)
+        return None

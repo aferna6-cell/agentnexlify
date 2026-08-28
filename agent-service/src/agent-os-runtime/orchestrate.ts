@@ -12,6 +12,8 @@ import type { SharedContext } from "../agent-os/types/agent.ts";
 import { requestScope } from "./request-scope.ts";
 import { RunRecordCollector, type RunRecordBundle } from "./run-record-collector.ts";
 import { registerAgentOsProviders } from "./bootstrap.ts";
+import { CollectingActionStore, CollectingCustomerNotesPort } from "./action-collector.ts";
+import type { TenantToolPolicy } from "../agent-os/actions/policy.ts";
 
 registerAgentOsProviders();
 
@@ -24,6 +26,12 @@ export interface OrchestrateInput {
   context: SharedContext;
   /** Owner override: force routing to this agent. */
   forceAgentId?: string;
+  /**
+   * The tenant's tool policy (which tools are enabled, what needs approval).
+   * Omitted means the safe defaults: reads and internal writes run, external
+   * communication and high-impact actions need approval.
+   */
+  toolPolicy?: TenantToolPolicy;
 }
 
 export interface OrchestrateOutput {
@@ -33,8 +41,23 @@ export interface OrchestrateOutput {
 
 export async function runOrchestration(input: OrchestrateInput): Promise<OrchestrateOutput> {
   const record = new RunRecordCollector();
-  return requestScope.run({ accountId: input.accountId, context: input.context, record }, async () => {
-    const result = await handle(input.accountId, input.ask, input.forceAgentId ? { forceAgentId: input.forceAgentId } : {});
-    return { result, record: record.toBundle() };
-  });
+  const actions = {
+    store: new CollectingActionStore(),
+    notes: new CollectingCustomerNotesPort(),
+    policy: input.toolPolicy ?? {},
+  };
+  return requestScope.run(
+    { accountId: input.accountId, context: input.context, record, actions },
+    async () => {
+      const result = await handle(
+        input.accountId,
+        input.ask,
+        input.forceAgentId ? { forceAgentId: input.forceAgentId } : {},
+      );
+      return {
+        result,
+        record: record.withActions(actions.store.toBundle(), actions.notes.toBundle()),
+      };
+    },
+  );
 }

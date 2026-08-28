@@ -130,6 +130,7 @@ from backend.routers import (
     account_deletion,
     os_deliverables,
     os_email_actions,
+    os_tool_executions as os_tool_executions_router,
     os_graph,
     os_memory,
     os_backlog,
@@ -1044,6 +1045,7 @@ app.include_router(os_orchestrate.router)
 app.include_router(os_agent_runs.router)
 app.include_router(account_deletion.router)
 app.include_router(os_deliverables.router)
+app.include_router(os_tool_executions_router.router)
 app.include_router(os_email_actions.router)
 app.include_router(os_graph.router)
 app.include_router(os_memory.router)

@@ -4,6 +4,7 @@
  */
 
 import { defineDepartment } from "./_department.ts";
+import { resolveRecordAction } from "./admin_records_actions.ts";
 
 // v1 worker agents, now used as internal skills.
 import { booking } from "./booking/agent.ts";
@@ -227,6 +228,11 @@ export const adminRecords = defineDepartment({
     { agent: contentWriter, extraKeywords: ["about us", "blog", "article", "paragraph"] },
   ],
   defaultSkillId: "document_drafter",
+  // The first department with a tool path: "add a note to Sarah's record saying
+  // she prefers texts" is a thing to DO, so it runs through the action executor
+  // (policy -> execution -> verification -> audit) instead of drafting. Anything
+  // it does not clearly understand still drafts. See admin_records_actions.ts.
+  resolveAction: resolveRecordAction,
   examples: [
     { owner_ask: "Draft a service agreement template for new customers.", expected_route: "admin_records", expected_output_excerpt: "agreement" },
     { owner_ask: "Write up a one-pager on our refund policy.", expected_route: "admin_records", expected_output_excerpt: "refund" },
