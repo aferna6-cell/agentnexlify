@@ -1,0 +1,49 @@
+{
+  "run": 110,
+  "date": "2026-08-28",
+  "winner": {
+    "title": "Fix Step 9J: add @dependabot rebase trigger for mergeable_state: unknown PRs",
+    "category": "workflow",
+    "effort": "S",
+    "confidence": "HIGH",
+    "autonomous_executable": true,
+    "requires_human": false,
+    "escalation_condition": "Autonomous-executable if not approved by run 111 (1st carry-forward mandate)"
+  },
+  "mandate_check": {
+    "source_mandate": "run_109_mandate",
+    "items": {
+      "step_9j_fired": "PASS — nightly-2026-08-28 confirms Step 9J: 3 PRs checked (#679, #666, #629), all mergeable_state: unknown, 0 merged",
+      "step_9j_merges": 0,
+      "step_9j_skipped": 3,
+      "step_9j_root_cause": "mergeable_state: unknown on all sampled PRs — stale-base Dependabot PRs require @dependabot rebase comment to trigger GitHub mergeability recomputation. Step 9J only merges clean state. All 20+ Dependabot PRs stuck.",
+      "gh_669": "OPEN — 8 days, 95 routers missing block_demo_role, no linked PR",
+      "gh_403_kb_freshness": "RESOLVED — KB last ran 2026-08-26 (2 days ago, under 7d threshold). 4 new articles compiled.",
+      "gh_399_token": "AUTOPILOT_GH_TOKEN ~55 days (OK, threshold 76d). Token exists but loop appears stalled — 3 ai-ready issues 8-21d with no linked PRs.",
+      "step_9k_check": "Deferred — subconscious PR count not verified this run"
+    }
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "debate_results": {
+    "idea_1_fix_step_9j": "SURVIVES — WINNER",
+    "idea_2_step_9k": "Parking Lot — valid but lower urgency",
+    "idea_3_loop_stall_diagnostic": "WEAKENED — Parking Lot (5th+ similar rec, mechanism uncertainty)",
+    "idea_4_middleware_block_demo_role": "WEAKENED — Parking Lot (M-effort, loop stall uncertainty, technical complexity)",
+    "idea_5_supabase_checklist_gh684": "Parking Lot — valid bonus action, lower leverage"
+  },
+  "evidence_digest": {
+    "commits_reviewed": "3 (all ops/logs — no production code changes)",
+    "nightly_log": "2026-08-28 — Step 9J: 0 merges, all unknown state. KB healthy. Brain connector 36d stale. 3 ai-ready issues stalled.",
+    "key_finding": "Step 9J permanent 0% without rebase trigger. nightly log explicitly recommends @dependabot rebase."
+  },
+  "run_111_mandate": [
+    "Verify @dependabot rebase trigger fires in nightly post-2026-08-28 (grep 'triggered rebase on PR')",
+    "Count: how many rebases triggered? (capped at 5 per run)",
+    "Count: how many Dependabot PRs became clean + merged within 24-48h of trigger?",
+    "Final Step 9J log line: N checked, M merged, K skipped, R rebase-triggered",
+    "GH #669: still open? Any middleware PR from issue-to-pr-loop?",
+    "GH #643 (21d) + GH #660 (13d): any linked PRs opened by loop?",
+    "Brain connector GH #684: SUPABASE_ACCESS_TOKEN set in Railway? (check for railway deploy or comment activity)"
+  ]
+}

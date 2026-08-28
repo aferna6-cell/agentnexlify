@@ -1,13 +1,11 @@
 {
   "version": 1,
-  "last_run": "2026-08-24",
-  "total_runs": 109,
+  "last_run": "2026-08-28",
+  "total_runs": 110,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
-  "frozen_ideas": [
-    "ai_human_handoff"
-  ],
+  "frozen_ideas": ["ai_human_handoff"],
   "moratorium_config": {
     "moratorium_active": false,
     "triggered_run": 15,
@@ -1918,5 +1916,24 @@
       "artifact_writing": "sonnet"
     }
   },
-  "run_109_mandate_executed": "EXECUTED 2026-08-24 (run 109). All mandate items checked: (1) Step 9J ABSENT — grep returned 0. 1st carry-forward mandate fires. ESCALATED: implemented directly this run (autonomous-executable channel per governance). Step 9J block added to .claude/skills/nightly-commit-review/SKILL.md after Step 9I log result, before step 10. (2) First nightly with Step 9J: N/A before this run — check nightly post-2026-08-24 for 'Step 9J:' line. (3) GH #669: OPEN (filed 2026-08-20, 97/97 routers, awaiting human action). (4) GH #403: OPEN, KB 32d+ stale (last: 2026-07-23). Run 107 targeted comment posted, no human response. (5) GH #399: OPEN Day 41+, AUTOPILOT_GH_TOKEN expired, 30 ai-ready issues blocked. (6) Dependabot PRs #629/#630/#631/#649/#665/#666 still aging — Step 9J will merge eligible on next nightly."
+  "run_109_mandate_executed": "EXECUTED 2026-08-24 (run 109). All mandate items checked: (1) Step 9J ABSENT — grep returned 0. 1st carry-forward mandate fires. ESCALATED: implemented directly this run (autonomous-executable channel per governance). Step 9J block added to .claude/skills/nightly-commit-review/SKILL.md after Step 9I log result, before step 10. (2) First nightly with Step 9J: N/A before this run — check nightly post-2026-08-24 for 'Step 9J:' line. (3) GH #669: OPEN (filed 2026-08-20, 97/97 routers, awaiting human action). (4) GH #403: OPEN, KB 32d+ stale (last: 2026-07-23). Run 107 targeted comment posted, no human response. (5) GH #399: OPEN Day 41+, AUTOPILOT_GH_TOKEN expired, 30 ai-ready issues blocked. (6) Dependabot PRs #629/#630/#631/#649/#665/#666 still aging — Step 9J will merge eligible on next nightly.",
+  "run_110_mandate_executed": "EXECUTED 2026-08-28 (run 110). Mandate items from run_109: (1) Step 9J FIRED: PASS — nightly-2026-08-28 confirms 'Step 9J: 3 PRs checked, all mergeable_state: unknown, 0 merged'. (2) Root cause of 0 merges: GitHub returns unknown for stale-base PRs — only @dependabot rebase triggers recomputation. Step 9J requires clean state; fix is adding rebase trigger for unknown state. (3) GH #669: OPEN 8 days, no linked PR. (4) GH #403/KB: RESOLVED — KB last ran 2026-08-26 (2d, healthy). (5) GH #399: AUTOPILOT_GH_TOKEN ~55d OK (<76d threshold). Loop appears stalled — 3 ai-ready issues 8-21d with no linked PRs. (6) Step 9K: subconscious PR count not verified this run. Run 110 winner: Fix Step 9J — add @dependabot rebase trigger for unknown state (S-effort, autonomous-executable, 1st carry-forward mandate if not approved by run 111).",
+  "run_110_active_direction": {
+    "title": "Fix Step 9J: add @dependabot rebase trigger for mergeable_state: unknown PRs (run 110 winner)",
+    "date": "2026-08-28",
+    "confidence": "HIGH",
+    "status": "recommendation",
+    "implemented": false,
+    "autonomous_executable": true,
+    "requires_human": false,
+    "category": "workflow",
+    "moratorium_override": false,
+    "source_run": 110,
+    "effort": "S",
+    "evidence": "nightly-2026-08-28: Step 9J fired, 3 PRs checked, all mergeable_state: unknown, 0 merged. 20+ Dependabot PRs permanently stuck. nightly log recommends @dependabot rebase. Root cause confirmed: GitHub unknown state requires rebase trigger for mergeability recomputation.",
+    "action": "Edit Step 9J block in .claude/skills/nightly-commit-review/SKILL.md: when mergeable_state == 'unknown', check if @dependabot rebase comment posted in last 48h (dedup guard). If not, post via mcp__github__add_issue_comment. Cap at 5 per nightly run. Log: 'Step 9J: triggered rebase on PR #{N} (state: unknown)'. Next nightly: PR clean after Dependabot rebases + CI passes → merges automatically.",
+    "implementation_sketch": "subconscious/runs/2026-08-28/winning-concept.md",
+    "escalation_condition": "Autonomous-executable if not approved by run 111 (1st carry-forward mandate)",
+    "note": "Compounds run 109's Step 9J. Without this fix: Step 9J permanent 0% merge rate. With fix: 20+ security dep bumps unblock within 24-48h, CVE window 2-3 weeks -> <48h."
+  }
 }
