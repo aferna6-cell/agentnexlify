@@ -6,6 +6,16 @@ from unittest.mock import MagicMock
 
 # MUST be set before any backend import — backend.config reads env at import time.
 os.environ.setdefault("TESTING", "1")
+# Same secrets tests/conftest.py seeds, and for the same reason: pydantic-settings
+# reads them once, at backend.config import time. Whichever tree pytest collects
+# FIRST is the one that gets to seed them, so both conftests must agree. Without
+# this, a run that collects backend/tests/ before tests/ (e.g. `pytest backend/tests
+# tests`, which is what scripts/ci_local.sh and pr-check.yml do) imports
+# backend.config with no JWT secret, and every test in tests/ that authenticates
+# with a real HS256 token gets 401. Values match tests/conftest.py exactly.
+os.environ.setdefault("API_SECRET_KEY", "test-secret-key-for-jwt")
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-jwt")
+os.environ.setdefault("ADMIN_API_SECRET_KEY", "test-admin-secret-key-for-jwt")
 
 import httpx
 import pytest
