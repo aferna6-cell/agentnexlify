@@ -45,6 +45,7 @@ _PLAN_BASELINE_AI_TOKENS: dict[str, int] = {
     # ai_usage_guard.PLAN_BASELINE_TOKENS so audit reports match enforcement.
     "chatbot": 800_000,
     "agent_os": 5_000_000,
+    "agent_os_managed": 8_000_000,
     # Legacy plans (grandfathered tenants on old contracts). Since 2026-07-22
     # ai_usage_guard.PLAN_BASELINE_TOKENS enforces these same values - before
     # that, enforcement silently used the chatbot default for legacy plans.

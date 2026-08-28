@@ -17,14 +17,17 @@ logger = logging.getLogger(__name__)
 # Live AI answering is an agent_os feature (full platform plan, $99.99/mo).
 # Grandfathered professional/enterprise contracts are also included.
 # Lower tiers (chatbot, free) get voicemail mode (recording -> transcription
-# -> recovery draft). See CLAUDE.md plan names + docs/dev-knowledge/schema-log.md.
-_AI_VOICE_PLANS = {"agent_os", "professional", "enterprise"}
+# -> recovery draft) UNLESS the $49.99/mo voice add-on subscription is active
+# (tenants.voice_addon_active, migration 194 — set by the Stripe webhook).
+# See CLAUDE.md plan names + docs/dev-knowledge/schema-log.md.
+_AI_VOICE_PLANS = {"agent_os", "agent_os_managed", "professional", "enterprise"}
 
 
 def _ai_voice_mode(tenant: dict) -> bool:
     """True when this tenant's calls get the live AI loop instead of voicemail."""
     return bool(tenant.get("voice_ai_enabled")) and (
         (tenant.get("plan") or "free") in _AI_VOICE_PLANS
+        or bool(tenant.get("voice_addon_active"))
     )
 
 
@@ -63,7 +66,8 @@ def _find_or_create_lead(db, tenant_id: str, caller: str, note: str) -> str | No
 
 _TENANT_PHONE_SELECT = (
     "id, business_name, business_type, owner_email, notification_phone, "
-    "twilio_number, sms_notifications_enabled, plan, voice_ai_enabled"
+    "twilio_number, sms_notifications_enabled, plan, voice_ai_enabled, "
+    "voice_addon_active"
 )
 
 

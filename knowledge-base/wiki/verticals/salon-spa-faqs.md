@@ -62,6 +62,36 @@ Same-day and same-week openings depend on the day and the service. Shorter servi
 **What forms of payment do you take and do you accept tips?**
 Most salons take cards and many take digital payments, plus cash. Tipping is common and appreciated, and some locations let you add a tip on the card. Check the specific location for its accepted methods.
 
+**Do you cut kids' hair, and do you do men's cuts?**
+Most salons take kids and men's cuts, often at a lower price than a full-service cut. Kids' pricing usually depends on age. If you are booking for a child, mention their age and we can pick the right service and time slot.
+
+**Do you require a deposit to book?**
+Longer or high-value services like balayage, extensions, and bridal work often require a deposit that applies to your final bill. Shorter services usually book without one. The exact policy depends on the location and the service.
+
+**Do you do bridal, prom, or event styling?**
+Many salons offer updos, event styling, and bridal packages, including trials before the big day. Bridal parties can often book as a group. Tell us the date and party size and we can check availability and pricing.
+
+**Can I book for a group or party?**
+Yes, many locations take group bookings for bridal parties, birthdays, or girls' days. Groups need more chairs at once, so book as early as you can and tell us how many people and which services.
+
+**Do you sell gift cards?**
+Most salons sell gift cards or gift certificates in any amount, in person and often online. They usually work for services and retail products. Ask us and we can point you to where to buy one.
+
+**What products do you use, and what if I have allergies or a sensitive scalp?**
+Product lines vary by salon, and most carry options for sensitive skin and scalps. If you have allergies or reactions to past color services, tell us before your visit — new color clients may need a quick patch test a day or two ahead.
+
+**Do you do extensions, keratin treatments, or perms?**
+Many salons offer extensions, smoothing or keratin treatments, and perms, though not every stylist does every service. These are longer appointments and often start with a consultation so pricing depends on your hair and the result you want.
+
+**Do you do lashes, brows, waxing, or nails?**
+Full-service salons and spas often cover brows, lashes, waxing, and nail services alongside hair. Availability depends on the location's team. Tell us what you are looking for and we can confirm and book it.
+
+**What happens if I'm running late?**
+A few minutes is usually fine. Past a grace period, often 10 to 15 minutes, the salon may need to shorten the service or rebook so the next guest starts on time. If you are running behind, message or call and we will do our best to make it work.
+
+**Is there a consultation before big changes like a color correction?**
+Yes. Big changes — going much lighter, color correction, extensions, or a major restyle — usually start with a short consultation, sometimes free, so the stylist can assess your hair and give a real quote and timeline before you commit.
+
 ## Key Concepts
 
 - **Walk-in versus appointment**: The most common first question. The answer steers the visitor toward booking, which is where the lead converts.

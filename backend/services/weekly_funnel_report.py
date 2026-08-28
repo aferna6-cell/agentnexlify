@@ -37,6 +37,11 @@ def _row(label: str, value) -> str:
     )
 
 
+def _rate(value) -> str:
+    """Format a percent rate; conversion is unmeasurable when None."""
+    return f"{value}%" if value is not None else "n/a"
+
+
 def _build_report_html(funnel: dict) -> str:
     rows = [
         _row("Real customer tenants", funnel.get("total_tenants", 0)),
@@ -44,8 +49,13 @@ def _build_report_html(funnel: dict) -> str:
         _row("With at least one lead", funnel.get("with_leads", 0)),
         _row("Paying", funnel.get("paid", 0)),
         _row("New signups this week", funnel.get("new_signups_week", 0)),
+        _row("Chat messages this week", funnel.get("new_messages_week", 0)),
         _row("New leads this week", funnel.get("new_leads_week", 0)),
         _row("New appointments this week", funnel.get("new_appointments_week", 0)),
+        # The two conversion numbers under active watch since the 2026-06
+        # prompt fixes (baseline ~1.0% msg→lead; 2.5% on 07-09; 8.5% on 08-25).
+        _row("Msg → lead conversion", _rate(funnel.get("msg_to_lead_rate_week"))),
+        _row("Lead → booking conversion", _rate(funnel.get("lead_to_appt_rate_week"))),
     ]
     errors = funnel.get("errors") or []
     error_note = (

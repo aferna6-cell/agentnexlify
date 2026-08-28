@@ -343,7 +343,8 @@ class ClientRow(BaseModel):
 
 class CreateCheckoutRequest(BaseModel):
     tenant_id: str
-    plan: str  # growth|professional|enterprise
+    plan: str  # chatbot|agent_os
+    billing_interval: str = "monthly"  # "monthly" | "annual" (annual = 2 months free)
     promo_code: str | None = None
     source: str | None = None  # "wizard" or null
 

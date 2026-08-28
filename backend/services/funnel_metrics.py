@@ -34,7 +34,7 @@ from backend.services.internal_tenants import is_internal_tenant
 logger = logging.getLogger(__name__)
 
 # Plans that are considered paid (not free/lapsed)
-_PAID_PLANS = {"chatbot", "agent_os", "growth", "autopilot", "professional", "enterprise"}
+_PAID_PLANS = {"chatbot", "agent_os", "agent_os_managed", "growth", "autopilot", "professional", "enterprise"}
 _PAID_STATUSES = {"active", "trialing"}
 
 
@@ -80,6 +80,13 @@ def compute_funnel() -> dict:
         "new_signups_week": 0,
         "new_leads_week": 0,
         "new_appointments_week": 0,
+        "new_messages_week": 0,
+        # Conversion rates for the week (percent, 1 decimal). None when the
+        # denominator is 0 or a source metric failed — the shipped 2026-06
+        # lead-capture + booking prompt fixes are tracked by these two numbers
+        # (audit-post-deploy-measurement-2026-07-09.md / 2026-08-25.md).
+        "msg_to_lead_rate_week": None,
+        "lead_to_appt_rate_week": None,
         "errors": errors,
         "computed_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -248,5 +255,42 @@ def compute_funnel() -> dict:
     except Exception:
         logger.exception("funnel_metrics: failed to count new_appointments_week")
         errors.append("new_appointments_week")
+
+    # 8. New chat messages this week (chat_messages use tenant_id) — the
+    # denominator for msg→lead conversion.
+    try:
+        resp = (
+            db.table("chat_messages")
+            .select("tenant_id, created_at")
+            .gte("created_at", since)
+            .limit(50000)
+            .execute()
+        )
+        result["new_messages_week"] = sum(
+            1
+            for row in (resp.data or [])
+            if row.get("tenant_id") and row["tenant_id"] in real_tenant_ids
+        )
+    except Exception:
+        logger.exception("funnel_metrics: failed to count new_messages_week")
+        errors.append("new_messages_week")
+
+    # 9. Weekly conversion rates — None when a source failed or denominator is 0
+    if (
+        "new_messages_week" not in errors
+        and "new_leads_week" not in errors
+        and result["new_messages_week"] > 0
+    ):
+        result["msg_to_lead_rate_week"] = round(
+            result["new_leads_week"] / result["new_messages_week"] * 100, 1
+        )
+    if (
+        "new_leads_week" not in errors
+        and "new_appointments_week" not in errors
+        and result["new_leads_week"] > 0
+    ):
+        result["lead_to_appt_rate_week"] = round(
+            result["new_appointments_week"] / result["new_leads_week"] * 100, 1
+        )
 
     return result

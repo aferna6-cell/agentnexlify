@@ -25,8 +25,8 @@ export function updateTenantSettings(tenantId, token, data) {
 
 // --- Billing ---
 
-export function billingCheckout(token, { plan, promo_code } = {}) {
-  return request("/api/v1/auth/billing/checkout", { method: "POST", token, body: { plan, promo_code } });
+export function billingCheckout(token, { plan, promo_code, billing_interval } = {}) {
+  return request("/api/v1/auth/billing/checkout", { method: "POST", token, body: { plan, promo_code, billing_interval } });
 }
 
 export function billingPortal(tenantId, token) {
@@ -37,8 +37,8 @@ export function fetchTrialStatus(tenantId, token) {
   return request(`/api/v1/auth/trial-status/${tenantId}`, { token });
 }
 
-export function changePlan(token, plan) {
-  return request("/api/v1/auth/billing/change-plan", { method: "POST", token, body: { plan } });
+export function changePlan(token, plan, billing_interval) {
+  return request("/api/v1/auth/billing/change-plan", { method: "POST", token, body: { plan, billing_interval } });
 }
 
 export function cancelSubscription(token, { reason, reason_detail, feedback } = {}) {
@@ -65,6 +65,10 @@ export function fetchAIInsights(tenantId, token) {
 
 export function submitContactForm(data) {
   return request("/api/v1/support/contact", { method: "POST", body: data });
+}
+
+export function submitPartnerInquiry(data) {
+  return request("/api/v1/partners/inquiry", { method: "POST", body: data });
 }
 
 // --- Notifications ---

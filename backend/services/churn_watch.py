@@ -3,6 +3,11 @@
 At-risk definition: paid tenant (plan != 'free' AND plan_status IN ('active','trialing'))
 with ZERO leads AND ZERO chat_messages in the last 14 days.
 
+The alert is a CALL LIST, not just a table: each at-risk tenant row carries
+its last recorded activity date and a ready-to-send re-engagement email draft
+the owner can copy, personalize, and send. Drafts are suggestions only —
+nothing is sent to the tenant automatically (drafts-only trust boundary).
+
 Schema conventions (schema-discipline.md):
   leads         → client_id   (NOT tenant_id)
   chat_messages → tenant_id
@@ -26,6 +31,15 @@ logger = logging.getLogger(__name__)
 
 _WINDOW_DAYS = 14
 _PAID_STATUSES = ("active", "trialing")
+
+# Monthly price by current purchasable plan — frames what silent churn costs.
+# Legacy/grandfathered plans (growth, autopilot, professional, enterprise)
+# have per-contract pricing and are shown without a dollar figure.
+_PLAN_MRR: dict[str, str] = {
+    "chatbot": "$19.99/mo",
+    "agent_os": "$99.99/mo",
+    "agent_os_managed": "$299.99/mo",
+}
 
 
 def _now_utc() -> datetime:
@@ -56,7 +70,7 @@ async def run_churn_watch() -> int:
     try:
         resp = (
             db.table("tenants")
-            .select("id, business_name, plan, plan_status")
+            .select("id, business_name, plan, plan_status, owner_email")
             .neq("plan", "free")
             .in_("plan_status", list(_PAID_STATUSES))
             .execute()
@@ -134,6 +148,8 @@ async def run_churn_watch() -> int:
                     "business_name": business_name,
                     "plan": plan,
                     "plan_status": plan_status,
+                    "owner_email": row.get("owner_email") or "",
+                    "last_activity": _last_activity(db, tid),
                 }
             )
 
@@ -149,8 +165,84 @@ async def run_churn_watch() -> int:
     return len(at_risk)
 
 
+def _last_activity(db, tenant_id: str) -> str:
+    """Most recent lead or chat_message timestamp for a tenant, '' if none.
+
+    Only called for at-risk tenants (a handful of rows), so the two extra
+    queries per tenant are cheap. Best-effort — returns '' on any failure.
+    """
+    latest = ""
+    try:
+        resp = (
+            db.table("leads")
+            .select("created_at")
+            .eq("client_id", tenant_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if resp.data:
+            latest = resp.data[0].get("created_at") or ""
+    except Exception:
+        logger.warning(
+            "churn_watch: last-lead lookup failed for %s", tenant_id, exc_info=True
+        )
+    try:
+        resp = (
+            db.table("chat_messages")
+            .select("created_at")
+            .eq("tenant_id", tenant_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if resp.data:
+            candidate = resp.data[0].get("created_at") or ""
+            if candidate > latest:
+                latest = candidate
+    except Exception:
+        logger.warning(
+            "churn_watch: last-message lookup failed for %s", tenant_id, exc_info=True
+        )
+    return latest
+
+
+def _reengagement_draft(tenant: dict, window_days: int) -> str:
+    """Plain-text re-engagement email the owner can copy, edit, and send.
+
+    A draft only — churn_watch never emails the tenant directly
+    (drafts-only trust boundary, see module docstring).
+    """
+    name = (tenant.get("business_name") or "there").strip()
+    return (
+        f"Subject: Getting more out of your AI assistant at {name}\n"
+        "\n"
+        f"Hi {name} team,\n"
+        "\n"
+        f"I noticed your AI assistant hasn't had any visitor conversations in the "
+        f"last {window_days} days. Usually that means the widget isn't on the pages "
+        "your visitors land on, or your site traffic dipped.\n"
+        "\n"
+        "I'd like to fix that with you this week. In 10 minutes we can:\n"
+        "- confirm the widget is live on your busiest pages\n"
+        "- tune the greeting so more visitors start a conversation\n"
+        "- switch on appointment booking so leads can book you directly\n"
+        "\n"
+        "Reply to this email and I'll make it happen.\n"
+        "\n"
+        "[Your name]\n"
+        "AgentNexLiFy"
+    )
+
+
+def _format_last_activity(value: str) -> str:
+    if not value:
+        return "No activity recorded"
+    return value[:10]  # ISO date part
+
+
 async def _send_churn_alert(*, at_risk: list[dict], window_days: int) -> None:
-    """Build and send the owner alert listing at-risk tenants."""
+    """Build and send the owner call list for at-risk tenants."""
     count = len(at_risk)
     subject = f"Churn Watch: {count} paid tenant{'s' if count != 1 else ''} with no activity in {window_days}d"
 
@@ -158,38 +250,68 @@ async def _send_churn_alert(*, at_risk: list[dict], window_days: int) -> None:
     for t in at_risk:
         name = html.escape(t.get("business_name") or t.get("tenant_id", "Unknown"))
         plan = html.escape(t.get("plan") or "")
+        mrr = html.escape(_PLAN_MRR.get(t.get("plan") or "", ""))
+        plan_label = f"{plan} ({mrr})" if mrr else plan
         status = html.escape(t.get("plan_status") or "")
-        tid = html.escape(t.get("tenant_id") or "")
+        owner_email = html.escape(t.get("owner_email") or "")
+        last_seen = html.escape(_format_last_activity(t.get("last_activity") or ""))
         rows_html += (
             "<tr>"
             f"<td style='padding:8px 12px;border:1px solid #e5e7eb;'>{name}</td>"
-            f"<td style='padding:8px 12px;border:1px solid #e5e7eb;'>{plan}</td>"
+            f"<td style='padding:8px 12px;border:1px solid #e5e7eb;'>{plan_label}</td>"
             f"<td style='padding:8px 12px;border:1px solid #e5e7eb;'>{status}</td>"
-            f"<td style='padding:8px 12px;border:1px solid #e5e7eb;font-family:monospace;font-size:12px;'>{tid}</td>"
+            f"<td style='padding:8px 12px;border:1px solid #e5e7eb;'>{last_seen}</td>"
+            f"<td style='padding:8px 12px;border:1px solid #e5e7eb;font-family:monospace;font-size:12px;'>{owner_email}</td>"
             "</tr>"
+        )
+
+    # One copy-paste draft per at-risk tenant, under the table.
+    drafts_html = ""
+    for t in at_risk:
+        name = html.escape(t.get("business_name") or t.get("tenant_id", "Unknown"))
+        mailto = html.escape(t.get("owner_email") or "")
+        draft = html.escape(_reengagement_draft(t, window_days))
+        mailto_line = (
+            f"<p style='color:#374151;margin:4px 0;'>Send to: "
+            f"<a href='mailto:{mailto}' style='color:#3b82f6;'>{mailto}</a></p>"
+            if mailto
+            else ""
+        )
+        drafts_html += (
+            f"<h3 style='color:#111827;margin:20px 0 4px;'>Draft for {name}</h3>"
+            f"{mailto_line}"
+            "<pre style='background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;"
+            "padding:12px;font-size:13px;white-space:pre-wrap;color:#111827;'>"
+            f"{draft}</pre>"
         )
 
     body_html = (
         "<div style='font-family:sans-serif;max-width:700px;margin:0 auto;'>"
-        "<h2 style='color:#dc2626;'>Churn Watch Alert</h2>"
+        "<h2 style='color:#dc2626;'>Churn Watch — this week's call list</h2>"
         f"<p style='color:#374151;'>"
         f"<strong>{count}</strong> paid tenant{'s have' if count != 1 else ' has'} "
         f"had <strong>zero leads and zero chat messages in the last {window_days} days</strong>. "
-        f"These customers may be churning silently.</p>"
+        f"These customers may be churning silently — one personal email each is the "
+        f"highest-ROI 30 minutes this week.</p>"
         "<table style='border-collapse:collapse;width:100%;margin:16px 0;'>"
         "<thead>"
         "<tr style='background:#f3f4f6;'>"
         "<th style='padding:8px 12px;border:1px solid #e5e7eb;text-align:left;'>Business</th>"
         "<th style='padding:8px 12px;border:1px solid #e5e7eb;text-align:left;'>Plan</th>"
         "<th style='padding:8px 12px;border:1px solid #e5e7eb;text-align:left;'>Status</th>"
-        "<th style='padding:8px 12px;border:1px solid #e5e7eb;text-align:left;'>Tenant ID</th>"
+        "<th style='padding:8px 12px;border:1px solid #e5e7eb;text-align:left;'>Last activity</th>"
+        "<th style='padding:8px 12px;border:1px solid #e5e7eb;text-align:left;'>Owner email</th>"
         "</tr>"
         "</thead>"
         f"<tbody>{rows_html}</tbody>"
         "</table>"
-        "<p style='color:#6b7280;margin-top:16px;'>Review at "
-        "<a href='https://app.agentnexlify.com' style='color:#3b82f6;'>app.agentnexlify.com</a>"
-        " — consider reaching out to re-engage before they cancel.</p>"
+        "<h2 style='color:#111827;margin-top:24px;'>Ready-to-send drafts</h2>"
+        "<p style='color:#6b7280;'>Copy, personalize, send from your own inbox. "
+        "Nothing is sent automatically.</p>"
+        f"{drafts_html}"
+        "<p style='color:#6b7280;margin-top:16px;'>Full tenant detail: "
+        "<a href='https://app.agentnexlify.com/admin/tenant-health' style='color:#3b82f6;'>"
+        "app.agentnexlify.com/admin/tenant-health</a></p>"
         "</div>"
     )
 
