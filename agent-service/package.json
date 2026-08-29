@@ -9,8 +9,9 @@
   "scripts": {
     "start": "node --experimental-strip-types src/server.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test \"src/**/*.test.ts\"",
-    "vendor:agent-os": "bash scripts/vendor-agent-os.sh"
+    "test": "node --experimental-strip-types --test \"src/**/*.test.ts\" \"evals/**/*.test.ts\"",
+    "vendor:agent-os": "bash scripts/vendor-agent-os.sh",
+    "eval:haiku-vs-h": "node --experimental-strip-types evals/run-haiku-vs-h.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.110",
