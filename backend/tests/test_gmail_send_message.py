@@ -469,6 +469,7 @@ def test_l2_audit_persist_still_fails_closed_next_to_l1_best_effort():
                 "mutating": True,
                 "requiresApproval": True,
                 "status": "pending_approval",
+                "idempotencyKey": "l2-audit-write-gmail-1",
                 "input": {"to": "sarah@example.com", "subject": "Hi", "body": "Hello"},
             }
         ]

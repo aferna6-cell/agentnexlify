@@ -51,6 +51,14 @@ RISK_FAIL_CLOSED = 2
 class ToolExecutionAuditError(RuntimeError):
     """L2+ audit row could not be written — refuse to queue or send."""
 
+
+class ToolExecutionIdempotencyConflict(RuntimeError):
+    """A second create reused an L2 idempotency key — not a second row."""
+
+    def __init__(self, existing: dict):
+        super().__init__("idempotency key already used")
+        self.existing = existing
+
 #: No further transition is possible from these.
 TERMINAL_STATUSES = (
     "succeeded",
@@ -109,7 +117,7 @@ def to_row(execution: dict, client_id: str, agent_run_id: str | None) -> dict:
         "verified_at": execution.get("verifiedAt"),
         "policy_reason": execution.get("policyReason") or "",
         "attempts": _int_or(execution.get("attempts"), 0),
-        "idempotency_key": execution.get("idempotencyKey"),
+        "idempotency_key": _normalized_idempotency_key(execution.get("idempotencyKey")),
         "effect": execution.get("effect"),
         "started_at": execution.get("startedAt"),
         "finished_at": execution.get("finishedAt"),
@@ -117,8 +125,38 @@ def to_row(execution: dict, client_id: str, agent_run_id: str | None) -> dict:
     }
 
 
+def _normalized_idempotency_key(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    key = value.strip()
+    return key or None
+
+
 def _is_fail_closed(row: dict) -> bool:
     return _int_or(row.get("risk_level"), 3) >= RISK_FAIL_CLOSED
+
+
+def _requires_idempotency_key(row: dict) -> bool:
+    """L2+ or anything parked for approval must carry a replay key."""
+    return _is_fail_closed(row) or bool(row.get("requires_approval"))
+
+
+def find_by_idempotency_key(
+    db: Any, client_id: str, tool_id: str, key: str
+) -> dict | None:
+    normalized = _normalized_idempotency_key(key)
+    if not normalized:
+        return None
+    rows = (
+        tenant_table(db, "os_tool_executions", client_id)
+        .select("*")
+        .eq("tool_id", tool_id)
+        .eq("idempotency_key", normalized)
+        .limit(1)
+        .execute()
+        .data
+    )
+    return rows[0] if rows else None
 
 
 def persist_tool_executions(
@@ -141,35 +179,109 @@ def persist_tool_executions(
     if not rows:
         return []
 
-    try:
-        inserted = (
-            tenant_table(db, "os_tool_executions", client_id).insert(rows).execute().data
-            or []
-        )
-    except Exception as exc:
-        if any(_is_fail_closed(row) for row in rows):
+    for row in rows:
+        if _requires_idempotency_key(row) and not row.get("idempotency_key"):
             raise ToolExecutionAuditError(
-                "L2+ tool execution could not be written to os_tool_executions; "
+                "L2+ tool execution requires a non-empty idempotency_key; "
                 "refusing to queue or send"
-            ) from exc
-        logger.exception("os_tool_executions: L0/L1 persist failed")
-        return []
+            )
 
-    inserted_ids = {row.get("id") for row in inserted}
-    missing_l2 = [
-        row["id"] for row in rows if _is_fail_closed(row) and row["id"] not in inserted_ids
-    ]
-    if missing_l2:
-        raise ToolExecutionAuditError(
-            f"L2+ tool execution(s) missing from persist: {missing_l2}; "
-            "refusing to queue or send"
-        )
+    reused: list[dict] = []
+    to_insert: list[dict] = []
+    for row in rows:
+        key = row.get("idempotency_key")
+        if key:
+            try:
+                existing = find_by_idempotency_key(db, client_id, row["tool_id"], key)
+            except Exception:
+                existing = None
+            if existing:
+                reused.append(existing)
+                continue
+        to_insert.append(row)
+
+    inserted: list[dict] = []
+    if to_insert:
+        try:
+            inserted = (
+                tenant_table(db, "os_tool_executions", client_id)
+                .insert(to_insert)
+                .execute()
+                .data
+                or []
+            )
+        except Exception as exc:
+            try:
+                recovered = _recover_duplicate_inserts(db, client_id, to_insert)
+            except Exception:
+                recovered = None
+            if recovered is not None:
+                inserted = recovered
+            elif any(_is_fail_closed(row) for row in to_insert):
+                raise ToolExecutionAuditError(
+                    "L2+ tool execution could not be written to os_tool_executions; "
+                    "refusing to queue or send"
+                ) from exc
+            else:
+                logger.exception("os_tool_executions: L0/L1 persist failed")
+                return reused
+
+        inserted_ids = {row.get("id") for row in inserted}
+        missing_l2 = [
+            row["id"]
+            for row in to_insert
+            if _is_fail_closed(row) and row["id"] not in inserted_ids
+        ]
+        if missing_l2:
+            raise ToolExecutionAuditError(
+                f"L2+ tool execution(s) missing from persist: {missing_l2}; "
+                "refusing to queue or send"
+            )
 
     notes = record.get("customerNotes") or []
     if notes:
         apply_customer_notes(db, client_id, notes, executions)
 
-    return inserted
+    return reused + inserted
+
+
+def _recover_duplicate_inserts(
+    db: Any, client_id: str, rows: list[dict]
+) -> list[dict] | None:
+    """A unique-index race: every keyed row must already exist, or this is a real write failure."""
+    recovered: list[dict] = []
+    for row in rows:
+        key = row.get("idempotency_key")
+        existing = (
+            find_by_idempotency_key(db, client_id, row["tool_id"], key) if key else None
+        )
+        if existing is None:
+            return None
+        recovered.append(existing)
+    return recovered
+
+
+def propose_tool_execution(
+    db: Any,
+    client_id: str,
+    agent_run_id: str | None,
+    execution: dict,
+    *,
+    conflict: str = "reuse",
+) -> dict | None:
+    """Create one parked/recorded execution. Replay of the same key is a no-op or 409."""
+    key = _normalized_idempotency_key(execution.get("idempotencyKey"))
+    tool_id = execution.get("toolId")
+    if key and tool_id:
+        existing = find_by_idempotency_key(db, client_id, tool_id, key)
+        if existing:
+            if conflict == "raise":
+                raise ToolExecutionIdempotencyConflict(existing)
+            return existing
+    rows = persist_tool_executions(
+        db, client_id, agent_run_id, {"toolExecutions": [execution]}
+    )
+    return rows[0] if rows else None
 
 
 def apply_customer_notes(
@@ -304,6 +416,28 @@ def get_tool_execution(db: Any, client_id: str, execution_id: str) -> dict | Non
         .data
     )
     return rows[0] if rows else None
+
+
+_REDACTED_INPUT = {"redacted": True}
+_SENSITIVE_RESULT_KEYS = frozenset(
+    {"recipient", "to", "cc", "bcc", "subject", "body", "html", "text", "message"}
+)
+
+
+def present_tool_execution(row: dict | None, *, owner: bool) -> dict | None:
+    """Owners see raw input for approval. Everyone else gets a redacted copy."""
+    if row is None or owner:
+        return row
+    visible = dict(row)
+    visible["input"] = dict(_REDACTED_INPUT)
+    result = visible.get("result")
+    if isinstance(result, dict):
+        visible["result"] = {
+            key: value
+            for key, value in result.items()
+            if str(key).lower() not in _SENSITIVE_RESULT_KEYS
+        }
+    return visible
 
 
 # --- approval ---------------------------------------------------------------

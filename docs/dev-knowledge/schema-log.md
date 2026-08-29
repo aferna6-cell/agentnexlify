@@ -1818,3 +1818,16 @@ failed | verification_failed | denied | cancelled. Approvals queue keys off
 195 may already be applied on prod, so this is a CHECK tighten, not a rewrite of
 195 and not a table drop. Dual tables stay: os_action_runs (126) vs
 os_tool_executions (195).
+
+## Migration 197_os_tool_executions_l2_idempotency_required — L2 must have a key (NOT YET APPLIED)
+Follow-on to 195/196. The 195 unique index is partial (`WHERE idempotency_key IS
+NOT NULL`), so two keyless L2 proposals could both reach `pending_approval` and
+later double-send. 197 cancels any already-parked/running keyless L2 or
+`requires_approval` rows, then adds CHECK
+`os_tool_executions_l2_idempotency_required`: a row in `pending_approval` or
+`running` with `risk_level >= 2` or `requires_approval` must have a non-empty
+trimmed `idempotency_key`. Terminal history may stay keyless so 195/196 can
+still apply on a database that already has audit rows. Does not rewrite 195/196
+and does not drop the table. Application persist
+(`backend/services/os_tool_executions.py`) rejects keyless L2 on create and
+treats a second create with the same key as a no-op / 409.

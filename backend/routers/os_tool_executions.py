@@ -76,7 +76,9 @@ async def list_tool_executions(
     rows = os_tool_executions.list_tool_executions(
         db, claims["tenant_id"], status=status, limit=limit
     )
-    return {"count": len(rows), "items": rows}
+    owner = _is_owner(claims)
+    items = [os_tool_executions.present_tool_execution(row, owner=owner) for row in rows]
+    return {"count": len(items), "items": items}
 
 
 @router.get("/tool-executions/{execution_id}")
@@ -87,7 +89,7 @@ async def get_tool_execution(
     row = os_tool_executions.get_tool_execution(db, claims["tenant_id"], execution_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Tool execution not found")
-    return row
+    return os_tool_executions.present_tool_execution(row, owner=_is_owner(claims))
 
 
 @router.post("/tool-executions/{execution_id}/approve")
