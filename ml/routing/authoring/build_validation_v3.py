@@ -129,7 +129,7 @@ case("v3_sal_006",
      "Harper Quinn's engagement gallery is done. Offer the linen album as an add-on before she leaves the proofing gallery.",
      "sales", "subject_intent_mismatch",
      "The gallery is a finished job; the ask is an upsell, not a marketing post.",
-     family="album_addon", behavior="draft_only", pair="v3_pair_photo_consent")
+     family="album_addon", behavior="draft_only")
 case("v3_sal_007",
      "Pax Holloway's bungalow failed the termite inspection. Price the exclusion skirt, bait stations, and the 90-day revisit as one package.",
      "sales", "high_evidence",
@@ -1217,8 +1217,8 @@ def _validate_pairs(rows: list[dict]) -> None:
         if c.get("pair_id"):
             by_pair.setdefault(c["pair_id"], []).append(c)
     for pid, halves in by_pair.items():
-        if len(halves) < 2:
-            raise SystemExit(f"pair {pid} has only {len(halves)} half/halves after filtering")
+        if len(halves) != 2:
+            raise SystemExit(f"pair {pid} must have exactly 2 members, has {len(halves)}")
         depts = {h["expected_department"] for h in halves}
         if len(depts) < 2:
             raise SystemExit(f"pair {pid} does not cross departments: {depts}")

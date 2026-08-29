@@ -63,7 +63,8 @@ def check(cases: list[dict]) -> dict:
         if c.get("pair_id"):
             pairs.setdefault(c["pair_id"], []).append(c["id"])
 
-    split_pairs = {pid: ids for pid, ids in pairs.items() if len(ids) < 2}
+    pair_size_histogram = dict(Counter(len(ids) for ids in pairs.values()))
+    split_pairs = {pid: ids for pid, ids in pairs.items() if len(ids) != 2}
     none_labels = [c["id"] for c in cases if c.get("department_label") == "none" or c.get("expected_department") == "none"]
 
     report = {
@@ -75,6 +76,7 @@ def check(cases: list[dict]) -> dict:
         "leftover_near_duplicates_jaccard_0_55_0_80": leftover_j,
         "department_counts": dict(depts),
         "pair_count": len(pairs),
+        "pair_size_histogram": pair_size_histogram,
         "split_pairs": split_pairs,
         "none_labels": none_labels,
         "thresholds": {"jaccard": JACCARD_THRESHOLD},
@@ -115,6 +117,7 @@ def main() -> int:
         for dept, n in sorted(report["department_counts"].items()):
             print(f"    {dept:<16}{n}")
         print(f"  complete pairs: {report['pair_count']}")
+        print(f"  pair_id size histogram: {report['pair_size_histogram']}")
         print(f"  clean: {report['clean']}")
         if report["drop_examples"]:
             print("\n  drop examples:")

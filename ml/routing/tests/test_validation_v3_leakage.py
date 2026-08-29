@@ -57,7 +57,7 @@ class ValidationV3LeakageTests(unittest.TestCase):
                 pairs.setdefault(c["pair_id"], []).append(c["expected_department"])
         self.assertTrue(pairs, "expected at least one hard-negative pair")
         for pid, depts_in_pair in pairs.items():
-            self.assertGreaterEqual(len(depts_in_pair), 2, f"{pid} is split or singleton")
+            self.assertEqual(len(depts_in_pair), 2, f"{pid} must be a true pair, has {len(depts_in_pair)}")
             self.assertGreaterEqual(len(set(depts_in_pair)), 2, f"{pid} does not cross departments")
 
     def test_leakage_drop_rules_clean(self) -> None:
@@ -66,6 +66,7 @@ class ValidationV3LeakageTests(unittest.TestCase):
         self.assertEqual(report["n_dropped_on_this_pass"], 0)
         self.assertFalse(report["split_pairs"])
         self.assertFalse(report["none_labels"])
+        self.assertEqual(report["pair_size_histogram"], {2: report["pair_count"]})
 
     def test_rationale_is_documentation_only(self) -> None:
         for c in load_v3():

@@ -133,8 +133,7 @@
         "subject_intent_mismatch",
         "validation-v3"
       ],
-      "expected_behavior": "draft_only",
-      "pair_id": "v3_pair_photo_consent"
+      "expected_behavior": "draft_only"
     },
     {
       "id": "v3_sal_007",
