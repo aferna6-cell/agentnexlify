@@ -1,0 +1,37 @@
+{
+  "date": "2026-08-29",
+  "run": 111,
+  "winner": "Fix Step 9J: add @dependabot rebase trigger for mergeable_state: unknown PRs",
+  "category": "workflow",
+  "effort": "S",
+  "confidence": "HIGH",
+  "escalation": "1st_carry_forward_autonomous_executable",
+  "status": "recommendation",
+  "implemented": false,
+  "summary": "Step 9J still at 0% effectiveness (nightly-2026-08-29: 10+ PRs in unknown state, 0 merged). Run 110 1st carry-forward mandate fires. Implementation sketch in subconscious/runs/2026-08-28/winning-concept.md and repeated here. Winning concept: edit Step 9J block in .claude/skills/nightly-commit-review/SKILL.md to post @dependabot rebase on unknown-state PRs (dedup 48h, cap 5/run). Brain connector 37d stale (GH #684) — bonus action: escalation comment with exact SUPABASE_ACCESS_TOKEN path.",
+  "mandate_check": {
+    "step_9j_fired": "PASS — nightly-2026-08-29 executed Step 9J",
+    "step_9j_merges": 0,
+    "step_9j_rebase_trigger": "NOT YET — SKILL.md not yet edited (run 111 recommendation)",
+    "kb_freshness": "PASS — 2026-08-26 (3 days, under 7-day threshold)",
+    "brain_connector_gh684": "OPEN 4 days — SUPABASE_ACCESS_TOKEN not set",
+    "gh_669": "OPEN 9 days, no middleware PR",
+    "gh_399_loop": "STALLED Day 56+, AUTOPILOT_GH_TOKEN expired"
+  },
+  "parking_lot": [
+    "Step 9K: stale subconscious draft PR report (run 112 candidate if >=3 open)",
+    "Step 9D loop-health API diagnostic (defer — infra uncertainty)",
+    "GH #684 bonus escalation comment (SUPABASE_ACCESS_TOKEN path)"
+  ],
+  "killed": [
+    "GH #399 AUTOPILOT_GH_TOKEN escalation comment — same mechanism, no new evidence (run 108 precedent)"
+  ],
+  "run_112_mandate": [
+    "Verify @dependabot rebase trigger fires in nightly-2026-08-30",
+    "Count rebases triggered vs PRs that become clean + merged",
+    "GH #684: SUPABASE_ACCESS_TOKEN set after bonus comment?",
+    "GH #669 middleware PR?",
+    "GH #643/#660: any linked PRs?",
+    "Step 9K readiness: >=3 subconscious PRs open?"
+  ]
+}
