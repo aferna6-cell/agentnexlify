@@ -112,6 +112,17 @@ async def approve_tool_execution(
     if existing is None:
         raise HTTPException(status_code=404, detail="Tool execution not found")
 
+    # Schema check THEN claim THEN execute. A Zod-pass / Python-fail email
+    # must not consume the only approval claim.
+    _row, invalid = os_tool_executions.validate_before_claim(
+        db, client_id, execution_id
+    )
+    if invalid == "invalid_email":
+        raise HTTPException(
+            status_code=400,
+            detail="recipient is not a valid email address",
+        )
+
     claimed = await run_in_threadpool(
         os_tool_executions.claim_for_execution, db, client_id, execution_id
     )

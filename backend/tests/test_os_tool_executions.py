@@ -466,6 +466,54 @@ def test_a_rejected_action_is_never_executed_by_a_later_approval():
     assert db.rows("leads")[0]["notes"] is None
 
 
+def test_approve_does_not_burn_the_claim_when_python_email_gate_fails():
+    """Schema check then claim: Zod-pass / Python-fail must leave the row pending."""
+    db = FakeSupabase(
+        {
+            "os_tool_executions": [
+                {
+                    "id": EXEC_ID,
+                    "client_id": CLIENT,
+                    "tool_id": "send_email",
+                    "status": "pending_approval",
+                    "approval_state": "pending",
+                    "risk_level": 2,
+                    "mutating": True,
+                    "requires_approval": True,
+                    "input": {
+                        "to": "o'reilly@example.com",
+                        "subject": "Hi",
+                        "body": "Hello",
+                    },
+                    "attempts": 0,
+                    "created_at": "2026-08-28T10:00:00Z",
+                }
+            ],
+            "leads": [],
+        }
+    )
+    client = _client()
+    calls = []
+
+    def _engine(*args, **kwargs):
+        calls.append(True)
+        return _engine_response()
+
+    try:
+        with patch.object(router_mod, "get_service_supabase", return_value=db), patch.object(
+            router_mod.agent_os_bridge, "assemble_shared_context", return_value={}
+        ), patch.object(router_mod.agent_sdk_client, "approve_action_sync", _engine):
+            resp = client.post(f"/api/v1/os/tool-executions/{EXEC_ID}/approve")
+    finally:
+        _teardown()
+
+    assert resp.status_code == 400
+    assert calls == []
+    row = db.rows("os_tool_executions")[0]
+    assert row["status"] == "pending_approval"
+    assert row.get("finished_at") in (None, "")
+
+
 def test_an_unreachable_engine_leaves_the_action_unfinished_rather_than_guessing():
     db = _pending_db()
     client = _client()

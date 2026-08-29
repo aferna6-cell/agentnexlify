@@ -41,6 +41,7 @@ bypasses the security model.
 | Request-scoped store/ports (agent-service) | `src/agent-os-runtime/action-collector.ts`, `scoped-providers.ts` |
 | Approval execution entry point | `src/agent-os-runtime/approve-action.ts`, `POST /actions/approve` |
 | Persistence + approval API (data plane) | `backend/services/os_tool_executions.py`, `backend/routers/os_tool_executions.py` |
+| Claim-gated runner (injected port only) | `backend/services/os_tools.py` |
 | Table | `migrations/195_os_tool_executions.sql` + `196_os_tool_executions_status_no_approved.sql` |
 
 ## Risk levels
@@ -183,12 +184,17 @@ the owner's turn.
 
 ## Leftovers for Slice B (do not sneak Gmail into A)
 
-- Optional idempotency keys already exist on the engine + unique index; callers
-  are not required to send them.
-- `GET /tool-executions` and `GET /tool-executions/{id}` are not owner-only
-  (approve/reject are). Tightening list/get is Slice B.
-- No `send_email`, Gmail connector, `communication_actions`, or 5-department
-  send wiring in this slice.
+- L2 idempotency is required on persist (migration 197). List/get redact
+  `input` for non-owners.
+- Data-plane B-blockers are in production without a live send: unknown
+  timeout/lost-response stays non-terminal (`apply_unknown_send_outcome`);
+  a later re-drive rfc822msgid-adopts via `_run_data_plane_tool` and an
+  injected mailbox port; Python email validation runs *before* the approval
+  claim; `os_tools.run_tool` is unreachable without that claim.
+- No `send_email` execute path, no `gmail_connector.send_message`, no
+  `communication_actions`, and no 5-department send wiring in this slice.
+  Dual `os_actions` (deliverable channel handlers) vs `os_tool_executions`
+  (agent tool audit) stays documented, not merged.
 
 ## Verification
 
@@ -226,6 +232,7 @@ executor, policy, registry or audit trail changing:
 | Agent → tool → executor → verification, end to end | `agent-service/src/agent-os/actions/agent-integration.test.ts` |
 | Request scoping, tenant isolation, approval round trip | `agent-service/src/agent-os-runtime/action-runtime.test.ts` |
 | Persistence, note application, approval API | `backend/tests/test_os_tool_executions.py` |
+| Unknown send, email-claim parity, unclaimed run_tool | `backend/tests/test_gmail_send_message.py` |
 
 Run them with `cd agent-service && npm run typecheck && npm test`, and
 `python -m pytest backend/tests/test_os_tool_executions.py`. Both run in CI
