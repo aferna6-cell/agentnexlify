@@ -145,6 +145,7 @@ def test_l2_persist_fails_closed_when_the_audit_row_cannot_be_written():
                 approvalState="pending",
                 toolId="fixture_external_message",
                 requiresApproval=True,
+                idempotencyKey="l2-audit-write-1",
             )
         ]
     }
@@ -189,7 +190,16 @@ def test_persist_is_a_no_op_when_the_turn_used_no_tools():
 def test_an_unknown_risk_level_is_stored_as_the_highest():
     """A record the engine could not classify is never filed as low risk."""
     db = _db_with_lead()
-    record = {"toolExecutions": [_execution(riskLevel=None, result=None, customerNotes=None)]}
+    record = {
+        "toolExecutions": [
+            _execution(
+                riskLevel=None,
+                result=None,
+                customerNotes=None,
+                idempotencyKey="unknown-risk-1",
+            )
+        ]
+    }
 
     svc.persist_tool_executions(db, CLIENT, RUN_ID, record)
 
@@ -286,7 +296,11 @@ def _pending_db():
                     "risk_level": 2,
                     "mutating": True,
                     "requires_approval": True,
-                    "input": {"customer_id": "lead_1", "note": "Prefers texts."},
+                    "input": {
+                        "recipient": "sarah@example.com",
+                        "subject": "Following up",
+                        "body": "Hi Sarah — can we book Tuesday?",
+                    },
                     "policy_reason": "requires approval",
                     "attempts": 0,
                     "created_at": "2026-08-28T10:00:00Z",
@@ -556,5 +570,144 @@ def test_the_history_is_readable_and_filterable():
     assert listed.json()["count"] == 1
     assert listed.json()["items"][0]["tool_id"] == "add_customer_note"
     assert one.json()["id"] == EXEC_ID
+    assert one.json()["input"]["recipient"] == "sarah@example.com"
+    assert one.json()["input"]["subject"] == "Following up"
+    assert one.json()["input"]["body"] == "Hi Sarah — can we book Tuesday?"
     assert bad.status_code == 400
     assert approved_status.status_code == 400
+
+
+# --- L2 idempotency -----------------------------------------------------------
+
+
+def _l2_proposal(**overrides):
+    record = _execution(
+        riskLevel=2,
+        mutating=True,
+        requiresApproval=True,
+        approvalState="pending",
+        status="pending_approval",
+        toolId="fixture_external_message",
+        input={
+            "recipient": "sarah@example.com",
+            "subject": "Following up",
+            "body": "Hi Sarah — can we book Tuesday?",
+        },
+        result=None,
+    )
+    record.update(overrides)
+    return record
+
+
+def test_two_keyless_l2_proposals_cannot_both_reach_pending_approval():
+    """Partial unique index lets two NULL keys through — L2 must refuse both."""
+    db = FakeSupabase({"os_tool_executions": [], "leads": []})
+    first = _l2_proposal(id="aaaaaaa1-aaaa-4aaa-8aaa-aaaaaaaaaaa1")
+    second = _l2_proposal(id="aaaaaaa1-aaaa-4aaa-8aaa-aaaaaaaaaaa2")
+
+    with pytest.raises(svc.ToolExecutionAuditError, match="idempotency"):
+        svc.persist_tool_executions(db, CLIENT, RUN_ID, {"toolExecutions": [first]})
+    with pytest.raises(svc.ToolExecutionAuditError, match="idempotency"):
+        svc.persist_tool_executions(db, CLIENT, RUN_ID, {"toolExecutions": [second]})
+
+    pending = [row for row in db.rows("os_tool_executions") if row.get("status") == "pending_approval"]
+    assert pending == []
+
+
+def test_l0_and_l1_may_still_persist_without_an_idempotency_key():
+    db = _db_with_lead()
+    svc.persist_tool_executions(
+        db,
+        CLIENT,
+        RUN_ID,
+        {
+            "toolExecutions": [
+                _execution(id="bbbbbbb1-bbbb-4bbb-8bbb-bbbbbbbbbbb0", riskLevel=0, mutating=False),
+                _execution(id="bbbbbbb1-bbbb-4bbb-8bbb-bbbbbbbbbbb1", riskLevel=1),
+            ]
+        },
+    )
+    assert len(db.rows("os_tool_executions")) == 2
+
+
+def test_a_blank_idempotency_key_is_rejected_for_l2():
+    db = FakeSupabase({"os_tool_executions": [], "leads": []})
+    with pytest.raises(svc.ToolExecutionAuditError, match="idempotency"):
+        svc.persist_tool_executions(
+            db,
+            CLIENT,
+            RUN_ID,
+            {"toolExecutions": [_l2_proposal(idempotencyKey="   ")]},
+        )
+    assert db.rows("os_tool_executions") == []
+
+
+def test_a_second_l2_create_with_the_same_key_is_a_noop_not_a_second_row():
+    db = FakeSupabase({"os_tool_executions": [], "leads": []})
+    first = _l2_proposal(idempotencyKey="send-sarah-1")
+    replay = _l2_proposal(
+        id="ccccccc1-cccc-4ccc-8ccc-ccccccccccc1",
+        idempotencyKey="send-sarah-1",
+    )
+
+    first_rows = svc.persist_tool_executions(db, CLIENT, RUN_ID, {"toolExecutions": [first]})
+    replay_rows = svc.persist_tool_executions(db, CLIENT, RUN_ID, {"toolExecutions": [replay]})
+
+    assert len(db.rows("os_tool_executions")) == 1
+    assert first_rows[0]["id"] == EXEC_ID
+    assert replay_rows[0]["id"] == EXEC_ID
+    assert replay_rows[0]["status"] == "pending_approval"
+
+
+def test_a_second_l2_create_with_the_same_key_is_a_conflict_when_asked():
+    """HTTP-shaped create: replay is 409, not a second parked row."""
+    db = FakeSupabase({"os_tool_executions": [], "leads": []})
+    first = _l2_proposal(idempotencyKey="send-sarah-2")
+    svc.persist_tool_executions(db, CLIENT, RUN_ID, {"toolExecutions": [first]})
+
+    with pytest.raises(svc.ToolExecutionIdempotencyConflict):
+        svc.propose_tool_execution(
+            db,
+            CLIENT,
+            RUN_ID,
+            _l2_proposal(id="ddddddd1-dddd-4ddd-8ddd-ddddddddddd1", idempotencyKey="send-sarah-2"),
+            conflict="raise",
+        )
+    assert len(db.rows("os_tool_executions")) == 1
+
+
+# --- owner-only raw input -----------------------------------------------------
+
+
+def test_a_non_owner_cannot_read_recipient_subject_or_body_on_list_or_get():
+    db = _pending_db()
+    client = _client(STAFF_CLAIMS)
+    try:
+        with patch.object(router_mod, "get_service_supabase", return_value=db):
+            listed = client.get("/api/v1/os/tool-executions")
+            one = client.get(f"/api/v1/os/tool-executions/{EXEC_ID}")
+    finally:
+        _teardown()
+
+    assert listed.status_code == 200
+    assert one.status_code == 200
+    leaked = f"{listed.text}{one.text}"
+    assert "sarah@example.com" not in leaked
+    assert "Following up" not in leaked
+    assert "Hi Sarah — can we book Tuesday?" not in leaked
+    assert listed.json()["items"][0]["input"] == {"redacted": True}
+    assert one.json()["input"] == {"redacted": True}
+
+
+def test_an_owner_can_still_read_tool_execution_input_for_approval():
+    db = _pending_db()
+    client = _client(OWNER_CLAIMS)
+    try:
+        with patch.object(router_mod, "get_service_supabase", return_value=db):
+            listed = client.get("/api/v1/os/tool-executions")
+            one = client.get(f"/api/v1/os/tool-executions/{EXEC_ID}")
+    finally:
+        _teardown()
+
+    assert listed.json()["items"][0]["input"]["recipient"] == "sarah@example.com"
+    assert one.json()["input"]["body"] == "Hi Sarah — can we book Tuesday?"
