@@ -30,7 +30,11 @@ beforeEach(() => {
   h = harness();
 });
 
-function run(toolId: string, input: unknown, extra: Record<string, unknown> = {}) {
+function run(
+  toolId: string,
+  input: unknown,
+  extra: Record<string, unknown> = {},
+) {
   return executeAction({
     accountId: "tenantA",
     agentId: "admin_records",
@@ -59,7 +63,10 @@ test("registry rejects a duplicate tool id", () => {
     execute: async () => ({}),
   };
   registry.register(defineTool(spec));
-  assert.throws(() => registry.register(defineTool(spec)), /duplicate tool id "dup_tool"/);
+  assert.throws(
+    () => registry.register(defineTool(spec)),
+    /duplicate tool id "dup_tool"/,
+  );
 });
 
 test("defineTool rejects definitions that break the risk model", () => {
@@ -73,17 +80,38 @@ test("defineTool rejects definitions that break the risk model", () => {
 
   // A level-0 tool may not mutate.
   assert.throws(
-    () => defineTool({ ...base, id: "bad_one", riskLevel: 0, mutating: true, requiresApproval: false }),
+    () =>
+      defineTool({
+        ...base,
+        id: "bad_one",
+        riskLevel: 0,
+        mutating: true,
+        requiresApproval: false,
+      }),
     /read-only/,
   );
   // External communication must declare approval.
   assert.throws(
-    () => defineTool({ ...base, id: "bad_two", riskLevel: 2, mutating: true, requiresApproval: false }),
+    () =>
+      defineTool({
+        ...base,
+        id: "bad_two",
+        riskLevel: 2,
+        mutating: true,
+        requiresApproval: false,
+      }),
     /must declare requiresApproval/,
   );
   // Ids are snake_case.
   assert.throws(
-    () => defineTool({ ...base, id: "BadThree", riskLevel: 0, mutating: false, requiresApproval: false }),
+    () =>
+      defineTool({
+        ...base,
+        id: "BadThree",
+        riskLevel: 0,
+        mutating: false,
+        requiresApproval: false,
+      }),
     /snake_case/,
   );
   // Only a mutating tool can be verified.
@@ -108,7 +136,11 @@ test("input that fails the tool's schema never reaches the tool", async () => {
 
   assert.equal(outcome.status, "failed");
   assert.equal(outcome.record.error?.code, "invalid_input");
-  assert.equal(h.calls["fixture_read_only"], undefined, "the tool body must not run");
+  assert.equal(
+    h.calls["fixture_read_only"],
+    undefined,
+    "the tool body must not run",
+  );
   assert.equal(outcome.record.startedAt, undefined);
 });
 
@@ -129,13 +161,20 @@ test("a level-0 read executes with no approval", async () => {
 // --- level 2 / level 3 gating -------------------------------------------------
 
 test("a level-2 action cannot execute without approval", async () => {
-  const outcome = await run("fixture_external_message", { to: "sarah@example.com", body: "hi" });
+  const outcome = await run("fixture_external_message", {
+    to: "sarah@example.com",
+    body: "hi",
+  });
 
   assert.equal(outcome.status, "pending_approval");
   assert.equal(outcome.requiresApproval, true);
   assert.equal(outcome.record.approvalState, "pending");
   assert.equal(outcome.output, undefined);
-  assert.equal(h.calls["fixture_external_message"], undefined, "the tool body must not run");
+  assert.equal(
+    h.calls["fixture_external_message"],
+    undefined,
+    "the tool body must not run",
+  );
 });
 
 test("a level-3 action always requires approval, even if the tenant lowers its threshold", async () => {
@@ -153,7 +192,10 @@ test("a level-3 action always requires approval, even if the tenant lowers its t
 // --- approval ----------------------------------------------------------------
 
 test("approving a parked action runs it, once", async () => {
-  const parked = await run("fixture_external_message", { to: "sarah@example.com", body: "hi" });
+  const parked = await run("fixture_external_message", {
+    to: "sarah@example.com",
+    body: "hi",
+  });
   assert.equal(parked.status, "pending_approval");
 
   const approved = await approveAction({
@@ -173,7 +215,10 @@ test("approving a parked action runs it, once", async () => {
 });
 
 test("approving twice does not execute twice", async () => {
-  const parked = await run("fixture_external_message", { to: "sarah@example.com", body: "hi" });
+  const parked = await run("fixture_external_message", {
+    to: "sarah@example.com",
+    body: "hi",
+  });
   const args = {
     accountId: "tenantA",
     executionId: parked.executionId,
@@ -188,12 +233,19 @@ test("approving twice does not execute twice", async () => {
   assert.equal(first.status, "succeeded");
   assert.equal(second.status, "succeeded");
   assert.equal(second.executionId, first.executionId);
-  assert.equal(h.calls["fixture_external_message"], 1, "the tool ran exactly once");
+  assert.equal(
+    h.calls["fixture_external_message"],
+    1,
+    "the tool ran exactly once",
+  );
   assert.equal(second.record.attempts, 1);
 });
 
 test("concurrent approvals of the same action still execute it once", async () => {
-  const parked = await run("fixture_external_message", { to: "sarah@example.com", body: "hi" });
+  const parked = await run("fixture_external_message", {
+    to: "sarah@example.com",
+    body: "hi",
+  });
   const args = {
     accountId: "tenantA",
     executionId: parked.executionId,
@@ -202,14 +254,42 @@ test("concurrent approvals of the same action still execute it once", async () =
     registry: h.registry,
   };
 
-  const results = await Promise.all([approveAction(args), approveAction(args), approveAction(args)]);
+  const results = await Promise.all([
+    approveAction(args),
+    approveAction(args),
+    approveAction(args),
+  ]);
 
   assert.equal(h.calls["fixture_external_message"], 1);
-  assert.ok(results.every((r) => ["succeeded", "approved", "running"].includes(r.status)));
+  assert.ok(results.every((r) => ["succeeded", "running"].includes(r.status)));
+});
+
+test("status never uses approved — that value lives on approval_state", async () => {
+  const allowed = await run("get_business_profile", {});
+  const parked = await run("fixture_external_message", {
+    to: "s@example.com",
+    body: "hi",
+  });
+  const decided = await approveAction({
+    accountId: "tenantA",
+    executionId: parked.executionId,
+    approvedBy: "owner@sunsetauto.com",
+    sharedContext: h.context,
+    registry: h.registry,
+  });
+
+  assert.notEqual(allowed.record.status, "approved");
+  assert.equal(parked.status, "pending_approval");
+  assert.equal(parked.record.approvalState, "pending");
+  assert.notEqual(decided.record.status, "approved");
+  assert.equal(decided.record.approvalState, "approved");
 });
 
 test("rejecting an action prevents it from ever executing", async () => {
-  const parked = await run("fixture_external_message", { to: "sarah@example.com", body: "hi" });
+  const parked = await run("fixture_external_message", {
+    to: "sarah@example.com",
+    body: "hi",
+  });
 
   const rejected = await rejectAction({
     accountId: "tenantA",
@@ -230,11 +310,18 @@ test("rejecting an action prevents it from ever executing", async () => {
     registry: h.registry,
   });
   assert.equal(afterwards.status, "denied");
-  assert.equal(h.calls["fixture_external_message"], undefined, "the tool never ran");
+  assert.equal(
+    h.calls["fixture_external_message"],
+    undefined,
+    "the tool never ran",
+  );
 });
 
 test("rejecting is idempotent, and cannot undo an action that already ran", async () => {
-  const parked = await run("fixture_external_message", { to: "s@example.com", body: "hi" });
+  const parked = await run("fixture_external_message", {
+    to: "s@example.com",
+    body: "hi",
+  });
   const reject = {
     accountId: "tenantA",
     executionId: parked.executionId,
@@ -246,14 +333,28 @@ test("rejecting is idempotent, and cannot undo an action that already ran", asyn
 
   const ran = await run("fixture_read_only", { query: "hours" });
   await assert.rejects(
-    () => rejectAction({ accountId: "tenantA", executionId: ran.executionId, rejectedBy: "owner" }),
-    (err: unknown) => err instanceof ActionStateError && err.status === "succeeded",
+    () =>
+      rejectAction({
+        accountId: "tenantA",
+        executionId: ran.executionId,
+        rejectedBy: "owner",
+      }),
+    (err: unknown) =>
+      err instanceof ActionStateError && err.status === "succeeded",
   );
 });
 
 test("an idempotency key collapses a repeated request to one execution", async () => {
-  const first = await run("fixture_read_only", { query: "hours" }, { idempotencyKey: "req-1" });
-  const second = await run("fixture_read_only", { query: "hours" }, { idempotencyKey: "req-1" });
+  const first = await run(
+    "fixture_read_only",
+    { query: "hours" },
+    { idempotencyKey: "req-1" },
+  );
+  const second = await run(
+    "fixture_read_only",
+    { query: "hours" },
+    { idempotencyKey: "req-1" },
+  );
 
   assert.equal(second.executionId, first.executionId);
   assert.equal(h.calls["fixture_read_only"], 1);
@@ -293,7 +394,11 @@ test("a tool that runs but cannot be verified never reports success", async () =
   assert.equal(outcome.status, "verification_failed");
   assert.equal(outcome.record.verificationState, "failed");
   assert.equal(outcome.record.error?.code, "verification_failed");
-  assert.equal(outcome.output, undefined, "no output is handed back as if it worked");
+  assert.equal(
+    outcome.output,
+    undefined,
+    "no output is handed back as if it worked",
+  );
   assert.equal(h.calls["fixture_fails_verification"], 1);
 });
 
@@ -319,7 +424,10 @@ test("a business can raise the gate so a level-1 action also needs approval", as
   );
 
   assert.equal(outcome.status, "pending_approval");
-  assert.equal((await h.notes.list({ accountId: "tenantA", customerId: "lead_1" })).length, 0);
+  assert.equal(
+    (await h.notes.list({ accountId: "tenantA", customerId: "lead_1" })).length,
+    0,
+  );
 
   const approved = await approveAction({
     accountId: "tenantA",
@@ -329,13 +437,18 @@ test("a business can raise the gate so a level-1 action also needs approval", as
     registry: h.registry,
   });
   assert.equal(approved.status, "succeeded");
-  assert.equal((await h.notes.list({ accountId: "tenantA", customerId: "lead_1" })).length, 1);
+  assert.equal(
+    (await h.notes.list({ accountId: "tenantA", customerId: "lead_1" })).length,
+    1,
+  );
 });
 
 test("a registered policy provider supplies the tenant's policy", async () => {
   setToolPolicyProvider({
     async load(accountId) {
-      return accountId === "tenantA" ? { disabledToolIds: ["fixture_read_only"] } : {};
+      return accountId === "tenantA"
+        ? { disabledToolIds: ["fixture_read_only"] }
+        : {};
     },
   });
 
@@ -350,14 +463,24 @@ test("a policy provider that throws falls back to the safe defaults", async () =
     },
   });
 
-  const gated = await run("fixture_external_message", { to: "s@example.com", body: "hi" });
-  assert.equal(gated.status, "pending_approval", "approval is still required when policy is unavailable");
+  const gated = await run("fixture_external_message", {
+    to: "s@example.com",
+    body: "hi",
+  });
+  assert.equal(
+    gated.status,
+    "pending_approval",
+    "approval is still required when policy is unavailable",
+  );
 });
 
 // --- audit + isolation --------------------------------------------------------
 
 test("every attempt leaves an auditable row, with secrets redacted", async () => {
-  await run("fixture_read_only", { query: "hours", api_key: "sk-live-should-never-persist" });
+  await run("fixture_read_only", {
+    query: "hours",
+    api_key: "sk-live-should-never-persist",
+  });
   await run("fixture_external_message", { to: "s@example.com", body: "hi" });
   await run("no_such_tool", { anything: true });
 
@@ -367,7 +490,9 @@ test("every attempt leaves an auditable row, with secrets redacted", async () =>
     history.map((r) => r.status),
     ["succeeded", "pending_approval", "denied"],
   );
-  assert.ok(history.every((r) => r.runId === "run_1" && r.agentId === "admin_records"));
+  assert.ok(
+    history.every((r) => r.runId === "run_1" && r.agentId === "admin_records"),
+  );
   assert.equal(history[0]?.input["api_key"], REDACTED);
   assert.equal(history[2]?.error?.code, "unknown_tool");
 });
@@ -376,12 +501,19 @@ test("an unknown tool is denied and audited rather than thrown away", async () =
   const outcome = await run("send_nuclear_launch_codes", { x: 1 });
 
   assert.equal(outcome.status, "denied");
-  assert.equal(outcome.record.riskLevel, 3, "an unknown tool is treated as maximum risk");
+  assert.equal(
+    outcome.record.riskLevel,
+    3,
+    "an unknown tool is treated as maximum risk",
+  );
   assert.match(outcome.record.policyReason, /unknown tool/);
 });
 
 test("one tenant cannot approve another tenant's action", async () => {
-  const parked = await run("fixture_external_message", { to: "s@example.com", body: "hi" });
+  const parked = await run("fixture_external_message", {
+    to: "s@example.com",
+    body: "hi",
+  });
 
   await assert.rejects(
     () =>

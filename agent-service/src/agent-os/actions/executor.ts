@@ -14,7 +14,12 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { evaluateActionPolicy, loadToolPolicy, type PolicyEvaluation, type TenantToolPolicy } from "./policy.ts";
+import {
+  evaluateActionPolicy,
+  loadToolPolicy,
+  type PolicyEvaluation,
+  type TenantToolPolicy,
+} from "./policy.ts";
 import { getToolPorts } from "./ports.ts";
 import { toolRegistry, type ToolRegistry } from "./registry.ts";
 import { getActionStore } from "./store.ts";
@@ -106,7 +111,9 @@ function outcomeOf(record: ActionExecutionRecord): ActionOutcome {
     requiresApproval: record.status === "pending_approval",
     record,
     output: record.status === "succeeded" ? record.result : undefined,
-    error: record.error?.message ?? (record.status === "denied" ? record.policyReason : undefined),
+    error:
+      record.error?.message ??
+      (record.status === "denied" ? record.policyReason : undefined),
   };
 }
 
@@ -125,13 +132,19 @@ function assertTenant(record: ActionExecutionRecord, accountId: string): void {
  * approval-required. It throws only for programmer errors (no store or ports
  * registered) — never for a policy or tool failure, which are data.
  */
-export async function executeAction(input: ExecuteActionInput): Promise<ActionOutcome> {
+export async function executeAction(
+  input: ExecuteActionInput,
+): Promise<ActionOutcome> {
   const store = getActionStore();
   const registry = input.registry ?? toolRegistry;
   const trace = input.trace;
 
   if (input.idempotencyKey) {
-    const existing = await store.findByIdempotencyKey(input.accountId, input.toolId, input.idempotencyKey);
+    const existing = await store.findByIdempotencyKey(
+      input.accountId,
+      input.toolId,
+      input.idempotencyKey,
+    );
     if (existing) return outcomeOf(existing);
   }
 
@@ -155,10 +168,16 @@ export async function executeAction(input: ExecuteActionInput): Promise<ActionOu
         input: sanitizeRecord(input.input),
         policyReason: `unknown tool "${input.toolId}"`,
         idempotencyKey: input.idempotencyKey,
-        error: { code: "unknown_tool", message: `unknown tool "${input.toolId}"` },
+        error: {
+          code: "unknown_tool",
+          message: `unknown tool "${input.toolId}"`,
+        },
       }),
     );
-    await trace?.fallback("tool_select", `No such tool "${input.toolId}" — nothing was run.`);
+    await trace?.fallback(
+      "tool_select",
+      `No such tool "${input.toolId}" — nothing was run.`,
+    );
     return outcomeOf(record);
   }
 
@@ -181,13 +200,20 @@ export async function executeAction(input: ExecuteActionInput): Promise<ActionOu
         status: "failed",
         approvalState: "not_required",
         input: sanitizeRecord(input.input),
-        policyReason: "input rejected by the tool's schema — nothing was executed",
+        policyReason:
+          "input rejected by the tool's schema — nothing was executed",
         idempotencyKey: input.idempotencyKey,
-        error: { code: "invalid_input", message: sanitizeErrorMessage(message) },
+        error: {
+          code: "invalid_input",
+          message: sanitizeErrorMessage(message),
+        },
         finishedAt: nowIso(),
       }),
     );
-    await trace?.fallback("tool_input", `The ${tool.displayName} tool rejected the input: ${message}`);
+    await trace?.fallback(
+      "tool_input",
+      `The ${tool.displayName} tool rejected the input: ${message}`,
+    );
     return outcomeOf(record);
   }
 
@@ -214,7 +240,12 @@ export async function executeAction(input: ExecuteActionInput): Promise<ActionOu
 
   if (evaluation.decision === "deny") {
     const record = await store.create(
-      baseRecord({ ...common, status: "denied", approvalState: "not_required", finishedAt: nowIso() }),
+      baseRecord({
+        ...common,
+        status: "denied",
+        approvalState: "not_required",
+        finishedAt: nowIso(),
+      }),
     );
     await trace?.fallback("tool_policy", `Not permitted: ${evaluation.reason}`);
     return outcomeOf(record);
@@ -222,7 +253,11 @@ export async function executeAction(input: ExecuteActionInput): Promise<ActionOu
 
   if (evaluation.decision === "requires_approval") {
     const record = await store.create(
-      baseRecord({ ...common, status: "pending_approval", approvalState: "pending" }),
+      baseRecord({
+        ...common,
+        status: "pending_approval",
+        approvalState: "pending",
+      }),
     );
     await trace?.fallback(
       "tool_approval",
@@ -232,9 +267,15 @@ export async function executeAction(input: ExecuteActionInput): Promise<ActionOu
   }
 
   const record = await store.create(
-    baseRecord({ ...common, status: "approved", approvalState: "not_required" }),
+    baseRecord({
+      ...common,
+      status: "running",
+      approvalState: "not_required",
+      startedAt: nowIso(),
+      attempts: 1,
+    }),
   );
-  return runApproved(record, tool, parsed.data, input.sharedContext, trace);
+  return runRecorded(record, tool, parsed.data, input.sharedContext, trace);
 }
 
 /**
@@ -242,7 +283,9 @@ export async function executeAction(input: ExecuteActionInput): Promise<ActionOu
  * called. A second approval of an already-decided action returns that action's
  * current state instead of executing again.
  */
-export async function approveAction(input: ApproveActionInput): Promise<ActionOutcome> {
+export async function approveAction(
+  input: ApproveActionInput,
+): Promise<ActionOutcome> {
   const store = getActionStore();
   const registry = input.registry ?? toolRegistry;
 
@@ -250,24 +293,36 @@ export async function approveAction(input: ApproveActionInput): Promise<ActionOu
   if (!existing) throw new ActionNotFoundError(input.executionId);
   assertTenant(existing, input.accountId);
 
-  // Idempotency: only a pending action can be approved. Anything else — already
-  // approved and running, already finished, already rejected — returns as-is.
-  const approved = await store.transition(input.executionId, ["pending_approval"], "approved", {
-    approvalState: "approved",
-    approvedBy: input.approvedBy,
-    approvedAt: nowIso(),
-  });
-  if (!approved) {
+  // Idempotency: only a parked action can be approved. Status stays parked /
+  // running / terminal — `approved` is written on approval_state, not status.
+  // Anything else — already running, already finished, already rejected —
+  // returns as-is.
+  const running = await store.transition(
+    input.executionId,
+    ["pending_approval"],
+    "running",
+    {
+      approvalState: "approved",
+      approvedBy: input.approvedBy,
+      approvedAt: nowIso(),
+      startedAt: nowIso(),
+      attempts: existing.attempts + 1,
+    },
+  );
+  if (!running) {
     const current = await store.get(input.executionId);
     if (!current) throw new ActionNotFoundError(input.executionId);
     return outcomeOf(current);
   }
 
-  const tool = registry.find(approved.toolId);
+  const tool = registry.find(running.toolId);
   if (!tool) {
-    const failed = await store.update(approved.id, {
+    const failed = await store.update(running.id, {
       status: "failed",
-      error: { code: "unknown_tool", message: `tool "${approved.toolId}" is no longer registered` },
+      error: {
+        code: "unknown_tool",
+        message: `tool "${running.toolId}" is no longer registered`,
+      },
       finishedAt: nowIso(),
     });
     return outcomeOf(failed);
@@ -275,10 +330,12 @@ export async function approveAction(input: ApproveActionInput): Promise<ActionOu
 
   // Re-validate against the tool's current schema: the stored input crossed a
   // process (and possibly a deploy) boundary since it was written.
-  const parsed = tool.inputSchema.safeParse(approved.input);
+  const parsed = tool.inputSchema.safeParse(running.input);
   if (!parsed.success) {
-    const message = parsed.error.issues.map((i) => `${i.path.join(".") || "input"}: ${i.message}`).join("; ");
-    const failed = await store.update(approved.id, {
+    const message = parsed.error.issues
+      .map((i) => `${i.path.join(".") || "input"}: ${i.message}`)
+      .join("; ");
+    const failed = await store.update(running.id, {
       status: "failed",
       error: { code: "invalid_input", message: sanitizeErrorMessage(message) },
       finishedAt: nowIso(),
@@ -286,11 +343,19 @@ export async function approveAction(input: ApproveActionInput): Promise<ActionOu
     return outcomeOf(failed);
   }
 
-  return runApproved(approved, tool, parsed.data, input.sharedContext, input.trace);
+  return runRecorded(
+    running,
+    tool,
+    parsed.data,
+    input.sharedContext,
+    input.trace,
+  );
 }
 
 /** Reject a parked action. Idempotent; refuses to "reject" something that ran. */
-export async function rejectAction(input: RejectActionInput): Promise<ActionOutcome> {
+export async function rejectAction(
+  input: RejectActionInput,
+): Promise<ActionOutcome> {
   const store = getActionStore();
   const existing = await store.get(input.executionId);
   if (!existing) throw new ActionNotFoundError(input.executionId);
@@ -304,13 +369,20 @@ export async function rejectAction(input: RejectActionInput): Promise<ActionOutc
     );
   }
 
-  const denied = await store.transition(input.executionId, ["pending_approval"], "denied", {
-    approvalState: "rejected",
-    rejectedBy: input.rejectedBy,
-    rejectedAt: nowIso(),
-    rejectionReason: input.reason ? sanitizeErrorMessage(input.reason) : "rejected by the owner",
-    finishedAt: nowIso(),
-  });
+  const denied = await store.transition(
+    input.executionId,
+    ["pending_approval"],
+    "denied",
+    {
+      approvalState: "rejected",
+      rejectedBy: input.rejectedBy,
+      rejectedAt: nowIso(),
+      rejectionReason: input.reason
+        ? sanitizeErrorMessage(input.reason)
+        : "rejected by the owner",
+      finishedAt: nowIso(),
+    },
+  );
   if (!denied) {
     const current = await store.get(input.executionId);
     if (!current) throw new ActionNotFoundError(input.executionId);
@@ -331,7 +403,10 @@ export async function getActionExecution(
 
 // --- internals --------------------------------------------------------------
 
-type BaseRecordInput = Omit<ActionExecutionRecord, "createdAt" | "id" | "attempts" | "verificationState"> & {
+type BaseRecordInput = Omit<
+  ActionExecutionRecord,
+  "createdAt" | "id" | "attempts" | "verificationState"
+> & {
   id?: string;
 };
 
@@ -346,30 +421,20 @@ function baseRecord(input: BaseRecordInput): ActionExecutionRecord {
 }
 
 /**
- * Run a tool whose execution row is already in "approved".
+ * Run a tool whose execution row is already `running`.
  *
- * The approved -> running transition is the exactly-once gate: whoever wins it
- * runs the tool, and everyone else gets the row as it stands.
+ * The exactly-once gate is the transition *into* running (pending_approval ->
+ * running on approve, or create-as-running when policy allows). Whoever won
+ * that transition calls this; everyone else must not invoke the tool.
  */
-async function runApproved(
-  record: ActionExecutionRecord,
+async function runRecorded(
+  running: ActionExecutionRecord,
   tool: ErasedTool,
   parsedInput: unknown,
   sharedContext: SharedContext,
   trace?: TraceEmitter,
 ): Promise<ActionOutcome> {
   const store = getActionStore();
-
-  const running = await store.transition(record.id, ["approved"], "running", {
-    startedAt: nowIso(),
-    attempts: record.attempts + 1,
-  });
-  if (!running) {
-    // Someone else already took it. Never execute twice.
-    const current = await store.get(record.id);
-    if (!current) throw new ActionNotFoundError(record.id);
-    return outcomeOf(current);
-  }
 
   let declaredEffect: EffectProvenance | undefined;
   const context: ToolInvocationContext = {
@@ -396,7 +461,10 @@ async function runApproved(
       effect: effectFor(tool, declaredEffect),
       finishedAt: nowIso(),
     });
-    await trace?.fallback("tool_execute", `${tool.displayName} failed: ${sanitizeErrorMessage(message)}`);
+    await trace?.fallback(
+      "tool_execute",
+      `${tool.displayName} failed: ${sanitizeErrorMessage(message)}`,
+    );
     return outcomeOf(failed);
   }
 
@@ -411,7 +479,10 @@ async function runApproved(
       effect: effectFor(tool, declaredEffect),
       finishedAt: nowIso(),
     });
-    await trace?.fallback("tool_execute", `${tool.displayName} returned an unusable result.`);
+    await trace?.fallback(
+      "tool_execute",
+      `${tool.displayName} returned an unusable result.`,
+    );
     return outcomeOf(failed);
   }
 
@@ -426,7 +497,14 @@ async function runApproved(
 
   if (!tool.verify) return outcomeOf(succeeded);
 
-  return verifyExecution(succeeded, tool, parsedInput, validated.data, context, trace);
+  return verifyExecution(
+    succeeded,
+    tool,
+    parsedInput,
+    validated.data,
+    context,
+    trace,
+  );
 }
 
 /** Independent read-back. A failed verification is never reported as success. */
@@ -451,12 +529,18 @@ async function verifyExecution(
       status: result.verified ? "succeeded" : "verification_failed",
       error: result.verified
         ? undefined
-        : { code: "verification_failed", message: sanitizeErrorMessage(result.detail) },
+        : {
+            code: "verification_failed",
+            message: sanitizeErrorMessage(result.detail),
+          },
     });
     if (result.verified) {
       await trace?.work("tool_verify", `Verified: ${result.detail}`);
     } else {
-      await trace?.fallback("tool_verify", `Could not verify: ${result.detail}`);
+      await trace?.fallback(
+        "tool_verify",
+        `Could not verify: ${result.detail}`,
+      );
     }
     return outcomeOf(updated);
   } catch (err) {
@@ -466,9 +550,15 @@ async function verifyExecution(
       verificationDetail: sanitizeErrorMessage(`verifier error: ${message}`),
       verifiedAt: nowIso(),
       status: "verification_failed",
-      error: { code: "verification_error", message: sanitizeErrorMessage(message) },
+      error: {
+        code: "verification_error",
+        message: sanitizeErrorMessage(message),
+      },
     });
-    await trace?.fallback("tool_verify", `Could not verify the result: ${sanitizeErrorMessage(message)}`);
+    await trace?.fallback(
+      "tool_verify",
+      `Could not verify the result: ${sanitizeErrorMessage(message)}`,
+    );
     return outcomeOf(updated);
   }
 }

@@ -41,7 +41,7 @@ bypasses the security model.
 | Request-scoped store/ports (agent-service) | `src/agent-os-runtime/action-collector.ts`, `scoped-providers.ts` |
 | Approval execution entry point | `src/agent-os-runtime/approve-action.ts`, `POST /actions/approve` |
 | Persistence + approval API (data plane) | `backend/services/os_tool_executions.py`, `backend/routers/os_tool_executions.py` |
-| Table | `migrations/195_os_tool_executions.sql` |
+| Table | `migrations/195_os_tool_executions.sql` + `196_os_tool_executions_status_no_approved.sql` |
 
 ## Risk levels
 
@@ -61,25 +61,40 @@ import time and therefore in CI.
 
 ## Lifecycle
 
+Two axes. Do not merge them.
+
+**`status`** is parked / running / terminal only:
+
+`pending_approval` | `running` | `succeeded` | `failed` | `verification_failed` | `denied` | `cancelled`
+
+**`approval_state`** is `not_required` | `pending` | `approved` | `rejected`.
+
+`approved` is **not** a status. The approvals queue keys off
+`status='pending_approval'` and/or `approval_state='pending'`.
+
 ```
-pending_approval ──approve──▶ approved ──▶ running ──▶ succeeded
-       │                                          ├──▶ failed
-       │                                          └──▶ verification_failed
+pending_approval ──approve──▶ running ──▶ succeeded
+       │                         ├──▶ failed
+       │                         └──▶ verification_failed
        ├──reject──▶ denied
        └──policy denial──▶ denied
-(policy allows) ──▶ approved ──▶ running ──▶ …
+(policy allows) ──▶ running ──▶ …
 ```
 
-`status` and `verification_state` are deliberately separate axes: "it ran" and
+On approve, `status` moves `pending_approval → running` and `approval_state`
+moves `pending → approved`. Policy-allowed actions are created as `running`
+with `approval_state=not_required`.
+
+`status` and `verification_state` are also separate: "it ran" and
 "we confirmed it landed" must never be conflated. A tool that runs but fails its
 verifier ends `verification_failed` and returns no output to the agent — it is
 never reported as success.
 
 Exactly-once is enforced with conditional transitions, not read-then-write:
 
-- the data plane moves a row out of `pending_approval` with a conditional
-  `UPDATE ... WHERE status = 'pending_approval'` before it calls the engine, so a
-  double-clicked approval never reaches the engine twice;
+- the data plane moves a row out of `pending_approval` to `running` with a
+  conditional `UPDATE ... WHERE status = 'pending_approval'` before it calls the
+  engine, so a double-clicked approval never reaches the engine twice;
 - inside the engine, `store.transition()` only succeeds from an expected status,
   so concurrent callers inside one request collapse to one invocation.
 
@@ -159,6 +174,21 @@ like credentials are redacted and oversized payloads truncated
 This is **not** `os_action_runs` (migration 126). That table records the channel
 handler fired when an owner approves a *deliverable* ("send this drafted SMS")
 and is unchanged. This one records an agent's own *tool* choice mid-run.
+The two tables stay dual — they are not merged.
+
+**L2 audit fail-closed.** Risk level 2+ (external communication / high impact)
+cannot be queued or treated as sent if the `os_tool_executions` row cannot be
+written. L0/L1 persist stays best-effort so a note-audit blip does not break
+the owner's turn.
+
+## Leftovers for Slice B (do not sneak Gmail into A)
+
+- Optional idempotency keys already exist on the engine + unique index; callers
+  are not required to send them.
+- `GET /tool-executions` and `GET /tool-executions/{id}` are not owner-only
+  (approve/reject are). Tightening list/get is Slice B.
+- No `send_email`, Gmail connector, `communication_actions`, or 5-department
+  send wiring in this slice.
 
 ## Verification
 

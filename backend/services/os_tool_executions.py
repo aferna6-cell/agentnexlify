@@ -31,9 +31,10 @@ logger = logging.getLogger(__name__)
 
 #: Statuses an execution can be in. Mirrors the engine's state machine
 #: (``agent-service/src/agent-os/actions/types.ts``) and the table's CHECK.
+#: Status is parked / running / terminal only. ``approved`` lives on
+#: ``approval_state``, never here.
 STATUSES = (
     "pending_approval",
-    "approved",
     "running",
     "succeeded",
     "failed",
@@ -41,6 +42,14 @@ STATUSES = (
     "denied",
     "cancelled",
 )
+
+#: Risk level 2+ (external communication / high impact). An L2+ action
+#: cannot be queued or treated as sent if its audit row cannot be written.
+RISK_FAIL_CLOSED = 2
+
+
+class ToolExecutionAuditError(RuntimeError):
+    """L2+ audit row could not be written — refuse to queue or send."""
 
 #: No further transition is possible from these.
 TERMINAL_STATUSES = (
@@ -108,6 +117,10 @@ def to_row(execution: dict, client_id: str, agent_run_id: str | None) -> dict:
     }
 
 
+def _is_fail_closed(row: dict) -> bool:
+    return _int_or(row.get("risk_level"), 3) >= RISK_FAIL_CLOSED
+
+
 def persist_tool_executions(
     db: Any,
     client_id: str,
@@ -116,10 +129,9 @@ def persist_tool_executions(
 ) -> list[dict]:
     """Persist a turn's tool executions and apply the writes they made.
 
-    Returns the inserted rows. Best-effort by contract — the caller wraps this
-    so an audit-write failure never breaks the owner's turn — but it logs
-    loudly, because a missing audit row is a real problem even when the turn
-    succeeded.
+    L0/L1 writes are best-effort: a missing audit row is logged and the
+    owner's turn still completes. L2+ is fail-closed — if the audit row
+    cannot be written the action is not queued or treated as sent.
     """
     executions = record.get("toolExecutions") or []
     if not executions:
@@ -129,10 +141,29 @@ def persist_tool_executions(
     if not rows:
         return []
 
-    inserted = (
-        tenant_table(db, "os_tool_executions", client_id).insert(rows).execute().data
-        or []
-    )
+    try:
+        inserted = (
+            tenant_table(db, "os_tool_executions", client_id).insert(rows).execute().data
+            or []
+        )
+    except Exception as exc:
+        if any(_is_fail_closed(row) for row in rows):
+            raise ToolExecutionAuditError(
+                "L2+ tool execution could not be written to os_tool_executions; "
+                "refusing to queue or send"
+            ) from exc
+        logger.exception("os_tool_executions: L0/L1 persist failed")
+        return []
+
+    inserted_ids = {row.get("id") for row in inserted}
+    missing_l2 = [
+        row["id"] for row in rows if _is_fail_closed(row) and row["id"] not in inserted_ids
+    ]
+    if missing_l2:
+        raise ToolExecutionAuditError(
+            f"L2+ tool execution(s) missing from persist: {missing_l2}; "
+            "refusing to queue or send"
+        )
 
     notes = record.get("customerNotes") or []
     if notes:

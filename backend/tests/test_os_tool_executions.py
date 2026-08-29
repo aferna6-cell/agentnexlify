@@ -127,6 +127,59 @@ def test_a_note_that_cannot_be_applied_downgrades_its_execution():
     assert "no longer exists" in row["verification_detail"]
 
 
+def test_l2_persist_fails_closed_when_the_audit_row_cannot_be_written():
+    """L2+ cannot be queued or treated as sent if os_tool_executions insert fails."""
+
+    class ExplodingExecutions(FakeSupabase):
+        def table(self, name):
+            if name == "os_tool_executions":
+                raise RuntimeError("insert refused")
+            return super().table(name)
+
+    db = ExplodingExecutions({"os_tool_executions": [], "leads": []})
+    record = {
+        "toolExecutions": [
+            _execution(
+                riskLevel=2,
+                status="pending_approval",
+                approvalState="pending",
+                toolId="fixture_external_message",
+                requiresApproval=True,
+            )
+        ]
+    }
+
+    with pytest.raises(svc.ToolExecutionAuditError, match="refusing to queue"):
+        svc.persist_tool_executions(db, CLIENT, RUN_ID, record)
+    assert db.rows("os_tool_executions") == []
+
+
+def test_l1_persist_stays_best_effort_when_the_audit_row_cannot_be_written():
+    class ExplodingExecutions(FakeSupabase):
+        def table(self, name):
+            if name == "os_tool_executions":
+                raise RuntimeError("insert refused")
+            return super().table(name)
+
+    db = ExplodingExecutions({"os_tool_executions": [], "leads": []})
+    assert svc.persist_tool_executions(db, CLIENT, RUN_ID, {"toolExecutions": [_execution()]}) == []
+
+
+def test_status_enum_does_not_include_approved():
+    """approved lives on approval_state. Queue keys off pending_approval."""
+    assert "approved" not in svc.STATUSES
+    assert "pending_approval" in svc.STATUSES
+    assert set(svc.STATUSES) == {
+        "pending_approval",
+        "running",
+        "succeeded",
+        "failed",
+        "verification_failed",
+        "denied",
+        "cancelled",
+    }
+
+
 def test_persist_is_a_no_op_when_the_turn_used_no_tools():
     db = _db_with_lead()
     assert svc.persist_tool_executions(db, CLIENT, RUN_ID, {"toolExecutions": []}) == []
@@ -496,6 +549,7 @@ def test_the_history_is_readable_and_filterable():
             listed = client.get("/api/v1/os/tool-executions?status=pending_approval")
             one = client.get(f"/api/v1/os/tool-executions/{EXEC_ID}")
             bad = client.get("/api/v1/os/tool-executions?status=nonsense")
+            approved_status = client.get("/api/v1/os/tool-executions?status=approved")
     finally:
         _teardown()
 
@@ -503,3 +557,4 @@ def test_the_history_is_readable_and_filterable():
     assert listed.json()["items"][0]["tool_id"] == "add_customer_note"
     assert one.json()["id"] == EXEC_ID
     assert bad.status_code == 400
+    assert approved_status.status_code == 400

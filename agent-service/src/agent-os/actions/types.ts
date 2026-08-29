@@ -46,18 +46,18 @@ export const RISK_LABELS: Record<RiskLevel, string> = {
 };
 
 /**
- * Execution lifecycle.
+ * Execution lifecycle. Status is parked / running / terminal only.
+ * `approved` is NOT a status — it lives on `approval_state`.
  *
- *   pending_approval -> approved -> running -> succeeded
- *                                           -> failed
- *                                           -> verification_failed
+ *   pending_approval -> running -> succeeded
+ *                               -> failed
+ *                               -> verification_failed
  *   pending_approval -> denied      (policy said no, or the owner rejected)
  *   pending_approval -> cancelled   (withdrawn before a decision)
  *   (allowed by policy) -> running -> succeeded | failed | verification_failed
  */
 export type ActionExecutionStatus =
   | "pending_approval"
-  | "approved"
   | "running"
   | "succeeded"
   | "failed"
@@ -79,13 +79,15 @@ export function isTerminal(status: ActionExecutionStatus): boolean {
 }
 
 /** Approval is its own axis: a level-0 read never enters the approval machine. */
-export type ApprovalState = "not_required" | "pending" | "approved" | "rejected";
+export type ApprovalState =
+  "not_required" | "pending" | "approved" | "rejected";
 
 /**
  * Verification is its own axis too. `not_applicable` means the tool declares no
  * verifier — which is honest — and is never presented as "verified".
  */
-export type VerificationState = "not_applicable" | "pending" | "passed" | "failed";
+export type VerificationState =
+  "not_applicable" | "pending" | "passed" | "failed";
 
 export interface VerificationOutcome {
   /** True when the verifier independently confirmed the effect exists. */
@@ -223,7 +225,11 @@ export interface ToolDefinition<TInput = unknown, TOutput = unknown> {
  */
 export type ErasedParseResult =
   | { success: true; data: unknown; error?: undefined }
-  | { success: false; data?: undefined; error: { issues: { path: PropertyKey[]; message: string }[] } };
+  | {
+      success: false;
+      data?: undefined;
+      error: { issues: { path: PropertyKey[]; message: string }[] };
+    };
 
 export interface ErasedSchema {
   safeParse(value: unknown): ErasedParseResult;
@@ -240,7 +246,10 @@ export interface ErasedTool {
   requiresApproval: boolean;
   inputSchema: ErasedSchema;
   outputSchema: ErasedSchema;
-  execute(args: { input: unknown; context: ToolInvocationContext }): Promise<unknown>;
+  execute(args: {
+    input: unknown;
+    context: ToolInvocationContext;
+  }): Promise<unknown>;
   verify?(args: {
     input: unknown;
     output: unknown;

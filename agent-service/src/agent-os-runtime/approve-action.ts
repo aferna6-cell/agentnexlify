@@ -10,9 +10,10 @@
  *
  * At-most-once is enforced in two places, deliberately:
  *  - the data plane moves the row out of `pending_approval` with a conditional
- *    UPDATE before it calls here, so a double-clicked approval never reaches the
- *    engine twice;
- *  - the executor's own conditional transitions stop a repeat inside a request.
+ *    UPDATE to `running` before it calls here, so a double-clicked approval
+ *    never reaches the engine twice;
+ *  - the executor's own pending_approval -> running transition (approval_state
+ *    becomes `approved`) stops a repeat inside a request.
  */
 
 import { z } from "zod";
@@ -20,8 +21,14 @@ import { approveAction } from "../agent-os/actions/executor.ts";
 import { requestScope } from "./request-scope.ts";
 import { RunRecordCollector } from "./run-record-collector.ts";
 import { registerAgentOsProviders } from "./bootstrap.ts";
-import { CollectingActionStore, CollectingCustomerNotesPort } from "./action-collector.ts";
-import type { ActionExecutionRecord, RiskLevel } from "../agent-os/actions/types.ts";
+import {
+  CollectingActionStore,
+  CollectingCustomerNotesPort,
+} from "./action-collector.ts";
+import type {
+  ActionExecutionRecord,
+  RiskLevel,
+} from "../agent-os/actions/types.ts";
 import type { CustomerNoteRecord } from "../agent-os/actions/ports.ts";
 import type { TenantToolPolicy } from "../agent-os/actions/policy.ts";
 import type { SharedContext } from "../agent-os/types/agent.ts";
@@ -61,7 +68,9 @@ export interface ApproveActionOutput {
   customerNotes: CustomerNoteRecord[];
 }
 
-export async function runApprovedAction(input: ApproveActionInput): Promise<ApproveActionOutput> {
+export async function runApprovedAction(
+  input: ApproveActionInput,
+): Promise<ApproveActionOutput> {
   if (input.execution.accountId !== input.accountId) {
     throw new Error("isolation breach: execution belongs to another account");
   }
@@ -71,8 +80,9 @@ export async function runApprovedAction(input: ApproveActionInput): Promise<Appr
 
   // Rebuild the row the executor expects. Only the fields the data plane is
   // authoritative for are carried over; status is always `pending_approval`
-  // here because the executor owns the approve -> running -> terminal machine
-  // and the data plane has already decided this call is the one that runs.
+  // here because the executor owns pending_approval -> running -> terminal
+  // (approval_state becomes `approved`) and the data plane has already
+  // decided this call is the one that runs.
   const seeded: ActionExecutionRecord = {
     id: input.execution.id,
     accountId: input.execution.accountId,

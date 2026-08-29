@@ -1787,7 +1787,8 @@ risk_level smallint 0-3 (0 read-only | 1 internal mutation | 2 external
 communication | 3 financial/legal/destructive), mutating, requires_approval,
 approval_state (not_required|pending|approved|rejected), status
 (pending_approval|approved|running|succeeded|failed|verification_failed|denied|
-cancelled), input/result/error jsonb (engine-sanitized — secret-looking keys
+cancelled — 195 as applied; 'approved' on status is a collision, removed by
+196_os_tool_executions_status_no_approved), input/result/error jsonb (engine-sanitized — secret-looking keys
 redacted before they leave the process), verification_state
 (not_applicable|pending|passed|failed) + detail + verified_at, policy_reason,
 attempts, idempotency_key, effect jsonb (which port performed the side effect
@@ -1804,3 +1805,16 @@ result. Writers: backend/services/os_tool_executions.py (from the engine's
 /orchestrate record bundle) and backend/routers/os_tool_executions.py (approve /
 reject). Engine side: agent-service/src/agent-os/actions/. Design doc:
 docs/agent-os-action-layer.md.
+
+## Migration 196_os_tool_executions_status_no_approved — tighten status CHECK (NOT YET APPLIED)
+Follow-on to 195. Status must not include `approved` — that value lives only on
+`approval_state` (not_required|pending|approved|rejected). 196 remaps any
+existing `status='approved'` rows (`approval_state=pending` → `pending_approval`,
+else → `running`), drops `os_tool_executions_status_check`, and re-adds it
+without `approved`. Allowed status: pending_approval | running | succeeded |
+failed | verification_failed | denied | cancelled. Approvals queue keys off
+`status='pending_approval'` and/or `approval_state='pending'`.
+
+195 may already be applied on prod, so this is a CHECK tighten, not a rewrite of
+195 and not a table drop. Dual tables stay: os_action_runs (126) vs
+os_tool_executions (195).

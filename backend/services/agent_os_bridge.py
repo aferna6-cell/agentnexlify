@@ -444,13 +444,15 @@ def persist_orchestration(
         logger.warning("agent_os_bridge: telemetry persist failed", exc_info=True)
 
     # Action layer: persist the turn's tool executions (the audit trail) and
-    # apply the internal writes they made. Best-effort like telemetry — a
-    # failure here must not break the owner's turn — but logged loudly, because
-    # a missing audit row matters even when the turn itself succeeded.
+    # apply the internal writes they made. L0/L1 is best-effort like telemetry.
+    # L2+ is fail-closed — a missing audit row must not leave an action queued
+    # or treated as sent.
     try:
         os_tool_executions.persist_tool_executions(
             db, client_id, agent_run_id, record
         )
+    except os_tool_executions.ToolExecutionAuditError:
+        raise
     except Exception:
         logger.warning(
             "agent_os_bridge: tool execution persist failed", exc_info=True

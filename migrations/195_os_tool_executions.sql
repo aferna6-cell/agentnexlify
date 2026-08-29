@@ -43,6 +43,9 @@ CREATE TABLE IF NOT EXISTS os_tool_executions (
     rejected_by         TEXT NULL,
     rejected_at         TIMESTAMPTZ NULL,
     rejection_reason    TEXT NULL,
+    -- Status CHECK as first applied. 'approved' on status collides with
+    -- approval_state; migration 196 drops it. Do not rewrite this CHECK
+    -- in place — 195 may already be applied on prod.
     status              TEXT NOT NULL DEFAULT 'pending_approval'
         CHECK (status IN (
             'pending_approval', 'approved', 'running', 'succeeded',
