@@ -1,22 +1,20 @@
-"""B-prep contracts that block Slice B (Gmail send).
+"""B-blocker contracts bound to production data-plane code.
 
-Test-only. No ``send_email`` production path, no ``gmail_connector.send_message``,
-no ``communication_actions``. The harness here is the spec B must satisfy:
+No ``send_email`` production path, no ``gmail_connector.send_message``,
+no ``communication_actions``. ``FakeGmailPort`` is the injected mailbox only.
 
-1. After ``claim_for_execution``, a transport timeout / lost Gmail response
-   stays non-terminal (no ``finished_at``, not failed-as-sent). A later
-   re-drive rfc822msgid-adopts and must not send a second message.
-2. Engine Zod ``.email()`` vs Python ``normalize_email``: a Zod-pass /
+Production bindings:
+
+1. ``os_tool_executions._run_data_plane_tool`` + ``apply_unknown_send_outcome``
+   — timeout / lost response stays non-terminal; re-drive rfc822msgid-adopts.
+2. ``claim_if_input_valid`` / ``validate_before_claim`` — Zod-pass /
    Python-fail must not burn the only approval claim.
-3. ``os_tools.run_tool`` (or the claim-gated stand-in) is unreachable
-   without a prior claim — the provider must not execute.
-
-``_run_data_plane_tool`` is not on main after #694. When B adds it, it must
-not always write terminal ``failed`` / ``succeeded`` / ``verification_failed``
-plus ``finished_at`` for an unknown send outcome.
+3. ``os_tools.run_tool`` is unreachable without a prior claim.
+4. L1 persist stays best-effort; L2 persist stays fail-closed
+   (``persist_tool_executions``).
 """
 
-import importlib
+import asyncio
 import importlib.util
 import os
 import re
@@ -27,6 +25,7 @@ os.environ.setdefault("TESTING", "1")
 import pytest
 
 from backend.services import os_tool_executions as svc
+from backend.services import os_tools
 from backend.tests.fake_supabase_store import FakeSupabase
 
 
@@ -67,10 +66,7 @@ def engine_zod_email_accepts(raw) -> bool:
     return _ENGINE_ZOD_EMAIL_RE.fullmatch(raw) is not None
 
 
-def rfc822_msgid_for(execution_id: str) -> str:
-    """Test-local copy of the #693 fingerprint. Not a production helper."""
-    safe = re.sub(r"[^A-Za-z0-9_.-]", "", str(execution_id))
-    return f"aos-{safe}@actions.agentnexlify"
+rfc822_msgid_for = svc.rfc822_msgid_for
 
 
 class FakeGmailPort:
@@ -123,98 +119,13 @@ def _pending_db(**overrides):
     return FakeSupabase({"os_tool_executions": [_pending_send_row(**overrides)]})
 
 
-def _optional_os_tools():
-    if importlib.util.find_spec("backend.services.os_tools") is None:
-        return None
-    return importlib.import_module("backend.services.os_tools")
-
-
-def apply_unknown_send_outcome(db, client_id: str, execution_id: str, detail: str):
-    """Correct write for a lost/timeout send: stay non-terminal.
-
-    B's ``_run_data_plane_tool`` must take this path for ``send_outcome_unknown``
-    instead of always writing a terminal status + ``finished_at``.
-    """
-    svc.mark_engine_unavailable(db, client_id, execution_id, detail)
-    return svc.get_tool_execution(db, client_id, execution_id)
+apply_unknown_send_outcome = svc.apply_unknown_send_outcome
+claim_only_if_python_email_valid = svc.claim_if_input_valid
 
 
 def drive_claimed_gmail_send(db, client_id: str, execution_id: str, gmail: FakeGmailPort):
-    """One post-claim send attempt. Lookup first; unknown stays non-terminal.
-
-    Until ``os_tools.run_tool`` exists this *is* the contract. When it lands,
-    it must preserve these outcomes.
-    """
-    row = svc.get_tool_execution(db, client_id, execution_id)
-    if row is None or row.get("status") != "running":
-        return {"executed": False, "adopted": False, "unknown": False}
-
-    msgid = rfc822_msgid_for(execution_id)
-    existing = gmail.find_by_rfc822_msgid(msgid)
-    if existing:
-        svc.record_execution_outcome(
-            db,
-            client_id,
-            {
-                "id": execution_id,
-                "status": "succeeded",
-                "result": {
-                    "messageId": existing,
-                    "deduplicated": True,
-                    "rfc822MsgId": msgid,
-                },
-                "verificationState": "pending",
-            },
-        )
-        return {"executed": False, "adopted": True, "unknown": False, "message_id": existing}
-
-    payload = row.get("input") or {}
-    try:
-        sent = gmail.send(
-            to=payload.get("to"),
-            subject=payload.get("subject"),
-            body=payload.get("body"),
-            rfc822_msgid=msgid,
-        )
-    except TimeoutError:
-        apply_unknown_send_outcome(
-            db, client_id, execution_id, "gmail transport timed out; outcome unknown"
-        )
-        return {"executed": True, "adopted": False, "unknown": True}
-
-    if sent is None:
-        apply_unknown_send_outcome(
-            db,
-            client_id,
-            execution_id,
-            "gmail accepted the message but the response was lost; outcome unknown",
-        )
-        return {"executed": True, "adopted": False, "unknown": True}
-
-    svc.record_execution_outcome(
-        db,
-        client_id,
-        {
-            "id": execution_id,
-            "status": "succeeded",
-            "result": {
-                "messageId": sent["message_id"],
-                "deduplicated": False,
-                "rfc822MsgId": msgid,
-            },
-        },
-    )
-    return {"executed": True, "adopted": False, "unknown": False, "message_id": sent["message_id"]}
-
-
-def claim_only_if_python_email_valid(db, client_id: str, execution_id: str):
-    """Pre-claim Python email check. A Zod-pass / Python-fail must stop here."""
-    row = svc.get_tool_execution(db, client_id, execution_id)
-    if row is None:
-        return None
-    if normalize_email((row.get("input") or {}).get("to")) is None:
-        return None
-    return svc.claim_for_execution(db, client_id, execution_id)
+    """One post-claim send attempt through the production data-plane runner."""
+    return svc._run_data_plane_tool(db, client_id, execution_id, gmail)
 
 
 # --- 1. accept + lost response / rfc822 adopt --------------------------------
@@ -359,29 +270,18 @@ def test_run_tool_without_a_prior_claim_does_not_execute_a_provider():
     db = _pending_db()
     gmail = FakeGmailPort()
 
-    os_tools = _optional_os_tools()
-    if os_tools is not None and hasattr(os_tools, "run_tool"):
-        ctx = os_tools.ToolContext(
-            db=db,
-            client_id=CLIENT,
-            execution_id=EXEC_ID,
-            tool_id="send_email",
-            input={"to": "sarah@example.com", "subject": "Hi", "body": "Hello"},
-            agent_id="sales",
-            approved_by="maya@sunsetauto.test",
-        )
-        import asyncio
-
-        asyncio.run(os_tools.run_tool(ctx))
-        assert gmail.sends == []
-        row = svc.get_tool_execution(db, CLIENT, EXEC_ID)
-        assert row["status"] == "pending_approval"
-        return
-
-    outcome = drive_claimed_gmail_send(db, CLIENT, EXEC_ID, gmail)
+    ctx = os_tools.ToolContext(
+        db=db,
+        client_id=CLIENT,
+        execution_id=EXEC_ID,
+        tool_id="send_email",
+        input={"to": "sarah@example.com", "subject": "Hi", "body": "Hello"},
+        agent_id="sales",
+        approved_by="maya@sunsetauto.test",
+        port=gmail,
+    )
+    asyncio.run(os_tools.run_tool(ctx))
     row = svc.get_tool_execution(db, CLIENT, EXEC_ID)
-    assert outcome["executed"] is False
-    assert outcome["adopted"] is False
     assert gmail.sends == []
     assert row["status"] == "pending_approval"
     assert row.get("finished_at") in (None, "")
@@ -484,12 +384,22 @@ def test_claim_then_run_is_the_only_path_that_reaches_the_provider():
     db = _pending_db()
     gmail = FakeGmailPort()
 
-    drive_claimed_gmail_send(db, CLIENT, EXEC_ID, gmail)
+    ctx = os_tools.ToolContext(
+        db=db,
+        client_id=CLIENT,
+        execution_id=EXEC_ID,
+        tool_id="send_email",
+        input={"to": "sarah@example.com", "subject": "Hi", "body": "Hello"},
+        agent_id="sales",
+        approved_by="maya@sunsetauto.test",
+        port=gmail,
+    )
+    asyncio.run(os_tools.run_tool(ctx))
     assert gmail.sends == []
 
     claimed = svc.claim_for_execution(db, CLIENT, EXEC_ID)
     assert claimed["status"] == "running"
-    outcome = drive_claimed_gmail_send(db, CLIENT, EXEC_ID, gmail)
+    outcome = asyncio.run(os_tools.run_tool(ctx))
     assert outcome["executed"] is True
     assert len(gmail.sends) == 1
     assert gmail.sends[0]["rfc822_msgid"] == rfc822_msgid_for(EXEC_ID)

@@ -15,14 +15,21 @@ Three responsibilities:
 3. **Approve / reject** a parked action. Approval is at-most-once: the status
    moves out of ``pending_approval`` with a conditional update *before* the
    engine is called, so a double-clicked approval cannot run a tool twice.
+4. **Re-drive a claimed row** through ``_run_data_plane_tool`` with an injected
+   mailbox port. A timeout or lost response stays non-terminal; a later
+   re-drive rfc822msgid-adopts. This is not a production Gmail send path.
 
 Distinct from ``backend/services/os_actions/``: that package fires a channel
 handler when the owner approves a *deliverable*. This one records and gates an
-agent's own *tool* choice mid-run.
+agent's own *tool* choice mid-run. The two tables stay dual — they are not
+merged.
 """
 
+import importlib.util
 import logging
+import re
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from backend.services.tenant_scope import tenant_table
@@ -498,6 +505,168 @@ def mark_engine_unavailable(db: Any, client_id: str, execution_id: str, detail: 
         logger.exception(
             "os_tool_executions: could not record engine outage for %s", execution_id
         )
+
+
+_RFC822_SAFE = re.compile(r"[^A-Za-z0-9_.-]")
+_NORMALIZE_EMAIL = None
+_EMAIL_TOOL_IDS = frozenset({"send_email"})
+
+
+def rfc822_msgid_for(execution_id: str) -> str:
+    """Stable Message-ID fingerprint for one execution. Used to adopt, not to send."""
+    safe = _RFC822_SAFE.sub("", str(execution_id))
+    return f"aos-{safe}@actions.agentnexlify"
+
+
+def apply_unknown_send_outcome(
+    db: Any, client_id: str, execution_id: str, detail: str
+) -> dict | None:
+    """Correct write for a lost/timeout send: stay non-terminal, no finished_at."""
+    mark_engine_unavailable(db, client_id, execution_id, detail)
+    return get_tool_execution(db, client_id, execution_id)
+
+
+def _normalize_email(raw) -> str | None:
+    """Load recipients.normalize_email without importing ``os_actions``."""
+    global _NORMALIZE_EMAIL
+    if _NORMALIZE_EMAIL is None:
+        path = Path(__file__).resolve().parent / "os_actions" / "recipients.py"
+        spec = importlib.util.spec_from_file_location(
+            "os_tool_executions_recipients", path
+        )
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+        _NORMALIZE_EMAIL = module.normalize_email
+    return _NORMALIZE_EMAIL(raw)
+
+
+def email_recipient_from_input(payload: Any) -> Any:
+    if not isinstance(payload, dict):
+        return None
+    if "to" in payload:
+        return payload.get("to")
+    return None
+
+
+def requires_preclaim_email_check(row: dict) -> bool:
+    """send_email (or the send_email input shape) is checked before the claim is spent."""
+    if row.get("tool_id") in _EMAIL_TOOL_IDS:
+        return True
+    payload = row.get("input") or {}
+    return isinstance(payload, dict) and "to" in payload
+
+
+def input_passes_python_email_gate(payload: Any) -> bool:
+    return _normalize_email(email_recipient_from_input(payload)) is not None
+
+
+def validate_before_claim(
+    db: Any, client_id: str, execution_id: str
+) -> tuple[dict | None, str | None]:
+    """Schema check that must run before ``claim_for_execution``.
+
+    Returns ``(row, error)``. A Zod-pass / Python-fail email must return
+    ``invalid_email`` so the only approval claim is not burned.
+    """
+    row = get_tool_execution(db, client_id, execution_id)
+    if row is None:
+        return None, "not_found"
+    if requires_preclaim_email_check(row) and not input_passes_python_email_gate(
+        row.get("input")
+    ):
+        return row, "invalid_email"
+    return row, None
+
+
+def claim_if_input_valid(db: Any, client_id: str, execution_id: str) -> dict | None:
+    """Validate then claim. A Python-fail email leaves the row pending_approval."""
+    _row, error = validate_before_claim(db, client_id, execution_id)
+    if error:
+        return None
+    return claim_for_execution(db, client_id, execution_id)
+
+
+def _run_data_plane_tool(
+    db: Any, client_id: str, execution_id: str, port: Any
+) -> dict:
+    """Post-claim mailbox attempt. Lookup first; unknown stays non-terminal.
+
+    ``port`` is an injected mailbox (test-local or internal). There is no
+    default that calls ``gmail_connector.send_message``.
+    """
+    row = get_tool_execution(db, client_id, execution_id)
+    if row is None or row.get("status") != "running":
+        return {"executed": False, "adopted": False, "unknown": False}
+    if port is None:
+        return {"executed": False, "adopted": False, "unknown": False}
+
+    msgid = rfc822_msgid_for(execution_id)
+    existing = port.find_by_rfc822_msgid(msgid)
+    if existing:
+        record_execution_outcome(
+            db,
+            client_id,
+            {
+                "id": execution_id,
+                "status": "succeeded",
+                "result": {
+                    "messageId": existing,
+                    "deduplicated": True,
+                    "rfc822MsgId": msgid,
+                },
+                "verificationState": "pending",
+            },
+        )
+        return {
+            "executed": False,
+            "adopted": True,
+            "unknown": False,
+            "message_id": existing,
+        }
+
+    payload = row.get("input") or {}
+    try:
+        sent = port.send(
+            to=payload.get("to"),
+            subject=payload.get("subject"),
+            body=payload.get("body"),
+            rfc822_msgid=msgid,
+        )
+    except TimeoutError:
+        apply_unknown_send_outcome(
+            db, client_id, execution_id, "gmail transport timed out; outcome unknown"
+        )
+        return {"executed": True, "adopted": False, "unknown": True}
+
+    if sent is None:
+        apply_unknown_send_outcome(
+            db,
+            client_id,
+            execution_id,
+            "gmail accepted the message but the response was lost; outcome unknown",
+        )
+        return {"executed": True, "adopted": False, "unknown": True}
+
+    record_execution_outcome(
+        db,
+        client_id,
+        {
+            "id": execution_id,
+            "status": "succeeded",
+            "result": {
+                "messageId": sent["message_id"],
+                "deduplicated": False,
+                "rfc822MsgId": msgid,
+            },
+        },
+    )
+    return {
+        "executed": True,
+        "adopted": False,
+        "unknown": False,
+        "message_id": sent["message_id"],
+    }
 
 
 def reject_tool_execution(
