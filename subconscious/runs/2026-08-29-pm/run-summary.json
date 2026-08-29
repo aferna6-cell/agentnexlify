@@ -1,0 +1,53 @@
+{
+  "run": 112,
+  "date": "2026-08-29-pm",
+  "winner": "Fix Step 9J: add @dependabot rebase trigger for mergeable_state: unknown PRs",
+  "category": "workflow",
+  "effort": "S",
+  "confidence": "HIGH",
+  "status": "implemented_this_run",
+  "escalation": "2nd_carry_forward_autonomous_executable",
+  "autonomous_executable": true,
+  "implemented": true,
+  "implemented_date": "2026-08-29",
+  "implemented_by": "subconscious run 112 — 2nd carry-forward autonomous-executable (run 110 recommendation, run 111 1st carry-forward recommendation — neither implemented; run 112 forced direct implementation per governance precedent). Step 9J block in .claude/skills/nightly-commit-review/SKILL.md updated: added mergeable_state==unknown branch with @dependabot rebase trigger, 48h dedup guard, cap 5/run, rebase_trigger_count counter. Log line updated to include {R} rebase-triggered count.",
+  "mandate_check": {
+    "item_1_rebase_trigger_fired": "FAIL — nightly-2026-08-29 confirmed 0 triggered (not yet in SKILL.md). Implemented this run.",
+    "item_2_rebases_count": 0,
+    "item_3_gh684_supabase_token": "FAIL — not set. Bonus comment posted on #684 with exact Railway setup path (comment ID: 5465159836).",
+    "item_4_gh669_middleware_pr": "FAIL — stalled 9d+, no fix PR. Loop blocked by GH #399 Day 57+.",
+    "item_5_step_9k_readiness": "DEFERRED — fresh PR count not checked this run. Run 113 mandate item."
+  },
+  "ideas_count": 5,
+  "ideas": [
+    "Step 9J @dependabot rebase trigger (2nd carry-forward)",
+    "Step 9K stale subconscious PR report",
+    "GH #669 middleware implementation sketch",
+    "Managed-agents telemetry step (Step 9L)",
+    "GH #684 SUPABASE_ACCESS_TOKEN comment"
+  ],
+  "debate_summary": {
+    "idea_1_step_9j_rebase": "SURVIVES -> WINNER (2nd carry-forward mandate; HIGH evidence; LOW risk; S effort; autonomous-executable precedent)",
+    "idea_2_step_9k": "WEAKENED -> Parking Lot (valid candidate, outranked by Idea 1; report-only S-effort; run 113 candidate)",
+    "idea_3_gh669_middleware": "KILLED (insufficient rigor; premature sketch; let loop handle when #399 resolved)"
+  },
+  "bonus_actions": [
+    "Posted comment on GH #684 with exact SUPABASE_ACCESS_TOKEN setup path (Railway + Supabase dashboard steps). Comment ID: 5465159836."
+  ],
+  "parking_lot": [
+    "Step 9K: stale subconscious PR report (run 113 candidate)",
+    "Step 9L: managed-agents telemetry step (after Step 9K)",
+    "GH #684 SUPABASE_ACCESS_TOKEN (human-only: set in Railway after comment)"
+  ],
+  "killed": [
+    "GH #669 middleware implementation sketch — insufficient rigor; let loop handle"
+  ],
+  "run_113_mandate": [
+    "Verify @dependabot rebase trigger fires in nightly-2026-08-30: grep 'triggered rebase' nightly log",
+    "Count: how many rebases triggered (<=5)? How many PRs checked?",
+    "After 24-48h: did any Dependabot PRs become clean + merge on next nightly?",
+    "GH #684: SUPABASE_ACCESS_TOKEN set after bonus comment (ID: 5465159836)?",
+    "Step 9K readiness: count open subconscious PRs — if >=3, Step 9K is run 113 winner",
+    "GH #669: any middleware fix PR from loop? (stalled 10d+)"
+  ]
+}

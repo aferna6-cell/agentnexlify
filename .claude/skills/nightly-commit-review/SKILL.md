@@ -394,21 +394,34 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
        `mcp__github__list_pull_requests` with state="open", base="main".
        Filter: keep only PRs where `user.login == "dependabot[bot]"`.
        If 0 Dependabot PRs found: log "Step 9J: 0 Dependabot PRs open — skip" and continue to step 10.
-    2. **For each Dependabot PR, check eligibility:**
+    2. **Initialize counters:** rebase_trigger_count = 0
+    3. **For each Dependabot PR, check eligibility:**
        a. CI status: `mcp__github__pull_request_read` for PR number — check `mergeable_state`.
-          If `mergeable_state != "clean"`: log "Step 9J: PR #{N} — CI not green ({state}) — skip" and skip.
+          - If `mergeable_state == "unknown"` (stale base — mergeability not yet computed):
+              * Call `mcp__github__list_issue_comments` (owner, repo, pr_number)
+              * Filter comments where (author == "dependabot[bot]" OR body contains "@dependabot rebase")
+                AND created_at > (now minus 48 hours)
+              * If any such comment found within 48h: log "Step 9J: PR #{N} — rebase already triggered <48h — skip" and skip.
+              * If none found (or all older than 48h) AND rebase_trigger_count < 5:
+                  - Post comment via `mcp__github__add_issue_comment`: body = "@dependabot rebase"
+                  - Increment rebase_trigger_count
+                  - Log: "Step 9J: triggered rebase on PR #{N} ({title})"
+              * If rebase_trigger_count >= 5: log "Step 9J: rebase cap reached (5) — stopping" and break loop.
+              * Skip this PR (will become clean after rebase + CI, merges on next nightly).
+          - If `mergeable_state != "clean"` (any other non-clean state):
+              log "Step 9J: PR #{N} — CI not green ({state}) — skip" and skip.
        b. Review requests: from PR read, check `requested_reviewers` array.
           If non-empty: log "Step 9J: PR #{N} — has review request — skip" and skip.
        c. Blocking labels: from PR read, check `labels` array.
           If labels contain "do-not-merge" or "hold": log "Step 9J: PR #{N} — blocked label — skip" and skip.
-    3. **Merge eligible PRs:**
+    4. **Merge eligible PRs:**
        For each PR passing all checks:
        `mcp__github__merge_pull_request` with pull_number={N}, merge_method="squash",
        commit_title="{PR title} (#{N})".
        On success: log "Step 9J: merged Dependabot PR #{N}"
        On failure: log "Step 9J: merge failed PR #{N} — {error}" and continue to next PR.
-    4. **Log result:**
-       Add to nightly report: "Step 9J: {N} Dependabot PRs checked, {M} merged, {K} skipped (CI/review/label)"
+    5. **Log result:**
+       Add to nightly report: "Step 9J: {N} Dependabot PRs checked, {M} merged, {K} skipped (CI/review/label), {R} rebase-triggered (unknown state)"
 10. Commit report: `docs(nightly): review YYYY-MM-DD [auto-nightly]`
 11. Push to main
 12. If any guardrail tripped (forbidden path, >5 files, >50 LOC, test-check failed) — abort fixes, file issue only, still write report
