@@ -120,6 +120,18 @@ run_gate "Agent OS engine (agent-service)" 1 sh -c "cd agent-service && npm run 
 # decision path and fails if anything the labels forbid is proposed or performed.
 # Safety only - accuracy is reported, never enforced. See docs/agent-action-eval.md.
 run_gate "agent action safety gate" 1 sh -c "cd agent-service && npm run eval:actions:gate --silent"
+# Routing experiment machinery (ml/routing): calibration cross-fitting, cascade
+# gate purity, leakage detectors and the routing/policy safety boundary. No
+# network and no trained artifacts needed. It does NOT train or score a model -
+# that is `python ml/routing/milestone6.py`, an experiment step deliberately kept
+# out of CI.
+#
+# Advisory (required=0) for one reason only: it imports numpy and scikit-learn,
+# which are experiment dependencies and are NOT in backend/requirements.txt. On a
+# checkout without them this gate reports "tool unavailable" rather than failing
+# a build for a dependency the product does not ship. Where they ARE installed it
+# runs and must pass - it is not advisory about correctness.
+run_gate "routing experiment unit tests" 0 python -m pytest ml/routing/tests -q
 run_gate "JS/TS test quality lint" 1 npm run lint:test-quality --silent
 run_gate "Python test quality lint" 1 python scripts/lint_python_test_quality.py
 run_gate "local Python test refs" 1 python scripts/check_test_local_refs.py

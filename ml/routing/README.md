@@ -62,3 +62,32 @@ run scored CV macro-F1 **0.998** against **0.70** on real validation data.
 **Confidence is uncalibrated.** It is recorded and its quality is measured
 (Brier, ECE, accuracy per bucket), because a router that abstains needs a
 confidence that ranks. Nothing here adjusts it — that is Milestone 6.
+
+
+---
+
+## Milestone 6 — calibration, cascades, selective routing
+
+Added 2026-08-29. Full write-up: `docs/ml-router-calibration.md`.
+
+| File | Purpose |
+|---|---|
+| `authoring/build_validation_v2.py` | Authors the 200-case validation split. Every case is a `case(...)` call carrying the argument that labels it and the routing boundary it stresses. |
+| `leakage.py` | Five-detector leakage report (exact, normalised, Jaccard, character n-gram, template family). Reports; never drops. |
+| `calibration.py` | Platt / isotonic / temperature / identity, cross-fitted. Selects the simplest method the data supports and rejects one that memorises its fold. |
+| `decision.py` | `RouterDecision` and the cascade engine. Raw and calibrated confidences stay in separate fields. |
+| `policy.py` | Risk/coverage, cost Pareto, low-evidence analysis, evidence-floor and abstention sweeps. |
+| `milestone6.py` | Driver. `--split validation` to iterate, `--split test` once at the end. |
+| `export_cascade.py` | Exports a cascade's decisions for end-to-end replay, including the abstention encoding. |
+| `tests/` | 24 tests over the above. |
+
+```bash
+python ml/routing/leakage.py
+python ml/routing/milestone6.py --split validation
+python -m pytest ml/routing/tests -q
+```
+
+The frozen split is measured **once**, at the end, with calibrators selected and
+fitted on validation. `milestone6.py --split test` refuses to fit anything: it
+loads the method chosen on validation, refits it on all of validation, and
+applies it.

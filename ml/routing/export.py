@@ -53,14 +53,16 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", choices=["tfidf", "embedding", "hybrid_tfidf", "hybrid_embedding"], required=True)
     ap.add_argument("--split", choices=["validation", "test"], default="test")
+    ap.add_argument("--validation-version", default=datasets.DEFAULT_VALIDATION, choices=["v1", "v2"])
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
 
-    split = datasets.load_validation() if args.split == "validation" else datasets.load_test()
     # The harness replays EVERY case in the dataset, including the `none`-labelled
     # ones the classifier is not scored on, so the table must cover them too or
     # those asks silently fall back to the shipped router mid-run.
-    raw = json.loads((datasets.VALIDATION_PATH if args.split == "validation" else datasets.TEST_PATH).read_text())
+    path = (datasets.VALIDATION_PATHS[args.validation_version] if args.split == "validation"
+            else datasets.TEST_PATH)
+    raw = json.loads(path.read_text())
     asks = [c["ask"] for c in raw["cases"]]
 
     if args.model in ("tfidf", "hybrid_tfidf"):

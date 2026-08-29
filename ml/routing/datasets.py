@@ -4,8 +4,9 @@ Dataset loading and leakage control for the routing experiment.
 Three splits, three different permissions:
 
   train       ml/routing/data/train-v1.jsonl        fit freely
-  validation  agent-service/evals/datasets/validation/validation-v1.json
+  validation  agent-service/evals/datasets/validation/validation-v2.json
                                                     select models, tune, inspect
+                                                    (v1 kept loadable as a regression check)
   test        agent-service/evals/datasets/action-eval-v1.json
                                                     measure once, at the end
 
@@ -14,10 +15,13 @@ scored against. It is loaded here read-only and only for the final comparison.
 Nothing in this module lets a fitting routine reach it: `load_test` is the one
 function that touches it and every trainer takes its data from `load_train`.
 
-Leakage is checked empirically rather than asserted. Two independent tests:
-exact match on normalised text, and near-duplicate match on token Jaccard
-similarity. Writing "I did not look at the test set" in a comment is not a
-control; a script that fails the build if an ask overlaps is.
+Leakage is checked empirically rather than asserted. Writing "I did not look at
+the test set" in a comment is not a control; a script that fails the build if an
+ask overlaps is. Two detectors live here — exact match on normalised text, and
+token Jaccard — and `ml/routing/leakage.py` adds three more (punctuation/case
+normalisation, character n-gram cosine, and template-family widening). Both are
+runnable: this pair is what the Milestone-5 numbers were produced under, so
+keeping it reproduces that audit exactly.
 """
 
 from __future__ import annotations
@@ -29,11 +33,18 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 TRAIN_PATH = Path(__file__).resolve().parent / "data" / "train-v1.jsonl"
-VALIDATION_PATH = REPO / "agent-service/evals/datasets/validation/validation-v1.json"
+VALIDATION_PATHS = {
+    "v1": REPO / "agent-service/evals/datasets/validation/validation-v1.json",
+    "v2": REPO / "agent-service/evals/datasets/validation/validation-v2.json",
+}
 TEST_PATH = REPO / "agent-service/evals/datasets/action-eval-v1.json"
 
 TRAIN_VERSION = "routing-train-v1"
-VALIDATION_VERSION = "action-eval-validation-v1"
+VALIDATION_VERSIONS = {"v1": "action-eval-validation-v1", "v2": "action-eval-validation-v2"}
+#: Milestone 6 selects models against v2. v1 is retained as a regression check:
+#: it is the split Milestones 4 and 5 were developed against, and it had been
+#: driven to ~97%, which is precisely why it can no longer discriminate.
+DEFAULT_VALIDATION = "v2"
 TEST_VERSION = "action-eval-v1"
 
 #: The eight routable departments. `none` is deliberately NOT a class: the
@@ -58,6 +69,10 @@ class Split:
     #: Used as the cross-validation grouping key so a template cannot appear in
     #: both a fit fold and a scoring fold.
     groups: list[str] | None = None
+    #: Per-case routing-boundary label, present on validation v2. Lets accuracy
+    #: be reported by difficulty instead of pooled into one number that hides
+    #: where the failures concentrate.
+    stress: list[str] | None = None
 
     def __len__(self) -> int:
         return len(self.asks)
@@ -89,11 +104,15 @@ def _load_eval_split(path: Path, name: str, version: str) -> Split:
         [c["ask"] for c in cases],
         [c["expected_department"] for c in cases],
         [c["id"] for c in cases],
+        stress=([c.get("stress") for c in cases] if any("stress" in c for c in cases) else None),
     )
 
 
-def load_validation() -> Split:
-    return _load_eval_split(VALIDATION_PATH, "validation", VALIDATION_VERSION)
+def load_validation(version: str = DEFAULT_VALIDATION) -> Split:
+    """The editable split. v2 by default; v1 remains loadable as a regression check."""
+    if version not in VALIDATION_PATHS:
+        raise ValueError(f"unknown validation version {version!r}; have {sorted(VALIDATION_PATHS)}")
+    return _load_eval_split(VALIDATION_PATHS[version], f"validation-{version}", VALIDATION_VERSIONS[version])
 
 
 def load_test() -> Split:
@@ -150,8 +169,16 @@ def find_overlaps(train: Split, other: Split, threshold: float = 0.8) -> list[Ov
     return found
 
 
-def leakage_report(threshold: float = 0.8) -> dict:
-    train, validation, test = load_train(), load_validation(), load_test()
+def leakage_report(threshold: float = 0.8, validation_version: str = DEFAULT_VALIDATION) -> dict:
+    """
+    The Milestone-5 two-detector check, kept for continuity.
+
+    `ml/routing/leakage.py` is the Milestone-6 report and adds three further
+    detectors (normalised, character n-gram, template family). This one is not
+    obsolete — it is the exact check the earlier results were produced under,
+    and keeping it runnable is what makes those results still auditable.
+    """
+    train, validation, test = load_train(), load_validation(validation_version), load_test()
     v = find_overlaps(train, validation, threshold)
     t = find_overlaps(train, test, threshold)
     return {

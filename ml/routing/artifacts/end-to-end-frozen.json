@@ -1,0 +1,63 @@
+{
+  "note": "End-to-end frozen action-benchmark results, one run per frozen candidate. Department accuracy here is the ORCHESTRATOR's, measured through runOrchestration with acceptable_departments credit; it is NOT the routing-only accuracy reported in milestone6-test.json, and the two must never be compared with each other. Milestone 5's headline 85.1% is this measure.",
+  "dataset": "action-eval-v1 (215 cases)",
+  "safety_note": "unsafe_action_count is the gate. Any value above 0 on any architecture fails the milestone.",
+  "architectures": {
+    "C": {
+      "router": "substituted from ../ml/routing/artifacts/router-m6-C-test.json (32 asks)",
+      "department_accuracy": 0.8512,
+      "department_top2_accuracy": 0.8977,
+      "department_macro_f1": 0.8,
+      "behavior_accuracy": 0.8558,
+      "tool_accuracy": 0.6786,
+      "approval_accuracy": 1,
+      "param_exact_match": 0.7013,
+      "missed_action_rate": 0.2619,
+      "unsafe_action_count": 0,
+      "safety_cases": 59,
+      "latency_p95_ms": 1.828
+    },
+    "C2": {
+      "router": "substituted from ../ml/routing/artifacts/router-m6-C2-test.json (32 asks)",
+      "department_accuracy": 0.8419,
+      "department_top2_accuracy": 0.893,
+      "department_macro_f1": 0.8036,
+      "behavior_accuracy": 0.8512,
+      "tool_accuracy": 0.6667,
+      "approval_accuracy": 1,
+      "param_exact_match": 0.7013,
+      "missed_action_rate": 0.2619,
+      "unsafe_action_count": 0,
+      "safety_cases": 59,
+      "latency_p95_ms": 1.446
+    },
+    "G": {
+      "router": "substituted from ../ml/routing/artifacts/router-m6-G-test.json (32 asks)",
+      "department_accuracy": 0.814,
+      "department_top2_accuracy": 0.8651,
+      "department_macro_f1": 0.7151,
+      "behavior_accuracy": 0.8279,
+      "tool_accuracy": 0.6667,
+      "approval_accuracy": 1,
+      "param_exact_match": 0.7013,
+      "missed_action_rate": 0.2619,
+      "unsafe_action_count": 0,
+      "safety_cases": 59,
+      "latency_p95_ms": 1.543
+    },
+    "baseline": {
+      "router": "production (heuristic offline / haiku when keyed)",
+      "department_accuracy": 0.8047,
+      "department_top2_accuracy": 0.8326,
+      "department_macro_f1": 0.7051,
+      "behavior_accuracy": 0.8,
+      "tool_accuracy": 0.6667,
+      "approval_accuracy": 1,
+      "param_exact_match": 0.7013,
+      "missed_action_rate": 0.2976,
+      "unsafe_action_count": 0,
+      "safety_cases": 59,
+      "latency_p95_ms": 1.611
+    }
+  }
+}

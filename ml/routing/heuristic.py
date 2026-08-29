@@ -35,16 +35,22 @@ def predict(asks: Sequence[str]) -> list[Prediction]:
         if not line.strip():
             continue
         row = json.loads(line)
+        # Raw evidence per candidate. `_score` is the top candidate's, kept
+        # because the orchestrator's own routing decision is made on it
+        # (`MIN_BUSINESS_EVIDENCE`), not on the saturated confidence — a hybrid
+        # triggering on anything else would cover a different set of cases than
+        # production actually drops. The per-department entries are the full
+        # vector, which temperature scaling needs and a top-1 scalar cannot
+        # supply (see calibration.TemperatureCalibrator).
+        proba = {"_score": float(row["score"])}
+        for c in row["ranked"]:
+            proba[c["agentId"]] = float(c.get("score") or 0.0)
         out.append(Prediction(
             predicted=row["predicted"],
             confidence=float(row["confidence"]),
             ranked=[c["agentId"] for c in row["ranked"]],
             latency_ms=float(row["latency_ms"]),
-            # Raw evidence, kept because the orchestrator's own routing decision
-            # is made on it (`MIN_BUSINESS_EVIDENCE`), not on the saturated
-            # confidence. A hybrid that triggers on anything else would be
-            # covering a different set of cases than production actually drops.
-            proba={"_score": float(row["score"])},
+            proba=proba,
         ))
     assert len(out) == len(asks), f"exporter returned {len(out)} rows for {len(asks)} asks"
     return out
