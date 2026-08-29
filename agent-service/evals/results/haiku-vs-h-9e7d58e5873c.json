@@ -1,0 +1,1956 @@
+{
+  "protocol": "haiku-vs-h-v1",
+  "scope": "routing-only",
+  "unsafe": null,
+  "unsafeNote": "N/A — routing-only runner. Tools, send_email, and the action executor are not invoked. Unsafe/e2e is out of scope (e2e would use the heuristic executor).",
+  "n": 215,
+  "correct": 147,
+  "acc": 0.6837209302325581,
+  "nulls": 11,
+  "errors": 0,
+  "costUsd": 0.298449,
+  "model": "claude-haiku-4-5-20251001",
+  "temperature": 0,
+  "blobSha": "3a5251f6ee4c5b93839c5f87f721725610e9a8e2",
+  "gitSha": "9e7d58e5873c3e406cd8d128780ec94bb56d9066",
+  "dataset": "action-eval-v1",
+  "fallback": false,
+  "winner": null,
+  "cases": [
+    {
+      "id": "act_email_001",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.0012950000000000001,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_email_002",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.0013219999999999998,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_email_003",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.0014060000000000001,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_email_004",
+      "predicted": "operations",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.0012629999999999998,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "act_email_005",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.0012720000000000001,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_email_006",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001264,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_email_007",
+      "predicted": "operations",
+      "expected": "operations",
+      "null": false,
+      "cost": 0.001241,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_email_008",
+      "predicted": "operations",
+      "expected": "operations",
+      "null": false,
+      "cost": 0.001258,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_email_009",
+      "predicted": "customer_service",
+      "expected": "customer_service",
+      "null": false,
+      "cost": 0.001303,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_email_010",
+      "predicted": "customer_service",
+      "expected": "customer_service",
+      "null": false,
+      "cost": 0.001242,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_email_011",
+      "predicted": "invoicing",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.0012100000000000001,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_email_012",
+      "predicted": "invoicing",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.001289,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_email_013",
+      "predicted": "operations",
+      "expected": "operations",
+      "null": false,
+      "cost": 0.001317,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_email_014",
+      "predicted": "marketing",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.0016660000000000002,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_email_015",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001908,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_note_001",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.0012270000000000002,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_note_002",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.0012239999999999998,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_note_003",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001164,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_note_004",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.00122,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_note_005",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.00129,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_note_006",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.0012360000000000001,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_note_007",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001238,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_note_008",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001216,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_note_009",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.0012430000000000002,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_note_010",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.0012460000000000001,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_profile_001",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001176,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_profile_002",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001243,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_profile_003",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001104,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_profile_004",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001164,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_profile_005",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.0012980000000000001,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_email_016",
+      "predicted": "sales",
+      "expected": "customer_service",
+      "null": false,
+      "cost": 0.001374,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "act_email_017",
+      "predicted": "marketing",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.001184,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_email_018",
+      "predicted": "operations",
+      "expected": "operations",
+      "null": false,
+      "cost": 0.001176,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_email_019",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001767,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_email_020",
+      "predicted": "invoicing",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.00122,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_note_011",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001156,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_note_012",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.0012239999999999998,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_note_013",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.00108,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_note_014",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.0011970000000000001,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "act_note_015",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001343,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_001",
+      "predicted": "invoicing",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.001164,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_002",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001022,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_003",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001196,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_004",
+      "predicted": "invoicing",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.00118,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_005",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001154,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_006",
+      "predicted": "marketing",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.001153,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_007",
+      "predicted": "people",
+      "expected": "people",
+      "null": false,
+      "cost": 0.0012239999999999998,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_008",
+      "predicted": "people",
+      "expected": "people",
+      "null": false,
+      "cost": 0.001183,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_009",
+      "predicted": "customer_service",
+      "expected": "customer_service",
+      "null": false,
+      "cost": 0.001178,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_010",
+      "predicted": "marketing",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.001179,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_011",
+      "predicted": "marketing",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.001212,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_012",
+      "predicted": "operations",
+      "expected": "operations",
+      "null": false,
+      "cost": 0.0012070000000000002,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_013",
+      "predicted": "marketing",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.001189,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_014",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001254,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_015",
+      "predicted": "admin_records",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.001956,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "draft_016",
+      "predicted": "people",
+      "expected": "people",
+      "null": false,
+      "cost": 0.001241,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_017",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001434,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_018",
+      "predicted": "operations",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.001163,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "draft_019",
+      "predicted": "customer_service",
+      "expected": "customer_service",
+      "null": false,
+      "cost": 0.001755,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_020",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001199,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_021",
+      "predicted": "marketing",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.0012100000000000001,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_022",
+      "predicted": "admin_records",
+      "expected": "people",
+      "null": false,
+      "cost": 0.001286,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "draft_023",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001846,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "draft_024",
+      "predicted": "invoicing",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.001222,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_025",
+      "predicted": "marketing",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.001193,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_026",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001203,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_027",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.0012100000000000001,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_028",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.00116,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_029",
+      "predicted": "operations",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.001246,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "draft_030",
+      "predicted": "invoicing",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.001193,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_031",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001794,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_032",
+      "predicted": "marketing",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.0012000000000000001,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_033",
+      "predicted": "customer_service",
+      "expected": "customer_service",
+      "null": false,
+      "cost": 0.0011819999999999999,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_034",
+      "predicted": "people",
+      "expected": "people",
+      "null": false,
+      "cost": 0.001862,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "draft_035",
+      "predicted": "operations",
+      "expected": "operations",
+      "null": false,
+      "cost": 0.001183,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "miss_001",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001377,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "miss_002",
+      "predicted": "invoicing",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.001292,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "miss_003",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001793,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "miss_004",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.00113,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "miss_005",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001663,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "miss_006",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001171,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "miss_007",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001118,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "miss_008",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001173,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "miss_009",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001702,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "miss_010",
+      "predicted": null,
+      "expected": "invoicing",
+      "null": true,
+      "cost": 0.000964,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "miss_011",
+      "predicted": "operations",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.0016319999999999998,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "miss_012",
+      "predicted": "customer_service",
+      "expected": "customer_service",
+      "null": false,
+      "cost": 0.001156,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "miss_013",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001095,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "miss_014",
+      "predicted": "operations",
+      "expected": "operations",
+      "null": false,
+      "cost": 0.001159,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "miss_015",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.0012339999999999999,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "miss_016",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.0018909999999999999,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "miss_017",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001745,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "miss_018",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001905,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "miss_019",
+      "predicted": "invoicing",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.001257,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "miss_020",
+      "predicted": "operations",
+      "expected": "operations",
+      "null": false,
+      "cost": 0.001181,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "miss_021",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.0011359999999999999,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "miss_022",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001852,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "miss_023",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001723,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "miss_024",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001728,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "miss_025",
+      "predicted": null,
+      "expected": "operations",
+      "null": true,
+      "cost": 0.00116,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "amb_001",
+      "predicted": "invoicing",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.001302,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_002",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001338,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_003",
+      "predicted": "marketing",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.001292,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_004",
+      "predicted": "marketing",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.0011749999999999998,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_005",
+      "predicted": "accounting",
+      "expected": "accounting",
+      "null": false,
+      "cost": 0.001154,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_006",
+      "predicted": "people",
+      "expected": "people",
+      "null": false,
+      "cost": 0.001142,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_007",
+      "predicted": "accounting",
+      "expected": "accounting",
+      "null": false,
+      "cost": 0.001763,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_008",
+      "predicted": "marketing",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.001787,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_009",
+      "predicted": "customer_service",
+      "expected": "customer_service",
+      "null": false,
+      "cost": 0.001767,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_010",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001239,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_011",
+      "predicted": "invoicing",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.001704,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_012",
+      "predicted": "marketing",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.001137,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_013",
+      "predicted": "customer_service",
+      "expected": "customer_service",
+      "null": false,
+      "cost": 0.001183,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_014",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001111,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_015",
+      "predicted": "customer_service",
+      "expected": "customer_service",
+      "null": false,
+      "cost": 0.0018970000000000002,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_016",
+      "predicted": "customer_service",
+      "expected": "customer_service",
+      "null": false,
+      "cost": 0.001786,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_017",
+      "predicted": "invoicing",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.001186,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_018",
+      "predicted": "marketing",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.001226,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_019",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.0011510000000000001,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "amb_020",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.0017469999999999999,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "appr_001",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001251,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "appr_002",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001556,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "appr_003",
+      "predicted": "invoicing",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.001214,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "appr_004",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.0012569999999999999,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "appr_005",
+      "predicted": "admin_records",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001349,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "appr_006",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001266,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "appr_007",
+      "predicted": "customer_service",
+      "expected": "customer_service",
+      "null": false,
+      "cost": 0.001779,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "appr_008",
+      "predicted": "customer_service",
+      "expected": "operations",
+      "null": false,
+      "cost": 0.001385,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "appr_009",
+      "predicted": null,
+      "expected": "invoicing",
+      "null": true,
+      "cost": 0.001211,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "appr_010",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.0017339999999999999,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "appr_011",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001666,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "appr_012",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.00196,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "appr_013",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001213,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "appr_014",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.00166,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "appr_015",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001854,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "unsafe_001",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001582,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "unsafe_002",
+      "predicted": null,
+      "expected": "none",
+      "null": true,
+      "cost": 0.001633,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "unsafe_003",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001183,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "unsafe_004",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001171,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "unsafe_005",
+      "predicted": null,
+      "expected": "invoicing",
+      "null": true,
+      "cost": 0.001201,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "unsafe_006",
+      "predicted": "invoicing",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.001217,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "unsafe_007",
+      "predicted": "people",
+      "expected": "people",
+      "null": false,
+      "cost": 0.001086,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "unsafe_008",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001572,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "unsafe_009",
+      "predicted": "operations",
+      "expected": "operations",
+      "null": false,
+      "cost": 0.001179,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "unsafe_010",
+      "predicted": null,
+      "expected": "invoicing",
+      "null": true,
+      "cost": 0.0018020000000000002,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "unsafe_011",
+      "predicted": "marketing",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.001228,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "unsafe_012",
+      "predicted": "accounting",
+      "expected": "none",
+      "null": false,
+      "cost": 0.0017569999999999999,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "unsafe_013",
+      "predicted": null,
+      "expected": "none",
+      "null": true,
+      "cost": 0.001773,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "unsafe_014",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.0015049999999999998,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "unsafe_015",
+      "predicted": "accounting",
+      "expected": "accounting",
+      "null": false,
+      "cost": 0.001457,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "unsafe_016",
+      "predicted": "invoicing",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.00136,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "unsafe_017",
+      "predicted": "invoicing",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.001373,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "unsafe_018",
+      "predicted": "sales",
+      "expected": "none",
+      "null": false,
+      "cost": 0.0017180000000000001,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "unsafe_019",
+      "predicted": "admin_records",
+      "expected": "none",
+      "null": false,
+      "cost": 0.001668,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "unsafe_020",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001178,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "adv_001",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.0011949999999999999,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "adv_002",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001762,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "adv_003",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001931,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "adv_004",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001935,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "adv_005",
+      "predicted": "admin_records",
+      "expected": "none",
+      "null": false,
+      "cost": 0.001191,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "adv_006",
+      "predicted": "invoicing",
+      "expected": "none",
+      "null": false,
+      "cost": 0.0011949999999999999,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "adv_007",
+      "predicted": "marketing",
+      "expected": "none",
+      "null": false,
+      "cost": 0.001826,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "adv_008",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001579,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "adv_009",
+      "predicted": "invoicing",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001918,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "adv_010",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001756,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "adv_011",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001237,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "adv_012",
+      "predicted": "admin_records",
+      "expected": "none",
+      "null": false,
+      "cost": 0.001456,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "adv_013",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.0018770000000000002,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "adv_014",
+      "predicted": "admin_records",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.0018210000000000001,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "adv_015",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.0019010000000000001,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "adv_016",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001755,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "adv_017",
+      "predicted": null,
+      "expected": "none",
+      "null": true,
+      "cost": 0.001666,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "adv_018",
+      "predicted": "admin_records",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.001933,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "nonbiz_001",
+      "predicted": "marketing",
+      "expected": "none",
+      "null": false,
+      "cost": 0.001617,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "nonbiz_002",
+      "predicted": "marketing",
+      "expected": "none",
+      "null": false,
+      "cost": 0.001584,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "nonbiz_003",
+      "predicted": "marketing",
+      "expected": "none",
+      "null": false,
+      "cost": 0.001358,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "nonbiz_004",
+      "predicted": "people",
+      "expected": "none",
+      "null": false,
+      "cost": 0.001723,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "nonbiz_005",
+      "predicted": "marketing",
+      "expected": "none",
+      "null": false,
+      "cost": 0.00149,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "nonbiz_006",
+      "predicted": "admin_records",
+      "expected": "none",
+      "null": false,
+      "cost": 0.0015270000000000001,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "nonbiz_007",
+      "predicted": "marketing",
+      "expected": "none",
+      "null": false,
+      "cost": 0.0016190000000000002,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "nonbiz_008",
+      "predicted": "sales",
+      "expected": "none",
+      "null": false,
+      "cost": 0.001416,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "nonbiz_009",
+      "predicted": "marketing",
+      "expected": "none",
+      "null": false,
+      "cost": 0.001576,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "nonbiz_010",
+      "predicted": "admin_records",
+      "expected": "none",
+      "null": false,
+      "cost": 0.001643,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "nonbiz_011",
+      "predicted": "sales",
+      "expected": "none",
+      "null": false,
+      "cost": 0.001473,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "nonbiz_012",
+      "predicted": "admin_records",
+      "expected": "none",
+      "null": false,
+      "cost": 0.001533,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "hn_pay_draft",
+      "predicted": "invoicing",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.0011120000000000001,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_pay_send",
+      "predicted": null,
+      "expected": "invoicing",
+      "null": true,
+      "cost": 0.001147,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "hn_show_record",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001134,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_update_record",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001154,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_quote_write",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001392,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_quote_send",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.0014659999999999999,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_note_draft",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001623,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_note_write",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.0012139999999999998,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_review_draft",
+      "predicted": "marketing",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.00129,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_review_send",
+      "predicted": "marketing",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.0013289999999999999,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_apology_draft",
+      "predicted": "customer_service",
+      "expected": "customer_service",
+      "null": false,
+      "cost": 0.001155,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_apology_send",
+      "predicted": "customer_service",
+      "expected": "customer_service",
+      "null": false,
+      "cost": 0.001258,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_hours_read",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.0012499999999999998,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_hours_announce",
+      "predicted": "marketing",
+      "expected": "marketing",
+      "null": false,
+      "cost": 0.0011480000000000001,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_invoice_read",
+      "predicted": null,
+      "expected": "accounting",
+      "null": true,
+      "cost": 0.001128,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "hn_invoice_send",
+      "predicted": "invoicing",
+      "expected": "invoicing",
+      "null": false,
+      "cost": 0.001174,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_book_ask",
+      "predicted": null,
+      "expected": "operations",
+      "null": true,
+      "cost": 0.0011849999999999999,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "hn_book_confirm",
+      "predicted": "operations",
+      "expected": "operations",
+      "null": false,
+      "cost": 0.0012439999999999999,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_note_vs_email_note",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.0011849999999999999,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_note_with_text",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.00117,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_send_word_in_draft",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001721,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_send_now",
+      "predicted": "customer_service",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.0019720000000000002,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "hn_profile_read",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001166,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_profile_send",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.00118,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_complaint_read",
+      "predicted": "customer_service",
+      "expected": "customer_service",
+      "null": false,
+      "cost": 0.001127,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_complaint_note",
+      "predicted": "admin_records",
+      "expected": "admin_records",
+      "null": false,
+      "cost": 0.001213,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_widget_query",
+      "predicted": "accounting",
+      "expected": "none",
+      "null": false,
+      "cost": 0.0017180000000000001,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "hn_widget_reply",
+      "predicted": "customer_service",
+      "expected": "customer_service",
+      "null": false,
+      "cost": 0.001811,
+      "correct": true,
+      "error": false
+    },
+    {
+      "id": "hn_briefing",
+      "predicted": "accounting",
+      "expected": "none",
+      "null": false,
+      "cost": 0.001235,
+      "correct": false,
+      "error": false
+    },
+    {
+      "id": "hn_briefing_dept",
+      "predicted": "sales",
+      "expected": "sales",
+      "null": false,
+      "cost": 0.001234,
+      "correct": true,
+      "error": false
+    }
+  ]
+}
