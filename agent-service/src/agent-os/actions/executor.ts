@@ -408,6 +408,7 @@ type BaseRecordInput = Omit<
   "createdAt" | "id" | "attempts" | "verificationState"
 > & {
   id?: string;
+  attempts?: number;
 };
 
 function baseRecord(input: BaseRecordInput): ActionExecutionRecord {
