@@ -1777,3 +1777,44 @@ verified against prod 2026-08-25. Same session (no migration needed):
 kb_articles salon-spa-faqs + plumber-hvac-faqs content roughly doubled (+10
 depth Q&As each, appended via UPDATE; content_tsv is a generated column so
 FTS reindexed automatically — verified with live tsquery probes).
+
+## Migration 195_os_tool_executions — os_tool_executions (NOT YET APPLIED)
+The Agent OS action layer's audit trail: one row per agent tool-execution
+attempt. Columns: client_id (NOT tenant_id, matching the os_* surface),
+agent_run_id FK->os_agent_runs (nullable — an execution can also be driven from
+an approval long after its run finished), engine_run_id text, agent_id, tool_id,
+risk_level smallint 0-3 (0 read-only | 1 internal mutation | 2 external
+communication | 3 financial/legal/destructive), mutating, requires_approval,
+approval_state (not_required|pending|approved|rejected), status
+(pending_approval|approved|running|succeeded|failed|verification_failed|denied|
+cancelled — 195 as applied; 'approved' on status is a collision, removed by
+196_os_tool_executions_status_no_approved), input/result/error jsonb (engine-sanitized — secret-looking keys
+redacted before they leave the process), verification_state
+(not_applicable|pending|passed|failed) + detail + verified_at, policy_reason,
+attempts, idempotency_key, effect jsonb (which port performed the side effect
+and whether it is durable), timestamps. Partial UNIQUE (client_id, tool_id,
+idempotency_key) WHERE idempotency_key IS NOT NULL for replay protection. RLS
+deny-public; reached through tenant_scope (os_tool_executions registered in
+_TENANT_COLUMN_OVERRIDES).
+
+DISTINCT from os_action_runs (mig 126), which is unchanged: that table records
+the channel handler fired when an owner approves a *deliverable* (send this
+drafted SMS). This one records an agent's own *tool* choice mid-run, with a risk
+level, schema-validated input, an approval gate and an independent verification
+result. Writers: backend/services/os_tool_executions.py (from the engine's
+/orchestrate record bundle) and backend/routers/os_tool_executions.py (approve /
+reject). Engine side: agent-service/src/agent-os/actions/. Design doc:
+docs/agent-os-action-layer.md.
+
+## Migration 196_os_tool_executions_status_no_approved — tighten status CHECK (NOT YET APPLIED)
+Follow-on to 195. Status must not include `approved` — that value lives only on
+`approval_state` (not_required|pending|approved|rejected). 196 remaps any
+existing `status='approved'` rows (`approval_state=pending` → `pending_approval`,
+else → `running`), drops `os_tool_executions_status_check`, and re-adds it
+without `approved`. Allowed status: pending_approval | running | succeeded |
+failed | verification_failed | denied | cancelled. Approvals queue keys off
+`status='pending_approval'` and/or `approval_state='pending'`.
+
+195 may already be applied on prod, so this is a CHECK tighten, not a rewrite of
+195 and not a table drop. Dual tables stay: os_action_runs (126) vs
+os_tool_executions (195).

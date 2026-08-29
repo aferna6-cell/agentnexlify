@@ -37,6 +37,10 @@ TENANT_DATA_TABLES: tuple[str, ...] = (
     "os_model_call_log",
     "os_routing_decision",
     "os_action_runs",
+    # Agent tool executions (migration 195): input/result payloads can carry a
+    # customer's email, subject line and note text, so they purge with the rest.
+    # Ordered before os_agent_runs, which it references.
+    "os_tool_executions",
     "os_outbound_log",
     "os_backlog_requests",
     "os_memory_entries",

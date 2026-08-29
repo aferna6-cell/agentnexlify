@@ -19,6 +19,18 @@ import type {
 } from "../agent-os/lib/providers/run-store.ts";
 import type { OwnerActions } from "../agent-os/lib/providers/owner-actions.ts";
 import type { SharedContext } from "../agent-os/types/agent.ts";
+import type {
+  ActionExecutionFilter,
+  ActionStore,
+} from "../agent-os/actions/store.ts";
+import type { ActionExecutionRecord, ActionExecutionStatus } from "../agent-os/actions/types.ts";
+import type {
+  AppendCustomerNoteInput,
+  CustomerNoteRecord,
+  CustomerNotesPort,
+  ToolPorts,
+} from "../agent-os/actions/ports.ts";
+import type { TenantToolPolicy, ToolPolicyProvider } from "../agent-os/actions/policy.ts";
 import { currentScope } from "./request-scope.ts";
 
 /** Returns the context FastAPI pre-loaded for this request's tenant. */
@@ -70,5 +82,64 @@ export class ScopedRunStore implements RunStore {
 export class ScopedOwnerActions implements OwnerActions {
   async tagAiVisibilityInterest(_userId: string): Promise<boolean> {
     return true;
+  }
+}
+
+/** Action executions go to the current request's collector, never a shared map. */
+export class ScopedActionStore implements ActionStore {
+  create(record: ActionExecutionRecord): Promise<ActionExecutionRecord> {
+    return currentScope().actions.store.create(record);
+  }
+  get(id: string): Promise<ActionExecutionRecord | null> {
+    return currentScope().actions.store.get(id);
+  }
+  update(id: string, patch: Partial<ActionExecutionRecord>): Promise<ActionExecutionRecord> {
+    return currentScope().actions.store.update(id, patch);
+  }
+  transition(
+    id: string,
+    from: ActionExecutionStatus[],
+    to: ActionExecutionStatus,
+    patch?: Partial<ActionExecutionRecord>,
+  ): Promise<ActionExecutionRecord | null> {
+    return currentScope().actions.store.transition(id, from, to, patch);
+  }
+  list(filter: ActionExecutionFilter): Promise<ActionExecutionRecord[]> {
+    return currentScope().actions.store.list(filter);
+  }
+  findByIdempotencyKey(accountId: string, toolId: string, key: string): Promise<ActionExecutionRecord | null> {
+    return currentScope().actions.store.findByIdempotencyKey(accountId, toolId, key);
+  }
+}
+
+/** Note writes go to the current request's collector for the data plane to apply. */
+export class ScopedCustomerNotesPort implements CustomerNotesPort {
+  get name(): string {
+    return currentScope().actions.notes.name;
+  }
+  get durable(): boolean {
+    return currentScope().actions.notes.durable;
+  }
+  append(input: AppendCustomerNoteInput): Promise<CustomerNoteRecord> {
+    return currentScope().actions.notes.append(input);
+  }
+  list(input: { accountId: string; customerId: string }): Promise<CustomerNoteRecord[]> {
+    return currentScope().actions.notes.list(input);
+  }
+}
+
+/** The full port surface, all request-scoped. */
+export const scopedToolPorts: ToolPorts = {
+  customerNotes: new ScopedCustomerNotesPort(),
+};
+
+/** The tenant's tool policy, as supplied by the data plane for this request. */
+export class ScopedToolPolicyProvider implements ToolPolicyProvider {
+  async load(accountId: string): Promise<TenantToolPolicy> {
+    const scope = currentScope();
+    if (accountId !== scope.accountId) {
+      throw new Error(`isolation breach: policy requested for ${accountId} but request scoped to ${scope.accountId}`);
+    }
+    return scope.actions.policy;
   }
 }

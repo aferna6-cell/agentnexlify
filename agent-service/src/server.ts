@@ -3,6 +3,8 @@
  *
  * Routes:
  *   GET  /health             -> 200 {"status":"ok"}
+ *   POST /orchestrate        -> one Agent OS turn (result + persistable record)
+ *   POST /actions/approve    -> execute an action the owner approved
  *   POST /agents/:name/run   -> RunResult JSON
  *
  * Request body for /agents/:name/run:
@@ -14,6 +16,9 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { runAgent } from './runner.ts';
 import { runOrchestration } from './agent-os-runtime/orchestrate.ts';
+import { runApprovedAction, PendingExecutionSchema } from './agent-os-runtime/approve-action.ts';
+import type { TenantToolPolicy } from './agent-os/actions/policy.ts';
+import type { CustomerNoteRecord } from './agent-os/actions/ports.ts';
 import { isTokenAuthorized } from './auth.ts';
 import type { SharedContext } from './agent-os/types/agent.ts';
 
@@ -81,7 +86,13 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
     // agent-service never touches a database.
     if (req.method === 'POST' && req.url === '/orchestrate') {
       const raw = await readBody(req);
-      let body: { accountId?: unknown; ask?: unknown; context?: unknown; forceAgentId?: unknown };
+      let body: {
+        accountId?: unknown;
+        ask?: unknown;
+        context?: unknown;
+        forceAgentId?: unknown;
+        toolPolicy?: unknown;
+      };
       try {
         body = JSON.parse(raw) as typeof body;
       } catch {
@@ -104,11 +115,72 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
         json(res, 400, { error: 'forceAgentId must be a string when provided' });
         return;
       }
+      if (body.toolPolicy !== undefined && (typeof body.toolPolicy !== 'object' || body.toolPolicy === null)) {
+        json(res, 400, { error: 'toolPolicy must be an object when provided' });
+        return;
+      }
       const out = await runOrchestration({
         accountId: body.accountId,
         ask: body.ask,
         context: body.context as SharedContext,
         forceAgentId: body.forceAgentId,
+        toolPolicy: body.toolPolicy as TenantToolPolicy | undefined,
+      });
+      json(res, 200, out);
+      return;
+    }
+
+    // Action approval. The data plane owns the durable execution row and has
+    // already decided (with a conditional UPDATE) that THIS call is the one that
+    // runs; the engine executes it through the same executor an agent uses, so
+    // policy, verification and the audit record behave identically.
+    if (req.method === 'POST' && req.url === '/actions/approve') {
+      const raw = await readBody(req);
+      let body: {
+        accountId?: unknown;
+        execution?: unknown;
+        context?: unknown;
+        approvedBy?: unknown;
+        toolPolicy?: unknown;
+        existingNotes?: unknown;
+      };
+      try {
+        body = JSON.parse(raw) as typeof body;
+      } catch {
+        json(res, 400, { error: 'invalid JSON body' });
+        return;
+      }
+      if (typeof body.accountId !== 'string' || !body.accountId.trim()) {
+        json(res, 400, { error: 'accountId must be a non-empty string' });
+        return;
+      }
+      if (typeof body.approvedBy !== 'string' || !body.approvedBy.trim()) {
+        json(res, 400, { error: 'approvedBy must be a non-empty string' });
+        return;
+      }
+      if (typeof body.context !== 'object' || body.context === null) {
+        json(res, 400, { error: 'context must be the tenant SharedContext object' });
+        return;
+      }
+      const parsed = PendingExecutionSchema.safeParse(body.execution);
+      if (!parsed.success) {
+        json(res, 400, {
+          error: 'execution is not a valid stored action execution',
+          detail: parsed.error.issues.map((i) => `${i.path.join('.') || 'execution'}: ${i.message}`),
+        });
+        return;
+      }
+      if (parsed.data.accountId !== body.accountId) {
+        json(res, 403, { error: 'execution belongs to another account' });
+        return;
+      }
+      const out = await runApprovedAction({
+        accountId: body.accountId,
+        execution: parsed.data,
+        context: body.context as SharedContext,
+        approvedBy: body.approvedBy,
+        toolPolicy: (body.toolPolicy ?? undefined) as TenantToolPolicy | undefined,
+        existingNotes: (body.existingNotes ?? undefined) as CustomerNoteRecord[] | undefined,
       });
       json(res, 200, out);
       return;

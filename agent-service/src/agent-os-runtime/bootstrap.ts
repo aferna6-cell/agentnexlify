@@ -6,7 +6,17 @@
 import { setSharedContextProvider } from "../agent-os/lib/providers/shared-context.ts";
 import { setRunStore } from "../agent-os/lib/providers/run-store.ts";
 import { setOwnerActions } from "../agent-os/lib/providers/owner-actions.ts";
-import { ScopedSharedContextProvider, ScopedRunStore, ScopedOwnerActions } from "./scoped-providers.ts";
+import { setActionStore } from "../agent-os/actions/store.ts";
+import { setToolPorts } from "../agent-os/actions/ports.ts";
+import { setToolPolicyProvider } from "../agent-os/actions/policy.ts";
+import {
+  ScopedSharedContextProvider,
+  ScopedRunStore,
+  ScopedOwnerActions,
+  ScopedActionStore,
+  ScopedToolPolicyProvider,
+  scopedToolPorts,
+} from "./scoped-providers.ts";
 
 let registered = false;
 
@@ -15,5 +25,8 @@ export function registerAgentOsProviders(): void {
   setSharedContextProvider(new ScopedSharedContextProvider());
   setRunStore(new ScopedRunStore());
   setOwnerActions(new ScopedOwnerActions());
+  setActionStore(new ScopedActionStore());
+  setToolPorts(scopedToolPorts);
+  setToolPolicyProvider(new ScopedToolPolicyProvider());
   registered = true;
 }

@@ -20,7 +20,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from backend.services import usage_meter
+from backend.services import os_tool_executions, usage_meter
 from backend.services.os_outbound_guard import apply_outbound_guard
 from backend.services.tenant_scope import tenant_table
 
@@ -442,6 +442,21 @@ def persist_orchestration(
         _persist_telemetry(db, client_id, agent_run_id, record)
     except Exception:
         logger.warning("agent_os_bridge: telemetry persist failed", exc_info=True)
+
+    # Action layer: persist the turn's tool executions (the audit trail) and
+    # apply the internal writes they made. L0/L1 is best-effort like telemetry.
+    # L2+ is fail-closed — a missing audit row must not leave an action queued
+    # or treated as sent.
+    try:
+        os_tool_executions.persist_tool_executions(
+            db, client_id, agent_run_id, record
+        )
+    except os_tool_executions.ToolExecutionAuditError:
+        raise
+    except Exception:
+        logger.warning(
+            "agent_os_bridge: tool execution persist failed", exc_info=True
+        )
 
     tenant_table(db, "os_threads", client_id).update({"updated_at": _now()}).eq(
         "id", thread_id
