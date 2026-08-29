@@ -1,0 +1,12 @@
+{
+  "n_authored": 208,
+  "n_kept": 208,
+  "n_dropped": 0,
+  "drop_reasons": {},
+  "closed_templates": [],
+  "closed_pairs": [],
+  "hits_by_detector": {},
+  "drop_hits_by_ref_split": {},
+  "leftover_near_duplicates": [],
+  "example_drops": []
+}
