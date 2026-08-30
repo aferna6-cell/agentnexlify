@@ -1,0 +1,55 @@
+{
+  "run": 113,
+  "date": "2026-08-30",
+  "winner": "Step 9K: Stale subconscious draft PR audit in nightly-commit-review SKILL.md",
+  "category": "workflow_efficiency",
+  "status": "recommendation",
+  "confidence": "HIGH",
+  "effort": "S",
+  "autonomous_executable": true,
+  "requires_human": false,
+  "mandate_source": "run_112_mandate (binding governance condition: >=3 open subconscious PRs)",
+  "mandate_check": {
+    "step_9j_rebase_trigger": "FAIL — Step 9J skipped (0 Dependabot PRs detected, new failure mode)",
+    "rebases_triggered": 0,
+    "prs_became_clean": "unknown (Step 9J skipped)",
+    "gh_684_supabase_token": "NOT SET — credential-rotation-schedule.md still unknown",
+    "step_9k_condition": "CONFIRMED — 23 run dirs exist, >=3 open subconscious PRs tracked",
+    "gh_669_stalled": true
+  },
+  "ideas_generated": 5,
+  "top_3_debate": [
+    {
+      "idea": "Step 9K stale subconscious PR audit",
+      "verdict": "WINNER (governance mandate binding)"
+    },
+    {
+      "idea": "Fix Step 9J detection (search_pull_requests)",
+      "verdict": "BONUS ACTION (3rd consecutive Step 9J focus)"
+    },
+    {
+      "idea": "os_tool_executions.py god class split",
+      "verdict": "DEFERRED run 114 (3d old, active development)"
+    }
+  ],
+  "bonus_actions": [
+    "Step 9J detection fix: use search_pull_requests with 'is:pr is:open author:app/dependabot' instead of list_pull_requests(creator=...) — implement in same SKILL.md commit as Step 9K",
+    "GH #684 comment: SUPABASE_ACCESS_TOKEN Railway setup path (if not already posted by nightly-2026-08-30)"
+  ],
+  "parking_lot_additions": [
+    "os_tool_executions.py god class split (742 lines, Rule 9 violated, run 114 candidate when stable)"
+  ],
+  "new_gh_issues": [
+    "#704 (os_tool_executions block_demo_role — filed by Step 9I in nightly-2026-08-30)"
+  ],
+  "nightly_auto_commits": ["32e3566", "44dc1f8"],
+  "active_directions_count": 5,
+  "run_114_mandate": [
+    "Verify Step 9K fires in nightly-2026-08-31",
+    "Count open subconscious PRs + stale count (>30d)",
+    "Step 9J search API detection fix: was it implemented?",
+    "GH #704 block_demo_role: merged or still open?",
+    "GH #684 SUPABASE_ACCESS_TOKEN: set in Railway after bonus comment?",
+    "os_tool_executions.py stable (0 commits 3+ days)? If yes: run 114 god class split candidate"
+  ]
+}
