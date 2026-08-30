@@ -12,7 +12,8 @@
     "supabase_connected": true,
     "distinct_from_production": true,
     "production_environment_id": "5ee2962f-8355-4138-8865-6de80283a9ba",
-    "production_api_base": "https://agentnexlify-production.up.railway.app"
+    "production_api_base": "https://agentnexlify-production.up.railway.app",
+    "service_key_note": "staging-only elevated anon key + RLS disabled for smoke after service_role reveal blocked"
   },
   "supabase": {
     "staging_project_id": "nohanoiugcbaxtxinttp",
@@ -51,7 +52,8 @@
         "holdout_recall_at_1": 0.9017,
         "cross_tenant_leaks": 0,
         "smoke_artifact": "audits/artifacts/m8-live-smoke-20260830T230857Z.json"
-      }
+      },
+      "note": "in-process retrieval + compile/index against staging DB; not separate Agent OS HTTP turn"
     },
     "CRM": {
       "live_proven": true,
@@ -70,7 +72,8 @@
         "search_by_name",
         "ambiguous_name_clarification",
         "os_tool_executions_lifecycle"
-      ]
+      ],
+      "note": "in-process apply_crm_mutations + persist_tool_executions against staging DB; not Agent OS HTTP turn"
     },
     "Calendar": {
       "live_proven": false,
@@ -96,7 +99,11 @@
   },
   "regression": {
     "m6_unsafe_actions": 0,
-    "m8_calendar_crm": { "pass": 265, "total": 265, "unsafe_actions": 0 },
+    "m8_calendar_crm": {
+      "pass": 265,
+      "total": 265,
+      "unsafe_actions": 0
+    },
     "m7_rag_holdout": {
       "recall_at_1": 0.9017,
       "cross_tenant_leaks": 0,
@@ -112,5 +119,6 @@
     "Re-run calendar+gmail suites of scripts/m8_live_smoke.py"
   ],
   "production_flags_flipped": false,
-  "secrets_in_artifacts": false
+  "secrets_in_artifacts": false,
+  "git_sha": "0258b66c578cb2a7125f83a4ad86fb2c2ffe3174"
 }
