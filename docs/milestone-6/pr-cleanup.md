@@ -14,6 +14,9 @@
 | #702 | OPEN draft | Measurement experiment (in-memory send/L2). Research-only. |
 | #703 | OPEN draft | Measurement experiment (claim-then-execute FakeGmail). Useful as evidence; production contracts already on main via #695/#699/#700. |
 
+Disposition comments posted on #693, #698, #701, #702, #703 (2026-08-30).
+Branches were not deleted.
+
 Merged PR descriptions that still say "do not merge" should be read with this
 post-merge clarification: those notes applied to the **research** branch, not
 to the already-merged slices (#694–#700).
