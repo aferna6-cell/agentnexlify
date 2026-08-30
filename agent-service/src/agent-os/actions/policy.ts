@@ -23,6 +23,7 @@ import {
   SEND_EMAIL_TOOL_ID,
   sendEmailEnabled,
 } from "./flags.ts";
+import { mayExecuteEmailSend } from "./communication_capabilities.ts";
 
 /**
  * The only tool facts policy needs. Keeping this narrow means policy never
@@ -125,19 +126,22 @@ export function evaluateActionPolicy(
   const riskLevel = tool.riskLevel;
 
   if (tool.id === SEND_EMAIL_TOOL_ID) {
+    // Level-2 tools keep requiresApproval=true even when denied, so audit rows
+    // and the safety gate reflect the tool's inherent risk, not the deny reason.
+    const sendRequiresApproval = tool.requiresApproval;
     if (!sendEmailEnabled()) {
       return {
         decision: "deny",
         riskLevel,
-        requiresApproval: false,
+        requiresApproval: sendRequiresApproval,
         reason: "send_email is disabled (SEND_EMAIL_ENABLED defaults off)",
       };
     }
-    if (context.agentId !== SALES_DEPARTMENT) {
+    if (!mayExecuteEmailSend(context.agentId ?? "")) {
       return {
         decision: "deny",
         riskLevel,
-        requiresApproval: false,
+        requiresApproval: sendRequiresApproval,
         reason: "send_email is only available to the Sales department",
       };
     }

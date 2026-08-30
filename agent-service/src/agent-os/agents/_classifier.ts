@@ -14,33 +14,92 @@
 
 import { registry } from "./_registry.ts";
 import { extractParams } from "./_extract.ts";
+import { readAskIntent } from "./_intent.ts";
+import { departmentSemanticScore, type DepartmentAgent } from "./_department.ts";
 import { complete, isModelAvailable, ModelUnavailableError } from "../lib/anthropic.ts";
 
 export interface Candidate {
   agentId: string;
   confidence: number;
+  /**
+   * Raw evidence score, before it is squashed into a confidence.
+   *
+   * The orchestrator's ambiguity test needs this. `confidence` saturates
+   * (`score/(score+2)`), so the same one-point difference in evidence shows up
+   * as 0.17 between weak candidates and 0.02 between strong ones. Testing
+   * closeness on the saturated value therefore calls two strong, clearly
+   * separated candidates "ambiguous" purely because they both scored well.
+   * Present for the heuristic classifier; absent for Haiku, which returns
+   * calibrated probabilities and no underlying score.
+   */
+  score?: number;
 }
 
 export interface Classification {
-  classifier: "haiku" | "heuristic";
+  classifier: "haiku" | "heuristic" | "ml";
   candidates: Candidate[];
   params: Record<string, unknown>;
 }
 
+/**
+ * A pluggable router, for benchmarking a candidate against the shipped one.
+ *
+ * This is an experiment seam, not a deployment. It exists so the action
+ * benchmark can be replayed end to end with a different router and the
+ * DOWNSTREAM effect measured — a router that improves department accuracy while
+ * lowering tool accuracy has not improved anything, and there is no way to see
+ * that without running the whole pipeline behind it.
+ *
+ * Registering a provider changes routing only. It cannot reach approval,
+ * risk level, tool execution, tenant scope or policy: those are decided by the
+ * action executor, which never consults this. A model does not get a vote on
+ * whether it is allowed to act.
+ */
+export type RoutingProvider = (ask: string) => Candidate[] | null;
+
+let routingProvider: RoutingProvider | null = null;
+
+export function setRoutingProvider(provider: RoutingProvider): void {
+  routingProvider = provider;
+}
+
+export function resetRoutingProvider(): void {
+  routingProvider = null;
+}
+
+export function hasRoutingProvider(): boolean {
+  return routingProvider !== null;
+}
+
 // --- Heuristic -------------------------------------------------------------
 
+/**
+ * Complaint SENTIMENT, matching `detectComplaint` in the orchestrator. "Refund"
+ * is a financial subject, not an emotion: an owner instructing one is doing
+ * billing work, and scoring it as a complaint sent that work to the wrong
+ * department from both places this test is made.
+ */
 function complaintLanguage(ask: string): boolean {
-  return /(furious|angry|upset|unhappy|disappointed|terrible|worst|ruined|scratch|damaged|refund|complaint|complained)/i.test(ask);
+  return /(furious|angry|upset|unhappy|disappointed|terrible|worst|ruined|scratch|damaged|complaint|complained)/i.test(ask);
 }
 
 export function classifyHeuristic(ask: string): Classification {
   const a = ask.toLowerCase();
+  // What the owner wants done, independent of the nouns they used. Scored
+  // alongside the keyword surface rather than instead of it: the keywords
+  // encode real product knowledge, they just cannot reach a department for a
+  // capability none of its skills happen to describe, and they rank a noun
+  // above a task.
+  const intent = readAskIntent(ask);
+
   // Score every routable agent first (boosts may apply even to a 0-score agent),
   // then filter to positives.
   const scored = registry.routable().map((agent) => {
     let score = 0;
     for (const kw of agent.keywords) if (a.includes(kw.toLowerCase())) score += 1;
     for (const sig of agent.strong_signals) if (a.includes(sig.toLowerCase())) score += 3;
+    const spec = (agent as Partial<DepartmentAgent>).__department;
+    if (spec) score += departmentSemanticScore(spec, intent);
     return { agentId: agent.agent_id, score };
   });
 
@@ -91,7 +150,11 @@ export function classifyHeuristic(ask: string): Classification {
   const candidates = scored
     .filter((c) => c.score > 0)
     .sort((x, y) => y.score - x.score || x.agentId.localeCompare(y.agentId))
-    .map((c) => ({ agentId: c.agentId, confidence: Number((c.score / (c.score + 2)).toFixed(3)) }));
+    .map((c) => ({
+      agentId: c.agentId,
+      confidence: Number((c.score / (c.score + 2)).toFixed(3)),
+      score: c.score,
+    }));
 
   return { classifier: "heuristic", candidates, params: extractParams(ask) };
 }
@@ -194,6 +257,16 @@ function clamp(n: number): number {
  * fallback-was-used, never a deliberate shortcut.
  */
 export async function classify(ask: string, runId?: string): Promise<Classification> {
+  // A registered experiment router wins outright, so a benchmark run measures
+  // that router rather than a blend of it and the shipped one. Returning null
+  // means "I have nothing for this ask" and falls through as normal.
+  if (routingProvider) {
+    const candidates = routingProvider(ask);
+    if (candidates && candidates.length > 0) {
+      return { classifier: "ml", candidates, params: extractParams(ask) };
+    }
+  }
+
   const viaHaiku = await classifyWithHaiku(ask, runId);
   if (viaHaiku && viaHaiku.candidates.length > 0) return viaHaiku;
   return classifyHeuristic(ask);
