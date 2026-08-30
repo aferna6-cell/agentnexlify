@@ -161,3 +161,74 @@ def test_wrong_tenant_event_not_found():
     assert applied is False
     assert detail == "event_not_found"
     assert row is None
+
+
+def test_persist_applies_crm_bundle(monkeypatch):
+    """Collecting CRM mutations reach apply_crm_mutations via persist."""
+    from backend.services import os_tool_executions as persist_svc
+    from backend.tests.fake_supabase_store import FakeSupabase
+
+    monkeypatch.setenv("CRM_ACTIONS_ENABLED", "1")
+    db = FakeSupabase(
+        {
+            "os_tool_executions": [],
+            "leads": [
+                {
+                    "id": "lead_1",
+                    "client_id": CLIENT,
+                    "name": "Ada",
+                    "email": "ada@ex.com",
+                    "phone": "555-0100",
+                    "status": "new",
+                    "notes": None,
+                }
+            ],
+            "pipeline_stages": [],
+        }
+    )
+    record = {
+        "toolExecutions": [
+            {
+                "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "accountId": CLIENT,
+                "toolId": "update_customer",
+                "riskLevel": 1,
+                "mutating": True,
+                "requiresApproval": False,
+                "approvalState": "not_required",
+                "status": "succeeded",
+                "input": {"customer_id": "lead_1", "fields": {"phone": "555-9999"}},
+                "result": {"customerId": "lead_1"},
+                "verificationState": "passed",
+                "attempts": 1,
+                "createdAt": "2026-08-30T12:00:00Z",
+            }
+        ],
+        "customers": [
+            {
+                "id": "lead_1",
+                "_op": "update",
+                "fields": {"phone": "555-9999"},
+                "name": "Ada",
+                "email": "ada@ex.com",
+                "phone": "555-9999",
+                "status": "new",
+            }
+        ],
+    }
+    persist_svc.persist_tool_executions(db, CLIENT, None, record)
+    lead = db.rows("leads")[0]
+    assert lead["phone"] == "555-9999"
+    assert lead["email"] == "ada@ex.com"
+    assert lead["name"] == "Ada"
+
+
+def test_calendar_busy_fields_fail_closed_without_google_or_appointments():
+    from backend.services import agent_os_bridge
+
+    with patch(
+        "backend.services.google_calendar.get_integration", return_value=None
+    ):
+        out = agent_os_bridge._calendar_busy_fields(CLIENT, [])
+    assert out["calendarBusy"] == []
+    assert "not connected" in (out["calendarAvailabilityError"] or "")

@@ -375,6 +375,16 @@ def _calendar_busy_fields(client_id: str, appts: list) -> dict:
 
     try:
         if not get_integration(client_id):
+            # Appointments-only is honest when we have local busy; empty with no
+            # Google must not invent "all free".
+            if not busy:
+                return {
+                    "calendarBusy": [],
+                    "calendarAvailabilityError": (
+                        "calendar availability could not be verified: "
+                        "google calendar not connected"
+                    ),
+                }
             return {"calendarBusy": busy, "calendarAvailabilityError": None}
         now = datetime.now(timezone.utc)
         google_busy = get_busy_times(client_id, now, now + timedelta(days=7))

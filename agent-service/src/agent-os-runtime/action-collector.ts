@@ -185,19 +185,6 @@ export class CollectingCalendarPort implements CalendarPort {
     return this.inner;
   }
 
-  /** Seed Google/appointment busy blocks from SharedContext. */
-  seedAvailability(input: {
-    busy?: { start: string; end: string }[];
-    error?: string | null;
-  }): void {
-    this.availabilitySeeded = true;
-    this.availabilityError = input.error ?? null;
-    if (input.busy?.length) {
-      // Group by account is handled per-query; seed under a wildcard via memory API
-      // after orchestrate knows accountId — callers use seedBusyForAccount.
-    }
-  }
-
   seedBusyForAccount(
     accountId: string,
     busy: { start: string; end: string }[],

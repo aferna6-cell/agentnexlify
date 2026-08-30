@@ -767,6 +767,112 @@ def test_a_non_owner_cannot_read_recipient_subject_or_body_on_list_or_get():
     assert one.json()["input"] == {"redacted": True}
 
 
+def test_calendar_l2_approve_bypasses_engine_and_runs_data_plane(monkeypatch):
+    """Invite create/cancel must not go through Collecting on approve."""
+    monkeypatch.setenv("CALENDAR_ACTIONS_ENABLED", "1")
+    db = FakeSupabase(
+        {
+            "os_tool_executions": [
+                {
+                    "id": EXEC_ID,
+                    "client_id": CLIENT,
+                    "agent_id": "operations",
+                    "tool_id": "cancel_calendar_event",
+                    "status": "pending_approval",
+                    "approval_state": "pending",
+                    "risk_level": 2,
+                    "mutating": True,
+                    "requires_approval": True,
+                    "input": {"event_id": "appt_1"},
+                    "policy_reason": "level 2 requires approval",
+                    "attempts": 0,
+                    "created_at": "2026-08-30T12:00:00Z",
+                }
+            ],
+            "leads": [],
+        }
+    )
+    client = _client()
+    engine_calls = []
+
+    def _engine(*_a, **_k):
+        engine_calls.append(1)
+        raise AssertionError("calendar L2 must not call the engine Collecting path")
+
+    try:
+        with patch.object(router_mod, "get_service_supabase", return_value=db), patch.object(
+            router_mod.agent_sdk_client, "approve_action_sync", side_effect=_engine
+        ), patch.object(
+            router_mod.os_calendar_crm,
+            "run_calendar_l2",
+            return_value={
+                "executed": True,
+                "refused": False,
+                "unknown": False,
+                "verified": True,
+                "reason": "cancelled",
+                "result": {"id": "appt_1", "google_event_id": "g_1"},
+            },
+        ) as run_l2:
+            resp = client.post(f"/api/v1/os/tool-executions/{EXEC_ID}/approve")
+            # second approve is idempotent — no second provider call
+            second = client.post(f"/api/v1/os/tool-executions/{EXEC_ID}/approve")
+    finally:
+        _teardown()
+
+    assert resp.status_code == 200
+    assert resp.json()["already_decided"] is False
+    assert resp.json()["execution"]["status"] == "succeeded"
+    assert second.json()["already_decided"] is True
+    assert engine_calls == []
+    assert run_l2.call_count == 1
+
+
+def test_calendar_l2_approve_refuses_when_flag_off_without_claim(monkeypatch):
+    monkeypatch.setenv("CALENDAR_ACTIONS_ENABLED", "0")
+    db = FakeSupabase(
+        {
+            "os_tool_executions": [
+                {
+                    "id": EXEC_ID,
+                    "client_id": CLIENT,
+                    "agent_id": "operations",
+                    "tool_id": "create_calendar_event",
+                    "status": "pending_approval",
+                    "approval_state": "pending",
+                    "risk_level": 2,
+                    "mutating": True,
+                    "requires_approval": True,
+                    "input": {
+                        "start": "2026-09-01T15:00:00Z",
+                        "end": "2026-09-01T16:00:00Z",
+                        "title": "Oil change",
+                        "attendees": [{"email": "a@ex.com"}],
+                        "send_invitations": True,
+                    },
+                    "attempts": 0,
+                    "created_at": "2026-08-30T12:00:00Z",
+                }
+            ],
+            "leads": [],
+        }
+    )
+    client = _client()
+    try:
+        with patch.object(router_mod, "get_service_supabase", return_value=db), patch.object(
+            router_mod.os_calendar_crm,
+            "run_calendar_l2",
+            side_effect=AssertionError("must refuse before claim"),
+        ):
+            resp = client.post(f"/api/v1/os/tool-executions/{EXEC_ID}/approve")
+    finally:
+        _teardown()
+
+    assert resp.status_code == 403
+    row = db.rows("os_tool_executions")[0]
+    assert row["status"] == "pending_approval"
+
+
 def test_an_owner_can_still_read_tool_execution_input_for_approval():
     db = _pending_db()
     client = _client(OWNER_CLAIMS)
