@@ -20,9 +20,24 @@
  * channel, so the plain-text/no_markdown rule still holds on the real output).
  */
 
-import { defineAgent, PLAIN_TEXT_CHANNELS, type Agent, type AgentBucket, type AgentChannel } from "./_schema.ts";
-import { readAskIntent, type AskIntent, type SubjectType, type TaskIntent } from "./_intent.ts";
-import type { AgentOutput, AgentRunArgs, SharedContext } from "../types/agent.ts";
+import {
+  defineAgent,
+  PLAIN_TEXT_CHANNELS,
+  type Agent,
+  type AgentBucket,
+  type AgentChannel,
+} from "./_schema.ts";
+import {
+  readAskIntent,
+  type AskIntent,
+  type SubjectType,
+  type TaskIntent,
+} from "./_intent.ts";
+import type {
+  AgentOutput,
+  AgentRunArgs,
+  SharedContext,
+} from "../types/agent.ts";
 import { executeAction } from "../actions/executor.ts";
 import { hasActionStore } from "../actions/store.ts";
 import { hasToolPorts } from "../actions/ports.ts";
@@ -172,15 +187,22 @@ export interface DepartmentSpec {
     intent: AskIntent;
     output: AgentOutput;
   }) => DepartmentActionRequest | undefined;
-  examples: { owner_ask: string; expected_route: string; expected_output_excerpt: string }[];
+  examples: {
+    owner_ask: string;
+    expected_route: string;
+    expected_output_excerpt: string;
+  }[];
 }
 
 function scoreSkill(ask: string, skill: DepartmentSkill): number {
   const a = ask.toLowerCase();
   let score = 0;
-  for (const kw of skill.agent.keywords) if (a.includes(kw.toLowerCase())) score += 1;
-  for (const sig of skill.agent.strong_signals) if (a.includes(sig.toLowerCase())) score += 3;
-  for (const kw of skill.extraKeywords ?? []) if (a.includes(kw.toLowerCase())) score += 2;
+  for (const kw of skill.agent.keywords)
+    if (a.includes(kw.toLowerCase())) score += 1;
+  for (const sig of skill.agent.strong_signals)
+    if (a.includes(sig.toLowerCase())) score += 3;
+  for (const kw of skill.extraKeywords ?? [])
+    if (a.includes(kw.toLowerCase())) score += 2;
   return score;
 }
 
@@ -193,11 +215,15 @@ function scoreSkill(ask: string, skill: DepartmentSkill): number {
  * checked first so scoring only ever chooses among skills that could actually
  * succeed.
  */
-export function eligibleSkills(spec: DepartmentSpec, intent: AskIntent | undefined): DepartmentSkill[] {
+export function eligibleSkills(
+  spec: DepartmentSpec,
+  intent: AskIntent | undefined,
+): DepartmentSkill[] {
   if (!intent) return spec.skills;
   const eligible = spec.skills.filter((skill) => {
     // A skill that declares the intents it serves does not serve the others.
-    if (skill.servesIntents && !skill.servesIntents.includes(intent.intent)) return false;
+    if (skill.servesIntents && !skill.servesIntents.includes(intent.intent))
+      return false;
     // A skill that makes new business objects is never right for a request
     // about one that already exists: "follow up on the quote we sent her" must
     // not reach a quote generator, whatever the word "quote" scores.
@@ -211,7 +237,11 @@ export function eligibleSkills(spec: DepartmentSpec, intent: AskIntent | undefin
 }
 
 /** Pick the best-fit skill for an ask within a department (transparent scoring). */
-export function pickSkill(spec: DepartmentSpec, ask: string, intent?: AskIntent): DepartmentSkill {
+export function pickSkill(
+  spec: DepartmentSpec,
+  ask: string,
+  intent?: AskIntent,
+): DepartmentSkill {
   const candidates = eligibleSkills(spec, intent);
   let best: DepartmentSkill | undefined;
   let bestScore = 0;
@@ -223,7 +253,9 @@ export function pickSkill(spec: DepartmentSpec, ask: string, intent?: AskIntent)
     }
   }
   if (best) return best;
-  const fallback = candidates.find((s) => s.agent.agent_id === spec.defaultSkillId);
+  const fallback = candidates.find(
+    (s) => s.agent.agent_id === spec.defaultSkillId,
+  );
   return fallback ?? candidates[0]!;
 }
 
@@ -235,7 +267,10 @@ export function pickSkill(spec: DepartmentSpec, ask: string, intent?: AskIntent)
  * it cannot do is reach a department for a capability none of its skills
  * describe, or rank a task above a noun. This supplies both.
  */
-export function departmentSemanticScore(spec: DepartmentSpec, intent: AskIntent): number {
+export function departmentSemanticScore(
+  spec: DepartmentSpec,
+  intent: AskIntent,
+): number {
   const sem = spec.semantics;
   if (!sem) return 0;
 
@@ -261,8 +296,20 @@ export type DepartmentAgent = Agent & { __department: DepartmentSpec };
 export function defineDepartment(spec: DepartmentSpec): DepartmentAgent {
   // Aggregate routing signals from all member skills so the orchestrator's
   // classifier can score the department as a 1-of-8 choice.
-  const keywords = [...new Set(spec.skills.flatMap((s) => [...s.agent.keywords, ...(s.extraKeywords ?? [])]))];
-  const strongSignals = [...new Set([...(spec.strong_signals ?? []), ...spec.skills.flatMap((s) => s.agent.strong_signals)])];
+  const keywords = [
+    ...new Set(
+      spec.skills.flatMap((s) => [
+        ...s.agent.keywords,
+        ...(s.extraKeywords ?? []),
+      ]),
+    ),
+  ];
+  const strongSignals = [
+    ...new Set([
+      ...(spec.strong_signals ?? []),
+      ...spec.skills.flatMap((s) => s.agent.strong_signals),
+    ]),
+  ];
 
   const agent = defineAgent(
     {
@@ -276,21 +323,37 @@ export function defineDepartment(spec: DepartmentSpec): DepartmentAgent {
       routes_here_when: spec.routes_here_when,
       keywords,
       strong_signals: strongSignals,
-      shared_context_needed: ["business_profile", "widget_history", "pipeline_state", "agent_run_history"],
+      shared_context_needed: [
+        "business_profile",
+        "widget_history",
+        "pipeline_state",
+        "agent_run_history",
+      ],
       tool_dependencies: ["none"],
-      permission_scope: { default: "drafts_only", require_owner_approval: true },
+      permission_scope: {
+        default: "drafts_only",
+        require_owner_approval: true,
+      },
       triggers_supported: ["manual", "scheduled", "event_based"],
       // The representative channel may be plain-text (e.g. Operations → sms); the
       // real draft channel is set per-skill, but the schema still requires
       // no_markdown to match the declared channel.
-      output_format: { title_template: "{department} — {skill}", body_constraints: { no_markdown: PLAIN_TEXT_CHANNELS.has(spec.channel) } },
+      output_format: {
+        title_template: "{department} — {skill}",
+        body_constraints: {
+          no_markdown: PLAIN_TEXT_CHANNELS.has(spec.channel),
+        },
+      },
       examples: spec.examples,
     },
     async (args: AgentRunArgs): Promise<AgentOutput> => {
       // Read the ask onto its semantic axes once, and hand the same reading to
       // every decision below. Skill choice, action eligibility and clarification
       // all need it, and re-deriving it per consumer is how they drift apart.
-      const intent = readAskIntent(args.ownerAsk);
+      const intent = readAskIntent(
+        args.ownerAsk,
+        args.requestOrigin === undefined || args.requestOrigin === "owner",
+      );
 
       // Action path first: some asks are things to DO, not things to draft.
       // This runs BEFORE composition on purpose. Resolving an action from
@@ -308,11 +371,15 @@ export function defineDepartment(spec: DepartmentSpec): DepartmentAgent {
         context: args.context,
         intent,
       });
-      if (forcedId) skill = spec.skills.find((s) => s.agent.agent_id === forcedId);
+      if (forcedId)
+        skill = spec.skills.find((s) => s.agent.agent_id === forcedId);
       if (!skill) skill = pickSkill(spec, args.ownerAsk, intent);
 
       // Make the skill decision visible in the reasoning trace (V-02).
-      await args.emitTrace.work("select_skill", `${spec.display_name} → ${skill.agent.display_name} skill`);
+      await args.emitTrace.work(
+        "select_skill",
+        `${spec.display_name} → ${skill.agent.display_name} skill`,
+      );
 
       const out = await skill.agent.run(args);
       out.orchestratorNotes = out.orchestratorNotes ?? [];
@@ -413,7 +480,11 @@ async function runAction(
   const notes: string[] = [];
   switch (outcome.status) {
     case "succeeded":
-      notes.push(request.describe ? request.describe(outcome.output) : `Done — ${request.toolId} completed.`);
+      notes.push(
+        request.describe
+          ? request.describe(outcome.output)
+          : `Done — ${request.toolId} completed.`,
+      );
       break;
     case "pending_approval":
       notes.push(
@@ -431,7 +502,9 @@ async function runAction(
       );
       break;
     default:
-      notes.push(`That didn't go through: ${outcome.error ?? "the action failed"}.`);
+      notes.push(
+        `That didn't go through: ${outcome.error ?? "the action failed"}.`,
+      );
       break;
   }
 

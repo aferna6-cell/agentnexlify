@@ -98,7 +98,12 @@ def _patch_helpers(
         return row
 
     async def fake_process_user_turn(
-        db, client_id, t_id, user_message_row, background_tasks=None
+        db,
+        client_id,
+        t_id,
+        user_message_row,
+        background_tasks=None,
+        request_origin="owner",
     ):
         calls["process_turn"].append(
             {
@@ -106,6 +111,7 @@ def _patch_helpers(
                 "thread_id": t_id,
                 "user_message_id": user_message_row["id"],
                 "background_tasks": background_tasks,
+                "request_origin": request_origin,
             }
         )
         return {
@@ -327,6 +333,7 @@ async def test_bridge_email_runs_engine_turn(monkeypatch, fake_db):
     assert turn["client_id"] == "tenant-1"
     assert turn["thread_id"] == "thread-abc"
     assert turn["background_tasks"] is None  # bridge runs inline
+    assert turn["request_origin"] == "inbound"
 
 
 @pytest.mark.asyncio

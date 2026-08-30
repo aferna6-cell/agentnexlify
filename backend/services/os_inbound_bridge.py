@@ -509,7 +509,12 @@ async def _bridge_common(
     # ``background_tasks=None`` -> worker runs inline; we're already off
     # the request thread inside the webhook's BackgroundTask.
     return await process_user_turn(
-        db, client_id, thread["id"], user_message_row, background_tasks=None
+        db,
+        client_id,
+        thread["id"],
+        user_message_row,
+        background_tasks=None,
+        request_origin="inbound",
     )
 
 

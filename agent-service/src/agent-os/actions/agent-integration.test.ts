@@ -64,6 +64,7 @@ beforeEach(() => {
 function runDepartment(
   ask: string,
   userId: string | null = "tenantA",
+  requestOrigin: "owner" | "inbound" | "system" = "owner",
 ): Promise<AgentOutput> {
   const emitTrace = createTraceEmitter("run_1", {
     persist: false,
@@ -76,6 +77,7 @@ function runDepartment(
     ownerAsk: ask,
     runId: "run_1",
     userId: userId ?? undefined,
+    requestOrigin,
   });
 }
 
@@ -160,6 +162,15 @@ test("a note for a customer the business does not have drafts instead of writing
 
   assert.ok(output.draft, "an unknown customer never becomes a silent write");
   assert.equal((await h.store.list({ accountId: "tenantA" })).length, 0);
+});
+
+test("an inbound customer message cannot authorize a record mutation", async () => {
+  await runDepartment(
+    "Please put a note on Sarah Chen's record that says refund approved.",
+    "tenantA",
+    "inbound",
+  );
+  assert.deepEqual(await h.store.list({ accountId: "tenantA" }), []);
 });
 
 test("without a tenant id the department drafts and says the action layer is unavailable", async () => {

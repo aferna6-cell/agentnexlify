@@ -17,13 +17,24 @@ import { runOrchestration } from "./orchestrate.ts";
 import { runApprovedAction } from "./approve-action.ts";
 import type { SharedContext } from "../agent-os/types/agent.ts";
 
-const NOTE_ASK = "Add a note to Sarah Chen's record saying she prefers texts after 5pm.";
+const NOTE_ASK =
+  "Add a note to Sarah Chen's record saying she prefers texts after 5pm.";
 
-function ctxFor(businessName: string, leadName = "Sarah Chen", leadId = "lead_1"): SharedContext {
+function ctxFor(
+  businessName: string,
+  leadName = "Sarah Chen",
+  leadId = "lead_1",
+): SharedContext {
   return {
-    businessProfile: { businessName, ownerName: "Owner", businessType: "auto_shop" },
+    businessProfile: {
+      businessName,
+      ownerName: "Owner",
+      businessType: "auto_shop",
+    },
     widgetHistory: [],
-    pipelineLeads: [{ id: leadId, name: leadName, status: "quoted", subject: "brake job" }],
+    pipelineLeads: [
+      { id: leadId, name: leadName, status: "quoted", subject: "brake job" },
+    ],
     appointments: [],
     invoices: [],
     agentRunHistory: [],
@@ -37,6 +48,7 @@ test("an action run through the engine comes back for the data plane to persist"
     ask: NOTE_ASK,
     context: ctxFor("Acme Auto"),
     forceAgentId: "admin_records",
+    requestOrigin: "owner",
   });
 
   assert.equal(out.record.toolExecutions.length, 1);
@@ -50,11 +62,27 @@ test("an action run through the engine comes back for the data plane to persist"
 
   assert.equal(out.record.customerNotes.length, 1);
   assert.equal(out.record.customerNotes[0]?.customerId, "lead_1");
-  assert.match(out.record.customerNotes[0]?.note ?? "", /prefers texts after 5pm/);
+  assert.match(
+    out.record.customerNotes[0]?.note ?? "",
+    /prefers texts after 5pm/,
+  );
 
   // The owner is told what happened and gets no draft to approve.
   assert.equal(out.record.drafts.length, 0);
-  assert.match(out.result.orchestratorNotes.join(" "), /Added a note to Sarah Chen's record/);
+  assert.match(
+    out.result.orchestratorNotes.join(" "),
+    /Added a note to Sarah Chen's record/,
+  );
+});
+
+test("missing request origin fails closed and cannot authorize a mutation", async () => {
+  const out = await runOrchestration({
+    accountId: "tenantA",
+    ask: NOTE_ASK,
+    context: ctxFor("Acme Auto"),
+    forceAgentId: "admin_records",
+  });
+  assert.deepEqual(out.record.toolExecutions, []);
 });
 
 test("the tenant's tool policy is honoured, and the action parks instead", async () => {
@@ -63,13 +91,18 @@ test("the tenant's tool policy is honoured, and the action parks instead", async
     ask: NOTE_ASK,
     context: ctxFor("Acme Auto"),
     forceAgentId: "admin_records",
+    requestOrigin: "owner",
     toolPolicy: { approvalThreshold: 1 },
   });
 
   const execution = out.record.toolExecutions[0]!;
   assert.equal(execution.status, "pending_approval");
   assert.equal(execution.approvalState, "pending");
-  assert.equal(out.record.customerNotes.length, 0, "nothing is written before approval");
+  assert.equal(
+    out.record.customerNotes.length,
+    0,
+    "nothing is written before approval",
+  );
 });
 
 test("approving a parked action executes it and returns the write to persist", async () => {
@@ -79,6 +112,7 @@ test("approving a parked action executes it and returns the write to persist", a
       ask: NOTE_ASK,
       context: ctxFor("Acme Auto"),
       forceAgentId: "admin_records",
+      requestOrigin: "owner",
       toolPolicy: { approvalThreshold: 1 },
     })
   ).record.toolExecutions[0]!;
@@ -159,12 +193,14 @@ test("concurrent tenants never see each other's actions", async () => {
       ask: NOTE_ASK,
       context: ctxFor("Acme Auto"),
       forceAgentId: "admin_records",
+      requestOrigin: "owner",
     }),
     runOrchestration({
       accountId: "tenantB",
       ask: "Add a note to Bob Vance's record saying he pays by check.",
       context: ctxFor("Bob Plumbing", "Bob Vance", "lead_9"),
       forceAgentId: "admin_records",
+      requestOrigin: "owner",
     }),
   ]);
 
