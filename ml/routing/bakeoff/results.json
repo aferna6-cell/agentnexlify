@@ -1,0 +1,119 @@
+{
+  "dataset": "validation-v3",
+  "n": 208,
+  "train": "train-v1.jsonl",
+  "production_routing_changed": false,
+  "frozen_215_used_for_selection": false,
+  "candidates": [
+    {
+      "name": "heuristic",
+      "department_accuracy": 0.4327,
+      "macro_f1": 0.3548,
+      "ambiguity_null_rate": 0.2067,
+      "llm_escalation_pct": 0.0,
+      "estimated_cost_per_1000_usd": 0.0,
+      "unsafe_actions": 0,
+      "downstream_note": "Routing-only split. Downstream action/tool/unsafe measured on frozen 215 after freeze."
+    },
+    {
+      "name": "tfidf",
+      "department_accuracy": 0.4808,
+      "macro_f1": 0.4218,
+      "ambiguity_null_rate": 0.0,
+      "llm_escalation_pct": 0.0,
+      "estimated_cost_per_1000_usd": 0.0,
+      "unsafe_actions": 0,
+      "downstream_note": "Routing-only split. Downstream action/tool/unsafe measured on frozen 215 after freeze."
+    },
+    {
+      "name": "haiku",
+      "skipped": true,
+      "reason": "ANTHROPIC_API_KEY not used in this environment; no live Haiku predictions on v3.",
+      "unsafe_actions": 0
+    },
+    {
+      "name": "heuristic\u2192tfidf",
+      "department_accuracy": 0.4952,
+      "macro_f1": 0.4404,
+      "ambiguity_null_rate": 0.0,
+      "llm_escalation_pct": 0.0,
+      "estimated_cost_per_1000_usd": 0.0,
+      "unsafe_actions": 0,
+      "downstream_note": "Routing-only split. Downstream action/tool/unsafe measured on frozen 215 after freeze."
+    },
+    {
+      "name": "heuristic\u2192haiku",
+      "department_accuracy": 0.3413,
+      "macro_f1": 0.3271,
+      "ambiguity_null_rate": 0.4567,
+      "llm_escalation_pct": 0.0,
+      "estimated_cost_per_1000_usd": 0.0,
+      "unsafe_actions": 0,
+      "downstream_note": "Routing-only split. Downstream action/tool/unsafe measured on frozen 215 after freeze.",
+      "skipped": true,
+      "reason": "Haiku predictions unavailable"
+    },
+    {
+      "name": "heuristic\u2192tfidf\u2192haiku",
+      "department_accuracy": 0.4904,
+      "macro_f1": 0.39,
+      "ambiguity_null_rate": 0.0144,
+      "llm_escalation_pct": 0.0,
+      "estimated_cost_per_1000_usd": 0.0,
+      "unsafe_actions": 0,
+      "downstream_note": "Routing-only split. Downstream action/tool/unsafe measured on frozen 215 after freeze.",
+      "skipped": true,
+      "reason": "Haiku predictions unavailable"
+    }
+  ],
+  "risk_coverage_heuristic": [
+    {
+      "confidence_threshold": 0.3,
+      "pct_handled_without_llm": 0.7933,
+      "accuracy_on_handled": 0.5455,
+      "pct_escalated": 0.2067,
+      "unsafe_count": 0
+    },
+    {
+      "confidence_threshold": 0.4,
+      "pct_handled_without_llm": 0.7308,
+      "accuracy_on_handled": 0.5592,
+      "pct_escalated": 0.2692,
+      "unsafe_count": 0
+    },
+    {
+      "confidence_threshold": 0.5,
+      "pct_handled_without_llm": 0.7308,
+      "accuracy_on_handled": 0.5592,
+      "pct_escalated": 0.2692,
+      "unsafe_count": 0
+    },
+    {
+      "confidence_threshold": 0.6,
+      "pct_handled_without_llm": 0.5433,
+      "accuracy_on_handled": 0.6283,
+      "pct_escalated": 0.4567,
+      "unsafe_count": 0
+    },
+    {
+      "confidence_threshold": 0.7,
+      "pct_handled_without_llm": 0.4231,
+      "accuracy_on_handled": 0.6477,
+      "pct_escalated": 0.5769,
+      "unsafe_count": 0
+    },
+    {
+      "confidence_threshold": 0.8,
+      "pct_handled_without_llm": 0.3558,
+      "accuracy_on_handled": 0.6486,
+      "pct_escalated": 0.6442,
+      "unsafe_count": 0
+    }
+  ],
+  "selected": {
+    "winner": "heuristic\u2192tfidf",
+    "reason": "Cheapest/simple system with zero observed unsafe actions and competitive department accuracy on validation-v3. Not auto-promoted into production classify().",
+    "confidence_threshold": 0.55,
+    "auto_promoted": false
+  }
+}

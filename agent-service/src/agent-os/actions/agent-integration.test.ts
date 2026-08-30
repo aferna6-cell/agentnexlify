@@ -18,7 +18,10 @@ delete process.env.AGENT_OS_DRAFTS_DISABLED;
 
 import { adminRecords } from "../agents/departments.ts";
 import { extractParams } from "../agents/_extract.ts";
-import { extractNoteText, resolveRecordAction } from "../agents/admin_records_actions.ts";
+import {
+  extractNoteText,
+  resolveRecordAction,
+} from "../agents/admin_records_actions.ts";
 import { createTraceEmitter } from "../agents/_trace.ts";
 import { setRunStore, type RunStore } from "../lib/providers/run-store.ts";
 import { harness, type Harness } from "./_testkit.ts";
@@ -57,8 +60,14 @@ beforeEach(() => {
  * host that could not resolve a tenant (explicit null, because passing
  * `undefined` would silently re-apply the default).
  */
-function runDepartment(ask: string, userId: string | null = "tenantA"): Promise<AgentOutput> {
-  const emitTrace = createTraceEmitter("run_1", { persist: false, onStep: (s) => steps.push(s) });
+function runDepartment(
+  ask: string,
+  userId: string | null = "tenantA",
+): Promise<AgentOutput> {
+  const emitTrace = createTraceEmitter("run_1", {
+    persist: false,
+    onStep: (s) => steps.push(s),
+  });
   return adminRecords.run({
     input: extractParams(ask),
     context: h.context,
@@ -76,11 +85,17 @@ test("the department runs a real action and reports what actually happened", asy
 
   // The owner is told the action happened, and gets no draft to approve.
   assert.equal(output.draft, undefined);
-  assert.match(output.orchestratorNotes.join(" "), /Added a note to Sarah Chen's record/);
+  assert.match(
+    output.orchestratorNotes.join(" "),
+    /Added a note to Sarah Chen's record/,
+  );
   assert.match(output.noDraftReason ?? "", /add_customer_note/);
 
   // The note is really on the record.
-  const notes = await h.notes.list({ accountId: "tenantA", customerId: "lead_1" });
+  const notes = await h.notes.list({
+    accountId: "tenantA",
+    customerId: "lead_1",
+  });
   assert.equal(notes.length, 1);
   assert.match(notes[0]?.note ?? "", /prefers texts after 5pm/);
 
@@ -110,24 +125,37 @@ test("an action the business gated on approval parks instead of writing", async 
     },
   });
 
-  const output = await runDepartment("Add a note to Sarah Chen's record saying she prefers texts after 5pm.");
+  const output = await runDepartment(
+    "Add a note to Sarah Chen's record saying she prefers texts after 5pm.",
+  );
 
   assert.match(output.orchestratorNotes.join(" "), /needs your approval/);
-  assert.equal((await h.notes.list({ accountId: "tenantA", customerId: "lead_1" })).length, 0);
+  assert.equal(
+    (await h.notes.list({ accountId: "tenantA", customerId: "lead_1" })).length,
+    0,
+  );
 
   const history = await h.store.list({ accountId: "tenantA" });
   assert.equal(history[0]?.status, "pending_approval");
 });
 
 test("an ask the department does not clearly understand drafts instead of writing", async () => {
-  const output = await runDepartment("Draft a service agreement template for new customers.");
+  const output = await runDepartment(
+    "Draft a service agreement template for new customers.",
+  );
 
   assert.ok(output.draft, "it still produces a document draft");
-  assert.equal((await h.store.list({ accountId: "tenantA" })).length, 0, "no action was attempted");
+  assert.equal(
+    (await h.store.list({ accountId: "tenantA" })).length,
+    0,
+    "no action was attempted",
+  );
 });
 
 test("a note for a customer the business does not have drafts instead of writing", async () => {
-  const output = await runDepartment("Add a note to Jordan Miles's record saying he prefers email.");
+  const output = await runDepartment(
+    "Add a note to Jordan Miles's record saying he prefers email.",
+  );
 
   assert.ok(output.draft, "an unknown customer never becomes a silent write");
   assert.equal((await h.store.list({ accountId: "tenantA" })).length, 0);
@@ -140,26 +168,45 @@ test("without a tenant id the department drafts and says the action layer is una
   );
 
   assert.ok(output.draft);
-  assert.ok(steps.some((s) => s.step === "tool_unavailable" && s.status === "fallback"));
+  assert.ok(
+    steps.some((s) => s.step === "tool_unavailable" && s.status === "fallback"),
+  );
 });
 
 // --- the ask parser --------------------------------------------------------
 
 test("note text is taken from the owner's own words", () => {
   assert.equal(
-    extractNoteText("Add a note to Sarah's record saying she prefers texts after 5pm."),
+    extractNoteText(
+      "Add a note to Sarah's record saying she prefers texts after 5pm.",
+    ),
     "she prefers texts after 5pm.",
   );
-  assert.equal(extractNoteText("Log a note on Mike's file: wants a Saturday slot"), "wants a Saturday slot");
+  assert.equal(
+    extractNoteText("Log a note on Mike's file: wants a Saturday slot"),
+    "wants a Saturday slot",
+  );
   assert.equal(extractNoteText("Add a note for Sarah"), undefined);
 });
 
 test("the resolver refuses asks that are not clearly an action", () => {
   const context = h.context;
-  const ask = (a: string) => resolveRecordAction({ ownerAsk: a, params: extractParams(a), context });
+  const ask = (a: string) =>
+    resolveRecordAction({ ownerAsk: a, params: extractParams(a), context });
 
   assert.equal(ask("Write a one-pager on our refund policy."), undefined);
-  assert.equal(ask("Add a note saying she prefers texts."), undefined, "no customer named");
-  assert.equal(ask("Add a note to Sarah Chen's record."), undefined, "no note text");
-  assert.ok(ask("Add a note to Sarah Chen's record saying she prefers texts."));
+  const unnamed = ask("Add a note saying she prefers texts.");
+  assert.ok(
+    unnamed && "clarify" in unnamed,
+    "no customer named → ask, do not guess",
+  );
+  const noText = ask("Add a note to Sarah Chen's record.");
+  assert.ok(
+    noText && "clarify" in noText,
+    "no note text → ask, do not write an empty note",
+  );
+  const ready = ask(
+    "Add a note to Sarah Chen's record saying she prefers texts.",
+  );
+  assert.ok(ready && "toolId" in ready);
 });

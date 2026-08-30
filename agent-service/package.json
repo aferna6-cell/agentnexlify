@@ -9,7 +9,10 @@
   "scripts": {
     "start": "node --experimental-strip-types src/server.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test \"src/**/*.test.ts\"",
+    "test": "node --experimental-strip-types --test \"src/**/*.test.ts\" \"evals/**/*.test.ts\"",
+    "eval:actions": "node --experimental-strip-types evals/run-action-eval.ts",
+    "eval:actions:gate": "node --experimental-strip-types evals/run-action-eval.ts --gate",
+    "eval:bakeoff": "node --experimental-strip-types evals/run-router-bakeoff.ts",
     "vendor:agent-os": "bash scripts/vendor-agent-os.sh"
   },
   "dependencies": {

@@ -65,6 +65,9 @@ CLAUDE.local.md
 pytest-of-*/
 .pytest_cache/
 
+# Generated action-eval reports (reproducible via npm run eval:actions)
+agent-service/evals/results/*.json
+
 # autoskills installs mirror dirs for each supported IDE. We only use
 # Claude Code, so only .agents/ (canonical storage) + .claude/skills/
 # (symlinked from .agents/) are committed. Next `npx autoskills` run
