@@ -34,21 +34,23 @@ case "$FILE_PATH" in
         ;;
 esac
 
-# Soft warnings (exit 0 = allowed but noted)
+# Soft warnings (exit 0 = allowed but noted). Notes go to stderr: some hook
+# runners (e.g. Cursor) parse stdout as JSON and fail closed on plain text,
+# which would turn these allow-with-note paths into hard blocks.
 case "$FILE_PATH" in
     migrations/*.sql)
         if [ -f "$FILE_PATH" ]; then
-            echo "WARNING: Editing an existing migration. Existing migrations should be immutable. Create a new numbered migration instead."
+            echo "WARNING: Editing an existing migration. Existing migrations should be immutable. Create a new numbered migration instead." >&2
         fi
         ;;
     *main.py)
-        echo "NOTE: main.py contains CORS config and router registration. Verify both after editing."
+        echo "NOTE: main.py contains CORS config and router registration. Verify both after editing." >&2
         ;;
     *settings.json)
-        echo "NOTE: Editing Claude Code settings. Verify hook paths are correct."
+        echo "NOTE: Editing Claude Code settings. Verify hook paths are correct." >&2
         ;;
     widget/agentnexlify-widget.js|frontend/public/widget/agentnexlify-widget.js)
-        echo "REMINDER: Widget files must be kept in sync. Edit both widget/ and frontend/public/widget/."
+        echo "REMINDER: Widget files must be kept in sync. Edit both widget/ and frontend/public/widget/." >&2
         ;;
 esac
 
