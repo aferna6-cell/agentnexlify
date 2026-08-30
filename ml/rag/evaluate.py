@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import math
-from collections import defaultdict
 from pathlib import Path
 
 from backend.services.business_retrieval import CorpusChunk, retrieve_business_context
@@ -26,19 +25,25 @@ def corpus_for(dataset: dict, account_id: str) -> list[CorpusChunk]:
     return [CorpusChunk(**c) for c in tenant["chunks"]]
 
 
+def mixed_corpus(dataset: dict) -> list[CorpusChunk]:
+    """All tenants' chunks. Isolation is only real if a leak *could* appear."""
+    rows: list[CorpusChunk] = []
+    for tenant in dataset["tenants"].values():
+        rows.extend(CorpusChunk(**c) for c in tenant["chunks"])
+    return rows
+
+
 def recall_at_k(expected: list[str], got: list[str], k: int) -> float:
+    """Fraction of expected chunk ids found in the top-k. Undefined if no gold ids."""
     if not expected:
-        return 1.0 if not got[:k] or True else 1.0
-    # no-answer cases: success if we retrieved nothing required
+        raise ValueError("recall_at_k requires expected chunk ids")
     exp = set(expected)
-    return 1.0 if exp & set(got[:k]) == exp or (len(exp & set(got[:k])) / len(exp) if exp else 1.0) else (
-        len(exp & set(got[:k])) / len(exp)
-    )
+    return len(exp & set(got[:k])) / len(exp)
 
 
 def mrr(expected: list[str], got: list[str]) -> float:
     if not expected:
-        return 1.0
+        raise ValueError("mrr requires expected chunk ids")
     exp = set(expected)
     for i, cid in enumerate(got, 1):
         if cid in exp:
@@ -52,7 +57,7 @@ def dcg(rels: list[float]) -> float:
 
 def ndcg_at_k(expected: list[str], got: list[str], k: int) -> float:
     if not expected:
-        return 1.0
+        raise ValueError("ndcg_at_k requires expected chunk ids")
     exp = set(expected)
     rels = [1.0 if cid in exp else 0.0 for cid in got[:k]]
     ideal = [1.0] * min(len(exp), k) + [0.0] * max(0, k - len(exp))
@@ -77,7 +82,7 @@ def run_eval(path: Path = DEFAULT_DATASET, top_k: int = 5, min_score: float = 1.
     dataset = load_dataset(path)
     cases = dataset["cases"]
     rec1 = rec3 = rec5 = mrrs = ndcgs = 0.0
-    n = 0
+    n_retr = 0
     correct_refuse = false_refuse = missed_refuse = 0
     faithfulness_ok = 0
     citation_ok = 0
@@ -93,27 +98,29 @@ def run_eval(path: Path = DEFAULT_DATASET, top_k: int = 5, min_score: float = 1.
         for c in t["chunks"]
     }
 
+    full_corpus = mixed_corpus(dataset)
     for c in cases:
-        corpus = corpus_for(dataset, c["accountId"])
         result = retrieve_business_context(
-            c["accountId"], c["ask"], corpus, top_k=top_k, min_score=min_score
+            c["accountId"], c["ask"], full_corpus, top_k=top_k, min_score=min_score
         )
         got_ids = [e.chunk_id for e in result.evidence]
-        # Isolation: any evidence from another account is a leak
-        if any(e.account_id != c["accountId"] for e in result.evidence):
+        forbidden = set(c.get("forbidden_account_ids") or [])
+        leaked = any(
+            e.account_id != c["accountId"] or e.account_id in forbidden
+            for e in result.evidence
+        )
+        if leaked:
             cross_tenant += 1
-        for forbidden in c.get("forbidden_account_ids") or []:
-            if any(e.account_id == forbidden for e in result.evidence):
-                cross_tenant += 1
 
         expected = c.get("expected_chunk_ids") or []
         acceptable = set(expected) | set(c.get("acceptable_chunk_ids") or [])
-        rec1 += recall_at_k(expected, got_ids, 1) if expected else (1.0 if result.abstain else 1.0)
-        rec3 += recall_at_k(expected, got_ids, 3) if expected else 1.0
-        rec5 += recall_at_k(expected, got_ids, 5) if expected else 1.0
-        mrrs += mrr(expected, got_ids) if expected else 1.0
-        ndcgs += ndcg_at_k(expected, got_ids, 5) if expected else 1.0
-        n += 1
+        if expected:
+            rec1 += recall_at_k(expected, got_ids, 1)
+            rec3 += recall_at_k(expected, got_ids, 3)
+            rec5 += recall_at_k(expected, got_ids, 5)
+            mrrs += mrr(expected, got_ids)
+            ndcgs += ndcg_at_k(expected, got_ids, 5)
+            n_retr += 1
 
         texts = [e.content for e in result.evidence]
         answer, behavior = extractive_answer(texts, c.get("expected_answer_contains") or [])
@@ -166,22 +173,24 @@ def run_eval(path: Path = DEFAULT_DATASET, top_k: int = 5, min_score: float = 1.
             "top_score": result.scores[0] if result.scores else 0,
         })
 
+    n_all = len(cases)
     refuse_n = sum(1 for c in cases if c["expected_behavior"] == "refuse")
-    answer_n = n - refuse_n
+    answer_n = n_all - refuse_n
     return {
         "dataset_version": dataset["dataset_version"],
-        "cases": n,
+        "cases": n_all,
+        "retrieval_labelled_cases": n_retr,
         "retrieval": {
-            "recall_at_1": round(rec1 / n, 4),
-            "recall_at_3": round(rec3 / n, 4),
-            "recall_at_5": round(rec5 / n, 4),
-            "mrr": round(mrrs / n, 4),
-            "ndcg_at_5": round(ndcgs / n, 4),
+            "recall_at_1": round(rec1 / n_retr, 4) if n_retr else None,
+            "recall_at_3": round(rec3 / n_retr, 4) if n_retr else None,
+            "recall_at_5": round(rec5 / n_retr, 4) if n_retr else None,
+            "mrr": round(mrrs / n_retr, 4) if n_retr else None,
+            "ndcg_at_5": round(ndcgs / n_retr, 4) if n_retr else None,
         },
         "generation": {
-            "faithfulness": round(faithfulness_ok / n, 4),
-            "citation_accuracy": round(citation_ok / n, 4),
-            "unsupported_claim_rate": round(unsupported / n, 4),
+            "faithfulness": round(faithfulness_ok / n_all, 4),
+            "citation_accuracy": round(citation_ok / n_all, 4),
+            "unsupported_claim_rate": round(unsupported / n_all, 4),
             "correct_refusal_rate": round(correct_refuse / refuse_n, 4) if refuse_n else None,
             "false_refusal_rate": round(false_refuse / answer_n, 4) if answer_n else None,
             "missed_refusal": missed_refuse,

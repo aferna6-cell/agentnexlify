@@ -2,6 +2,8 @@
  * Shared types for the agent engine.
  */
 
+import type { RagChunk } from "../rag/types.ts";
+
 export interface BusinessProfileData {
   businessName?: string;
   ownerName?: string;
@@ -98,7 +100,7 @@ export interface SharedContext {
   agentRunHistory: AgentRunHistoryItem[];
   kb: KbEntry[];
   /** Eval / FastAPI may attach a tenant-scoped corpus. Never another tenant. */
-  ragCorpus?: import("../rag/types.ts").RagChunk[];
+  ragCorpus?: RagChunk[];
   ragEvidence?: RagEvidenceItem[];
 }
 

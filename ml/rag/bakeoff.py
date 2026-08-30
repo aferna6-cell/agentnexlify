@@ -87,26 +87,21 @@ def _score_method(dataset: dict, method: str) -> dict:
             raise ValueError(method)
         got = [chunks[i].chunk_id for i in order[:5]]
         expected = c.get("expected_chunk_ids") or []
-        if expected:
-            rec1 += recall_at_k(expected, got, 1)
-            rec3 += recall_at_k(expected, got, 3)
-            rec5 += recall_at_k(expected, got, 5)
-            mrrs += mrr(expected, got)
-            ndcgs += ndcg_at_k(expected, got, 5)
-        else:
-            rec1 += 1
-            rec3 += 1
-            rec5 += 1
-            mrrs += 1
-            ndcgs += 1
+        if not expected:
+            continue
+        rec1 += recall_at_k(expected, got, 1)
+        rec3 += recall_at_k(expected, got, 3)
+        rec5 += recall_at_k(expected, got, 5)
+        mrrs += mrr(expected, got)
+        ndcgs += ndcg_at_k(expected, got, 5)
         n += 1
     return {
-        "recall_at_1": round(rec1 / n, 4),
-        "recall_at_3": round(rec3 / n, 4),
-        "recall_at_5": round(rec5 / n, 4),
-        "mrr": round(mrrs / n, 4),
-        "ndcg_at_5": round(ndcgs / n, 4),
-        "cases": n,
+        "recall_at_1": round(rec1 / n, 4) if n else None,
+        "recall_at_3": round(rec3 / n, 4) if n else None,
+        "recall_at_5": round(rec5 / n, 4) if n else None,
+        "mrr": round(mrrs / n, 4) if n else None,
+        "ndcg_at_5": round(ndcgs / n, 4) if n else None,
+        "labelled_cases": n,
     }
 
 
