@@ -1,6 +1,6 @@
 # Milestone 6 — Production Decision Intelligence
 
-Status: **HOLD**  
+Status: **HOLD**
 Evaluation branch: `cursor/milestone-6-decision-intelligence-888d`
 
 This is the canonical Milestone 6 evidence record. Historical results in
