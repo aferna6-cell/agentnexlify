@@ -224,7 +224,7 @@ def test_flag_on_sales_approve_claim_execute_uses_gmail(monkeypatch):
     client = _client()
     sends = []
 
-    def fake_find(tenant_id, msgid):
+    def fake_find(tenant_id, msgid, *, strict=False):
         return None
 
     def fake_send(db_arg, tenant_id, **kwargs):
@@ -337,7 +337,7 @@ def test_gmail_mailbox_port_adopts_instead_of_sending(monkeypatch):
     svc.claim_for_execution(db, CLIENT, EXEC_ID)
     sends = []
 
-    def fake_find(tenant_id, msgid):
+    def fake_find(tenant_id, msgid, *, strict=False):
         return "gmail-existing"
 
     def fake_send(*args, **kwargs):
