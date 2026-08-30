@@ -76,6 +76,7 @@ class FakeGmailPort:
     def __init__(self):
         self.sends: list[dict] = []
         self.mailbox: dict[str, str] = {}
+        self.messages: dict[str, dict] = {}
         self.mode = "ok"
 
     def find_by_rfc822_msgid(self, msgid: str) -> str | None:
@@ -88,9 +89,28 @@ class FakeGmailPort:
         self.sends.append(dict(kwargs))
         provider_id = f"gmail-{len(self.sends)}"
         self.mailbox[msgid] = provider_id
+        self.messages[provider_id] = dict(kwargs)
         if self.mode == "accept_then_lose":
             return None
         return {"success": True, "message_id": provider_id}
+
+    def verify(self, message_id: str, *, to: str, subject: str, rfc822_msgid: str):
+        message = self.messages.get(message_id)
+        if not message:
+            return {"verified": False, "detail": "message not found"}
+        if self.mode == "verification_mismatch":
+            return {"verified": False, "detail": "recipient or subject mismatch"}
+        verified = (
+            message.get("to") == to
+            and message.get("subject") == subject
+            and message.get("rfc822_msgid") == rfc822_msgid
+        )
+        return {
+            "verified": verified,
+            "detail": "recipient, subject, and Message-ID match"
+            if verified
+            else "recipient, subject, or Message-ID mismatch",
+        }
 
 
 def _pending_send_row(**overrides):
@@ -127,6 +147,36 @@ claim_only_if_python_email_valid = svc.claim_if_input_valid
 def drive_claimed_gmail_send(db, client_id: str, execution_id: str, gmail: FakeGmailPort):
     """One post-claim send attempt through the production data-plane runner."""
     return svc._run_data_plane_tool(db, client_id, execution_id, gmail)
+
+
+def test_successful_send_reaches_verified_terminal_state():
+    db = _pending_db()
+    gmail = FakeGmailPort()
+    assert svc.claim_for_execution(db, CLIENT, EXEC_ID, "owner@test") is not None
+
+    outcome = drive_claimed_gmail_send(db, CLIENT, EXEC_ID, gmail)
+
+    row = svc.get_tool_execution(db, CLIENT, EXEC_ID)
+    assert outcome["executed"] is True
+    assert row["status"] == "succeeded"
+    assert row["approval_state"] == "approved"
+    assert row["verification_state"] == "passed"
+    assert "Message-ID match" in row["verification_detail"]
+
+
+def test_sent_message_with_mismatched_readback_is_not_reported_as_success():
+    db = _pending_db()
+    gmail = FakeGmailPort()
+    gmail.mode = "verification_mismatch"
+    assert svc.claim_for_execution(db, CLIENT, EXEC_ID, "owner@test") is not None
+
+    outcome = drive_claimed_gmail_send(db, CLIENT, EXEC_ID, gmail)
+
+    row = svc.get_tool_execution(db, CLIENT, EXEC_ID)
+    assert outcome["executed"] is True
+    assert row["status"] == "verification_failed"
+    assert row["verification_state"] == "failed"
+    assert "mismatch" in row["verification_detail"]
 
 
 # --- 1. accept + lost response / rfc822 adopt --------------------------------
