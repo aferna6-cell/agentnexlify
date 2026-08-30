@@ -1,58 +1,26 @@
 #!/usr/bin/env python3
-"""Controlled M8 Calendar/CRM smoke — stops at auth boundary when unset.
+"""Controlled M8 smoke entrypoint — delegates to the real live runner.
 
-Requires explicit env authorization:
-
-  M8_SMOKE_AUTHORIZED=1
-  M8_SMOKE_CLIENT_ID=<staging tenant uuid>
-  CALENDAR_ACTIONS_ENABLED=1
-  CRM_ACTIONS_ENABLED=1
-
-Plus working Supabase service credentials and (for Calendar) Google OAuth on
-that tenant. Without M8_SMOKE_AUTHORIZED=1 this script exits 2 and prints the
-boundary — it never mutates production.
+Authorization guard only lived here previously. Live provider/DB evidence is
+produced by ``scripts/m8_live_smoke.py``. This wrapper keeps the historical
+command path and forwards all args/env.
 """
 
 from __future__ import annotations
 
-import os
+import runpy
 import sys
+from pathlib import Path
 
 
 def main() -> int:
-    if os.environ.get("M8_SMOKE_AUTHORIZED", "").strip() != "1":
-        print("M8 SMOKE STOPPED AT AUTH BOUNDARY")
-        print("Set M8_SMOKE_AUTHORIZED=1 and M8_SMOKE_CLIENT_ID to a staging")
-        print("tenant with a harmless calendar / test lead before running.")
-        print("Checklist (manual once authorized):")
-        print("  Calendar: availability, create once, GET verify, cancel,")
-        print("            invite parks, approve once, redrive no-dup,")
-        print("            wrong-tenant fails, audit complete")
-        print("  CRM: tenant search, ambiguous clarify, partial update,")
-        print("       read-back, duplicate create blocked, stage validate,")
-        print("       cross-tenant refuse, audit complete")
-        return 2
-
-    client_id = os.environ.get("M8_SMOKE_CLIENT_ID", "").strip()
-    if not client_id:
-        print("M8_SMOKE_CLIENT_ID required when authorized")
-        return 2
-
-    # Live path is owner-operated against staging APIs; this entrypoint only
-    # confirms flags + wiring imports when authorized.
-    os.environ.setdefault("CALENDAR_ACTIONS_ENABLED", "1")
-    os.environ.setdefault("CRM_ACTIONS_ENABLED", "1")
-    from backend.services import os_calendar_crm
-    from backend.services.m8_action_flags import (
-        calendar_actions_enabled,
-        crm_actions_enabled,
-    )
-
-    assert calendar_actions_enabled() and crm_actions_enabled()
-    assert os_calendar_crm.refuse_calendar_tool() is None
-    assert os_calendar_crm.refuse_crm_tool() is None
-    print(f"M8 smoke authorized for client_id={client_id}")
-    print("Run staging API checklist from docs/milestone-8-calendar-crm.md")
+    target = Path(__file__).resolve().parent / "m8_live_smoke.py"
+    # runpy returns the module globals; exit via SystemExit from the target.
+    try:
+        runpy.run_path(str(target), run_name="__main__")
+    except SystemExit as exc:
+        code = exc.code
+        return int(code) if isinstance(code, int) else (0 if code is None else 1)
     return 0
 
 

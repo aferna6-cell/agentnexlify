@@ -1,27 +1,24 @@
-# Feature rollout matrix — Agent OS capabilities (2026-08-30)
+# Feature rollout matrix — Agent OS capabilities (2026-08-30 live-proof update)
 
-Distinguish **merged** (code on main), **live-proven** (controlled smoke), and
-**enabled** (flag on). Do not flip all capabilities globally at once.
+Distinguish **merged**, **live-proven**, and **enabled**. Do not flip all capabilities globally.
 
-| Flag | Development | Staging | Canary | Production | Current state | Proof completed | Blocker | Rollback |
-|------|-------------|---------|--------|------------|---------------|-----------------|---------|----------|
-| `RAG_ENABLED` | OK to exercise locally | Candidate: holdout Recall@1≈0.902, refusal 1.0, leaks 0, injection 0; keep `min_score=1.0` | Candidate after staging soak | **OFF** | Merged (#707); migration **198 APPLIED** | Offline + holdout yes; live tenant soak **no** | Owner enable + soak | Set `RAG_ENABLED=0` |
-| `SEND_EMAIL_ENABLED` | Optional local with test mailbox | **OFF** until live Gmail procedure | **OFF** | **OFF** | Merged data plane | Offline M6 0/59 unsafe; live send **incomplete** | Controlled Gmail proof (propose→approve→one send→Message-ID→redrive) | Set `SEND_EMAIL_ENABLED=0` |
-| `CALENDAR_ACTIONS_ENABLED` | Optional local | **OFF** until Calendar smoke | **OFF** | **OFF** | Merged offline (#709) + data-plane finalize | Offline M8 265/265; live Calendar **blocked on OAuth auth** | Staging Google OAuth + harmless calendar | Set `CALENDAR_ACTIONS_ENABLED=0` |
-| `CRM_ACTIONS_ENABLED` | Optional local | **OFF** until CRM smoke | **OFF** | **OFF** | Merged offline (#709) + data-plane finalize | Offline M8; live CRM **needs staging tenant** | Staging lead + cross-tenant negative | Set `CRM_ACTIONS_ENABLED=0` |
+| Flag | Development | Staging | Canary | Production | Merged? | Migration ready? | Live-proven? | Staging enabled? | Canary eligible? | Production eligible? | Blocker | Rollback |
+|------|-------------|---------|--------|------------|---------|------------------|--------------|------------------|------------------|----------------------|---------|----------|
+| `RAG_ENABLED` | OK local | Candidate after KB compile | After staging soak | **OFF** | yes (#707) | **198 APPLIED** | holdout yes; live tenant **no** (0 chunks) | **no** (Railway prod-only; flag not flipped) | not yet | **no** | Empty `tenant_kb_chunks`; no staging Railway env; need compiled KB + staging deploy | `RAG_ENABLED=0` |
+| `SEND_EMAIL_ENABLED` | optional | **OFF** | **OFF** | **OFF** | yes | n/a | **no** | **no** | **no** | **no** | No gmail connector in DB; no service key in agent; owner live procedure pending | `SEND_EMAIL_ENABLED=0` |
+| `CALENDAR_ACTIONS_ENABLED` | optional | **OFF** | **OFF** | **OFF** | yes (#709/#710) | n/a | **no** | **no** | **no** | **no** | Zero `google_calendar` OAuth integrations; no service key in agent | `CALENDAR_ACTIONS_ENABLED=0` |
+| `CRM_ACTIONS_ENABLED` | optional | **OFF** | **OFF** | **OFF** | yes (#709/#710) | n/a | partial DB-plane only; Action Executor path **no** | **no** | **no** | **no** | Service key unavailable to agent runner; need Action Executor + `os_tool_executions` live audit | `CRM_ACTIONS_ENABLED=0` |
 
-## RAG rollout assessment (no retrieval-model change)
+## Recommended progression
 
-1. **Staging:** Yes — eligible with frozen `min_score=1.0`, fast disable, monitor refusal/leak metrics.
-2. **Internal/canary tenant:** Yes — after staging looks clean for a soak window.
-3. **Broader production:** Not yet — wait for canary soak; keep default OFF.
+1. Provision **staging Railway environment** (or confirm smoke-tenant-only local runner with service key secrets injected).
+2. Connect **Google Calendar + Gmail** OAuth on smoke tenant `7451537b-…`.
+3. Compile/index approved KB → non-zero `tenant_kb_chunks`.
+4. Run `scripts/m8_live_smoke.py` with auth env → capture artifact.
+5. staging → internal/canary tenant → broader production — one flag family at a time.
 
-## Gmail rollout assessment
+## Evidence
 
-Do **not** enable globally. Prepare/run existing M6 live Gmail procedure; enable
-staging only after exactly-one send + redrive proof.
-
-## Production capabilities now enabled
-
-None of the four flags are enabled in production by default. Owner may enable
-staging flags only after the corresponding smoke checklist passes.
+- `audits/artifacts/m8-live-proof-report-2026-08-30.md`
+- `audits/artifacts/m8-live-smoke-20260830T165228Z.json`
+- Runner: `scripts/m8_live_smoke.py`
