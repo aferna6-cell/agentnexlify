@@ -17,6 +17,8 @@ import {
 import { registerAgentOsProviders } from "./bootstrap.ts";
 import {
   CollectingActionStore,
+  CollectingCalendarPort,
+  CollectingCrmPort,
   CollectingCustomerNotesPort,
 } from "./action-collector.ts";
 import type { TenantToolPolicy } from "../agent-os/actions/policy.ts";
@@ -53,6 +55,8 @@ export async function runOrchestration(
   const actions = {
     store: new CollectingActionStore(),
     notes: new CollectingCustomerNotesPort(),
+    calendar: new CollectingCalendarPort(),
+    crm: new CollectingCrmPort(),
     policy: input.toolPolicy ?? {},
   };
   const context = applyRagToContext(input.accountId, input.ask, input.context);

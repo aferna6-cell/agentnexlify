@@ -23,7 +23,9 @@
     "eval:rag": "python3 ../ml/rag/evaluate.py",
     "eval:rag:holdout": "python3 ../ml/rag/evaluate.py --dataset evals/datasets/rag/rag-eval-holdout-v1.json",
     "eval:rag:calibrate": "python3 ../ml/rag/calibrate_abstention.py",
-    "eval:rag:downstream": "python3 ../ml/rag/downstream_bakeoff.py"
+    "eval:rag:downstream": "python3 ../ml/rag/downstream_bakeoff.py",
+    "eval:calendar-crm": "node --experimental-strip-types evals/run-calendar-crm-eval.ts",
+    "eval:calendar-crm:gate": "node --experimental-strip-types evals/run-calendar-crm-eval.ts --gate"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.110",

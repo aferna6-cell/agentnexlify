@@ -23,14 +23,32 @@ import type {
   ActionExecutionFilter,
   ActionStore,
 } from "../agent-os/actions/store.ts";
-import type { ActionExecutionRecord, ActionExecutionStatus } from "../agent-os/actions/types.ts";
+import type {
+  ActionExecutionRecord,
+  ActionExecutionStatus,
+} from "../agent-os/actions/types.ts";
 import type {
   AppendCustomerNoteInput,
+  CalendarAvailabilityQuery,
+  CalendarAvailabilityResult,
+  CalendarEventRecord,
+  CalendarPort,
+  CancelCalendarEventInput,
+  CreateCalendarEventInput,
+  CreateCustomerInput,
+  CrmPort,
   CustomerNoteRecord,
   CustomerNotesPort,
+  CustomerRecord,
+  RescheduleCalendarEventInput,
   ToolPorts,
+  UpdateCustomerInput,
+  UpdateLeadStageInput,
 } from "../agent-os/actions/ports.ts";
-import type { TenantToolPolicy, ToolPolicyProvider } from "../agent-os/actions/policy.ts";
+import type {
+  TenantToolPolicy,
+  ToolPolicyProvider,
+} from "../agent-os/actions/policy.ts";
 import { currentScope } from "./request-scope.ts";
 
 /** Returns the context FastAPI pre-loaded for this request's tenant. */
@@ -40,7 +58,9 @@ export class ScopedSharedContextProvider implements SharedContextProvider {
     if (userId !== scope.accountId) {
       // Defense in depth: the orchestrator was asked for a tenant other than
       // the one this request is scoped to. Never serve cross-tenant data.
-      throw new Error(`isolation breach: context requested for ${userId} but request scoped to ${scope.accountId}`);
+      throw new Error(
+        `isolation breach: context requested for ${userId} but request scoped to ${scope.accountId}`,
+      );
     }
     return scope.context;
   }
@@ -51,8 +71,14 @@ export class ScopedRunStore implements RunStore {
   createRoutingDecision(input: RoutingDecisionCreate): Promise<{ id: string }> {
     return currentScope().record.createRoutingDecision(input);
   }
-  markRoutingDecisionOverridden(decisionId: string, changedTo: string): Promise<void> {
-    return currentScope().record.markRoutingDecisionOverridden(decisionId, changedTo);
+  markRoutingDecisionOverridden(
+    decisionId: string,
+    changedTo: string,
+  ): Promise<void> {
+    return currentScope().record.markRoutingDecisionOverridden(
+      decisionId,
+      changedTo,
+    );
   }
   createRun(input: AgentRunCreate): Promise<{ id: string }> {
     return currentScope().record.createRun(input);
@@ -63,7 +89,11 @@ export class ScopedRunStore implements RunStore {
   createDraft(input: DraftCreate): Promise<{ id: string }> {
     return currentScope().record.createDraft(input);
   }
-  captureWishlist(input: { userId: string; request: string; consideredAgents: string }): Promise<void> {
+  captureWishlist(input: {
+    userId: string;
+    request: string;
+    consideredAgents: string;
+  }): Promise<void> {
     return currentScope().record.captureWishlist(input);
   }
   recordTraceStep(input: TraceStepCreate): Promise<void> {
@@ -93,7 +123,10 @@ export class ScopedActionStore implements ActionStore {
   get(id: string): Promise<ActionExecutionRecord | null> {
     return currentScope().actions.store.get(id);
   }
-  update(id: string, patch: Partial<ActionExecutionRecord>): Promise<ActionExecutionRecord> {
+  update(
+    id: string,
+    patch: Partial<ActionExecutionRecord>,
+  ): Promise<ActionExecutionRecord> {
     return currentScope().actions.store.update(id, patch);
   }
   transition(
@@ -107,8 +140,16 @@ export class ScopedActionStore implements ActionStore {
   list(filter: ActionExecutionFilter): Promise<ActionExecutionRecord[]> {
     return currentScope().actions.store.list(filter);
   }
-  findByIdempotencyKey(accountId: string, toolId: string, key: string): Promise<ActionExecutionRecord | null> {
-    return currentScope().actions.store.findByIdempotencyKey(accountId, toolId, key);
+  findByIdempotencyKey(
+    accountId: string,
+    toolId: string,
+    key: string,
+  ): Promise<ActionExecutionRecord | null> {
+    return currentScope().actions.store.findByIdempotencyKey(
+      accountId,
+      toolId,
+      key,
+    );
   }
 }
 
@@ -123,14 +164,87 @@ export class ScopedCustomerNotesPort implements CustomerNotesPort {
   append(input: AppendCustomerNoteInput): Promise<CustomerNoteRecord> {
     return currentScope().actions.notes.append(input);
   }
-  list(input: { accountId: string; customerId: string }): Promise<CustomerNoteRecord[]> {
+  list(input: {
+    accountId: string;
+    customerId: string;
+  }): Promise<CustomerNoteRecord[]> {
     return currentScope().actions.notes.list(input);
+  }
+}
+
+export class ScopedCalendarPort implements CalendarPort {
+  get name(): string {
+    return currentScope().actions.calendar.name;
+  }
+  get durable(): boolean {
+    return currentScope().actions.calendar.durable;
+  }
+  getAvailability(
+    query: CalendarAvailabilityQuery,
+  ): Promise<CalendarAvailabilityResult> {
+    return currentScope().actions.calendar.getAvailability(query);
+  }
+  createEvent(input: CreateCalendarEventInput): Promise<CalendarEventRecord> {
+    return currentScope().actions.calendar.createEvent(input);
+  }
+  getEvent(input: {
+    accountId: string;
+    eventId: string;
+  }): Promise<CalendarEventRecord | null> {
+    return currentScope().actions.calendar.getEvent(input);
+  }
+  findByFingerprint(input: {
+    accountId: string;
+    start: string;
+    end: string;
+    title: string;
+    customerId?: string;
+    idempotencyKey?: string;
+  }): Promise<CalendarEventRecord | null> {
+    return currentScope().actions.calendar.findByFingerprint(input);
+  }
+  rescheduleEvent(
+    input: RescheduleCalendarEventInput,
+  ): Promise<CalendarEventRecord> {
+    return currentScope().actions.calendar.rescheduleEvent(input);
+  }
+  cancelEvent(input: CancelCalendarEventInput): Promise<CalendarEventRecord> {
+    return currentScope().actions.calendar.cancelEvent(input);
+  }
+}
+
+export class ScopedCrmPort implements CrmPort {
+  get name(): string {
+    return currentScope().actions.crm.name;
+  }
+  get durable(): boolean {
+    return currentScope().actions.crm.durable;
+  }
+  getCustomer(input: {
+    accountId: string;
+    customerId: string;
+  }): Promise<CustomerRecord | null> {
+    return currentScope().actions.crm.getCustomer(input);
+  }
+  listCustomers(input: { accountId: string }): Promise<CustomerRecord[]> {
+    return currentScope().actions.crm.listCustomers(input);
+  }
+  updateCustomer(input: UpdateCustomerInput): Promise<CustomerRecord> {
+    return currentScope().actions.crm.updateCustomer(input);
+  }
+  createCustomer(input: CreateCustomerInput): Promise<CustomerRecord> {
+    return currentScope().actions.crm.createCustomer(input);
+  }
+  updateLeadStage(input: UpdateLeadStageInput): Promise<CustomerRecord> {
+    return currentScope().actions.crm.updateLeadStage(input);
   }
 }
 
 /** The full port surface, all request-scoped. */
 export const scopedToolPorts: ToolPorts = {
   customerNotes: new ScopedCustomerNotesPort(),
+  calendar: new ScopedCalendarPort(),
+  crm: new ScopedCrmPort(),
 };
 
 /** The tenant's tool policy, as supplied by the data plane for this request. */
@@ -138,7 +252,9 @@ export class ScopedToolPolicyProvider implements ToolPolicyProvider {
   async load(accountId: string): Promise<TenantToolPolicy> {
     const scope = currentScope();
     if (accountId !== scope.accountId) {
-      throw new Error(`isolation breach: policy requested for ${accountId} but request scoped to ${scope.accountId}`);
+      throw new Error(
+        `isolation breach: policy requested for ${accountId} but request scoped to ${scope.accountId}`,
+      );
     }
     return scope.actions.policy;
   }

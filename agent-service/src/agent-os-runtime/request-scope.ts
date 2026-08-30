@@ -13,13 +13,20 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { SharedContext } from "../agent-os/types/agent.ts";
 import type { RunRecordCollector } from "./run-record-collector.ts";
-import type { CollectingActionStore, CollectingCustomerNotesPort } from "./action-collector.ts";
+import type {
+  CollectingActionStore,
+  CollectingCalendarPort,
+  CollectingCrmPort,
+  CollectingCustomerNotesPort,
+} from "./action-collector.ts";
 import type { TenantToolPolicy } from "../agent-os/actions/policy.ts";
 
 /** The action layer's per-request state: audit rows, note writes, tenant policy. */
 export interface RequestActionScope {
   store: CollectingActionStore;
   notes: CollectingCustomerNotesPort;
+  calendar: CollectingCalendarPort;
+  crm: CollectingCrmPort;
   policy: TenantToolPolicy;
 }
 

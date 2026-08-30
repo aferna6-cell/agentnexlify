@@ -216,8 +216,17 @@ test("the shipped registry exposes honest metadata", () => {
   const ids = meta.map((m) => m.id).sort();
   assert.deepEqual(ids, [
     "add_customer_note",
+    "cancel_calendar_event",
+    "create_calendar_event",
+    "create_customer",
     "get_business_profile",
+    "get_calendar_availability",
+    "get_customer",
+    "reschedule_calendar_event",
+    "search_customers",
     "send_email",
+    "update_customer",
+    "update_lead_stage",
   ]);
 
   const read = meta.find((m) => m.id === "get_business_profile")!;
@@ -250,11 +259,7 @@ test("availableFor honours a tenant's allow-list", () => {
   );
 
   const none = toolRegistry.availableFor({
-    disabledToolIds: [
-      "get_business_profile",
-      "add_customer_note",
-      "send_email",
-    ],
+    disabledToolIds: toolRegistry.all().map((t) => t.id),
   });
   assert.deepEqual(none, []);
 });

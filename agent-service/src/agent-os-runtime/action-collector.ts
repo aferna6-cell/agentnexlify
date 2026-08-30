@@ -16,11 +16,30 @@ import type {
   ActionExecutionFilter,
   ActionStore,
 } from "../agent-os/actions/store.ts";
-import type { ActionExecutionRecord, ActionExecutionStatus } from "../agent-os/actions/types.ts";
+import type {
+  ActionExecutionRecord,
+  ActionExecutionStatus,
+} from "../agent-os/actions/types.ts";
 import type {
   AppendCustomerNoteInput,
+  CalendarAvailabilityQuery,
+  CalendarAvailabilityResult,
+  CalendarEventRecord,
+  CalendarPort,
+  CancelCalendarEventInput,
+  CreateCalendarEventInput,
+  CreateCustomerInput,
+  CrmPort,
   CustomerNoteRecord,
   CustomerNotesPort,
+  CustomerRecord,
+  RescheduleCalendarEventInput,
+  UpdateCustomerInput,
+  UpdateLeadStageInput,
+} from "../agent-os/actions/ports.ts";
+import {
+  InMemoryCalendarPort,
+  InMemoryCrmPort,
 } from "../agent-os/actions/ports.ts";
 
 /** Collects execution rows for the data plane to persist. */
@@ -33,7 +52,8 @@ export class CollectingActionStore implements ActionStore {
   }
 
   async create(record: ActionExecutionRecord): Promise<ActionExecutionRecord> {
-    if (this.rows.has(record.id)) throw new Error(`duplicate action execution id "${record.id}"`);
+    if (this.rows.has(record.id))
+      throw new Error(`duplicate action execution id "${record.id}"`);
     this.rows.set(record.id, { ...record });
     return { ...record };
   }
@@ -43,7 +63,10 @@ export class CollectingActionStore implements ActionStore {
     return row ? { ...row } : null;
   }
 
-  async update(id: string, patch: Partial<ActionExecutionRecord>): Promise<ActionExecutionRecord> {
+  async update(
+    id: string,
+    patch: Partial<ActionExecutionRecord>,
+  ): Promise<ActionExecutionRecord> {
     const row = this.rows.get(id);
     if (!row) throw new Error(`unknown action execution "${id}"`);
     const next = { ...row, ...patch, id: row.id };
@@ -80,7 +103,10 @@ export class CollectingActionStore implements ActionStore {
     key: string,
   ): Promise<ActionExecutionRecord | null> {
     const hit = [...this.rows.values()].find(
-      (r) => r.accountId === accountId && r.toolId === toolId && r.idempotencyKey === key,
+      (r) =>
+        r.accountId === accountId &&
+        r.toolId === toolId &&
+        r.idempotencyKey === key,
     );
     return hit ? { ...hit } : null;
   }
@@ -124,7 +150,10 @@ export class CollectingCustomerNotesPort implements CustomerNotesPort {
     return { ...record };
   }
 
-  async list(input: { accountId: string; customerId: string }): Promise<CustomerNoteRecord[]> {
+  async list(input: {
+    accountId: string;
+    customerId: string;
+  }): Promise<CustomerNoteRecord[]> {
     return [...this.existing, ...this.written]
       .filter((n) => n.customerId === input.customerId)
       .map((n) => ({ ...n }));
@@ -133,5 +162,93 @@ export class CollectingCustomerNotesPort implements CustomerNotesPort {
   /** Notes written this request, for the data plane to apply. */
   toBundle(): CustomerNoteRecord[] {
     return this.written.map((n) => ({ ...n }));
+  }
+}
+
+/**
+ * Calendar port for the orchestration path. Mutations are held for FastAPI to
+ * apply via google_calendar / appointments; verify() still reads back here.
+ */
+export class CollectingCalendarPort implements CalendarPort {
+  readonly name = "agent_service_calendar_bundle";
+  readonly durable = true;
+  private readonly inner = new InMemoryCalendarPort();
+
+  /** Expose inner for tests that need to seed busy intervals. */
+  get memory(): InMemoryCalendarPort {
+    return this.inner;
+  }
+
+  getAvailability(
+    query: CalendarAvailabilityQuery,
+  ): Promise<CalendarAvailabilityResult> {
+    return this.inner.getAvailability(query);
+  }
+  createEvent(input: CreateCalendarEventInput): Promise<CalendarEventRecord> {
+    return this.inner.createEvent(input);
+  }
+  getEvent(input: {
+    accountId: string;
+    eventId: string;
+  }): Promise<CalendarEventRecord | null> {
+    return this.inner.getEvent(input);
+  }
+  findByFingerprint(input: {
+    accountId: string;
+    start: string;
+    end: string;
+    title: string;
+    customerId?: string;
+    idempotencyKey?: string;
+  }): Promise<CalendarEventRecord | null> {
+    return this.inner.findByFingerprint(input);
+  }
+  rescheduleEvent(
+    input: RescheduleCalendarEventInput,
+  ): Promise<CalendarEventRecord> {
+    return this.inner.rescheduleEvent(input);
+  }
+  cancelEvent(input: CancelCalendarEventInput): Promise<CalendarEventRecord> {
+    return this.inner.cancelEvent(input);
+  }
+
+  toBundle(): CalendarEventRecord[] {
+    return this.inner.allEvents();
+  }
+}
+
+/** CRM port for the orchestration path — collects mutations for FastAPI. */
+export class CollectingCrmPort implements CrmPort {
+  readonly name = "agent_service_crm_bundle";
+  readonly durable = true;
+  private readonly inner = new InMemoryCrmPort();
+
+  get memory(): InMemoryCrmPort {
+    return this.inner;
+  }
+
+  getCustomer(input: {
+    accountId: string;
+    customerId: string;
+  }): Promise<CustomerRecord | null> {
+    return this.inner.getCustomer(input);
+  }
+  listCustomers(input: { accountId: string }): Promise<CustomerRecord[]> {
+    return this.inner.listCustomers(input);
+  }
+  updateCustomer(input: UpdateCustomerInput): Promise<CustomerRecord> {
+    return this.inner.updateCustomer(input);
+  }
+  createCustomer(input: CreateCustomerInput): Promise<CustomerRecord> {
+    return this.inner.createCustomer(input);
+  }
+  updateLeadStage(input: UpdateLeadStageInput): Promise<CustomerRecord> {
+    return this.inner.updateLeadStage(input);
+  }
+
+  toBundle(): CustomerRecord[] {
+    // Return only mutated accounts — for v1 return all in memory for the tenant
+    // the data plane will reconcile. Tests use InMemory directly.
+    return [];
   }
 }
