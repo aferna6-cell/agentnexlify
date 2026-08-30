@@ -137,8 +137,243 @@ def _write_artifact(evidence: dict) -> Path:
     return path
 
 
-def run_rag_soak(evidence: dict) -> int:
-    """In-process RAG soak — does not flip Railway production RAG_ENABLED."""
+def _staging_meta() -> dict[str, Any]:
+    """Non-secret staging identifiers only — never tokens/keys."""
+    return {
+        "api_base": (os.environ.get("M8_SMOKE_API_BASE") or "").strip() or None,
+        "railway_project_id": (
+            os.environ.get("M8_SMOKE_RAILWAY_PROJECT_ID") or ""
+        ).strip()
+        or None,
+        "railway_environment_id": (
+            os.environ.get("M8_SMOKE_RAILWAY_ENVIRONMENT_ID") or ""
+        ).strip()
+        or None,
+        "railway_environment_name": (
+            os.environ.get("M8_SMOKE_RAILWAY_ENVIRONMENT_NAME") or "staging"
+        ).strip(),
+    }
+
+
+def _probe_staging_api(evidence: dict) -> None:
+    base = (os.environ.get("M8_SMOKE_API_BASE") or "").strip().rstrip("/")
+    if not base:
+        _record(
+            evidence,
+            "staging",
+            "api_base",
+            result="blocked",
+            blocker="M8_SMOKE_API_BASE unset — no staging deploy URL to probe",
+        )
+        return
+    import urllib.error
+    import urllib.request
+
+    url = f"{base}/health"
+    try:
+        with urllib.request.urlopen(url, timeout=15) as resp:  # noqa: S310
+            code = getattr(resp, "status", None) or resp.getcode()
+            body = resp.read(200).decode("utf-8", errors="replace")
+        _record(
+            evidence,
+            "staging",
+            "health_probe",
+            result="pass" if int(code) == 200 else "fail",
+            http_status=int(code),
+            url=url,
+            body_preview=body[:120],
+        )
+    except urllib.error.URLError as exc:
+        _record(
+            evidence,
+            "staging",
+            "health_probe",
+            result="fail",
+            url=url,
+            detail=type(exc).__name__,
+        )
+
+
+def _load_smoke_corpus(client_id: str) -> tuple[list, str, int | None]:
+    """Return (corpus, source_label, db_chunk_count_or_None)."""
+    from backend.services.business_retrieval import CorpusChunk
+    from backend.services.tenant_kb_index import (
+        documents_to_chunks,
+        load_corpus_from_documents,
+    )
+
+    if _service_creds_present():
+        from backend.models.database import get_service_supabase
+
+        db = get_service_supabase()
+        corpus = load_corpus_from_documents(db, client_id)
+        chunk_count = None
+        try:
+            rows = (
+                db.table("tenant_kb_chunks")
+                .select("id", count="exact")
+                .eq("client_id", client_id)
+                .eq("status", "active")
+                .execute()
+            )
+            chunk_count = int(getattr(rows, "count", None) or len(rows.data or []))
+        except Exception:
+            chunk_count = None
+        return corpus, "db_documents_compile_path", chunk_count
+
+    # Artifact mirror of indexed chunks (written after compile/index). Not a
+    # substitute for Agent OS HTTP, but proves retrieval against real smoke KB.
+    art = ARTIFACT_DIR / "m8-smoke-kb-chunks.json"
+    if art.exists():
+        raw = json.loads(art.read_text(encoding="utf-8"))
+        corpus = []
+        for row in raw:
+            if row.get("client_id") != client_id:
+                continue
+            if (row.get("status") or "active") != "active":
+                continue
+            corpus.append(
+                CorpusChunk(
+                    chunk_id=str(row.get("id") or f"{row.get('document_id')}#{row.get('chunk_index')}"),
+                    document_id=str(row.get("document_id") or ""),
+                    account_id=client_id,
+                    title=row.get("title") or "document",
+                    section=row.get("section") or "",
+                    content=row.get("content") or "",
+                    source_type=row.get("source_type") or "upload",
+                    citation_label=row.get("citation_label") or "",
+                    status="active",
+                )
+            )
+        return corpus, "artifact_chunks_mirror", len(corpus)
+
+    # Last resort: reconstruct from approved smoke markdown if present in repo.
+    md_path = ARTIFACT_DIR / "m8-smoke-kb.md"
+    if md_path.exists():
+        corpus = documents_to_chunks(
+            client_id,
+            [
+                {
+                    "id": "a5dbe7dc-2277-4dd7-95ec-04a152bfff73",
+                    "filename": "m8-smoke-kb.md",
+                    "content_md": md_path.read_text(encoding="utf-8"),
+                    "source": "upload",
+                    "status": "active",
+                }
+            ],
+        )
+        return corpus, "artifact_markdown_compile_path", len(corpus)
+
+    return [], "unavailable", None
+
+
+def run_rag_tenant_proof(evidence: dict, client_id: str) -> int:
+    """Smoke-tenant retrieval against compiled KB (citations + abstention)."""
+    os.environ["RAG_ENABLED"] = "1"
+    from backend.services.business_retrieval import (
+        DEFAULT_MIN_SCORE,
+        attach_rag_knowledge,
+        retrieve_business_context,
+    )
+
+    if DEFAULT_MIN_SCORE != 1.0:
+        _record(
+            evidence,
+            "rag",
+            "threshold_guard",
+            result="fail",
+            detail=f"DEFAULT_MIN_SCORE drifted to {DEFAULT_MIN_SCORE}",
+        )
+        return 4
+
+    corpus, source, chunk_count = _load_smoke_corpus(client_id)
+    active = chunk_count if chunk_count is not None else len(corpus)
+    if active <= 0 or not corpus:
+        _record(
+            evidence,
+            "rag",
+            "tenant_kb_chunks",
+            result="blocked",
+            blocker="active tenant_kb_chunks count is 0 / corpus empty",
+            source=source,
+            active_chunks=active,
+        )
+        return 3
+
+    _record(
+        evidence,
+        "rag",
+        "tenant_kb_chunks",
+        result="pass",
+        source=source,
+        active_chunks=active,
+        note="Does not flip Railway production RAG_ENABLED",
+    )
+
+    other = str(uuid.uuid4())
+    cases = [
+        ("services", "What services do you offer?", False),
+        ("prices", "How much is an exterior wash?", False),
+        ("warranty", "What is your ceramic coating warranty?", False),
+        ("cancellation", "What is your cancellation policy?", False),
+        ("faq", "Do you come to my driveway?", False),
+        ("no_answer", "What is your cryptocurrency mining hash rate?", True),
+    ]
+    fails = 0
+    for label, ask, expect_abstain in cases:
+        result = retrieve_business_context(
+            client_id, ask, corpus, min_score=DEFAULT_MIN_SCORE
+        )
+        cross = retrieve_business_context(
+            other, ask, corpus, min_score=DEFAULT_MIN_SCORE
+        )
+        ok = (result.abstain is expect_abstain) and (
+            cross.abstain and len(cross.evidence) == 0
+        )
+        if not ok:
+            fails += 1
+        _record(
+            evidence,
+            "rag",
+            f"tenant_query_{label}",
+            result="pass" if ok else "fail",
+            abstain=result.abstain,
+            reason=result.reason,
+            citations=[e.citation_label for e in result.evidence[:3]],
+            top_score=result.scores[0] if result.scores else None,
+            cross_tenant_evidence=len(cross.evidence),
+            expected_abstain=expect_abstain,
+        )
+
+    attached_ok = attach_rag_knowledge(
+        {"kb": []}, client_id, "How much is an exterior wash?", corpus
+    )
+    attached_no = attach_rag_knowledge(
+        {"kb": []},
+        client_id,
+        "What is your cryptocurrency mining hash rate?",
+        corpus,
+    )
+    attach_pass = (
+        attached_ok.get("ragStatus") == "ok"
+        and bool(attached_ok.get("ragEvidence"))
+        and attached_no.get("ragStatus") == "abstain"
+    )
+    _record(
+        evidence,
+        "rag",
+        "attach_rag_contract",
+        result="pass" if attach_pass else "fail",
+        price_status=attached_ok.get("ragStatus"),
+        no_answer_status=attached_no.get("ragStatus"),
+        no_answer_reason=attached_no.get("ragAbstainReason"),
+        agent_os_http="not_run_without_staging_api",
+    )
+    return 4 if fails or not attach_pass else 0
+
+
+def run_rag_soak(evidence: dict, client_id: str | None = None) -> int:
+    """Holdout soak + optional smoke-tenant retrieval proof."""
     os.environ["RAG_ENABLED"] = "1"
     # Frozen threshold — do not change during rollout.
     from backend.services.business_retrieval import DEFAULT_MIN_SCORE
@@ -206,11 +441,14 @@ def run_rag_soak(evidence: dict) -> int:
         prompt_injection_failures=safety.get("prompt_injection_failures"),
         note=(
             "Process-local RAG_ENABLED=1 soak against independent holdout. "
-            "Does not enable Railway production RAG_ENABLED. "
-            "Live tenant_kb_chunks may still be empty — enable staging deploy separately."
+            "Does not enable Railway production RAG_ENABLED."
         ),
     )
-    return 0 if ok else 4
+    if not ok:
+        return 4
+    if client_id:
+        return run_rag_tenant_proof(evidence, client_id)
+    return 0
 
 
 def run_calendar_suite(evidence: dict, client_id: str) -> int:
@@ -611,11 +849,21 @@ def main(argv: list[str] | None = None) -> int:
     suites_raw = os.environ.get("M8_SMOKE_SUITES", "rag,calendar,crm,gmail")
     suites = [s.strip().lower() for s in suites_raw.split(",") if s.strip()]
     evidence["suites"] = suites
+    evidence["staging"] = _staging_meta()
+    evidence["feature_flags_process"] = {
+        "RAG_ENABLED": os.environ.get("RAG_ENABLED", "0"),
+        "CALENDAR_ACTIONS_ENABLED": os.environ.get("CALENDAR_ACTIONS_ENABLED", "0"),
+        "CRM_ACTIONS_ENABLED": os.environ.get("CRM_ACTIONS_ENABLED", "0"),
+        "SEND_EMAIL_ENABLED": os.environ.get("SEND_EMAIL_ENABLED", "0"),
+        "DEFAULT_MIN_SCORE": 1.0,
+        "note": "Process-local only unless staging Railway vars are set by owner",
+    }
+    _probe_staging_api(evidence)
 
     codes: list[int] = []
     for suite in suites:
         if suite == "rag":
-            codes.append(run_rag_soak(evidence))
+            codes.append(run_rag_soak(evidence, client_id))
         elif suite == "calendar":
             codes.append(run_calendar_suite(evidence, client_id))
         elif suite == "crm":
