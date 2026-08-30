@@ -10,25 +10,44 @@
 
 import { z } from "zod";
 import { defineTool } from "./define-tool.ts";
-import { InMemoryCustomerNotesPort, setToolPorts, type ToolPorts } from "./ports.ts";
+import {
+  InMemoryCalendarPort,
+  InMemoryCrmPort,
+  InMemoryCustomerNotesPort,
+  setToolPorts,
+  type ToolPorts,
+} from "./ports.ts";
 import { InMemoryActionStore, setActionStore } from "./store.ts";
 import { ToolRegistry } from "./registry.ts";
 import { resetToolPolicyProvider } from "./policy.ts";
 import { getBusinessProfile } from "./tools/get_business_profile.ts";
 import { addCustomerNote } from "./tools/add_customer_note.ts";
+import { getCalendarAvailability } from "./tools/get_calendar_availability.ts";
+import { createCalendarEvent } from "./tools/create_calendar_event.ts";
+import { rescheduleCalendarEvent } from "./tools/reschedule_calendar_event.ts";
+import { cancelCalendarEvent } from "./tools/cancel_calendar_event.ts";
+import { getCustomer } from "./tools/get_customer.ts";
+import { searchCustomers } from "./tools/search_customers.ts";
+import { updateCustomer } from "./tools/update_customer.ts";
+import { createCustomer } from "./tools/create_customer.ts";
+import { updateLeadStage } from "./tools/update_lead_stage.ts";
 import type { SharedContext } from "../types/agent.ts";
 
 export interface Harness {
   store: InMemoryActionStore;
   ports: ToolPorts;
   notes: InMemoryCustomerNotesPort;
+  calendar: InMemoryCalendarPort;
+  crm: InMemoryCrmPort;
   registry: ToolRegistry;
   context: SharedContext;
   /** How many times each fixture tool body actually ran. */
   calls: Record<string, number>;
 }
 
-export function sampleContext(overrides: Partial<SharedContext> = {}): SharedContext {
+export function sampleContext(
+  overrides: Partial<SharedContext> = {},
+): SharedContext {
   return {
     businessProfile: {
       businessName: "Sunset Auto Care",
@@ -36,11 +55,39 @@ export function sampleContext(overrides: Partial<SharedContext> = {}): SharedCon
       city: "Phoenix",
       state: "AZ",
       phone: "(602) 555-0148",
+      timezone: "America/Phoenix",
     },
     widgetHistory: [],
     pipelineLeads: [
-      { id: "lead_1", name: "Sarah Chen", status: "quoted", subject: "brake job", quoteAmount: 640 },
-      { id: "lead_2", name: "Mike Johnson", status: "new", subject: "tire rotation" },
+      {
+        id: "lead_1",
+        name: "Sarah Chen",
+        status: "quoted",
+        subject: "brake job",
+        quoteAmount: 640,
+        email: "sarah@example.com",
+      },
+      {
+        id: "lead_2",
+        name: "Mike Johnson",
+        status: "new",
+        subject: "tire rotation",
+        phone: "(602) 555-0199",
+      },
+      {
+        id: "lead_3",
+        name: "Mike Rivera",
+        status: "contacted",
+        subject: "oil change",
+      },
+    ],
+    pipelineStages: [
+      "new",
+      "contacted",
+      "appointment_booked",
+      "closed",
+      "lost",
+      "quoted",
     ],
     appointments: [],
     invoices: [],
@@ -54,7 +101,23 @@ export function sampleContext(overrides: Partial<SharedContext> = {}): SharedCon
 export function harness(): Harness {
   const store = new InMemoryActionStore();
   const notes = new InMemoryCustomerNotesPort();
-  const ports: ToolPorts = { customerNotes: notes };
+  const calendar = new InMemoryCalendarPort();
+  const crm = new InMemoryCrmPort();
+  // Seed CRM from sample pipeline so mutations have writable targets.
+  for (const lead of sampleContext().pipelineLeads) {
+    crm.seed({
+      id: lead.id,
+      accountId: "tenantA",
+      name: lead.name,
+      status: lead.status,
+      email: lead.email,
+      phone: lead.phone,
+      subject: lead.subject,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  }
+  const ports: ToolPorts = { customerNotes: notes, calendar, crm };
   setActionStore(store);
   setToolPorts(ports);
   resetToolPolicyProvider();
@@ -63,9 +126,27 @@ export function harness(): Harness {
   const registry = new ToolRegistry();
   registry.register(getBusinessProfile);
   registry.register(addCustomerNote);
+  registry.register(getCalendarAvailability);
+  registry.register(createCalendarEvent);
+  registry.register(rescheduleCalendarEvent);
+  registry.register(cancelCalendarEvent);
+  registry.register(getCustomer);
+  registry.register(searchCustomers);
+  registry.register(updateCustomer);
+  registry.register(createCustomer);
+  registry.register(updateLeadStage);
   for (const tool of fixtureTools(calls)) registry.register(tool);
 
-  return { store, ports, notes, registry, context: sampleContext(), calls };
+  return {
+    store,
+    ports,
+    notes,
+    calendar,
+    crm,
+    registry,
+    context: sampleContext(),
+    calls,
+  };
 }
 
 /** Test-only tools covering the paths the shipped registry has no real tool for. */
@@ -138,7 +219,10 @@ export function fixtureTools(calls: Record<string, number>) {
       return { ok: true };
     },
     async verify() {
-      return { verified: false, detail: "the record was not found when read back" };
+      return {
+        verified: false,
+        detail: "the record was not found when read back",
+      };
     },
   });
 
@@ -150,7 +234,10 @@ export function fixtureTools(calls: Record<string, number>) {
     riskLevel: 0,
     mutating: false,
     requiresApproval: false,
-    inputSchema: z.object({ query: z.string(), api_key: z.string().optional() }),
+    inputSchema: z.object({
+      query: z.string(),
+      api_key: z.string().optional(),
+    }),
     outputSchema: z.object({ query: z.string() }),
     async execute({ input }) {
       bump("fixture_read_only");
@@ -158,5 +245,11 @@ export function fixtureTools(calls: Record<string, number>) {
     },
   });
 
-  return [externalMessage, highImpact, alwaysFails, failsVerification, readOnlyEcho];
+  return [
+    externalMessage,
+    highImpact,
+    alwaysFails,
+    failsVerification,
+    readOnlyEcho,
+  ];
 }

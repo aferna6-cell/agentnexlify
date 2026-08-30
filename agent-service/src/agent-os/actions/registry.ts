@@ -21,6 +21,15 @@ import {
 import { getBusinessProfile } from "./tools/get_business_profile.ts";
 import { addCustomerNote } from "./tools/add_customer_note.ts";
 import { sendEmail } from "./tools/send_email.ts";
+import { getCalendarAvailability } from "./tools/get_calendar_availability.ts";
+import { createCalendarEvent } from "./tools/create_calendar_event.ts";
+import { rescheduleCalendarEvent } from "./tools/reschedule_calendar_event.ts";
+import { cancelCalendarEvent } from "./tools/cancel_calendar_event.ts";
+import { getCustomer } from "./tools/get_customer.ts";
+import { searchCustomers } from "./tools/search_customers.ts";
+import { updateCustomer } from "./tools/update_customer.ts";
+import { createCustomer } from "./tools/create_customer.ts";
+import { updateLeadStage } from "./tools/update_lead_stage.ts";
 
 export type AnyTool = ErasedTool;
 
@@ -124,3 +133,12 @@ export const toolRegistry = new ToolRegistry();
 toolRegistry.register(getBusinessProfile);
 toolRegistry.register(addCustomerNote);
 toolRegistry.register(sendEmail);
+toolRegistry.register(getCalendarAvailability);
+toolRegistry.register(createCalendarEvent);
+toolRegistry.register(rescheduleCalendarEvent);
+toolRegistry.register(cancelCalendarEvent);
+toolRegistry.register(getCustomer);
+toolRegistry.register(searchCustomers);
+toolRegistry.register(updateCustomer);
+toolRegistry.register(createCustomer);
+toolRegistry.register(updateLeadStage);

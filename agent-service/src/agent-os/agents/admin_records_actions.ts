@@ -6,30 +6,25 @@
  * executor decides whether policy allows it, runs it, verifies it, and records
  * it. The department never touches the tool itself.
  *
- * Three things decide whether this is an action, and all three are general:
- *
- *  1. `intent.intent === "update_record"` — the ask is a record mutation, read
- *     off the task axis rather than off the presence of the word "note". This
- *     is what distinguishes "note on Mike's record that he approved the quote"
- *     (act) from "should I be noting quote approvals?" (a question about
- *     practice, which must never write anything).
- *  2. `authorizesAction(intent)` — the owner asked for it to be done, not for
- *     words about doing it.
- *  3. The customer resolves to exactly one record in this tenant's data.
- *
- * Where the customer is named but ambiguous, this asks. That is a third outcome
- * beside acting and drafting, and it is the right one: two customers called
- * Mike is not a reason to draft, and certainly not a reason to pick one.
+ * CRM retrieve tools (get_customer / search_customers) are gated by
+ * CRM_ACTIONS_ENABLED (default OFF) so production behaviour matches pre-M8
+ * until rollout.
  */
 
-import type { ClarificationRequest, DepartmentActionRequest } from "./_department.ts";
+import type {
+  ClarificationRequest,
+  DepartmentActionRequest,
+} from "./_department.ts";
 import { authorizesAction, type AskIntent } from "./_intent.ts";
 import { describeAmbiguity, resolveCustomerAnywhere } from "./_resolve.ts";
+import { crmActionsEnabled } from "../actions/flags.ts";
 import type { SharedContext } from "../types/agent.ts";
 
 /** The business's own details, as distinct from a customer's. */
 const BUSINESS_PROFILE_RE =
   /\b(my|our|the) (business|company|shop|store)\b|\b(business|company) (name|phone|address|hours|profile|details)\b|\bon file\b/i;
+
+const CUSTOMER_LOOKUP_RE = /\b(customer|lead|client|record|profile|contact)\b/i;
 
 /**
  * Pull the note text out of the ask. Owners phrase this as "… saying X",
@@ -44,11 +39,10 @@ export function extractNoteText(ask: string): string | undefined {
 }
 
 /**
- * Decide whether this ask is a "note on a record" action.
+ * Decide whether this ask is a CRM / record action.
  *
  * Returns undefined — meaning "not an action, draft instead" — unless the ask
- * is a record mutation the owner authorized, against a customer this business
- * actually has, with note text to store.
+ * clearly names a capability this department owns.
  */
 export function resolveRecordAction(args: {
   ownerAsk: string;
@@ -58,11 +52,6 @@ export function resolveRecordAction(args: {
 }): DepartmentActionRequest | ClarificationRequest | undefined {
   const { ownerAsk, params, context, intent } = args;
 
-  // Reading the business's own profile is a level-0 tool call, not a document
-  // to draft. Asking "what's my phone number on file?" and being handed a
-  // freshly written one-pager is the same category error as answering a
-  // communication request with a quote generator: the department reached for
-  // the skill it usually uses instead of the capability the task named.
   if (intent.intent === "retrieve" && BUSINESS_PROFILE_RE.test(ownerAsk)) {
     return {
       toolId: "get_business_profile",
@@ -71,9 +60,57 @@ export function resolveRecordAction(args: {
         const p = result as Record<string, unknown>;
         const parts = Object.entries(p)
           .filter(([, v]) => typeof v === "string" && v)
-          .map(([k, v]) => `${k.replace(/([A-Z])/g, " $1").toLowerCase().trim()}: ${String(v)}`);
-        return parts.length ? `Here's what I have on file — ${parts.join(", ")}.` : "I don't have a business profile on file yet.";
+          .map(
+            ([k, v]) =>
+              `${k
+                .replace(/([A-Z])/g, " $1")
+                .toLowerCase()
+                .trim()}: ${String(v)}`,
+          );
+        return parts.length
+          ? `Here's what I have on file — ${parts.join(", ")}.`
+          : "I don't have a business profile on file yet.";
       },
+    };
+  }
+
+  if (
+    crmActionsEnabled() &&
+    intent.intent === "retrieve" &&
+    CUSTOMER_LOOKUP_RE.test(ownerAsk)
+  ) {
+    const customerName =
+      typeof params.customer_name === "string"
+        ? params.customer_name.trim()
+        : "";
+    if (!customerName) {
+      return { clarify: "Which customer should I look up? Give me a name." };
+    }
+    const resolution = resolveCustomerAnywhere(context, customerName);
+    if (resolution.kind === "multiple") {
+      const names = describeAmbiguity(resolution.matches, (m) => m.name);
+      return {
+        clarify: `I found more than one customer matching "${customerName}" — ${names}. Which one did you mean?`,
+      };
+    }
+    if (resolution.kind === "none") {
+      return {
+        clarify: `I couldn't find a customer matching "${customerName}" in this business.`,
+      };
+    }
+    if (resolution.match.leadId) {
+      return {
+        toolId: "get_customer",
+        input: { customer_id: resolution.match.leadId },
+        describe: (result) => {
+          const out = result as { name?: string; status?: string };
+          return `Here's ${out.name ?? resolution.match.name} — status ${out.status ?? "unknown"}.`;
+        },
+      };
+    }
+    return {
+      toolId: "search_customers",
+      input: { query: customerName },
     };
   }
 
@@ -81,10 +118,9 @@ export function resolveRecordAction(args: {
   if (!authorizesAction(intent)) return undefined;
 
   const note = extractNoteText(ownerAsk);
-  const customerName = typeof params.customer_name === "string" ? params.customer_name.trim() : "";
+  const customerName =
+    typeof params.customer_name === "string" ? params.customer_name.trim() : "";
 
-  // Nothing to identify the customer by. Ask rather than draft a note into the
-  // void — the owner plainly wants a record updated, they just did not say whose.
   if (!customerName) {
     return {
       clarify:
@@ -95,26 +131,34 @@ export function resolveRecordAction(args: {
 
   const resolution = resolveCustomerAnywhere(context, customerName);
 
-  // Two customers match. There is no safe way to choose, so do not.
   if (resolution.kind === "multiple") {
     const names = describeAmbiguity(resolution.matches, (m) => m.name);
-    return { clarify: `I found more than one customer matching "${customerName}" — ${names}. Which one did you mean?` };
+    return {
+      clarify: `I found more than one customer matching "${customerName}" — ${names}. Which one did you mean?`,
+    };
   }
 
-  // Not a customer of this business. Fall through to drafting rather than
-  // inventing a record.
   if (resolution.kind === "none") return undefined;
 
   if (!note) {
-    return { clarify: `What should the note on ${resolution.match.name}'s record say?` };
+    return {
+      clarify: `What should the note on ${resolution.match.name}'s record say?`,
+    };
   }
 
   return {
     toolId: "add_customer_note",
     input: { customer_name: resolution.match.name, note },
     describe: (result) => {
-      const out = result as { customerName?: string; note?: string; durable?: boolean };
-      const where = out.durable === false ? " (this environment stores notes in memory only)" : "";
+      const out = result as {
+        customerName?: string;
+        note?: string;
+        durable?: boolean;
+      };
+      const where =
+        out.durable === false
+          ? " (this environment stores notes in memory only)"
+          : "";
       return `Added a note to ${out.customerName ?? resolution.match.name}'s record: "${out.note ?? note}"${where}.`;
     },
   };

@@ -5,7 +5,11 @@
 
 import { defineDepartment } from "./_department.ts";
 import { resolveRecordAction } from "./admin_records_actions.ts";
-import { resolveCommunicationAmbiguity, resolveEmailSendFromOutput } from "./communication_actions.ts";
+import { resolveCalendarAction } from "./operations_calendar_actions.ts";
+import {
+  resolveCommunicationAmbiguity,
+  resolveEmailSendFromOutput,
+} from "./communication_actions.ts";
 
 // v1 worker agents, now used as internal skills.
 import { booking } from "./booking/agent.ts";
@@ -42,7 +46,8 @@ export const sales = defineDepartment({
   display_name: "Sales",
   bucket: "sales",
   channel: "sequence",
-  purpose: "Brings in new customers and closes business: outreach, follow-ups, quote follow-ups, and quote documents.",
+  purpose:
+    "Brings in new customers and closes business: outreach, follow-ups, quote follow-ups, and quote documents.",
   routes_here_when: [
     "Owner follows up with a lead or prospect",
     "Owner asks to draft a quote or chase an unbooked quote",
@@ -64,13 +69,38 @@ export const sales = defineDepartment({
     // together enforce.
     {
       agent: quoteGenerator,
-      extraKeywords: ["draft a quote", "write up a quote", "estimate for", "parts", "labor"],
+      extraKeywords: [
+        "draft a quote",
+        "write up a quote",
+        "estimate for",
+        "parts",
+        "labor",
+      ],
       servesIntents: ["create"],
       generative: true,
     },
-    { agent: quoteFollowUp, extraKeywords: ["chase", "hasn't booked", "didn't book"], servesIntents: ["communicate"] },
-    { agent: leadNurture, extraKeywords: ["re-engage", "lapsed", "haven't seen", "referral"], servesIntents: ["communicate", "unknown"] },
-    { agent: outreach, extraKeywords: ["cold email", "reach out to", "prospect", "outreach", "new business", "cold outreach"], servesIntents: ["communicate"] },
+    {
+      agent: quoteFollowUp,
+      extraKeywords: ["chase", "hasn't booked", "didn't book"],
+      servesIntents: ["communicate"],
+    },
+    {
+      agent: leadNurture,
+      extraKeywords: ["re-engage", "lapsed", "haven't seen", "referral"],
+      servesIntents: ["communicate", "unknown"],
+    },
+    {
+      agent: outreach,
+      extraKeywords: [
+        "cold email",
+        "reach out to",
+        "prospect",
+        "outreach",
+        "new business",
+        "cold outreach",
+      ],
+      servesIntents: ["communicate"],
+    },
   ],
   defaultSkillId: "lead_nurture",
   // The first department that can send something real. Sales composes exactly
@@ -90,16 +120,33 @@ export const sales = defineDepartment({
   resolveSkill: ({ ownerAsk, params, context }) => {
     const a = ownerAsk.toLowerCase();
     // Explicit new-quote drafting with line items always generates.
-    const hasLineItems = /\$\s?\d/.test(ownerAsk) && /(parts|labor|part|materials|each|qty|x\d)/i.test(ownerAsk);
-    if (/\b(draft|write up|create|generate|make)\b.*\bquote\b/.test(a) || hasLineItems) return "quote_generator";
+    const hasLineItems =
+      /\$\s?\d/.test(ownerAsk) &&
+      /(parts|labor|part|materials|each|qty|x\d)/i.test(ownerAsk);
+    if (
+      /\b(draft|write up|create|generate|make)\b.*\bquote\b/.test(a) ||
+      hasLineItems
+    )
+      return "quote_generator";
 
-    const followUpIntent = /\b(follow up|follow-up|check in|chase|circle back|nudge|touch base)\b/.test(a);
+    const followUpIntent =
+      /\b(follow up|follow-up|check in|chase|circle back|nudge|touch base)\b/.test(
+        a,
+      );
     if (!followUpIntent) return undefined; // keyword scoring handles the rest
 
-    const name = typeof params.customer_name === "string" ? params.customer_name.trim().toLowerCase() : "";
+    const name =
+      typeof params.customer_name === "string"
+        ? params.customer_name.trim().toLowerCase()
+        : "";
     const lead = name
       ? context.pipelineLeads.find(
-          (l) => l.name.toLowerCase().includes(name) && l.quoteAmount && !["won", "lost", "accepted", "cancelled"].includes(l.status.toLowerCase()),
+          (l) =>
+            l.name.toLowerCase().includes(name) &&
+            l.quoteAmount &&
+            !["won", "lost", "accepted", "cancelled"].includes(
+              l.status.toLowerCase(),
+            ),
         )
       : undefined;
     if (lead) return "quote_follow_up"; // existing open quote → follow up on it
@@ -108,9 +155,23 @@ export const sales = defineDepartment({
     return "lead_nurture";
   },
   examples: [
-    { owner_ask: "Follow up with Sarah Chen on her brake quote.", expected_route: "sales", expected_output_excerpt: "quote" },
-    { owner_ask: "Draft a quote for Mike Johnson, parts $620, labor $480, net 15 terms.", expected_route: "sales", expected_output_excerpt: "Total" },
-    { owner_ask: "Reach out to the three customers we haven't seen in 6+ months.", expected_route: "sales", expected_output_excerpt: "Hi" },
+    {
+      owner_ask: "Follow up with Sarah Chen on her brake quote.",
+      expected_route: "sales",
+      expected_output_excerpt: "quote",
+    },
+    {
+      owner_ask:
+        "Draft a quote for Mike Johnson, parts $620, labor $480, net 15 terms.",
+      expected_route: "sales",
+      expected_output_excerpt: "Total",
+    },
+    {
+      owner_ask:
+        "Reach out to the three customers we haven't seen in 6+ months.",
+      expected_route: "sales",
+      expected_output_excerpt: "Hi",
+    },
   ],
 });
 
@@ -119,7 +180,8 @@ export const marketing = defineDepartment({
   display_name: "Marketing",
   bucket: "marketing",
   channel: "email",
-  purpose: "Advertising, social, email campaigns, content, SEO, reviews, and brand awareness.",
+  purpose:
+    "Advertising, social, email campaigns, content, SEO, reviews, and brand awareness.",
   routes_here_when: [
     "Owner asks for a campaign, social post, blog, or content piece",
     "Owner asks for SEO recommendations or review requests",
@@ -133,13 +195,35 @@ export const marketing = defineDepartment({
     intents: ["create", "analyze", "communicate"],
   },
   skills: [
-    { agent: campaign, extraKeywords: ["email blast", "promo", "special", "announce"] },
+    {
+      agent: campaign,
+      extraKeywords: ["email blast", "promo", "special", "announce"],
+    },
     { agent: socialPost, extraKeywords: ["facebook", "instagram", "social"] },
-    { agent: contentWriter, extraKeywords: ["about us", "blog", "article", "paragraph", "write up"] },
-    { agent: reviewRequest, extraKeywords: ["review", "google review", "testimonial"] },
-    { agent: seoRecommendations, extraKeywords: ["seo", "search", "rank", "website"] },
-    { agent: aiVisibilityStub, extraKeywords: ["ai visibility", "geo score", "chatgpt see"] },
-    { agent: marketResearch, extraKeywords: ["what do others charge", "what are competitors", "market check"] },
+    {
+      agent: contentWriter,
+      extraKeywords: ["about us", "blog", "article", "paragraph", "write up"],
+    },
+    {
+      agent: reviewRequest,
+      extraKeywords: ["review", "google review", "testimonial"],
+    },
+    {
+      agent: seoRecommendations,
+      extraKeywords: ["seo", "search", "rank", "website"],
+    },
+    {
+      agent: aiVisibilityStub,
+      extraKeywords: ["ai visibility", "geo score", "chatgpt see"],
+    },
+    {
+      agent: marketResearch,
+      extraKeywords: [
+        "what do others charge",
+        "what are competitors",
+        "market check",
+      ],
+    },
   ],
   defaultSkillId: "campaign",
   // Sending is a system capability, not a Sales one: any department that writes
@@ -148,9 +232,22 @@ export const marketing = defineDepartment({
   resolveAction: resolveCommunicationAmbiguity,
   resolveActionFromOutput: resolveEmailSendFromOutput,
   examples: [
-    { owner_ask: "Draft an email blast for our June AC special, $59 instead of $89.", expected_route: "marketing", expected_output_excerpt: "59" },
-    { owner_ask: "Write a Facebook post about our weekend hours.", expected_route: "marketing", expected_output_excerpt: "weekend" },
-    { owner_ask: "Give me SEO recommendations for our website.", expected_route: "marketing", expected_output_excerpt: "SEO" },
+    {
+      owner_ask:
+        "Draft an email blast for our June AC special, $59 instead of $89.",
+      expected_route: "marketing",
+      expected_output_excerpt: "59",
+    },
+    {
+      owner_ask: "Write a Facebook post about our weekend hours.",
+      expected_route: "marketing",
+      expected_output_excerpt: "weekend",
+    },
+    {
+      owner_ask: "Give me SEO recommendations for our website.",
+      expected_route: "marketing",
+      expected_output_excerpt: "SEO",
+    },
   ],
 });
 
@@ -159,7 +256,8 @@ export const customerService = defineDepartment({
   display_name: "Customer Service",
   bucket: "customer_service",
   channel: "widget_reply",
-  purpose: "Handles customer questions, complaints, and retention with the hardcoded complaint-safety rules.",
+  purpose:
+    "Handles customer questions, complaints, and retention with the hardcoded complaint-safety rules.",
   routes_here_when: [
     "Owner is responding to an inbound customer question",
     "Owner is responding to a complaint or service issue",
@@ -173,9 +271,25 @@ export const customerService = defineDepartment({
     intents: ["communicate"],
   },
   skills: [
-    { agent: complaintHandler, extraKeywords: ["angry", "upset", "complaint", "refund", "unhappy"] },
-    { agent: customerQuestion, extraKeywords: ["asked", "question", "do you", "reply", "respond"] },
-    { agent: conversationInsights, extraKeywords: ["insights", "what are customers asking", "common questions", "conversation report", "capture rate", "chat trends"] },
+    {
+      agent: complaintHandler,
+      extraKeywords: ["angry", "upset", "complaint", "refund", "unhappy"],
+    },
+    {
+      agent: customerQuestion,
+      extraKeywords: ["asked", "question", "do you", "reply", "respond"],
+    },
+    {
+      agent: conversationInsights,
+      extraKeywords: [
+        "insights",
+        "what are customers asking",
+        "common questions",
+        "conversation report",
+        "capture rate",
+        "chat trends",
+      ],
+    },
   ],
   defaultSkillId: "customer_question",
   // Sending is a system capability, not a Sales one: any department that writes
@@ -184,9 +298,23 @@ export const customerService = defineDepartment({
   resolveAction: resolveCommunicationAmbiguity,
   resolveActionFromOutput: resolveEmailSendFromOutput,
   examples: [
-    { owner_ask: "A customer named Aisha asked: do you handle hybrids? Draft a reply.", expected_route: "customer_service", expected_output_excerpt: "Hi" },
-    { owner_ask: "Robert L. is angry his AC recharge didn't hold. Draft a careful response.", expected_route: "customer_service", expected_output_excerpt: "sorry" },
-    { owner_ask: "Reply to the customer asking about our weekend hours.", expected_route: "customer_service", expected_output_excerpt: "Hi" },
+    {
+      owner_ask:
+        "A customer named Aisha asked: do you handle hybrids? Draft a reply.",
+      expected_route: "customer_service",
+      expected_output_excerpt: "Hi",
+    },
+    {
+      owner_ask:
+        "Robert L. is angry his AC recharge didn't hold. Draft a careful response.",
+      expected_route: "customer_service",
+      expected_output_excerpt: "sorry",
+    },
+    {
+      owner_ask: "Reply to the customer asking about our weekend hours.",
+      expected_route: "customer_service",
+      expected_output_excerpt: "Hi",
+    },
   ],
 });
 
@@ -195,7 +323,8 @@ export const operations = defineDepartment({
   display_name: "Operations",
   bucket: "scheduling_ops",
   channel: "sms",
-  purpose: "Delivering the service: bookings, reschedules, cancellations, reminders, and day-to-day operational comms.",
+  purpose:
+    "Delivering the service: bookings, reschedules, cancellations, reminders, and day-to-day operational comms.",
   routes_here_when: [
     "Owner is communicating about appointments or scheduling",
     "Owner sends operational updates (closures, delays, order ready)",
@@ -209,19 +338,41 @@ export const operations = defineDepartment({
     primaryIntents: ["schedule"],
   },
   skills: [
-    { agent: appointmentReminder, extraKeywords: ["reminders", "tomorrow's appointments", "day-before"] },
-    { agent: booking, extraKeywords: ["book", "confirm", "reschedule", "cancel", "slot"] },
+    {
+      agent: appointmentReminder,
+      extraKeywords: ["reminders", "tomorrow's appointments", "day-before"],
+    },
+    {
+      agent: booking,
+      extraKeywords: ["book", "confirm", "reschedule", "cancel", "slot"],
+    },
   ],
   defaultSkillId: "booking",
   // Sending is a system capability, not a Sales one: any department that writes
   // to a customer can propose the send, under the same authorization and the
   // same approval gate. See communication_actions.ts.
-  resolveAction: resolveCommunicationAmbiguity,
+  // Calendar tools (M8) first when CALENDAR_ACTIONS_ENABLED; otherwise fall
+  // through to the shared communication ambiguity / email path.
+  resolveAction: (args) =>
+    resolveCalendarAction(args) ?? resolveCommunicationAmbiguity(args),
   resolveActionFromOutput: resolveEmailSendFromOutput,
   examples: [
-    { owner_ask: "Mike Johnson called wanting a tire rotation Thursday at 10:30.", expected_route: "operations", expected_output_excerpt: "Thursday" },
-    { owner_ask: "Send tomorrow's appointments their day-before reminders.", expected_route: "operations", expected_output_excerpt: "reminder" },
-    { owner_ask: "Confirm Maria's Saturday 10am appointment.", expected_route: "operations", expected_output_excerpt: "confirm" },
+    {
+      owner_ask:
+        "Mike Johnson called wanting a tire rotation Thursday at 10:30.",
+      expected_route: "operations",
+      expected_output_excerpt: "Thursday",
+    },
+    {
+      owner_ask: "Send tomorrow's appointments their day-before reminders.",
+      expected_route: "operations",
+      expected_output_excerpt: "reminder",
+    },
+    {
+      owner_ask: "Confirm Maria's Saturday 10am appointment.",
+      expected_route: "operations",
+      expected_output_excerpt: "confirm",
+    },
   ],
 });
 
@@ -230,7 +381,8 @@ export const invoicing = defineDepartment({
   display_name: "Invoicing & Collections",
   bucket: "finance",
   channel: "email",
-  purpose: "Sends invoice reminders and follows up on overdue accounts. Always owner-approved; never threatening.",
+  purpose:
+    "Sends invoice reminders and follows up on overdue accounts. Always owner-approved; never threatening.",
   routes_here_when: [
     "Owner mentions an outstanding or overdue invoice",
     "Owner wants to send a billing reminder or escalate a past-due notice",
@@ -241,8 +393,20 @@ export const invoicing = defineDepartment({
     intents: ["communicate", "create"],
   },
   skills: [
-    { agent: paymentFollowUp, extraKeywords: ["escalate", "past due", "second notice", "final notice", "payment plan"] },
-    { agent: invoiceReminder, extraKeywords: ["invoice", "reminder", "outstanding", "unpaid"] },
+    {
+      agent: paymentFollowUp,
+      extraKeywords: [
+        "escalate",
+        "past due",
+        "second notice",
+        "final notice",
+        "payment plan",
+      ],
+    },
+    {
+      agent: invoiceReminder,
+      extraKeywords: ["invoice", "reminder", "outstanding", "unpaid"],
+    },
   ],
   defaultSkillId: "invoice_reminder",
   // Sending is a system capability, not a Sales one: any department that writes
@@ -251,9 +415,23 @@ export const invoicing = defineDepartment({
   resolveAction: resolveCommunicationAmbiguity,
   resolveActionFromOutput: resolveEmailSendFromOutput,
   examples: [
-    { owner_ask: "Send Mike Johnson a reminder about his outstanding invoice, $1,100, 8 days overdue.", expected_route: "invoicing", expected_output_excerpt: "invoice" },
-    { owner_ask: "Escalate the past-due notice for the Wallace account, this is the second time.", expected_route: "invoicing", expected_output_excerpt: "payment" },
-    { owner_ask: "Draft a payment-plan offer for our biggest overdue customer.", expected_route: "invoicing", expected_output_excerpt: "payment" },
+    {
+      owner_ask:
+        "Send Mike Johnson a reminder about his outstanding invoice, $1,100, 8 days overdue.",
+      expected_route: "invoicing",
+      expected_output_excerpt: "invoice",
+    },
+    {
+      owner_ask:
+        "Escalate the past-due notice for the Wallace account, this is the second time.",
+      expected_route: "invoicing",
+      expected_output_excerpt: "payment",
+    },
+    {
+      owner_ask: "Draft a payment-plan offer for our biggest overdue customer.",
+      expected_route: "invoicing",
+      expected_output_excerpt: "payment",
+    },
   ],
 });
 
@@ -262,7 +440,8 @@ export const accounting = defineDepartment({
   display_name: "Accounting & Finance",
   bucket: "finance",
   channel: "report",
-  purpose: "Plain-English financial summaries, pricing memos, and tax-prep checklists from the data layer.",
+  purpose:
+    "Plain-English financial summaries, pricing memos, and tax-prep checklists from the data layer.",
   routes_here_when: [
     "Owner asks for a financial summary or revenue figure",
     "Owner asks for pricing help or a tax-prep reminder",
@@ -273,17 +452,45 @@ export const accounting = defineDepartment({
     intents: ["analyze", "retrieve", "create"],
   },
   skills: [
-    { agent: financialSummary, extraKeywords: ["revenue", "financial", "summary", "receivables", "cash", "income"] },
-    { agent: pricingMemo, extraKeywords: ["pricing", "price", "raise", "increase", "charge more"] },
-    { agent: taxPrep, extraKeywords: ["tax", "taxes", "quarterly", "941", "irs", "deductions"] },
+    {
+      agent: financialSummary,
+      extraKeywords: [
+        "revenue",
+        "financial",
+        "summary",
+        "receivables",
+        "cash",
+        "income",
+      ],
+    },
+    {
+      agent: pricingMemo,
+      extraKeywords: ["pricing", "price", "raise", "increase", "charge more"],
+    },
+    {
+      agent: taxPrep,
+      extraKeywords: ["tax", "taxes", "quarterly", "941", "irs", "deductions"],
+    },
     // Weekly Briefing remains as a general fallback for broad "how's business" asks.
     { agent: weeklyBriefing },
   ],
   defaultSkillId: "financial_summary",
   examples: [
-    { owner_ask: "What was our revenue last week?", expected_route: "accounting", expected_output_excerpt: "Briefing" },
-    { owner_ask: "Give me a financial summary for the month.", expected_route: "accounting", expected_output_excerpt: "Briefing" },
-    { owner_ask: "Summarize our outstanding receivables.", expected_route: "accounting", expected_output_excerpt: "Briefing" },
+    {
+      owner_ask: "What was our revenue last week?",
+      expected_route: "accounting",
+      expected_output_excerpt: "Briefing",
+    },
+    {
+      owner_ask: "Give me a financial summary for the month.",
+      expected_route: "accounting",
+      expected_output_excerpt: "Briefing",
+    },
+    {
+      owner_ask: "Summarize our outstanding receivables.",
+      expected_route: "accounting",
+      expected_output_excerpt: "Briefing",
+    },
   ],
 });
 
@@ -292,7 +499,8 @@ export const adminRecords = defineDepartment({
   display_name: "Customer Data & Administration",
   bucket: "system",
   channel: "report",
-  purpose: "Documents, contracts, intake forms, SOPs, and CRM record organization.",
+  purpose:
+    "Documents, contracts, intake forms, SOPs, and CRM record organization.",
   routes_here_when: [
     "Owner asks for a document, contract, or intake form",
     "Owner asks to update or organize customer records",
@@ -310,9 +518,24 @@ export const adminRecords = defineDepartment({
     primaryIntents: ["update_record"],
   },
   skills: [
-    { agent: documentDrafter, extraKeywords: ["contract", "agreement", "intake form", "template", "one-pager", "policy", "sop", "document"] },
+    {
+      agent: documentDrafter,
+      extraKeywords: [
+        "contract",
+        "agreement",
+        "intake form",
+        "template",
+        "one-pager",
+        "policy",
+        "sop",
+        "document",
+      ],
+    },
     // Content Writer remains as a general fallback for broader copy requests.
-    { agent: contentWriter, extraKeywords: ["about us", "blog", "article", "paragraph"] },
+    {
+      agent: contentWriter,
+      extraKeywords: ["about us", "blog", "article", "paragraph"],
+    },
   ],
   defaultSkillId: "document_drafter",
   // The first department with a tool path: "add a note to Sarah's record saying
@@ -321,9 +544,21 @@ export const adminRecords = defineDepartment({
   // it does not clearly understand still drafts. See admin_records_actions.ts.
   resolveAction: resolveRecordAction,
   examples: [
-    { owner_ask: "Draft a service agreement template for new customers.", expected_route: "admin_records", expected_output_excerpt: "agreement" },
-    { owner_ask: "Write up a one-pager on our refund policy.", expected_route: "admin_records", expected_output_excerpt: "refund" },
-    { owner_ask: "Generate a new-customer intake form for the front desk.", expected_route: "admin_records", expected_output_excerpt: "intake" },
+    {
+      owner_ask: "Draft a service agreement template for new customers.",
+      expected_route: "admin_records",
+      expected_output_excerpt: "agreement",
+    },
+    {
+      owner_ask: "Write up a one-pager on our refund policy.",
+      expected_route: "admin_records",
+      expected_output_excerpt: "refund",
+    },
+    {
+      owner_ask: "Generate a new-customer intake form for the front desk.",
+      expected_route: "admin_records",
+      expected_output_excerpt: "intake",
+    },
   ],
 });
 
@@ -332,28 +567,70 @@ export const people = defineDepartment({
   display_name: "People Management",
   bucket: "system",
   channel: "report",
-  purpose: "Hiring, training, scheduling, payroll communications, and HR memos.",
+  purpose:
+    "Hiring, training, scheduling, payroll communications, and HR memos.",
   routes_here_when: [
     "Owner is hiring, training, or scheduling employees",
     "Owner needs an HR memo, policy, or payroll communication",
   ],
-  strong_signals: ["hire", "job post", "training", "employee", "payroll", "schedule the team"],
+  strong_signals: [
+    "hire",
+    "job post",
+    "training",
+    "employee",
+    "payroll",
+    "schedule the team",
+  ],
   semantics: {
     subjects: ["staff"],
     intents: ["create", "communicate"],
   },
   skills: [
-    { agent: jobPost, extraKeywords: ["job post", "craigslist", "hiring ad", "hire", "posting"] },
-    { agent: trainingDoc, extraKeywords: ["training", "checklist", "sop", "handbook", "onboarding"] },
-    { agent: hrMemo, extraKeywords: ["write up", "write-up", "coaching", "performance", "late", "schedule the team", "mother's day"] },
+    {
+      agent: jobPost,
+      extraKeywords: ["job post", "craigslist", "hiring ad", "hire", "posting"],
+    },
+    {
+      agent: trainingDoc,
+      extraKeywords: ["training", "checklist", "sop", "handbook", "onboarding"],
+    },
+    {
+      agent: hrMemo,
+      extraKeywords: [
+        "write up",
+        "write-up",
+        "coaching",
+        "performance",
+        "late",
+        "schedule the team",
+        "mother's day",
+      ],
+    },
     // Content Writer remains as a general fallback for broader copy requests.
-    { agent: contentWriter, extraKeywords: ["about us", "blog", "article", "paragraph"] },
+    {
+      agent: contentWriter,
+      extraKeywords: ["about us", "blog", "article", "paragraph"],
+    },
   ],
   defaultSkillId: "job_post",
   examples: [
-    { owner_ask: "Write a Craigslist post for a part-time mechanic, weekends, must have tools.", expected_route: "people", expected_output_excerpt: "mechanic" },
-    { owner_ask: "Draft a training checklist for a new front-desk hire.", expected_route: "people", expected_output_excerpt: "training" },
-    { owner_ask: "Help me write up an employee who's been late three times this month.", expected_route: "people", expected_output_excerpt: "employee" },
+    {
+      owner_ask:
+        "Write a Craigslist post for a part-time mechanic, weekends, must have tools.",
+      expected_route: "people",
+      expected_output_excerpt: "mechanic",
+    },
+    {
+      owner_ask: "Draft a training checklist for a new front-desk hire.",
+      expected_route: "people",
+      expected_output_excerpt: "training",
+    },
+    {
+      owner_ask:
+        "Help me write up an employee who's been late three times this month.",
+      expected_route: "people",
+      expected_output_excerpt: "employee",
+    },
   ],
 });
 

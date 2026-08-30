@@ -19,11 +19,20 @@
 
 import type { RiskLevel } from "./types.ts";
 import {
-  SALES_DEPARTMENT,
+  CALENDAR_ACTIONS_FLAG,
+  CRM_ACTIONS_FLAG,
   SEND_EMAIL_TOOL_ID,
+  calendarActionsEnabled,
+  crmActionsEnabled,
+  isCalendarToolId,
+  isCrmToolId,
   sendEmailEnabled,
 } from "./flags.ts";
 import { mayExecuteEmailSend } from "./communication_capabilities.ts";
+import {
+  RISK_EXTERNAL_COMMUNICATION,
+  RISK_INTERNAL_MUTATION,
+} from "./types.ts";
 
 /**
  * The only tool facts policy needs. Keeping this narrow means policy never
@@ -147,6 +156,51 @@ export function evaluateActionPolicy(
     }
   }
 
+  if (isCalendarToolId(tool.id) && !calendarActionsEnabled()) {
+    return {
+      decision: "deny",
+      riskLevel,
+      requiresApproval: tool.requiresApproval,
+      reason: `calendar actions are disabled (${CALENDAR_ACTIONS_FLAG} defaults off)`,
+    };
+  }
+
+  if (isCrmToolId(tool.id) && !crmActionsEnabled()) {
+    return {
+      decision: "deny",
+      riskLevel,
+      requiresApproval: tool.requiresApproval,
+      reason: `CRM actions are disabled (${CRM_ACTIONS_FLAG} defaults off)`,
+    };
+  }
+
+  // External calendar invites escalate internal create → L2 approval.
+  if (
+    tool.id === "create_calendar_event" &&
+    hasExternalCalendarInvite(_input)
+  ) {
+    return {
+      decision: "requires_approval",
+      riskLevel: RISK_EXTERNAL_COMMUNICATION,
+      requiresApproval: true,
+      reason:
+        "calendar event includes external attendees or invitations — owner approval required",
+    };
+  }
+
+  // Customer-facing reschedule/cancel always require approval (L2).
+  if (
+    tool.id === "reschedule_calendar_event" ||
+    tool.id === "cancel_calendar_event"
+  ) {
+    return {
+      decision: "requires_approval",
+      riskLevel: Math.max(riskLevel, RISK_EXTERNAL_COMMUNICATION) as RiskLevel,
+      requiresApproval: true,
+      reason: `tool "${tool.id}" alters an external commitment and requires approval`,
+    };
+  }
+
   if (policy.enabledToolIds && !policy.enabledToolIds.includes(tool.id)) {
     return {
       decision: "deny",
@@ -209,4 +263,21 @@ export function evaluateActionPolicy(
         ? "read-only action, no approval required"
         : `risk level ${riskLevel} is below this business's approval threshold (${threshold})`,
   };
+}
+
+/** True when create_calendar_event would notify someone outside the business. */
+export function hasExternalCalendarInvite(input: unknown): boolean {
+  if (!input || typeof input !== "object") return false;
+  const rec = input as Record<string, unknown>;
+  if (rec.send_invitations === true || rec.sendInvitations === true)
+    return true;
+  const attendees = rec.attendees;
+  return Array.isArray(attendees) && attendees.length > 0;
+}
+
+/** Exported for tests that assert internal create stays at L1. */
+export function createCalendarEventEffectiveRisk(input: unknown): RiskLevel {
+  return hasExternalCalendarInvite(input)
+    ? RISK_EXTERNAL_COMMUNICATION
+    : RISK_INTERNAL_MUTATION;
 }

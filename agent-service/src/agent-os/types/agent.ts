@@ -43,6 +43,9 @@ export interface PipelineLeadData {
   subject?: string;
   quoteAmount?: number;
   lastContactDate?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
 }
 
 export interface AgentRunHistoryItem {
@@ -106,6 +109,8 @@ export interface SharedContext {
   businessProfile: BusinessProfileData;
   widgetHistory: WidgetConversationData[];
   pipelineLeads: PipelineLeadData[];
+  /** Tenant pipeline stage names; empty/absent → canonical closed set. */
+  pipelineStages?: string[];
   appointments: AppointmentData[];
   invoices: InvoiceData[];
   agentRunHistory: AgentRunHistoryItem[];

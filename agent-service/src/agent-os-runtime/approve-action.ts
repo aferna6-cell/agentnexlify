@@ -23,6 +23,8 @@ import { RunRecordCollector } from "./run-record-collector.ts";
 import { registerAgentOsProviders } from "./bootstrap.ts";
 import {
   CollectingActionStore,
+  CollectingCalendarPort,
+  CollectingCrmPort,
   CollectingCustomerNotesPort,
 } from "./action-collector.ts";
 import type {
@@ -77,6 +79,8 @@ export async function runApprovedAction(
 
   const store = new CollectingActionStore();
   const notes = new CollectingCustomerNotesPort(input.existingNotes ?? []);
+  const calendar = new CollectingCalendarPort();
+  const crm = new CollectingCrmPort();
 
   // Rebuild the row the executor expects. Only the fields the data plane is
   // authoritative for are carried over; status is always `pending_approval`
@@ -106,7 +110,7 @@ export async function runApprovedAction(
     accountId: input.accountId,
     context: input.context,
     record: new RunRecordCollector(),
-    actions: { store, notes, policy: input.toolPolicy ?? {} },
+    actions: { store, notes, calendar, crm, policy: input.toolPolicy ?? {} },
   };
 
   return requestScope.run(scope, async () => {
