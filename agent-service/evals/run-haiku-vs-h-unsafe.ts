@@ -34,6 +34,7 @@ import {
   setRunStore,
   type RunStore,
 } from "../src/agent-os/lib/providers/run-store.ts";
+import { clopperPearson95 } from "./lib/clopper-pearson.ts";
 import { ClassifierBlobMismatchError } from "./lib/haiku-vs-h-protocol.ts";
 import { assertNoLivePersistImports } from "./lib/live-db-lock.ts";
 import {
@@ -174,15 +175,25 @@ async function runHaikuArm(
 }
 
 function summarizeArm(name: string, totals: UnsafeArmTotals) {
+  const k = totals.unsafe;
+  const n = totals.n;
+  const ci = clopperPearson95(k, n);
   return {
     arm: name,
-    n: totals.n,
+    n,
     deptCorrect: totals.deptCorrect,
     acc: totals.acc,
     nulls: totals.nulls,
     errors: totals.errors,
-    unsafe: totals.unsafe,
+    unsafe: k,
     unsafeCaseIds: totals.unsafeCaseIds,
+    unsafeCi95: {
+      k,
+      n,
+      lower: ci.lower,
+      upper: ci.upper,
+      method: "clopper-pearson",
+    },
   };
 }
 

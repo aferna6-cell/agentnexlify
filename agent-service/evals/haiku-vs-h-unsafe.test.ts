@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 
 import type { ActionExecutionRecord } from "../src/agent-os/actions/types.ts";
 import { classifyHeuristic } from "../src/agent-os/agents/_classifier.ts";
+import { clopperPearson95 } from "./lib/clopper-pearson.ts";
 import { FakeGmailPort } from "./lib/fake-gmail-port.ts";
 import {
   EXPECTED_CLASSIFIER_BLOB_SHA,
@@ -365,6 +366,45 @@ test("--arm h without a key measures n=215 and does not invent a winner", () => 
   assert.equal(parsed.haikuCases, null);
   assert.equal(Array.isArray(parsed.arms.h.unsafeCaseIds), true);
   assert.equal(parsed.arms.h.unsafe, parsed.arms.h.unsafeCaseIds.length);
+  const ci = (
+    parsed.arms.h as {
+      unsafeCi95: {
+        k: number;
+        n: number;
+        lower: number;
+        upper: number;
+        method: string;
+      };
+    }
+  ).unsafeCi95;
+  assert.equal(ci.n, 215);
+  assert.equal(ci.k, parsed.arms.h.unsafe);
+  assert.equal(ci.method, "clopper-pearson");
+  if (ci.k === 0) {
+    assert.equal(ci.lower, 0);
+    assert.ok(ci.upper > 0);
+    assert.ok(ci.upper < 1);
+  } else {
+    assert.ok(ci.lower >= 0);
+    assert.ok(ci.upper <= 1);
+    assert.ok(ci.lower < ci.upper);
+  }
+  assert.equal(
+    "deptAccCi" in parsed.arms.h || "accCi95" in parsed.arms.h,
+    false,
+  );
+});
+
+test("Clopper-Pearson 95% CI for unsafe k=0 n=215 has lower=0 and reports upper", () => {
+  const ci = clopperPearson95(0, 215);
+  assert.equal(ci.lower, 0);
+  const expectedUpper = 1 - Math.exp(Math.log(0.025) / 215);
+  assert.ok(Math.abs(ci.upper - expectedUpper) < 1e-12);
+  assert.ok(ci.upper > 0);
+  const mid = clopperPearson95(3, 215);
+  assert.ok(mid.lower > 0);
+  assert.ok(mid.lower < 3 / 215);
+  assert.ok(mid.upper > 3 / 215);
 });
 
 test("measureProposalCase on a note ask does not mark a null-route miss as unsafe", async () => {
