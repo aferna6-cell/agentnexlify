@@ -2,6 +2,8 @@
  * Runtime tests for runOrchestration: it produces a persistable record, and
  * concurrent orchestrations stay isolated via AsyncLocalStorage (the property
  * that lets one Node process serve many tenants safely).
+ *
+ * RAG grounding contract unit tests live in ../agent-os/rag/attach.test.ts.
  */
 
 import { test } from "node:test";

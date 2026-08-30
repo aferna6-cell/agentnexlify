@@ -10,7 +10,11 @@ import json
 import math
 from pathlib import Path
 
-from backend.services.business_retrieval import CorpusChunk, retrieve_business_context
+from backend.services.business_retrieval import (
+    DEFAULT_MIN_SCORE,
+    CorpusChunk,
+    retrieve_business_context,
+)
 
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_DATASET = REPO / "agent-service/evals/datasets/rag/rag-eval-validation-v1.json"
@@ -78,7 +82,11 @@ def extractive_answer(evidence_texts: list[str], expected_phrases: list[str]) ->
     return " ".join(found), "answer"
 
 
-def run_eval(path: Path = DEFAULT_DATASET, top_k: int = 5, min_score: float = 1.2) -> dict:
+def run_eval(
+    path: Path = DEFAULT_DATASET,
+    top_k: int = 5,
+    min_score: float = DEFAULT_MIN_SCORE,
+) -> dict:
     dataset = load_dataset(path)
     cases = dataset["cases"]
     rec1 = rec3 = rec5 = mrrs = ndcgs = 0.0
@@ -210,8 +218,19 @@ def run_eval(path: Path = DEFAULT_DATASET, top_k: int = 5, min_score: float = 1.
 
 
 if __name__ == "__main__":
-    report = run_eval()
-    out = REPO / "ml/rag/artifacts/rag-eval-validation-v1.json"
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument(
+        "--dataset",
+        type=Path,
+        default=DEFAULT_DATASET,
+        help="Path to a RAG eval JSON dataset",
+    )
+    ap.add_argument("--min-score", type=float, default=DEFAULT_MIN_SCORE)
+    args = ap.parse_args()
+    report = run_eval(args.dataset, min_score=args.min_score)
+    out = REPO / "ml/rag/artifacts" / f"{args.dataset.stem}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     slim = {k: v for k, v in report.items() if k != "per_case"}
     slim["per_case_sample"] = report["per_case"][:15]

@@ -7,13 +7,22 @@
 --
 -- client_id (NOT tenant_id) — same family as tenant_kb_documents / leads.
 -- RLS deny-public. Search RPC requires p_client_id.
+--
+-- Lifecycle / orphans:
+--   document_id REFERENCES tenant_kb_documents(id) ON DELETE CASCADE so a
+--   hard-deleted source document cannot leave indefinitely active chunks.
+--   Soft-delete / supersede still goes through the existing compile path
+--   (index_after_compile → replace_chunks_for_tenant), which deletes all
+--   tenant chunks and reinserts only from status='active' documents.
+--   RPC and request-time retrieval only read status='active' chunks.
+--   embedding NULL is allowed (lexical path); dense match RPC skips nulls.
 
 CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS tenant_kb_chunks (
     id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     client_id       uuid NOT NULL,
-    document_id     uuid NOT NULL,
+    document_id     uuid NOT NULL REFERENCES tenant_kb_documents(id) ON DELETE CASCADE,
     chunk_index     integer NOT NULL,
     source_type     text NOT NULL,
     title           text NOT NULL,
@@ -93,4 +102,4 @@ AS $$
 $$;
 
 COMMENT ON TABLE tenant_kb_chunks IS
-    'M7 approved tenant knowledge chunks. client_id scoped. voyage-3-lite 512d.';
+    'M7 approved tenant knowledge chunks. client_id scoped. FK cascade on document delete. voyage-3-lite 512d optional.';

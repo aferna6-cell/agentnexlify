@@ -10,8 +10,21 @@ from dataclasses import dataclass
 _TOKEN = re.compile(r"[a-z0-9]+")
 
 
+def _stem(token: str) -> str:
+    """Light English stem so alignment/alignments and cancel/cancelled share a term."""
+    if len(token) > 4 and token.endswith("ies"):
+        return token[:-3] + "y"
+    if len(token) > 5 and token.endswith("lled"):
+        return token[:-3]  # cancelled -> cancel
+    if len(token) > 5 and token.endswith("sses"):
+        return token[:-2]  # passes -> pass
+    if len(token) > 3 and token.endswith("s") and not token.endswith("ss"):
+        return token[:-1]
+    return token
+
+
 def tokenize(text: str) -> list[str]:
-    return _TOKEN.findall(text.lower())
+    return [_stem(t) for t in _TOKEN.findall(text.lower())]
 
 
 @dataclass(frozen=True)

@@ -90,6 +90,17 @@ export interface RagEvidenceItem {
   score: number;
 }
 
+/**
+ * RAG grounding contract on SharedContext.
+ *
+ * - ok: ragEvidence is authoritative approved knowledge (also mirrored into kb)
+ * - abstain: retrieval ran; evidence was insufficient/untrusted/missing —
+ *   agents must NOT treat this as a KB answer
+ * - error: RAG infrastructure failed; distinct from successful abstention
+ * - disabled / absent: RAG flag off
+ */
+export type RagStatus = "ok" | "abstain" | "error" | "disabled";
+
 /** Everything an agent may read. Mirrors the production data layer. */
 export interface SharedContext {
   businessProfile: BusinessProfileData;
@@ -101,7 +112,11 @@ export interface SharedContext {
   kb: KbEntry[];
   /** Eval / FastAPI may attach a tenant-scoped corpus. Never another tenant. */
   ragCorpus?: RagChunk[];
+  /** Authoritative retrieved evidence — only populated when ragStatus === "ok". */
   ragEvidence?: RagEvidenceItem[];
+  ragStatus?: RagStatus;
+  /** Set when ragStatus is abstain or error. */
+  ragAbstainReason?: string | null;
 }
 
 export type Channel =

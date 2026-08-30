@@ -1,0 +1,142 @@
+{
+  "dataset": "rag-eval-validation-v1",
+  "selection_rule": "Among min_score values with correct_refusal>=0.95, false_refusal<=0.05, unsupported==0, zero cross-tenant leaks: maximize answered_coverage; on a coverage plateau freeze at DEFAULT_MIN_SCORE=1.0 when eligible.",
+  "selected_min_score": 1.0,
+  "code_default_min_score": 1.0,
+  "selected_row": {
+    "min_score": 1.0,
+    "answered_coverage": 1.0,
+    "answered_count": 140,
+    "answer_cases": 140,
+    "correct_refusal_rate": 1.0,
+    "false_refusal_rate": 0.0,
+    "missed_refusal": 0,
+    "unsupported_claim_rate": 0.0,
+    "recall_at_1": 0.965,
+    "cross_tenant_leaks": 0,
+    "prompt_injection_failures": 0
+  },
+  "curve": [
+    {
+      "min_score": 0.5,
+      "answered_coverage": 1.0,
+      "answered_count": 140,
+      "answer_cases": 140,
+      "correct_refusal_rate": 1.0,
+      "false_refusal_rate": 0.0,
+      "missed_refusal": 0,
+      "unsupported_claim_rate": 0.0,
+      "recall_at_1": 0.965,
+      "cross_tenant_leaks": 0,
+      "prompt_injection_failures": 0
+    },
+    {
+      "min_score": 0.8,
+      "answered_coverage": 1.0,
+      "answered_count": 140,
+      "answer_cases": 140,
+      "correct_refusal_rate": 1.0,
+      "false_refusal_rate": 0.0,
+      "missed_refusal": 0,
+      "unsupported_claim_rate": 0.0,
+      "recall_at_1": 0.965,
+      "cross_tenant_leaks": 0,
+      "prompt_injection_failures": 0
+    },
+    {
+      "min_score": 1.0,
+      "answered_coverage": 1.0,
+      "answered_count": 140,
+      "answer_cases": 140,
+      "correct_refusal_rate": 1.0,
+      "false_refusal_rate": 0.0,
+      "missed_refusal": 0,
+      "unsupported_claim_rate": 0.0,
+      "recall_at_1": 0.965,
+      "cross_tenant_leaks": 0,
+      "prompt_injection_failures": 0
+    },
+    {
+      "min_score": 1.2,
+      "answered_coverage": 1.0,
+      "answered_count": 140,
+      "answer_cases": 140,
+      "correct_refusal_rate": 1.0,
+      "false_refusal_rate": 0.0,
+      "missed_refusal": 0,
+      "unsupported_claim_rate": 0.0,
+      "recall_at_1": 0.965,
+      "cross_tenant_leaks": 0,
+      "prompt_injection_failures": 0
+    },
+    {
+      "min_score": 1.5,
+      "answered_coverage": 1.0,
+      "answered_count": 140,
+      "answer_cases": 140,
+      "correct_refusal_rate": 1.0,
+      "false_refusal_rate": 0.0,
+      "missed_refusal": 0,
+      "unsupported_claim_rate": 0.0,
+      "recall_at_1": 0.965,
+      "cross_tenant_leaks": 0,
+      "prompt_injection_failures": 0
+    },
+    {
+      "min_score": 1.8,
+      "answered_coverage": 0.9714,
+      "answered_count": 136,
+      "answer_cases": 140,
+      "correct_refusal_rate": 1.0,
+      "false_refusal_rate": 0.0286,
+      "missed_refusal": 0,
+      "unsupported_claim_rate": 0.0,
+      "recall_at_1": 0.965,
+      "cross_tenant_leaks": 0,
+      "prompt_injection_failures": 0
+    },
+    {
+      "min_score": 2.0,
+      "answered_coverage": 0.9429,
+      "answered_count": 132,
+      "answer_cases": 140,
+      "correct_refusal_rate": 1.0,
+      "false_refusal_rate": 0.0571,
+      "missed_refusal": 0,
+      "unsupported_claim_rate": 0.0,
+      "recall_at_1": 0.965,
+      "cross_tenant_leaks": 0,
+      "prompt_injection_failures": 0
+    },
+    {
+      "min_score": 2.5,
+      "answered_coverage": 0.7714,
+      "answered_count": 108,
+      "answer_cases": 140,
+      "correct_refusal_rate": 1.0,
+      "false_refusal_rate": 0.2286,
+      "missed_refusal": 0,
+      "unsupported_claim_rate": 0.0,
+      "recall_at_1": 0.965,
+      "cross_tenant_leaks": 0,
+      "prompt_injection_failures": 0
+    },
+    {
+      "min_score": 3.0,
+      "answered_coverage": 0.7357,
+      "answered_count": 103,
+      "answer_cases": 140,
+      "correct_refusal_rate": 1.0,
+      "false_refusal_rate": 0.2643,
+      "missed_refusal": 0,
+      "unsupported_claim_rate": 0.0,
+      "recall_at_1": 0.965,
+      "cross_tenant_leaks": 0,
+      "prompt_injection_failures": 0
+    }
+  ],
+  "notes": [
+    "Calibration uses validation only \u2014 never the independent holdout.",
+    "Additional abstention features (OOS, mass-action, money-signal, trusted rerank, significant overlap) were also fit on validation."
+  ]
+}

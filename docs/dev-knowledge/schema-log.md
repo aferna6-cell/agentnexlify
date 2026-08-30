@@ -4,13 +4,15 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
-## 198_tenant_kb_chunks.sql (2026-08-30)
+## 198_tenant_kb_chunks.sql (2026-08-30, reviewed 2026-08-30)
 
-**What:** New `tenant_kb_chunks` table + `match_tenant_kb_chunks(p_client_id, p_query_embedding, p_match_count)` RPC. Columns: `client_id` (NOT `tenant_id`), `document_id`, `chunk_index`, `source_type`, `title`, `section`, `content`, `content_sha256`, `status`, `version`, `effective_date`, `citation_label`, `embedding vector(512)`. HNSW cosine index. RLS deny-public + service_role policy.
+**What:** New `tenant_kb_chunks` table + `match_tenant_kb_chunks(p_client_id, p_query_embedding, p_match_count)` RPC. Columns: `client_id` (NOT `tenant_id`), `document_id` **FK → tenant_kb_documents(id) ON DELETE CASCADE**, `chunk_index`, `source_type`, `title`, `section`, `content`, `content_sha256`, `status`, `version`, `effective_date`, `citation_label`, `embedding vector(512)` (nullable). HNSW cosine index. RLS deny-public + service_role policy. RPC filters `client_id`, `status='active'`, and `embedding IS NOT NULL`.
 
 **Why:** Milestone 7 tenant RAG. `tenant_kb_documents` remains the approved source of truth; chunks are the retrievable projection. Voyage 512d matches `kb_articles` / `os_memory_entries`. Search RPC requires `p_client_id`.
 
-**Applied:** NOT YET — file-only until owner applies via Supabase. Request-time retrieval falls back to in-memory chunking of `tenant_kb_documents`.
+**Lifecycle / orphans:** Hard delete of a source document cascades to chunks (no indefinitely active orphans). Soft-delete / supersede uses the existing compile path (`index_after_compile` → `replace_chunks_for_tenant`), which deletes all tenant chunks then reinserts only from `status='active'` documents. Request-time fallback chunks active documents in memory and never reads deleted rows.
+
+**Applied:** NOT YET — file-only until owner applies via normal migration workflow. Request-time retrieval falls back to in-memory chunking of `tenant_kb_documents`.
 
 ---
 

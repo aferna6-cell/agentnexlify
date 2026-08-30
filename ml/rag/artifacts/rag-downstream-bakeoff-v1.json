@@ -1,0 +1,40 @@
+{
+  "dataset": "rag-eval-validation-v1",
+  "principle": "downstream business correctness > isolated retrieval metric",
+  "bm25": {
+    "method": "bm25",
+    "retrieval_labelled_cases": 143,
+    "recall_at_1": 0.965,
+    "mrr": 0.979,
+    "answered_coverage": 1.0,
+    "correct_refusal_rate": 1.0,
+    "false_refusal_rate": 0.0,
+    "missed_refusal": 0,
+    "unsupported_claim_rate": 0.0,
+    "cross_tenant_leaks": 0,
+    "prompt_injection_failures": 0
+  },
+  "tfidf": {
+    "method": "tfidf",
+    "retrieval_labelled_cases": 143,
+    "recall_at_1": 0.965,
+    "mrr": 0.979,
+    "answered_coverage": 1.0,
+    "correct_refusal_rate": 1.0,
+    "false_refusal_rate": 0.0,
+    "missed_refusal": 0,
+    "unsupported_claim_rate": 0.0,
+    "cross_tenant_leaks": 0,
+    "prompt_injection_failures": 0
+  },
+  "voyage": {
+    "method": "voyage_dense",
+    "status": "unmeasured",
+    "reason": "VOYAGE_API_KEY absent"
+  },
+  "production_candidate": "bm25",
+  "notes": [
+    "TF-IDF may win isolated Recall@1; promotion requires better or equal grounded answer/refusal metrics under the same abstention contract.",
+    "Voyage dense remains optional; absence alone does not block M7."
+  ]
+}

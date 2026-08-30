@@ -1,0 +1,16 @@
+{
+  "validation_cases": 183,
+  "holdout_cases": 162,
+  "thresholds": {
+    "jaccard": 0.8
+  },
+  "exact_normalized_matches": [],
+  "jaccard_hits": [],
+  "template_family_overlap": [],
+  "hard_pair_ids": [
+    "hold_iso_hard_001",
+    "hold_iso_hard_002"
+  ],
+  "hard_pair_leaks": [],
+  "pass": true
+}

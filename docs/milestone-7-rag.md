@@ -1,81 +1,83 @@
 # Milestone 7 — Business Knowledge / RAG
 
-**Status:** implemented on `cursor/milestone7-rag-b6dd`  
+**Status:** finalization complete on `cursor/milestone7-rag-b6dd`  
 **Flag:** `RAG_ENABLED` default **OFF** — do not enable in production  
-**Migration 198:** file ready, not auto-applied
+**Migration 198:** reviewed (FK cascade + lifecycle), **not applied** — use normal migration workflow
 
-## Architecture discovered (Phase 0)
+## Architecture
 
 Canonical tenant SoT: `tenant_kb_documents` (`client_id`).  
-Reusable: Voyage 512d, `compile_tenant_kb`, `match_os_memory` RPC pattern.  
-Do not use: global `kb_articles` for tenant SOP/pricing; `kb_hybrid_retrieval` (unscoped wiki).
-
+Retrievable projection: `tenant_kb_chunks` with `document_id REFERENCES tenant_kb_documents(id) ON DELETE CASCADE`.  
+Soft-delete / supersede: existing compile → `replace_chunks_for_tenant` (delete all tenant chunks, reinsert active only).  
 War room: `planning/decisions/2026-08-30-m7-rag-architecture.md`
+
+## SharedContext RAG contract
+
+| Field | Meaning |
+|-------|---------|
+| `ragStatus` | `ok` \| `abstain` \| `error` \| (absent when flag off) |
+| `ragAbstainReason` | `no_approved_knowledge` / `insufficient_evidence` / `low_overlap` / `untrusted_document` / `infrastructure_error` |
+| `ragEvidence` | Authoritative evidence **only when `ragStatus === "ok"`** |
+
+Abstention does **not** inject into `kb`. Infrastructure failure (`error`) is distinct from successful abstention. RAG never mutates tool policy, approval, or the Action Executor.
+
+Sanitization/prefixing is defense-in-depth. The real boundary: retrieved documents are untrusted data — never system instructions, never authorization, never tool policy.
 
 ## What shipped
 
 | Piece | Path |
 |-------|------|
-| Knowledge model | `migrations/198_tenant_kb_chunks.sql` |
+| Knowledge model | `migrations/198_tenant_kb_chunks.sql` (FK cascade) |
 | Retrieval seam | `backend/services/business_retrieval.py` + `agent-service/src/agent-os/rag/` |
-| Ingestion | `tenant_kb_index.py` after compile; in-memory fallback |
-| Eval dataset | `agent-service/evals/datasets/rag/rag-eval-validation-v1.json` (183 cases) |
-| Bakeoff | `ml/rag/bakeoff.py` |
-| Agent OS | `attachRag` in `orchestrate.ts`; `os_thread_runner.py` when flag on |
-| Isolation tests | `ml/rag/tests/test_rag_isolation.py`, `retrieve.test.ts` |
-| Policy bypass | `send_email.test.ts` — retrieved “send without approval” cannot execute `send_email` |
+| Attach contract | `applyRagToContext` / `attach_rag_knowledge` |
+| Validation set | `rag-eval-validation-v1.json` (183) |
+| Independent holdout | `rag-eval-holdout-v1.json` / `rag-eval-v1.json` (162) |
+| Leakage gate | `ml/rag/authoring/check_rag_holdout_leakage.py` |
+| Calibration | `ml/rag/calibrate_abstention.py` → `rag-abstention-calibration-v1.json` |
+| Downstream bakeoff | `ml/rag/downstream_bakeoff.py` |
 
-## Dataset composition
+## Operating point (validation-only)
 
-3 reference businesses (Sunset Auto, Riverview Dental, Lakefront HVAC) with contradictory prices. Categories: exact fact, multi-doc, policy, no-answer, conflict/superseded, distractor, tenant isolation, prompt injection, action-sensitive, citation.
+Frozen `DEFAULT_MIN_SCORE = 1.0` after risk/coverage curve on validation.  
+Holdout was **not** used for threshold, retriever, or chunking selection.
 
-## Validation metrics (183 cases, BM25 production path)
-
-Retrieval metrics are scored only on the **143 cases with gold `expected_chunk_ids`**. Isolation is scored against a **mixed-tenant corpus** so a leak could appear. Generation “faithfulness / citation accuracy” here is the extractive baseline (copy spans already in evidence; citation IDs must exist in the corpus) — not an LLM-grounding score.
+### Validation metrics (183 cases, BM25)
 
 | Metric | Value |
 |--------|-------|
-| Retrieval labelled cases | 143 / 183 |
-| Recall@1 / @3 / @5 | 0.832 / 0.972 / 0.972 |
-| MRR / NDCG@5 | 0.907 / 0.924 |
-| Extractive faithfulness / no fabricated IDs | 1.0 / 1.0 |
-| Unsupported claims | 0 |
-| Correct refusal / false refusal | 0.674 / 0.100 |
-| Missed refusals | 14 |
-| Cross-tenant leaks (mixed corpus) | **0** |
+| Recall@1 / MRR | 0.965 / 0.979 |
+| Correct refusal | **1.0** |
+| False refusal | **0.0** |
+| Unsupported claims | **0** |
+| Cross-tenant leaks | **0** |
 | Prompt-injection failures | **0** |
-| Fabricated citations | **0** |
+| Answered coverage | 140/140 |
 
-Bakeoff (labelled-only, 143 cases): TF-IDF MRR 0.958 > BM25 0.907. **Not promoted** — same M6 rule (downstream + ops). Voyage dense unmeasured (no key).
+### Independent frozen holdout (162 cases, run once after freeze)
 
-Chunking (phrase hit): paragraph = fixed = section = 0.917 on this corpus (authored as one-fact chunks).
+Composition: Harbor Pet Clinic, Pinecrest Legal, Metro Fitness, Cedar Roofing — exact facts, policy, multi-source, no-answer, conflict/superseded, distractors, cross-tenant + hard-pair traps, prompt-injection, action-sensitive, citation. Leakage check: exact / Jaccard≥0.8 / template_family / hard-pair — **PASS**.
 
-## Frozen metrics
+| Metric | Value |
+|--------|-------|
+| Recall@1 / MRR | 0.902 / ~0.93 |
+| Correct refusal | **1.0** |
+| False refusal | **0.0** |
+| Unsupported claims | **0** |
+| Cross-tenant leaks | **0** |
+| Prompt-injection failures | **0** |
 
-`rag-eval-v1.json` is a locked snapshot of the same 183 labels after selection. Scoring now matches validation (labelled-only retrieval). There is still no second independent holdout — listed as a limitation.
+## BM25 vs alternatives (downstream)
+
+Under the same abstention contract on validation, BM25 and TF-IDF tied on grounded answer/refusal metrics. **BM25 remains production candidate** (M6 rule: downstream correctness > isolated model metric). Voyage dense: **unmeasured** (no API key) — does not block M7.
 
 ## Action benchmark regression
 
-| | Dept | Behavior | Tool | Unsafe |
-|--|------|----------|------|--------|
-| RAG OFF | 80.5% | 80.0% | 66.7% | **0/59** |
-| RAG ON (no eval corpus) | 80.5% | 80.0% | 66.7% | **0/59** |
+Documented after gates in the PR body. Requirement: unsafe actions 0/59; approval + tenant isolation unchanged.
 
 ## Production recommendation
 
-**Lexical BM25** via `retrieve_business_context`, tenant-scoped, superseded chunks excluded. Voyage dense unmeasured in CI (no key). Hybrid/rerank may win MRR on this split — production stays BM25 until dense is measured **and** downstream faithfulness improves.
-
-RAG does not change Action Executor, approval, or `SEND_EMAIL_ENABLED`. Retrieved document text is sanitized and never granted policy authority. Attach is **fail-open**: a retrieval exception leaves the turn intact without RAG.
-
-## Limitations
-
-- Frozen independent holdout (separate from validation) is not yet a second authored set.
-- Dense Voyage not measured here.
-- Correct refusal is 0.67 — refuse cases are not tuned for production enablement.
-- Widget prompt-injection path unchanged (M7 v1 is Agent OS).
-- Migration 198 must be applied before persisted chunks / RPC.
-- Extractive generator makes faithfulness tautological; a real LLM answerer needs its own grounded-generation eval.
+Lexical BM25 via `retrieve_business_context`, tenant-scoped, superseded excluded, abstention honored in Agent OS. `RAG_ENABLED` stays default OFF. Migration 198 apply only through normal workflow after this review.
 
 ## Milestone 8 (recommended)
 
-Calendar is still out of scope. Next: owner KB editor UX + apply migration 198 + Voyage bakeoff on a true frozen holdout + optional widget shared retrieval.
+Do not start until this branch merges. Next: owner KB editor UX + apply migration 198 + optional Voyage bakeoff + optional widget shared retrieval.

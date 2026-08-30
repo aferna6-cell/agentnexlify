@@ -1,5 +1,5 @@
 {
-  "dataset_version": "rag-eval-v1",
+  "dataset_version": "rag-eval-holdout-v1",
   "frozen": true,
   "independent": true,
   "used_for_selection": false,
@@ -9,8 +9,7 @@
     "Not copied/paraphrased from validation asks",
     "rationale is never model input",
     "accountId is the only tenant scope",
-    "Run check_rag_holdout_leakage.py before trusting metrics",
-    "Supersedes the prior validation-snapshot that was incorrectly called frozen independent"
+    "Run check_rag_holdout_leakage.py before trusting metrics"
   ],
   "tenants": {
     "eval-tenant-harbor": {
@@ -4226,6 +4225,5 @@
       "rationale": "holdout labelled hold_var_096",
       "template_family": "oos_nonsense"
     }
-  ],
-  "source": "rag-eval-holdout-v1"
+  ]
 }
