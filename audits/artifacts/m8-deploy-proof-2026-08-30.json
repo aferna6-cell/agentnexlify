@@ -14,7 +14,9 @@
     "services": {
       "agentnexlify": "293f3d78-f644-470a-ba40-a6767ad2fbcd",
       "agent_service": "1f6f4f55-34ff-4571-a9d4-49f8ac030afd"
-    }
+    },
+    "secrets_injected": false,
+    "secrets_leaked_to_agent": false
   },
   "tenant_test_id": "7451537b-a694-4c31-83b0-1b804df3d757",
   "tenant_label": "AgentNexLiFy Smoke Test",
@@ -54,7 +56,8 @@
         "cross_tenant_leaks": 0,
         "prompt_injection_failures": 0,
         "smoke_artifact": "audits/artifacts/m8-live-smoke-20260830T171155Z.json",
-        "tenant_proof_artifact": "audits/artifacts/m8-rag-smoke-tenant-proof.json"
+        "tenant_proof_artifact": "audits/artifacts/m8-rag-smoke-tenant-proof.json",
+        "index_method": "documents_to_chunks (compile-equivalent); compile_tenant_kb HTTP not run"
       }
     },
     "CRM": {
@@ -132,5 +135,5 @@
   ],
   "runbook": "docs/ops/m8-staging-setup.md",
   "secrets_in_artifacts": false,
-  "git_sha": "b65d2f7ddad6e2fc8d5996077827f53f8d8c31ca"
+  "git_sha": null
 }
