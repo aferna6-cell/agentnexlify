@@ -132,7 +132,11 @@ async def approve_tool_execution(
             raise HTTPException(status_code=403, detail=refused)
 
     claimed = await run_in_threadpool(
-        os_tool_executions.claim_for_execution, db, client_id, execution_id
+        os_tool_executions.claim_for_execution,
+        db,
+        client_id,
+        execution_id,
+        _actor(claims),
     )
     if claimed is None:
         # Already approved, rejected, running or finished. Idempotent: report

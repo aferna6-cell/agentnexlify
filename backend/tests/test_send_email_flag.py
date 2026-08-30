@@ -205,6 +205,39 @@ def test_flag_on_sales_approve_claim_execute_uses_gmail(monkeypatch):
     assert sends[0]["tenant_id"] == CLIENT
 
 
+def test_successful_sales_send_records_approved_state_and_owner(monkeypatch):
+    """A flag-on Sales send must persist the approval axis, not leave pending/null."""
+    monkeypatch.setenv("SEND_EMAIL_ENABLED", "1")
+    db = _pending_db(agent_id="sales")
+    client = _client()
+
+    def fake_send(db_arg, tenant_id, **kwargs):
+        return {"success": True, "detail": "sent", "message_id": "gmail-1"}
+
+    try:
+        with patch.object(router_mod, "get_service_supabase", return_value=db), patch.object(
+            gmail_connector, "find_message_id_by_rfc822_msgid", return_value=None
+        ), patch.object(gmail_connector, "send_message", fake_send), patch.object(
+            router_mod.agent_sdk_client, "approve_action_sync", side_effect=AssertionError("engine")
+        ):
+            resp = client.post(f"/api/v1/os/tool-executions/{EXEC_ID}/approve")
+    finally:
+        _teardown()
+
+    assert resp.status_code == 200
+    row = resp.json()["execution"]
+    assert row["status"] == "succeeded"
+    assert row["approval_state"] == "approved"
+    assert row["approved_by"] == OWNER["email"]
+    assert row["approved_by"] not in (None, "")
+    assert row["approval_state"] not in {"pending", "not_required"}
+    stored = db.rows("os_tool_executions")[0]
+    assert stored["status"] == "succeeded"
+    assert stored["approval_state"] == "approved"
+    assert stored["approved_by"] == OWNER["email"]
+    assert stored["approval_state"] not in {"pending", "not_required"}
+
+
 # --- connector send + rfc822 adopt -------------------------------------------
 
 

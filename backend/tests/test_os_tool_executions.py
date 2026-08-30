@@ -342,6 +342,26 @@ def test_recording_the_outcome_keeps_the_row_s_identity():
     assert row["client_id"] == CLIENT
 
 
+def test_record_execution_outcome_does_not_stamp_not_required_over_an_approved_claim():
+    """Data-plane success omits approvalState. Must not wipe the claim write."""
+    db = _pending_db()
+    claimed = svc.claim_for_execution(
+        db, CLIENT, EXEC_ID, approved_by="maya@sunsetauto.test"
+    )
+    assert claimed["approval_state"] == "approved"
+    assert claimed["approved_by"] == "maya@sunsetauto.test"
+
+    svc.record_execution_outcome(
+        db, CLIENT, {"id": EXEC_ID, "status": "succeeded", "result": {"ok": True}}
+    )
+
+    row = db.rows("os_tool_executions")[0]
+    assert row["status"] == "succeeded"
+    assert row["approval_state"] == "approved"
+    assert row["approved_by"] == "maya@sunsetauto.test"
+    assert row["approval_state"] not in {"pending", "not_required"}
+
+
 # --- rejection -----------------------------------------------------------------
 
 

@@ -452,16 +452,31 @@ def present_tool_execution(row: dict | None, *, owner: bool) -> dict | None:
 # --- approval ---------------------------------------------------------------
 
 
-def claim_for_execution(db: Any, client_id: str, execution_id: str) -> dict | None:
+def claim_for_execution(
+    db: Any,
+    client_id: str,
+    execution_id: str,
+    approved_by: str | None = None,
+) -> dict | None:
     """Move a pending row to ``running``, or return None if it was not pending.
 
     This is the at-most-once gate. It is a conditional update — the status
     filter is part of the statement — so of two concurrent approvals exactly one
     gets a row back and the other gets None.
+
+    Status stays parked/running/terminal. When ``approved_by`` is the owner
+    who approved, ``approval_state`` moves ``pending → approved`` on this
+    same write so a later data-plane success cannot sit as pending with no
+    actor.
     """
+    patch = {"status": "running", "started_at": _now(), "updated_at": _now()}
+    if approved_by:
+        patch["approval_state"] = "approved"
+        patch["approved_by"] = approved_by
+        patch["approved_at"] = _now()
     updated = (
         tenant_table(db, "os_tool_executions", client_id)
-        .update({"status": "running", "started_at": _now(), "updated_at": _now()})
+        .update(patch)
         .eq("id", execution_id)
         .eq("status", "pending_approval")
         .execute()
@@ -473,11 +488,23 @@ def claim_for_execution(db: Any, client_id: str, execution_id: str) -> dict | No
 def record_execution_outcome(
     db: Any, client_id: str, execution: dict
 ) -> dict | None:
-    """Write the engine's terminal record back onto the claimed row."""
+    """Write the engine's terminal record back onto the claimed row.
+
+    ``to_row`` defaults a missing approval axis to ``not_required``. A
+    data-plane success (send_email) omits that axis — the owner-approve
+    claim already wrote ``approved`` + ``approved_by``. Do not stamp
+    ``not_required`` or wipe the actor over that write. Status and
+    approval_state stay separate columns.
+    """
     patch = to_row(execution, client_id, None)
     # The row already carries its identity and lineage; only the outcome moves.
     for immutable in ("id", "client_id", "agent_run_id", "engine_run_id", "agent_id", "tool_id", "created_at"):
         patch.pop(immutable, None)
+    if "approvalState" not in execution and "approval_state" not in execution:
+        patch.pop("approval_state", None)
+        if "approvedBy" not in execution and "approved_by" not in execution:
+            patch.pop("approved_by", None)
+            patch.pop("approved_at", None)
     updated = (
         tenant_table(db, "os_tool_executions", client_id)
         .update(patch)
