@@ -36,6 +36,10 @@ import type { ActionExecutionRecord } from "../../src/agent-os/actions/types.ts"
 import type { SharedContext } from "../../src/agent-os/types/agent.ts";
 import { FakeGmailPort } from "./fake-gmail-port.ts";
 import {
+  LiveOsToolExecutionAbort,
+  assertEvalOnlyExecutor,
+} from "./live-db-lock.ts";
+import {
   DEFAULT_CLASSIFIER_PATH,
   DEFAULT_DATASET_PATH,
   DEFAULT_RESULTS_DIR,
@@ -275,9 +279,27 @@ function resolveDepartmentAction(
 }
 
 /**
+ * Install the only executor this runner may use. Aborts if the registered
+ * seams are not in-memory / FakeGmailPort (a live persist path).
+ */
+export function installEvalOnlyExecutor(): {
+  store: InMemoryActionStore;
+  notes: InMemoryCustomerNotesPort;
+  gmail: FakeGmailPort;
+} {
+  const store = new InMemoryActionStore();
+  const notes = new InMemoryCustomerNotesPort();
+  const gmail = new FakeGmailPort();
+  setActionStore(store);
+  setToolPorts({ customerNotes: notes });
+  assertEvalOnlyExecutor(store, notes, gmail);
+  return { store, notes, gmail };
+}
+
+/**
  * Proposal-level path: intercepts → injected classification → department
  * resolveAction → in-memory executor. FakeGmailPort is the only Gmail
- * boundary; live send is never invoked.
+ * boundary; live send is never invoked. Live table writes abort.
  */
 export async function runProposalPath(
   ask: string,
@@ -302,10 +324,8 @@ export async function runProposalPath(
     return { predicted: route.predicted, executions: [], gmail };
   }
 
-  const store = new InMemoryActionStore();
-  const notes = new InMemoryCustomerNotesPort();
-  setActionStore(store);
-  setToolPorts({ customerNotes: notes });
+  const { store, notes } = installEvalOnlyExecutor();
+  assertEvalOnlyExecutor(store, notes, gmail);
 
   await executeAction({
     accountId,
@@ -314,6 +334,8 @@ export async function runProposalPath(
     agentId: route.runDept,
     sharedContext: context,
   });
+
+  assertEvalOnlyExecutor(store, notes, gmail);
 
   return {
     predicted: route.predicted,
@@ -334,7 +356,8 @@ export async function measureProposalCase(
     const out = await runProposalPath(c.ask, cls, context);
     predicted = out.predicted;
     executions = out.executions;
-  } catch {
+  } catch (err) {
+    if (err instanceof LiveOsToolExecutionAbort) throw err;
     threw = true;
     predicted = null;
     executions = [];

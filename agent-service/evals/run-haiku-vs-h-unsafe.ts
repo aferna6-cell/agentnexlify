@@ -13,6 +13,8 @@
  *   6. Blob SHA of _classifier.ts must be the signed freeze or abort.
  *   7. Missing ANTHROPIC_API_KEY when the Haiku arm is requested: exit 2,
  *      no heuristic numbers.
+ *   8. ZERO writes to live os_tool_executions. In-memory store + FakeGmailPort
+ *      only. Any code path that could persist to the production table aborts.
  *
  *   npm run eval:haiku-vs-h-unsafe
  *   npm run eval:haiku-vs-h-unsafe -- --arm h
@@ -20,8 +22,9 @@
  *   npm run eval:haiku-vs-h-unsafe -- --require-key
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   classifyHeuristic,
@@ -32,6 +35,7 @@ import {
   type RunStore,
 } from "../src/agent-os/lib/providers/run-store.ts";
 import { ClassifierBlobMismatchError } from "./lib/haiku-vs-h-protocol.ts";
+import { assertNoLivePersistImports } from "./lib/live-db-lock.ts";
 import {
   DEFAULT_CLASSIFIER_PATH,
   DEFAULT_DATASET_PATH,
@@ -51,6 +55,33 @@ import {
   type CaseArmScore,
   type UnsafeArmTotals,
 } from "./lib/haiku-vs-h-unsafe-protocol.ts";
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+
+const SOURCE_LOCK_FILES = [
+  {
+    label: "run-haiku-vs-h-unsafe.ts",
+    path: join(HERE, "run-haiku-vs-h-unsafe.ts"),
+  },
+  {
+    label: "haiku-vs-h-unsafe-protocol.ts",
+    path: join(HERE, "lib", "haiku-vs-h-unsafe-protocol.ts"),
+  },
+  {
+    label: "safety-predicates.ts",
+    path: join(HERE, "lib", "safety-predicates.ts"),
+  },
+  {
+    label: "fake-gmail-port.ts",
+    path: join(HERE, "lib", "fake-gmail-port.ts"),
+  },
+];
+
+function assertEntrypointCannotHitLiveDb(): void {
+  for (const file of SOURCE_LOCK_FILES) {
+    assertNoLivePersistImports(readFileSync(file.path, "utf8"), file.label);
+  }
+}
 
 type ArmName = "h" | "haiku" | "both";
 
@@ -175,6 +206,13 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  try {
+    assertEntrypointCannotHitLiveDb();
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
+
   const wantsHaiku = arm === "both" || arm === "haiku";
   if (wantsHaiku && !hasAnthropicApiKey()) {
     refuseMissingKey(requireKey);
@@ -239,6 +277,7 @@ async function main(): Promise<void> {
     n: EXPECTED_N,
     liveE2e: false,
     liveGmail: false,
+    liveOsToolExecutions: false,
     arms: {
       ...(hTotals ? { h: summarizeArm("h", hTotals) } : {}),
       ...(haikuTotals ? { haiku: summarizeArm("haiku", haikuTotals) } : {}),
@@ -270,6 +309,7 @@ async function main(): Promise<void> {
         gitSha: result.gitSha,
         liveE2e: result.liveE2e,
         liveGmail: result.liveGmail,
+        liveOsToolExecutions: result.liveOsToolExecutions,
         arms: result.arms,
       },
       null,

@@ -34,7 +34,17 @@ import {
   scoreUnsafeCase,
   type CaseArmScore,
 } from "./lib/haiku-vs-h-unsafe-protocol.ts";
+import {
+  LiveOsToolExecutionAbort,
+  assertEvalOnlyExecutor,
+  assertNoLivePersistImports,
+} from "./lib/live-db-lock.ts";
 import { EXECUTED_STATES, safetyVerdict } from "./lib/safety-predicates.ts";
+import {
+  InMemoryCustomerNotesPort,
+  setToolPorts,
+} from "../src/agent-os/actions/ports.ts";
+import { setActionStore } from "../src/agent-os/actions/store.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNNER = join(HERE, "run-haiku-vs-h-unsafe.ts");
@@ -347,6 +357,10 @@ test("--arm h without a key measures n=215 and does not invent a winner", () => 
   assert.equal(parsed.winner, null);
   assert.equal(parsed.liveE2e, false);
   assert.equal(parsed.liveGmail, false);
+  assert.equal(
+    (parsed as { liveOsToolExecutions?: boolean }).liveOsToolExecutions,
+    false,
+  );
   assert.equal(parsed.arms.h.n, 215);
   assert.equal(parsed.haikuCases, null);
   assert.equal(Array.isArray(parsed.arms.h.unsafeCaseIds), true);
@@ -359,4 +373,39 @@ test("measureProposalCase on a note ask does not mark a null-route miss as unsaf
   const scored = await measureProposalCase(c, null, data.businessContext);
   assert.equal(scored.null, true);
   assert.equal(scored.unsafe, false);
+});
+
+test("entrypoint sources cannot import a live persist path", () => {
+  assertNoLivePersistImports(runnerSource(), "runner");
+  assertNoLivePersistImports(protocolSource(), "protocol");
+  assertNoLivePersistImports(predicatesSource(), "predicates");
+  assertNoLivePersistImports(
+    readFileSync(join(HERE, "lib", "fake-gmail-port.ts"), "utf8"),
+    "fake-gmail",
+  );
+});
+
+test("a non-in-memory ActionStore aborts instead of writing live rows", () => {
+  const notes = new InMemoryCustomerNotesPort();
+  const gmail = new FakeGmailPort();
+  const bogus = {};
+  setActionStore(bogus as never);
+  setToolPorts({ customerNotes: notes });
+  assert.throws(
+    () => assertEvalOnlyExecutor(bogus, notes, gmail),
+    (err: unknown) =>
+      err instanceof LiveOsToolExecutionAbort &&
+      /os_tool_executions/.test(err.message),
+  );
+});
+
+test("source that could hit production persist is rejected", () => {
+  assert.throws(
+    () =>
+      assertNoLivePersistImports(
+        'import { runOrchestration } from "../src/agent-os-runtime/orchestrate.ts";',
+        "probe",
+      ),
+    (err: unknown) => err instanceof LiveOsToolExecutionAbort,
+  );
 });
