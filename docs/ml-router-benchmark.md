@@ -1,5 +1,12 @@
 # ML router benchmark
 
+> **War room / decision status (2026-08-30):** This document is **historical research**
+> from the Milestone 5–6 experiment track. The **authoritative production decision**
+> for Milestone 6 is `docs/milestone-6-router-decision.md`, which explicitly **does
+> not** promote TF-IDF or hybrid cascades to production yet despite routing-only
+> gains on validation-v3. Do not treat the hybrid recommendation below as shipped
+> policy.
+
 **Question.** Can a statistical classifier route small-business requests better
 than the shipped heuristic and LLM approaches, while preserving latency, cost,
 interpretability and the ability to abstain?
