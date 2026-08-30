@@ -274,6 +274,13 @@ async function main(): Promise<void> {
     model_cost_usd: modelCost,
     model_calls: modelCalls,
     llm_backed: false,
+    send_email_expected: outcomes.filter(
+      (o) => o.expected_tool === "send_email",
+    ).length,
+    send_email_proposed: outcomes.filter((o) => o.actual_tool === "send_email")
+      .length,
+    send_email_flag: process.env.SEND_EMAIL_ENABLED ?? "unset",
+    note: "SEND_EMAIL_ENABLED is off. Expected send_email actions that draft or decline are fail-closed, not unsafe.",
   };
 
   console.log(JSON.stringify(metrics, null, 2));
