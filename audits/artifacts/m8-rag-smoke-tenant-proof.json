@@ -1,0 +1,122 @@
+{
+  "tenant_id": "7451537b-a694-4c31-83b0-1b804df3d757",
+  "active_chunk_count_from_compile_path": 6,
+  "DEFAULT_MIN_SCORE": 1.0,
+  "RAG_ENABLED_process": true,
+  "queries": [
+    {
+      "label": "services",
+      "query": "What services do you offer?",
+      "abstain": false,
+      "reason": "ok",
+      "evidence_count": 3,
+      "top_score": 2.8242,
+      "citations": [
+        "m8-smoke-kb.md \u00a7Services",
+        "m8-smoke-kb.md \u00a7FAQs",
+        "m8-smoke-kb.md \u00a7Out of scope note"
+      ],
+      "kb_injected": true,
+      "cross_tenant_abstain": true,
+      "cross_tenant_evidence": 0,
+      "cross_tenant_reason": "no_approved_knowledge"
+    },
+    {
+      "label": "prices",
+      "query": "How much is an exterior wash?",
+      "abstain": false,
+      "reason": "ok",
+      "evidence_count": 2,
+      "top_score": 4.5307,
+      "citations": [
+        "m8-smoke-kb.md \u00a7Prices",
+        "m8-smoke-kb.md \u00a7Services"
+      ],
+      "kb_injected": true,
+      "cross_tenant_abstain": true,
+      "cross_tenant_evidence": 0,
+      "cross_tenant_reason": "no_approved_knowledge"
+    },
+    {
+      "label": "warranty",
+      "query": "What is your ceramic coating warranty?",
+      "abstain": false,
+      "reason": "ok",
+      "evidence_count": 4,
+      "top_score": 3.8752,
+      "citations": [
+        "m8-smoke-kb.md \u00a7Warranty",
+        "m8-smoke-kb.md \u00a7Prices",
+        "m8-smoke-kb.md \u00a7Services",
+        "m8-smoke-kb.md \u00a7FAQs"
+      ],
+      "kb_injected": true,
+      "cross_tenant_abstain": true,
+      "cross_tenant_evidence": 0,
+      "cross_tenant_reason": "no_approved_knowledge"
+    },
+    {
+      "label": "cancellation",
+      "query": "What is your cancellation policy?",
+      "abstain": false,
+      "reason": "ok",
+      "evidence_count": 3,
+      "top_score": 3.0504,
+      "citations": [
+        "m8-smoke-kb.md \u00a7Cancellation Policy",
+        "m8-smoke-kb.md \u00a7Prices",
+        "m8-smoke-kb.md \u00a7FAQs"
+      ],
+      "kb_injected": true,
+      "cross_tenant_abstain": true,
+      "cross_tenant_evidence": 0,
+      "cross_tenant_reason": "no_approved_knowledge"
+    },
+    {
+      "label": "faq",
+      "query": "Do you come to my driveway?",
+      "abstain": false,
+      "reason": "ok",
+      "evidence_count": 2,
+      "top_score": 7.6041,
+      "citations": [
+        "m8-smoke-kb.md \u00a7FAQs",
+        "m8-smoke-kb.md \u00a7Out of scope note"
+      ],
+      "kb_injected": true,
+      "cross_tenant_abstain": true,
+      "cross_tenant_evidence": 0,
+      "cross_tenant_reason": "no_approved_knowledge"
+    },
+    {
+      "label": "no_answer",
+      "query": "What is your cryptocurrency mining hash rate?",
+      "abstain": true,
+      "reason": "low_overlap",
+      "evidence_count": 2,
+      "top_score": 2.3165,
+      "citations": [
+        "m8-smoke-kb.md \u00a7Prices",
+        "m8-smoke-kb.md \u00a7FAQs"
+      ],
+      "kb_injected": false,
+      "cross_tenant_abstain": true,
+      "cross_tenant_evidence": 0,
+      "cross_tenant_reason": "no_approved_knowledge"
+    }
+  ],
+  "attach_rag_price_status": "ok",
+  "attach_rag_price_kb_topics": [
+    "rag:m8-smoke-kb.md \u00a7Prices",
+    "rag:m8-smoke-kb.md \u00a7Services"
+  ],
+  "attach_rag_noanswer_status": "abstain",
+  "attach_rag_noanswer_reason": "low_overlap",
+  "unsupported_claims": 0,
+  "cross_tenant_leaks": 0,
+  "attach_rag_price_citations": [
+    "m8-smoke-kb.md \u00a7Prices",
+    "m8-smoke-kb.md \u00a7Services"
+  ],
+  "db_active_chunks_verified": 6
+}

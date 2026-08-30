@@ -1,0 +1,139 @@
+{
+  "verdict": "MILESTONE 8 HOLD",
+  "timestamp": "2026-08-30T17:12:00Z",
+  "git_sha_base": "62ea09c2f2b4559fce4ab86be340cc083269fd3f",
+  "branch": "cursor/milestone8-deploy-proof-a2c9",
+  "staging_environment": {
+    "exists": false,
+    "railway_project_id": "22fbefe0-bd69-41c6-9896-e5f533473c60",
+    "railway_project_name": "cheerful-freedom",
+    "production_environment_id": "5ee2962f-8355-4138-8865-6de80283a9ba",
+    "staging_environment_id": null,
+    "staging_api_base": null,
+    "production_api_base": "https://agentnexlify-production.up.railway.app",
+    "services": {
+      "agentnexlify": "293f3d78-f644-470a-ba40-a6767ad2fbcd",
+      "agent_service": "1f6f4f55-34ff-4571-a9d4-49f8ac030afd"
+    },
+    "secrets_injected": false,
+    "secrets_leaked_to_agent": false
+  },
+  "tenant_test_id": "7451537b-a694-4c31-83b0-1b804df3d757",
+  "tenant_label": "AgentNexLiFy Smoke Test",
+  "supabase_project_id": "pxserpybmajixqrmzaly",
+  "feature_flags": {
+    "production": {
+      "RAG_ENABLED": "unset/OFF",
+      "CRM_ACTIONS_ENABLED": "unset/OFF",
+      "CALENDAR_ACTIONS_ENABLED": "unset/OFF",
+      "SEND_EMAIL_ENABLED": "unset/OFF"
+    },
+    "staging": {
+      "provisioned": false
+    },
+    "process_smoke": {
+      "RAG_ENABLED": "1",
+      "DEFAULT_MIN_SCORE": 1.0,
+      "CRM_ACTIONS_ENABLED": "0",
+      "CALENDAR_ACTIONS_ENABLED": "0",
+      "SEND_EMAIL_ENABLED": "0"
+    }
+  },
+  "capabilities": {
+    "RAG": {
+      "live_proven": "partial",
+      "staging_enabled": false,
+      "canary_eligible": false,
+      "production_eligible": false,
+      "blocker": "No staging Railway env; Agent OS HTTP not run; Railway RAG_ENABLED not set",
+      "rollback": "RAG_ENABLED=0",
+      "evidence": {
+        "active_tenant_kb_chunks": 6,
+        "document_id": "a5dbe7dc-2277-4dd7-95ec-04a152bfff73",
+        "holdout_recall_at_1": 0.9017,
+        "correct_refusal_rate": 1.0,
+        "unsupported_claim_rate": 0.0,
+        "cross_tenant_leaks": 0,
+        "prompt_injection_failures": 0,
+        "smoke_artifact": "audits/artifacts/m8-live-smoke-20260830T171155Z.json",
+        "tenant_proof_artifact": "audits/artifacts/m8-rag-smoke-tenant-proof.json",
+        "index_method": "documents_to_chunks (compile-equivalent); compile_tenant_kb HTTP not run"
+      }
+    },
+    "CRM": {
+      "live_proven": false,
+      "staging_enabled": false,
+      "canary_eligible": false,
+      "production_eligible": false,
+      "blocker": "SUPABASE_SERVICE_KEY unavailable to agent; Action Executor path not executed",
+      "rollback": "CRM_ACTIONS_ENABLED=0",
+      "execution_ids": null,
+      "verification_state": null,
+      "redrive_result": null,
+      "cross_tenant_result": "offline_eval_pass_only"
+    },
+    "Calendar": {
+      "live_proven": false,
+      "staging_enabled": false,
+      "canary_eligible": false,
+      "production_eligible": false,
+      "blocker": "No google_calendar OAuth integration; no service key; no staging",
+      "rollback": "CALENDAR_ACTIONS_ENABLED=0",
+      "provider_object_ids": null,
+      "execution_ids": null,
+      "verification_state": null,
+      "redrive_result": null,
+      "cross_tenant_result": null
+    },
+    "Gmail": {
+      "live_proven": false,
+      "staging_enabled": false,
+      "canary_eligible": false,
+      "production_eligible": false,
+      "blocker": "No gmail connector; no service key; no staging",
+      "rollback": "SEND_EMAIL_ENABLED=0",
+      "provider_object_ids": null,
+      "execution_ids": null,
+      "verification_state": null,
+      "redrive_result": null
+    }
+  },
+  "integrations_observed": {
+    "smoke_tenant_providers": [],
+    "global_providers": [
+      "os_inbound_bridges"
+    ]
+  },
+  "regression": {
+    "m6_unsafe_actions": 0,
+    "m8_calendar_crm": {
+      "pass": 265,
+      "total": 265,
+      "unsafe_actions": 0
+    },
+    "m7_rag_holdout": {
+      "recall_at_1": 0.9017,
+      "cross_tenant_leaks": 0,
+      "prompt_injection_failures": 0,
+      "unsupported_claim_rate": 0.0
+    },
+    "pytest_os_calendar_crm_rag_isolation": "31 passed",
+    "pytest_os_tool_executions": "41 passed",
+    "check_quick": "pass"
+  },
+  "rollback_state": {
+    "RAG_ENABLED": "0 / unset",
+    "CRM_ACTIONS_ENABLED": "0 / unset",
+    "CALENDAR_ACTIONS_ENABLED": "0 / unset",
+    "SEND_EMAIL_ENABLED": "0 / unset",
+    "production_flags_flipped": false
+  },
+  "remaining_blockers": [
+    "Create Railway staging environment and inject secrets via deploy vars only",
+    "OAuth-connect Google Calendar + Gmail on smoke tenant via normal product path",
+    "Re-run scripts/m8_live_smoke.py with service key + M8_SMOKE_API_BASE for CRM/Calendar/Gmail Action Executor proofs"
+  ],
+  "runbook": "docs/ops/m8-staging-setup.md",
+  "secrets_in_artifacts": false,
+  "git_sha": "91002879e05a6f458e3a85ad39b87efbfe0ba0db"
+}
