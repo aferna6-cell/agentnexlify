@@ -41,12 +41,32 @@ export interface CustomerNotesPort {
   /** True only when the write survives the process. */
   readonly durable: boolean;
   append(input: AppendCustomerNoteInput): Promise<CustomerNoteRecord>;
-  list(input: { accountId: string; customerId: string }): Promise<CustomerNoteRecord[]>;
+  list(input: {
+    accountId: string;
+    customerId: string;
+  }): Promise<CustomerNoteRecord[]>;
+}
+
+/** Outbound mail. Eval injects FakeGmailPort; production does not register this. */
+export interface GmailPort {
+  readonly name: string;
+  readonly durable: boolean;
+  send(input: {
+    to: string;
+    subject?: string;
+    body?: string;
+  }): Promise<{ messageId: string; delivered: boolean }>;
 }
 
 /** The full port surface handed to tools. New capabilities extend this. */
 export interface ToolPorts {
   customerNotes: CustomerNotesPort;
+  /**
+   * Eval-only send seam. Optional so production `scopedToolPorts` is unchanged.
+   * This runner never leaves it `None` and never enables SEND_EMAIL_ENABLED
+   * (that flag + a missing port is the live Gmail attach path).
+   */
+  gmail?: GmailPort;
 }
 
 /**
@@ -78,8 +98,13 @@ export class InMemoryCustomerNotesPort implements CustomerNotesPort {
     return record;
   }
 
-  async list(input: { accountId: string; customerId: string }): Promise<CustomerNoteRecord[]> {
-    return [...(this.notes.get(this.key(input.accountId, input.customerId)) ?? [])];
+  async list(input: {
+    accountId: string;
+    customerId: string;
+  }): Promise<CustomerNoteRecord[]> {
+    return [
+      ...(this.notes.get(this.key(input.accountId, input.customerId)) ?? []),
+    ];
   }
 }
 

@@ -12,7 +12,8 @@
     "test": "node --experimental-strip-types --test \"src/**/*.test.ts\" \"evals/**/*.test.ts\"",
     "vendor:agent-os": "bash scripts/vendor-agent-os.sh",
     "eval:haiku-vs-h": "node --experimental-strip-types evals/run-haiku-vs-h.ts",
-    "eval:haiku-vs-h-unsafe": "node --experimental-strip-types evals/run-haiku-vs-h-unsafe.ts"
+    "eval:haiku-vs-h-unsafe": "node --experimental-strip-types evals/run-haiku-vs-h-unsafe.ts",
+    "eval:haiku-vs-h-send-l2": "node --experimental-strip-types evals/run-haiku-vs-h-send-l2.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.110",

@@ -1,10 +1,12 @@
 /**
  * Eval-only Gmail boundary.
  *
- * The unsafe-action runner is proposal-level: it may record that the engine
- * *wanted* to send, but it must never touch live Gmail or production send.
- * This port stores attempts in memory and reports `delivered: false`.
+ * The only send port this measurement may install. It records attempts in
+ * memory and reports `delivered: false`. It is not a live client and it is
+ * not the production mailbox port.
  */
+
+import type { GmailPort } from "../../src/agent-os/actions/ports.ts";
 
 export interface FakeGmailSendInput {
   to: string;
@@ -16,7 +18,7 @@ export interface FakeGmailSendRecord extends FakeGmailSendInput {
   at: string;
 }
 
-export class FakeGmailPort {
+export class FakeGmailPort implements GmailPort {
   readonly name = "fake_gmail";
   readonly durable = false;
   readonly sent: FakeGmailSendRecord[] = [];

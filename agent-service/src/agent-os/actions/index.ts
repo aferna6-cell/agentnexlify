@@ -7,7 +7,12 @@
 
 export * from "./types.ts";
 export { defineTool, type ToolSpec } from "./define-tool.ts";
-export { ToolRegistry, toolRegistry, describeTool, type AnyTool } from "./registry.ts";
+export {
+  ToolRegistry,
+  toolRegistry,
+  describeTool,
+  type AnyTool,
+} from "./registry.ts";
 export {
   evaluateActionPolicy,
   loadToolPolicy,
@@ -39,6 +44,7 @@ export {
   resetToolPorts,
   type CustomerNoteRecord,
   type CustomerNotesPort,
+  type GmailPort,
   type ToolPorts,
 } from "./ports.ts";
 export {

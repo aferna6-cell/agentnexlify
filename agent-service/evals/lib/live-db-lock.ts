@@ -87,3 +87,29 @@ export function assertEvalOnlyExecutor(
     );
   }
 }
+
+/**
+ * Stricter send-boundary lock: FakeGmailPort must be the registered gmail
+ * port. A missing port is the live-attach failure mode and aborts.
+ */
+export function assertEvalOnlySendBoundary(gmail: unknown): void {
+  if (gmail == null) {
+    throw new LiveOsToolExecutionAbort(
+      "gmail port is None — refusing a path that could attach live Gmail",
+    );
+  }
+  if (!(gmail instanceof FakeGmailPort) || gmail.durable !== false) {
+    throw new LiveOsToolExecutionAbort("Gmail boundary is not FakeGmailPort");
+  }
+  const ports = getToolPorts();
+  if (ports.gmail == null) {
+    throw new LiveOsToolExecutionAbort(
+      "registered gmail port is None — FakeGmailPort must be injected on every send_email call",
+    );
+  }
+  if (ports.gmail !== gmail) {
+    throw new LiveOsToolExecutionAbort(
+      "registered Gmail port is not the eval FakeGmailPort instance",
+    );
+  }
+}
