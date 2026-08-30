@@ -21,7 +21,7 @@ export interface RoutingDecisionCreate {
   userId: string;
   runId?: string;
   ask: string;
-  classifier: "haiku" | "heuristic";
+  classifier: "haiku" | "heuristic" | "ml";
   /** "routed" | "ambiguous" | "wishlist_fallback" | "owner_override" | "direct_answer" | "declined" */
   decision: string;
   chosenAgent: string;
@@ -76,7 +76,10 @@ export interface RunStore {
   /** Log a routing decision (the fine-tuning + routing-accuracy dataset). */
   createRoutingDecision(input: RoutingDecisionCreate): Promise<{ id: string }>;
   /** Owner re-routed from the picker: mark the prior decision not-accepted. */
-  markRoutingDecisionOverridden(decisionId: string, changedTo: string): Promise<void>;
+  markRoutingDecisionOverridden(
+    decisionId: string,
+    changedTo: string,
+  ): Promise<void>;
   /** Open an agent run (status "running"); returns its id. */
   createRun(input: AgentRunCreate): Promise<{ id: string }>;
   /** Transition a run's status. */
@@ -84,7 +87,11 @@ export interface RunStore {
   /** Persist a produced draft (the approval-gated deliverable); returns its id. */
   createDraft(input: DraftCreate): Promise<{ id: string }>;
   /** Capture an unmet-need signal (no-fit dataset). Upserts by (userId, request). */
-  captureWishlist(input: { userId: string; request: string; consideredAgents: string }): Promise<void>;
+  captureWishlist(input: {
+    userId: string;
+    request: string;
+    consideredAgents: string;
+  }): Promise<void>;
   /** Persist one reasoning-trace step (best effort — must never break a run). */
   recordTraceStep(input: TraceStepCreate): Promise<void>;
   /** Persist one model-call cost log (best effort — exhaustion is never silent). */

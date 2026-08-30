@@ -111,6 +111,8 @@ export interface AgentOutput {
   orchestratorNotes: string[];
   /** Set when the agent intentionally produced no draft. */
   noDraftReason?: string;
+  /** The agent needs owner input before it can safely continue. */
+  needsClarification?: boolean;
 }
 
 /** A trace step as streamed to the client and persisted. */
