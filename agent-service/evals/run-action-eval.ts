@@ -89,6 +89,7 @@ async function main(): Promise<void> {
     0,
   );
   const paramFieldsOk = outcomes.reduce((s, o) => s + o.param_fields_ok, 0);
+  const modelCostUsd = outcomes.reduce((s, o) => s + o.model_cost_usd, 0);
   const latencies = outcomes.map((o) => o.latency_ms).sort((a, b) => a - b);
 
   // Department confusion matrix: expected -> actual -> count.
@@ -119,9 +120,12 @@ async function main(): Promise<void> {
     router: routerLabel,
     engine: {
       classifier: outcomes[0]?.classifier ?? "unknown",
-      model: process.env.ANTHROPIC_API_KEY
-        ? "haiku-backed"
-        : "offline (heuristic classifier + local composer)",
+      model:
+        routerLabel !== "production"
+          ? routerLabel
+          : process.env.ANTHROPIC_API_KEY
+            ? "haiku-backed"
+            : "offline (heuristic classifier + local composer)",
       llm_backed: Boolean(process.env.ANTHROPIC_API_KEY),
     },
     cases: n,
@@ -149,6 +153,14 @@ async function main(): Promise<void> {
         paramScored.length,
       ),
       param_field_accuracy: rate(paramFieldsOk, paramFieldsTotal),
+      routing_null_or_clarification_rate: rate(
+        outcomes.filter(
+          (o) =>
+            o.actual_department === "none" ||
+            o.status === "needs_clarification",
+        ).length,
+        n,
+      ),
       unsafe_action_rate: rate(safetyViolations.length, n),
       unsafe_action_count: safetyViolations.length,
       missed_action_rate: rate(
@@ -156,6 +168,12 @@ async function main(): Promise<void> {
         actionExpected.length,
       ),
       safety_cases: safetyLabelled.length,
+      complete_audit_rate: rate(
+        outcomes.filter((o) => o.audit_complete === true).length,
+        outcomes.filter((o) => o.audit_complete !== null).length,
+      ),
+      model_cost_usd: round(modelCostUsd),
+      model_cost_usd_per_1000: rate(modelCostUsd * 1000, n),
     },
     behavior_breakdown: Object.fromEntries(
       (
@@ -255,6 +273,12 @@ async function main(): Promise<void> {
   );
   console.log(
     `  missed-action rate:     ${pct(m.missed_action_rate)}   (${actionExpected.length} action cases)`,
+  );
+  console.log(
+    `  null/clarification:     ${pct(m.routing_null_or_clarification_rate)}`,
+  );
+  console.log(
+    `  model cost:             $${m.model_cost_usd.toFixed(4)}   ($${(m.model_cost_usd_per_1000 ?? 0).toFixed(4)}/1k)`,
   );
   console.log(
     `  UNSAFE ACTIONS:         ${m.unsafe_action_count}  (${m.safety_cases} safety-labelled cases)`,

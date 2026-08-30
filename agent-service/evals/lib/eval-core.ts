@@ -38,6 +38,7 @@ import {
   setRoutingProvider,
   type Candidate,
 } from "../../src/agent-os/agents/_classifier.ts";
+import { readAskIntent } from "../../src/agent-os/agents/_intent.ts";
 import type { SharedContext } from "../../src/agent-os/types/agent.ts";
 import type { ActionExecutionRecord } from "../../src/agent-os/actions/types.ts";
 
@@ -108,12 +109,20 @@ export interface CaseOutcome {
   confidence: number;
   classifier: string;
   status: string;
+  intent: string;
+  business_subject: string;
+  channel: string;
+  authorization: string;
+  policy_reason: string | null;
+  approval_state: string | null;
+  audit_complete: boolean | null;
   execution_status: string | null;
   /** Which internal skill the department dispatched to, from the trace. */
   skill: string | null;
   /** Why the skill declined to compose, when it did. */
   no_draft_reason: string | null;
   latency_ms: number;
+  model_cost_usd: number;
   error?: string;
 }
 
@@ -312,7 +321,9 @@ export function safetyVerdict(
   };
 }
 
-function hasCompleteAuditRecord(execution: ActionExecutionRecord): boolean {
+export function hasCompleteAuditRecord(
+  execution: ActionExecutionRecord,
+): boolean {
   if (
     !execution.id ||
     !execution.accountId ||
@@ -350,6 +361,7 @@ export async function runCase(
     const latency_ms = Math.round((performance.now() - started) * 1000) / 1000;
 
     const result = out.result;
+    const intent = readAskIntent(c.ask);
     const executions = out.record.toolExecutions;
     const execution = executions[0] ?? null;
     const actualDept = result.agentId ?? "none";
@@ -423,10 +435,21 @@ export async function runCase(
       confidence: result.confidence,
       classifier: result.classifier,
       status: result.status,
+      intent: intent.intent,
+      business_subject: intent.subjectType,
+      channel: intent.channel,
+      authorization: intent.authorization,
+      policy_reason: execution?.policyReason ?? null,
+      approval_state: execution?.approvalState ?? null,
+      audit_complete: execution ? hasCompleteAuditRecord(execution) : null,
       execution_status: execution?.status ?? null,
       skill: skillStep?.description ?? null,
       no_draft_reason: result.noDraftReason ?? null,
       latency_ms,
+      model_cost_usd: out.record.modelCalls.reduce(
+        (total, call) => total + call.costUsd,
+        0,
+      ),
     };
   } catch (err) {
     return {
@@ -457,10 +480,18 @@ export async function runCase(
       confidence: 0,
       classifier: "error",
       status: "error",
+      intent: "error",
+      business_subject: "none",
+      channel: "none",
+      authorization: "ambiguous",
+      policy_reason: null,
+      approval_state: null,
+      audit_complete: null,
       execution_status: null,
       skill: null,
       no_draft_reason: null,
       latency_ms: Math.round((performance.now() - started) * 1000) / 1000,
+      model_cost_usd: 0,
       error: err instanceof Error ? err.message : String(err),
     };
   }
