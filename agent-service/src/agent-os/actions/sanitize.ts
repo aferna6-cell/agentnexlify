@@ -13,9 +13,28 @@
  * "ssn", which is how well-meaning redaction quietly destroys an audit trail.
  */
 const SECRET_TOKENS = new Set([
-  "password", "passwd", "passphrase", "secret", "secrets", "token", "tokens",
-  "apikey", "credential", "credentials", "authorization", "auth", "bearer",
-  "signature", "cookie", "cookies", "otp", "pin", "cvv", "ssn", "key", "keys",
+  "password",
+  "passwd",
+  "passphrase",
+  "secret",
+  "secrets",
+  "token",
+  "tokens",
+  "apikey",
+  "credential",
+  "credentials",
+  "authorization",
+  "auth",
+  "bearer",
+  "signature",
+  "cookie",
+  "cookies",
+  "otp",
+  "pin",
+  "cvv",
+  "ssn",
+  "key",
+  "keys",
 ]);
 
 /** Split camelCase / snake_case / kebab-case into lowercase word tokens. */
@@ -45,25 +64,29 @@ function truncate(value: string): string {
   return `${value.slice(0, MAX_STRING_LENGTH)}…[truncated ${value.length - MAX_STRING_LENGTH} chars]`;
 }
 
-function walk(value: unknown, depth: number): unknown {
+function walk(value: unknown, depth: number, shorten: boolean): unknown {
   if (value === null || value === undefined) return value ?? null;
-  if (typeof value === "string") return truncate(value);
+  if (typeof value === "string") return shorten ? truncate(value) : value;
   if (typeof value === "number" || typeof value === "boolean") return value;
   if (typeof value === "bigint") return value.toString();
   if (value instanceof Date) return value.toISOString();
-  if (typeof value === "function" || typeof value === "symbol") return "[unserializable]";
+  if (typeof value === "function" || typeof value === "symbol")
+    return "[unserializable]";
   if (depth >= MAX_DEPTH) return "[max depth]";
 
   if (Array.isArray(value)) {
-    const kept = value.slice(0, MAX_ARRAY_LENGTH).map((v) => walk(v, depth + 1));
-    if (value.length > MAX_ARRAY_LENGTH) kept.push(`[+${value.length - MAX_ARRAY_LENGTH} more]`);
+    const kept = value
+      .slice(0, MAX_ARRAY_LENGTH)
+      .map((v) => walk(v, depth + 1, shorten));
+    if (value.length > MAX_ARRAY_LENGTH)
+      kept.push(`[+${value.length - MAX_ARRAY_LENGTH} more]`);
     return kept;
   }
 
   if (typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
-      out[key] = isSecretKey(key) ? REDACTED : walk(v, depth + 1);
+      out[key] = isSecretKey(key) ? REDACTED : walk(v, depth + 1, shorten);
     }
     return out;
   }
@@ -73,12 +96,21 @@ function walk(value: unknown, depth: number): unknown {
 
 /** Redact + bound an arbitrary value for persistence. */
 export function sanitize(value: unknown): unknown {
-  return walk(value, 0);
+  return walk(value, 0, true);
 }
 
-/** Same, narrowed to an object (what execution `input` always is). */
-export function sanitizeRecord(value: unknown): Record<string, unknown> {
-  const cleaned = sanitize(value);
+/**
+ * Same, narrowed to an object (what execution `input` always is).
+ *
+ * Validated action input may disable shortening because the persisted bytes are
+ * the bytes executed after approval. Secret-key redaction and depth/array
+ * limits still apply.
+ */
+export function sanitizeRecord(
+  value: unknown,
+  { shorten = true }: { shorten?: boolean } = {},
+): Record<string, unknown> {
+  const cleaned = walk(value, 0, shorten);
   if (cleaned && typeof cleaned === "object" && !Array.isArray(cleaned)) {
     return cleaned as Record<string, unknown>;
   }

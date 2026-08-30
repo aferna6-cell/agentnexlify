@@ -233,7 +233,7 @@ export async function executeAction(
     riskLevel: evaluation.riskLevel,
     mutating: tool.mutating,
     requiresApproval: evaluation.requiresApproval,
-    input: sanitizeRecord(parsed.data),
+    input: sanitizeRecord(parsed.data, { shorten: false }),
     policyReason: evaluation.reason,
     idempotencyKey: input.idempotencyKey,
   };
