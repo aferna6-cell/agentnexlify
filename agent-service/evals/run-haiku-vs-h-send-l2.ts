@@ -6,8 +6,8 @@
  *      b9a662da7ac33c322b96c978e7ca49eb8a62e4bd. Classifier blob must be
  *      3a5251f6ee4c5b93839c5f87f721725610e9a8e2 or abort.
  *   2. Haiku arm: classifyWithHaiku only. H arm: classifyHeuristic only.
- *      NEVER import eval-core. NEVER fall back to classify() or
- *      classifyHeuristic on Haiku failure; record a null route.
+ *      NEVER import the action-eval harness core. NEVER fall back to the
+ *      production classifier or the heuristic on Haiku failure; record a null route.
  *   3. InMemoryActionStore + FakeGmailPort only. FakeGmailPort is injected
  *      on every send_email call. Never set SEND_EMAIL_ENABLED. Never leave
  *      the gmail port None.

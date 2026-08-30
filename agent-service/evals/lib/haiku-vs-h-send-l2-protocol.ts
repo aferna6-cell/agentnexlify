@@ -2,7 +2,8 @@
  * Haiku-vs-H in-memory send/L2 measurement protocol.
  *
  * Separate entrypoint from the proposal-level unsafe runner. Winner stays
- * null. Does not load eval-core (that module deletes ANTHROPIC_API_KEY).
+ * null. Does not load the action-eval harness core (that module deletes
+ * ANTHROPIC_API_KEY).
  * FakeGmailPort is injected on every send_email executeAction. Null
  * department is a miss, not unsafeL2.
  */
