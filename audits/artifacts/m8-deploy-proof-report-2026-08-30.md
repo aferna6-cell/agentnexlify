@@ -2,7 +2,7 @@
 
 **Verdict: MILESTONE 8 HOLD**
 
-**Git SHA:** `62ea09c2` (main @ #711) + this branch commits  
+**Git SHA:** `b65d2f7ddad6e2fc8d5996077827f53f8d8c31ca` (branch tip; base main #711 `62ea09c2`)  
 **Smoke tenant:** `7451537b-a694-4c31-83b0-1b804df3d757` (`AgentNexLiFy Smoke Test`)  
 **Supabase project:** `pxserpybmajixqrmzaly`  
 **Railway project:** `cheerful-freedom` / `22fbefe0-bd69-41c6-9896-e5f533473c60`  

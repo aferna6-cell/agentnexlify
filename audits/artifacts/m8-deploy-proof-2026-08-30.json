@@ -132,5 +132,5 @@
   ],
   "runbook": "docs/ops/m8-staging-setup.md",
   "secrets_in_artifacts": false,
-  "git_sha": "e263f0d1ae2c53c76d70389909c79b61cf68ff28"
+  "git_sha": "b65d2f7ddad6e2fc8d5996077827f53f8d8c31ca"
 }
