@@ -402,6 +402,85 @@ Milestone 6 selected C2 on validation evidence and shipped it, the frozen run
 would have shown that selection to be worth nothing — which is the entire reason
 the frozen split is run once, at the end, and never tuned against.
 
+### Replication against an independently authored split (added 2026-08-30)
+
+After this milestone was pushed, PR #696 landed `validation-v3` on `main` — a
+**208-case Milestone-6 validation split authored independently of this branch**,
+balanced at 26 cases per department, and (by convergent design) also carrying a
+`stress` axis. It shares **zero asks** with validation-v2 under all five leakage
+detectors, and is clean against both `train` and the frozen split.
+
+Two independently authored splits addressing the same milestone is a replication
+opportunity that did not exist when §12 was written. Re-running the frozen
+candidates against v3 changes the reading of the ordering flip substantially:
+
+| Router / architecture | v2 (this branch) | **v3 (independent)** | Frozen |
+|---|---|---|---|
+| Heuristic | 47.3% | 36.5% | **75.4%** |
+| TF-IDF | 54.9% | 51.9% | 72.8% |
+| Embedding | 60.3% | 51.4% | 63.3% |
+| C: heuristic → TF-IDF | 57.1% | 48.1% | **77.0%** |
+| **C2: heuristic → embedding** | **63.0%** | **51.9%** | 76.4% |
+| B: TF-IDF only | 54.9% | **51.9%** | 72.8% |
+
+**C2 ≥ C on both hand-written splits, and C > C2 on frozen.** The disagreement
+is not an artefact of one author's case-writing: it reproduces on a split
+written by someone else, with no shared vocabulary.
+
+#### The mechanism: a distribution shift, not noise
+
+| Split | Share below `MIN_BUSINESS_EVIDENCE` | No candidate at all |
+|---|---|---|
+| validation-v2 (this branch) | 43.5% (80/184) | 41 |
+| **validation-v3 (independent)** | **45.7% (95/208)** | 43 |
+| **Frozen (action-eval-v1)** | **10.0% (19/191)** | 3 |
+
+Both stress splits put ~45% of traffic in the region where the heuristic is
+nearly useless (15.8% accuracy on v3) and the statistical models carry the load.
+The frozen benchmark puts **10%** there. That single structural difference
+explains the flip: frozen is dominated by high-evidence asks where the
+heuristic's hand-written rules win outright, so a cascade that defers to the
+heuristic (C) looks best; the stress splits are dominated by low-evidence asks,
+so the stronger fallback (C2) looks best.
+
+Two consequences, and the second is uncomfortable:
+
+1. **The Milestone 6 recommendation is unchanged and now better supported.** C
+   and C2 are not separable on the evidence available; which one leads is
+   decided by the evidence mix of whichever split you measure on, not by either
+   being a better router.
+2. **Neither split's mix is known to match production.** Both stress splits were
+   written to oversample hard cases and succeed at it; the frozen split was
+   written to sample the product surface. Real tenant traffic has never been
+   measured, so the honest statement is that **the correct architecture depends
+   on a distribution nobody in this project has yet observed** — which raises
+   the priority of instrumenting production routing (`RouterDecision` logging)
+   alongside measuring Model D.
+
+#### The calibrator choice does not fully replicate
+
+| Router | v2 chose | v3 chose |
+|---|---|---|
+| TF-IDF | temperature | **temperature** ✓ |
+| Heuristic | identity | **isotonic** ✗ |
+
+TF-IDF's temperature scaling replicates cleanly. The heuristic's does not: v2
+rejected isotonic on an overfit gap of 0.0861, while on v3 its gap is 0.0493 —
+which slips under the 0.05 rejection bar by four thousandths and is therefore
+selected. A rule that flips on a margin that thin is not measuring a stable
+property. **Treat the heuristic's calibrator as undetermined at n ≈ 200**, keep
+its raw confidence, and revisit only with substantially more data. The TF-IDF
+result is the one that survives replication.
+
+Reproduce:
+
+```bash
+git show origin/main:agent-service/evals/datasets/validation/validation-v3.json > /tmp/validation-v3.json
+python ml/routing/milestone6.py --split validation --validation-path /tmp/validation-v3.json \
+  --out ml/routing/artifacts/milestone6-validation-v3-replication.json
+```
+
+
 ## 13. The unified RouterDecision
 
 `agent-service/src/agent-os/agents/_router_decision.ts` (engine) and
@@ -467,10 +546,14 @@ The reasoning, in order of weight:
    offline path. Recommending a switch *from* Haiku *to* a cascade whose
    advantage over Haiku is unmeasured would be a recommendation made from
    absence of evidence.
-2. **The validation→frozen ordering flip (§12) is a live warning.** The split
-   that was built specifically to discriminate picked C2; the frozen split picked
-   C; the gap between them is under a point in both directions. There is no
-   stable winner among the offline cascades to promote.
+2. **The validation→frozen ordering flip (§12) is a live warning, and it
+   replicates.** The split built specifically to discriminate picked C2; an
+   independently authored split (`validation-v3`, PR #696) also picked C2; the
+   frozen split picked C. The flip is now traced to a measured distribution
+   shift — ~45% of both stress splits sit below the evidence floor against 10%
+   of the frozen split — which means the winner is decided by the evidence mix
+   of the split, not by either cascade being better. Production's own mix has
+   never been observed, so there is no stable winner to promote.
 3. **The one gain that IS solid does not require a routing change.**
    C's +4.6 points of end-to-end department accuracy over baseline
    (80.5% → 85.1%) at $0 and ~+1.4 ms of p95 routing latency is real, reproduced
@@ -568,8 +651,20 @@ Concretely, and in this order:
 3. **Then decide between C and the status quo** with both sides measured, and
    evaluate E and F end-to-end — F escalates only 4.7% of frozen traffic, so an
    LLM stage may be affordable precisely because it is rarely reached.
-4. **Only after that, consider deployment**, with `RouterDecision` logging from
-   day one so the production distribution can be compared against these splits.
+4. **Instrument production routing before deploying anything.** The replication
+   above shows the architecture choice is decided by a split's evidence mix, and
+   production's mix has never been observed. `RouterDecision` logging — evidence
+   score, source, and whether the ask fell below the floor — answers that from
+   real traffic in a week, costs nothing, and changes no behaviour. It should
+   land *before* a router change, not alongside one.
+5. **Only after that, consider deployment.**
+
+**Already in flight elsewhere.** PRs #698 / #701 / #702 / #703 ("Haiku vs H"
+measurement runner, no fallback; unsafe-action measurement; send/L2
+claim-then-execute via a fake Gmail port) are building exactly step 1. This
+milestone's harness (`evals/export-llm-predictions.ts`, driven by
+`ml/routing/milestone6.py`) and its three splits are available to that work, and
+the two should be reconciled rather than run in parallel.
 
 Deferred deliberately, and still deferred: RAG, computer use, Calendar, SMS,
 active learning, fine-tuning, reinforcement learning, drift monitoring.

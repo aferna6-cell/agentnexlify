@@ -321,6 +321,9 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--split", choices=["validation", "test"], default="validation")
     ap.add_argument("--validation-version", default="v2", choices=["v1", "v2"])
+    ap.add_argument("--validation-path", default=None,
+                    help="load validation from an explicit file (for replicating against an "
+                         "independently authored split, e.g. main's validation-v3)")
     ap.add_argument("--calibrators-from", default=None,
                     help="validation artifact to take fitted calibrator choices from (required for --split test)")
     ap.add_argument("--out", default=None)
@@ -330,7 +333,7 @@ def main() -> None:
         print("!! FROZEN TEST SPLIT — this is the final measurement, not an iteration step.\n")
         split = datasets.load_test()
     else:
-        split = datasets.load_validation(args.validation_version)
+        split = datasets.load_validation(args.validation_version, args.validation_path)
     labels = split.labels
     print(f"split: {split.name} ({split.version}), {len(split)} cases with a department label\n")
 
@@ -475,9 +478,16 @@ def main() -> None:
             for i in range(len(split))
         ],
     }
-    out = Path(args.out) if args.out else ARTIFACTS / f"milestone6-{split.name}.json"
+    out = (Path(args.out).resolve() if args.out else ARTIFACTS / f"milestone6-{split.name}.json")
     out.write_text(json.dumps(payload, indent=2, default=str) + "\n")
-    print(f"\nwritten -> {out.relative_to(REPO)}")
+    # `relative_to` raises for a path outside the repo, and an --out anywhere
+    # else is legitimate; fall back to the absolute path rather than failing
+    # after the artifact is already safely on disk.
+    try:
+        shown = out.relative_to(REPO)
+    except ValueError:
+        shown = out
+    print(f"\nwritten -> {shown}")
 
 
 if __name__ == "__main__":

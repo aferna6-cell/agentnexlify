@@ -108,8 +108,24 @@ def _load_eval_split(path: Path, name: str, version: str) -> Split:
     )
 
 
-def load_validation(version: str = DEFAULT_VALIDATION) -> Split:
-    """The editable split. v2 by default; v1 remains loadable as a regression check."""
+def load_validation(version: str = DEFAULT_VALIDATION, path: Path | str | None = None) -> Split:
+    """
+    The editable split. v2 by default; v1 remains loadable as a regression check.
+
+    `path` loads a validation split from an arbitrary file, which exists for one
+    purpose: replicating a finding against an INDEPENDENTLY authored split that
+    lives somewhere this branch does not carry it — e.g.
+
+        git show origin/main:agent-service/evals/datasets/validation/validation-v3.json
+
+    A conclusion that holds on one hand-written split and fails on another
+    written by someone else was never a conclusion about the system. Being able
+    to check that without vendoring a copy of the other split is the difference
+    between doing the check and describing it.
+    """
+    if path is not None:
+        p = Path(path)
+        return _load_eval_split(p, f"validation-{p.stem}", f"external:{p.name}")
     if version not in VALIDATION_PATHS:
         raise ValueError(f"unknown validation version {version!r}; have {sorted(VALIDATION_PATHS)}")
     return _load_eval_split(VALIDATION_PATHS[version], f"validation-{version}", VALIDATION_VERSIONS[version])
