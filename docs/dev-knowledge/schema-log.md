@@ -12,7 +12,7 @@ Every database schema change. Claude Code checks this when working with database
 
 **Lifecycle / orphans:** Hard delete of a source document cascades to chunks (no indefinitely active orphans). Soft-delete / supersede uses the existing compile path (`index_after_compile` → `replace_chunks_for_tenant`), which deletes all tenant chunks then reinserts only from `status='active'` documents. Request-time fallback chunks active documents in memory and never reads deleted rows.
 
-**Applied:** NOT YET — file-only until owner applies via normal migration workflow. Request-time retrieval falls back to in-memory chunking of `tenant_kb_documents`.
+**Applied:** APPLIED to prod 2026-08-30 via Supabase `apply_migration` (`198_tenant_kb_chunks`). Verified: table + 16 columns, RLS on (2 policies), HNSW + client/status + document indexes, `match_tenant_kb_chunks` RPC present.
 
 ---
 
