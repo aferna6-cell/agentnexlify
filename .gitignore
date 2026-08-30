@@ -93,3 +93,4 @@ pytest-of-*/
 # Per-run scratch, same as .autonomy/ — scaffolded by scripts/gan/init_harness.py
 # and driven by /gan. Commit the artifact the loop produces, not the loop's state.
 gan-harness/
+.env.staging
