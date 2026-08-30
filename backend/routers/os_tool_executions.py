@@ -131,6 +131,11 @@ async def approve_tool_execution(
             status_code=400,
             detail="recipient is not a valid email address",
         )
+    if invalid == "invalid_email_header":
+        raise HTTPException(
+            status_code=400,
+            detail="email subject contains invalid line breaks",
+        )
 
     if (existing.get("tool_id") or "") == os_tools.SEND_EMAIL_TOOL_ID:
         refused = os_tools.refuse_send_email(

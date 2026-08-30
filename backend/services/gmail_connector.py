@@ -16,6 +16,7 @@ Do NOT add 'from __future__ import annotations' — breaks Pydantic on FastAPI.
 
 import base64
 import logging
+from email.errors import HeaderParseError
 from email.mime.text import MIMEText
 from email.utils import parseaddr
 from typing import Any
@@ -520,19 +521,25 @@ def send_message(
     sending twice. Returns ``{"success": bool, "detail": str, ...}`` and
     never raises.
     """
-    message = MIMEText(body_html, "html")
-    message["to"] = to
-    message["subject"] = subject
-    if rfc822_msgid:
-        message["Message-ID"] = (
-            rfc822_msgid if rfc822_msgid.startswith("<") else f"<{rfc822_msgid}>"
-        )
-    if in_reply_to:
-        ref_header = in_reply_to if in_reply_to.startswith("<") else f"<{in_reply_to}>"
-        message["In-Reply-To"] = ref_header
-        message["References"] = references or ref_header
-
-    raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
+    try:
+        message = MIMEText(body_html, "html")
+        message["to"] = to
+        message["subject"] = subject
+        if rfc822_msgid:
+            message["Message-ID"] = (
+                rfc822_msgid
+                if rfc822_msgid.startswith("<")
+                else f"<{rfc822_msgid}>"
+            )
+        if in_reply_to:
+            ref_header = (
+                in_reply_to if in_reply_to.startswith("<") else f"<{in_reply_to}>"
+            )
+            message["In-Reply-To"] = ref_header
+            message["References"] = references or ref_header
+        raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
+    except (HeaderParseError, ValueError):
+        return {"success": False, "detail": "invalid email headers"}
     body: dict[str, Any] = {"raw": raw}
     if thread_id:
         body["threadId"] = thread_id

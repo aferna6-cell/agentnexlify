@@ -22,9 +22,9 @@ import type { PipelineLeadData } from "../../types/agent.ts";
 const Input = z
   .object({
     /** Preferred: the customer's id from the pipeline. */
-    customer_id: z.string().min(1).optional(),
+    customer_id: z.string().min(1).max(200).optional(),
     /** Fallback: a name to resolve against the pipeline (exact, then prefix). */
-    customer_name: z.string().min(1).optional(),
+    customer_name: z.string().min(1).max(200).optional(),
     note: z.string().min(1).max(2000),
   })
   .refine((v) => Boolean(v.customer_id || v.customer_name), {
@@ -59,7 +59,9 @@ export function resolveCustomer(
   if (exact.length === 1) return exact[0]!;
   if (exact.length > 1) return null; // ambiguous — refuse rather than guess
 
-  const partial = leads.filter((l) => l.name.trim().toLowerCase().startsWith(name));
+  const partial = leads.filter((l) =>
+    l.name.trim().toLowerCase().startsWith(name),
+  );
   return partial.length === 1 ? partial[0]! : null;
 }
 
@@ -77,7 +79,10 @@ export const addCustomerNote = defineTool({
   outputSchema: Output,
 
   async execute({ input, context }): Promise<AddCustomerNoteOutput> {
-    const customer = resolveCustomer(context.sharedContext.pipelineLeads, input);
+    const customer = resolveCustomer(
+      context.sharedContext.pipelineLeads,
+      input,
+    );
     if (!customer) {
       throw new ToolExecutionError(
         "customer_not_found",

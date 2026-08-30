@@ -20,6 +20,7 @@
  * channel, so the plain-text/no_markdown rule still holds on the real output).
  */
 
+import { createHash } from "node:crypto";
 import {
   defineAgent,
   PLAIN_TEXT_CHANNELS,
@@ -352,7 +353,7 @@ export function defineDepartment(spec: DepartmentSpec): DepartmentAgent {
       // all need it, and re-deriving it per consumer is how they drift apart.
       const intent = readAskIntent(
         args.ownerAsk,
-        args.requestOrigin === undefined || args.requestOrigin === "owner",
+        args.requestOrigin === "owner",
       );
 
       // Action path first: some asks are things to DO, not things to draft.
@@ -473,6 +474,11 @@ async function runAction(
     agentId: spec.agent_id,
     toolId: request.toolId,
     input: request.input,
+    idempotencyKey: actionIdempotencyKey(
+      args.runId,
+      request.toolId,
+      request.input,
+    ),
     sharedContext: args.context,
     trace: args.emitTrace,
   });
@@ -512,4 +518,26 @@ async function runAction(
     orchestratorNotes: notes,
     noDraftReason: `This was an action (${request.toolId}), not a draft — see the outcome above.`,
   };
+}
+
+function actionIdempotencyKey(
+  runId: string,
+  toolId: string,
+  input: Record<string, unknown>,
+): string {
+  const canonical = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(canonical);
+    if (value && typeof value === "object") {
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>)
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([key, item]) => [key, canonical(item)]),
+      );
+    }
+    return value;
+  };
+  const digest = createHash("sha256")
+    .update(JSON.stringify(canonical(input)))
+    .digest("hex");
+  return `${runId}:${toolId}:${digest}`;
 }

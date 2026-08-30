@@ -108,3 +108,14 @@ test("approval record preserves the exact validated email body", async () => {
   assert.equal(outcome.status, "pending_approval");
   assert.equal(outcome.record.input.body, body);
 });
+
+test("header line breaks are rejected before approval", async () => {
+  process.env[SEND_EMAIL_FLAG] = "1";
+  const outcome = await run("sales", {
+    ...validInput,
+    subject: "Following up\r\nBcc: attacker@example.com",
+  });
+
+  assert.equal(outcome.status, "failed");
+  assert.equal(outcome.record.error?.code, "invalid_input");
+});

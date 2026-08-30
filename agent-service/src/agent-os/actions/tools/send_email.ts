@@ -20,7 +20,11 @@ const Input = z.object({
     .min(3)
     .max(254)
     .email("recipient must be a valid email address"),
-  subject: z.string().min(1).max(200),
+  subject: z
+    .string()
+    .min(1)
+    .max(200)
+    .regex(/^[^\r\n]*$/, "subject must not contain line breaks"),
   body: z.string().min(1).max(20000),
   thread_id: z.string().min(1).max(200).optional(),
   in_reply_to: z.string().min(1).max(500).optional(),

@@ -178,6 +178,7 @@ def test_successful_send_reaches_verified_terminal_state_without_losing_guard_fi
     assert row["risk_level"] == 2
     assert row["requires_approval"] is True
     assert row["started_at"]
+    assert row["attempts"] == 1
 
 
 def test_conclusive_readback_mismatch_is_not_reported_as_success():

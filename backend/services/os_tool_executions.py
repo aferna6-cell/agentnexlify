@@ -606,6 +606,13 @@ def input_passes_python_email_gate(payload: Any) -> bool:
     return _normalize_email(email_recipient_from_input(payload)) is not None
 
 
+def input_has_safe_email_headers(payload: Any) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    subject = payload.get("subject")
+    return isinstance(subject, str) and "\r" not in subject and "\n" not in subject
+
+
 def validate_before_claim(
     db: Any, client_id: str, execution_id: str
 ) -> tuple[dict | None, str | None]:
@@ -621,6 +628,10 @@ def validate_before_claim(
         row.get("input")
     ):
         return row, "invalid_email"
+    if requires_preclaim_email_check(row) and not input_has_safe_email_headers(
+        row.get("input")
+    ):
+        return row, "invalid_email_header"
     return row, None
 
 
@@ -652,6 +663,11 @@ def _run_data_plane_tool(
     try:
         existing = port.find_by_rfc822_msgid(msgid)
     except Exception:
+        logger.warning(
+            "os_tool_executions: Message-ID lookup unavailable execution_id=%s",
+            execution_id,
+            exc_info=True,
+        )
         apply_unknown_send_outcome(
             db,
             client_id,
@@ -690,6 +706,14 @@ def _run_data_plane_tool(
             "verified": verification["verified"],
         }
 
+    record_execution_outcome(
+        db,
+        client_id,
+        {
+            "id": execution_id,
+            "attempts": _int_or(row.get("attempts"), 0) + 1,
+        },
+    )
     try:
         sent = port.send(
             to=payload.get("to"),

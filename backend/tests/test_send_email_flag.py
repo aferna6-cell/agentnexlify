@@ -181,6 +181,28 @@ def test_flag_on_non_sales_cannot_send(monkeypatch):
     assert sends == []
 
 
+def test_header_line_break_is_rejected_before_claim(monkeypatch):
+    monkeypatch.setenv("SEND_EMAIL_ENABLED", "1")
+    db = _pending_db(
+        input={
+            "to": "sarah@example.com",
+            "subject": "Following up\r\nBcc: attacker@example.com",
+            "body": "Hi Sarah",
+        }
+    )
+    client = _client()
+    try:
+        with patch.object(router_mod, "get_service_supabase", return_value=db):
+            response = client.post(
+                f"/api/v1/os/tool-executions/{EXEC_ID}/approve"
+            )
+    finally:
+        _teardown()
+
+    assert response.status_code == 400
+    assert db.rows("os_tool_executions")[0]["status"] == "pending_approval"
+
+
 def test_flag_on_sales_approve_claim_execute_uses_gmail(monkeypatch):
     monkeypatch.setenv("SEND_EMAIL_ENABLED", "1")
     db = _pending_db(agent_id="sales")

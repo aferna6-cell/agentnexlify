@@ -112,6 +112,10 @@ test("the department runs a real action and reports what actually happened", asy
   assert.equal(record.agentId, "admin_records");
   assert.equal(record.runId, "run_1");
   assert.equal(record.riskLevel, 1);
+  assert.match(
+    record.idempotencyKey ?? "",
+    /^run_1:add_customer_note:[a-f0-9]{64}$/,
+  );
 
   // Tool use is visible in the honest reasoning trace.
   const traced = steps.map((s) => s.step);
