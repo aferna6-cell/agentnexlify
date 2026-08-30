@@ -1,0 +1,409 @@
+{
+  "model": "tfidf_lr",
+  "config": {
+    "name": "word(1,2)+char(3,5) C=4",
+    "word_ngram": [
+      1,
+      2
+    ],
+    "char_ngram": [
+      3,
+      5
+    ],
+    "C": 4.0,
+    "min_df": 1,
+    "class_weight": null
+  },
+  "cv_scheme": "StratifiedGroupKFold(5) grouped by template_id",
+  "cv_groups": 200,
+  "cv_macro_f1_mean": 0.6073,
+  "cv_macro_f1_std": 0.0844,
+  "cv_grid": [
+    {
+      "name": "word(1,1) C=1",
+      "mean": 0.5572,
+      "std": 0.0658
+    },
+    {
+      "name": "word(1,2) C=1",
+      "mean": 0.5258,
+      "std": 0.0729
+    },
+    {
+      "name": "word(1,2) C=4",
+      "mean": 0.5453,
+      "std": 0.0663
+    },
+    {
+      "name": "word(1,2)+char(3,5) C=4",
+      "mean": 0.6073,
+      "std": 0.0844
+    },
+    {
+      "name": "word(1,2)+char(3,5) C=10",
+      "mean": 0.6072,
+      "std": 0.0808
+    },
+    {
+      "name": "word(1,2)+char(2,5) C=4 balanced",
+      "mean": 0.6049,
+      "std": 0.0824
+    }
+  ],
+  "fit_seconds": 1.688,
+  "artifact_kb": 860.6,
+  "vocabulary_size": 10457,
+  "validation": {
+    "model": "TF-IDF + LR",
+    "split": "validation",
+    "n": 208,
+    "accuracy": 0.5192,
+    "top2_accuracy": 0.7115,
+    "macro_precision": 0.5155,
+    "macro_recall": 0.5192,
+    "macro_f1": 0.5114,
+    "no_evidence_rate": 0.0,
+    "per_department": {
+      "accounting": {
+        "support": 26,
+        "precision": 0.4706,
+        "recall": 0.3077,
+        "f1": 0.3721
+      },
+      "admin_records": {
+        "support": 26,
+        "precision": 0.4,
+        "recall": 0.4615,
+        "f1": 0.4286
+      },
+      "customer_service": {
+        "support": 26,
+        "precision": 0.5862,
+        "recall": 0.6538,
+        "f1": 0.6182
+      },
+      "invoicing": {
+        "support": 26,
+        "precision": 0.6452,
+        "recall": 0.7692,
+        "f1": 0.7018
+      },
+      "marketing": {
+        "support": 26,
+        "precision": 0.4828,
+        "recall": 0.5385,
+        "f1": 0.5091
+      },
+      "operations": {
+        "support": 26,
+        "precision": 0.5667,
+        "recall": 0.6538,
+        "f1": 0.6071
+      },
+      "people": {
+        "support": 26,
+        "precision": 0.5556,
+        "recall": 0.3846,
+        "f1": 0.4545
+      },
+      "sales": {
+        "support": 26,
+        "precision": 0.4167,
+        "recall": 0.3846,
+        "f1": 0.4
+      }
+    },
+    "confusion": {
+      "sales": {
+        "admin_records": 8,
+        "sales": 10,
+        "operations": 2,
+        "marketing": 2,
+        "customer_service": 3,
+        "people": 1
+      },
+      "operations": {
+        "operations": 17,
+        "invoicing": 4,
+        "admin_records": 1,
+        "customer_service": 2,
+        "sales": 1,
+        "people": 1
+      },
+      "invoicing": {
+        "invoicing": 20,
+        "operations": 2,
+        "marketing": 1,
+        "accounting": 1,
+        "sales": 1,
+        "customer_service": 1
+      },
+      "accounting": {
+        "invoicing": 4,
+        "marketing": 3,
+        "customer_service": 2,
+        "accounting": 8,
+        "operations": 3,
+        "sales": 2,
+        "people": 2,
+        "admin_records": 2
+      },
+      "customer_service": {
+        "customer_service": 17,
+        "marketing": 3,
+        "operations": 1,
+        "sales": 4,
+        "admin_records": 1
+      },
+      "marketing": {
+        "marketing": 14,
+        "admin_records": 3,
+        "accounting": 2,
+        "people": 1,
+        "operations": 2,
+        "invoicing": 2,
+        "sales": 1,
+        "customer_service": 1
+      },
+      "admin_records": {
+        "sales": 5,
+        "customer_service": 1,
+        "admin_records": 12,
+        "accounting": 4,
+        "people": 3,
+        "marketing": 1
+      },
+      "people": {
+        "people": 10,
+        "admin_records": 3,
+        "accounting": 2,
+        "invoicing": 1,
+        "marketing": 5,
+        "customer_service": 2,
+        "operations": 3
+      }
+    },
+    "latency_p50_ms": 0.9142,
+    "latency_p95_ms": 1.1176,
+    "latency_mean_ms": 1.1472
+  },
+  "risk_coverage": [
+    {
+      "threshold": 0.0,
+      "coverage": 1.0,
+      "routed": 208,
+      "abstained": 0,
+      "accuracy_on_routed": 0.5192,
+      "errors_on_routed": 100
+    },
+    {
+      "threshold": 0.05,
+      "coverage": 1.0,
+      "routed": 208,
+      "abstained": 0,
+      "accuracy_on_routed": 0.5192,
+      "errors_on_routed": 100
+    },
+    {
+      "threshold": 0.1,
+      "coverage": 1.0,
+      "routed": 208,
+      "abstained": 0,
+      "accuracy_on_routed": 0.5192,
+      "errors_on_routed": 100
+    },
+    {
+      "threshold": 0.15,
+      "coverage": 1.0,
+      "routed": 208,
+      "abstained": 0,
+      "accuracy_on_routed": 0.5192,
+      "errors_on_routed": 100
+    },
+    {
+      "threshold": 0.2,
+      "coverage": 0.9519,
+      "routed": 198,
+      "abstained": 10,
+      "accuracy_on_routed": 0.5354,
+      "errors_on_routed": 92
+    },
+    {
+      "threshold": 0.25,
+      "coverage": 0.8269,
+      "routed": 172,
+      "abstained": 36,
+      "accuracy_on_routed": 0.564,
+      "errors_on_routed": 75
+    },
+    {
+      "threshold": 0.3,
+      "coverage": 0.7163,
+      "routed": 149,
+      "abstained": 59,
+      "accuracy_on_routed": 0.6107,
+      "errors_on_routed": 58
+    },
+    {
+      "threshold": 0.35,
+      "coverage": 0.5769,
+      "routed": 120,
+      "abstained": 88,
+      "accuracy_on_routed": 0.65,
+      "errors_on_routed": 42
+    },
+    {
+      "threshold": 0.4,
+      "coverage": 0.4327,
+      "routed": 90,
+      "abstained": 118,
+      "accuracy_on_routed": 0.7333,
+      "errors_on_routed": 24
+    },
+    {
+      "threshold": 0.45,
+      "coverage": 0.3125,
+      "routed": 65,
+      "abstained": 143,
+      "accuracy_on_routed": 0.7846,
+      "errors_on_routed": 14
+    },
+    {
+      "threshold": 0.5,
+      "coverage": 0.25,
+      "routed": 52,
+      "abstained": 156,
+      "accuracy_on_routed": 0.8269,
+      "errors_on_routed": 9
+    },
+    {
+      "threshold": 0.55,
+      "coverage": 0.2163,
+      "routed": 45,
+      "abstained": 163,
+      "accuracy_on_routed": 0.8,
+      "errors_on_routed": 9
+    },
+    {
+      "threshold": 0.6,
+      "coverage": 0.1779,
+      "routed": 37,
+      "abstained": 171,
+      "accuracy_on_routed": 0.8378,
+      "errors_on_routed": 6
+    },
+    {
+      "threshold": 0.65,
+      "coverage": 0.125,
+      "routed": 26,
+      "abstained": 182,
+      "accuracy_on_routed": 0.8846,
+      "errors_on_routed": 3
+    },
+    {
+      "threshold": 0.7,
+      "coverage": 0.0865,
+      "routed": 18,
+      "abstained": 190,
+      "accuracy_on_routed": 1.0,
+      "errors_on_routed": 0
+    },
+    {
+      "threshold": 0.75,
+      "coverage": 0.0577,
+      "routed": 12,
+      "abstained": 196,
+      "accuracy_on_routed": 1.0,
+      "errors_on_routed": 0
+    },
+    {
+      "threshold": 0.8,
+      "coverage": 0.0337,
+      "routed": 7,
+      "abstained": 201,
+      "accuracy_on_routed": 1.0,
+      "errors_on_routed": 0
+    },
+    {
+      "threshold": 0.85,
+      "coverage": 0.024,
+      "routed": 5,
+      "abstained": 203,
+      "accuracy_on_routed": 1.0,
+      "errors_on_routed": 0
+    },
+    {
+      "threshold": 0.9,
+      "coverage": 0.0096,
+      "routed": 2,
+      "abstained": 206,
+      "accuracy_on_routed": 1.0,
+      "errors_on_routed": 0
+    },
+    {
+      "threshold": 0.95,
+      "coverage": 0.0,
+      "routed": 0,
+      "abstained": 208,
+      "accuracy_on_routed": null,
+      "errors_on_routed": 0
+    }
+  ],
+  "confidence": {
+    "note": "UNCALIBRATED. Reported to measure calibration quality, not to assert it.",
+    "buckets": [
+      {
+        "range": [
+          0.0,
+          0.2
+        ],
+        "count": 10,
+        "mean_confidence": 0.1869,
+        "accuracy": 0.2
+      },
+      {
+        "range": [
+          0.2,
+          0.4
+        ],
+        "count": 108,
+        "mean_confidence": 0.3042,
+        "accuracy": 0.3704
+      },
+      {
+        "range": [
+          0.4,
+          0.6
+        ],
+        "count": 53,
+        "mean_confidence": 0.472,
+        "accuracy": 0.6604
+      },
+      {
+        "range": [
+          0.6,
+          0.8
+        ],
+        "count": 30,
+        "mean_confidence": 0.683,
+        "accuracy": 0.8
+      },
+      {
+        "range": [
+          0.8,
+          1.0
+        ],
+        "count": 7,
+        "mean_confidence": 0.876,
+        "accuracy": 1.0
+      }
+    ],
+    "brier_score_top1": 0.2204,
+    "expected_calibration_error": 0.104,
+    "mean_confidence_when_correct": 0.483,
+    "mean_confidence_when_wrong": 0.342
+  },
+  "seed": 20260828,
+  "train_version": "routing-train-v1",
+  "validation_version": "action-eval-validation-v3"
+}
