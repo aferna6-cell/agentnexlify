@@ -463,7 +463,9 @@ def get_message(tenant_id: str, message_id: str) -> ParsedEmail | None:
     return _normalize_message(data)
 
 
-def find_message_id_by_rfc822_msgid(tenant_id: str, rfc822_msgid: str) -> str | None:
+def find_message_id_by_rfc822_msgid(
+    tenant_id: str, rfc822_msgid: str, *, strict: bool = False
+) -> str | None:
     """Find a message in this mailbox by its RFC 5322 ``Message-ID`` header.
 
     Pre-send duplicate check for ``send_email``: every outgoing message is
@@ -487,8 +489,12 @@ def find_message_id_by_rfc822_msgid(tenant_id: str, rfc822_msgid: str) -> str | 
         logger.warning(
             "gmail_connector: rfc822msgid lookup failed tenant=%s", tenant_id, exc_info=True
         )
+        if strict:
+            raise
         return None
     if not data:
+        if strict:
+            raise GmailApiError(503, "rfc822msgid lookup unavailable")
         return None
     messages = data.get("messages") or []
     return messages[0].get("id") if messages else None

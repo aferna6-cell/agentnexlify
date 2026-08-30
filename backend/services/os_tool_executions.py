@@ -446,6 +446,11 @@ def present_tool_execution(row: dict | None, *, owner: bool) -> dict | None:
             for key, value in result.items()
             if str(key).lower() not in _SENSITIVE_RESULT_KEYS
         }
+    if visible.get("verification_detail"):
+        visible["verification_detail"] = "[redacted]"
+    error = visible.get("error")
+    if isinstance(error, dict) and error.get("message"):
+        visible["error"] = {**error, "message": "[redacted]"}
     return visible
 
 
@@ -488,23 +493,34 @@ def claim_for_execution(
 def record_execution_outcome(
     db: Any, client_id: str, execution: dict
 ) -> dict | None:
-    """Write the engine's terminal record back onto the claimed row.
+    """Write only supplied outcome fields onto an existing claimed row.
 
-    ``to_row`` defaults a missing approval axis to ``not_required``. A
-    data-plane success (send_email) omits that axis — the owner-approve
-    claim already wrote ``approved`` + ``approved_by``. Do not stamp
-    ``not_required`` or wipe the actor over that write. Status and
-    approval_state stay separate columns.
+    Input, risk classification, lineage, and idempotency key are immutable.
+    Rebuilding a full row with defaults would null the L2 duplicate-send guard.
     """
-    patch = to_row(execution, client_id, None)
-    # The row already carries its identity and lineage; only the outcome moves.
-    for immutable in ("id", "client_id", "agent_run_id", "engine_run_id", "agent_id", "tool_id", "created_at"):
-        patch.pop(immutable, None)
-    if "approvalState" not in execution and "approval_state" not in execution:
-        patch.pop("approval_state", None)
-        if "approvedBy" not in execution and "approved_by" not in execution:
-            patch.pop("approved_by", None)
-            patch.pop("approved_at", None)
+    fields = {
+        "status": "status",
+        "result": "result",
+        "error": "error",
+        "verificationState": "verification_state",
+        "verificationDetail": "verification_detail",
+        "verifiedAt": "verified_at",
+        "finishedAt": "finished_at",
+        "startedAt": "started_at",
+        "attempts": "attempts",
+        "approvalState": "approval_state",
+        "approvedBy": "approved_by",
+        "approvedAt": "approved_at",
+        "rejectedBy": "rejected_by",
+        "rejectedAt": "rejected_at",
+        "rejectionReason": "rejection_reason",
+    }
+    patch = {
+        column: execution[key]
+        for key, column in fields.items()
+        if key in execution
+    }
+    patch["updated_at"] = _now()
     updated = (
         tenant_table(db, "os_tool_executions", client_id)
         .update(patch)
@@ -632,30 +648,48 @@ def _run_data_plane_tool(
         return {"executed": False, "adopted": False, "unknown": False}
 
     msgid = rfc822_msgid_for(execution_id)
-    existing = port.find_by_rfc822_msgid(msgid)
-    if existing:
-        record_execution_outcome(
+    payload = row.get("input") or {}
+    try:
+        existing = port.find_by_rfc822_msgid(msgid)
+    except Exception:
+        apply_unknown_send_outcome(
             db,
             client_id,
-            {
-                "id": execution_id,
-                "status": "succeeded",
-                "result": {
-                    "messageId": existing,
-                    "deduplicated": True,
-                    "rfc822MsgId": msgid,
-                },
-                "verificationState": "pending",
-            },
+            execution_id,
+            "Gmail Message-ID lookup failed; send was not attempted",
+        )
+        return {
+            "executed": False,
+            "adopted": False,
+            "unknown": True,
+            "reason": "deduplication lookup unavailable",
+        }
+    if existing:
+        verification = _verify_sent_message(
+            port,
+            existing,
+            to=payload.get("to") or "",
+            subject=payload.get("subject") or "",
+            rfc822_msgid=msgid,
+        )
+        _record_send_verification(
+            db,
+            client_id,
+            execution_id,
+            existing,
+            payload,
+            msgid,
+            deduplicated=True,
+            verification=verification,
         )
         return {
             "executed": False,
             "adopted": True,
-            "unknown": False,
+            "unknown": not verification["conclusive"],
             "message_id": existing,
+            "verified": verification["verified"],
         }
 
-    payload = row.get("input") or {}
     try:
         sent = port.send(
             to=payload.get("to"),
@@ -678,25 +712,130 @@ def _run_data_plane_tool(
         )
         return {"executed": True, "adopted": False, "unknown": True}
 
+    verification = _verify_sent_message(
+        port,
+        sent["message_id"],
+        to=payload.get("to") or "",
+        subject=payload.get("subject") or "",
+        rfc822_msgid=msgid,
+    )
+    _record_send_verification(
+        db,
+        client_id,
+        execution_id,
+        sent["message_id"],
+        payload,
+        msgid,
+        deduplicated=False,
+        verification=verification,
+    )
+    return {
+        "executed": True,
+        "adopted": False,
+        "unknown": not verification["conclusive"],
+        "message_id": sent["message_id"],
+        "verified": verification["verified"],
+    }
+
+
+def _verify_sent_message(
+    port: Any,
+    message_id: str,
+    *,
+    to: str,
+    subject: str,
+    rfc822_msgid: str,
+) -> dict:
+    """Read a sent/adopted message back, distinguishing mismatch from unknown."""
+    verify = getattr(port, "verify", None)
+    if not callable(verify):
+        return {
+            "verified": False,
+            "conclusive": False,
+            "detail": "mailbox port does not support read-back verification",
+        }
+    try:
+        result = verify(
+            message_id,
+            to=to,
+            subject=subject,
+            rfc822_msgid=rfc822_msgid,
+        )
+    except Exception:
+        logger.exception(
+            "os_tool_executions: Gmail read-back failed message_id=%s", message_id
+        )
+        return {
+            "verified": False,
+            "conclusive": False,
+            "detail": "Gmail read-back failed",
+        }
+    if not isinstance(result, dict):
+        return {
+            "verified": False,
+            "conclusive": False,
+            "detail": "mailbox returned no verification result",
+        }
+    return {
+        "verified": result.get("verified") is True,
+        "conclusive": result.get("conclusive", True) is True,
+        "detail": str(result.get("detail") or "mailbox verification returned no detail")[
+            :500
+        ],
+    }
+
+
+def _record_send_verification(
+    db: Any,
+    client_id: str,
+    execution_id: str,
+    message_id: str,
+    payload: dict,
+    rfc822_msgid: str,
+    *,
+    deduplicated: bool,
+    verification: dict,
+) -> None:
+    result = {
+        "messageId": message_id,
+        "deduplicated": deduplicated,
+        "rfc822MsgId": rfc822_msgid,
+        "to": payload.get("to"),
+        "subject": payload.get("subject"),
+    }
+    if not verification["conclusive"]:
+        record_execution_outcome(
+            db,
+            client_id,
+            {
+                "id": execution_id,
+                "result": result,
+                "verificationState": "pending",
+                "verificationDetail": verification["detail"],
+            },
+        )
+        return
+
+    verified = verification["verified"] is True
+    detail = verification["detail"]
     record_execution_outcome(
         db,
         client_id,
         {
             "id": execution_id,
-            "status": "succeeded",
-            "result": {
-                "messageId": sent["message_id"],
-                "deduplicated": False,
-                "rfc822MsgId": msgid,
-            },
+            "status": "succeeded" if verified else "verification_failed",
+            "result": result,
+            "verificationState": "passed" if verified else "failed",
+            "verificationDetail": detail,
+            "verifiedAt": _now(),
+            "finishedAt": _now(),
+            "error": (
+                None
+                if verified
+                else {"code": "verification_failed", "message": detail}
+            ),
         },
     )
-    return {
-        "executed": True,
-        "adopted": False,
-        "unknown": False,
-        "message_id": sent["message_id"],
-    }
 
 
 def reject_tool_execution(

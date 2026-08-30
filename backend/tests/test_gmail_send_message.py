@@ -76,9 +76,12 @@ class FakeGmailPort:
     def __init__(self):
         self.sends: list[dict] = []
         self.mailbox: dict[str, str] = {}
+        self.messages: dict[str, dict] = {}
         self.mode = "ok"
 
     def find_by_rfc822_msgid(self, msgid: str) -> str | None:
+        if self.mode == "lookup_error":
+            raise RuntimeError("gmail lookup unavailable")
         return self.mailbox.get(msgid)
 
     def send(self, **kwargs) -> dict | None:
@@ -88,9 +91,37 @@ class FakeGmailPort:
         self.sends.append(dict(kwargs))
         provider_id = f"gmail-{len(self.sends)}"
         self.mailbox[msgid] = provider_id
+        self.messages[provider_id] = dict(kwargs)
         if self.mode == "accept_then_lose":
             return None
         return {"success": True, "message_id": provider_id}
+
+    def verify(self, message_id: str, *, to: str, subject: str, rfc822_msgid: str):
+        message = self.messages.get(message_id)
+        if not message:
+            return {
+                "verified": False,
+                "conclusive": False,
+                "detail": "message not found",
+            }
+        if self.mode == "verification_mismatch":
+            return {
+                "verified": False,
+                "conclusive": True,
+                "detail": "recipient or subject mismatch",
+            }
+        verified = (
+            message.get("to") == to
+            and message.get("subject") == subject
+            and message.get("rfc822_msgid") == rfc822_msgid
+        )
+        return {
+            "verified": verified,
+            "conclusive": True,
+            "detail": "recipient, subject, and Message-ID match"
+            if verified
+            else "recipient, subject, or Message-ID mismatch",
+        }
 
 
 def _pending_send_row(**overrides):
@@ -127,6 +158,76 @@ claim_only_if_python_email_valid = svc.claim_if_input_valid
 def drive_claimed_gmail_send(db, client_id: str, execution_id: str, gmail: FakeGmailPort):
     """One post-claim send attempt through the production data-plane runner."""
     return svc._run_data_plane_tool(db, client_id, execution_id, gmail)
+
+
+def test_successful_send_reaches_verified_terminal_state_without_losing_guard_fields():
+    db = _pending_db(idempotency_key="send-key-1")
+    gmail = FakeGmailPort()
+    before = svc.get_tool_execution(db, CLIENT, EXEC_ID)
+    assert svc.claim_for_execution(db, CLIENT, EXEC_ID, "owner@test") is not None
+
+    outcome = drive_claimed_gmail_send(db, CLIENT, EXEC_ID, gmail)
+
+    row = svc.get_tool_execution(db, CLIENT, EXEC_ID)
+    assert outcome["executed"] is True
+    assert row["status"] == "succeeded"
+    assert row["approval_state"] == "approved"
+    assert row["verification_state"] == "passed"
+    assert row["idempotency_key"] == "send-key-1"
+    assert row["input"] == before["input"]
+    assert row["risk_level"] == 2
+    assert row["requires_approval"] is True
+    assert row["started_at"]
+
+
+def test_conclusive_readback_mismatch_is_not_reported_as_success():
+    db = _pending_db(idempotency_key="send-key-2")
+    gmail = FakeGmailPort()
+    gmail.mode = "verification_mismatch"
+    assert svc.claim_for_execution(db, CLIENT, EXEC_ID, "owner@test") is not None
+
+    outcome = drive_claimed_gmail_send(db, CLIENT, EXEC_ID, gmail)
+
+    row = svc.get_tool_execution(db, CLIENT, EXEC_ID)
+    assert outcome["executed"] is True
+    assert row["status"] == "verification_failed"
+    assert row["verification_state"] == "failed"
+
+
+def test_lookup_failure_never_falls_through_to_a_second_send():
+    db = _pending_db(idempotency_key="send-key-3")
+    gmail = FakeGmailPort()
+    gmail.mode = "lookup_error"
+    assert svc.claim_for_execution(db, CLIENT, EXEC_ID, "owner@test") is not None
+
+    outcome = drive_claimed_gmail_send(db, CLIENT, EXEC_ID, gmail)
+
+    row = svc.get_tool_execution(db, CLIENT, EXEC_ID)
+    assert outcome["unknown"] is True
+    assert outcome["executed"] is False
+    assert gmail.sends == []
+    assert row["status"] == "running"
+
+
+def test_inconclusive_readback_stays_non_terminal_for_safe_redrive():
+    db = _pending_db(idempotency_key="send-key-4")
+    gmail = FakeGmailPort()
+    assert svc.claim_for_execution(db, CLIENT, EXEC_ID, "owner@test") is not None
+    gmail.mode = "ok"
+    original_verify = gmail.verify
+
+    def inconclusive(*args, **kwargs):
+        return {"verified": False, "conclusive": False, "detail": "Gmail 503"}
+
+    gmail.verify = inconclusive
+    outcome = drive_claimed_gmail_send(db, CLIENT, EXEC_ID, gmail)
+    gmail.verify = original_verify
+
+    row = svc.get_tool_execution(db, CLIENT, EXEC_ID)
+    assert outcome["unknown"] is True
+    assert row["status"] == "running"
+    assert row["verification_state"] == "pending"
+    assert row.get("finished_at") in (None, "")
 
 
 # --- 1. accept + lost response / rfc822 adopt --------------------------------

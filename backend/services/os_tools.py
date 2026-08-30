@@ -17,6 +17,8 @@ import html
 import logging
 import os
 from dataclasses import dataclass
+from email.header import decode_header, make_header
+from email.utils import parseaddr
 from typing import Any, Protocol
 
 from backend.services import os_tool_executions as svc
@@ -34,6 +36,27 @@ class MailboxPort(Protocol):
     def find_by_rfc822_msgid(self, msgid: str) -> str | None: ...
 
     def send(self, **kwargs) -> dict | None: ...
+
+    def verify(
+        self, message_id: str, *, to: str, subject: str, rfc822_msgid: str
+    ) -> dict: ...
+
+
+def _decoded_header(raw: str) -> str:
+    try:
+        return str(make_header(decode_header(raw or "")))
+    except (LookupError, UnicodeError):
+        return raw or ""
+
+
+def _comparable_address(raw: str) -> str | None:
+    address = parseaddr(raw or "")[1].strip()
+    if "@" not in address:
+        return None
+    local, domain = address.rsplit("@", 1)
+    if not local or not domain:
+        return None
+    return f"{local}@{domain.lower()}"
 
 
 @dataclass
@@ -77,13 +100,15 @@ class GmailMailboxPort:
     def find_by_rfc822_msgid(self, msgid: str) -> str | None:
         from backend.services import gmail_connector
 
-        return gmail_connector.find_message_id_by_rfc822_msgid(self.tenant_id, msgid)
+        return gmail_connector.find_message_id_by_rfc822_msgid(
+            self.tenant_id, msgid, strict=True
+        )
 
     def send(self, **kwargs) -> dict | None:
         from backend.services import gmail_connector
 
         body = kwargs.get("body") or ""
-        body_html = body if "<" in body else f"<p>{html.escape(body)}</p>"
+        body_html = f"<p>{html.escape(body)}</p>"
         result = gmail_connector.send_message(
             self.db,
             self.tenant_id,
@@ -97,6 +122,39 @@ class GmailMailboxPort:
         if result.get("success"):
             return {"success": True, "message_id": result.get("message_id", "")}
         return None
+
+    def verify(
+        self, message_id: str, *, to: str, subject: str, rfc822_msgid: str
+    ) -> dict:
+        from backend.services import gmail_connector
+
+        message = gmail_connector.get_message(self.tenant_id, message_id)
+        if message is None:
+            return {
+                "verified": False,
+                "conclusive": False,
+                "detail": "sent message could not be read back from Gmail",
+            }
+        expected_msgid = rfc822_msgid.strip().strip("<>")
+        actual_msgid = (
+            (message.get("headers") or {}).get("message-id") or ""
+        ).strip().strip("<>")
+        verified = (
+            _comparable_address(message.get("recipient") or "")
+            == _comparable_address(to)
+            and _decoded_header(message.get("subject") or "").strip()
+            == subject.strip()
+            and actual_msgid == expected_msgid
+        )
+        return {
+            "verified": verified,
+            "conclusive": True,
+            "detail": (
+                "recipient, subject, and Message-ID match"
+                if verified
+                else "recipient, subject, or Message-ID mismatch"
+            ),
+        }
 
 
 def _run_data_plane_tool(

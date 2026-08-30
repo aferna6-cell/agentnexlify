@@ -767,6 +767,18 @@ def test_a_non_owner_cannot_read_recipient_subject_or_body_on_list_or_get():
     assert one.json()["input"] == {"redacted": True}
 
 
+def test_non_owner_verification_and_error_details_are_redacted():
+    visible = svc.present_tool_execution(
+        _pending_row(
+            verification_detail="recipient sarah@example.com mismatched",
+            error={"code": "verification_failed", "message": "subject Following up"},
+        ),
+        owner=False,
+    )
+    assert visible["verification_detail"] == "[redacted]"
+    assert visible["error"]["message"] == "[redacted]"
+
+
 def test_an_owner_can_still_read_tool_execution_input_for_approval():
     db = _pending_db()
     client = _client(OWNER_CLAIMS)
