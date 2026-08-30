@@ -482,7 +482,9 @@ async function runAction(
       break;
     case "pending_approval":
       notes.push(
-        "That needs your approval before I run it, so I've queued it for review. Approve it and I'll finish the job.",
+        request.describePending
+          ? request.describePending(request.input)
+          : "That needs your approval before I run it, so I've queued it for review. Approve it and I'll finish the job.",
       );
       break;
     case "denied":

@@ -237,7 +237,7 @@ test("the shipped registry exposes honest metadata", () => {
   assert.equal(send.riskLabel, "external_communication");
   assert.equal(send.mutating, true);
   assert.equal(send.requiresApproval, true);
-  assert.equal(send.department, "sales");
+  assert.equal(send.department, undefined);
 });
 
 test("availableFor honours a tenant's allow-list", () => {
