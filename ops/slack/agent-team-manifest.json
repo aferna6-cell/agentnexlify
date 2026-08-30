@@ -1,0 +1,38 @@
+{
+  "_comment": "Slack app manifest for the internal agent team. Paste into https://api.slack.com/apps -> Create New App -> From a manifest, then replace REPLACE_WITH_BACKEND_DOMAIN. Setup guide: docs/slack-agent-team.md",
+  "display_information": {
+    "name": "Nexus",
+    "description": "The AgentNexLiFy agent team: chief of staff, engineer, schema guardian, growth, support, ops.",
+    "background_color": "#0b1220"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Nexus",
+      "always_online": true
+    }
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "app_mentions:read",
+        "chat:write",
+        "chat:write.customize",
+        "channels:history",
+        "groups:history",
+        "im:history"
+      ]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "request_url": "https://REPLACE_WITH_BACKEND_DOMAIN/api/v1/slack/events",
+      "bot_events": ["app_mention", "message.im"]
+    },
+    "interactivity": {
+      "is_enabled": false
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+}

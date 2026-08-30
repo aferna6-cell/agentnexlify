@@ -88,6 +88,7 @@ from backend.routers import (
     qualifier_config,
     scoring_config,
     sequences,
+    slack_agents,
     smart_lists,
     kb_integrations,
     tenant_kb,
@@ -1064,6 +1065,7 @@ app.include_router(os_tasks.router)
 app.include_router(os_ask_data.router)
 app.include_router(os_files.router)
 app.include_router(os_inbound.router)
+app.include_router(slack_agents.router)
 app.include_router(os_sync_router.router)
 app.include_router(push_subscriptions.router)
 app.include_router(pricing_experiment.router)

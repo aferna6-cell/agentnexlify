@@ -104,6 +104,21 @@ class Settings(BaseSettings):
     postmark_webhook_secret: str = ""
     mailgun_signing_key: str = ""
 
+    # Slack agent team (operator-facing, not a tenant feature —
+    # docs/slack-agent-team.md). All three of signing secret, bot token, and
+    # team id must be set for the endpoint to accept anything: the secret
+    # authenticates Slack, the token lets the bot reply, and the team id
+    # bounds who can spend Anthropic credits. Unset => endpoint 503s.
+    slack_signing_secret: str = ""
+    slack_bot_token: str = ""
+    slack_team_id: str = ""
+    # Optional comma-separated Slack user IDs. Empty => anyone in the allowed
+    # workspace may talk to the agents.
+    slack_allowed_user_ids: str = ""
+    slack_agents_model: str = "claude-sonnet-5"
+    slack_agents_max_tokens: int = 700
+    slack_agents_history_messages: int = 12
+
     widget_allowed_origins: str = "*"
     # Production MUST set API_SECRET_KEY env var. The dev fallback is deterministic
     # so all workers share the same key, but it is NOT secure for production use.
