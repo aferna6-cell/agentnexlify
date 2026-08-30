@@ -582,6 +582,11 @@ export class InMemoryCrmPort implements CrmPort {
     this.customers.set(c.id, next);
     return { ...next };
   }
+
+  /** Test / collector helper. */
+  allCustomers(): CustomerRecord[] {
+    return [...this.customers.values()].map((c) => ({ ...c }));
+  }
 }
 
 let ports: ToolPorts | null = null;

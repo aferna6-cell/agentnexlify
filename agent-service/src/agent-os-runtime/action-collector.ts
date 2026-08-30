@@ -222,6 +222,7 @@ export class CollectingCrmPort implements CrmPort {
   readonly name = "agent_service_crm_bundle";
   readonly durable = true;
   private readonly inner = new InMemoryCrmPort();
+  private readonly mutatedIds = new Set<string>();
 
   get memory(): InMemoryCrmPort {
     return this.inner;
@@ -236,19 +237,28 @@ export class CollectingCrmPort implements CrmPort {
   listCustomers(input: { accountId: string }): Promise<CustomerRecord[]> {
     return this.inner.listCustomers(input);
   }
-  updateCustomer(input: UpdateCustomerInput): Promise<CustomerRecord> {
-    return this.inner.updateCustomer(input);
+  async updateCustomer(input: UpdateCustomerInput): Promise<CustomerRecord> {
+    const record = await this.inner.updateCustomer(input);
+    this.mutatedIds.add(record.id);
+    return record;
   }
-  createCustomer(input: CreateCustomerInput): Promise<CustomerRecord> {
-    return this.inner.createCustomer(input);
+  async createCustomer(input: CreateCustomerInput): Promise<CustomerRecord> {
+    const record = await this.inner.createCustomer(input);
+    this.mutatedIds.add(record.id);
+    return record;
   }
-  updateLeadStage(input: UpdateLeadStageInput): Promise<CustomerRecord> {
-    return this.inner.updateLeadStage(input);
+  async updateLeadStage(input: UpdateLeadStageInput): Promise<CustomerRecord> {
+    const record = await this.inner.updateLeadStage(input);
+    this.mutatedIds.add(record.id);
+    return record;
   }
 
+  /** Customers created or updated this request, for the data plane. */
   toBundle(): CustomerRecord[] {
-    // Return only mutated accounts — for v1 return all in memory for the tenant
-    // the data plane will reconcile. Tests use InMemory directly.
-    return [];
+    const byId = new Map(this.inner.allCustomers().map((c) => [c.id, c]));
+    return [...this.mutatedIds]
+      .map((id) => byId.get(id))
+      .filter((c): c is CustomerRecord => Boolean(c))
+      .map((c) => ({ ...c }));
   }
 }

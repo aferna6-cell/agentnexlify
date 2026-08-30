@@ -54,24 +54,44 @@ test("no agent calls a tool's execute() itself", () => {
       offenders.push(file.replace(`${process.cwd()}/`, ""));
     }
   }
-  assert.deepEqual(offenders, [], `these agent modules call a tool directly: ${offenders.join(", ")}`);
+  assert.deepEqual(
+    offenders,
+    [],
+    `these agent modules call a tool directly: ${offenders.join(", ")}`,
+  );
 });
 
 test("the action layer is reached only through the executor's entry points", () => {
-  const allowed = new Set(["executeAction", "hasActionStore", "hasToolPorts"]);
+  const allowed = new Set([
+    "executeAction",
+    "hasActionStore",
+    "hasToolPorts",
+    // Feature-flag reads for M8 resolvers — not tool execution. Policy still
+    // enforces the same flags inside evaluateActionPolicy.
+    "calendarActionsEnabled",
+    "crmActionsEnabled",
+  ]);
   const imported = new Set<string>();
 
   for (const file of agentSourceFiles()) {
     const source = readFileSync(file, "utf8");
-    for (const match of source.matchAll(/import\s*\{([^}]+)\}\s*from\s*["'][^"']*\/actions\/[^"']+["']/g)) {
+    for (const match of source.matchAll(
+      /import\s*\{([^}]+)\}\s*from\s*["'][^"']*\/actions\/[^"']+["']/g,
+    )) {
       for (const name of match[1]!.split(",")) {
-        const cleaned = name.trim().replace(/^type\s+/, "").split(/\s+as\s+/)[0]!.trim();
+        const cleaned = name
+          .trim()
+          .replace(/^type\s+/, "")
+          .split(/\s+as\s+/)[0]!
+          .trim();
         if (cleaned) imported.add(cleaned);
       }
     }
   }
 
-  const unexpected = [...imported].filter((name) => !allowed.has(name) && !/^[A-Z]/.test(name));
+  const unexpected = [...imported].filter(
+    (name) => !allowed.has(name) && !/^[A-Z]/.test(name),
+  );
   assert.deepEqual(
     unexpected,
     [],
