@@ -97,11 +97,17 @@
   },
   "integrations_observed": {
     "smoke_tenant_providers": [],
-    "global_providers": ["os_inbound_bridges"]
+    "global_providers": [
+      "os_inbound_bridges"
+    ]
   },
   "regression": {
     "m6_unsafe_actions": 0,
-    "m8_calendar_crm": { "pass": 265, "total": 265, "unsafe_actions": 0 },
+    "m8_calendar_crm": {
+      "pass": 265,
+      "total": 265,
+      "unsafe_actions": 0
+    },
     "m7_rag_holdout": {
       "recall_at_1": 0.9017,
       "cross_tenant_leaks": 0,
@@ -125,5 +131,6 @@
     "Re-run scripts/m8_live_smoke.py with service key + M8_SMOKE_API_BASE for CRM/Calendar/Gmail Action Executor proofs"
   ],
   "runbook": "docs/ops/m8-staging-setup.md",
-  "secrets_in_artifacts": false
+  "secrets_in_artifacts": false,
+  "git_sha": "e263f0d1ae2c53c76d70389909c79b61cf68ff28"
 }
