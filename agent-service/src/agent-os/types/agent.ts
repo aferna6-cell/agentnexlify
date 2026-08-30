@@ -2,6 +2,8 @@
  * Shared types for the agent engine.
  */
 
+import type { RagChunk } from "../rag/types.ts";
+
 export interface BusinessProfileData {
   businessName?: string;
   ownerName?: string;
@@ -77,6 +79,28 @@ export interface KbEntry {
   answer: string;
 }
 
+/** Retrieved approved tenant knowledge. Optional — absent when RAG is off. */
+export interface RagEvidenceItem {
+  chunkId: string;
+  documentId: string;
+  accountId: string;
+  title: string;
+  citationLabel: string;
+  content: string;
+  score: number;
+}
+
+/**
+ * RAG grounding contract on SharedContext.
+ *
+ * - ok: ragEvidence is authoritative approved knowledge (also mirrored into kb)
+ * - abstain: retrieval ran; evidence was insufficient/untrusted/missing —
+ *   agents must NOT treat this as a KB answer
+ * - error: RAG infrastructure failed; distinct from successful abstention
+ * - disabled / absent: RAG flag off
+ */
+export type RagStatus = "ok" | "abstain" | "error" | "disabled";
+
 /** Everything an agent may read. Mirrors the production data layer. */
 export interface SharedContext {
   businessProfile: BusinessProfileData;
@@ -86,6 +110,13 @@ export interface SharedContext {
   invoices: InvoiceData[];
   agentRunHistory: AgentRunHistoryItem[];
   kb: KbEntry[];
+  /** Eval / FastAPI may attach a tenant-scoped corpus. Never another tenant. */
+  ragCorpus?: RagChunk[];
+  /** Authoritative retrieved evidence — only populated when ragStatus === "ok". */
+  ragEvidence?: RagEvidenceItem[];
+  ragStatus?: RagStatus;
+  /** Set when ragStatus is abstain or error. */
+  ragAbstainReason?: string | null;
 }
 
 export type Channel =
@@ -127,7 +158,10 @@ export interface StreamedTraceStep {
  */
 export interface TraceEmitter {
   /** Returns true when data was present (and the step marked completed). */
-  emit(step: string, payload?: { description: string; data: unknown }): Promise<boolean>;
+  emit(
+    step: string,
+    payload?: { description: string; data: unknown },
+  ): Promise<boolean>;
   /** An ordinary reasoning step the agent always performs. */
   work(step: string, description: string): Promise<void>;
   /** An explicit honest fallback line (e.g. "no KB yet — using a safe reply"). */

@@ -138,6 +138,22 @@ async def process_user_turn(
             + os_kb_feed.tenant_kb_entries(db, client_id, profile.get("businessType"))
             + await os_graph_memory.graph_kb_entries(db, client_id, user_content)
         )
+        # RAG: approved tenant chunks only. Knowledge, not authorization.
+        # Fail-open: retrieval must never take down a turn (flag-on or table missing).
+        try:
+            from backend.services.rag_flags import rag_enabled
+            if rag_enabled():
+                from backend.services.business_retrieval import attach_rag_knowledge
+                from backend.services.tenant_kb_index import load_corpus_from_documents
+
+                corpus = load_corpus_from_documents(db, client_id)
+                context = attach_rag_knowledge(context, client_id, user_content, corpus)
+        except Exception:
+            logger.warning(
+                "RAG attach failed client_id=%s — continuing without retrieval",
+                client_id,
+                exc_info=True,
+            )
         if missing_connectors:
             context["integrations"] = {
                 "missing_for_this_request": [m["key"] for m in missing_connectors],

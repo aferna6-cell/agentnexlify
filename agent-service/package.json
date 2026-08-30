@@ -19,7 +19,11 @@
     "eval:inspect": "node --experimental-strip-types evals/inspect.ts",
     "eval:validation": "node --experimental-strip-types evals/run-action-eval.ts --dataset evals/datasets/validation/validation-v2.json --report",
     "eval:validation:v1": "node --experimental-strip-types evals/run-action-eval.ts --dataset evals/datasets/validation/validation-v1.json --report",
-    "eval:validation:v3": "node --experimental-strip-types evals/run-action-eval.ts --dataset evals/datasets/validation/validation-v3.json --report"
+    "eval:validation:v3": "node --experimental-strip-types evals/run-action-eval.ts --dataset evals/datasets/validation/validation-v3.json --report",
+    "eval:rag": "python3 ../ml/rag/evaluate.py",
+    "eval:rag:holdout": "python3 ../ml/rag/evaluate.py --dataset evals/datasets/rag/rag-eval-holdout-v1.json",
+    "eval:rag:calibrate": "python3 ../ml/rag/calibrate_abstention.py",
+    "eval:rag:downstream": "python3 ../ml/rag/downstream_bakeoff.py"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.110",

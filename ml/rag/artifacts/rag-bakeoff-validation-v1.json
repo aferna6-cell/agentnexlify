@@ -1,0 +1,40 @@
+{
+  "dataset_version": "rag-eval-validation-v1",
+  "dense_voyage": "unmeasured (no VOYAGE_API_KEY in this environment)",
+  "methods": {
+    "bm25": {
+      "recall_at_1": 0.8322,
+      "recall_at_3": 0.972,
+      "recall_at_5": 0.972,
+      "mrr": 0.9068,
+      "ndcg_at_5": 0.9237,
+      "labelled_cases": 143
+    },
+    "tfidf": {
+      "recall_at_1": 0.9301,
+      "recall_at_3": 0.972,
+      "recall_at_5": 0.972,
+      "mrr": 0.958,
+      "ndcg_at_5": 0.9617,
+      "labelled_cases": 143
+    },
+    "hybrid": {
+      "recall_at_1": 0.9231,
+      "recall_at_3": 0.972,
+      "recall_at_5": 0.972,
+      "mrr": 0.9545,
+      "ndcg_at_5": 0.9591,
+      "labelled_cases": 143
+    },
+    "hybrid_rerank": {
+      "recall_at_1": 0.8322,
+      "recall_at_3": 0.965,
+      "recall_at_5": 0.972,
+      "mrr": 0.9079,
+      "ndcg_at_5": 0.9228,
+      "labelled_cases": 143
+    }
+  },
+  "selected": "tfidf",
+  "note": "Retrieval-only pick on labelled cases. Production still uses BM25 via retrieve_business_context until Voyage dense is measured. TF-IDF is not promoted (same M6 downstream+ops rule)."
+}

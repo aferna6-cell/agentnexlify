@@ -1,0 +1,17 @@
+{
+  "note": "Gold labels were authored against the curated chunks. Re-chunking changes ids, so this reports retrieval-of-phrase, not id recall.",
+  "strategies": {
+    "paragraph": {
+      "phrase_hit_rate": 0.9173,
+      "n": 133
+    },
+    "fixed": {
+      "phrase_hit_rate": 0.9173,
+      "n": 133
+    },
+    "section": {
+      "phrase_hit_rate": 0.9173,
+      "n": 133
+    }
+  }
+}

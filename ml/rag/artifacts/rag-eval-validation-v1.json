@@ -1,0 +1,227 @@
+{
+  "dataset_version": "rag-eval-validation-v1",
+  "cases": 183,
+  "retrieval_labelled_cases": 143,
+  "scoring_note": "Retrieval metrics exclude cases with no expected_chunk_ids. Isolation uses a mixed-tenant corpus. Generation faithfulness is extractive (spans already in evidence), not an LLM score.",
+  "retrieval": {
+    "recall_at_1": 0.965,
+    "recall_at_3": 0.972,
+    "recall_at_5": 0.979,
+    "mrr": 0.979,
+    "ndcg_at_5": 0.9766
+  },
+  "generation": {
+    "faithfulness": 1.0,
+    "citation_accuracy": 1.0,
+    "unsupported_claim_rate": 0.0,
+    "correct_refusal_rate": 1.0,
+    "false_refusal_rate": 0.0,
+    "missed_refusal": 0
+  },
+  "safety": {
+    "cross_tenant_leaks": 0,
+    "prompt_injection_failures": 0,
+    "fabricated_citations": 0
+  },
+  "per_case_sample": [
+    {
+      "id": "rag_fact_001",
+      "accountId": "eval-tenant-sunset",
+      "got_ids": [
+        "sunset-prices#0",
+        "sunset-distractor#0",
+        "sunset-prices#2",
+        "sunset-bmw#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 4.3666
+    },
+    {
+      "id": "rag_fact_002",
+      "accountId": "eval-tenant-sunset",
+      "got_ids": [
+        "sunset-prices#1",
+        "sunset-distractor#0",
+        "sunset-bmw#0",
+        "sunset-warranty#0",
+        "sunset-faq#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 5.2108
+    },
+    {
+      "id": "rag_fact_003",
+      "accountId": "eval-tenant-sunset",
+      "got_ids": [
+        "sunset-prices#2",
+        "sunset-prices#0",
+        "sunset-distractor#0",
+        "sunset-bmw#0",
+        "sunset-warranty#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 5.3493
+    },
+    {
+      "id": "rag_fact_004",
+      "accountId": "eval-tenant-sunset",
+      "got_ids": [
+        "sunset-cancel#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 4.9266
+    },
+    {
+      "id": "rag_fact_005",
+      "accountId": "eval-tenant-sunset",
+      "got_ids": [
+        "sunset-warranty#0",
+        "sunset-distractor#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 5.0238
+    },
+    {
+      "id": "rag_fact_006",
+      "accountId": "eval-tenant-sunset",
+      "got_ids": [
+        "sunset-bmw#0",
+        "sunset-distractor#0",
+        "sunset-warranty#0",
+        "sunset-sop#0",
+        "sunset-faq#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 8.0726
+    },
+    {
+      "id": "rag_fact_007",
+      "accountId": "eval-tenant-sunset",
+      "got_ids": [
+        "sunset-faq#0",
+        "sunset-cancel#0",
+        "sunset-warranty#0",
+        "sunset-bmw#0",
+        "sunset-prices#2"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 5.9862
+    },
+    {
+      "id": "rag_fact_008",
+      "accountId": "eval-tenant-riverview",
+      "got_ids": [
+        "river-prices#0",
+        "river-prices#1",
+        "river-sop#0",
+        "river-warranty#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 5.9993
+    },
+    {
+      "id": "rag_fact_009",
+      "accountId": "eval-tenant-riverview",
+      "got_ids": [
+        "river-cancel#0",
+        "river-sop#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 4.5864
+    },
+    {
+      "id": "rag_fact_010",
+      "accountId": "eval-tenant-lakefront",
+      "got_ids": [
+        "lake-prices#0",
+        "lake-sop#0",
+        "lake-warranty#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 4.5564
+    },
+    {
+      "id": "rag_fact_011",
+      "accountId": "eval-tenant-sunset",
+      "got_ids": [
+        "sunset-prices#2",
+        "sunset-distractor#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 3.9329
+    },
+    {
+      "id": "rag_fact_012",
+      "accountId": "eval-tenant-riverview",
+      "got_ids": [
+        "river-faq#0",
+        "river-warranty#0",
+        "river-prices#1"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 6.8781
+    },
+    {
+      "id": "rag_fact_013",
+      "accountId": "eval-tenant-lakefront",
+      "got_ids": [
+        "lake-faq#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 5.696
+    },
+    {
+      "id": "rag_fact_014",
+      "accountId": "eval-tenant-sunset",
+      "got_ids": [
+        "sunset-warranty#0",
+        "sunset-prices#1",
+        "sunset-bmw#0",
+        "sunset-distractor#0",
+        "sunset-faq#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 11.7648
+    },
+    {
+      "id": "rag_fact_015",
+      "accountId": "eval-tenant-lakefront",
+      "got_ids": [
+        "lake-prices#0",
+        "lake-warranty#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 5.4686
+    }
+  ]
+}

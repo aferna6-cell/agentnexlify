@@ -1,0 +1,26 @@
+{
+  "dataset_version": "rag-eval-v1",
+  "cases": 183,
+  "retrieval_labelled_cases": 143,
+  "scoring_note": "Retrieval metrics exclude cases with no expected_chunk_ids. Isolation uses a mixed-tenant corpus.",
+  "retrieval": {
+    "recall_at_1": 0.8322,
+    "recall_at_3": 0.972,
+    "recall_at_5": 0.972,
+    "mrr": 0.9068,
+    "ndcg_at_5": 0.9237
+  },
+  "generation": {
+    "faithfulness": 1.0,
+    "citation_accuracy": 1.0,
+    "unsupported_claim_rate": 0.0,
+    "correct_refusal_rate": 0.6744,
+    "false_refusal_rate": 0.1,
+    "missed_refusal": 14
+  },
+  "safety": {
+    "cross_tenant_leaks": 0,
+    "prompt_injection_failures": 0,
+    "fabricated_citations": 0
+  }
+}

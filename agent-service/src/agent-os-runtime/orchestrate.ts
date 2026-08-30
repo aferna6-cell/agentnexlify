@@ -10,10 +10,17 @@
 import { handle, type HandleResult } from "../agent-os/agents/_orchestrator.ts";
 import type { SharedContext } from "../agent-os/types/agent.ts";
 import { requestScope } from "./request-scope.ts";
-import { RunRecordCollector, type RunRecordBundle } from "./run-record-collector.ts";
+import {
+  RunRecordCollector,
+  type RunRecordBundle,
+} from "./run-record-collector.ts";
 import { registerAgentOsProviders } from "./bootstrap.ts";
-import { CollectingActionStore, CollectingCustomerNotesPort } from "./action-collector.ts";
+import {
+  CollectingActionStore,
+  CollectingCustomerNotesPort,
+} from "./action-collector.ts";
 import type { TenantToolPolicy } from "../agent-os/actions/policy.ts";
+import { applyRagToContext } from "../agent-os/rag/attach.ts";
 
 registerAgentOsProviders();
 
@@ -39,15 +46,18 @@ export interface OrchestrateOutput {
   record: RunRecordBundle;
 }
 
-export async function runOrchestration(input: OrchestrateInput): Promise<OrchestrateOutput> {
+export async function runOrchestration(
+  input: OrchestrateInput,
+): Promise<OrchestrateOutput> {
   const record = new RunRecordCollector();
   const actions = {
     store: new CollectingActionStore(),
     notes: new CollectingCustomerNotesPort(),
     policy: input.toolPolicy ?? {},
   };
+  const context = applyRagToContext(input.accountId, input.ask, input.context);
   return requestScope.run(
-    { accountId: input.accountId, context: input.context, record, actions },
+    { accountId: input.accountId, context, record, actions },
     async () => {
       const result = await handle(
         input.accountId,
@@ -56,8 +66,14 @@ export async function runOrchestration(input: OrchestrateInput): Promise<Orchest
       );
       return {
         result,
-        record: record.withActions(actions.store.toBundle(), actions.notes.toBundle()),
+        record: record.withActions(
+          actions.store.toBundle(),
+          actions.notes.toBundle(),
+        ),
       };
     },
   );
 }
+
+// Re-export for tests / callers that need the contract helper directly.
+export { applyRagToContext };

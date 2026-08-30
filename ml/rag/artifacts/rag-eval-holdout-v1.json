@@ -1,0 +1,231 @@
+{
+  "dataset_version": "rag-eval-holdout-v1",
+  "cases": 162,
+  "retrieval_labelled_cases": 117,
+  "scoring_note": "Retrieval metrics exclude cases with no expected_chunk_ids. Isolation uses a mixed-tenant corpus. Generation faithfulness is extractive (spans already in evidence), not an LLM score.",
+  "retrieval": {
+    "recall_at_1": 0.9017,
+    "recall_at_3": 0.9359,
+    "recall_at_5": 0.9402,
+    "mrr": 0.9316,
+    "ndcg_at_5": 0.9328
+  },
+  "generation": {
+    "faithfulness": 1.0,
+    "citation_accuracy": 1.0,
+    "unsupported_claim_rate": 0.0,
+    "correct_refusal_rate": 1.0,
+    "false_refusal_rate": 0.0,
+    "missed_refusal": 0
+  },
+  "safety": {
+    "cross_tenant_leaks": 0,
+    "prompt_injection_failures": 0,
+    "fabricated_citations": 0
+  },
+  "per_case_sample": [
+    {
+      "id": "hold_fact_001",
+      "accountId": "eval-tenant-harbor",
+      "got_ids": [
+        "harbor-fees#0",
+        "harbor-fees#1",
+        "harbor-boarding#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 7.8379
+    },
+    {
+      "id": "hold_fact_002",
+      "accountId": "eval-tenant-harbor",
+      "got_ids": [
+        "harbor-boarding#0",
+        "harbor-fees#1",
+        "harbor-distractor#0",
+        "harbor-fees#0",
+        "harbor-sop#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 2.5274
+    },
+    {
+      "id": "hold_fact_003",
+      "accountId": "eval-tenant-harbor",
+      "got_ids": [
+        "harbor-cancel#0",
+        "harbor-fees#1",
+        "harbor-fees#0",
+        "harbor-sop#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 5.7308
+    },
+    {
+      "id": "hold_fact_004",
+      "accountId": "eval-tenant-harbor",
+      "got_ids": [
+        "harbor-boarding#0",
+        "harbor-fees#1"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 5.9952
+    },
+    {
+      "id": "hold_fact_005",
+      "accountId": "eval-tenant-harbor",
+      "got_ids": [
+        "harbor-hours#0",
+        "harbor-cancel#0",
+        "harbor-boarding#0",
+        "harbor-fees#0",
+        "harbor-distractor#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 7.0971
+    },
+    {
+      "id": "hold_fact_006",
+      "accountId": "eval-tenant-pinecrest",
+      "got_ids": [
+        "pine-rates#0",
+        "pine-rates#1",
+        "pine-retain#0",
+        "pine-conflict#0",
+        "pine-hours#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 2.9672
+    },
+    {
+      "id": "hold_fact_007",
+      "accountId": "eval-tenant-pinecrest",
+      "got_ids": [
+        "pine-rates#1",
+        "pine-rates#0",
+        "pine-hours#0",
+        "pine-retain#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 5.7738
+    },
+    {
+      "id": "hold_fact_008",
+      "accountId": "eval-tenant-pinecrest",
+      "got_ids": [
+        "pine-retain#0",
+        "pine-hours#0",
+        "pine-rates#1"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 4.5613
+    },
+    {
+      "id": "hold_fact_009",
+      "accountId": "eval-tenant-metrofit",
+      "got_ids": [
+        "metro-dues#0",
+        "metro-cancel#0",
+        "metro-dues#1",
+        "metro-distractor#0",
+        "metro-hours#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 2.2739
+    },
+    {
+      "id": "hold_fact_010",
+      "accountId": "eval-tenant-metrofit",
+      "got_ids": [
+        "metro-dues#1",
+        "metro-distractor#0",
+        "metro-cancel#0",
+        "metro-sop#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 2.9514
+    },
+    {
+      "id": "hold_fact_011",
+      "accountId": "eval-tenant-metrofit",
+      "got_ids": [
+        "metro-cancel#0",
+        "metro-distractor#0",
+        "metro-hours#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 4.3683
+    },
+    {
+      "id": "hold_fact_012",
+      "accountId": "eval-tenant-cedar",
+      "got_ids": [
+        "cedar-prices#0",
+        "cedar-cancel#0",
+        "cedar-area#0",
+        "cedar-warranty#0",
+        "cedar-sop#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 1.5197
+    },
+    {
+      "id": "hold_fact_013",
+      "accountId": "eval-tenant-cedar",
+      "got_ids": [
+        "cedar-prices#1",
+        "cedar-cancel#0",
+        "cedar-warranty#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 3.6991
+    },
+    {
+      "id": "hold_fact_014",
+      "accountId": "eval-tenant-cedar",
+      "got_ids": [
+        "cedar-warranty#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 6.5001
+    },
+    {
+      "id": "hold_fact_015",
+      "accountId": "eval-tenant-cedar",
+      "got_ids": [
+        "cedar-area#0"
+      ],
+      "behavior": "answer",
+      "abstain": false,
+      "citation_hit": true,
+      "top_score": 7.2728
+    }
+  ]
+}

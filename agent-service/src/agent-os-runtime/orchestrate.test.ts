@@ -2,6 +2,8 @@
  * Runtime tests for runOrchestration: it produces a persistable record, and
  * concurrent orchestrations stay isolated via AsyncLocalStorage (the property
  * that lets one Node process serve many tenants safely).
+ *
+ * RAG grounding contract unit tests live in ../agent-os/rag/attach.test.ts.
  */
 
 import { test } from "node:test";
@@ -15,7 +17,11 @@ import type { SharedContext } from "../agent-os/types/agent.ts";
 
 function ctxFor(businessName: string): SharedContext {
   return {
-    businessProfile: { businessName, ownerName: "Owner", businessType: "auto_shop" },
+    businessProfile: {
+      businessName,
+      ownerName: "Owner",
+      businessType: "auto_shop",
+    },
     widgetHistory: [],
     pipelineLeads: [],
     appointments: [],
@@ -46,8 +52,18 @@ test("produces a result + a persistable run record", async () => {
 
 test("concurrent orchestrations stay isolated (no cross-tenant bleed)", async () => {
   const [a, b] = await Promise.all([
-    runOrchestration({ accountId: "tenantA", ask: "Draft a quote follow-up", context: ctxFor("Acme Auto"), forceAgentId: "sales" }),
-    runOrchestration({ accountId: "tenantB", ask: "Draft a quote follow-up", context: ctxFor("Bob Plumbing"), forceAgentId: "sales" }),
+    runOrchestration({
+      accountId: "tenantA",
+      ask: "Draft a quote follow-up",
+      context: ctxFor("Acme Auto"),
+      forceAgentId: "sales",
+    }),
+    runOrchestration({
+      accountId: "tenantB",
+      ask: "Draft a quote follow-up",
+      context: ctxFor("Bob Plumbing"),
+      forceAgentId: "sales",
+    }),
   ]);
 
   // Each bundle contains exactly its own tenant's run — no leakage despite
@@ -58,6 +74,40 @@ test("concurrent orchestrations stay isolated (no cross-tenant bleed)", async ()
   assert.equal(b.record.runs[0]?.userId, "tenantB");
   assert.ok(a.record.decisions.every((d) => d.userId === "tenantA"));
   assert.ok(b.record.decisions.every((d) => d.userId === "tenantB"));
+});
+
+test("RAG retrieve failure does not take down orchestration", async () => {
+  const prev = process.env.RAG_ENABLED;
+  process.env.RAG_ENABLED = "1";
+  const poisoned = ctxFor("Acme Auto");
+  poisoned.ragCorpus = [
+    {
+      get chunk_id(): string {
+        throw new Error("retrieval exploded");
+      },
+      document_id: "x",
+      account_id: "tenantA",
+      title: "Boom",
+      section: "",
+      content: "Oil is $79.99.",
+      source_type: "prices",
+      citation_label: "Boom",
+      status: "active",
+    } as never,
+  ];
+  try {
+    const out = await runOrchestration({
+      accountId: "tenantA",
+      ask: "Write a sales quote for a new lead",
+      context: poisoned,
+      forceAgentId: "sales",
+    });
+    assert.equal(out.result.agentId, "sales");
+    assert.notEqual(out.record.runs[0]?.status, "running");
+  } finally {
+    if (prev === undefined) delete process.env.RAG_ENABLED;
+    else process.env.RAG_ENABLED = prev;
+  }
 });
 
 test("a mismatched scope is rejected (defense in depth)", async () => {
