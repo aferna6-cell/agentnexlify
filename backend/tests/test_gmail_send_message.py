@@ -20,11 +20,13 @@ import importlib.util
 import os
 import re
 from pathlib import Path
+from unittest.mock import patch
 
 os.environ.setdefault("TESTING", "1")
 
 import pytest
 
+from backend.services import gmail_connector
 from backend.services import os_tool_executions as svc
 from backend.services import os_tools
 from backend.tests.fake_supabase_store import FakeSupabase
@@ -228,6 +230,32 @@ def test_definite_provider_refusal_is_terminal_failed_not_unknown():
     assert row["status"] == "failed"
     assert row["error"]["code"] == "provider_refused"
     assert "403" in row["error"]["message"]
+
+
+def test_production_port_preserves_lost_transport_as_unknown():
+    db = _pending_db(idempotency_key="send-key-transport")
+    assert svc.claim_for_execution(db, CLIENT, EXEC_ID, "owner@test") is not None
+    port = os_tools.GmailMailboxPort(CLIENT, db)
+
+    with patch.object(
+        gmail_connector,
+        "find_message_id_by_rfc822_msgid",
+        return_value=None,
+    ), patch.object(
+        gmail_connector,
+        "send_message",
+        return_value={
+            "success": False,
+            "unknown": True,
+            "detail": "gmail transport outcome unknown",
+        },
+    ):
+        outcome = drive_claimed_gmail_send(db, CLIENT, EXEC_ID, port)
+
+    row = svc.get_tool_execution(db, CLIENT, EXEC_ID)
+    assert outcome["unknown"] is True
+    assert row["status"] == "running"
+    assert row.get("finished_at") in (None, "")
 
 
 def test_inconclusive_readback_stays_non_terminal_for_safe_redrive():

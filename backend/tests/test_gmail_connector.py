@@ -580,6 +580,24 @@ class TestApiPost:
         with patch.object(gc, "get_credentials", return_value=None):
             assert gc._api_post(TENANT_ID, "/messages/send", {}) is None
 
+    def test_send_transport_loss_raises_unknown_when_requested(self):
+        creds = MagicMock(token="tok123")
+        request = httpx.Request(
+            "POST", "https://gmail.googleapis.com/messages/send"
+        )
+        with patch.object(gc, "get_credentials", return_value=creds), patch.object(
+            gc.httpx,
+            "post",
+            side_effect=httpx.ReadTimeout("response lost", request=request),
+        ):
+            with pytest.raises(gc.GmailTransportUnknown):
+                gc._api_post(
+                    TENANT_ID,
+                    "/messages/send",
+                    {},
+                    raise_transport_unknown=True,
+                )
+
     def test_success_returns_json(self):
         creds = MagicMock(token="tok123")
         resp = MagicMock()

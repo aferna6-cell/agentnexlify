@@ -121,6 +121,8 @@ class GmailMailboxPort:
         )
         if result.get("success"):
             return {"success": True, "message_id": result.get("message_id", "")}
+        if result.get("unknown"):
+            return None
         return {
             "success": False,
             "refused": True,

@@ -60,6 +60,10 @@ class GmailApiError(Exception):
         super().__init__(f"gmail api error {status_code}: {detail}")
 
 
+class GmailTransportUnknown(RuntimeError):
+    """The send request may have reached Gmail, but its response was lost."""
+
+
 # ---------------------------------------------------------------------------
 # Token management (mirrors google_calendar.py)
 # ---------------------------------------------------------------------------
@@ -271,7 +275,13 @@ def _api_get(tenant_id: str, path: str, params: dict | None = None) -> dict | No
         return None
 
 
-def _api_post(tenant_id: str, path: str, json_body: dict) -> dict | None:
+def _api_post(
+    tenant_id: str,
+    path: str,
+    json_body: dict,
+    *,
+    raise_transport_unknown: bool = False,
+) -> dict | None:
     """POST against the Gmail Data API for this tenant. Same contract as
     ``_api_get`` (raises ``GmailApiError`` on non-2xx, ``None`` on missing
     credentials or transport failure)."""
@@ -292,10 +302,12 @@ def _api_post(tenant_id: str, path: str, json_body: dict) -> dict | None:
         return resp.json()
     except httpx.HTTPStatusError as e:
         raise GmailApiError(e.response.status_code, e.response.text[:200]) from e
-    except Exception:
+    except Exception as exc:
         logger.warning(
             "gmail_connector: POST %s failed tenant=%s", path, tenant_id, exc_info=True
         )
+        if raise_transport_unknown:
+            raise GmailTransportUnknown("Gmail send response was lost") from exc
         return None
 
 
@@ -545,12 +557,23 @@ def send_message(
         body["threadId"] = thread_id
 
     try:
-        data = _api_post(tenant_id, "/messages/send", body)
+        data = _api_post(
+            tenant_id,
+            "/messages/send",
+            body,
+            raise_transport_unknown=True,
+        )
     except GmailApiError as e:
         return {
             "success": False,
             "detail": f"gmail api error {e.status_code}",
             "status_code": e.status_code,
+        }
+    except GmailTransportUnknown:
+        return {
+            "success": False,
+            "unknown": True,
+            "detail": "gmail transport outcome unknown",
         }
 
     if not data:
