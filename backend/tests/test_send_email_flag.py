@@ -279,7 +279,7 @@ def test_successful_sales_send_records_approved_state_and_owner(monkeypatch):
 def test_gmail_send_message_stamps_rfc822_msgid():
     captured = {}
 
-    def fake_api_post(tenant_id, path, json_body):
+    def fake_api_post(tenant_id, path, json_body, **kwargs):
         captured["path"] = path
         captured["body"] = json_body
         return {"id": "gmail-9", "threadId": "thread-9"}
