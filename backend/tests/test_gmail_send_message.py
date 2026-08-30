@@ -1,7 +1,8 @@
 """B-blocker contracts bound to production data-plane code.
 
-No ``send_email`` production path, no ``gmail_connector.send_message``,
-no ``communication_actions``. ``FakeGmailPort`` is the injected mailbox only.
+``FakeGmailPort`` is the injected mailbox for these contracts. Production
+``send_email`` is Sales-only and gated by ``SEND_EMAIL_ENABLED`` (see
+``test_send_email_flag.py``). No ``communication_actions``.
 
 Production bindings:
 
@@ -380,7 +381,8 @@ def test_l2_audit_persist_still_fails_closed_next_to_l1_best_effort():
     assert db.rows("os_tool_executions") == []
 
 
-def test_claim_then_run_is_the_only_path_that_reaches_the_provider():
+def test_claim_then_run_is_the_only_path_that_reaches_the_provider(monkeypatch):
+    monkeypatch.setenv("SEND_EMAIL_ENABLED", "1")
     db = _pending_db()
     gmail = FakeGmailPort()
 

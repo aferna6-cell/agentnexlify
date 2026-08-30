@@ -463,6 +463,97 @@ def get_message(tenant_id: str, message_id: str) -> ParsedEmail | None:
     return _normalize_message(data)
 
 
+def find_message_id_by_rfc822_msgid(tenant_id: str, rfc822_msgid: str) -> str | None:
+    """Find a message in this mailbox by its RFC 5322 ``Message-ID`` header.
+
+    Pre-send duplicate check for ``send_email``: every outgoing message is
+    stamped with a Message-ID derived from the execution id, so this answers
+    "did this exact send already happen?" without depending on our record.
+
+    Returns the Gmail message id, or ``None`` when there is no match, no
+    credentials, or the search fails — callers treat ``None`` as unknown,
+    never as "definitely not sent".
+    """
+    if not rfc822_msgid:
+        return None
+    bare = rfc822_msgid.strip().strip("<>")
+    try:
+        data = _api_get(
+            tenant_id,
+            "/messages",
+            params={"q": f"rfc822msgid:{bare}", "maxResults": 1},
+        )
+    except GmailApiError:
+        logger.warning(
+            "gmail_connector: rfc822msgid lookup failed tenant=%s", tenant_id, exc_info=True
+        )
+        return None
+    if not data:
+        return None
+    messages = data.get("messages") or []
+    return messages[0].get("id") if messages else None
+
+
+def send_message(
+    db: Any,
+    tenant_id: str,
+    *,
+    to: str,
+    subject: str,
+    body_html: str,
+    rfc822_msgid: str | None = None,
+    thread_id: str | None = None,
+    in_reply_to: str | None = None,
+    references: str | None = None,
+) -> dict[str, Any]:
+    """Send a new message through the tenant's Gmail mailbox.
+
+    Sibling of ``send_reply`` for the action-layer ``send_email`` tool.
+    ``rfc822_msgid`` sets an explicit RFC 5322 ``Message-ID`` so
+    ``find_message_id_by_rfc822_msgid`` can adopt a prior send instead of
+    sending twice. Returns ``{"success": bool, "detail": str, ...}`` and
+    never raises.
+    """
+    message = MIMEText(body_html, "html")
+    message["to"] = to
+    message["subject"] = subject
+    if rfc822_msgid:
+        message["Message-ID"] = (
+            rfc822_msgid if rfc822_msgid.startswith("<") else f"<{rfc822_msgid}>"
+        )
+    if in_reply_to:
+        ref_header = in_reply_to if in_reply_to.startswith("<") else f"<{in_reply_to}>"
+        message["In-Reply-To"] = ref_header
+        message["References"] = references or ref_header
+
+    raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
+    body: dict[str, Any] = {"raw": raw}
+    if thread_id:
+        body["threadId"] = thread_id
+
+    try:
+        data = _api_post(tenant_id, "/messages/send", body)
+    except GmailApiError as e:
+        return {
+            "success": False,
+            "detail": f"gmail api error {e.status_code}",
+            "status_code": e.status_code,
+        }
+
+    if not data:
+        return {"success": False, "detail": "no gmail credentials or send failed"}
+
+    logger.info(
+        "gmail_connector: message sent tenant=%s message_id=%s", tenant_id, data.get("id")
+    )
+    return {
+        "success": True,
+        "detail": "sent",
+        "message_id": data.get("id", ""),
+        "thread_id": data.get("threadId", ""),
+    }
+
+
 def send_reply(
     db: Any,
     tenant_id: str,

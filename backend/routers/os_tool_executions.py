@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field
 
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
-from backend.services import agent_os_bridge, agent_sdk_client, os_tool_executions
+from backend.services import agent_os_bridge, agent_sdk_client, os_tool_executions, os_tools
 from backend.services.agent_os_gate import require_agent_os_access
 
 logger = logging.getLogger(__name__)
@@ -123,6 +123,14 @@ async def approve_tool_execution(
             detail="recipient is not a valid email address",
         )
 
+    if (existing.get("tool_id") or "") == os_tools.SEND_EMAIL_TOOL_ID:
+        refused = os_tools.refuse_send_email(
+            agent_id=existing.get("agent_id"),
+            tool_id=existing.get("tool_id"),
+        )
+        if refused:
+            raise HTTPException(status_code=403, detail=refused)
+
     claimed = await run_in_threadpool(
         os_tool_executions.claim_for_execution, db, client_id, execution_id
     )
@@ -131,6 +139,24 @@ async def approve_tool_execution(
         # where it stands rather than running the tool a second time.
         current = os_tool_executions.get_tool_execution(db, client_id, execution_id)
         return {"execution": current, "already_decided": True}
+
+    if (claimed.get("tool_id") or "") == os_tools.SEND_EMAIL_TOOL_ID:
+        ctx = os_tools.ToolContext(
+            db=db,
+            client_id=client_id,
+            execution_id=execution_id,
+            tool_id=claimed["tool_id"],
+            input=claimed.get("input") or {},
+            agent_id=claimed.get("agent_id"),
+            approved_by=_actor(claims),
+            port=os_tools.production_send_email_port(client_id, db),
+        )
+        outcome = await os_tools.run_tool(ctx)
+        return {
+            "execution": os_tool_executions.get_tool_execution(db, client_id, execution_id),
+            "already_decided": False,
+            "outcome": outcome,
+        }
 
     context = await run_in_threadpool(
         agent_os_bridge.assemble_shared_context, db, client_id

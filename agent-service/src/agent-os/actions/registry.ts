@@ -11,9 +11,16 @@
  */
 
 import type { TenantToolPolicy } from "./policy.ts";
-import { RISK_LABELS, type ErasedTool, type RiskLevel, type ToolDefinition, type ToolMetadata } from "./types.ts";
+import {
+  RISK_LABELS,
+  type ErasedTool,
+  type RiskLevel,
+  type ToolDefinition,
+  type ToolMetadata,
+} from "./types.ts";
 import { getBusinessProfile } from "./tools/get_business_profile.ts";
 import { addCustomerNote } from "./tools/add_customer_note.ts";
+import { sendEmail } from "./tools/send_email.ts";
 
 export type AnyTool = ErasedTool;
 
@@ -33,7 +40,9 @@ export class ToolRegistry {
    * the executor re-validates every input and output through the tool's own
    * schemas before and after it runs.
    */
-  register<TInput, TOutput>(tool: ToolDefinition<TInput, TOutput> | ErasedTool): void {
+  register<TInput, TOutput>(
+    tool: ToolDefinition<TInput, TOutput> | ErasedTool,
+  ): void {
     if (this.byId.has(tool.id)) {
       throw new Error(`duplicate tool id "${tool.id}"`);
     }
@@ -81,7 +90,9 @@ export class ToolRegistry {
   availableFor(policy: TenantToolPolicy | undefined): ErasedTool[] {
     const p = policy ?? {};
     return this.all()
-      .filter((t) => (p.enabledToolIds ? p.enabledToolIds.includes(t.id) : true))
+      .filter((t) =>
+        p.enabledToolIds ? p.enabledToolIds.includes(t.id) : true,
+      )
       .filter((t) => !(p.disabledToolIds ?? []).includes(t.id));
   }
 
@@ -91,7 +102,9 @@ export class ToolRegistry {
   }
 }
 
-export function describeTool(tool: ErasedTool | ToolDefinition<never, never>): ToolMetadata {
+export function describeTool(
+  tool: ErasedTool | ToolDefinition<never, never>,
+): ToolMetadata {
   return {
     id: tool.id,
     displayName: tool.displayName,
@@ -110,3 +123,4 @@ export function describeTool(tool: ErasedTool | ToolDefinition<never, never>): T
 export const toolRegistry = new ToolRegistry();
 toolRegistry.register(getBusinessProfile);
 toolRegistry.register(addCustomerNote);
+toolRegistry.register(sendEmail);

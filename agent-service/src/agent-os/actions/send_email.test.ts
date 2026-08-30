@@ -1,0 +1,101 @@
+/**
+ * Sales-only send_email: flag defaults off, non-Sales cannot propose, and
+ * the engine never sends mail. The data plane owns Gmail after approval.
+ */
+
+import { test, beforeEach, afterEach } from "node:test";
+import assert from "node:assert/strict";
+
+import { executeAction } from "./executor.ts";
+import { evaluateActionPolicy } from "./policy.ts";
+import { toolRegistry } from "./registry.ts";
+import { SEND_EMAIL_FLAG, sendEmailEnabled } from "./flags.ts";
+import { sendEmail } from "./tools/send_email.ts";
+import { harness, type Harness } from "./_testkit.ts";
+
+let h: Harness;
+const previousFlag = process.env[SEND_EMAIL_FLAG];
+
+beforeEach(() => {
+  h = harness();
+  delete process.env[SEND_EMAIL_FLAG];
+});
+
+afterEach(() => {
+  if (previousFlag === undefined) delete process.env[SEND_EMAIL_FLAG];
+  else process.env[SEND_EMAIL_FLAG] = previousFlag;
+});
+
+function run(agentId: string, input: unknown) {
+  return executeAction({
+    accountId: "tenantA",
+    agentId,
+    runId: "run_1",
+    toolId: "send_email",
+    input,
+    sharedContext: h.context,
+  });
+}
+
+const validInput = {
+  to: "sarah@example.com",
+  subject: "Following up",
+  body: "Hi Sarah",
+};
+
+test("SEND_EMAIL_ENABLED defaults off", () => {
+  delete process.env[SEND_EMAIL_FLAG];
+  assert.equal(sendEmailEnabled(), false);
+  process.env[SEND_EMAIL_FLAG] = "0";
+  assert.equal(sendEmailEnabled(), false);
+  process.env[SEND_EMAIL_FLAG] = "false";
+  assert.equal(sendEmailEnabled(), false);
+});
+
+test("send_email is a Sales-only level-2 tool that requires approval", () => {
+  assert.equal(sendEmail.id, "send_email");
+  assert.equal(sendEmail.department, "sales");
+  assert.equal(sendEmail.riskLevel, 2);
+  assert.equal(sendEmail.mutating, true);
+  assert.equal(sendEmail.requiresApproval, true);
+  assert.deepEqual(sendEmail.requiredConnectors, ["gmail"]);
+  assert.equal(toolRegistry.find("send_email")?.department, "sales");
+});
+
+test("flag off: send_email is denied and not queued, even for Sales", async () => {
+  delete process.env[SEND_EMAIL_FLAG];
+  const outcome = await run("sales", validInput);
+  assert.equal(outcome.status, "denied");
+  assert.match(outcome.record.policyReason, /SEND_EMAIL_ENABLED defaults off/);
+  assert.equal(outcome.record.approvalState, "not_required");
+});
+
+test("flag on: a non-Sales department cannot propose or send", async () => {
+  process.env[SEND_EMAIL_FLAG] = "1";
+  for (const agentId of ["admin_records", "marketing", "service", undefined]) {
+    const evaluation = evaluateActionPolicy(sendEmail, validInput, {
+      accountId: "tenantA",
+      agentId,
+    });
+    assert.equal(evaluation.decision, "deny", `expected deny for ${agentId}`);
+    assert.match(evaluation.reason, /Sales department/);
+  }
+  const outcome = await run("marketing", validInput);
+  assert.equal(outcome.status, "denied");
+  assert.match(outcome.record.policyReason, /Sales department/);
+});
+
+test("flag on: Sales parks at pending_approval and the engine does not send", async () => {
+  process.env[SEND_EMAIL_FLAG] = "1";
+  const outcome = await run("sales", validInput);
+  assert.equal(outcome.status, "pending_approval");
+  assert.equal(outcome.record.approvalState, "pending");
+  assert.equal(outcome.record.agentId, "sales");
+  await assert.rejects(
+    () => sendEmail.execute({ input: validInput, context: {} as never }),
+    (err: Error & { code?: string }) => {
+      assert.equal(err.code, "data_plane_only");
+      return true;
+    },
+  );
+});

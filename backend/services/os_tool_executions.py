@@ -15,9 +15,11 @@ Three responsibilities:
 3. **Approve / reject** a parked action. Approval is at-most-once: the status
    moves out of ``pending_approval`` with a conditional update *before* the
    engine is called, so a double-clicked approval cannot run a tool twice.
-4. **Re-drive a claimed row** through ``_run_data_plane_tool`` with an injected
+   4. **Re-drive a claimed row** through ``_run_data_plane_tool`` with an injected
    mailbox port. A timeout or lost response stays non-terminal; a later
-   re-drive rfc822msgid-adopts. This is not a production Gmail send path.
+   re-drive rfc822msgid-adopts. Production ``send_email`` uses
+   ``os_tools.run_tool`` + ``GmailMailboxPort``, gated by
+   ``SEND_EMAIL_ENABLED`` (default off) and Sales-only.
 
 Distinct from ``backend/services/os_actions/``: that package fires a channel
 handler when the owner approves a *deliverable*. This one records and gates an
@@ -592,8 +594,9 @@ def _run_data_plane_tool(
 ) -> dict:
     """Post-claim mailbox attempt. Lookup first; unknown stays non-terminal.
 
-    ``port`` is an injected mailbox (test-local or internal). There is no
-    default that calls ``gmail_connector.send_message``.
+    ``port`` is an injected mailbox. Production ``send_email`` attaches
+    ``GmailMailboxPort`` only after ``os_tools.refuse_send_email`` returns
+    None (flag on + Sales).
     """
     row = get_tool_execution(db, client_id, execution_id)
     if row is None or row.get("status") != "running":
