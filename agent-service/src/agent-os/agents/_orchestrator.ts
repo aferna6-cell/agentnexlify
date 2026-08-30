@@ -68,7 +68,7 @@ export type DecisionStatus =
 export interface HandleResult {
   status: DecisionStatus;
   /** `none` means a deterministic pre-routing decision handled the ask. */
-  classifier: "haiku" | "heuristic" | "none";
+  classifier: "haiku" | "heuristic" | "ml" | "none";
   decisionId: string;
   runId?: string;
   agentId?: string;
@@ -402,7 +402,7 @@ async function runAndLog(
   agentId: string,
   confidence: number,
   candidates: Candidate[],
-  classifier: "haiku" | "heuristic",
+  classifier: "haiku" | "heuristic" | "ml",
   params: Record<string, unknown>,
   decisionType: DecisionStatus | "wishlist_fallback",
   onStep?: (step: StreamedTraceStep) => void,

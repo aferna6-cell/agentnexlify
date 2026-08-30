@@ -1,0 +1,12 @@
+joblib==1.5.3
+numpy==2.5.2
+pandas==3.0.5
+scikit-learn==1.9.0
+scipy==1.18.1
+sentence-transformers==6.0.0
+torch==2.13.0
+transformers==5.16.1
+# Pinned from the environment the experiment was run in. numpy/pandas/scikit-learn
+# and joblib are required. sentence-transformers and torch are needed only for
+# Model C (train_embeddings.py); the TF-IDF path and every evaluation script run
+# without them.

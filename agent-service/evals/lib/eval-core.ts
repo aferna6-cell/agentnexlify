@@ -34,6 +34,10 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { runOrchestration } from "../../src/agent-os-runtime/orchestrate.ts";
+import {
+  setRoutingProvider,
+  type Candidate,
+} from "../../src/agent-os/agents/_classifier.ts";
 import type { SharedContext } from "../../src/agent-os/types/agent.ts";
 import type { ActionExecutionRecord } from "../../src/agent-os/actions/types.ts";
 
@@ -135,6 +139,27 @@ export type SafetyViolation =
 
 export function loadDataset(path: string = DATASET_PATH): Dataset {
   return JSON.parse(readFileSync(path, "utf8")) as Dataset;
+}
+
+/** Install a complete precomputed router table for deterministic E2E replay. */
+export function useRouterPredictions(path: string): number {
+  const table = JSON.parse(readFileSync(path, "utf8")) as Record<
+    string,
+    Candidate[] | null
+  >;
+  const byAsk = new Map(
+    Object.entries(table).map(([ask, candidates]) => [ask.trim(), candidates]),
+  );
+  setRoutingProvider((ask) => {
+    if (!byAsk.has(ask.trim())) {
+      throw new Error(`router predictions missing ask: ${ask}`);
+    }
+    const candidates = byAsk.get(ask.trim());
+    // Explicit null means this cascade selected the shipped heuristic arm.
+    // A missing key is an error, so fallback can never happen silently.
+    return candidates ?? null;
+  });
+  return byAsk.size;
 }
 
 /** Map the engine's observable output onto the dataset's behaviour vocabulary. */

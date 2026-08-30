@@ -15,8 +15,15 @@
 import { registry } from "./_registry.ts";
 import { extractParams } from "./_extract.ts";
 import { readAskIntent } from "./_intent.ts";
-import { departmentSemanticScore, type DepartmentAgent } from "./_department.ts";
-import { complete, isModelAvailable, ModelUnavailableError } from "../lib/anthropic.ts";
+import {
+  departmentSemanticScore,
+  type DepartmentAgent,
+} from "./_department.ts";
+import {
+  complete,
+  isModelAvailable,
+  ModelUnavailableError,
+} from "../lib/anthropic.ts";
 
 export interface Candidate {
   agentId: string;
@@ -36,9 +43,30 @@ export interface Candidate {
 }
 
 export interface Classification {
-  classifier: "haiku" | "heuristic";
+  classifier: "haiku" | "heuristic" | "ml";
   candidates: Candidate[];
   params: Record<string, unknown>;
+}
+
+/**
+ * Evaluation-only router substitution. It changes routing and nothing else:
+ * risk, policy, approval, tenant scope, execution, and verification remain in
+ * the deterministic action layer.
+ */
+export type RoutingProvider = (ask: string) => Candidate[] | null;
+
+let routingProvider: RoutingProvider | null = null;
+
+export function setRoutingProvider(provider: RoutingProvider): void {
+  routingProvider = provider;
+}
+
+export function resetRoutingProvider(): void {
+  routingProvider = null;
+}
+
+export function hasRoutingProvider(): boolean {
+  return routingProvider !== null;
 }
 
 // --- Heuristic -------------------------------------------------------------
@@ -50,7 +78,9 @@ export interface Classification {
  * department from both places this test is made.
  */
 function complaintLanguage(ask: string): boolean {
-  return /(furious|angry|upset|unhappy|disappointed|terrible|worst|ruined|scratch|damaged|complaint|complained)/i.test(ask);
+  return /(furious|angry|upset|unhappy|disappointed|terrible|worst|ruined|scratch|damaged|complaint|complained)/i.test(
+    ask,
+  );
 }
 
 export function classifyHeuristic(ask: string): Classification {
@@ -66,8 +96,10 @@ export function classifyHeuristic(ask: string): Classification {
   // then filter to positives.
   const scored = registry.routable().map((agent) => {
     let score = 0;
-    for (const kw of agent.keywords) if (a.includes(kw.toLowerCase())) score += 1;
-    for (const sig of agent.strong_signals) if (a.includes(sig.toLowerCase())) score += 3;
+    for (const kw of agent.keywords)
+      if (a.includes(kw.toLowerCase())) score += 1;
+    for (const sig of agent.strong_signals)
+      if (a.includes(sig.toLowerCase())) score += 3;
     const spec = (agent as Partial<DepartmentAgent>).__department;
     if (spec) score += departmentSemanticScore(spec, intent);
     return { agentId: agent.agent_id, score };
@@ -81,7 +113,8 @@ export function classifyHeuristic(ask: string): Classification {
   // without an explicit booking keyword ("Mike called wanting a tire rotation
   // Thursday at 10:30").
   const dayTime =
-    /\b(?:mon|tues|wednes|thurs|fri|satur|sun)day\b/i.test(ask) && /\b(\d{1,2}:\d{2}|\d{1,2}\s*(?:am|pm))\b/i.test(ask);
+    /\b(?:mon|tues|wednes|thurs|fri|satur|sun)day\b/i.test(ask) &&
+    /\b(\d{1,2}:\d{2}|\d{1,2}\s*(?:am|pm))\b/i.test(ask);
   if (dayTime) {
     const b = scored.find((c) => c.agentId === "operations");
     if (b) b.score += 4;
@@ -97,7 +130,10 @@ export function classifyHeuristic(ask: string): Classification {
   // Tax / financial language → Accounting. Checked BEFORE People so "payroll
   // TAX / quarterly filings" (a finance task) doesn't get grabbed by the People
   // "payroll" keyword (which is about paying/managing staff).
-  const taxFinance = /\b(tax|taxes|quarterly|941|940|irs|deduction|filing|revenue|receivables|cash flow|profit|expenses?|bookkeep)\b/i.test(ask);
+  const taxFinance =
+    /\b(tax|taxes|quarterly|941|940|irs|deduction|filing|revenue|receivables|cash flow|profit|expenses?|bookkeep)\b/i.test(
+      ask,
+    );
   if (taxFinance) {
     const ac = scored.find((c) => c.agentId === "accounting");
     if (ac) ac.score += 7;
@@ -106,13 +142,22 @@ export function classifyHeuristic(ask: string): Classification {
   // Hiring / HR / staff language → People (disambiguates from Marketing, since a
   // "Craigslist post" for an employee is a People task, not a marketing post).
   // Exclude tax/finance asks so "payroll taxes" stays with Accounting above.
-  if (!taxFinance && /\b(hire|hiring|job post|craigslist|interview|employee|payroll|staff|new hire|training (doc|checklist)|handbook|write[- ]?up)\b/i.test(ask)) {
+  if (
+    !taxFinance &&
+    /\b(hire|hiring|job post|craigslist|interview|employee|payroll|staff|new hire|training (doc|checklist)|handbook|write[- ]?up)\b/i.test(
+      ask,
+    )
+  ) {
     const p = scored.find((c) => c.agentId === "people");
     if (p) p.score += 8; // decisive: a job/HR post is People, not Marketing
   }
 
   // Document / contract / CRM language → Customer Data & Administration.
-  if (/\b(contract|agreement|intake form|service agreement|refund policy|one[- ]?pager|sop|template|update (his|her|their|the) record)\b/i.test(ask)) {
+  if (
+    /\b(contract|agreement|intake form|service agreement|refund policy|one[- ]?pager|sop|template|update (his|her|their|the) record)\b/i.test(
+      ask,
+    )
+  ) {
     const ar = scored.find((c) => c.agentId === "admin_records");
     if (ar) ar.score += 4;
   }
@@ -134,7 +179,10 @@ export function classifyHeuristic(ask: string): Classification {
 function buildRoutingPrompt(ask: string): { system: string; prompt: string } {
   const catalogue = registry
     .routable()
-    .map((a) => `- ${a.agent_id} (${a.bucket}): ${a.purpose} Routes here when: ${a.routes_here_when.join("; ")}`)
+    .map(
+      (a) =>
+        `- ${a.agent_id} (${a.bucket}): ${a.purpose} Routes here when: ${a.routes_here_when.join("; ")}`,
+    )
     .join("\n");
 
   const system =
@@ -179,17 +227,28 @@ function toRoutableId(id: string | undefined): string | undefined {
   if (!id) return undefined;
   if (registry.has(id) && registry.get(id).channel !== "internal") return id;
   const dept = registry.routable().find((d) => {
-    const spec = (d as { __department?: { skills: { agent: { agent_id: string } }[] } }).__department;
+    const spec = (
+      d as { __department?: { skills: { agent: { agent_id: string } }[] } }
+    ).__department;
     return spec?.skills.some((s) => s.agent.agent_id === id);
   });
   return dept?.agent_id;
 }
 
-export async function classifyWithHaiku(ask: string, runId?: string): Promise<Classification | null> {
+export async function classifyWithHaiku(
+  ask: string,
+  runId?: string,
+): Promise<Classification | null> {
   if (!isModelAvailable()) return null;
   const { system, prompt } = buildRoutingPrompt(ask);
   try {
-    const res = await complete({ purpose: "routing", system, prompt, maxTokens: 400, runId });
+    const res = await complete({
+      purpose: "routing",
+      system,
+      prompt,
+      maxTokens: 400,
+      runId,
+    });
     const parsed = parseHaiku(res.text);
     if (!parsed) return null;
     const routedTo = toRoutableId(parsed.routed_to);
@@ -198,7 +257,11 @@ export async function classifyWithHaiku(ask: string, runId?: string): Promise<Cl
     const altCandidates: Candidate[] = [];
     for (const x of parsed.alternates ?? []) {
       const id = toRoutableId(x.agent_id);
-      if (id && id !== routedTo) altCandidates.push({ agentId: id, confidence: clamp(x.confidence ?? 0) });
+      if (id && id !== routedTo)
+        altCandidates.push({
+          agentId: id,
+          confidence: clamp(x.confidence ?? 0),
+        });
     }
     const candidates: Candidate[] = [
       { agentId: routedTo, confidence: clamp(parsed.confidence ?? 0.5) },
@@ -226,7 +289,16 @@ function clamp(n: number): number {
  * (see toRoutableId). So a "heuristic" label in the UI always means
  * fallback-was-used, never a deliberate shortcut.
  */
-export async function classify(ask: string, runId?: string): Promise<Classification> {
+export async function classify(
+  ask: string,
+  runId?: string,
+): Promise<Classification> {
+  if (routingProvider) {
+    const candidates = routingProvider(ask);
+    if (candidates && candidates.length > 0) {
+      return { classifier: "ml", candidates, params: extractParams(ask) };
+    }
+  }
   const viaHaiku = await classifyWithHaiku(ask, runId);
   if (viaHaiku && viaHaiku.candidates.length > 0) return viaHaiku;
   return classifyHeuristic(ask);

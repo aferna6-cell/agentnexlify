@@ -1,6 +1,6 @@
 {
   "dataset_version": "action-eval-validation-v3",
-  "frozen": false,
+  "frozen": true,
   "created": "2026-08-29",
   "independent_of": [
     "ml/routing/data/train-v1.jsonl",
@@ -8,12 +8,13 @@
     "agent-service/evals/datasets/validation/validation-v1.json",
     "agent-service/evals/datasets/validation/validation-v2.json"
   ],
-  "not_for_model_selection": true,
-  "description": "Independent routing validation split (workstream A). Authored for Milestone 6 as a held-out label set that does not reuse train-v1, the frozen 215-case action-eval-v1, validation-v1, or validation-v2. Eight department labels only; no `none`. Hard-negative pairs are complete inside this file. Leakage-checked with exact / Jaccard>=0.8 / template_id / pair_id drop rules. Not for model selection yet. Frozen action-eval-v1.json was not modified. Production routing is unchanged.",
+  "not_for_model_selection": false,
+  "selection_authorization": "Frozen for Milestone 6 router selection by the owner's 2026-08-30 completion request. Labels and asks remain byte-for-byte unchanged.",
+  "description": "Independent routing validation split for Milestone 6 model selection. It does not reuse train-v1, the frozen 215-case action-eval-v1, validation-v1, or validation-v2. Eight department labels only; no `none`. Hard-negative pairs are complete inside this file. Leakage-checked with exact / Jaccard>=0.8 / template_id / pair_id drop rules. Frozen action-eval-v1.json was not modified. Production routing is unchanged until a separately documented selection decision.",
   "leakage_rules": [
     "This split is independent of train-v1, action-eval-v1 (frozen 215), validation-v1, and validation-v2.",
     "Do not copy a case between this file and any of those sets in either direction.",
-    "This set is NOT for model selection yet. Do not pick a router or report a winner from it.",
+    "This set was authorized and frozen for Milestone 6 model selection on 2026-08-30. Do not change asks or labels after selection began.",
     "Frozen action-eval-v1.json was not modified, copied, or extended by this authoring path.",
     "Production routing (classify / classifyWithHaiku / classifyHeuristic) is unchanged.",
     "`rationale` and `stress` are documentation. Neither is a model feature.",
@@ -48,10 +49,7 @@
       "split": "validation",
       "template_id": "v3:sales:tplo_packet",
       "family": "tplo_packet",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "draft_only",
       "pair_id": "v3_pair_tplo"
     },
@@ -65,10 +63,7 @@
       "split": "validation",
       "template_id": "v3:sales:catering_retainer",
       "family": "catering_retainer",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -81,10 +76,7 @@
       "split": "validation",
       "template_id": "v3:sales:newborn_bundle",
       "family": "newborn_bundle",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -97,10 +89,7 @@
       "split": "validation",
       "template_id": "v3:sales:sat_nudge",
       "family": "sat_nudge",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -113,10 +102,7 @@
       "split": "validation",
       "template_id": "v3:sales:pharmacy_lobby",
       "family": "pharmacy_lobby",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -129,10 +115,7 @@
       "split": "validation",
       "template_id": "v3:sales:album_addon",
       "family": "album_addon",
-      "tags": [
-        "subject_intent_mismatch",
-        "validation-v3"
-      ],
+      "tags": ["subject_intent_mismatch", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -145,10 +128,7 @@
       "split": "validation",
       "template_id": "v3:sales:termite_exclusion",
       "family": "termite_exclusion",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -161,10 +141,7 @@
       "split": "validation",
       "template_id": "v3:sales:arch_referral",
       "family": "arch_referral",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -177,10 +154,7 @@
       "split": "validation",
       "template_id": "v3:sales:wheel_hold_price",
       "family": "wheel_hold_price",
-      "tags": [
-        "misleading_noun",
-        "validation-v3"
-      ],
+      "tags": ["misleading_noun", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -193,14 +167,9 @@
       "split": "validation",
       "template_id": "v3:sales:tour_reopen",
       "family": "tour_reopen",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "operations"
-      ]
+      "acceptable_departments": ["operations"]
     },
     {
       "id": "v3_sal_011",
@@ -212,10 +181,7 @@
       "split": "validation",
       "template_id": "v3:sales:move_options",
       "family": "move_options",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -228,10 +194,7 @@
       "split": "validation",
       "template_id": "v3:sales:myopia_plan",
       "family": "myopia_plan",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -244,10 +207,7 @@
       "split": "validation",
       "template_id": "v3:sales:tasting_vs_tower",
       "family": "tasting_vs_tower",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -260,10 +220,7 @@
       "split": "validation",
       "template_id": "v3:sales:hoa_circuit",
       "family": "hoa_circuit",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -276,10 +233,7 @@
       "split": "validation",
       "template_id": "v3:sales:rekey_estimate",
       "family": "rekey_estimate",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -292,10 +246,7 @@
       "split": "validation",
       "template_id": "v3:sales:corp_onramp",
       "family": "corp_onramp",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -308,14 +259,9 @@
       "split": "validation",
       "template_id": "v3:sales:deshed_membership",
       "family": "deshed_membership",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "operations"
-      ]
+      "acceptable_departments": ["operations"]
     },
     {
       "id": "v3_sal_018",
@@ -327,10 +273,7 @@
       "split": "validation",
       "template_id": "v3:sales:funeral_spray",
       "family": "funeral_spray",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -343,10 +286,7 @@
       "split": "validation",
       "template_id": "v3:sales:lens_recap",
       "family": "lens_recap",
-      "tags": [
-        "low_evidence",
-        "validation-v3"
-      ],
+      "tags": ["low_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -359,10 +299,7 @@
       "split": "validation",
       "template_id": "v3:sales:keep_the_date",
       "family": "keep_the_date",
-      "tags": [
-        "zero_evidence",
-        "validation-v3"
-      ],
+      "tags": ["zero_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -375,10 +312,7 @@
       "split": "validation",
       "template_id": "v3:sales:progressive_sheet",
       "family": "progressive_sheet",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -391,10 +325,7 @@
       "split": "validation",
       "template_id": "v3:sales:lobby_standing",
       "family": "lobby_standing",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -407,10 +338,7 @@
       "split": "validation",
       "template_id": "v3:sales:chain_addendum",
       "family": "chain_addendum",
-      "tags": [
-        "short_command",
-        "validation-v3"
-      ],
+      "tags": ["short_command", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -423,10 +351,7 @@
       "split": "validation",
       "template_id": "v3:sales:sat_vs_essay",
       "family": "sat_vs_essay",
-      "tags": [
-        "multi_intent",
-        "validation-v3"
-      ],
+      "tags": ["multi_intent", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -439,10 +364,7 @@
       "split": "validation",
       "template_id": "v3:sales:hypertrophy_number",
       "family": "hypertrophy_number",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -455,10 +377,7 @@
       "split": "validation",
       "template_id": "v3:sales:cake_agreement",
       "family": "cake_agreement",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -471,14 +390,9 @@
       "split": "validation",
       "template_id": "v3:operations:session_hold",
       "family": "session_hold",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "action"
-      ],
+      "acceptable_behaviors": ["action"],
       "pair_id": "v3_pair_hold_vs_bill"
     },
     {
@@ -491,10 +405,7 @@
       "split": "validation",
       "template_id": "v3:operations:tour_shift",
       "family": "tour_shift",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -507,10 +418,7 @@
       "split": "validation",
       "template_id": "v3:operations:ward_capacity",
       "family": "ward_capacity",
-      "tags": [
-        "long_context",
-        "validation-v3"
-      ],
+      "tags": ["long_context", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -523,14 +431,9 @@
       "split": "validation",
       "template_id": "v3:operations:block_cancel",
       "family": "block_cancel",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "action"
-      ]
+      "acceptable_behaviors": ["action"]
     },
     {
       "id": "v3_ops_005",
@@ -542,10 +445,7 @@
       "split": "validation",
       "template_id": "v3:operations:membership_hold",
       "family": "membership_hold",
-      "tags": [
-        "subject_intent_mismatch",
-        "validation-v3"
-      ],
+      "tags": ["subject_intent_mismatch", "validation-v3"],
       "expected_behavior": "clarification",
       "pair_id": "v3_pair_membership_pause"
     },
@@ -559,14 +459,9 @@
       "split": "validation",
       "template_id": "v3:operations:studio_heat",
       "family": "studio_heat",
-      "tags": [
-        "low_evidence",
-        "validation-v3"
-      ],
+      "tags": ["low_evidence", "validation-v3"],
       "expected_behavior": "direct_answer",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_ops_007",
@@ -578,10 +473,7 @@
       "split": "validation",
       "template_id": "v3:operations:water_main_shift",
       "family": "water_main_shift",
-      "tags": [
-        "long_context",
-        "validation-v3"
-      ],
+      "tags": ["long_context", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -594,10 +486,7 @@
       "split": "validation",
       "template_id": "v3:operations:daylight_dispatch",
       "family": "daylight_dispatch",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -610,10 +499,7 @@
       "split": "validation",
       "template_id": "v3:operations:waitlist_pull",
       "family": "waitlist_pull",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "clarification",
       "pair_id": "v3_pair_waitlist_blast"
     },
@@ -627,10 +513,7 @@
       "split": "validation",
       "template_id": "v3:operations:groom_slip",
       "family": "groom_slip",
-      "tags": [
-        "multi_intent",
-        "validation-v3"
-      ],
+      "tags": ["multi_intent", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -643,10 +526,7 @@
       "split": "validation",
       "template_id": "v3:operations:jig_block",
       "family": "jig_block",
-      "tags": [
-        "zero_evidence",
-        "validation-v3"
-      ],
+      "tags": ["zero_evidence", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -659,14 +539,9 @@
       "split": "validation",
       "template_id": "v3:operations:cooler_reminder",
       "family": "cooler_reminder",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "sales"
-      ]
+      "acceptable_departments": ["sales"]
     },
     {
       "id": "v3_ops_013",
@@ -678,14 +553,9 @@
       "split": "validation",
       "template_id": "v3:operations:same_day_rekey",
       "family": "same_day_rekey",
-      "tags": [
-        "short_command",
-        "validation-v3"
-      ],
+      "tags": ["short_command", "validation-v3"],
       "expected_behavior": "direct_answer",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_ops_014",
@@ -697,10 +567,7 @@
       "split": "validation",
       "template_id": "v3:operations:second_table",
       "family": "second_table",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -713,10 +580,7 @@
       "split": "validation",
       "template_id": "v3:operations:screening_clash",
       "family": "screening_clash",
-      "tags": [
-        "long_context",
-        "validation-v3"
-      ],
+      "tags": ["long_context", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -729,14 +593,9 @@
       "split": "validation",
       "template_id": "v3:operations:dock_lookup",
       "family": "dock_lookup",
-      "tags": [
-        "typo",
-        "validation-v3"
-      ],
+      "tags": ["typo", "validation-v3"],
       "expected_behavior": "direct_answer",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_ops_017",
@@ -748,10 +607,7 @@
       "split": "validation",
       "template_id": "v3:operations:elevator_gate",
       "family": "elevator_gate",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -764,10 +620,7 @@
       "split": "validation",
       "template_id": "v3:operations:kennel_offline",
       "family": "kennel_offline",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -780,10 +633,7 @@
       "split": "validation",
       "template_id": "v3:operations:hold_collision",
       "family": "hold_collision",
-      "tags": [
-        "multi_intent",
-        "validation-v3"
-      ],
+      "tags": ["multi_intent", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -796,14 +646,9 @@
       "split": "validation",
       "template_id": "v3:operations:pier_window",
       "family": "pier_window",
-      "tags": [
-        "low_evidence",
-        "validation-v3"
-      ],
+      "tags": ["low_evidence", "validation-v3"],
       "expected_behavior": "direct_answer",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_ops_021",
@@ -815,10 +660,7 @@
       "split": "validation",
       "template_id": "v3:operations:cooler_halt",
       "family": "cooler_halt",
-      "tags": [
-        "zero_evidence",
-        "validation-v3"
-      ],
+      "tags": ["zero_evidence", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -831,10 +673,7 @@
       "split": "validation",
       "template_id": "v3:operations:makeup_hour",
       "family": "makeup_hour",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -847,10 +686,7 @@
       "split": "validation",
       "template_id": "v3:operations:rain_atrium",
       "family": "rain_atrium",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -863,10 +699,7 @@
       "split": "validation",
       "template_id": "v3:operations:drill_blackout",
       "family": "drill_blackout",
-      "tags": [
-        "zero_evidence",
-        "validation-v3"
-      ],
+      "tags": ["zero_evidence", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -879,10 +712,7 @@
       "split": "validation",
       "template_id": "v3:operations:lockout_priority",
       "family": "lockout_priority",
-      "tags": [
-        "long_context",
-        "validation-v3"
-      ],
+      "tags": ["long_context", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -895,14 +725,9 @@
       "split": "validation",
       "template_id": "v3:operations:counter_close",
       "family": "counter_close",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "marketing"
-      ]
+      "acceptable_departments": ["marketing"]
     },
     {
       "id": "v3_inv_001",
@@ -914,10 +739,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:tplo_bill",
       "family": "tplo_bill",
-      "tags": [
-        "misleading_noun",
-        "validation-v3"
-      ],
+      "tags": ["misleading_noun", "validation-v3"],
       "expected_behavior": "draft_only",
       "pair_id": "v3_pair_tplo"
     },
@@ -931,10 +753,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:session_bill",
       "family": "session_bill",
-      "tags": [
-        "subject_intent_mismatch",
-        "validation-v3"
-      ],
+      "tags": ["subject_intent_mismatch", "validation-v3"],
       "expected_behavior": "draft_only",
       "pair_id": "v3_pair_hold_vs_bill"
     },
@@ -948,10 +767,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:membership_draft",
       "family": "membership_draft",
-      "tags": [
-        "subject_intent_mismatch",
-        "validation-v3"
-      ],
+      "tags": ["subject_intent_mismatch", "validation-v3"],
       "expected_behavior": "clarification",
       "pair_id": "v3_pair_membership_pause"
     },
@@ -965,10 +781,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:cake_chargeback",
       "family": "cake_chargeback",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only",
       "pair_id": "v3_pair_chargeback"
     },
@@ -982,10 +795,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:dinner_invoice",
       "family": "dinner_invoice",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only",
       "pair_id": "v3_pair_vendor_ap"
     },
@@ -999,10 +809,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:cat4419_notice",
       "family": "cat4419_notice",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -1015,10 +822,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:cake_deposit",
       "family": "cake_deposit",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -1031,10 +835,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:split_move_bill",
       "family": "split_move_bill",
-      "tags": [
-        "typo",
-        "validation-v3"
-      ],
+      "tags": ["typo", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -1047,14 +848,9 @@
       "split": "validation",
       "template_id": "v3:invoicing:myopia_resend",
       "family": "myopia_resend",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_inv_010",
@@ -1066,14 +862,9 @@
       "split": "validation",
       "template_id": "v3:invoicing:noshow_writeoff",
       "family": "noshow_writeoff",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "accounting"
-      ]
+      "acceptable_departments": ["accounting"]
     },
     {
       "id": "v3_inv_011",
@@ -1085,10 +876,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:key_line",
       "family": "key_line",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -1101,10 +889,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:spray_to_bill",
       "family": "spray_to_bill",
-      "tags": [
-        "misleading_noun",
-        "validation-v3"
-      ],
+      "tags": ["misleading_noun", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -1117,14 +902,9 @@
       "split": "validation",
       "template_id": "v3:invoicing:hoa_unpaid",
       "family": "hoa_unpaid",
-      "tags": [
-        "zero_evidence",
-        "validation-v3"
-      ],
+      "tags": ["zero_evidence", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "accounting"
-      ]
+      "acceptable_departments": ["accounting"]
     },
     {
       "id": "v3_inv_014",
@@ -1136,10 +916,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:groom_paid",
       "family": "groom_paid",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -1152,10 +929,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:lobby_standing_bill",
       "family": "lobby_standing_bill",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -1168,10 +942,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:print_discount",
       "family": "print_discount",
-      "tags": [
-        "multi_intent",
-        "validation-v3"
-      ],
+      "tags": ["multi_intent", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -1184,14 +955,9 @@
       "split": "validation",
       "template_id": "v3:invoicing:fsa_receipt",
       "family": "fsa_receipt",
-      "tags": [
-        "short_command",
-        "validation-v3"
-      ],
+      "tags": ["short_command", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_inv_018",
@@ -1203,14 +969,9 @@
       "split": "validation",
       "template_id": "v3:invoicing:tuition_pause",
       "family": "tuition_pause",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "operations"
-      ]
+      "acceptable_departments": ["operations"]
     },
     {
       "id": "v3_inv_019",
@@ -1222,10 +983,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:chain_balance",
       "family": "chain_balance",
-      "tags": [
-        "low_evidence",
-        "validation-v3"
-      ],
+      "tags": ["low_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -1238,10 +996,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:sat_conditional",
       "family": "sat_conditional",
-      "tags": [
-        "ambiguous",
-        "validation-v3"
-      ],
+      "tags": ["ambiguous", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -1254,10 +1009,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:corp_deposit",
       "family": "corp_deposit",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -1270,14 +1022,9 @@
       "split": "validation",
       "template_id": "v3:invoicing:skirt_invoice",
       "family": "skirt_invoice",
-      "tags": [
-        "typo",
-        "validation-v3"
-      ],
+      "tags": ["typo", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_inv_023",
@@ -1289,10 +1036,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:reassign_truck",
       "family": "reassign_truck",
-      "tags": [
-        "long_context",
-        "validation-v3"
-      ],
+      "tags": ["long_context", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -1305,14 +1049,9 @@
       "split": "validation",
       "template_id": "v3:invoicing:funeral_open",
       "family": "funeral_open",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "direct_answer",
-      "acceptable_departments": [
-        "accounting"
-      ]
+      "acceptable_departments": ["accounting"]
     },
     {
       "id": "v3_inv_025",
@@ -1324,10 +1063,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:dinner_plan",
       "family": "dinner_plan",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -1340,10 +1076,7 @@
       "split": "validation",
       "template_id": "v3:invoicing:isolation_credit",
       "family": "isolation_credit",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -1356,10 +1089,7 @@
       "split": "validation",
       "template_id": "v3:accounting:flour_ap",
       "family": "flour_ap",
-      "tags": [
-        "misleading_noun",
-        "validation-v3"
-      ],
+      "tags": ["misleading_noun", "validation-v3"],
       "expected_behavior": "clarification",
       "pair_id": "v3_pair_vendor_ap"
     },
@@ -1373,14 +1103,9 @@
       "split": "validation",
       "template_id": "v3:accounting:941_packet",
       "family": "941_packet",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "direct_answer"
-      ],
+      "acceptable_behaviors": ["direct_answer"],
       "pair_id": "v3_pair_941"
     },
     {
@@ -1393,14 +1118,9 @@
       "split": "validation",
       "template_id": "v3:accounting:espresso_payback",
       "family": "espresso_payback",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "direct_answer"
-      ]
+      "acceptable_behaviors": ["direct_answer"]
     },
     {
       "id": "v3_acc_004",
@@ -1412,14 +1132,9 @@
       "split": "validation",
       "template_id": "v3:accounting:cake_vs_counter",
       "family": "cake_vs_counter",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "direct_answer",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_acc_005",
@@ -1431,14 +1146,9 @@
       "split": "validation",
       "template_id": "v3:accounting:boarding_cash",
       "family": "boarding_cash",
-      "tags": [
-        "zero_evidence",
-        "validation-v3"
-      ],
+      "tags": ["zero_evidence", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "direct_answer"
-      ]
+      "acceptable_behaviors": ["direct_answer"]
     },
     {
       "id": "v3_acc_006",
@@ -1450,10 +1160,7 @@
       "split": "validation",
       "template_id": "v3:accounting:square_recon",
       "family": "square_recon",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -1466,14 +1173,9 @@
       "split": "validation",
       "template_id": "v3:accounting:tplo_margin",
       "family": "tplo_margin",
-      "tags": [
-        "misleading_noun",
-        "validation-v3"
-      ],
+      "tags": ["misleading_noun", "validation-v3"],
       "expected_behavior": "direct_answer",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_acc_008",
@@ -1485,10 +1187,7 @@
       "split": "validation",
       "template_id": "v3:accounting:optical_tax",
       "family": "optical_tax",
-      "tags": [
-        "misleading_noun",
-        "validation-v3"
-      ],
+      "tags": ["misleading_noun", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -1501,14 +1200,9 @@
       "split": "validation",
       "template_id": "v3:accounting:stem_leakage",
       "family": "stem_leakage",
-      "tags": [
-        "multi_intent",
-        "validation-v3"
-      ],
+      "tags": ["multi_intent", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "invoicing"
-      ]
+      "acceptable_departments": ["invoicing"]
     },
     {
       "id": "v3_acc_010",
@@ -1520,14 +1214,9 @@
       "split": "validation",
       "template_id": "v3:accounting:use_tax_jig",
       "family": "use_tax_jig",
-      "tags": [
-        "short_command",
-        "validation-v3"
-      ],
+      "tags": ["short_command", "validation-v3"],
       "expected_behavior": "direct_answer",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_acc_011",
@@ -1539,10 +1228,7 @@
       "split": "validation",
       "template_id": "v3:accounting:event_1099",
       "family": "event_1099",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -1555,14 +1241,9 @@
       "split": "validation",
       "template_id": "v3:accounting:floated_deposit",
       "family": "floated_deposit",
-      "tags": [
-        "typo",
-        "validation-v3"
-      ],
+      "tags": ["typo", "validation-v3"],
       "expected_behavior": "direct_answer",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_acc_013",
@@ -1574,10 +1255,7 @@
       "split": "validation",
       "template_id": "v3:accounting:strobe_lease",
       "family": "strobe_lease",
-      "tags": [
-        "long_context",
-        "validation-v3"
-      ],
+      "tags": ["long_context", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -1590,14 +1268,9 @@
       "split": "validation",
       "template_id": "v3:accounting:tip_out",
       "family": "tip_out",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "people"
-      ]
+      "acceptable_departments": ["people"]
     },
     {
       "id": "v3_acc_015",
@@ -1609,14 +1282,9 @@
       "split": "validation",
       "template_id": "v3:accounting:onramp_contribution",
       "family": "onramp_contribution",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "direct_answer"
-      ]
+      "acceptable_behaviors": ["direct_answer"]
     },
     {
       "id": "v3_acc_016",
@@ -1628,14 +1296,9 @@
       "split": "validation",
       "template_id": "v3:accounting:groupon_unit",
       "family": "groupon_unit",
-      "tags": [
-        "misleading_noun",
-        "validation-v3"
-      ],
+      "tags": ["misleading_noun", "validation-v3"],
       "expected_behavior": "direct_answer",
-      "acceptable_departments": [
-        "marketing"
-      ]
+      "acceptable_departments": ["marketing"]
     },
     {
       "id": "v3_acc_017",
@@ -1647,14 +1310,9 @@
       "split": "validation",
       "template_id": "v3:accounting:readable_pl",
       "family": "readable_pl",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "draft_only"
-      ]
+      "acceptable_behaviors": ["draft_only"]
     },
     {
       "id": "v3_acc_018",
@@ -1666,14 +1324,9 @@
       "split": "validation",
       "template_id": "v3:accounting:van_cooler_deduct",
       "family": "van_cooler_deduct",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "direct_answer",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_acc_019",
@@ -1685,17 +1338,10 @@
       "split": "validation",
       "template_id": "v3:accounting:event_ar",
       "family": "event_ar",
-      "tags": [
-        "short_command",
-        "validation-v3"
-      ],
+      "tags": ["short_command", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "invoicing"
-      ],
-      "acceptable_behaviors": [
-        "direct_answer"
-      ]
+      "acceptable_departments": ["invoicing"],
+      "acceptable_behaviors": ["direct_answer"]
     },
     {
       "id": "v3_acc_020",
@@ -1707,10 +1353,7 @@
       "split": "validation",
       "template_id": "v3:accounting:hoa_drive",
       "family": "hoa_drive",
-      "tags": [
-        "long_context",
-        "validation-v3"
-      ],
+      "tags": ["long_context", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -1723,10 +1366,7 @@
       "split": "validation",
       "template_id": "v3:accounting:gift_card_liability",
       "family": "gift_card_liability",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -1739,14 +1379,9 @@
       "split": "validation",
       "template_id": "v3:accounting:prepay_math",
       "family": "prepay_math",
-      "tags": [
-        "zero_evidence",
-        "validation-v3"
-      ],
+      "tags": ["zero_evidence", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "sales"
-      ]
+      "acceptable_departments": ["sales"]
     },
     {
       "id": "v3_acc_023",
@@ -1758,14 +1393,9 @@
       "split": "validation",
       "template_id": "v3:accounting:screening_hours",
       "family": "screening_hours",
-      "tags": [
-        "misleading_noun",
-        "validation-v3"
-      ],
+      "tags": ["misleading_noun", "validation-v3"],
       "expected_behavior": "direct_answer",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_acc_024",
@@ -1777,10 +1407,7 @@
       "split": "validation",
       "template_id": "v3:accounting:tplo_cogs",
       "family": "tplo_cogs",
-      "tags": [
-        "long_context",
-        "validation-v3"
-      ],
+      "tags": ["long_context", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -1793,14 +1420,9 @@
       "split": "validation",
       "template_id": "v3:accounting:unused_hours",
       "family": "unused_hours",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "direct_answer",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_acc_026",
@@ -1812,14 +1434,9 @@
       "split": "validation",
       "template_id": "v3:accounting:exempt_certs",
       "family": "exempt_certs",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "admin_records"
-      ]
+      "acceptable_departments": ["admin_records"]
     },
     {
       "id": "v3_cs_001",
@@ -1831,10 +1448,7 @@
       "split": "validation",
       "template_id": "v3:customer_service:deposit_anger",
       "family": "deposit_anger",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only",
       "pair_id": "v3_pair_cancel_policy"
     },
@@ -1848,10 +1462,7 @@
       "split": "validation",
       "template_id": "v3:customer_service:cake_dm",
       "family": "cake_dm",
-      "tags": [
-        "subject_intent_mismatch",
-        "validation-v3"
-      ],
+      "tags": ["subject_intent_mismatch", "validation-v3"],
       "expected_behavior": "draft_only",
       "pair_id": "v3_pair_yelp_dm"
     },
@@ -1865,10 +1476,7 @@
       "split": "validation",
       "template_id": "v3:customer_service:charge_walkthrough",
       "family": "charge_walkthrough",
-      "tags": [
-        "misleading_noun",
-        "validation-v3"
-      ],
+      "tags": ["misleading_noun", "validation-v3"],
       "expected_behavior": "draft_only",
       "pair_id": "v3_pair_chargeback"
     },
@@ -1882,10 +1490,7 @@
       "split": "validation",
       "template_id": "v3:customer_service:incision_worry",
       "family": "incision_worry",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -1898,14 +1503,9 @@
       "split": "validation",
       "template_id": "v3:customer_service:optical_wait",
       "family": "optical_wait",
-      "tags": [
-        "low_evidence",
-        "validation-v3"
-      ],
+      "tags": ["low_evidence", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "draft_only"
-      ]
+      "acceptable_behaviors": ["draft_only"]
     },
     {
       "id": "v3_cs_006",
@@ -1917,14 +1517,9 @@
       "split": "validation",
       "template_id": "v3:customer_service:apoquel",
       "family": "apoquel",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_behaviors": [
-        "direct_answer"
-      ]
+      "acceptable_behaviors": ["direct_answer"]
     },
     {
       "id": "v3_cs_007",
@@ -1936,10 +1531,7 @@
       "split": "validation",
       "template_id": "v3:customer_service:rushed_hour",
       "family": "rushed_hour",
-      "tags": [
-        "long_context",
-        "validation-v3"
-      ],
+      "tags": ["long_context", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -1952,14 +1544,9 @@
       "split": "validation",
       "template_id": "v3:customer_service:bait_apology",
       "family": "bait_apology",
-      "tags": [
-        "short_command",
-        "validation-v3"
-      ],
+      "tags": ["short_command", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_cs_009",
@@ -1971,10 +1558,7 @@
       "split": "validation",
       "template_id": "v3:customer_service:missing_sibling",
       "family": "missing_sibling",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -1987,14 +1571,9 @@
       "split": "validation",
       "template_id": "v3:customer_service:elevator_scuff",
       "family": "elevator_scuff",
-      "tags": [
-        "typo",
-        "validation-v3"
-      ],
+      "tags": ["typo", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "draft_only"
-      ]
+      "acceptable_behaviors": ["draft_only"]
     },
     {
       "id": "v3_cs_011",
@@ -2006,14 +1585,9 @@
       "split": "validation",
       "template_id": "v3:customer_service:benadryl",
       "family": "benadryl",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "draft_only"
-      ]
+      "acceptable_behaviors": ["draft_only"]
     },
     {
       "id": "v3_cs_012",
@@ -2025,10 +1599,7 @@
       "split": "validation",
       "template_id": "v3:customer_service:wrong_funeral",
       "family": "wrong_funeral",
-      "tags": [
-        "ambiguous",
-        "validation-v3"
-      ],
+      "tags": ["ambiguous", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -2041,14 +1612,9 @@
       "split": "validation",
       "template_id": "v3:customer_service:over_pluck",
       "family": "over_pluck",
-      "tags": [
-        "zero_evidence",
-        "validation-v3"
-      ],
+      "tags": ["zero_evidence", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "draft_only"
-      ]
+      "acceptable_behaviors": ["draft_only"]
     },
     {
       "id": "v3_cs_014",
@@ -2060,14 +1626,9 @@
       "split": "validation",
       "template_id": "v3:customer_service:afterhours_fee",
       "family": "afterhours_fee",
-      "tags": [
-        "misleading_noun",
-        "validation-v3"
-      ],
+      "tags": ["misleading_noun", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "invoicing"
-      ]
+      "acceptable_departments": ["invoicing"]
     },
     {
       "id": "v3_cs_015",
@@ -2079,14 +1640,9 @@
       "split": "validation",
       "template_id": "v3:customer_service:progress_recap",
       "family": "progress_recap",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "sales"
-      ]
+      "acceptable_departments": ["sales"]
     },
     {
       "id": "v3_cs_016",
@@ -2098,14 +1654,9 @@
       "split": "validation",
       "template_id": "v3:customer_service:bodycomp",
       "family": "bodycomp",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_behaviors": [
-        "direct_answer"
-      ]
+      "acceptable_behaviors": ["direct_answer"]
     },
     {
       "id": "v3_cs_017",
@@ -2117,14 +1668,9 @@
       "split": "validation",
       "template_id": "v3:customer_service:atrium_promise",
       "family": "atrium_promise",
-      "tags": [
-        "long_context",
-        "validation-v3"
-      ],
+      "tags": ["long_context", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "operations"
-      ]
+      "acceptable_departments": ["operations"]
     },
     {
       "id": "v3_cs_018",
@@ -2136,14 +1682,9 @@
       "split": "validation",
       "template_id": "v3:customer_service:nut_free",
       "family": "nut_free",
-      "tags": [
-        "low_evidence",
-        "validation-v3"
-      ],
+      "tags": ["low_evidence", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "draft_only"
-      ]
+      "acceptable_behaviors": ["draft_only"]
     },
     {
       "id": "v3_cs_019",
@@ -2155,14 +1696,9 @@
       "split": "validation",
       "template_id": "v3:customer_service:cooler_sorry",
       "family": "cooler_sorry",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "admin_records"
-      ]
+      "acceptable_departments": ["admin_records"]
     },
     {
       "id": "v3_cs_020",
@@ -2174,10 +1710,7 @@
       "split": "validation",
       "template_id": "v3:customer_service:pickup_tears",
       "family": "pickup_tears",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -2190,14 +1723,9 @@
       "split": "validation",
       "template_id": "v3:customer_service:remake_no_refund",
       "family": "remake_no_refund",
-      "tags": [
-        "multi_intent",
-        "validation-v3"
-      ],
+      "tags": ["multi_intent", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "invoicing"
-      ]
+      "acceptable_departments": ["invoicing"]
     },
     {
       "id": "v3_cs_022",
@@ -2209,17 +1737,10 @@
       "split": "validation",
       "template_id": "v3:customer_service:lobby_smell",
       "family": "lobby_smell",
-      "tags": [
-        "typo",
-        "validation-v3"
-      ],
+      "tags": ["typo", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "operations"
-      ],
-      "acceptable_behaviors": [
-        "direct_answer"
-      ]
+      "acceptable_departments": ["operations"],
+      "acceptable_behaviors": ["direct_answer"]
     },
     {
       "id": "v3_cs_023",
@@ -2231,10 +1752,7 @@
       "split": "validation",
       "template_id": "v3:customer_service:unsigned_chain",
       "family": "unsigned_chain",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -2247,14 +1765,9 @@
       "split": "validation",
       "template_id": "v3:customer_service:nauseous_lenses",
       "family": "nauseous_lenses",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "operations"
-      ]
+      "acceptable_departments": ["operations"]
     },
     {
       "id": "v3_cs_025",
@@ -2266,10 +1779,7 @@
       "split": "validation",
       "template_id": "v3:customer_service:late_bouquet",
       "family": "late_bouquet",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -2282,10 +1792,7 @@
       "split": "validation",
       "template_id": "v3:customer_service:pad_protection",
       "family": "pad_protection",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -2298,14 +1805,9 @@
       "split": "validation",
       "template_id": "v3:marketing:yelp_cake",
       "family": "yelp_cake",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "customer_service"
-      ],
+      "acceptable_departments": ["customer_service"],
       "pair_id": "v3_pair_yelp_dm"
     },
     {
@@ -2318,10 +1820,7 @@
       "split": "validation",
       "template_id": "v3:marketing:groupon_tasting",
       "family": "groupon_tasting",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only",
       "pair_id": "v3_pair_indeed_groupon"
     },
@@ -2335,10 +1834,7 @@
       "split": "validation",
       "template_id": "v3:marketing:august_blast",
       "family": "august_blast",
-      "tags": [
-        "subject_intent_mismatch",
-        "validation-v3"
-      ],
+      "tags": ["subject_intent_mismatch", "validation-v3"],
       "expected_behavior": "draft_only",
       "pair_id": "v3_pair_waitlist_blast"
     },
@@ -2352,10 +1848,7 @@
       "split": "validation",
       "template_id": "v3:marketing:engagement_post",
       "family": "engagement_post",
-      "tags": [
-        "subject_intent_mismatch",
-        "validation-v3"
-      ],
+      "tags": ["subject_intent_mismatch", "validation-v3"],
       "expected_behavior": "draft_only",
       "pair_id": "v3_pair_photo_consent"
     },
@@ -2369,10 +1862,7 @@
       "split": "validation",
       "template_id": "v3:marketing:deshed_review_ask",
       "family": "deshed_review_ask",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -2385,10 +1875,7 @@
       "split": "validation",
       "template_id": "v3:marketing:skirt_nextdoor",
       "family": "skirt_nextdoor",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -2401,14 +1888,9 @@
       "split": "validation",
       "template_id": "v3:marketing:sat_flyer",
       "family": "sat_flyer",
-      "tags": [
-        "short_command",
-        "validation-v3"
-      ],
+      "tags": ["short_command", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "draft_only"
-      ]
+      "acceptable_behaviors": ["draft_only"]
     },
     {
       "id": "v3_mkt_008",
@@ -2420,14 +1902,9 @@
       "split": "validation",
       "template_id": "v3:marketing:sunrise_coupon",
       "family": "sunrise_coupon",
-      "tags": [
-        "long_context",
-        "validation-v3"
-      ],
+      "tags": ["long_context", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_mkt_009",
@@ -2439,10 +1916,7 @@
       "split": "validation",
       "template_id": "v3:marketing:window_newborn",
       "family": "window_newborn",
-      "tags": [
-        "zero_evidence",
-        "validation-v3"
-      ],
+      "tags": ["zero_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -2455,14 +1929,9 @@
       "split": "validation",
       "template_id": "v3:marketing:review_trend",
       "family": "review_trend",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "direct_answer",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_mkt_011",
@@ -2474,14 +1943,9 @@
       "split": "validation",
       "template_id": "v3:marketing:closure_notice",
       "family": "closure_notice",
-      "tags": [
-        "subject_intent_mismatch",
-        "validation-v3"
-      ],
+      "tags": ["subject_intent_mismatch", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "operations"
-      ]
+      "acceptable_departments": ["operations"]
     },
     {
       "id": "v3_mkt_012",
@@ -2493,14 +1957,9 @@
       "split": "validation",
       "template_id": "v3:marketing:optical_newsletter",
       "family": "optical_newsletter",
-      "tags": [
-        "typo",
-        "validation-v3"
-      ],
+      "tags": ["typo", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_mkt_013",
@@ -2512,10 +1971,7 @@
       "split": "validation",
       "template_id": "v3:marketing:cooler_door",
       "family": "cooler_door",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -2528,10 +1984,7 @@
       "split": "validation",
       "template_id": "v3:marketing:blythe_thanks",
       "family": "blythe_thanks",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -2544,17 +1997,10 @@
       "split": "validation",
       "template_id": "v3:marketing:nextdoor_attr",
       "family": "nextdoor_attr",
-      "tags": [
-        "misleading_noun",
-        "validation-v3"
-      ],
+      "tags": ["misleading_noun", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "accounting"
-      ],
-      "acceptable_behaviors": [
-        "direct_answer"
-      ]
+      "acceptable_departments": ["accounting"],
+      "acceptable_behaviors": ["direct_answer"]
     },
     {
       "id": "v3_mkt_016",
@@ -2566,10 +2012,7 @@
       "split": "validation",
       "template_id": "v3:marketing:funeral_home_flyer",
       "family": "funeral_home_flyer",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -2582,10 +2025,7 @@
       "split": "validation",
       "template_id": "v3:marketing:parents_slack",
       "family": "parents_slack",
-      "tags": [
-        "typo",
-        "validation-v3"
-      ],
+      "tags": ["typo", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -2598,14 +2038,9 @@
       "split": "validation",
       "template_id": "v3:marketing:newborn_reviews_ar",
       "family": "newborn_reviews_ar",
-      "tags": [
-        "multi_intent",
-        "validation-v3"
-      ],
+      "tags": ["multi_intent", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "invoicing"
-      ]
+      "acceptable_departments": ["invoicing"]
     },
     {
       "id": "v3_mkt_019",
@@ -2617,14 +2052,9 @@
       "split": "validation",
       "template_id": "v3:marketing:unheard_rep",
       "family": "unheard_rep",
-      "tags": [
-        "zero_evidence",
-        "validation-v3"
-      ],
+      "tags": ["zero_evidence", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "direct_answer"
-      ]
+      "acceptable_behaviors": ["direct_answer"]
     },
     {
       "id": "v3_mkt_020",
@@ -2636,10 +2066,7 @@
       "split": "validation",
       "template_id": "v3:marketing:groom_referral",
       "family": "groom_referral",
-      "tags": [
-        "ambiguous",
-        "validation-v3"
-      ],
+      "tags": ["ambiguous", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -2652,14 +2079,9 @@
       "split": "validation",
       "template_id": "v3:marketing:shop_day_story",
       "family": "shop_day_story",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "operations"
-      ]
+      "acceptable_departments": ["operations"]
     },
     {
       "id": "v3_mkt_022",
@@ -2671,10 +2093,7 @@
       "split": "validation",
       "template_id": "v3:marketing:plating_stories",
       "family": "plating_stories",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -2687,14 +2106,9 @@
       "split": "validation",
       "template_id": "v3:marketing:myopia_seo",
       "family": "myopia_seo",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_behaviors": [
-        "direct_answer"
-      ]
+      "acceptable_behaviors": ["direct_answer"]
     },
     {
       "id": "v3_mkt_024",
@@ -2706,14 +2120,9 @@
       "split": "validation",
       "template_id": "v3:marketing:wall_photos",
       "family": "wall_photos",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "admin_records"
-      ]
+      "acceptable_departments": ["admin_records"]
     },
     {
       "id": "v3_mkt_025",
@@ -2725,14 +2134,9 @@
       "split": "validation",
       "template_id": "v3:marketing:lockout_promo",
       "family": "lockout_promo",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "draft_only"
-      ]
+      "acceptable_behaviors": ["draft_only"]
     },
     {
       "id": "v3_mkt_026",
@@ -2744,14 +2148,9 @@
       "split": "validation",
       "template_id": "v3:marketing:smell_review",
       "family": "smell_review",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "customer_service"
-      ]
+      "acceptable_departments": ["customer_service"]
     },
     {
       "id": "v3_adm_001",
@@ -2763,14 +2162,9 @@
       "split": "validation",
       "template_id": "v3:admin_records:photo_release_file",
       "family": "photo_release_file",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "action"
-      ],
+      "acceptable_behaviors": ["action"],
       "pair_id": "v3_pair_photo_consent"
     },
     {
@@ -2783,10 +2177,7 @@
       "split": "validation",
       "template_id": "v3:admin_records:cancel_policy_doc",
       "family": "cancel_policy_doc",
-      "tags": [
-        "misleading_noun",
-        "validation-v3"
-      ],
+      "tags": ["misleading_noun", "validation-v3"],
       "expected_behavior": "draft_only",
       "pair_id": "v3_pair_cancel_policy"
     },
@@ -2800,14 +2191,9 @@
       "split": "validation",
       "template_id": "v3:admin_records:crate_rest_note",
       "family": "crate_rest_note",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "action"
-      ]
+      "acceptable_behaviors": ["action"]
     },
     {
       "id": "v3_adm_004",
@@ -2819,10 +2205,7 @@
       "split": "validation",
       "template_id": "v3:admin_records:wrong_felix",
       "family": "wrong_felix",
-      "tags": [
-        "ambiguous",
-        "validation-v3"
-      ],
+      "tags": ["ambiguous", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -2835,14 +2218,9 @@
       "split": "validation",
       "template_id": "v3:admin_records:score_email",
       "family": "score_email",
-      "tags": [
-        "long_context",
-        "validation-v3"
-      ],
+      "tags": ["long_context", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "action"
-      ]
+      "acceptable_behaviors": ["action"]
     },
     {
       "id": "v3_adm_006",
@@ -2854,10 +2232,7 @@
       "split": "validation",
       "template_id": "v3:admin_records:allergen_addendum",
       "family": "allergen_addendum",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -2870,14 +2245,9 @@
       "split": "validation",
       "template_id": "v3:admin_records:lockout_auth_where",
       "family": "lockout_auth_where",
-      "tags": [
-        "low_evidence",
-        "validation-v3"
-      ],
+      "tags": ["low_evidence", "validation-v3"],
       "expected_behavior": "direct_answer",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_adm_008",
@@ -2889,10 +2259,7 @@
       "split": "validation",
       "template_id": "v3:admin_records:late_pickup_fee_doc",
       "family": "late_pickup_fee_doc",
-      "tags": [
-        "misleading_noun",
-        "validation-v3"
-      ],
+      "tags": ["misleading_noun", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -2905,17 +2272,10 @@
       "split": "validation",
       "template_id": "v3:admin_records:dog_door_note",
       "family": "dog_door_note",
-      "tags": [
-        "typo",
-        "validation-v3"
-      ],
+      "tags": ["typo", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "operations"
-      ],
-      "acceptable_behaviors": [
-        "action"
-      ]
+      "acceptable_departments": ["operations"],
+      "acceptable_behaviors": ["action"]
     },
     {
       "id": "v3_adm_010",
@@ -2927,10 +2287,7 @@
       "split": "validation",
       "template_id": "v3:admin_records:two_willas",
       "family": "two_willas",
-      "tags": [
-        "ambiguous",
-        "validation-v3"
-      ],
+      "tags": ["ambiguous", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -2943,14 +2300,9 @@
       "split": "validation",
       "template_id": "v3:admin_records:crate_handout",
       "family": "crate_handout",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "customer_service"
-      ]
+      "acceptable_departments": ["customer_service"]
     },
     {
       "id": "v3_adm_012",
@@ -2962,14 +2314,9 @@
       "split": "validation",
       "template_id": "v3:admin_records:no_almond",
       "family": "no_almond",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "action"
-      ]
+      "acceptable_behaviors": ["action"]
     },
     {
       "id": "v3_adm_013",
@@ -2981,10 +2328,7 @@
       "split": "validation",
       "template_id": "v3:admin_records:roster_dupes",
       "family": "roster_dupes",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -2997,14 +2341,9 @@
       "split": "validation",
       "template_id": "v3:admin_records:missing_ice",
       "family": "missing_ice",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "direct_answer",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_adm_015",
@@ -3016,15 +2355,9 @@
       "split": "validation",
       "template_id": "v3:admin_records:plating_closeout",
       "family": "plating_closeout",
-      "tags": [
-        "zero_evidence",
-        "validation-v3"
-      ],
+      "tags": ["zero_evidence", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "operations",
-        "people"
-      ]
+      "acceptable_departments": ["operations", "people"]
     },
     {
       "id": "v3_adm_016",
@@ -3036,14 +2369,9 @@
       "split": "validation",
       "template_id": "v3:admin_records:corp_flag",
       "family": "corp_flag",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "action"
-      ]
+      "acceptable_behaviors": ["action"]
     },
     {
       "id": "v3_adm_017",
@@ -3055,10 +2383,7 @@
       "split": "validation",
       "template_id": "v3:admin_records:termite_photos",
       "family": "termite_photos",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -3071,14 +2396,9 @@
       "split": "validation",
       "template_id": "v3:admin_records:nausea_note_only",
       "family": "nausea_note_only",
-      "tags": [
-        "multi_intent",
-        "validation-v3"
-      ],
+      "tags": ["multi_intent", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "action"
-      ]
+      "acceptable_behaviors": ["action"]
     },
     {
       "id": "v3_adm_019",
@@ -3090,17 +2410,10 @@
       "split": "validation",
       "template_id": "v3:admin_records:scuff_policy",
       "family": "scuff_policy",
-      "tags": [
-        "zero_evidence",
-        "validation-v3"
-      ],
+      "tags": ["zero_evidence", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "operations"
-      ],
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_departments": ["operations"],
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_adm_020",
@@ -3112,14 +2425,9 @@
       "split": "validation",
       "template_id": "v3:admin_records:insurance_card",
       "family": "insurance_card",
-      "tags": [
-        "subject_intent_mismatch",
-        "validation-v3"
-      ],
+      "tags": ["subject_intent_mismatch", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "operations"
-      ]
+      "acceptable_departments": ["operations"]
     },
     {
       "id": "v3_adm_021",
@@ -3131,14 +2439,9 @@
       "split": "validation",
       "template_id": "v3:admin_records:lobby_contract",
       "family": "lobby_contract",
-      "tags": [
-        "short_command",
-        "validation-v3"
-      ],
+      "tags": ["short_command", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_adm_022",
@@ -3150,10 +2453,7 @@
       "split": "validation",
       "template_id": "v3:admin_records:missing_number",
       "family": "missing_number",
-      "tags": [
-        "ambiguous",
-        "validation-v3"
-      ],
+      "tags": ["ambiguous", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -3166,10 +2466,7 @@
       "split": "validation",
       "template_id": "v3:admin_records:save_addendum",
       "family": "save_addendum",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -3182,14 +2479,9 @@
       "split": "validation",
       "template_id": "v3:admin_records:muzzle_note",
       "family": "muzzle_note",
-      "tags": [
-        "short_command",
-        "validation-v3"
-      ],
+      "tags": ["short_command", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "action"
-      ]
+      "acceptable_behaviors": ["action"]
     },
     {
       "id": "v3_adm_025",
@@ -3201,10 +2493,7 @@
       "split": "validation",
       "template_id": "v3:admin_records:dropoff_form",
       "family": "dropoff_form",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "draft_only",
       "pair_id": "v3_pair_ceu_form"
     },
@@ -3218,14 +2507,9 @@
       "split": "validation",
       "template_id": "v3:admin_records:cert_gap",
       "family": "cert_gap",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "accounting"
-      ]
+      "acceptable_departments": ["accounting"]
     },
     {
       "id": "v3_ppl_001",
@@ -3237,10 +2521,7 @@
       "split": "validation",
       "template_id": "v3:people:indeed_baker",
       "family": "indeed_baker",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only",
       "pair_id": "v3_pair_indeed_groupon"
     },
@@ -3254,10 +2535,7 @@
       "split": "validation",
       "template_id": "v3:people:sitter_deposit",
       "family": "sitter_deposit",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "clarification",
       "pair_id": "v3_pair_941"
     },
@@ -3271,10 +2549,7 @@
       "split": "validation",
       "template_id": "v3:people:ceu_tracker",
       "family": "ceu_tracker",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only",
       "pair_id": "v3_pair_ceu_form"
     },
@@ -3288,14 +2563,9 @@
       "split": "validation",
       "template_id": "v3:people:locksmith_qs",
       "family": "locksmith_qs",
-      "tags": [
-        "short_command",
-        "validation-v3"
-      ],
+      "tags": ["short_command", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_ppl_005",
@@ -3307,14 +2577,9 @@
       "split": "validation",
       "template_id": "v3:people:late_open",
       "family": "late_open",
-      "tags": [
-        "long_context",
-        "validation-v3"
-      ],
+      "tags": ["long_context", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_ppl_006",
@@ -3326,14 +2591,9 @@
       "split": "validation",
       "template_id": "v3:people:driver_shadow",
       "family": "driver_shadow",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "admin_records"
-      ]
+      "acceptable_departments": ["admin_records"]
     },
     {
       "id": "v3_ppl_007",
@@ -3345,14 +2605,9 @@
       "split": "validation",
       "template_id": "v3:people:plater_short",
       "family": "plater_short",
-      "tags": [
-        "zero_evidence",
-        "validation-v3"
-      ],
+      "tags": ["zero_evidence", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "operations"
-      ]
+      "acceptable_departments": ["operations"]
     },
     {
       "id": "v3_ppl_008",
@@ -3364,14 +2619,9 @@
       "split": "validation",
       "template_id": "v3:people:tutor_paperwork",
       "family": "tutor_paperwork",
-      "tags": [
-        "typo",
-        "validation-v3"
-      ],
+      "tags": ["typo", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "direct_answer"
-      ]
+      "acceptable_behaviors": ["direct_answer"]
     },
     {
       "id": "v3_ppl_009",
@@ -3383,10 +2633,7 @@
       "split": "validation",
       "template_id": "v3:people:late_writeup",
       "family": "late_writeup",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -3399,17 +2646,10 @@
       "split": "validation",
       "template_id": "v3:people:sitter_rate",
       "family": "sitter_rate",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "direct_answer",
-      "acceptable_departments": [
-        "accounting"
-      ],
-      "acceptable_behaviors": [
-        "clarification"
-      ]
+      "acceptable_departments": ["accounting"],
+      "acceptable_behaviors": ["clarification"]
     },
     {
       "id": "v3_ppl_011",
@@ -3421,10 +2661,7 @@
       "split": "validation",
       "template_id": "v3:people:assistant_channels",
       "family": "assistant_channels",
-      "tags": [
-        "misleading_noun",
-        "validation-v3"
-      ],
+      "tags": ["misleading_noun", "validation-v3"],
       "expected_behavior": "draft_only"
     },
     {
@@ -3437,14 +2674,9 @@
       "split": "validation",
       "template_id": "v3:people:holiday_rota",
       "family": "holiday_rota",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "operations"
-      ]
+      "acceptable_departments": ["operations"]
     },
     {
       "id": "v3_ppl_013",
@@ -3456,14 +2688,9 @@
       "split": "validation",
       "template_id": "v3:people:pad_briefing",
       "family": "pad_briefing",
-      "tags": [
-        "zero_evidence",
-        "validation-v3"
-      ],
+      "tags": ["zero_evidence", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "admin_records"
-      ]
+      "acceptable_departments": ["admin_records"]
     },
     {
       "id": "v3_ppl_014",
@@ -3475,14 +2702,9 @@
       "split": "validation",
       "template_id": "v3:people:solo_rekey",
       "family": "solo_rekey",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "direct_answer"
-      ]
+      "acceptable_behaviors": ["direct_answer"]
     },
     {
       "id": "v3_ppl_015",
@@ -3494,14 +2716,9 @@
       "split": "validation",
       "template_id": "v3:people:optician_offer",
       "family": "optician_offer",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "admin_records"
-      ]
+      "acceptable_departments": ["admin_records"]
     },
     {
       "id": "v3_ppl_016",
@@ -3513,14 +2730,9 @@
       "split": "validation",
       "template_id": "v3:people:underproof",
       "family": "underproof",
-      "tags": [
-        "long_context",
-        "validation-v3"
-      ],
+      "tags": ["long_context", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_behaviors": [
-        "draft_only"
-      ]
+      "acceptable_behaviors": ["draft_only"]
     },
     {
       "id": "v3_ppl_017",
@@ -3532,17 +2744,10 @@
       "split": "validation",
       "template_id": "v3:people:floor_rota",
       "family": "floor_rota",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "operations"
-      ],
-      "acceptable_behaviors": [
-        "direct_answer"
-      ]
+      "acceptable_departments": ["operations"],
+      "acceptable_behaviors": ["direct_answer"]
     },
     {
       "id": "v3_ppl_018",
@@ -3554,10 +2759,7 @@
       "split": "validation",
       "template_id": "v3:people:kasper_pto",
       "family": "kasper_pto",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -3570,14 +2772,9 @@
       "split": "validation",
       "template_id": "v3:people:licensing_handbook",
       "family": "licensing_handbook",
-      "tags": [
-        "short_command",
-        "validation-v3"
-      ],
+      "tags": ["short_command", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "admin_records"
-      ]
+      "acceptable_departments": ["admin_records"]
     },
     {
       "id": "v3_ppl_020",
@@ -3589,17 +2786,10 @@
       "split": "validation",
       "template_id": "v3:people:tech_retention",
       "family": "tech_retention",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "accounting"
-      ],
-      "acceptable_behaviors": [
-        "direct_answer"
-      ]
+      "acceptable_departments": ["accounting"],
+      "acceptable_behaviors": ["direct_answer"]
     },
     {
       "id": "v3_ppl_021",
@@ -3611,10 +2801,7 @@
       "split": "validation",
       "template_id": "v3:people:driver_screen",
       "family": "driver_screen",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "clarification"
     },
     {
@@ -3627,14 +2814,9 @@
       "split": "validation",
       "template_id": "v3:people:saturday_lockout",
       "family": "saturday_lockout",
-      "tags": [
-        "zero_evidence",
-        "validation-v3"
-      ],
+      "tags": ["zero_evidence", "validation-v3"],
       "expected_behavior": "clarification",
-      "acceptable_departments": [
-        "operations"
-      ]
+      "acceptable_departments": ["operations"]
     },
     {
       "id": "v3_ppl_023",
@@ -3646,14 +2828,9 @@
       "split": "validation",
       "template_id": "v3:people:sitter_bg",
       "family": "sitter_bg",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "admin_records"
-      ]
+      "acceptable_departments": ["admin_records"]
     },
     {
       "id": "v3_ppl_024",
@@ -3665,14 +2842,9 @@
       "split": "validation",
       "template_id": "v3:people:complaint_coach",
       "family": "complaint_coach",
-      "tags": [
-        "novel_phrasing",
-        "validation-v3"
-      ],
+      "tags": ["novel_phrasing", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "customer_service"
-      ]
+      "acceptable_departments": ["customer_service"]
     },
     {
       "id": "v3_ppl_025",
@@ -3684,14 +2856,9 @@
       "split": "validation",
       "template_id": "v3:people:tip_pool_rules",
       "family": "tip_pool_rules",
-      "tags": [
-        "department_boundary",
-        "validation-v3"
-      ],
+      "tags": ["department_boundary", "validation-v3"],
       "expected_behavior": "draft_only",
-      "acceptable_departments": [
-        "accounting"
-      ]
+      "acceptable_departments": ["accounting"]
     },
     {
       "id": "v3_ppl_026",
@@ -3703,10 +2870,7 @@
       "split": "validation",
       "template_id": "v3:people:mover_safety",
       "family": "mover_safety",
-      "tags": [
-        "high_evidence",
-        "validation-v3"
-      ],
+      "tags": ["high_evidence", "validation-v3"],
       "expected_behavior": "draft_only"
     }
   ],

@@ -22,7 +22,7 @@ export interface RoutingDecisionCreate {
   runId?: string;
   ask: string;
   /** `none` means the deterministic orchestrator decided before routing. */
-  classifier: "haiku" | "heuristic" | "none";
+  classifier: "haiku" | "heuristic" | "ml" | "none";
   /** "routed" | "ambiguous" | "wishlist_fallback" | "owner_override" | "direct_answer" | "declined" */
   decision: string;
   chosenAgent: string;
