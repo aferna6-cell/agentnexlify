@@ -55,6 +55,8 @@ export interface DepartmentActionRequest {
   input: Record<string, unknown>;
   /** Turns a successful result into the line the owner reads. */
   describe?: (result: unknown) => string;
+  /** Explains the exact proposed effect while it waits for owner approval. */
+  describePending?: (input: Record<string, unknown>) => string;
 }
 
 /**
