@@ -1,9 +1,9 @@
 # Milestone 8 — Calendar + CRM Business Actions
 
-**Status (2026-08-30 finalization):** Offline slice **merged** on `main` via
-PR #709. Migration **198 APPLIED** on production Supabase (#708). Production
-data-plane wiring lands on `cursor/milestone8-finalize-a2c9`. Flags remain
-**default OFF** until controlled live proof.
+**Status (2026-08-30 live-proof):** Offline + data-plane **merged** (#709/#710).
+Migration **198 APPLIED**. Live Calendar/CRM/Gmail staging smokes **blocked** on
+OAuth/service credentials; RAG holdout soak pass with Railway flag still OFF.
+Flags remain **default OFF**. See `audits/artifacts/m8-live-proof-report-2026-08-30.md`.
 
 | State | Meaning |
 |-------|---------|
@@ -11,7 +11,7 @@ data-plane wiring lands on `cursor/milestone8-finalize-a2c9`. Flags remain
 | **Live-proven** | Controlled staging smoke with real Google / leads completed |
 | **Enabled** | Env flag `=1` on that environment |
 
-Today: **merged** yes · **live-proven** no (auth-gated) · **enabled** nowhere by default.
+Today: **merged** yes · **live-proven** no (OAuth/service-key blocked) · **enabled** nowhere by default.
 
 ## Architecture (locked)
 
@@ -95,13 +95,28 @@ cd backend && python -m pytest tests/test_os_calendar_crm.py tests/test_os_tool_
 
 ## Live smoke (owner-gated)
 
-Blocked until explicit environment authorization:
+Use the real runner (not a guard-only stub):
 
-1. Staging tenant + test calendar
-2. Availability from provider → internal create once → GET verify → cancel verify
-3. Invite create parks → nothing external before approve → one event after approve → redrive no-dup
-4. Wrong-tenant event ID fails
-5. CRM: tenant search, ambiguous clarify, partial update + read-back, duplicate create blocked, stage validation, cross-tenant ID refused, audit complete
+```bash
+export M8_SMOKE_AUTHORIZED=1
+export M8_SMOKE_CLIENT_ID=<smoke-tenant-uuid>
+export M8_SMOKE_ENV=staging
+export M8_SMOKE_CONFIRM_ENV=staging
+export M8_SMOKE_SUITES=rag,calendar,crm,gmail
+# Also: SUPABASE_URL + SUPABASE_SERVICE_KEY
+# Calendar needs google_calendar OAuth on that tenant
+# Gmail needs gmail connector + SEND_EMAIL_ENABLED=1 + M8_SMOKE_ALLOW_EXTERNAL_SEND=1
+python3 scripts/m8_controlled_smoke.py   # delegates to scripts/m8_live_smoke.py
+```
+
+Exit codes: `2` auth · `3` credentials/provider missing · `4` assertion fail · `0` pass.
+
+Evidence: `audits/artifacts/m8-live-smoke-*.json`.
+
+**2026-08-30 cloud-agent attempt:** RAG process soak passed; Calendar/CRM Action
+Executor/Gmail blocked (no service key in agent env; zero Google/Gmail
+integrations; empty `tenant_kb_chunks`). Report:
+`audits/artifacts/m8-live-proof-report-2026-08-30.md`.
 
 ## Out of scope
 
@@ -110,11 +125,8 @@ ten CRM vendors, RL/active learning.
 
 ## Status honesty
 
-**Merged on main (#709):** offline Action Executor + policy + evals +
-flag-gated department resolvers.
+**Merged on main (#709 + #710):** offline Action Executor + production apply
+paths + L2 calendar claim gate + docs/matrix.
 
-**This finalization branch:** production apply paths (`os_calendar_crm`),
-SharedContext busy/CRM seed, L2 calendar claim-gated execute, docs/matrix.
-
-**Not yet live-proven / not enabled:** production Calendar/CRM flags, Gmail
-send, RAG beyond optional staging candidate.
+**Not live-proven / not enabled:** production Calendar/CRM/Gmail/RAG flags.
+Live smoke still needs staging secrets + OAuth on a smoke tenant.

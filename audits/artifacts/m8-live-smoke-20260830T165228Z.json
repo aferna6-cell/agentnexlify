@@ -1,0 +1,63 @@
+{
+  "environment": "staging",
+  "timestamp": "2026-08-30T16:52:27.995824+00:00",
+  "git_sha": "a36f97afe68279355f83d41c9d0ef020b2da5473",
+  "tenant_test_id": "7451537b-a694-4c31-83b0-1b804df3d757",
+  "suites": [
+    "rag",
+    "calendar",
+    "crm",
+    "gmail"
+  ],
+  "results": [
+    {
+      "suite": "rag",
+      "step": "holdout_soak",
+      "at": "2026-08-30T16:52:28.076440+00:00",
+      "result": "pass",
+      "rag_enabled_process": true,
+      "railway_flag_unchanged": true,
+      "default_min_score": 1.0,
+      "recall_at_1": 0.9017,
+      "correct_refusal_rate": 1.0,
+      "false_refusal_rate": 0.0,
+      "unsupported_claim_rate": 0.0,
+      "cross_tenant_leaks": 0,
+      "prompt_injection_failures": 0,
+      "note": "Process-local RAG_ENABLED=1 soak against independent holdout. Does not enable Railway production RAG_ENABLED. Live tenant_kb_chunks may still be empty \u2014 enable staging deploy separately."
+    },
+    {
+      "suite": "calendar",
+      "step": "credential_gate",
+      "at": "2026-08-30T16:52:28.076468+00:00",
+      "result": "blocked",
+      "blocker": "SUPABASE_URL/SUPABASE_SERVICE_KEY not available in agent environment"
+    },
+    {
+      "suite": "crm",
+      "step": "credential_gate",
+      "at": "2026-08-30T16:52:28.076475+00:00",
+      "result": "blocked",
+      "blocker": "SUPABASE_URL/SUPABASE_SERVICE_KEY not available in agent environment"
+    },
+    {
+      "suite": "gmail",
+      "step": "credential_gate",
+      "at": "2026-08-30T16:52:28.076480+00:00",
+      "result": "blocked",
+      "blocker": "SUPABASE_URL/SUPABASE_SERVICE_KEY not available in agent environment"
+    }
+  ],
+  "exit_codes": [
+    0,
+    3,
+    3,
+    3
+  ],
+  "rollback": {
+    "RAG_ENABLED": "0 / unset",
+    "CALENDAR_ACTIONS_ENABLED": "0 / unset",
+    "CRM_ACTIONS_ENABLED": "0 / unset",
+    "SEND_EMAIL_ENABLED": "0 / unset"
+  }
+}
