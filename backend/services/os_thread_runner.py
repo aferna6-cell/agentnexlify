@@ -139,31 +139,21 @@ async def process_user_turn(
             + await os_graph_memory.graph_kb_entries(db, client_id, user_content)
         )
         # RAG: approved tenant chunks only. Knowledge, not authorization.
-        from backend.services.rag_flags import rag_enabled
-        if rag_enabled():
-            from backend.services.business_retrieval import (
-                evidence_to_kb_entries,
-                retrieve_business_context,
-            )
-            from backend.services.tenant_kb_index import load_corpus_from_documents
+        # Fail-open: retrieval must never take down a turn (flag-on or table missing).
+        try:
+            from backend.services.rag_flags import rag_enabled
+            if rag_enabled():
+                from backend.services.business_retrieval import attach_rag_knowledge
+                from backend.services.tenant_kb_index import load_corpus_from_documents
 
-            corpus = load_corpus_from_documents(db, client_id)
-            retrieved = retrieve_business_context(client_id, user_content, corpus)
-            context["kb"] = evidence_to_kb_entries(retrieved) + context["kb"]
-            context["ragEvidence"] = [
-                {
-                    "chunkId": e.chunk_id,
-                    "documentId": e.document_id,
-                    "accountId": e.account_id,
-                    "title": e.title,
-                    "citationLabel": e.citation_label,
-                    "content": e.content,
-                    "score": e.score,
-                }
-                for e in retrieved.evidence
-            ]
-            if retrieved.abstain:
-                context.setdefault("ragAbstain", retrieved.reason)
+                corpus = load_corpus_from_documents(db, client_id)
+                context = attach_rag_knowledge(context, client_id, user_content, corpus)
+        except Exception:
+            logger.warning(
+                "RAG attach failed client_id=%s — continuing without retrieval",
+                client_id,
+                exc_info=True,
+            )
         if missing_connectors:
             context["integrations"] = {
                 "missing_for_this_request": [m["key"] for m in missing_connectors],

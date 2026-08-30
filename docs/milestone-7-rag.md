@@ -65,7 +65,7 @@ Chunking (phrase hit): paragraph = fixed = section = 0.917 on this corpus (autho
 
 **Lexical BM25** via `retrieve_business_context`, tenant-scoped, superseded chunks excluded. Voyage dense unmeasured in CI (no key). Hybrid/rerank may win MRR on this split — production stays BM25 until dense is measured **and** downstream faithfulness improves.
 
-RAG does not change Action Executor, approval, or `SEND_EMAIL_ENABLED`. Retrieved document text is sanitized and never granted policy authority.
+RAG does not change Action Executor, approval, or `SEND_EMAIL_ENABLED`. Retrieved document text is sanitized and never granted policy authority. Attach is **fail-open**: a retrieval exception leaves the turn intact without RAG.
 
 ## Limitations
 

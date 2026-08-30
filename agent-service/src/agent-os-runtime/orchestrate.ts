@@ -84,25 +84,30 @@ function attachRag(
   ask: string,
   context: SharedContext,
 ): SharedContext {
-  if (!ragEnabled()) return context;
-  const corpus = context.ragCorpus ?? [];
-  if (!corpus.length) return context;
-  const retrieved = retrieveBusinessContext({ accountId, ask, corpus });
-  const kbExtra = retrieved.evidence.map((e) => ({
-    topic: `rag:${e.citationLabel}`,
-    answer: e.content,
-  }));
-  return {
-    ...context,
-    kb: [...kbExtra, ...context.kb],
-    ragEvidence: retrieved.evidence.map((e) => ({
-      chunkId: e.chunkId,
-      documentId: e.documentId,
-      accountId: e.accountId,
-      title: e.title,
-      citationLabel: e.citationLabel,
-      content: e.content,
-      score: e.score,
-    })),
-  };
+  try {
+    if (!ragEnabled()) return context;
+    const corpus = context.ragCorpus ?? [];
+    if (!corpus.length) return context;
+    const retrieved = retrieveBusinessContext({ accountId, ask, corpus });
+    const kbExtra = retrieved.evidence.map((e) => ({
+      topic: `rag:${e.citationLabel}`,
+      answer: e.content,
+    }));
+    return {
+      ...context,
+      kb: [...kbExtra, ...context.kb],
+      ragEvidence: retrieved.evidence.map((e) => ({
+        chunkId: e.chunkId,
+        documentId: e.documentId,
+        accountId: e.accountId,
+        title: e.title,
+        citationLabel: e.citationLabel,
+        content: e.content,
+        score: e.score,
+      })),
+    };
+  } catch {
+    // Fail-open: retrieval must never take down a turn.
+    return context;
+  }
 }

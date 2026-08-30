@@ -6,8 +6,11 @@ every lookup takes account_id / client_id and never searches another tenant.
 Lexical BM25 always works offline. Dense (Voyage) is optional.
 """
 
+import logging
 from dataclasses import dataclass, field
-from typing import Iterable
+from typing import Any, Iterable
+
+logger = logging.getLogger(__name__)
 
 from backend.services.rag_bm25 import BM25, tokenize
 from backend.services.rag_flags import rag_enabled
@@ -156,3 +159,40 @@ def evidence_to_kb_entries(result: RetrievalResult) -> list[dict]:
 
 def should_retrieve() -> bool:
     return rag_enabled()
+
+
+def attach_rag_knowledge(
+    context: dict[str, Any],
+    account_id: str,
+    ask: str,
+    corpus: Iterable[CorpusChunk],
+) -> dict[str, Any]:
+    """Attach retrieved evidence to SharedContext. Fail-open. Knowledge only."""
+    try:
+        if not rag_enabled():
+            return context
+        retrieved = retrieve_business_context(account_id, ask, corpus)
+        next_ctx = dict(context)
+        next_ctx["kb"] = evidence_to_kb_entries(retrieved) + list(context.get("kb") or [])
+        next_ctx["ragEvidence"] = [
+            {
+                "chunkId": e.chunk_id,
+                "documentId": e.document_id,
+                "accountId": e.account_id,
+                "title": e.title,
+                "citationLabel": e.citation_label,
+                "content": e.content,
+                "score": e.score,
+            }
+            for e in retrieved.evidence
+        ]
+        if retrieved.abstain:
+            next_ctx.setdefault("ragAbstain", retrieved.reason)
+        return next_ctx
+    except Exception:
+        logger.warning(
+            "RAG attach failed account_id=%s — continuing without retrieval",
+            account_id,
+            exc_info=True,
+        )
+        return context
