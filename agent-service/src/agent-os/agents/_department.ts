@@ -346,7 +346,10 @@ export function defineDepartment(spec: DepartmentSpec): DepartmentAgent {
       // Read the ask onto its semantic axes once, and hand the same reading to
       // every decision below. Skill choice, action eligibility and clarification
       // all need it, and re-deriving it per consumer is how they drift apart.
-      const intent = readAskIntent(args.ownerAsk);
+      const intent = readAskIntent(
+        args.ownerAsk,
+        args.requestOrigin === undefined || args.requestOrigin === "owner",
+      );
 
       // Action path first: some asks are things to DO, not things to draft.
       // This runs BEFORE composition on purpose. Resolving an action from
@@ -483,7 +486,7 @@ async function runAction(
     case "pending_approval":
       notes.push(
         request.describePending
-          ? request.describePending(request.input)
+          ? request.describePending(outcome.record.input)
           : "That needs your approval before I run it, so I've queued it for review. Approve it and I'll finish the job.",
       );
       break;

@@ -27,7 +27,7 @@ import type {
   DepartmentActionRequest,
 } from "./_department.ts";
 import { authorizesAction, type AskIntent } from "./_intent.ts";
-import { describeAmbiguity, resolveCustomerAnywhere } from "./_resolve.ts";
+import { describeAmbiguity, resolveLead } from "./_resolve.ts";
 import type { SharedContext } from "../types/agent.ts";
 
 /** The business's own details, as distinct from a customer's. */
@@ -105,7 +105,7 @@ export function resolveRecordAction(args: {
     };
   }
 
-  const resolution = resolveCustomerAnywhere(context, customerName);
+  const resolution = resolveLead(context, customerName);
 
   // Two customers match. There is no safe way to choose, so do not.
   if (resolution.kind === "multiple") {

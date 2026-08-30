@@ -87,6 +87,8 @@ export interface HandleResult {
 
 export interface HandleOptions {
   onStep?: (step: StreamedTraceStep) => void;
+  /** Trust boundary for action authorization. */
+  requestOrigin?: "owner" | "inbound" | "system";
   /** Owner override: force routing to this agent (re-route from the picker). */
   forceAgentId?: string;
   /** When re-routing, mark this prior decision as not accepted. */
@@ -256,6 +258,7 @@ export async function handle(
       cls.classifier,
       cls.params,
       "owner_override",
+      opts.requestOrigin,
       opts.onStep,
     );
   }
@@ -277,6 +280,7 @@ export async function handle(
       cls.classifier,
       cls.params,
       "routed",
+      opts.requestOrigin,
       opts.onStep,
     );
     res.orchestratorNotes = [
@@ -335,6 +339,7 @@ export async function handle(
       cls.classifier,
       cls.params,
       "wishlist_fallback",
+      opts.requestOrigin,
       opts.onStep,
     );
     const nearest = registry.get(top.agentId).display_name;
@@ -392,6 +397,7 @@ export async function handle(
     cls.classifier,
     cls.params,
     "routed",
+    opts.requestOrigin,
     opts.onStep,
   );
 }
@@ -405,6 +411,7 @@ async function runAndLog(
   classifier: "haiku" | "heuristic" | "ml",
   params: Record<string, unknown>,
   decisionType: DecisionStatus | "wishlist_fallback",
+  requestOrigin?: "owner" | "inbound" | "system",
   onStep?: (step: StreamedTraceStep) => void,
 ): Promise<HandleResult> {
   const agent = registry.get(agentId);
@@ -440,6 +447,7 @@ async function runAndLog(
       ownerAsk: ask,
       runId: run.id,
       userId,
+      requestOrigin,
     });
   } catch (err) {
     await getRunStore().setRunStatus(run.id, "failed");

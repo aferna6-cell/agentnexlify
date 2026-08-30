@@ -80,6 +80,8 @@ class FakeGmailPort:
         self.mode = "ok"
 
     def find_by_rfc822_msgid(self, msgid: str) -> str | None:
+        if self.mode == "lookup_error":
+            raise RuntimeError("gmail lookup unavailable")
         return self.mailbox.get(msgid)
 
     def send(self, **kwargs) -> dict | None:
@@ -177,6 +179,21 @@ def test_sent_message_with_mismatched_readback_is_not_reported_as_success():
     assert row["status"] == "verification_failed"
     assert row["verification_state"] == "failed"
     assert "mismatch" in row["verification_detail"]
+
+
+def test_lookup_failure_never_falls_through_to_a_second_send():
+    db = _pending_db()
+    gmail = FakeGmailPort()
+    gmail.mode = "lookup_error"
+    assert svc.claim_for_execution(db, CLIENT, EXEC_ID, "owner@test") is not None
+
+    outcome = drive_claimed_gmail_send(db, CLIENT, EXEC_ID, gmail)
+
+    row = svc.get_tool_execution(db, CLIENT, EXEC_ID)
+    assert outcome["unknown"] is True
+    assert outcome["executed"] is False
+    assert gmail.sends == []
+    assert row["status"] == "running"
 
 
 # --- 1. accept + lost response / rfc822 adopt --------------------------------

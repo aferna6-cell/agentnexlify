@@ -316,6 +316,7 @@ async def _run_step(db, project: dict, step: dict, summaries: list[str]) -> None
         message,
         None,
         force_agent_id=step["department"],
+        request_origin="system",
     )
     runs = out.get("agent_runs") or []
     run = runs[0] if runs and isinstance(runs[0], dict) else None

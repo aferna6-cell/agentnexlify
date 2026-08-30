@@ -140,8 +140,10 @@ const UPDATE_RECORD_RE =
   /\b(note|notes|noting|log|logged|record|records|recording|mark|flag|save|attach|jot|update|add)\b/i;
 const RETRIEVE_RE =
   /\b(what'?s?|which|who|show|list|pull up|look up|find|how many|how much|do (i|we) have|on file)\b/i;
-const SCHEDULE_RE = /\b(book|schedule|reschedule|cancel|move|slot|appointment|calendar)\b/i;
-const ANALYZE_RE = /\b(why|analy[sz]e|figure out|explain|breakdown|break down|trend|compare|should (i|we))\b/i;
+const SCHEDULE_RE =
+  /\b(book|schedule|reschedule|cancel|move|slot|appointment|calendar)\b/i;
+const ANALYZE_RE =
+  /\b(why|analy[sz]e|figure out|explain|breakdown|break down|trend|compare|should (i|we))\b/i;
 const DESTROY_RE = /\b(delete|remove|purge|wipe|erase|drop|get rid of)\b/i;
 
 /** Objects that make a "draft/write" ask a message rather than a new artifact. */
@@ -151,7 +153,12 @@ const MESSAGE_OBJECT_RE =
 /** The record-mutation shape: a note/flag placed ON a customer's record. */
 const RECORD_TARGET_RE = /\b(record|file|account|profile|crm|notes?)\b/i;
 
-function readIntent(ask: string, subject: SubjectType, isQuestion: boolean, subjectExists: boolean): TaskIntent {
+function readIntent(
+  ask: string,
+  subject: SubjectType,
+  isQuestion: boolean,
+  subjectExists: boolean,
+): TaskIntent {
   // Destruction first: it is the one intent whose misreading is unrecoverable.
   if (DESTROY_RE.test(ask)) return "destroy";
 
@@ -214,24 +221,51 @@ function readIntent(ask: string, subject: SubjectType, isQuestion: boolean, subj
  * and more constrained reading.
  */
 const SUBJECT_PATTERNS: [SubjectType, RegExp][] = [
-  ["complaint", /\b(complaints?|complained|furious|angry|upset|unhappy|apolog(y|ise|ize)|went wrong|ruined|damaged)\b/i],
+  [
+    "complaint",
+    /\b(complaints?|complained|furious|angry|upset|unhappy|apolog(y|ise|ize)|went wrong|ruined|damaged)\b/i,
+  ],
   ["review", /\b(reviews?|testimonials?|google review|yelp|star rating)\b/i],
-  ["invoice", /\b(invoices?|bills?|billing|past due|overdue|payments?|owes?|balance|refunds?)\b/i],
+  [
+    "invoice",
+    /\b(invoices?|bills?|billing|past due|overdue|payments?|owes?|balance|refunds?)\b/i,
+  ],
   ["quote", /\b(quotes?|quotation|estimates?|proposals?)\b/i],
   // "the car is ready" is service completion — the same operational subject as
   // "ready for pickup", which is why both halves of a hard-negative pair that
   // differ only in phrasing must land in the same department.
-  ["appointment", /\b(appointments?|bookings?|slots?|reschedul|visits?|drop[- ]?offs?|pick[- ]?ups?|(is|are)\s+ready|ready for pick)\b/i],
+  [
+    "appointment",
+    /\b(appointments?|bookings?|slots?|reschedul|visits?|drop[- ]?offs?|pick[- ]?ups?|(is|are)\s+ready|ready for pick)\b/i,
+  ],
   // Checked before customer_record: "email everyone in the pipeline a discount
   // offer" is a campaign that happens to name the pipeline, not a records task.
-  ["campaign", /\b(campaigns?|newsletters?|blast|promo|specials?|discounts?|offers?|social post|facebook|instagram|blog)\b/i],
-  ["customer_record", /\b(records?|files?|profiles?|crm|customer data|pipeline)\b/i],
-  ["staff", /\b(employees?|staff|hire|hiring|payroll|job posts?|training|handbook|team member)\b/i],
-  ["finances", /\b(revenue|financial|profit|cash flow|receivables|taxes?|quarterly|bookkeep)\b/i],
-  ["document", /\b(contracts?|agreements?|intake forms?|sop|polic(y|ies)|one[- ]?pagers?|templates?|checklists?)\b/i],
+  [
+    "campaign",
+    /\b(campaigns?|newsletters?|blast|promo|specials?|discounts?|offers?|social post|facebook|instagram|blog)\b/i,
+  ],
+  [
+    "customer_record",
+    /\b(records?|files?|profiles?|crm|customer data|pipeline)\b/i,
+  ],
+  [
+    "staff",
+    /\b(employees?|staff|hire|hiring|payroll|job posts?|training|handbook|team member)\b/i,
+  ],
+  [
+    "finances",
+    /\b(revenue|financial|profit|cash flow|receivables|taxes?|quarterly|bookkeep)\b/i,
+  ],
+  [
+    "document",
+    /\b(contracts?|agreements?|intake forms?|sop|polic(y|ies)|one[- ]?pagers?|templates?|checklists?)\b/i,
+  ],
   // Direction is decided below; the entry itself only detects "this is about a
   // message".
-  ["outbound_message", /\b(e-?mails?|messages?|texts?|repl(y|ies)|respond(ing)?|responses?|wording|note to)\b/i],
+  [
+    "outbound_message",
+    /\b(e-?mails?|messages?|texts?|repl(y|ies)|respond(ing)?|responses?|wording|note to)\b/i,
+  ],
 ];
 
 /** The business is answering something that came to it. */
@@ -285,11 +319,22 @@ function readSubjectExists(ask: string): boolean {
 
 // --- Entry point -----------------------------------------------------------
 
-const QUESTION_RE = /^\s*(what|which|who|when|where|why|how|should|can|could|do|does|did|is|are|am)\b/i;
+const QUESTION_RE =
+  /^\s*(what|which|who|when|where|why|how|should|can|could|do|does|did|is|are|am)\b/i;
 
-/** Parse an owner ask onto the four semantic axes. Pure and deterministic. */
-export function readAskIntent(ask: string): AskIntent {
-  const isQuestion = QUESTION_RE.test(ask) || (ask.trim().endsWith("?") && !/^\s*(please|go ahead)/i.test(ask));
+/**
+ * Parse a request onto the four semantic axes.
+ *
+ * `canAuthorizeActions` is false for customer-authored inbound messages. Their
+ * words may describe a task, but they can never grant owner authority.
+ */
+export function readAskIntent(
+  ask: string,
+  canAuthorizeActions = true,
+): AskIntent {
+  const isQuestion =
+    QUESTION_RE.test(ask) ||
+    (ask.trim().endsWith("?") && !/^\s*(please|go ahead)/i.test(ask));
   const subjectType = readSubject(ask);
   const subjectExists = readSubjectExists(ask);
   const intent = readIntent(ask, subjectType, isQuestion, subjectExists);
@@ -298,7 +343,10 @@ export function readAskIntent(ask: string): AskIntent {
     subjectType,
     channel: readChannel(ask),
     // A question is never an instruction to act, whatever verbs it contains.
-    authorization: isQuestion ? "draft_only" : readAuthorization(ask),
+    authorization:
+      isQuestion || !canAuthorizeActions
+        ? "draft_only"
+        : readAuthorization(ask),
     subjectExists,
     isQuestion,
   };
@@ -316,5 +364,9 @@ export function authorizesAction(intent: AskIntent): boolean {
   // Destruction and analysis never become actions in this system: there is no
   // tool behind them, and inventing one from a verb is exactly the failure mode
   // the approval model exists to prevent.
-  return intent.intent !== "destroy" && intent.intent !== "analyze" && intent.intent !== "unknown";
+  return (
+    intent.intent !== "destroy" &&
+    intent.intent !== "analyze" &&
+    intent.intent !== "unknown"
+  );
 }

@@ -8,6 +8,8 @@ reached only through the existing approve → claim → run_tool path.
 import asyncio
 import base64
 import os
+import re
+from pathlib import Path
 from unittest.mock import patch
 
 os.environ.setdefault("TESTING", "1")
@@ -199,6 +201,21 @@ def test_flag_on_capable_departments_pass_policy_gate(monkeypatch):
             )
             is None
         )
+
+
+def test_python_and_engine_send_email_capabilities_match():
+    source = (
+        Path(__file__).resolve().parents[2]
+        / "agent-service/src/agent-os/actions/communication-capabilities.ts"
+    ).read_text()
+    block = re.search(
+        r"SEND_EMAIL_CAPABLE_DEPARTMENTS\s*=\s*\[(.*?)\]\s*as const",
+        source,
+        re.DOTALL,
+    )
+    assert block is not None
+    engine_departments = set(re.findall(r'"([a-z_]+)"', block.group(1)))
+    assert engine_departments == os_tools.SEND_EMAIL_CAPABLE_DEPARTMENTS
 
 
 def test_flag_on_sales_approve_claim_execute_uses_gmail(monkeypatch):

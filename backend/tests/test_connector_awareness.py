@@ -337,8 +337,15 @@ async def test_engine_context_carries_missing_connectors(monkeypatch):
 
     seen_context = {}
 
-    def _orchestrate(client_id, content, context, force_agent_id=None):
+    def _orchestrate(
+        client_id,
+        content,
+        context,
+        force_agent_id=None,
+        request_origin="owner",
+    ):
         seen_context.update(context)
+        seen_context["request_origin"] = request_origin
         return {"result": {}}
 
     monkeypatch.setattr(
@@ -374,6 +381,7 @@ async def test_engine_context_carries_missing_connectors(monkeypatch):
     )
 
     assert seen_context["integrations"]["missing_for_this_request"] == ["hubspot"]
+    assert seen_context["request_origin"] == "owner"
     assert out["followup_messages"]
     assert "/dashboard/integrations" in out["followup_messages"][0]["content"]
 

@@ -60,6 +60,7 @@ async def run_task(db, task: dict) -> bool:
         message,
         None,
         force_agent_id=task.get("department") or None,
+        request_origin="system",
     )
     return True
 

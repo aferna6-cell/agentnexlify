@@ -425,6 +425,19 @@ def persist_orchestration(
         except Exception:
             logger.warning("agent_os_bridge: usage metering failed", exc_info=True)
 
+    # Persist action audits before the owner-facing reply. If an L2 row cannot
+    # be written, fail before promising that an approval is queued.
+    try:
+        os_tool_executions.persist_tool_executions(
+            db, client_id, agent_run_id, record
+        )
+    except os_tool_executions.ToolExecutionAuditError:
+        raise
+    except Exception:
+        logger.warning(
+            "agent_os_bridge: tool execution persist failed", exc_info=True
+        )
+
     message_row: dict = {
         "thread_id": thread_id,
         "role": "assistant",
@@ -442,21 +455,6 @@ def persist_orchestration(
         _persist_telemetry(db, client_id, agent_run_id, record)
     except Exception:
         logger.warning("agent_os_bridge: telemetry persist failed", exc_info=True)
-
-    # Action layer: persist the turn's tool executions (the audit trail) and
-    # apply the internal writes they made. L0/L1 is best-effort like telemetry.
-    # L2+ is fail-closed — a missing audit row must not leave an action queued
-    # or treated as sent.
-    try:
-        os_tool_executions.persist_tool_executions(
-            db, client_id, agent_run_id, record
-        )
-    except os_tool_executions.ToolExecutionAuditError:
-        raise
-    except Exception:
-        logger.warning(
-            "agent_os_bridge: tool execution persist failed", exc_info=True
-        )
 
     tenant_table(db, "os_threads", client_id).update({"updated_at": _now()}).eq(
         "id", thread_id

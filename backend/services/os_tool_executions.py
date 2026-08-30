@@ -633,7 +633,21 @@ def _run_data_plane_tool(
 
     msgid = rfc822_msgid_for(execution_id)
     payload = row.get("input") or {}
-    existing = port.find_by_rfc822_msgid(msgid)
+    try:
+        existing = port.find_by_rfc822_msgid(msgid)
+    except Exception:
+        apply_unknown_send_outcome(
+            db,
+            client_id,
+            execution_id,
+            "Gmail Message-ID lookup failed; send was not attempted",
+        )
+        return {
+            "executed": False,
+            "adopted": False,
+            "unknown": True,
+            "reason": "deduplication lookup unavailable",
+        }
     if existing:
         verification = _verify_sent_message(
             port,

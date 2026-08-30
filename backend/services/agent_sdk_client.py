@@ -115,6 +115,7 @@ def orchestrate_sync(
     context: dict[str, Any],
     *,
     force_agent_id: str | None = None,
+    request_origin: str = "owner",
     timeout: float = _DEFAULT_ORCHESTRATE_TIMEOUT_S,
 ) -> dict[str, Any] | None:
     """Call agent-service POST /orchestrate. Returns None when not configured.
@@ -130,7 +131,12 @@ def orchestrate_sync(
         return None
 
     endpoint = f"{_AGENT_SERVICE_URL}/orchestrate"
-    body: dict[str, Any] = {"accountId": account_id, "ask": ask, "context": context}
+    body: dict[str, Any] = {
+        "accountId": account_id,
+        "ask": ask,
+        "context": context,
+        "requestOrigin": request_origin,
+    }
     if force_agent_id:
         body["forceAgentId"] = force_agent_id
     try:

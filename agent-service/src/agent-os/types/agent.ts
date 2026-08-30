@@ -139,7 +139,10 @@ export interface StreamedTraceStep {
  */
 export interface TraceEmitter {
   /** Returns true when data was present (and the step marked completed). */
-  emit(step: string, payload?: { description: string; data: unknown }): Promise<boolean>;
+  emit(
+    step: string,
+    payload?: { description: string; data: unknown },
+  ): Promise<boolean>;
   /** An ordinary reasoning step the agent always performs. */
   work(step: string, description: string): Promise<void>;
   /** An explicit honest fallback line (e.g. "no KB yet — using a safe reply"). */
@@ -156,4 +159,6 @@ export interface AgentRunArgs {
   runId: string;
   /** The owner's user id, when available (for agents that tag the owner record). */
   userId?: string;
+  /** Trust origin of the text. Only `owner` may authorize a mutation. */
+  requestOrigin?: "owner" | "inbound" | "system";
 }

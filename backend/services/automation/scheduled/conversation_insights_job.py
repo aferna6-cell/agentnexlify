@@ -125,6 +125,7 @@ async def _dispatch_for_tenant(db, client_id: str) -> bool:
         user_message,
         background_tasks=None,
         force_agent_id=CONVERSATION_INSIGHTS_AGENT_ID,
+        request_origin="system",
     )
     return True
 

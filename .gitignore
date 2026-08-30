@@ -22,6 +22,7 @@ coverage.xml
 
 # Reproducible local router binaries; commit JSON measurements, not joblib blobs.
 ml/routing/artifacts/*.joblib
+agent-service/evals/results/*.json
 
 # Agent communication files (ephemeral, per-session)
 .claude/agent-comms/*.md

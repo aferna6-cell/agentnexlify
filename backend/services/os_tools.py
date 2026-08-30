@@ -83,7 +83,9 @@ class GmailMailboxPort:
     def find_by_rfc822_msgid(self, msgid: str) -> str | None:
         from backend.services import gmail_connector
 
-        return gmail_connector.find_message_id_by_rfc822_msgid(self.tenant_id, msgid)
+        return gmail_connector.find_message_id_by_rfc822_msgid(
+            self.tenant_id, msgid, strict=True
+        )
 
     def send(self, **kwargs) -> dict | None:
         from backend.services import gmail_connector
