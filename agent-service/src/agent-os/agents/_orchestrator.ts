@@ -22,8 +22,30 @@ import type { AgentOutput, StreamedTraceStep } from "../types/agent.ts";
 
 const CONFIDENCE_FLOOR = 0.5;
 const RESOLUTION_GAP = 0.1;
+const RESOLUTION_RATIO = 0.85;
+const MIN_BUSINESS_EVIDENCE = 3;
 
-export type DecisionStatus = "routed" | "needs_clarification" | "wishlist_fallback" | "owner_override" | "direct_answer" | "declined";
+/**
+ * Are the top two candidates too close to separate?
+ * Measured on raw evidence when the heuristic provides it, because
+ * confidence saturates. Haiku returns probabilities and no score.
+ */
+export function isAmbiguous(top: Candidate, second: Candidate): boolean {
+  if (typeof top.score === "number" && typeof second.score === "number") {
+    if (top.score <= 0) return false;
+    return second.score / top.score >= RESOLUTION_RATIO;
+  }
+  const gap = Math.round((top.confidence - second.confidence) * 100) / 100;
+  return gap < RESOLUTION_GAP;
+}
+
+export type DecisionStatus =
+  | "routed"
+  | "needs_clarification"
+  | "wishlist_fallback"
+  | "owner_override"
+  | "direct_answer"
+  | "declined";
 
 export interface HandleResult {
   status: DecisionStatus;
@@ -52,16 +74,34 @@ export interface HandleOptions {
   overrodeDecisionId?: string;
 }
 
-export async function handle(userId: string, ask: string, opts: HandleOptions = {}): Promise<HandleResult> {
+export async function handle(
+  userId: string,
+  ask: string,
+  opts: HandleOptions = {},
+): Promise<HandleResult> {
   // --- Direct answer: widget-activity questions the orchestrator answers itself
   // (no worker agent), per the product plan's "what came in through the widget?".
   if (!opts.forceAgentId && isWidgetQuery(ask)) {
     const ctx = await loadSharedContext(userId);
     const answer = summarizeWidget(ctx);
     const decision = await getRunStore().createRoutingDecision({
-      userId, ask, classifier: "heuristic", decision: "direct_answer", chosenAgent: "orchestrator", confidence: 1,
+      userId,
+      ask,
+      classifier: "heuristic",
+      decision: "direct_answer",
+      chosenAgent: "orchestrator",
+      confidence: 1,
     });
-    return { status: "direct_answer", classifier: "heuristic", decisionId: decision.id, confidence: 1, alternates: [], params: {}, orchestratorNotes: [], answer };
+    return {
+      status: "direct_answer",
+      classifier: "heuristic",
+      decisionId: decision.id,
+      confidence: 1,
+      alternates: [],
+      params: {},
+      orchestratorNotes: [],
+      answer,
+    };
   }
 
   // --- Direct answer: a cross-department "weekly briefing" the orchestrator
@@ -71,16 +111,35 @@ export async function handle(userId: string, ask: string, opts: HandleOptions = 
     const ctx = await loadSharedContext(userId);
     const answer = aggregateBriefing(ctx);
     const decision = await getRunStore().createRoutingDecision({
-      userId, ask, classifier: "heuristic", decision: "direct_answer", chosenAgent: "orchestrator", confidence: 1,
+      userId,
+      ask,
+      classifier: "heuristic",
+      decision: "direct_answer",
+      chosenAgent: "orchestrator",
+      confidence: 1,
     });
-    return { status: "direct_answer", classifier: "heuristic", decisionId: decision.id, confidence: 1, alternates: [], params: {}, orchestratorNotes: [], answer };
+    return {
+      status: "direct_answer",
+      classifier: "heuristic",
+      decisionId: decision.id,
+      confidence: 1,
+      alternates: [],
+      params: {},
+      orchestratorNotes: [],
+      answer,
+    };
   }
 
   // --- Non-business asks → polite decline (v2 Decision 2: no Generalist) -------
   if (!opts.forceAgentId && isNonBusiness(ask)) {
     await captureWishlist(userId, ask, []);
     const decision = await getRunStore().createRoutingDecision({
-      userId, ask, classifier: "heuristic", decision: "declined", chosenAgent: "none", confidence: 0,
+      userId,
+      ask,
+      classifier: "heuristic",
+      decision: "declined",
+      chosenAgent: "none",
+      confidence: 0,
     });
     return {
       status: "declined",
@@ -102,10 +161,24 @@ export async function handle(userId: string, ask: string, opts: HandleOptions = 
   // --- Owner override -------------------------------------------------------
   if (opts.forceAgentId && registry.has(opts.forceAgentId)) {
     if (opts.overrodeDecisionId) {
-      await getRunStore().markRoutingDecisionOverridden(opts.overrodeDecisionId, opts.forceAgentId);
+      await getRunStore().markRoutingDecisionOverridden(
+        opts.overrodeDecisionId,
+        opts.forceAgentId,
+      );
     }
-    const chosen = candidates.find((c) => c.agentId === opts.forceAgentId)?.confidence ?? 0;
-    return runAndLog(userId, ask, opts.forceAgentId, chosen, candidates, cls.classifier, cls.params, "owner_override", opts.onStep);
+    const chosen =
+      candidates.find((c) => c.agentId === opts.forceAgentId)?.confidence ?? 0;
+    return runAndLog(
+      userId,
+      ask,
+      opts.forceAgentId,
+      chosen,
+      candidates,
+      cls.classifier,
+      cls.params,
+      "owner_override",
+      opts.onStep,
+    );
   }
 
   // --- Complaint detection short-circuits to Customer Service (§11 rule 6) ----
@@ -113,9 +186,24 @@ export async function handle(userId: string, ask: string, opts: HandleOptions = 
   // reaches Customer Service, which dispatches to its (hardcoded never-auto-send)
   // complaint skill.
   if (detectComplaint(ask)) {
-    const conf = candidates.find((c) => c.agentId === "customer_service")?.confidence ?? 0.9;
-    const res = await runAndLog(userId, ask, "customer_service", conf, candidates, cls.classifier, cls.params, "routed", opts.onStep);
-    res.orchestratorNotes = ["Detected complaint language, so I routed this straight to Customer Service.", ...res.orchestratorNotes];
+    const conf =
+      candidates.find((c) => c.agentId === "customer_service")?.confidence ??
+      0.9;
+    const res = await runAndLog(
+      userId,
+      ask,
+      "customer_service",
+      conf,
+      candidates,
+      cls.classifier,
+      cls.params,
+      "routed",
+      opts.onStep,
+    );
+    res.orchestratorNotes = [
+      "Detected complaint language, so I routed this straight to Customer Service.",
+      ...res.orchestratorNotes,
+    ];
     return res;
   }
 
@@ -126,12 +214,21 @@ export async function handle(userId: string, ask: string, opts: HandleOptions = 
   // The 8 departments cover the genuine-business surface, so there's no catch-all
   // worker. We capture the unmet-need signal and run the NEAREST department,
   // telling the owner it was the closest match (and to pick another if wrong).
-  if (!top || top.confidence < CONFIDENCE_FLOOR) {
+  const hasBusinessEvidence =
+    top === undefined ||
+    top.score === undefined ||
+    top.score >= MIN_BUSINESS_EVIDENCE;
+  if (!top || !hasBusinessEvidence || top.confidence < CONFIDENCE_FLOOR) {
     await captureWishlist(userId, ask, candidates);
-    if (!top) {
+    if (!top || !hasBusinessEvidence) {
       // Nothing scored at all — decline gracefully rather than guess.
       const decision = await getRunStore().createRoutingDecision({
-        userId, ask, classifier: cls.classifier, decision: "wishlist_fallback", chosenAgent: "none", confidence: 0,
+        userId,
+        ask,
+        classifier: cls.classifier,
+        decision: "wishlist_fallback",
+        chosenAgent: "none",
+        confidence: 0,
       });
       return {
         status: "wishlist_fallback",
@@ -145,7 +242,17 @@ export async function handle(userId: string, ask: string, opts: HandleOptions = 
         ],
       };
     }
-    const res = await runAndLog(userId, ask, top.agentId, top.confidence, candidates, cls.classifier, cls.params, "wishlist_fallback", opts.onStep);
+    const res = await runAndLog(
+      userId,
+      ask,
+      top.agentId,
+      top.confidence,
+      candidates,
+      cls.classifier,
+      cls.params,
+      "wishlist_fallback",
+      opts.onStep,
+    );
     const nearest = registry.get(top.agentId).display_name;
     const otherAlts = alternates.filter((c) => c.agentId !== top.agentId);
     const others = otherAlts.length
@@ -158,10 +265,8 @@ export async function handle(userId: string, ask: string, opts: HandleOptions = 
     return res;
   }
 
-  // --- Ambiguous (top two within 0.1) → ask the owner ------------------------
-  // Round the gap to avoid float artefacts (0.6 - 0.5 = 0.0999…).
-  const gap = second ? Math.round((top.confidence - second.confidence) * 100) / 100 : 1;
-  if (second && gap < RESOLUTION_GAP) {
+  // --- Ambiguous (relative evidence, or 0.1 gap for Haiku) -------------------
+  if (second && isAmbiguous(top, second)) {
     const a = registry.get(top.agentId);
     const b = registry.get(second.agentId);
     const decision = await getRunStore().createRoutingDecision({
@@ -194,7 +299,17 @@ export async function handle(userId: string, ask: string, opts: HandleOptions = 
   if (top.agentId === "generalist") {
     await captureWishlist(userId, ask, candidates);
   }
-  return runAndLog(userId, ask, top.agentId, top.confidence, candidates, cls.classifier, cls.params, "routed", opts.onStep);
+  return runAndLog(
+    userId,
+    ask,
+    top.agentId,
+    top.confidence,
+    candidates,
+    cls.classifier,
+    cls.params,
+    "routed",
+    opts.onStep,
+  );
 }
 
 async function runAndLog(
@@ -210,7 +325,12 @@ async function runAndLog(
 ): Promise<HandleResult> {
   const agent = registry.get(agentId);
 
-  const run = await getRunStore().createRun({ userId, agentId, ownerAsk: ask, params });
+  const run = await getRunStore().createRun({
+    userId,
+    agentId,
+    ownerAsk: ask,
+    params,
+  });
 
   const decision = await getRunStore().createRoutingDecision({
     userId,
@@ -229,7 +349,14 @@ async function runAndLog(
 
   let output: AgentOutput;
   try {
-    output = await agent.run({ input: params, context, emitTrace: emit, ownerAsk: ask, runId: run.id, userId });
+    output = await agent.run({
+      input: params,
+      context,
+      emitTrace: emit,
+      ownerAsk: ask,
+      runId: run.id,
+      userId,
+    });
   } catch (err) {
     await getRunStore().setRunStatus(run.id, "failed");
     const message = err instanceof Error ? err.message : String(err);
@@ -263,8 +390,9 @@ async function runAndLog(
     await getRunStore().setRunStatus(run.id, "no_draft");
   }
 
-  const status: DecisionStatus =
-    decisionType === "owner_override"
+  const status: DecisionStatus = output.needsClarification
+    ? "needs_clarification"
+    : decisionType === "owner_override"
       ? "owner_override"
       : decisionType === "wishlist_fallback"
         ? "wishlist_fallback"
@@ -274,7 +402,11 @@ async function runAndLog(
   // the local composer (no key, cap hit, or model error) say so — never present
   // a template-composed draft as if it were AI-generated.
   const notes = [...output.orchestratorNotes];
-  if (output.draft && (output.draft.metadata as Record<string, unknown> | undefined)?.source === "local") {
+  if (
+    output.draft &&
+    (output.draft.metadata as Record<string, unknown> | undefined)?.source ===
+      "local"
+  ) {
     notes.unshift(
       "Heads up — I'm running in offline mode right now, so this draft came from the built-in composer rather than live AI. It's a safe starting point, but real AI generation is currently unavailable.",
     );
@@ -303,10 +435,16 @@ async function runAndLog(
  */
 export function isAggregateBriefingQuery(ask: string): boolean {
   const a = ask.toLowerCase();
-  const wantsBriefing = /\b(weekly briefing|my briefing|briefing|recap|summary of (the )?(week|business)|how'?s business|what happened (this|last) week)\b/.test(a);
+  const wantsBriefing =
+    /\b(weekly briefing|my briefing|briefing|recap|summary of (the )?(week|business)|how'?s business|what happened (this|last) week)\b/.test(
+      a,
+    );
   if (!wantsBriefing) return false;
   // If a specific department is named, let it route there instead.
-  const dept = /\b(sales|marketing|customer service|operations|invoicing|collections|accounting|finance|admin|records|people|hr|hiring)\b/.test(a);
+  const dept =
+    /\b(sales|marketing|customer service|operations|invoicing|collections|accounting|finance|admin|records|people|hr|hiring)\b/.test(
+      a,
+    );
   return !dept;
 }
 
@@ -328,22 +466,36 @@ export function isWidgetQuery(ask: string): boolean {
   // An ask that wants something *drafted* in response to a forwarded widget
   // message is a worker-agent task (e.g. Customer Question), not a question
   // about widget activity — don't intercept it for a direct answer.
-  if (/\b(draft|write|compose|respond|reply|answer this|send|create)\b/.test(a)) return false;
-  return /(came in|come in|yesterday|today|this week|recent|capture|happened|new|leads?|chats?|conversations?|messages?)/.test(a);
+  if (/\b(draft|write|compose|respond|reply|answer this|send|create)\b/.test(a))
+    return false;
+  return /(came in|come in|yesterday|today|this week|recent|capture|happened|new|leads?|chats?|conversations?|messages?)/.test(
+    a,
+  );
 }
 
 /** Summarises recent widget conversations for a direct orchestrator answer. */
-function summarizeWidget(ctx: import("../types/agent.ts").SharedContext): string {
+function summarizeWidget(
+  ctx: import("../types/agent.ts").SharedContext,
+): string {
   const convos = ctx.widgetHistory;
   if (convos.length === 0) {
     return "Nothing came in through the widget recently — no captured conversations yet.";
   }
   const byIntent = new Map<string, number>();
-  for (const c of convos) byIntent.set(c.intent ?? "other", (byIntent.get(c.intent ?? "other") ?? 0) + 1);
-  const breakdown = [...byIntent.entries()].map(([k, n]) => `${n} ${k.replace(/_/g, " ")}`).join(", ");
+  for (const c of convos)
+    byIntent.set(
+      c.intent ?? "other",
+      (byIntent.get(c.intent ?? "other") ?? 0) + 1,
+    );
+  const breakdown = [...byIntent.entries()]
+    .map(([k, n]) => `${n} ${k.replace(/_/g, " ")}`)
+    .join(", ");
   const lines = convos
     .slice(0, 6)
-    .map((c) => `• ${c.contactName ?? "Someone"}${c.intent ? ` (${c.intent.replace(/_/g, " ")})` : ""}: ${c.summary}`);
+    .map(
+      (c) =>
+        `• ${c.contactName ?? "Someone"}${c.intent ? ` (${c.intent.replace(/_/g, " ")})` : ""}: ${c.summary}`,
+    );
   return `Here's what came in through the widget — ${convos.length} conversation(s) [${breakdown}]:\n${lines.join("\n")}`;
 }
 
@@ -353,61 +505,113 @@ function summarizeWidget(ctx: import("../types/agent.ts").SharedContext): string
  * "Owner attention needed" block (complaints, overdue invoices, stale leads, KB
  * gaps, no-shows), then a per-department snapshot, then "What's coming".
  */
-export function aggregateBriefing(ctx: import("../types/agent.ts").SharedContext): string {
+export function aggregateBriefing(
+  ctx: import("../types/agent.ts").SharedContext,
+): string {
   const out: string[] = ["Weekly briefing — across all departments:"];
 
   const attention: string[] = [];
-  for (const c of ctx.widgetHistory.filter((w) => (w.intent ?? "").toLowerCase().includes("complaint"))) {
-    attention.push(`Complaint from ${c.contactName ?? "a customer"}: ${c.summary} (Customer Service)`);
+  for (const c of ctx.widgetHistory.filter((w) =>
+    (w.intent ?? "").toLowerCase().includes("complaint"),
+  )) {
+    attention.push(
+      `Complaint from ${c.contactName ?? "a customer"}: ${c.summary} (Customer Service)`,
+    );
   }
   for (const iv of ctx.invoices.filter((i) => i.status === "overdue")) {
-    attention.push(`Overdue invoice ${iv.number} for ${iv.customerName} — $${iv.amount.toLocaleString("en-US")} (Invoicing & Collections)`);
+    attention.push(
+      `Overdue invoice ${iv.number} for ${iv.customerName} — $${iv.amount.toLocaleString("en-US")} (Invoicing & Collections)`,
+    );
   }
   for (const l of ctx.pipelineLeads.filter((p) => p.status === "stale")) {
-    attention.push(`Stale lead ${l.name}${l.subject ? ` (${l.subject})` : ""} (Sales)`);
+    attention.push(
+      `Stale lead ${l.name}${l.subject ? ` (${l.subject})` : ""} (Sales)`,
+    );
   }
   for (const r of ctx.agentRunHistory.filter((h) => h.kbGap)) {
-    attention.push(`Knowledge-base gap from a customer question — add an FAQ entry (Customer Service): ${r.title}`);
+    attention.push(
+      `Knowledge-base gap from a customer question — add an FAQ entry (Customer Service): ${r.title}`,
+    );
   }
   for (const ap of ctx.appointments.filter((a) => a.status === "no_show")) {
-    attention.push(`No-show: ${ap.customerName}${ap.service ? ` (${ap.service})` : ""} (Operations)`);
+    attention.push(
+      `No-show: ${ap.customerName}${ap.service ? ` (${ap.service})` : ""} (Operations)`,
+    );
   }
-  if (attention.length) out.push("\nOwner attention needed:\n" + attention.map((a) => `• ${a}`).join("\n"));
+  if (attention.length)
+    out.push(
+      "\nOwner attention needed:\n" + attention.map((a) => `• ${a}`).join("\n"),
+    );
 
   const dept: string[] = [];
-  if (ctx.widgetHistory.length) dept.push(`Customer Service: ${ctx.widgetHistory.length} widget conversation(s).`);
-  if (ctx.pipelineLeads.length) dept.push(`Sales: ${ctx.pipelineLeads.length} lead(s) in the pipeline.`);
-  const openInv = ctx.invoices.filter((i) => i.status === "overdue" || i.status === "unpaid");
-  if (openInv.length) dept.push(`Invoicing: ${openInv.length} outstanding invoice(s) totaling $${openInv.reduce((s, i) => s + i.amount, 0).toLocaleString("en-US")}.`);
-  const completed = ctx.appointments.filter((a) => a.status === "completed").length;
-  if (completed) dept.push(`Operations: ${completed} completed appointment(s).`);
-  if (dept.length) out.push("\nBy department:\n" + dept.map((d) => `• ${d}`).join("\n"));
+  if (ctx.widgetHistory.length)
+    dept.push(
+      `Customer Service: ${ctx.widgetHistory.length} widget conversation(s).`,
+    );
+  if (ctx.pipelineLeads.length)
+    dept.push(`Sales: ${ctx.pipelineLeads.length} lead(s) in the pipeline.`);
+  const openInv = ctx.invoices.filter(
+    (i) => i.status === "overdue" || i.status === "unpaid",
+  );
+  if (openInv.length)
+    dept.push(
+      `Invoicing: ${openInv.length} outstanding invoice(s) totaling $${openInv.reduce((s, i) => s + i.amount, 0).toLocaleString("en-US")}.`,
+    );
+  const completed = ctx.appointments.filter(
+    (a) => a.status === "completed",
+  ).length;
+  if (completed)
+    dept.push(`Operations: ${completed} completed appointment(s).`);
+  if (dept.length)
+    out.push("\nBy department:\n" + dept.map((d) => `• ${d}`).join("\n"));
 
   const upcoming = ctx.appointments
     .filter((a) => a.status === "scheduled")
     .sort((x, y) => x.scheduledFor.localeCompare(y.scheduledFor))
     .slice(0, 3);
   if (upcoming.length) {
-    out.push("\nWhat's coming:\n" + upcoming.map((a) => {
-      const w = new Date(a.scheduledFor);
-      const label = Number.isNaN(w.getTime()) ? a.scheduledFor : w.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-      return `• ${a.customerName}${a.service ? ` — ${a.service}` : ""} (${label})`;
-    }).join("\n"));
+    out.push(
+      "\nWhat's coming:\n" +
+        upcoming
+          .map((a) => {
+            const w = new Date(a.scheduledFor);
+            const label = Number.isNaN(w.getTime())
+              ? a.scheduledFor
+              : w.toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                });
+            return `• ${a.customerName}${a.service ? ` — ${a.service}` : ""} (${label})`;
+          })
+          .join("\n"),
+    );
   }
 
-  if (out.length === 1) return "Quiet week — no logged activity across your departments yet. Nothing needs your attention right now.";
+  if (out.length === 1)
+    return "Quiet week — no logged activity across your departments yet. Nothing needs your attention right now.";
   return out.join("\n");
 }
 
 /** Complaint-language detection (short-circuits routing to the Complaint Handler). */
 export function detectComplaint(ask: string): boolean {
-  return /(furious|angry|upset|unhappy|disappointed|terrible|awful|worst|ruined|scratch(ed)?|damaged|broke|refund|complaint|complained|unacceptable|fed up|never again)/i.test(ask);
+  return /(furious|angry|upset|unhappy|disappointed|terrible|awful|worst|ruined|scratch(ed)?|damaged|broke|refund|complaint|complained|unacceptable|fed up|never again)/i.test(
+    ask,
+  );
 }
 
-async function captureWishlist(userId: string, ask: string, candidates: Candidate[]): Promise<void> {
+async function captureWishlist(
+  userId: string,
+  ask: string,
+  candidates: Candidate[],
+): Promise<void> {
   const request = ask.trim();
   const considered = candidates.map((c) => c.agentId).join(",");
-  await getRunStore().captureWishlist({ userId, request, consideredAgents: considered });
+  await getRunStore().captureWishlist({
+    userId,
+    request,
+    consideredAgents: considered,
+  });
 }
 
 export { classify } from "./_classifier.ts";

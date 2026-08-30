@@ -111,6 +111,12 @@ export interface AgentOutput {
   orchestratorNotes: string[];
   /** Set when the agent intentionally produced no draft. */
   noDraftReason?: string;
+  /**
+   * The department understood the ask and needs one more fact before it can
+   * act. Distinct from a routing tie: this is a department question, not a
+   * department picker.
+   */
+  needsClarification?: boolean;
 }
 
 /** A trace step as streamed to the client and persisted. */
@@ -127,7 +133,10 @@ export interface StreamedTraceStep {
  */
 export interface TraceEmitter {
   /** Returns true when data was present (and the step marked completed). */
-  emit(step: string, payload?: { description: string; data: unknown }): Promise<boolean>;
+  emit(
+    step: string,
+    payload?: { description: string; data: unknown },
+  ): Promise<boolean>;
   /** An ordinary reasoning step the agent always performs. */
   work(step: string, description: string): Promise<void>;
   /** An explicit honest fallback line (e.g. "no KB yet — using a safe reply"). */

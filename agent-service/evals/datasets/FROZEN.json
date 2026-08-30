@@ -1,0 +1,9 @@
+{
+  "action-eval-v1.json": {
+    "blob_sha1": "b9a662da7ac33c322b96c978e7ca49eb8a62e4bd",
+    "bytes": 139988,
+    "cases": 215,
+    "provenance": "PR #693 @ origin/claude/agent-action-executor-v8ntvk; identical blob on PR #703",
+    "note": "git hash-object output, not a content hash of parsed JSON. Do not re-serialize."
+  }
+}

@@ -19,8 +19,8 @@
 
 import type { RiskLevel } from "./types.ts";
 import {
-  SALES_DEPARTMENT,
   SEND_EMAIL_TOOL_ID,
+  canProposeSendEmail,
   sendEmailEnabled,
 } from "./flags.ts";
 
@@ -124,23 +124,15 @@ export function evaluateActionPolicy(
   const policy = context.policy ?? DEFAULT_TOOL_POLICY;
   const riskLevel = tool.riskLevel;
 
-  if (tool.id === SEND_EMAIL_TOOL_ID) {
-    if (!sendEmailEnabled()) {
-      return {
-        decision: "deny",
-        riskLevel,
-        requiresApproval: false,
-        reason: "send_email is disabled (SEND_EMAIL_ENABLED defaults off)",
-      };
-    }
-    if (context.agentId !== SALES_DEPARTMENT) {
-      return {
-        decision: "deny",
-        riskLevel,
-        requiresApproval: false,
-        reason: "send_email is only available to the Sales department",
-      };
-    }
+  if (tool.id === SEND_EMAIL_TOOL_ID && !canProposeSendEmail(context.agentId)) {
+    return {
+      decision: "deny",
+      riskLevel,
+      requiresApproval: false,
+      reason: !sendEmailEnabled()
+        ? "send_email is disabled (SEND_EMAIL_ENABLED defaults off)"
+        : "send_email is only available to the Sales department",
+    };
   }
 
   if (policy.enabledToolIds && !policy.enabledToolIds.includes(tool.id)) {

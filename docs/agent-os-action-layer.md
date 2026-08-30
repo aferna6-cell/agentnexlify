@@ -195,10 +195,14 @@ the owner's turn.
   `SEND_EMAIL_ENABLED` (default off). Flag-off refuses propose/queue/execute
   — no Gmail `send_message` and no outbound mail. Production execute uses
   `gmail_connector.send_message` + `find_message_id_by_rfc822_msgid` through
-  the existing claim path. No `communication_actions`, no 5-department
-  proposal wiring, no routing change. Dual `os_actions` vs
-  `os_tool_executions` stays documented, not merged. Migrations 195/196/197
-  are untouched.
+  the existing claim path.
+- Communication **proposal** capability is explicit:
+  `SEND_EMAIL_PROPOSE_DEPARTMENTS` (currently `["sales"]`). Operations,
+  Customer Service, Invoicing, and Marketing are documented candidates and
+  are **not** enabled. `canProposeSendEmail` is the same gate policy uses, so
+  a non-Sales department never sees a denial that leaks the internal gate —
+  it drafts. Dual `os_actions` vs `os_tool_executions` stays documented, not
+  merged. Migrations 195/196/197 are untouched. No production flag change.
 
 ## Verification
 

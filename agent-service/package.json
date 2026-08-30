@@ -9,8 +9,12 @@
   "scripts": {
     "start": "node --experimental-strip-types src/server.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test \"src/**/*.test.ts\"",
-    "vendor:agent-os": "bash scripts/vendor-agent-os.sh"
+    "test": "node --experimental-strip-types --test \"src/**/*.test.ts\" \"evals/**/*.test.ts\"",
+    "vendor:agent-os": "bash scripts/vendor-agent-os.sh",
+    "eval:actions": "node --experimental-strip-types evals/run-action-eval.ts",
+    "eval:actions:gate": "node --experimental-strip-types evals/run-action-eval.ts --gate",
+    "eval:routing:v3": "node --experimental-strip-types evals/run-action-eval.ts --dataset evals/datasets/validation/validation-v3.json --routing-only --acknowledge-not-for-selection --report",
+    "eval:inspect": "node --experimental-strip-types evals/inspect.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.110",

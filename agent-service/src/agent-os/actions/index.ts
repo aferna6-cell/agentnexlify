@@ -45,6 +45,7 @@ export {
   type CustomerNoteRecord,
   type CustomerNotesPort,
   type ToolPorts,
+  type GmailPort,
 } from "./ports.ts";
 export {
   executeAction,
@@ -63,7 +64,10 @@ export { addCustomerNote } from "./tools/add_customer_note.ts";
 export { sendEmail } from "./tools/send_email.ts";
 export {
   sendEmailEnabled,
+  canProposeSendEmail,
   SEND_EMAIL_FLAG,
   SEND_EMAIL_TOOL_ID,
+  SEND_EMAIL_PROPOSE_DEPARTMENTS,
+  SEND_EMAIL_CANDIDATE_DEPARTMENTS,
 } from "./flags.ts";
 export { sanitize, sanitizeRecord, REDACTED } from "./sanitize.ts";

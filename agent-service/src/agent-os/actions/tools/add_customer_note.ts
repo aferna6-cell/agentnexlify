@@ -18,6 +18,7 @@ import { z } from "zod";
 import { defineTool } from "../define-tool.ts";
 import { RISK_INTERNAL_MUTATION, ToolExecutionError } from "../types.ts";
 import type { PipelineLeadData } from "../../types/agent.ts";
+import { resolveByName, resolvedMatch } from "../../agents/_resolve.ts";
 
 const Input = z
   .object({
@@ -52,15 +53,9 @@ export function resolveCustomer(
   if (input.customer_id) {
     return leads.find((l) => l.id === input.customer_id) ?? null;
   }
-  const name = (input.customer_name ?? "").trim().toLowerCase();
+  const name = (input.customer_name ?? "").trim();
   if (!name) return null;
-
-  const exact = leads.filter((l) => l.name.trim().toLowerCase() === name);
-  if (exact.length === 1) return exact[0]!;
-  if (exact.length > 1) return null; // ambiguous — refuse rather than guess
-
-  const partial = leads.filter((l) => l.name.trim().toLowerCase().startsWith(name));
-  return partial.length === 1 ? partial[0]! : null;
+  return resolvedMatch(resolveByName(leads, (l) => l.name, name)) ?? null;
 }
 
 export const addCustomerNote = defineTool({
@@ -77,7 +72,10 @@ export const addCustomerNote = defineTool({
   outputSchema: Output,
 
   async execute({ input, context }): Promise<AddCustomerNoteOutput> {
-    const customer = resolveCustomer(context.sharedContext.pipelineLeads, input);
+    const customer = resolveCustomer(
+      context.sharedContext.pipelineLeads,
+      input,
+    );
     if (!customer) {
       throw new ToolExecutionError(
         "customer_not_found",
