@@ -180,6 +180,11 @@ def run_eval(path: Path = DEFAULT_DATASET, top_k: int = 5, min_score: float = 1.
         "dataset_version": dataset["dataset_version"],
         "cases": n_all,
         "retrieval_labelled_cases": n_retr,
+        "scoring_note": (
+            "Retrieval metrics exclude cases with no expected_chunk_ids. "
+            "Isolation uses a mixed-tenant corpus. Generation faithfulness "
+            "is extractive (spans already in evidence), not an LLM score."
+        ),
         "retrieval": {
             "recall_at_1": round(rec1 / n_retr, 4) if n_retr else None,
             "recall_at_3": round(rec3 / n_retr, 4) if n_retr else None,

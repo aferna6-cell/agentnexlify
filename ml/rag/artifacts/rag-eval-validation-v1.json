@@ -1,12 +1,14 @@
 {
   "dataset_version": "rag-eval-validation-v1",
   "cases": 183,
+  "retrieval_labelled_cases": 143,
+  "scoring_note": "Retrieval metrics exclude cases with no expected_chunk_ids. Isolation uses a mixed-tenant corpus. Generation faithfulness is extractive (spans already in evidence), not an LLM score.",
   "retrieval": {
-    "recall_at_1": 0.8798,
-    "recall_at_3": 0.9781,
-    "recall_at_5": 0.9781,
-    "mrr": 0.9271,
-    "ndcg_at_5": 0.9404
+    "recall_at_1": 0.8322,
+    "recall_at_3": 0.972,
+    "recall_at_5": 0.972,
+    "mrr": 0.9068,
+    "ndcg_at_5": 0.9237
   },
   "generation": {
     "faithfulness": 1.0,

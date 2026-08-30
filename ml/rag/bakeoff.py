@@ -116,8 +116,9 @@ def main() -> None:
         "methods": results,
         "selected": winner,
         "note": (
-            "Winner is a retrieval-only pick. Production still uses BM25 via "
-            "retrieve_business_context until Voyage dense is measured on this split."
+            "Retrieval-only pick on labelled cases. Production still uses BM25 "
+            "via retrieve_business_context until Voyage dense is measured. "
+            "TF-IDF is not promoted (same M6 downstream+ops rule)."
         ),
     }
     out = REPO / "ml/rag/artifacts/rag-bakeoff-validation-v1.json"
