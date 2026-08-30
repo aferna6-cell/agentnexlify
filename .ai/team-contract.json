@@ -39,7 +39,9 @@
     "duplicate_full_issue_implementations": false,
     "branch_pattern": "team/{issue}/{agent}/{lane}",
     "default_claim_lease_hours": 4,
-    "worktree_per_active_lane": true
+    "worktree_per_active_lane": true,
+    "optional_invocation": "slack",
+    "slack_agent_team": ".ai/slack-agent-team.json"
   },
   "review": {
     "normal_peer_approvals": 1,

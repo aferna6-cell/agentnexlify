@@ -11,6 +11,7 @@ The `manifest.json` file is a universal index of all AI resources in this reposi
 - **Workflows** — Step-by-step procedures for common operations
 - **Critical rules** — Invariants that must not be violated
 - **Directory map** — What lives where in this codebase
+- **`slack-agent-team.json`** — Grok-like Slack invocation surface; GitHub Issues stay the durable hub
 
 Any AI agent can read `manifest.json` to discover available resources and understand the project structure.
 

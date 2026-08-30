@@ -226,6 +226,7 @@ def main() -> int:
     for team_path in (
         "docs/TEAM_OPERATING_CONTRACT.md",
         ".ai/team-contract.json",
+        ".ai/slack-agent-team.json",
         "scripts/teamctl.py",
         "scripts/check_team_protocol.py",
         "KIMI.md",

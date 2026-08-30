@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-08-30",
+  "status": "canonical",
+  "purpose": "Grok-like Slack invocation surface for the AgentNexLiFy engineering team. Slack starts work; GitHub Issues remain the durable hub.",
+  "durable_hub": "github_issue",
+  "invocation": "cursor_slack",
+  "canonical_repo": "aferna6-cell/agentnexlify",
+  "not_the_repo": "aferna6-cell/Agent-Nexlify-OS",
+  "workspace": {
+    "name": "Agent Nexlify",
+    "slack_team_id": "T0AU024EH38",
+    "cursor_bot": "@cursor",
+    "cursor_user_id": "U0BTH748Z3P"
+  },
+  "live_slack_apps": {
+    "owner": {
+      "name": "Aidan",
+      "slack_user_id": "U0AU23Y8PSN",
+      "role": "owner"
+    },
+    "chatgpt": {
+      "name": "ChatGPT",
+      "slack_user_id": "U0BTQPR3KFE",
+      "role": "engineering_manager"
+    },
+    "claude": {
+      "name": "Claude",
+      "slack_user_id": "U0BTM9DHUV8",
+      "role": "principal_reviewer",
+      "note": "Legacy Slack bot until Claude Tag is enabled"
+    },
+    "cursor": {
+      "name": "Cursor",
+      "slack_user_id": "U0BTH748Z3P",
+      "role": "implementation_engineer",
+      "note": "Grok-class Cloud Agent; only this app can edit the repo like the Grok bot"
+    },
+    "github": {
+      "name": "GitHub",
+      "slack_user_id": "U0BTKCEKLK0",
+      "role": "repository_notifications"
+    }
+  },
+  "existing_channels": [
+    {
+      "name": "agent-nexlify",
+      "id": "C0BTKCYP8TG",
+      "role": "hq",
+      "visibility": "public",
+      "usage": "Shared engineering room. @mention bots here. Prefixes route Cursor Automations."
+    },
+    {
+      "name": "all-agent-nexlify",
+      "id": "C0AU5MEJ5QC",
+      "role": "broadcast",
+      "visibility": "public",
+      "usage": "Workspace-wide notices. Do not run specialist automations here."
+    }
+  ],
+  "specialist_channels": [
+    {
+      "name": "agent-grok",
+      "role": "front_desk",
+      "visibility": "public",
+      "agent": "grok",
+      "usage": "Type normally, no @mention. Closest UX to the Grok bot."
+    },
+    {
+      "name": "agent-product",
+      "role": "product",
+      "visibility": "public",
+      "agent": "fable5",
+      "usage": "Product, journeys, architecture. Type normally."
+    },
+    {
+      "name": "agent-code",
+      "role": "implementation",
+      "visibility": "public",
+      "agent": "codex",
+      "usage": "Implementation and integration. Type normally."
+    },
+    {
+      "name": "agent-review",
+      "role": "review",
+      "visibility": "public",
+      "agent": "kimi3",
+      "usage": "Challenge, verification, adversarial review. Type normally."
+    }
+  ],
+  "agents": [
+    {
+      "id": "grok",
+      "display_name": "Grok Front Desk",
+      "default_role": "conversational_router",
+      "maps_to_team_agent": null,
+      "channel": "agent-grok",
+      "hq_prefixes": ["grok:", "ask:"],
+      "prompt_file": "ops/slack-agent-team/prompts/grok-front-desk.md",
+      "recommended_model": "grok",
+      "needs_repository": true,
+      "tools": ["Send to Slack", "Read Slack channels", "Pull request creation"]
+    },
+    {
+      "id": "fable5",
+      "display_name": "Fable 5 Product",
+      "default_role": "product_and_architecture",
+      "maps_to_team_agent": "fable5",
+      "channel": "agent-product",
+      "hq_prefixes": ["fable:", "product:"],
+      "prompt_file": "ops/slack-agent-team/prompts/fable5-product.md",
+      "recommended_model": "opus",
+      "needs_repository": true,
+      "tools": ["Send to Slack", "Read Slack channels", "Pull request creation"]
+    },
+    {
+      "id": "codex",
+      "display_name": "Codex Implement",
+      "default_role": "implementation_and_integration",
+      "maps_to_team_agent": "codex",
+      "channel": "agent-code",
+      "hq_prefixes": ["codex:", "impl:"],
+      "prompt_file": "ops/slack-agent-team/prompts/codex-implement.md",
+      "recommended_model": "gpt-5.6",
+      "needs_repository": true,
+      "tools": ["Send to Slack", "Read Slack channels", "Pull request creation"]
+    },
+    {
+      "id": "kimi3",
+      "display_name": "Kimi 3 Review",
+      "default_role": "challenge_and_verification",
+      "maps_to_team_agent": "kimi3",
+      "channel": "agent-review",
+      "hq_prefixes": ["kimi:", "review:"],
+      "prompt_file": "ops/slack-agent-team/prompts/kimi3-review.md",
+      "recommended_model": "kimi",
+      "needs_repository": true,
+      "tools": ["Send to Slack", "Read Slack channels", "Pull request creation"]
+    }
+  ],
+  "install": {
+    "integrations_url": "https://cursor.com/dashboard/integrations",
+    "automations_url": "https://cursor.com/automations",
+    "slack_docs_url": "https://cursor.com/docs/integrations/slack",
+    "automations_docs_url": "https://cursor.com/docs/cloud-agent/automations",
+    "owner_only": [
+      "Confirm Cursor Slack app is installed and @cursor is in each public specialist channel",
+      "Create public channels agent-grok, agent-product, agent-code, agent-review",
+      "Create one Cursor Automation per agent using the matching prompt file",
+      "Set each automation repository to aferna6-cell/agentnexlify and trigger from Anyone in the channel",
+      "Enable Claude Tag if Claude should @mention other bots instead of the legacy fallback"
+    ]
+  },
+  "invariants": [
+    "GitHub Issues remain the durable task hub; Slack threads are ephemeral invocation",
+    "Repo work still runs scripts/teamctl.py preflight and claim before editing",
+    "Team and integration commits include [skip ci]",
+    "No GitHub Actions workflows are enabled or dispatched for this Slack team",
+    "Canonical repo is aferna6-cell/agentnexlify, never Agent-Nexlify-OS",
+    "Only Aidan or a standing-authorized manager mention launches ad-hoc @cursor runs in HQ",
+    "Specialist automations reply in the triggering Slack thread and keep main-channel posts to 1-4 bullets",
+    "Tier C / owner-authority actions stay blocked: main pushes, merges, deploys, secrets, purchases, customer contact"
+  ]
+}

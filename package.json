@@ -8,6 +8,7 @@
     "check:local-release": "npm run check:quick && npm run build && npm run test:backend:focused && npm run test:frontend",
     "check:agent": "npm run agent-system:check",
     "team:check": "node scripts/run_python.cjs scripts/check_team_protocol.py",
+    "slack-team:check": "node scripts/run_python.cjs scripts/check_slack_agent_team.py",
     "team:preflight": "node scripts/run_python.cjs scripts/teamctl.py preflight",
     "team:status": "node scripts/run_python.cjs scripts/teamctl.py status",
     "check:instruction-budget": "node scripts/run_python.cjs scripts/check_instruction_budget.py",

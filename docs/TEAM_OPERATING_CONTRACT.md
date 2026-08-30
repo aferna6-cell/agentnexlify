@@ -212,3 +212,17 @@ The integrator may integrate only when:
 - the issue contains a final outcome and remaining-risk summary.
 
 Autonomy does not mean silent work. It means the team keeps moving, makes reversible evidence-backed decisions, and asks the owner only for authority that cannot safely be substituted.
+
+## 11. Slack is an optional invocation surface
+
+Slack is an optional Grok-like way to start this team. It does not replace GitHub Issues as the durable task hub.
+
+Canonical config: [`.ai/slack-agent-team.json`](../.ai/slack-agent-team.json). Setup: [`docs/ops/slack-agent-team.md`](ops/slack-agent-team.md). Spec: [`specs/slack-agent-team_spec.md`](../specs/slack-agent-team_spec.md).
+
+Rules:
+
+- `#agent-nexlify` stays the shared HQ; specialist channels (`#agent-grok`, `#agent-product`, `#agent-code`, `#agent-review`) are always-on Cursor Automations
+- `@cursor` remains the ad-hoc Cloud Agent launcher; unmentioned HQ posts do not wake Cursor unless a prefix automation matches
+- Slack-started repo work still runs `teamctl` preflight/claim and writes events to the GitHub issue
+- Slack threads are ephemeral; issue comments are durable
+- Team commits still include `[skip ci]`; this surface must not allocate GitHub Actions minutes

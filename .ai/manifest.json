@@ -11,6 +11,9 @@
     "agent_routing_policy": "docs/AGENT_ROUTING.md",
     "team_operating_contract": "docs/TEAM_OPERATING_CONTRACT.md",
     "team_contract": ".ai/team-contract.json",
+    "slack_agent_team": ".ai/slack-agent-team.json",
+    "slack_agent_team_setup": "docs/ops/slack-agent-team.md",
+    "slack_agent_team_spec": "specs/slack-agent-team_spec.md",
     "kimi_adapter": "KIMI.md",
     "agent_routing_eval": "config/agent-routing-eval.json",
     "agent_system_guardrail": "scripts/check_agent_system.py",
@@ -307,7 +310,9 @@
     "event_transport": "structured GitHub issue comments",
     "branch_pattern": "team/{issue}/{agent}/{lane}",
     "ephemeral_directory": ".claude/agent-comms/",
-    "ephemeral_scope": "same-provider session scratch only"
+    "ephemeral_scope": "same-provider session scratch only",
+    "optional_invocation": "slack",
+    "slack_agent_team": ".ai/slack-agent-team.json"
   },
   "cross_provider_team": {
     "contract": "docs/TEAM_OPERATING_CONTRACT.md",

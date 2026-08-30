@@ -38,6 +38,7 @@ def main() -> int:
     required_files = [
         "docs/TEAM_OPERATING_CONTRACT.md",
         ".ai/team-contract.json",
+        ".ai/slack-agent-team.json",
         "scripts/teamctl.py",
         "tests/test_teamctl.py",
         "KIMI.md",
@@ -90,7 +91,11 @@ def main() -> int:
     )
     require_text("scripts/hooks/prepare-commit-msg", ["team/*", "[skip ci]"])
     require_text("scripts/install-hooks.sh", ["prepare-commit-msg"])
-    require_text("package.json", ["team:check", "scripts/check_team_protocol.py"])
+    require_text("package.json", ["team:check", "scripts/check_team_protocol.py", "slack-team:check"])
+    require_text(
+        "docs/TEAM_OPERATING_CONTRACT.md",
+        ["Slack is an optional invocation surface", ".ai/slack-agent-team.json"],
+    )
 
     if ERRORS:
         print("Team protocol check failed:", file=sys.stderr)
