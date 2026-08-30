@@ -23,6 +23,7 @@ import {
 } from "./action-collector.ts";
 import type { TenantToolPolicy } from "../agent-os/actions/policy.ts";
 import { applyRagToContext } from "../agent-os/rag/attach.ts";
+import { seedActionPortsFromContext } from "./seed-action-ports.ts";
 
 registerAgentOsProviders();
 
@@ -60,6 +61,12 @@ export async function runOrchestration(
     policy: input.toolPolicy ?? {},
   };
   const context = applyRagToContext(input.accountId, input.ask, input.context);
+  seedActionPortsFromContext(
+    input.accountId,
+    context,
+    actions.calendar,
+    actions.crm,
+  );
   return requestScope.run(
     { accountId: input.accountId, context, record, actions },
     async () => {
@@ -73,6 +80,8 @@ export async function runOrchestration(
         record: record.withActions(
           actions.store.toBundle(),
           actions.notes.toBundle(),
+          actions.calendar.toBundle(),
+          actions.crm.toBundle(),
         ),
       };
     },

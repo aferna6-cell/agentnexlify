@@ -328,6 +328,61 @@ def delete_calendar_event(tenant_id: str, event_id: str) -> str | None:
         return None
 
 
+def get_calendar_event(tenant_id: str, event_id: str) -> dict | None:
+    """Fetch one Google Calendar event for independent verification.
+
+    Returns a normalized dict on success:
+      ``{id, status, summary, start, end, attendees}``
+    Returns ``None`` when credentials/API fail or the event is missing —
+    callers must treat that as verification failure / unknown, never invent.
+    """
+    try:
+        service = _build_service(tenant_id)
+        if not service:
+            return None
+        event = (
+            service.events()
+            .get(calendarId="primary", eventId=event_id)
+            .execute()
+        )
+        start = (event.get("start") or {}).get("dateTime") or (event.get("start") or {}).get(
+            "date"
+        )
+        end = (event.get("end") or {}).get("dateTime") or (event.get("end") or {}).get("date")
+        attendees = [
+            {"email": a.get("email"), "displayName": a.get("displayName")}
+            for a in (event.get("attendees") or [])
+            if a.get("email")
+        ]
+        return {
+            "id": event.get("id"),
+            "status": event.get("status") or "confirmed",
+            "summary": event.get("summary") or "",
+            "start": start,
+            "end": end,
+            "attendees": attendees,
+            "htmlLink": event.get("htmlLink"),
+        }
+    except HttpError as e:
+        if e.resp.status == 404:
+            return None
+        logger.warning(
+            "Google Calendar get event %s failed for tenant %s: %s",
+            event_id,
+            tenant_id,
+            e,
+        )
+        return None
+    except Exception:
+        logger.warning(
+            "Failed to get Google Calendar event %s for tenant %s",
+            event_id,
+            tenant_id,
+            exc_info=True,
+        )
+        return None
+
+
 def get_busy_times(
     tenant_id: str,
     time_min: datetime,

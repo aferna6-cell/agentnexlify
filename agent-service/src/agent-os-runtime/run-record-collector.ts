@@ -20,7 +20,11 @@ import type {
   ModelCallCreate,
 } from "../agent-os/lib/providers/run-store.ts";
 import type { ActionExecutionRecord } from "../agent-os/actions/types.ts";
-import type { CustomerNoteRecord } from "../agent-os/actions/ports.ts";
+import type {
+  CalendarEventRecord,
+  CustomerNoteRecord,
+} from "../agent-os/actions/ports.ts";
+import type { CrmMutationBundle } from "./action-collector.ts";
 
 export interface CollectedDecision extends RoutingDecisionCreate {
   id: string;
@@ -51,6 +55,15 @@ export interface RunRecordBundle {
    * tenant's customer records.
    */
   customerNotes: CustomerNoteRecord[];
+  /**
+   * Calendar events mutated this turn (Collecting). FastAPI applies via
+   * appointments / Google — L2 invite/reschedule/cancel still claim-gated.
+   */
+  calendarEvents: CalendarEventRecord[];
+  /**
+   * CRM mutations this turn. FastAPI applies to ``leads`` with read-back.
+   */
+  customers: CrmMutationBundle[];
 }
 
 export class RunRecordCollector implements RunStore {
@@ -63,15 +76,22 @@ export class RunRecordCollector implements RunStore {
     wishlist: [],
     toolExecutions: [],
     customerNotes: [],
+    calendarEvents: [],
+    customers: [],
   };
 
-  async createRoutingDecision(input: RoutingDecisionCreate): Promise<{ id: string }> {
+  async createRoutingDecision(
+    input: RoutingDecisionCreate,
+  ): Promise<{ id: string }> {
     const id = randomUUID();
     this.bundle.decisions.push({ ...input, id });
     return { id };
   }
 
-  async markRoutingDecisionOverridden(decisionId: string, changedTo: string): Promise<void> {
+  async markRoutingDecisionOverridden(
+    decisionId: string,
+    changedTo: string,
+  ): Promise<void> {
     const d = this.bundle.decisions.find((x) => x.id === decisionId);
     if (d) {
       d.accepted = false;
@@ -96,7 +116,11 @@ export class RunRecordCollector implements RunStore {
     return { id };
   }
 
-  async captureWishlist(input: { userId: string; request: string; consideredAgents: string }): Promise<void> {
+  async captureWishlist(input: {
+    userId: string;
+    request: string;
+    consideredAgents: string;
+  }): Promise<void> {
     this.bundle.wishlist.push({ ...input });
   }
 
@@ -120,7 +144,15 @@ export class RunRecordCollector implements RunStore {
   withActions(
     toolExecutions: ActionExecutionRecord[],
     customerNotes: CustomerNoteRecord[],
+    calendarEvents: CalendarEventRecord[] = [],
+    customers: CrmMutationBundle[] = [],
   ): RunRecordBundle {
-    return { ...this.bundle, toolExecutions, customerNotes };
+    return {
+      ...this.bundle,
+      toolExecutions,
+      customerNotes,
+      calendarEvents,
+      customers,
+    };
   }
 }

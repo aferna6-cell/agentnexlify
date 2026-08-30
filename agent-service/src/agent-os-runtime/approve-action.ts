@@ -31,9 +31,14 @@ import type {
   ActionExecutionRecord,
   RiskLevel,
 } from "../agent-os/actions/types.ts";
-import type { CustomerNoteRecord } from "../agent-os/actions/ports.ts";
+import type {
+  CalendarEventRecord,
+  CustomerNoteRecord,
+} from "../agent-os/actions/ports.ts";
 import type { TenantToolPolicy } from "../agent-os/actions/policy.ts";
 import type { SharedContext } from "../agent-os/types/agent.ts";
+import type { CrmMutationBundle } from "./action-collector.ts";
+import { seedActionPortsFromContext } from "./seed-action-ports.ts";
 
 registerAgentOsProviders();
 
@@ -68,6 +73,8 @@ export interface ApproveActionInput {
 export interface ApproveActionOutput {
   execution: ActionExecutionRecord;
   customerNotes: CustomerNoteRecord[];
+  calendarEvents: CalendarEventRecord[];
+  customers: CrmMutationBundle[];
 }
 
 export async function runApprovedAction(
@@ -81,6 +88,7 @@ export async function runApprovedAction(
   const notes = new CollectingCustomerNotesPort(input.existingNotes ?? []);
   const calendar = new CollectingCalendarPort();
   const crm = new CollectingCrmPort();
+  seedActionPortsFromContext(input.accountId, input.context, calendar, crm);
 
   // Rebuild the row the executor expects. Only the fields the data plane is
   // authoritative for are carried over; status is always `pending_approval`
@@ -120,6 +128,11 @@ export async function runApprovedAction(
       approvedBy: input.approvedBy,
       sharedContext: input.context,
     });
-    return { execution: outcome.record, customerNotes: notes.toBundle() };
+    return {
+      execution: outcome.record,
+      customerNotes: notes.toBundle(),
+      calendarEvents: calendar.toBundle(),
+      customers: crm.toBundle(),
+    };
   });
 }

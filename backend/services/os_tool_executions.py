@@ -251,6 +251,22 @@ def persist_tool_executions(
     if notes:
         apply_customer_notes(db, client_id, notes, executions)
 
+    customers = record.get("customers") or []
+    if customers:
+        from backend.services import os_calendar_crm
+
+        os_calendar_crm.apply_crm_mutations(
+            db, client_id, customers, executions
+        )
+
+    calendar_events = record.get("calendarEvents") or []
+    if calendar_events:
+        from backend.services import os_calendar_crm
+
+        os_calendar_crm.apply_calendar_mutations(
+            db, client_id, calendar_events, executions
+        )
+
     return reused + inserted
 
 
