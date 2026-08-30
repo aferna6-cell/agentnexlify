@@ -20,10 +20,12 @@ No production flags flipped. Secrets not recorded in artifacts.
 
 | Capability | Live-proven? | Staging enabled? | Canary eligible? | Production eligible? | Blocker | Rollback |
 |---|---|---|---|---|---|---|
-| **RAG** | **yes** (holdout + smoke-tenant citations/abstention/isolation; compile/index path) | **yes** (`RAG_ENABLED=1`) | after Calendar/Gmail also pass | **no** | — | `RAG_ENABLED=0` |
-| **CRM** | **yes** (Action Executor data-plane apply + `os_tool_executions` lifecycle) | **yes** | after Calendar/Gmail also pass | **no** | — | `CRM_ACTIONS_ENABLED=0` |
+| **RAG** | **yes*** (compile/index + retrieval citations/abstention/isolation on staging DB) | **yes** (`RAG_ENABLED=1`) | after Calendar/Gmail also pass | **no** | — | `RAG_ENABLED=0` |
+| **CRM** | **yes*** (data-plane `apply_crm_mutations` + `persist_tool_executions` on staging DB) | **yes** | after Calendar/Gmail also pass | **no** | — | `CRM_ACTIONS_ENABLED=0` |
 | **Calendar** | **no** | **yes** (flag on) | **no** | **no** | No `google_calendar` OAuth row; Google Cloud redirect URI registration blocked | `CALENDAR_ACTIONS_ENABLED=0` |
 | **Gmail** | **no** | **yes** (flag on) | **no** | **no** | No `gmail` OAuth row; same Google Cloud redirect block | `SEND_EMAIL_ENABLED=0` |
+
+\*Proven via `scripts/m8_live_smoke.py` calling production backend modules against staging Supabase (not a separate Agent OS chat HTTP turn). Staging smoke used a staging-only elevated DB key workaround after service_role UI reveal failed; RLS was disabled on staging for that smoke.
 
 ---
 
@@ -42,10 +44,12 @@ No production flags flipped. Secrets not recorded in artifacts.
 - Tenant queries: services/prices/warranty/cancel/faq cite; crypto no-answer abstains
 - Cross-tenant evidence 0
 
-### CRM evidence (Action Executor data plane)
+### CRM evidence (staging data plane)
+
 - create, duplicate prevention, partial update, valid/invalid stage, cross-tenant refusal
 - search + ambiguous-name clarification (`Mike Smoke` ×2)
 - `os_tool_executions` persist + read-back lifecycle **pass**
+- Path: smoke runner → `os_calendar_crm` / `os_tool_executions` → staging DB (same modules Action Executor uses). Not an Agent OS HTTP chat turn.
 
 ### Calendar / Gmail
 - Blocked at provider gate: zero integration rows for smoke tenant
