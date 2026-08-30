@@ -58,6 +58,9 @@ export type RoutingProvider = (ask: string) => Candidate[] | null;
 let routingProvider: RoutingProvider | null = null;
 
 export function setRoutingProvider(provider: RoutingProvider): void {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("routing provider substitution is disabled in production");
+  }
   routingProvider = provider;
 }
 

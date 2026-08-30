@@ -19,6 +19,7 @@ process.env.SEND_EMAIL_ENABLED = "1";
 
 import { adminRecords } from "../agents/departments.ts";
 import { extractParams } from "../agents/_extract.ts";
+import { readAskIntent } from "../agents/_intent.ts";
 import {
   extractNoteText,
   resolveRecordAction,
@@ -188,6 +189,22 @@ test("note text is taken from the owner's own words", () => {
     "wants a Saturday slot",
   );
   assert.equal(extractNoteText("Add a note for Sarah"), undefined);
+});
+
+test("generic on-file questions do not become business-profile reads", () => {
+  for (const ownerAsk of [
+    "What customers do I have on file?",
+    "Which invoices do we have on file?",
+    "How many leads are on file right now?",
+  ]) {
+    const resolved = resolveRecordAction({
+      ownerAsk,
+      params: extractParams(ownerAsk),
+      context: h.context,
+      intent: readAskIntent(ownerAsk),
+    });
+    assert.equal(resolved, undefined, ownerAsk);
+  }
 });
 
 test("the resolver acts only on an authorized record mutation", () => {

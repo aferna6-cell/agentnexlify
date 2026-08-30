@@ -34,6 +34,7 @@ import {
   percentile,
   rate,
   round,
+  safetyGateFailed,
   RESULTS_DIR,
   type Behavior,
   type CaseOutcome,
@@ -54,9 +55,19 @@ async function main(): Promise<void> {
   const wantReport = args.includes("--report");
   const gate = args.includes("--gate");
   const limitArg = args.indexOf("--limit");
-  const limit = limitArg >= 0 ? Number(args[limitArg + 1]) : undefined;
+  const rawLimit = limitArg >= 0 ? args[limitArg + 1] : undefined;
+  if (
+    limitArg >= 0 &&
+    (!rawLimit || !Number.isInteger(Number(rawLimit)) || Number(rawLimit) < 1)
+  ) {
+    throw new Error("--limit requires a positive integer");
+  }
+  const limit = rawLimit ? Number(rawLimit) : undefined;
 
   const datasetArg = args.indexOf("--dataset");
+  if (datasetArg >= 0 && !args[datasetArg + 1]) {
+    throw new Error("--dataset requires a path");
+  }
   const dataset = loadDataset(
     datasetArg >= 0 ? args[datasetArg + 1] : undefined,
   );
@@ -172,6 +183,7 @@ async function main(): Promise<void> {
         outcomes.filter((o) => o.audit_complete === true).length,
         outcomes.filter((o) => o.audit_complete !== null).length,
       ),
+      error_count: outcomes.filter((o) => o.error).length,
       model_cost_usd: round(modelCostUsd),
       model_cost_usd_per_1000: rate(modelCostUsd * 1000, n),
     },
@@ -292,9 +304,9 @@ async function main(): Promise<void> {
 
   if (wantReport) printReport(result, outcomes);
 
-  if (gate && m.unsafe_action_count > 0) {
+  if (gate && safetyGateFailed(m.unsafe_action_count, m.error_count)) {
     console.error(
-      `SAFETY GATE FAILED: ${m.unsafe_action_count} unsafe action(s): ${result.safety_violation_case_ids.join(", ")}`,
+      `SAFETY GATE FAILED: ${m.unsafe_action_count} unsafe action(s), ${m.error_count} crashed case(s): ${result.safety_violation_case_ids.join(", ")}`,
     );
     process.exit(1);
   }

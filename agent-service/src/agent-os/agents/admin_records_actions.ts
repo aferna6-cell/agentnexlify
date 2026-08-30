@@ -22,14 +22,17 @@
  * Mike is not a reason to draft, and certainly not a reason to pick one.
  */
 
-import type { ClarificationRequest, DepartmentActionRequest } from "./_department.ts";
+import type {
+  ClarificationRequest,
+  DepartmentActionRequest,
+} from "./_department.ts";
 import { authorizesAction, type AskIntent } from "./_intent.ts";
 import { describeAmbiguity, resolveCustomerAnywhere } from "./_resolve.ts";
 import type { SharedContext } from "../types/agent.ts";
 
 /** The business's own details, as distinct from a customer's. */
 const BUSINESS_PROFILE_RE =
-  /\b(my|our|the) (business|company|shop|store)\b|\b(business|company) (name|phone|address|hours|profile|details)\b|\bon file\b/i;
+  /\b(my|our|the) (business|company|shop|store)\b|\b(business|company) (name|phone|address|hours|profile|details)\b/i;
 
 /**
  * Pull the note text out of the ask. Owners phrase this as "… saying X",
@@ -71,8 +74,16 @@ export function resolveRecordAction(args: {
         const p = result as Record<string, unknown>;
         const parts = Object.entries(p)
           .filter(([, v]) => typeof v === "string" && v)
-          .map(([k, v]) => `${k.replace(/([A-Z])/g, " $1").toLowerCase().trim()}: ${String(v)}`);
-        return parts.length ? `Here's what I have on file — ${parts.join(", ")}.` : "I don't have a business profile on file yet.";
+          .map(
+            ([k, v]) =>
+              `${k
+                .replace(/([A-Z])/g, " $1")
+                .toLowerCase()
+                .trim()}: ${String(v)}`,
+          );
+        return parts.length
+          ? `Here's what I have on file — ${parts.join(", ")}.`
+          : "I don't have a business profile on file yet.";
       },
     };
   }
@@ -81,7 +92,8 @@ export function resolveRecordAction(args: {
   if (!authorizesAction(intent)) return undefined;
 
   const note = extractNoteText(ownerAsk);
-  const customerName = typeof params.customer_name === "string" ? params.customer_name.trim() : "";
+  const customerName =
+    typeof params.customer_name === "string" ? params.customer_name.trim() : "";
 
   // Nothing to identify the customer by. Ask rather than draft a note into the
   // void — the owner plainly wants a record updated, they just did not say whose.
@@ -98,7 +110,9 @@ export function resolveRecordAction(args: {
   // Two customers match. There is no safe way to choose, so do not.
   if (resolution.kind === "multiple") {
     const names = describeAmbiguity(resolution.matches, (m) => m.name);
-    return { clarify: `I found more than one customer matching "${customerName}" — ${names}. Which one did you mean?` };
+    return {
+      clarify: `I found more than one customer matching "${customerName}" — ${names}. Which one did you mean?`,
+    };
   }
 
   // Not a customer of this business. Fall through to drafting rather than
@@ -106,15 +120,24 @@ export function resolveRecordAction(args: {
   if (resolution.kind === "none") return undefined;
 
   if (!note) {
-    return { clarify: `What should the note on ${resolution.match.name}'s record say?` };
+    return {
+      clarify: `What should the note on ${resolution.match.name}'s record say?`,
+    };
   }
 
   return {
     toolId: "add_customer_note",
     input: { customer_name: resolution.match.name, note },
     describe: (result) => {
-      const out = result as { customerName?: string; note?: string; durable?: boolean };
-      const where = out.durable === false ? " (this environment stores notes in memory only)" : "";
+      const out = result as {
+        customerName?: string;
+        note?: string;
+        durable?: boolean;
+      };
+      const where =
+        out.durable === false
+          ? " (this environment stores notes in memory only)"
+          : "";
       return `Added a note to ${out.customerName ?? resolution.match.name}'s record: "${out.note ?? note}"${where}.`;
     },
   };

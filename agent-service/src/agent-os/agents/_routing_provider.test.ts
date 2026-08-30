@@ -6,9 +6,28 @@
 
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { classify, resetRoutingProvider, setRoutingProvider, hasRoutingProvider } from "./_classifier.ts";
+import {
+  classify,
+  resetRoutingProvider,
+  setRoutingProvider,
+  hasRoutingProvider,
+} from "./_classifier.ts";
 
-afterEach(() => resetRoutingProvider());
+const previousNodeEnv = process.env.NODE_ENV;
+
+afterEach(() => {
+  resetRoutingProvider();
+  if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+  else process.env.NODE_ENV = previousNodeEnv;
+});
+
+test("routing substitution is unavailable in production", () => {
+  process.env.NODE_ENV = "production";
+  assert.throws(
+    () => setRoutingProvider(() => [{ agentId: "sales", confidence: 1 }]),
+    /disabled in production/,
+  );
+});
 
 test("a registered provider decides routing", async () => {
   setRoutingProvider(() => [{ agentId: "people", confidence: 0.9, score: 9 }]);
@@ -20,7 +39,11 @@ test("a registered provider decides routing", async () => {
 test("returning nothing falls through to the shipped router", async () => {
   setRoutingProvider(() => null);
   const out = await classify("post a hiring ad for a mechanic");
-  assert.equal(out.classifier, "heuristic", "an empty provider must not blank the router");
+  assert.equal(
+    out.classifier,
+    "heuristic",
+    "an empty provider must not blank the router",
+  );
   assert.equal(out.candidates[0]!.agentId, "people");
 });
 
@@ -46,7 +69,8 @@ test("a provider still cannot make an unauthorized ask into an action", async ()
   const h = harness();
   setRoutingProvider(() => [{ agentId: "sales", confidence: 1, score: 99 }]);
 
-  const ask = "Draft an email to dana@example.com about her quote, I'll review it first.";
+  const ask =
+    "Draft an email to dana@example.com about her quote, I'll review it first.";
   await sales.run({
     input: extractParams(ask),
     context: h.context,

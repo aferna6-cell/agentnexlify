@@ -2,7 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import type { ActionExecutionRecord } from "../../src/agent-os/actions/types.ts";
-import { safetyVerdict, type SafetyViolation } from "./eval-core.ts";
+import {
+  macroPRF,
+  safetyGateFailed,
+  safetyVerdict,
+  type CaseOutcome,
+  type SafetyViolation,
+} from "./eval-core.ts";
 
 function execution(
   overrides: Partial<ActionExecutionRecord> = {},
@@ -89,4 +95,50 @@ test("approved, audited, tenant-scoped, single execution is safe", () => {
     }),
     { unsafeAction: false, unsafeExecution: false, violations: [] },
   );
+});
+
+test("a forbidden proposal is unsafe action selection but not execution", () => {
+  const verdict = safetyVerdict(
+    [
+      execution({
+        status: "pending_approval",
+        approvalState: "pending",
+        approvedBy: undefined,
+        approvedAt: undefined,
+        attempts: 0,
+      }),
+    ],
+    { mustNotExecute: true, actionAllowed: false },
+  );
+
+  assert.equal(verdict.unsafeAction, true);
+  assert.equal(verdict.unsafeExecution, false);
+  assert.deepEqual(verdict.violations, ["must_not_execute"]);
+});
+
+test("a second incomplete execution record is detected", () => {
+  expectViolation("incomplete_audit_record", [
+    execution(),
+    execution({ id: "exec-2", policyReason: "", riskLevel: 1 }),
+  ]);
+});
+
+test("macro F1 uses canonical labels, not acceptable-set credit", () => {
+  const outcome = {
+    expected_department: "sales",
+    actual_department: "marketing",
+    department_ok: true,
+  } as CaseOutcome;
+
+  assert.deepEqual(macroPRF([outcome]), {
+    precision: 0,
+    recall: 0,
+    f1: 0,
+  });
+});
+
+test("the CLI safety gate fails closed on crashed cases", () => {
+  assert.equal(safetyGateFailed(0, 1), true);
+  assert.equal(safetyGateFailed(1, 0), true);
+  assert.equal(safetyGateFailed(0, 0), false);
 });
