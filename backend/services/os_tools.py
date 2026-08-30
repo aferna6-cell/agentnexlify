@@ -37,6 +37,10 @@ class MailboxPort(Protocol):
 
     def send(self, **kwargs) -> dict | None: ...
 
+    def verify(
+        self, message_id: str, *, to: str, subject: str, rfc822_msgid: str
+    ) -> dict: ...
+
 
 @dataclass
 class ToolContext:
@@ -99,6 +103,33 @@ class GmailMailboxPort:
         if result.get("success"):
             return {"success": True, "message_id": result.get("message_id", "")}
         return None
+
+    def verify(
+        self, message_id: str, *, to: str, subject: str, rfc822_msgid: str
+    ) -> dict:
+        from backend.services import gmail_connector
+
+        message = gmail_connector.get_message(self.tenant_id, message_id)
+        if message is None:
+            return {"verified": False, "detail": "sent message was not found in Gmail"}
+        expected_to = svc._normalize_email(to)
+        actual_to = svc._normalize_email(message.recipient)
+        expected_msgid = rfc822_msgid.strip().strip("<>")
+        actual_msgid = (message.headers.get("message-id") or "").strip().strip("<>")
+        verified = (
+            expected_to is not None
+            and actual_to == expected_to
+            and message.subject.strip() == subject.strip()
+            and actual_msgid == expected_msgid
+        )
+        return {
+            "verified": verified,
+            "detail": (
+                "recipient, subject, and Message-ID match"
+                if verified
+                else "recipient, subject, or Message-ID mismatch"
+            ),
+        }
 
 
 def _run_data_plane_tool(

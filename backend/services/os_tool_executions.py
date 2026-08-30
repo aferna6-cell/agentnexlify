@@ -632,30 +632,34 @@ def _run_data_plane_tool(
         return {"executed": False, "adopted": False, "unknown": False}
 
     msgid = rfc822_msgid_for(execution_id)
+    payload = row.get("input") or {}
     existing = port.find_by_rfc822_msgid(msgid)
     if existing:
-        record_execution_outcome(
+        verification = _verify_sent_message(
+            port,
+            existing,
+            to=payload.get("to") or "",
+            subject=payload.get("subject") or "",
+            rfc822_msgid=msgid,
+        )
+        _record_send_verification(
             db,
             client_id,
-            {
-                "id": execution_id,
-                "status": "succeeded",
-                "result": {
-                    "messageId": existing,
-                    "deduplicated": True,
-                    "rfc822MsgId": msgid,
-                },
-                "verificationState": "pending",
-            },
+            execution_id,
+            existing,
+            payload,
+            msgid,
+            deduplicated=True,
+            verification=verification,
         )
         return {
             "executed": False,
             "adopted": True,
             "unknown": False,
             "message_id": existing,
+            "verified": verification["verified"],
         }
 
-    payload = row.get("input") or {}
     try:
         sent = port.send(
             to=payload.get("to"),
@@ -678,25 +682,106 @@ def _run_data_plane_tool(
         )
         return {"executed": True, "adopted": False, "unknown": True}
 
-    record_execution_outcome(
+    verification = _verify_sent_message(
+        port,
+        sent["message_id"],
+        to=payload.get("to") or "",
+        subject=payload.get("subject") or "",
+        rfc822_msgid=msgid,
+    )
+    _record_send_verification(
         db,
         client_id,
-        {
-            "id": execution_id,
-            "status": "succeeded",
-            "result": {
-                "messageId": sent["message_id"],
-                "deduplicated": False,
-                "rfc822MsgId": msgid,
-            },
-        },
+        execution_id,
+        sent["message_id"],
+        payload,
+        msgid,
+        deduplicated=False,
+        verification=verification,
     )
     return {
         "executed": True,
         "adopted": False,
         "unknown": False,
         "message_id": sent["message_id"],
+        "verified": verification["verified"],
     }
+
+
+def _verify_sent_message(
+    port: Any,
+    message_id: str,
+    *,
+    to: str,
+    subject: str,
+    rfc822_msgid: str,
+) -> dict:
+    """Read a sent/adopted message back; missing verification fails closed."""
+    verify = getattr(port, "verify", None)
+    if not callable(verify):
+        return {
+            "verified": False,
+            "detail": "mailbox port does not support read-back verification",
+        }
+    try:
+        result = verify(
+            message_id,
+            to=to,
+            subject=subject,
+            rfc822_msgid=rfc822_msgid,
+        )
+    except Exception:
+        logger.exception(
+            "os_tool_executions: Gmail read-back failed message_id=%s", message_id
+        )
+        return {"verified": False, "detail": "Gmail read-back failed"}
+    if not isinstance(result, dict):
+        return {"verified": False, "detail": "mailbox returned no verification result"}
+    return {
+        "verified": result.get("verified") is True,
+        "detail": str(result.get("detail") or "mailbox verification returned no detail")[
+            :500
+        ],
+    }
+
+
+def _record_send_verification(
+    db: Any,
+    client_id: str,
+    execution_id: str,
+    message_id: str,
+    payload: dict,
+    rfc822_msgid: str,
+    *,
+    deduplicated: bool,
+    verification: dict,
+) -> None:
+    verified = verification["verified"] is True
+    detail = verification["detail"]
+    record_execution_outcome(
+        db,
+        client_id,
+        {
+            "id": execution_id,
+            "status": "succeeded" if verified else "verification_failed",
+            "result": {
+                "messageId": message_id,
+                "deduplicated": deduplicated,
+                "rfc822MsgId": rfc822_msgid,
+                "to": payload.get("to"),
+                "subject": payload.get("subject"),
+            },
+            "verificationState": "passed" if verified else "failed",
+            "verificationDetail": detail,
+            "verifiedAt": _now(),
+            "finishedAt": _now(),
+            "error": (
+                None
+                if verified
+                else {"code": "verification_failed", "message": detail}
+            ),
+        },
+    )
 
 
 def reject_tool_execution(
