@@ -1,5 +1,9 @@
 # Agent action evaluation harness
 
+> Harness design and original research baseline. Current Milestone 6 evidence,
+> dataset permissions, and HOLD status live in
+> `docs/milestone-6-decision-intelligence.md`.
+
 A reproducible benchmark for the question the unit tests cannot answer:
 **did the AI make the correct business decision?**
 
@@ -83,8 +87,8 @@ and leakage rules. In short:
 | Split | File | Cases | Editable |
 |---|---|---|---|
 | test (frozen) | `action-eval-v1.json` | 215 | **No** |
-| validation | `validation/validation-v1.json` | 35 | Yes |
-| train | `train/` | 0 | Yes (reserved) |
+| selection | `validation/validation-v3.json` | 208 | **No — frozen 2026-08-30** |
+| train | `../../../ml/routing/data/train-v1.jsonl` | 1,216 | Fit/CV only |
 
 Each case carries the ask, the expected department, the expected behaviour
 (`action` / `draft_only` / `clarification` / `decline` / `direct_answer`), the

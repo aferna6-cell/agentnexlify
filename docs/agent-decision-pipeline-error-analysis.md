@@ -1,5 +1,8 @@
 # Decision pipeline — error analysis and generalization fixes
 
+> Research baseline from PR #693. Current integrated evidence is recorded in
+> `docs/milestone-6-decision-intelligence.md`.
+
 Milestone 4. Baseline commit `9c3ac4a`. Method: build a stage-based error
 taxonomy, fix root causes at the category level against the **editable
 validation split**, then run the frozen test split **once** to measure whether

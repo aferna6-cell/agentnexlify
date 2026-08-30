@@ -1,5 +1,8 @@
 # Milestone 6 — Router calibration, LLM benchmark, and selective routing
 
+> Research reference from PR #693. Its “complete” status does not describe
+> current production. See `docs/milestone-6-decision-intelligence.md`.
+
 **Status:** complete. **Production routing is unchanged.**
 **Commit:** `1c2c9e7` (baseline) → this branch. **Date:** 2026-08-29.
 

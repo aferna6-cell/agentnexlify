@@ -1,5 +1,8 @@
 # ML router benchmark
 
+> Research reference from PR #693, not current production evidence. See
+> `docs/milestone-6-decision-intelligence.md` for the canonical decision.
+
 **Question.** Can a statistical classifier route small-business requests better
 than the shipped heuristic and LLM approaches, while preserving latency, cost,
 interpretability and the ability to abstain?
