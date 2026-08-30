@@ -1,0 +1,138 @@
+{
+  "dataset": "validation-v3",
+  "n": 208,
+  "frozen_215_used_for_selection": false,
+  "production_classify_changed": false,
+  "send_email_enabled": false,
+  "candidates": [
+    {
+      "name": "heuristic",
+      "n": 208,
+      "department_accuracy": 0.4326923076923077,
+      "department_exact_accuracy": 0.3701923076923077,
+      "macro_f1": 0.3888866881210909,
+      "null_rate": 0.20673076923076922,
+      "unsafe_actions": 0,
+      "downstream_behavior_accuracy": null,
+      "downstream_tool_accuracy": null,
+      "downstream_note": "validation-v3 is routing-only (no SharedContext). Downstream measured on frozen 215 after freeze.",
+      "llm_escalation_pct": 0.0,
+      "latency_ms_per_request": 1.526,
+      "latency_note": "in-process heuristic (classifyHeuristic)",
+      "cost_per_1000_usd": 0.0
+    },
+    {
+      "name": "tfidf",
+      "n": 208,
+      "department_accuracy": 0.5192307692307693,
+      "department_exact_accuracy": 0.4519230769230769,
+      "macro_f1": 0.4477415733042887,
+      "null_rate": 0.0,
+      "unsafe_actions": 0,
+      "downstream_behavior_accuracy": null,
+      "downstream_tool_accuracy": null,
+      "downstream_note": "validation-v3 is routing-only (no SharedContext). Downstream measured on frozen 215 after freeze.",
+      "llm_escalation_pct": 0.0,
+      "latency_ms_per_request": 0.03,
+      "latency_note": "in-process tfidf after one-time fit",
+      "cost_per_1000_usd": 0.0
+    },
+    {
+      "name": "heuristic\u2192tfidf",
+      "n": 208,
+      "department_accuracy": 0.5144230769230769,
+      "department_exact_accuracy": 0.44711538461538464,
+      "macro_f1": 0.45266191046689447,
+      "null_rate": 0.0,
+      "unsafe_actions": 0,
+      "downstream_behavior_accuracy": null,
+      "downstream_tool_accuracy": null,
+      "downstream_note": "validation-v3 is routing-only (no SharedContext). Downstream measured on frozen 215 after freeze.",
+      "llm_escalation_pct": 0.0,
+      "tfidf_escalation_pct": 0.4567307692307692,
+      "latency_ms_per_request": 1.539,
+      "latency_note": "heuristic then tfidf on low evidence (score<3 or null)",
+      "cost_per_1000_usd": 0.0
+    },
+    {
+      "name": "haiku",
+      "skipped": true,
+      "note": "ANTHROPIC_API_KEY absent. Haiku / heuristic\u2192Haiku / three-stage cascade not measured."
+    },
+    {
+      "name": "heuristic\u2192haiku",
+      "skipped": true,
+      "note": "Blocked on owner API key. Estimated Haiku cost ~$1.10/1k routes if measured later."
+    },
+    {
+      "name": "heuristic\u2192tfidf\u2192haiku",
+      "skipped": true,
+      "note": "Blocked on owner API key."
+    }
+  ],
+  "risk_coverage": [
+    {
+      "min_heuristic_score": 0,
+      "pct_without_llm": 0.7932692307692307,
+      "accuracy_on_handled": 0.5454545454545454,
+      "pct_escalated": 0.20673076923076927,
+      "unsafe_count": 0
+    },
+    {
+      "min_heuristic_score": 2,
+      "pct_without_llm": 0.7307692307692307,
+      "accuracy_on_handled": 0.5592105263157895,
+      "pct_escalated": 0.2692307692307693,
+      "unsafe_count": 0
+    },
+    {
+      "min_heuristic_score": 3,
+      "pct_without_llm": 0.5432692307692307,
+      "accuracy_on_handled": 0.6283185840707964,
+      "pct_escalated": 0.4567307692307693,
+      "unsafe_count": 0
+    },
+    {
+      "min_heuristic_score": 4,
+      "pct_without_llm": 0.5096153846153846,
+      "accuracy_on_handled": 0.6320754716981132,
+      "pct_escalated": 0.4903846153846154,
+      "unsafe_count": 0
+    },
+    {
+      "min_heuristic_score": 5,
+      "pct_without_llm": 0.4230769230769231,
+      "accuracy_on_handled": 0.6477272727272727,
+      "pct_escalated": 0.5769230769230769,
+      "unsafe_count": 0
+    },
+    {
+      "min_heuristic_score": 6,
+      "pct_without_llm": 0.3605769230769231,
+      "accuracy_on_handled": 0.6533333333333333,
+      "pct_escalated": 0.6394230769230769,
+      "unsafe_count": 0
+    },
+    {
+      "min_heuristic_score": 8,
+      "pct_without_llm": 0.3557692307692308,
+      "accuracy_on_handled": 0.6486486486486487,
+      "pct_escalated": 0.6442307692307692,
+      "unsafe_count": 0
+    },
+    {
+      "min_heuristic_score": 10,
+      "pct_without_llm": 0.2403846153846154,
+      "accuracy_on_handled": 0.64,
+      "pct_escalated": 0.7596153846153846,
+      "unsafe_count": 0
+    }
+  ],
+  "winner": "tfidf",
+  "winner_auto_promoted": false,
+  "production_recommendation": "keep_heuristic",
+  "production_recommendation_note": "A measured accuracy leader is not shipped. classify() is unchanged. Promote only after an explicit owner decision.",
+  "rationale": "TF-IDF standalone is more accurate on v3, but is not auto-promoted.",
+  "haiku_measured": false,
+  "estimated_haiku_cost_per_1000_usd": 1.1
+}

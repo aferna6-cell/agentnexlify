@@ -24,6 +24,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -150,19 +151,30 @@ def f1(pairs: list[tuple[str, str]]) -> float:
     return 0.0 if p + r == 0 else 2 * p * r / (p + r)
 
 
+def acceptable(case: dict) -> set[str]:
+    ok = {case.get("department_label") or case["expected_department"]}
+    ok.update(case.get("acceptable_departments") or [])
+    return ok
+
+
 def summarize(name: str, cases: list[dict], preds: list[str | None], extras: dict) -> dict:
     n = len(cases)
     expected = [c.get("department_label") or c["expected_department"] for c in cases]
-    correct = sum(1 for e, a in zip(expected, preds) if e == a)
+    correct = sum(1 for c, a in zip(cases, preds) if a in acceptable(c))
+    exact = sum(1 for e, a in zip(expected, preds) if e == a)
     nulls = sum(1 for a in preds if a is None)
     pairs = [(e, a or "none") for e, a in zip(expected, preds)]
     return {
         "name": name,
         "n": n,
         "department_accuracy": correct / n,
+        "department_exact_accuracy": exact / n,
         "macro_f1": f1(pairs),
         "null_rate": nulls / n,
         "unsafe_actions": 0,
+        "downstream_behavior_accuracy": None,
+        "downstream_tool_accuracy": None,
+        "downstream_note": "validation-v3 is routing-only (no SharedContext). Downstream measured on frozen 215 after freeze.",
         **extras,
     }
 
@@ -180,13 +192,13 @@ def cascade_ht(h_rows: list[dict], tfidf: TfidfRouter, asks: list[str], floor: f
     return preds, escalated / len(asks)
 
 
-def risk_curve(h_rows: list[dict], tfidf: TfidfRouter, asks: list[str], expected: list[str]) -> list[dict]:
+def risk_curve(h_rows: list[dict], tfidf: TfidfRouter, asks: list[str], cases: list[dict]) -> list[dict]:
     rows = []
     for floor in (0, 2, 3, 4, 5, 6, 8, 10):
         handled = []
-        for ask, h, exp in zip(asks, h_rows, expected):
+        for ask, h, case in zip(asks, h_rows, cases):
             if not h["null"] and (h["score"] or 0) >= floor and h["predicted"]:
-                handled.append(h["predicted"] == exp)
+                handled.append(h["predicted"] in acceptable(case))
             else:
                 handled.append(None)
         n_handled = sum(1 for x in handled if x is not None)
@@ -209,32 +221,41 @@ def main() -> None:
     print(f"validation-v3 n={len(cases)}", file=sys.stderr)
 
     print("heuristic…", file=sys.stderr)
+    t0 = time.perf_counter()
     h_rows = heuristic_batch(asks)
+    h_ms = (time.perf_counter() - t0) * 1000 / max(len(asks), 1)
     h_preds = [r["predicted"] for r in h_rows]
 
     print("tfidf…", file=sys.stderr)
     tfidf = TfidfRouter()
     tfidf.fit(load_train())
+    t0 = time.perf_counter()
     t_preds = [tfidf.predict(a)[0] for a in asks]
+    t_ms = (time.perf_counter() - t0) * 1000 / max(len(asks), 1)
 
+    t0 = time.perf_counter()
     ht_preds, ht_esc = cascade_ht(h_rows, tfidf, asks)
+    ht_ms = (time.perf_counter() - t0) * 1000 / max(len(asks), 1)
 
     haiku_available = bool(os.environ.get("ANTHROPIC_API_KEY"))
     results = [
         summarize("heuristic", cases, h_preds, {
             "llm_escalation_pct": 0.0,
-            "latency_note": "in-process heuristic",
+            "latency_ms_per_request": round(h_ms, 3),
+            "latency_note": "in-process heuristic (classifyHeuristic)",
             "cost_per_1000_usd": 0.0,
         }),
         summarize("tfidf", cases, t_preds, {
             "llm_escalation_pct": 0.0,
-            "latency_note": "in-process tfidf",
+            "latency_ms_per_request": round(t_ms, 3),
+            "latency_note": "in-process tfidf after one-time fit",
             "cost_per_1000_usd": 0.0,
         }),
         summarize("heuristic→tfidf", cases, ht_preds, {
             "llm_escalation_pct": 0.0,
             "tfidf_escalation_pct": ht_esc,
-            "latency_note": "heuristic then tfidf on low evidence",
+            "latency_ms_per_request": round(ht_ms + h_ms, 3),
+            "latency_note": "heuristic then tfidf on low evidence (score<3 or null)",
             "cost_per_1000_usd": 0.0,
         }),
     ]
@@ -262,7 +283,7 @@ def main() -> None:
             "note": "Blocked on owner API key.",
         })
 
-    curve = risk_curve(h_rows, tfidf, asks, expected)
+    curve = risk_curve(h_rows, tfidf, asks, cases)
 
     # Winner: cheapest/simplest with strong downstream-safe routing.
     # Heuristic is production today. Cascade to TF-IDF only if it clearly beats
@@ -294,6 +315,11 @@ def main() -> None:
         "risk_coverage": curve,
         "winner": winner,
         "winner_auto_promoted": False,
+        "production_recommendation": "keep_heuristic",
+        "production_recommendation_note": (
+            "A measured accuracy leader is not shipped. classify() is unchanged. "
+            "Promote only after an explicit owner decision."
+        ),
         "rationale": rationale,
         "haiku_measured": haiku_available,
         "estimated_haiku_cost_per_1000_usd": 1.10,
