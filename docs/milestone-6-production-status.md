@@ -19,8 +19,8 @@ false verification outcomes.
 - Gmail dedup lookup failures never fall through to another send.
 - Gmail success requires read-back of recipient, RFC 2047-decoded subject, and
   deterministic Message-ID.
-- Inconclusive read-back stays non-terminal for safe redrive; conclusive mismatch
-  records `verification_failed`.
+- Inconclusive read-back stays non-terminal for operator investigation. Internal
+  redrive may adopt and verify a Message-ID hit but never performs a second send.
 - The safety detector has negative controls for all seven required unsafe
   classes, and crashed cases fail the CLI gate.
 

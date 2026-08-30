@@ -156,6 +156,7 @@ export function useRouterPredictions(path: string): number {
   const byAsk = new Map(
     Object.entries(table).map(([ask, cands]) => [ask.trim(), cands]),
   );
+  process.env.ALLOW_ROUTER_SUBSTITUTION = "1";
   setRoutingProvider((ask) => {
     if (!byAsk.has(ask.trim())) {
       throw new Error(`router predictions missing ask: ${ask}`);
@@ -331,6 +332,8 @@ export async function runCase(
 ): Promise<CaseOutcome> {
   const started = performance.now();
   try {
+    // Import after the eval-only environment setup above; static ESM imports
+    // are evaluated before module-body assignments.
     const { runOrchestration } =
       await import("../../src/agent-os-runtime/orchestrate.ts");
     // Only the ask is given to the system. `rationale`, the expected labels and

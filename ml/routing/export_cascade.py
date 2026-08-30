@@ -66,7 +66,7 @@ def _embedding(asks: list[str]) -> list[Prediction]:
     return predictions_from(joblib.load(ARTIFACTS / "embedding_lr.joblib"), _encoder(), asks)
 
 
-def build(arch: str, asks: list[str], abstain_below: float) -> tuple[Cascade, list[Prediction]]:
+def build(arch: str, asks: list[str]) -> tuple[Cascade, list[Prediction]]:
     heur = heuristic_router.predict(asks)
     if arch == "C":
         fb = _tfidf(asks)
@@ -88,7 +88,6 @@ def main() -> None:
     ap.add_argument("--arch", choices=["C", "C2"], required=True)
     ap.add_argument("--split", choices=["validation", "test"], default="test")
     ap.add_argument("--validation-version", default=datasets.DEFAULT_VALIDATION, choices=["v1", "v2", "v3"])
-    ap.add_argument("--abstain-below", type=float, default=0.55)
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
 
@@ -99,7 +98,7 @@ def main() -> None:
     # shipped router mid-run, which would make the replay a blend.
     asks = [c["ask"] for c in json.loads(path.read_text())["cases"]]
 
-    cascade, heur = build(args.arch, asks, args.abstain_below)
+    cascade, heur = build(args.arch, asks)
     decisions = cascade.run(len(asks))
 
     table: dict[str, list[dict] | None] = {}

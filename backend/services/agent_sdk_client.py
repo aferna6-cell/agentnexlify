@@ -115,7 +115,7 @@ def orchestrate_sync(
     context: dict[str, Any],
     *,
     force_agent_id: str | None = None,
-    request_origin: str = "owner",
+    request_origin: str = "system",
     timeout: float = _DEFAULT_ORCHESTRATE_TIMEOUT_S,
 ) -> dict[str, Any] | None:
     """Call agent-service POST /orchestrate. Returns None when not configured.

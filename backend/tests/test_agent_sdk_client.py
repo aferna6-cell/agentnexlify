@@ -55,7 +55,9 @@ def test_orchestrate_sync_attaches_token_header(monkeypatch):
         return _Resp({"result": {}, "record": {}})
 
     monkeypatch.setattr(client.httpx, "post", _fake_post)
-    out = client.orchestrate_sync("acct-1", "summarize", {"kb": []})
+    out = client.orchestrate_sync(
+        "acct-1", "summarize", {"kb": []}, request_origin="owner"
+    )
     assert "record" in out
     assert captured["headers"] == {"X-Agent-Token": "s3cret"}
     assert captured["json"]["requestOrigin"] == "owner"
@@ -64,6 +66,9 @@ def test_orchestrate_sync_attaches_token_header(monkeypatch):
         "acct-1", "customer message", {"kb": []}, request_origin="inbound"
     )
     assert captured["json"]["requestOrigin"] == "inbound"
+
+    client.orchestrate_sync("acct-1", "missing provenance", {"kb": []})
+    assert captured["json"]["requestOrigin"] == "system"
 
 
 def test_no_header_sent_when_token_unset(monkeypatch):

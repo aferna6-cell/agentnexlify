@@ -254,6 +254,12 @@ def test_claimed_gmail_timeout_stays_non_terminal():
     assert row["error"]["code"] == "engine_unavailable"
     assert "unknown" in row["error"]["message"]
 
+    gmail.mode = "ok"
+    redrive = drive_claimed_gmail_send(db, CLIENT, EXEC_ID, gmail)
+    assert redrive["unknown"] is True
+    assert redrive["executed"] is False
+    assert gmail.sends == []
+
 
 def test_accept_then_lost_response_is_adopted_on_redrive_and_does_not_send_twice():
     """Gmail accepted; our response was lost. Re-drive must adopt, not resend."""

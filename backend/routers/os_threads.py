@@ -180,7 +180,12 @@ async def post_message(
     usage_meter.record_message(db, client_id)
 
     return await process_user_turn(
-        db, client_id, thread_id, user_message, background_tasks
+        db,
+        client_id,
+        thread_id,
+        user_message,
+        background_tasks,
+        request_origin="owner",
     )
 
 

@@ -10,16 +10,13 @@
 | #697 | L2 idempotency + execution data redaction |
 | #699 | Unknown-send handling, pre-claim validation, claim-gated execution |
 | #700 | Sales-only `send_email` behind default-OFF `SEND_EMAIL_ENABLED` |
+| #705 | Evaluation harness, semantic pipeline, validation-v3 bakeoff, and shipped-path frozen result |
 
-## This milestone branch (`cursor/milestone6-completion-b6dd`)
+## Safety follow-up (`cursor/milestone-6-safety-followup-888d`)
 
-Integrates from research **selectively** (not wholesale #693):
-
-- Production action evaluation harness (`agent-service/evals/`)
-- Semantic decision pipeline (`_intent.ts`, `_resolve.ts`, `communication_actions.ts`)
-- Communication capability config (`communication_capabilities.ts`)
-- ML router bakeoff tooling (`ml/routing/milestone6.py`, TF-IDF trainer)
-- Router decision + Gmail proof documentation
+Closes post-merge trust-origin, Gmail idempotency/verification, and evaluation
+fail-closed findings. Milestone status remains **HOLD** until the credentialed
+Haiku arms and owner-authorized Gmail proof are complete.
 
 ## Reference / research — do not merge wholesale
 

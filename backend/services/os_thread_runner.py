@@ -66,7 +66,7 @@ async def process_user_turn(
     user_message_row: dict,
     background_tasks: BackgroundTasks | None,
     force_agent_id: str | None = None,
-    request_origin: str = "owner",
+    request_origin: str = "system",
 ) -> dict:
     """Run one engine turn for a thread.
 

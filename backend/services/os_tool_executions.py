@@ -706,6 +706,20 @@ def _run_data_plane_tool(
             "verified": verification["verified"],
         }
 
+    if _int_or(row.get("attempts"), 0) > 0:
+        apply_unknown_send_outcome(
+            db,
+            client_id,
+            execution_id,
+            "prior Gmail attempt remains unresolved; automatic resend blocked",
+        )
+        return {
+            "executed": False,
+            "adopted": False,
+            "unknown": True,
+            "reason": "prior attempt unresolved",
+        }
+
     record_execution_outcome(
         db,
         client_id,
