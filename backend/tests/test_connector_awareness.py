@@ -377,7 +377,12 @@ async def test_engine_context_carries_missing_connectors(monkeypatch):
 
     db = _RunnerDB()
     out = await os_thread_runner.process_user_turn(
-        db, "t1", "th-1", {"id": "m1", "content": "push this to hubspot"}, None
+        db,
+        "t1",
+        "th-1",
+        {"id": "m1", "content": "push this to hubspot"},
+        None,
+        request_origin="owner",
     )
 
     assert seen_context["integrations"]["missing_for_this_request"] == ["hubspot"]
