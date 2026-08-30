@@ -7,7 +7,7 @@ contract on `FakeGmailPort`:
 
 1. A Sales `send_email` proposal parks in `pending_approval`.
 2. Gmail is untouched before the owner claim.
-3. Claim records `approval_state=approved` and moves status to `running`.
+3. Owner claim (`approved_by`) records `approval_state=approved` and moves status to `running`. A claim without `approved_by` only moves status — it does not mint an approval.
 4. Exactly one message is sent.
 5. The sent message is locatable by the deterministic rfc822 Message-ID.
 6. Recipient and subject match the proposal.
@@ -16,6 +16,8 @@ contract on `FakeGmailPort`:
 9. A different tenant cannot claim the row.
 
 `SEND_EMAIL_ENABLED` remains default OFF.
+
+Local proof (this environment): `PYTHONPATH=. python3 -m pytest backend/tests/test_controlled_gmail_smoke.py --noconftest` — **3 passed**. Full backend suite needs the project venv (FastAPI/httpx); that is a test-runner gap, not a missing contract.
 
 ## Live send — approval boundary
 

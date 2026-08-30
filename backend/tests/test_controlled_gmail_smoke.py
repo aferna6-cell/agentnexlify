@@ -25,6 +25,7 @@ CLIENT = "11111111-1111-1111-1111-111111111111"
 OTHER = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 EXEC_ID = "22222222-2222-2222-2222-222222222222"
 HARMLESS = "aidan+m6-smoke@example.com"
+OWNER = "aidan+m6-owner@example.com"
 
 
 def _proposal(**overrides):
@@ -61,10 +62,11 @@ def test_controlled_gmail_path_parks_then_sends_once():
     assert gmail.sends == []
     assert gmail.mailbox == {}
 
-    claimed = svc.claim_for_execution(db, CLIENT, EXEC_ID)
+    claimed = svc.claim_for_execution(db, CLIENT, EXEC_ID, approved_by=OWNER)
     assert claimed is not None
     assert claimed["status"] == "running"
     assert claimed["approval_state"] == "approved"
+    assert claimed["approved_by"] == OWNER
     assert gmail.sends == []
 
     first = drive_claimed_gmail_send(db, CLIENT, EXEC_ID, gmail)
