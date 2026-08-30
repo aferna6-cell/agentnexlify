@@ -28,8 +28,21 @@ SCHEMA_LOG = REPO_ROOT / "docs" / "dev-knowledge" / "schema-log.md"
 
 
 def changed_migrations(compare_branch: str) -> list[str]:
+    """
+    Migrations this branch adds or changes, relative to where it diverged.
+
+    Three-dot (`base...HEAD`), not two-dot. Two-dot asks "how do these two trees
+    differ", which on a branch whose base has moved ahead also lists migrations
+    the BASE added — files this branch has never seen, whose schema-log entries
+    live on the base and could only be satisfied here by copying in a log entry
+    for someone else's work. Three-dot asks "what did this branch do since the
+    merge base", which is what the module docstring promises and the only
+    question this gate should be answering.
+
+    The gate is not weakened: a migration added on this branch still appears.
+    """
     result = subprocess.run(
-        ["git", "diff", "--name-only", compare_branch, "HEAD", "--", "migrations/"],
+        ["git", "diff", "--name-only", f"{compare_branch}...HEAD", "--", "migrations/"],
         capture_output=True,
         text=True,
         cwd=REPO_ROOT,
