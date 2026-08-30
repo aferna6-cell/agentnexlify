@@ -21,7 +21,12 @@ from pydantic import BaseModel, Field
 
 from backend.dependencies import _get_current_tenant
 from backend.models.database import get_service_supabase
-from backend.services import agent_os_bridge, agent_sdk_client, os_tool_executions, os_tools
+from backend.services import (
+    agent_os_bridge,
+    agent_sdk_client,
+    os_tool_executions,
+    os_tools,
+)
 from backend.services.agent_os_gate import require_agent_os_access
 
 logger = logging.getLogger(__name__)
@@ -77,7 +82,9 @@ async def list_tool_executions(
         db, claims["tenant_id"], status=status, limit=limit
     )
     owner = _is_owner(claims)
-    items = [os_tool_executions.present_tool_execution(row, owner=owner) for row in rows]
+    items = [
+        os_tool_executions.present_tool_execution(row, owner=owner) for row in rows
+    ]
     return {"count": len(items), "items": items}
 
 
@@ -94,7 +101,9 @@ async def get_tool_execution(
 
 @router.post("/tool-executions/{execution_id}/approve")
 async def approve_tool_execution(
-    execution_id: str, claims: dict = Depends(_get_current_tenant)
+    execution_id: str,
+    claims: dict = Depends(_get_current_tenant),
+    _: None = Depends(block_demo_role),
 ):
     """Approve a parked action and run it — exactly once.
 
@@ -157,7 +166,9 @@ async def approve_tool_execution(
         )
         outcome = await os_tools.run_tool(ctx)
         return {
-            "execution": os_tool_executions.get_tool_execution(db, client_id, execution_id),
+            "execution": os_tool_executions.get_tool_execution(
+                db, client_id, execution_id
+            ),
             "already_decided": False,
             "outcome": outcome,
         }
@@ -209,6 +220,7 @@ async def reject_tool_execution(
     execution_id: str,
     req: RejectToolExecutionRequest,
     claims: dict = Depends(_get_current_tenant),
+    _: None = Depends(block_demo_role),
 ):
     """Reject a parked action so it can never run."""
     if not _is_owner(claims):
