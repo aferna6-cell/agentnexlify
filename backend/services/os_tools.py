@@ -113,13 +113,15 @@ class GmailMailboxPort:
         if message is None:
             return {"verified": False, "detail": "sent message was not found in Gmail"}
         expected_to = svc._normalize_email(to)
-        actual_to = svc._normalize_email(message.recipient)
+        actual_to = svc._normalize_email(message.get("recipient"))
         expected_msgid = rfc822_msgid.strip().strip("<>")
-        actual_msgid = (message.headers.get("message-id") or "").strip().strip("<>")
+        actual_msgid = (
+            (message.get("headers") or {}).get("message-id") or ""
+        ).strip().strip("<>")
         verified = (
             expected_to is not None
             and actual_to == expected_to
-            and message.subject.strip() == subject.strip()
+            and (message.get("subject") or "").strip() == subject.strip()
             and actual_msgid == expected_msgid
         )
         return {

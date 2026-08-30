@@ -70,6 +70,15 @@ def _ctx(db, gmail=None, **overrides):
     return os_tools.ToolContext(**kwargs)
 
 
+def _verified_message(message_id="gmail-1"):
+    return {
+        "provider_message_id": message_id,
+        "recipient": "sarah@example.com",
+        "subject": "Following up",
+        "headers": {"message-id": f"<{rfc822_msgid_for(EXEC_ID)}>"},
+    }
+
+
 def _client():
     app.dependency_overrides[_get_current_tenant] = lambda: OWNER
     app.dependency_overrides[require_agent_os_access] = lambda: OWNER
@@ -209,6 +218,8 @@ def test_flag_on_sales_approve_claim_execute_uses_gmail(monkeypatch):
         with patch.object(router_mod, "get_service_supabase", return_value=db), patch.object(
             gmail_connector, "find_message_id_by_rfc822_msgid", fake_find
         ), patch.object(gmail_connector, "send_message", fake_send), patch.object(
+            gmail_connector, "get_message", return_value=_verified_message()
+        ), patch.object(
             router_mod.agent_sdk_client, "approve_action_sync", side_effect=AssertionError("engine")
         ):
             resp = client.post(f"/api/v1/os/tool-executions/{EXEC_ID}/approve")
@@ -238,6 +249,8 @@ def test_successful_sales_send_records_approved_state_and_owner(monkeypatch):
         with patch.object(router_mod, "get_service_supabase", return_value=db), patch.object(
             gmail_connector, "find_message_id_by_rfc822_msgid", return_value=None
         ), patch.object(gmail_connector, "send_message", fake_send), patch.object(
+            gmail_connector, "get_message", return_value=_verified_message()
+        ), patch.object(
             router_mod.agent_sdk_client, "approve_action_sync", side_effect=AssertionError("engine")
         ):
             resp = client.post(f"/api/v1/os/tool-executions/{EXEC_ID}/approve")
@@ -317,6 +330,10 @@ def test_gmail_mailbox_port_adopts_instead_of_sending(monkeypatch):
     port = os_tools.GmailMailboxPort(CLIENT, db)
     with patch.object(gmail_connector, "find_message_id_by_rfc822_msgid", fake_find), patch.object(
         gmail_connector, "send_message", fake_send
+    ), patch.object(
+        gmail_connector,
+        "get_message",
+        return_value=_verified_message("gmail-existing"),
     ):
         outcome = asyncio.run(os_tools.run_tool(_ctx(db, port)))
 
