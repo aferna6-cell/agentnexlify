@@ -1,6 +1,16 @@
 {
   "verdict": "MILESTONE 8 HOLD",
   "timestamp": "2026-08-30T23:09:00Z",
+  "confidence_gate_reverify_at": "2026-08-30T23:14:06Z",
+  "confidence_gate_notes": {
+    "calendar_gmail_still_blocked": true,
+    "smoke_recheck_artifact": "audits/artifacts/m8-live-smoke-20260830T231406Z.json",
+    "check_quick": "pass",
+    "pytest_calendar_crm_rag": "60 passed",
+    "staging_active_chunks": 6,
+    "staging_integrations_for_smoke_tenant": 0,
+    "production_m8_flag_names_absent": true
+  },
   "branch": "cursor/milestone8-staging-live-a2c9",
   "staging_environment": {
     "exists": true,

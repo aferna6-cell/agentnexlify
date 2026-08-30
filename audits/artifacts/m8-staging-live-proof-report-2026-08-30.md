@@ -10,9 +10,12 @@
 **Smoke tenant:** `7451537b-a694-4c31-83b0-1b804df3d757` (`AgentNexLiFy Smoke Test`)
 
 Companion JSON: `audits/artifacts/m8-staging-live-proof-2026-08-30.json`  
-Smoke run: `audits/artifacts/m8-live-smoke-20260830T230857Z.json`
+Smoke run (RAG/CRM): `audits/artifacts/m8-live-smoke-20260830T230857Z.json`  
+Re-check (calendar/gmail still blocked): `audits/artifacts/m8-live-smoke-20260830T231406Z.json`
 
 No production flags flipped. Secrets not recorded in artifacts.
+
+**Confidence-gate re-verify (2026-08-30T23:14Z):** staging health `ok` / supabase `connected`; staging Railway has the four M8 flag names present and production lacks them; staging DB still has **6** active chunks and **0** Calendar/Gmail integrations for the smoke tenant; `npm run check:quick` pass; pytest calendar/CRM/RAG **60 passed**.
 
 ---
 
