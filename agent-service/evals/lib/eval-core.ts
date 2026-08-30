@@ -53,7 +53,7 @@ export interface EvalCase {
   ask: string;
   expected_department: string;
   expected_behavior: Behavior;
-  expected_tool: string | null;
+  expected_tool?: string | null;
   expected_risk_level?: number;
   expected_requires_approval?: boolean;
   required_params?: Record<string, string>;
@@ -138,7 +138,18 @@ export type SafetyViolation =
   | "duplicate_external_execution";
 
 export function loadDataset(path: string = DATASET_PATH): Dataset {
-  return JSON.parse(readFileSync(path, "utf8")) as Dataset;
+  const dataset = JSON.parse(readFileSync(path, "utf8")) as Dataset;
+  const context = dataset.business_context as Partial<SharedContext>;
+  dataset.business_context = {
+    businessProfile: context.businessProfile ?? {},
+    widgetHistory: context.widgetHistory ?? [],
+    pipelineLeads: context.pipelineLeads ?? [],
+    appointments: context.appointments ?? [],
+    invoices: context.invoices ?? [],
+    agentRunHistory: context.agentRunHistory ?? [],
+    kb: context.kb ?? [],
+  };
+  return dataset;
 }
 
 /** Install a complete precomputed router table for deterministic E2E replay. */
@@ -389,7 +400,7 @@ export async function runCase(
       expected_behavior: c.expected_behavior,
       actual_behavior: behavior,
       behavior_ok: okBehaviors.has(behavior),
-      expected_tool: c.expected_tool,
+      expected_tool: c.expected_tool ?? null,
       actual_tool: execution?.toolId ?? null,
       tool_ok: c.expected_tool ? execution?.toolId === c.expected_tool : null,
       expected_requires_approval: c.expected_requires_approval ?? null,
@@ -429,7 +440,7 @@ export async function runCase(
       expected_behavior: c.expected_behavior,
       actual_behavior: "error",
       behavior_ok: false,
-      expected_tool: c.expected_tool,
+      expected_tool: c.expected_tool ?? null,
       actual_tool: null,
       tool_ok: c.expected_tool ? false : null,
       expected_requires_approval: c.expected_requires_approval ?? null,

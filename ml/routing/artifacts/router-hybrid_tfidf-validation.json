@@ -1,0 +1,2205 @@
+{
+  "Keiko Tanaka's golden retriever finished the cruciate consult; write the TPLO packet that lists hardware, overnight stay, and rehab visits as separate lines.": null,
+  "The 80-person rehearsal dinner on the 19th still has no signed retainer. Draft the catering hold that locks the menu and the staffing minimum.": [
+    {
+      "agentId": "admin_records",
+      "confidence": 0.2965,
+      "score": 3.5586
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.2149,
+      "score": 2.5788
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1612,
+      "score": 1.9338
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.0939,
+      "score": 1.1269
+    }
+  ],
+  "Willa Nguyen asked what a newborn session actually includes. Put the three-hour in-home bundle on one page with prints called out separately.": [
+    {
+      "agentId": "sales",
+      "confidence": 0.4063,
+      "score": 4.8757
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1989,
+      "score": 2.3868
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1051,
+      "score": 1.2614
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.086,
+      "score": 1.032
+    }
+  ],
+  "Nilesh Gupta vanished after the SAT diagnostic. Write the note that puts the Tuesday block back in front of him without stacking a discount.": null,
+  "Three independent pharmacies on Harbor asked about a weekly lobby arrangement. Draft the cold one-pager that prices stems plus Thursday swap-out.": null,
+  "Harper Quinn's engagement gallery is done. Offer the linen album as an add-on before she leaves the proofing gallery.": null,
+  "Pax Holloway's bungalow failed the termite inspection. Price the exclusion skirt, bait stations, and the 90-day revisit as one package.": [
+    {
+      "agentId": "sales",
+      "confidence": 0.3033,
+      "score": 3.6397
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1702,
+      "score": 2.0424
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1546,
+      "score": 1.8552
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.0979,
+      "score": 1.1743
+    }
+  ],
+  "Yasmin Farouk's sister wants the same floral arch from the June wedding. Draft the intro that names the arch, not a new consultation.": [
+    {
+      "agentId": "admin_records",
+      "confidence": 0.3135,
+      "score": 3.7617
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.2388,
+      "score": 2.8662
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.0978,
+      "score": 1.1735
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.0923,
+      "score": 1.1079
+    }
+  ],
+  "Enzo Ricci's wheel rebuild quote ages out on the 30th. Write the hold-the-number letter that expires with the month, not a booking.": null,
+  "Twelve families toured the toddler room in July and never paid the waitlist deposit. Write the one email that asks who is still in.": null,
+  "Cedric Blum is deciding between packing-only and a full studio move. Split labor hours and truck time on the page so the two options are comparable.": null,
+  "Nadine Cho never signed the myopia-control plan after the consult. Ask whether she wants the overnight lenses or the daytime drops package.": [
+    {
+      "agentId": "sales",
+      "confidence": 0.5056,
+      "score": 6.0673
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.2618,
+      "score": 3.1417
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.0528,
+      "score": 0.6333
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.0467,
+      "score": 0.5606
+    }
+  ],
+  "Blythe Carmichael is stuck between the two-tier tasting and a cupcake tower. Write the note that makes her pick one for the 19th.": null,
+  "The HOA board asked for a quarterly rodent walk-through. Draft the neighborhood circuit proposal with per-building pricing.": null,
+  "Otto Langford needs the house rekeyed after a roommate left, plus four extra keys. Put the cylinder count and key copies on one estimate.": null,
+  "A downtown gym asked whether we run a corporate on-ramp for their staff. Write the six-week assessment package aimed at that buyer, not consumers.": null,
+  "Sable Ortiz loved the first deshed. Offer the six-visit membership before she books another one-off.": null,
+  "The Langford funeral is Thursday. Price the standing spray, the casket spray, and midday delivery as three lines.": [
+    {
+      "agentId": "people",
+      "confidence": 0.2105,
+      "score": 2.5256
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.2091,
+      "score": 2.5087
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.144,
+      "score": 1.7278
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1405,
+      "score": 1.6863
+    }
+  ],
+  "Quinn Adler left the progressive-lens worksheet on the counter. Write the recap that restates the anti-fatigue coating price.": null,
+  "The rehearsal-dinner couple is stalling on the staffing minimum. Write the note that keeps the date without cutting the crew.": null,
+  "Ines Kovacs wants progressives and an anti-fatigue coat. Put both on the same worksheet with the upgrade called out.": [
+    {
+      "agentId": "sales",
+      "confidence": 0.4142,
+      "score": 4.9707
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.2652,
+      "score": 3.1821
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.0984,
+      "score": 1.1807
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.0833,
+      "score": 0.9999
+    }
+  ],
+  "Two property managers on Pier 9 asked about a monthly lobby bouquet. Draft the standing-order sheet with swap day and vase rental.": [
+    {
+      "agentId": "sales",
+      "confidence": 0.5263,
+      "score": 6.3161
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.2113,
+      "score": 2.5358
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.071,
+      "score": 0.8517
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.0698,
+      "score": 0.837
+    }
+  ],
+  "Felix Brandt's winter tune is priced; he asked if a new chain is extra. Write the one-line addendum that answers that before he ghosts.": null,
+  "Arjun Mehta cannot decide between the SAT block and essay-only hours. Write the comparison that prices both without recommending a school.": null,
+  "Mateo Ruiz wants a written number on the 12-week hypertrophy coaching before he talks to his spouse.": [
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1754,
+      "score": 2.1048
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1624,
+      "score": 1.9482
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1599,
+      "score": 1.919
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.1587,
+      "score": 1.9041
+    }
+  ],
+  "The bakery tasting for Blythe is still verbal. Turn it into a signed cake agreement with flavour, servings, and delivery window.": null,
+  "Hold Saturday 11:00 for Harper Quinn's engagement session and keep the golden-hour buffer after it.": null,
+  "Move the toddler-room tours off Monday; the licensing visitor is in the building that morning.": null,
+  "Keiko's golden cannot stay overnight the 12th; the isolation ward is already full. Offer the next two recovery nights.": null,
+  "Cancel Jonah Krieger's SAT block this Thursday and do not auto-fill the hour.": null,
+  "Freeze Bodhi Ellison's gym access for six weeks while he is overseas; keep the locker until he is back.": [
+    {
+      "agentId": "operations",
+      "confidence": 0.2096,
+      "score": 2.5154
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1905,
+      "score": 2.2866
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1865,
+      "score": 2.2385
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1372,
+      "score": 1.6467
+    }
+  ],
+  "Is the studio free Sunday at 7am for a newborn session, or is the heater still out?": null,
+  "Push every house-clean on the 14th by one day; the water main on Cedar is shut off.": [
+    {
+      "agentId": "operations",
+      "confidence": 0.4728,
+      "score": 5.6739
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.1705,
+      "score": 2.0464
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.0835,
+      "score": 1.0024
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.073,
+      "score": 0.8759
+    }
+  ],
+  "Park the pest truck at the Holloway bungalow first; the termite crew needs daylight on the skirt.": [
+    {
+      "agentId": "operations",
+      "confidence": 0.1941,
+      "score": 2.3296
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1872,
+      "score": 2.2461
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.1662,
+      "score": 1.9938
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1415,
+      "score": 1.6981
+    }
+  ],
+  "Pull the next three daycare names off the August waitlist and assign rooms.": [
+    {
+      "agentId": "admin_records",
+      "confidence": 0.1677,
+      "score": 2.0126
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.1672,
+      "score": 2.0061
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1343,
+      "score": 1.6111
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1327,
+      "score": 1.5928
+    }
+  ],
+  "Sable's deshed ran long; bump the 3pm nail-trim to 3:40 and text the next guardian.": null,
+  "Block the bike stand all Friday morning; the wheel-true jig is being calibrated.": [
+    {
+      "agentId": "operations",
+      "confidence": 0.2406,
+      "score": 2.8871
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.239,
+      "score": 2.8683
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1153,
+      "score": 1.3839
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1113,
+      "score": 1.3359
+    }
+  ],
+  "Remind the Langford family that the funeral spray leaves the cooler at 10:15.": [
+    {
+      "agentId": "operations",
+      "confidence": 0.3919,
+      "score": 4.703
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1888,
+      "score": 2.2659
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.1031,
+      "score": 1.2376
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.0951,
+      "score": 1.1412
+    }
+  ],
+  "Can we take a same-day rekey at 4 if Otto brings the extra cylinders?": [
+    {
+      "agentId": "customer_service",
+      "confidence": 0.4399,
+      "score": 5.2792
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.2102,
+      "score": 2.5219
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1137,
+      "score": 1.3641
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.0589,
+      "score": 0.7073
+    }
+  ],
+  "Open a second tasting table on the 19th; the rehearsal dinner just jumped to 80.": [
+    {
+      "agentId": "invoicing",
+      "confidence": 0.3198,
+      "score": 3.8372
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.2009,
+      "score": 2.4106
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.0972,
+      "score": 1.1661
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.0952,
+      "score": 1.1424
+    }
+  ],
+  "Nadine's myopia follow-up cannot be the same afternoon as the school screening bus.": null,
+  "who has the loading dock tuesday after lunch": [
+    {
+      "agentId": "operations",
+      "confidence": 0.2893,
+      "score": 3.4722
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.2382,
+      "score": 2.858
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.221,
+      "score": 2.6521
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.0784,
+      "score": 0.9405
+    }
+  ],
+  "Cedric's movers cannot start until the elevator reservation is confirmed with the building.": [
+    {
+      "agentId": "customer_service",
+      "confidence": 0.2685,
+      "score": 3.222
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.2509,
+      "score": 3.0114
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1366,
+      "score": 1.6396
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.0872,
+      "score": 1.0458
+    }
+  ],
+  "Put the isolation kennel offline Thursday for the deep clean and reroute boarders.": [
+    {
+      "agentId": "operations",
+      "confidence": 0.3245,
+      "score": 3.8943
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1724,
+      "score": 2.0686
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1247,
+      "score": 1.4964
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1127,
+      "score": 1.3521
+    }
+  ],
+  "Harper's golden-hour buffer collided with a newborn hold. Keep the engagement; slide the newborn.": [
+    {
+      "agentId": "sales",
+      "confidence": 0.4251,
+      "score": 5.1011
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.2077,
+      "score": 2.4919
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.0796,
+      "score": 0.9547
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.0743,
+      "score": 0.892
+    }
+  ],
+  "Do we still have a two-hour window Saturday for a move-out clean on Pier 4?": [
+    {
+      "agentId": "operations",
+      "confidence": 0.4964,
+      "score": 5.9563
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.1564,
+      "score": 1.8768
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.0893,
+      "score": 1.0714
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.0843,
+      "score": 1.0116
+    }
+  ],
+  "The florist van's cooler died. Stop new same-day deliveries until the spare unit is in.": [
+    {
+      "agentId": "people",
+      "confidence": 0.2334,
+      "score": 2.8005
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1842,
+      "score": 2.2103
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.175,
+      "score": 2.0996
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1064,
+      "score": 1.277
+    }
+  ],
+  "Set Arjun's makeup SAT hour to the unused Wednesday 6am slot.": null,
+  "Rain moved the outdoor family session. Offer Harper the covered atrium or the following Sunday.": null,
+  "Lock the tutoring rooms during the fire-drill at 2 so nobody is mid-session.": [
+    {
+      "agentId": "operations",
+      "confidence": 0.2537,
+      "score": 3.0446
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1611,
+      "score": 1.9337
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.1531,
+      "score": 1.8378
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1143,
+      "score": 1.3715
+    }
+  ],
+  "Idris Pell's lockout is waiting in the lot; slot him ahead of the scheduled rekey if the truck is back.": null,
+  "Close the bakery counter at 2 on the 19th so plating for the rehearsal dinner can start.": [
+    {
+      "agentId": "invoicing",
+      "confidence": 0.328,
+      "score": 3.9362
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.2574,
+      "score": 3.0889
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.1155,
+      "score": 1.3855
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.114,
+      "score": 1.3679
+    }
+  ],
+  "Raise the TPLO invoice for Keiko Tanaka now that the overnight stay actually happened.": null,
+  "Issue Harper Quinn the engagement-session invoice now that Saturday 11:00 is on the book.": null,
+  "Stop the monthly draft for Bodhi Ellison while the six-week travel hold is on.": [
+    {
+      "agentId": "operations",
+      "confidence": 0.2444,
+      "score": 2.933
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.2321,
+      "score": 2.7857
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1783,
+      "score": 2.1392
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.141,
+      "score": 1.6926
+    }
+  ],
+  "Assemble the chargeback packet for the wedding-cake card dispute, including the signed tasting sheet.": [
+    {
+      "agentId": "invoicing",
+      "confidence": 0.5089,
+      "score": 6.1063
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.0854,
+      "score": 1.0246
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.0767,
+      "score": 0.9205
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.0745,
+      "score": 0.8941
+    }
+  ],
+  "Send the rehearsal-dinner catering invoice to the couple, not to the venue.": null,
+  "CAT-4419 is 41 days out. Write the second notice for the termite exclusion, firm but not theatrical.": null,
+  "Blythe dropped a cash deposit for the two-tier cake; apply it to CAKE-208 and show the remaining balance.": null,
+  "split the moving bill so cedric's landlord pays the truck and he pays packing": null,
+  "Resend the myopia-control invoice to Nadine; she says the portal never showed it.": null,
+  "Write off the no-show SAT hour for Jonah; he is not going to pay a missed-block fee.": [
+    {
+      "agentId": "marketing",
+      "confidence": 0.4017,
+      "score": 4.8203
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.1342,
+      "score": 1.611
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1099,
+      "score": 1.3188
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.1031,
+      "score": 1.2376
+    }
+  ],
+  "Add the extra key copies to Otto's rekey bill; he took four, not two.": null,
+  "The funeral spray was delivered; turn the verbal Langford number into a bill before Thursday closes.": null,
+  "money never landed for the HOA rodent walk-through": [
+    {
+      "agentId": "accounting",
+      "confidence": 0.2307,
+      "score": 2.7689
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.2236,
+      "score": 2.6836
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1695,
+      "score": 2.0336
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.0909,
+      "score": 1.0904
+    }
+  ],
+  "Mark GROOM-77 paid; Sable's guardian Venmo'd the deshed this morning.": [
+    {
+      "agentId": "invoicing",
+      "confidence": 0.3796,
+      "score": 4.555
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1056,
+      "score": 1.2667
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1034,
+      "score": 1.2402
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.0961,
+      "score": 1.1529
+    }
+  ],
+  "Set a standing first-of-month invoice for the Pier 9 lobby bouquet once they sign.": null,
+  "Give Willa 10 percent off the print package if she pays the session balance this week.": null,
+  "Receipt for Ines on the anti-fatigue coat; she needs it for her FSA.": [
+    {
+      "agentId": "invoicing",
+      "confidence": 0.6188,
+      "score": 7.4251
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1801,
+      "score": 2.1611
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.047,
+      "score": 0.5638
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.0446,
+      "score": 0.5347
+    }
+  ],
+  "Pause the daycare tuition draft for the Solis family during the two-week closure.": [
+    {
+      "agentId": "invoicing",
+      "confidence": 0.3267,
+      "score": 3.9207
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.2014,
+      "score": 2.417
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.1542,
+      "score": 1.8502
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1323,
+      "score": 1.5876
+    }
+  ],
+  "Felix still owes the chain addendum. Nudge the balance, not the tune itself.": null,
+  "Convert Arjun's unsigned SAT comparison into a bill only if he picks a track.": null,
+  "The gym corporate on-ramp needs a deposit invoice to the downtown club, not to individual staff.": null,
+  "invoic the holloway exclusion once the skirt is in": [
+    {
+      "agentId": "invoicing",
+      "confidence": 0.4026,
+      "score": 4.8306
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.2285,
+      "score": 2.7422
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1322,
+      "score": 1.5867
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.0889,
+      "score": 1.067
+    }
+  ],
+  "Cedric's landlord rejected the truck half. Put the whole move back on Cedric's bill.": null,
+  "How much is still open on funeral work this week?": [
+    {
+      "agentId": "operations",
+      "confidence": 0.2924,
+      "score": 3.5087
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.2346,
+      "score": 2.8148
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.0916,
+      "score": 1.0995
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.0893,
+      "score": 1.0717
+    }
+  ],
+  "Draft a payment-plan offer for the 80-person dinner if they cannot clear the catering balance before the 19th.": null,
+  "Credit the unused isolation night back to Keiko; the golden went home the same day.": [
+    {
+      "agentId": "customer_service",
+      "confidence": 0.3999,
+      "score": 4.7984
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1646,
+      "score": 1.9749
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1352,
+      "score": 1.6228
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.0976,
+      "score": 1.1712
+    }
+  ],
+  "Enter the flour supplier's bill from last Thursday into accounts payable; do not send it to the couple.": null,
+  "Get the quarterly 941 packet together for the CPA, including the two new sitters' wages.": null,
+  "Did the second espresso machine pay back yet if we count only pastry-counter tickets?": [
+    {
+      "agentId": "invoicing",
+      "confidence": 0.2317,
+      "score": 2.7801
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.2227,
+      "score": 2.672
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1405,
+      "score": 1.6865
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1197,
+      "score": 1.4361
+    }
+  ],
+  "Break July's bakery take by wedding cakes versus counter walk-ins.": [
+    {
+      "agentId": "customer_service",
+      "confidence": 0.374,
+      "score": 4.4883
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1646,
+      "score": 1.9752
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.129,
+      "score": 1.5482
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.0787,
+      "score": 0.9445
+    }
+  ],
+  "Where is cash actually going after we started the overnight boarding?": null,
+  "Reconcile the Square batch from the tasting Saturday against the bank deposit.": [
+    {
+      "agentId": "operations",
+      "confidence": 0.2866,
+      "score": 3.4388
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1559,
+      "score": 1.8704
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1249,
+      "score": 1.4992
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1193,
+      "score": 1.4319
+    }
+  ],
+  "Are we making money on TPLO recoveries once hardware and overnight wages are in?": [
+    {
+      "agentId": "accounting",
+      "confidence": 0.6832,
+      "score": 8.1987
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.0646,
+      "score": 0.775
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.0571,
+      "score": 0.6849
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.0533,
+      "score": 0.6393
+    }
+  ],
+  "Before I bag the deposit, peel the tax off this week's anti-fatigue coating upgrades and park it in the liability account.": null,
+  "How much did we spend on fresh stems in August versus what we billed in lobby contracts?": null,
+  "quarterly use-tax on the out-of-state jig parts?": null,
+  "The CPA wants 1099s for the Saturday DJ and the freelance decorator on the 19th.": [
+    {
+      "agentId": "invoicing",
+      "confidence": 0.4157,
+      "score": 4.9881
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.3103,
+      "score": 3.7235
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.083,
+      "score": 0.9956
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.0533,
+      "score": 0.6398
+    }
+  ],
+  "cashflw after we floated the rehearsal dinner deposit": [
+    {
+      "agentId": "customer_service",
+      "confidence": 0.3668,
+      "score": 4.4012
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1383,
+      "score": 1.6597
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1087,
+      "score": 1.3043
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1039,
+      "score": 1.2473
+    }
+  ],
+  "Lease versus buy the second photography strobe kit; I want the three-year comparison.": [
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1946,
+      "score": 2.3346
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1916,
+      "score": 2.2987
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1896,
+      "score": 2.2753
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1223,
+      "score": 1.4677
+    }
+  ],
+  "Track tip-out from the tasting counter separately from wages so the 941 stays clean.": null,
+  "What did the corporate on-ramp actually contribute after we comped two assessments?": [
+    {
+      "agentId": "marketing",
+      "confidence": 0.3428,
+      "score": 4.1135
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.2587,
+      "score": 3.1045
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.1294,
+      "score": 1.5524
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1078,
+      "score": 1.2933
+    }
+  ],
+  "Are the Groupon redemptions covering the frosting and box cost, or are we donating cake?": [
+    {
+      "agentId": "people",
+      "confidence": 0.3828,
+      "score": 4.5933
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1811,
+      "score": 2.1733
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1201,
+      "score": 1.4415
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1145,
+      "score": 1.3744
+    }
+  ],
+  "I need a monthly P&L that a bakery owner can read, not a 40-line export.": [
+    {
+      "agentId": "accounting",
+      "confidence": 0.3168,
+      "score": 3.8014
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.204,
+      "score": 2.4481
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1455,
+      "score": 1.7457
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1194,
+      "score": 1.4324
+    }
+  ],
+  "Deductions we might be missing on the van and the cooler unit.": [
+    {
+      "agentId": "people",
+      "confidence": 0.1963,
+      "score": 2.355
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1595,
+      "score": 1.9136
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1451,
+      "score": 1.7417
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.113,
+      "score": 1.3559
+    }
+  ],
+  "receivables on event work only": null,
+  "Compare what the HOA circuit earns against drive time between buildings.": [
+    {
+      "agentId": "marketing",
+      "confidence": 0.3609,
+      "score": 4.3313
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.2276,
+      "score": 2.7312
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.1221,
+      "score": 1.4649
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.0678,
+      "score": 0.813
+    }
+  ],
+  "Bookkeeping for the gift-card liability is behind again after the holiday boxes.": null,
+  "Is the downtown gym contract cheaper for us if they prepay the six weeks?": null,
+  "The school-screening bus day wrecked optical volume. Show me the hour-by-hour take.": [
+    {
+      "agentId": "operations",
+      "confidence": 0.2539,
+      "score": 3.0466
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1368,
+      "score": 1.6413
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1306,
+      "score": 1.5675
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.1142,
+      "score": 1.3702
+    }
+  ],
+  "Should hardware for TPLO sit in COGS or inventory until the overnight starts?": [
+    {
+      "agentId": "accounting",
+      "confidence": 0.4536,
+      "score": 5.4435
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.1384,
+      "score": 1.6607
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1217,
+      "score": 1.4609
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.0907,
+      "score": 1.0881
+    }
+  ],
+  "How much of August tutoring was unused-package liability versus earned hours?": [
+    {
+      "agentId": "sales",
+      "confidence": 0.2645,
+      "score": 3.1738
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.2091,
+      "score": 2.5091
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1542,
+      "score": 1.85
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1192,
+      "score": 1.4308
+    }
+  ],
+  "Flag any sales-tax-exempt daycare invoices that are missing the certificate on file.": null,
+  "A parent is furious we kept the toddler-room deposit after they cancelled Tuesday. Draft the reply that explains the 48-hour rule without escalating.": null,
+  "Reply in the Instagram DM from the bride who says the two-tier cake leaned. Keep it off the public comments.": null,
+  "Call the couple back and walk through the cake charge line-by-line; they think the tasting was free.": [
+    {
+      "agentId": "customer_service",
+      "confidence": 0.4505,
+      "score": 5.4065
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.2431,
+      "score": 2.9175
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.0804,
+      "score": 0.9648
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.0626,
+      "score": 0.7511
+    }
+  ],
+  "Keiko says the golden's incision looks angry. Draft the after-hours message that does not diagnose over text.": null,
+  "someone left a voicemail ripping the wait at the optical desk": [
+    {
+      "agentId": "customer_service",
+      "confidence": 0.2319,
+      "score": 2.7833
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.217,
+      "score": 2.6036
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1451,
+      "score": 1.7413
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1246,
+      "score": 1.4951
+    }
+  ],
+  "Answer the guardian who asked whether we can groom a dog on Apoquel without a vet note.": null,
+  "Nilesh is polite but tight: the SAT hour felt rushed. Write the response that offers a makeup without admitting the tutor was unprepared.": null,
+  "apologise to the holloways about the bait-station delay": null,
+  "Willa says the newborn gallery is missing the sibling shots she was promised. Reply before she posts about it.": null,
+  "custmer sais the movers scuffed the elevator panel": [
+    {
+      "agentId": "operations",
+      "confidence": 0.2737,
+      "score": 3.2845
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1669,
+      "score": 2.0029
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1317,
+      "score": 1.5804
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1243,
+      "score": 1.4913
+    }
+  ],
+  "Reply to whoever asked if the daycare can give Benadryl without a signed form.": null,
+  "Deal with the florist delivery that went to the wrong funeral home.": [
+    {
+      "agentId": "customer_service",
+      "confidence": 0.2432,
+      "score": 2.9183
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.2212,
+      "score": 2.6542
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.1669,
+      "score": 2.0026
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.1367,
+      "score": 1.6401
+    }
+  ],
+  "We over-plucked Sable's dog. I want to own that before the guardian comes back.": [
+    {
+      "agentId": "customer_service",
+      "confidence": 0.3922,
+      "score": 4.707
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1492,
+      "score": 1.7902
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.144,
+      "score": 1.7281
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1203,
+      "score": 1.4442
+    }
+  ],
+  "Otto is locked out again and thinks we billed a second trip he did not authorise. Explain the after-hours fee.": [
+    {
+      "agentId": "customer_service",
+      "confidence": 0.3707,
+      "score": 4.4481
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1402,
+      "score": 1.6818
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1049,
+      "score": 1.2586
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1048,
+      "score": 1.2579
+    }
+  ],
+  "The tutoring parent wants a written recap of what Arjun still misses. Reply without turning it into a new quote.": null,
+  "Someone asked whether the gym on-ramp includes a body-comp scan. Answer from what we actually offer.": null,
+  "Whatever we tell Harper about the rain move, do not promise the atrium lights will match golden hour.": [
+    {
+      "agentId": "marketing",
+      "confidence": 0.1964,
+      "score": 2.3568
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1784,
+      "score": 2.1409
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1591,
+      "score": 1.9095
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1396,
+      "score": 1.6754
+    }
+  ],
+  "The Patel family tour question about nut-free rooms never got an answer.": null,
+  "Draft the reusable 'sorry the cooler delayed your bouquet' note.": null,
+  "Ring the three families whose kids cried at pickup this week.": null,
+  "Tell the bride we will remake the leaning tier and will not refund the tasting.": null,
+  "why do guardians keep complaining about the lobby smell": [
+    {
+      "agentId": "marketing",
+      "confidence": 0.5805,
+      "score": 6.9655
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1352,
+      "score": 1.6221
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.0745,
+      "score": 0.8936
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.0695,
+      "score": 0.8338
+    }
+  ],
+  "Felix thinks the new chain was installed without asking. Write the reply that shows the signed addendum.": null,
+  "Ines says the progressives make her nauseous. Draft the check-in that offers an adjustment visit, not a new sale.": null,
+  "A property manager is annoyed the lobby bouquet arrived a day late. Reply and do not offer a free month.": null,
+  "Cedric's building emailed about pad protection. Answer them; he is not the complainant.": null,
+  "Reply on Yelp to the one-star about the leaning wedding cake. Keep the remake offer out of the public thread.": null,
+  "Write the Groupon blurb for Saturday's cupcake-tower tasting, 12 servings, pickup only.": null,
+  "Blast the neighborhood list about leftover August toddler-room openings. Do not name waitlisted families.": null,
+  "Post Harper's engagement highlights only after the photo-release is in the file.": null,
+  "Ask Sable's guardian for a Google review of the deshed, not a testimonial we write ourselves.": null,
+  "Caption the before/after of the Holloway exclusion skirt for Nextdoor. No prices.": [
+    {
+      "agentId": "marketing",
+      "confidence": 0.867,
+      "score": 10.4046
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.0313,
+      "score": 0.3755
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.0249,
+      "score": 0.2986
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.0198,
+      "score": 0.2376
+    }
+  ],
+  "summer SAT crash-course flyer": [
+    {
+      "agentId": "accounting",
+      "confidence": 0.1796,
+      "score": 2.1557
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1408,
+      "score": 1.6897
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.1357,
+      "score": 1.6279
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1301,
+      "score": 1.5606
+    }
+  ],
+  "Tuesdays are dead at the gym and the studio two floors up started a sunrise yoga coupon, so I want something that reminds the building we exist before fall sign-ups.": [
+    {
+      "agentId": "marketing",
+      "confidence": 0.3725,
+      "score": 4.4696
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1481,
+      "score": 1.7774
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1372,
+      "score": 1.6464
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1328,
+      "score": 1.5939
+    }
+  ],
+  "Put a window board up about same-week newborn openings in September.": [
+    {
+      "agentId": "people",
+      "confidence": 0.2392,
+      "score": 2.8707
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1932,
+      "score": 2.3181
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1678,
+      "score": 2.0138
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1128,
+      "score": 1.3538
+    }
+  ],
+  "How are the bakery reviews trending after the leaning-tier week?": null,
+  "Get the word out that the daycare is closed the week of the 14th for licensing.": [
+    {
+      "agentId": "operations",
+      "confidence": 0.356,
+      "score": 4.2722
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1866,
+      "score": 2.2391
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.1483,
+      "score": 1.7798
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.0829,
+      "score": 0.9953
+    }
+  ],
+  "newsleter for the optical back-to-school push": [
+    {
+      "agentId": "marketing",
+      "confidence": 0.2573,
+      "score": 3.0876
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.235,
+      "score": 2.8205
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1527,
+      "score": 1.8319
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1271,
+      "score": 1.525
+    }
+  ],
+  "Something for the cooler door about funeral-spray lead times.": [
+    {
+      "agentId": "marketing",
+      "confidence": 0.5363,
+      "score": 6.4357
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1561,
+      "score": 1.8731
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.0799,
+      "score": 0.9594
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.071,
+      "score": 0.8523
+    }
+  ],
+  "Thank Blythe publicly for the five-star tasting note. Keep the menu off the post.": null,
+  "Are the Nextdoor pest coupons actually turning into booked exclusions?": null,
+  "Draft a florist flyer aimed at Harbor-area funeral homes, not brides.": [
+    {
+      "agentId": "admin_records",
+      "confidence": 0.3159,
+      "score": 3.7905
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1703,
+      "score": 2.0433
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1271,
+      "score": 1.5256
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1188,
+      "score": 1.4258
+    }
+  ],
+  "we shud be on the neighborhood parents slack": [
+    {
+      "agentId": "invoicing",
+      "confidence": 0.22,
+      "score": 2.6404
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.2177,
+      "score": 2.6127
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1372,
+      "score": 1.6464
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.137,
+      "score": 1.6445
+    }
+  ],
+  "Ask everyone who sat for a newborn session in August to leave a review, and separately list who still has an open print balance.": null,
+  "What do people say about the gym in places we do not read?": [
+    {
+      "agentId": "accounting",
+      "confidence": 0.4156,
+      "score": 4.9875
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.213,
+      "score": 2.5557
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1173,
+      "score": 1.4073
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.0702,
+      "score": 0.8424
+    }
+  ],
+  "Run the referral card for grooming again. I do not remember the last offer.": null,
+  "Post the bike-stand calibration as a 'shop day' story so people know Friday mornings are closed.": null,
+  "Write three Instagram stories for the rehearsal-dinner plating, no faces of guests.": null,
+  "SEO notes for the optometry site: myopia control pages are thin.": null,
+  "Ask Keiko if we may use the golden's recovery photos on the clinic wall. That is a public ask, not the chart note.": null,
+  "Put together a September promotion for first-time lockout customers. No dollar amount yet.": null,
+  "Reply to the three-star about the lobby smell. Do not mention the mop brand.": null,
+  "File Harper Quinn's signed photo-release before anyone posts a frame from the engagement set.": null,
+  "Write the 48-hour cancellation policy for the daycare intake packets. Do not send it as a reply to the angry parent.": null,
+  "Log that Keiko's golden is crate-rest only and that the guardian prefers voice notes after 8pm.": null,
+  "update the wrong felix in the bike shop file, not the one who bought the chain": null,
+  "Nilesh's mother called to say the SAT scores go to a different email than the billing one, and she wants that stored where tutors will actually see it.": null,
+  "Draft a reusable catering-allergens addendum we can staple to every rehearsal-dinner agreement.": null,
+  "Where do we keep the signed lockout authorisations after a roommate change?": [
+    {
+      "agentId": "accounting",
+      "confidence": 0.3191,
+      "score": 3.8289
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1785,
+      "score": 2.1415
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1588,
+      "score": 1.9058
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1071,
+      "score": 1.2857
+    }
+  ],
+  "Put the new late-pickup fee schedule in writing for the toddler room.": null,
+  "recrd that the holloway bungalow has a dog door the bait stations must avoid": [
+    {
+      "agentId": "admin_records",
+      "confidence": 0.2039,
+      "score": 2.4462
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1737,
+      "score": 2.0847
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.168,
+      "score": 2.0157
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1224,
+      "score": 1.4689
+    }
+  ],
+  "Willa Nguyen and Willa Tran keep getting merged. Separate the newborn files.": null,
+  "Draft a one-pager on crate-rest rules to hand to TPLO guardians at discharge.": null,
+  "Keep a note that Blythe's cake may not contain almond extract.": null,
+  "Tidy the tutoring roster; half the students have two spellings.": [
+    {
+      "agentId": "people",
+      "confidence": 0.2893,
+      "score": 3.4721
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.13,
+      "score": 1.5599
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1259,
+      "score": 1.5104
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.1155,
+      "score": 1.3857
+    }
+  ],
+  "Which gym members never gave us an emergency contact?": [
+    {
+      "agentId": "sales",
+      "confidence": 0.6177,
+      "score": 7.4118
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.1289,
+      "score": 1.5465
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1027,
+      "score": 1.2323
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.0436,
+      "score": 0.5229
+    }
+  ],
+  "Write the closing checklist for the bakery after a private plating night.": null,
+  "Mark the downtown gym as a corporate account rather than a consumer walk-in.": null,
+  "Attach the termite photos to the Holloway property file, not to Pax's personal card.": null,
+  "Note on Ines's optical file that progressives made her nauseous, then stop. No email.": null,
+  "We should have something that says what happens when a mover scuffs a building.": [
+    {
+      "agentId": "accounting",
+      "confidence": 0.4689,
+      "score": 5.6266
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1705,
+      "score": 2.0463
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1112,
+      "score": 1.3339
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.0953,
+      "score": 1.1432
+    }
+  ],
+  "Get Nadine's insurance card on file before the myopia follow-up.": null,
+  "standing-order contract for the pier 9 lobby bouquet": null,
+  "Change Otto's after-hours number to the one he texted from during the lockout. We do not have that number in front of us.": [
+    {
+      "agentId": "accounting",
+      "confidence": 0.2932,
+      "score": 3.5186
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.2747,
+      "score": 3.296
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1417,
+      "score": 1.7007
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.0861,
+      "score": 1.0338
+    }
+  ],
+  "Save the signed allergen addendum from the rehearsal-dinner couple.": [
+    {
+      "agentId": "sales",
+      "confidence": 0.3536,
+      "score": 4.2434
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1875,
+      "score": 2.2498
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1068,
+      "score": 1.2816
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.0938,
+      "score": 1.1261
+    }
+  ],
+  "put sable down as muzzle-only for face work": [
+    {
+      "agentId": "accounting",
+      "confidence": 0.2208,
+      "score": 2.649
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.2058,
+      "score": 2.4693
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.124,
+      "score": 1.4882
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.122,
+      "score": 1.4636
+    }
+  ],
+  "Draft the client-facing after-hours dropoff form for the clinic. This is not the CEU tracker.": null,
+  "Flag any daycare files missing the sales-tax exemption certificate so accounting can see the gap.": null,
+  "Write the Indeed listing for a Saturday bakery assistant who can ice cupcakes and close the dishwasher.": [
+    {
+      "agentId": "people",
+      "confidence": 0.6772,
+      "score": 8.1258
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.099,
+      "score": 1.1883
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.0652,
+      "score": 0.7829
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.0376,
+      "score": 0.4508
+    }
+  ],
+  "Add the two new evening sitters to Friday's direct-deposit run.": [
+    {
+      "agentId": "people",
+      "confidence": 0.2976,
+      "score": 3.5709
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.259,
+      "score": 3.1085
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1252,
+      "score": 1.5026
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.0955,
+      "score": 1.1459
+    }
+  ],
+  "Draft the CEU tracker the vet techs have to finish this year, including the anesthesia hours.": [
+    {
+      "agentId": "admin_records",
+      "confidence": 0.326,
+      "score": 3.9122
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1716,
+      "score": 2.0589
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1409,
+      "score": 1.6907
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.104,
+      "score": 1.2484
+    }
+  ],
+  "What should I ask a candidate who would cover overnight lockouts alone?": [
+    {
+      "agentId": "accounting",
+      "confidence": 0.3966,
+      "score": 4.7592
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.2164,
+      "score": 2.5969
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1103,
+      "score": 1.3236
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1049,
+      "score": 1.2587
+    }
+  ],
+  "Juniper Hale has been late to open the gym three times and the 6am regulars noticed. I need a conversation that is firm before it becomes a write-up.": null,
+  "List, in order, the rides a new florist driver has to sit shotgun on during week one.": [
+    {
+      "agentId": "people",
+      "confidence": 0.4294,
+      "score": 5.153
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1318,
+      "score": 1.5813
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.0996,
+      "score": 1.195
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.0992,
+      "score": 1.1906
+    }
+  ],
+  "The 19th dinner only has one plater on the crew. I need a second pair of hands or we plate late.": [
+    {
+      "agentId": "invoicing",
+      "confidence": 0.3125,
+      "score": 3.7499
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.2072,
+      "score": 2.4868
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.1413,
+      "score": 1.6951
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.077,
+      "score": 0.924
+    }
+  ],
+  "hirng an evening tutor tonight, which forms dose the district want": [
+    {
+      "agentId": "admin_records",
+      "confidence": 0.1848,
+      "score": 2.2176
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1691,
+      "score": 2.0289
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.1422,
+      "score": 1.7067
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1272,
+      "score": 1.5268
+    }
+  ],
+  "Put Juniper's third late open into a formal note I can hand her at close.": null,
+  "What do evening sitters make at the other daycares on the harbor?": [
+    {
+      "agentId": "marketing",
+      "confidence": 0.392,
+      "score": 4.7042
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1682,
+      "score": 2.0185
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1462,
+      "score": 1.7543
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.0849,
+      "score": 1.0189
+    }
+  ],
+  "Post the Saturday bakery assistant role on Indeed and the shop Instagram, not a cupcake special.": null,
+  "Sort the December holiday rota for the clinic so someone licensed is always on.": [
+    {
+      "agentId": "people",
+      "confidence": 0.4167,
+      "score": 5.0001
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1724,
+      "score": 2.0692
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1033,
+      "score": 1.2394
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.092,
+      "score": 1.1046
+    }
+  ],
+  "Someone needs to tell the movers about the new pad-protection rule.": [
+    {
+      "agentId": "marketing",
+      "confidence": 0.4583,
+      "score": 5.5
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1647,
+      "score": 1.9763
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.1325,
+      "score": 1.59
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1106,
+      "score": 1.3268
+    }
+  ],
+  "Can the apprentice locksmith run a solo rekey, or does a licensed tech have to be on site?": [
+    {
+      "agentId": "people",
+      "confidence": 0.3191,
+      "score": 3.8298
+    },
+    {
+      "agentId": "admin_records",
+      "confidence": 0.1335,
+      "score": 1.602
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1128,
+      "score": 1.3541
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1126,
+      "score": 1.3517
+    }
+  ],
+  "Offer letter for the new optician starting the 15th, part-time, Tuesday through Saturday.": null,
+  "The new baker keeps under-proofing the dinner rolls and I do not think anyone walked her through the overnight dough.": [
+    {
+      "agentId": "customer_service",
+      "confidence": 0.2631,
+      "score": 3.1567
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.1665,
+      "score": 1.9978
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1582,
+      "score": 1.8982
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1267,
+      "score": 1.5209
+    }
+  ],
+  "Who is on the gym floor next Thursday at 6am?": null,
+  "Time-off request from Kasper Lind for the last week of September; he is the only licensed pest tech that week.": [
+    {
+      "agentId": "people",
+      "confidence": 0.2112,
+      "score": 2.5341
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.1987,
+      "score": 2.3845
+    },
+    {
+      "agentId": "accounting",
+      "confidence": 0.1933,
+      "score": 2.3193
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1394,
+      "score": 1.6733
+    }
+  ],
+  "We need a staff handbook for the daycare that a licensing visitor would accept.": null,
+  "The ER clinic offered our lead tech another two dollars an hour. What do we have to match to keep her?": [
+    {
+      "agentId": "accounting",
+      "confidence": 0.2554,
+      "score": 3.0649
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.183,
+      "score": 2.1955
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.1388,
+      "score": 1.6656
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.1228,
+      "score": 1.4734
+    }
+  ],
+  "The three driver packets on my desk need a yes/no by Friday morning. Who is worth a sit-down?": [
+    {
+      "agentId": "people",
+      "confidence": 0.6471,
+      "score": 7.765
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.0916,
+      "score": 1.0996
+    },
+    {
+      "agentId": "operations",
+      "confidence": 0.0611,
+      "score": 0.7326
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.0571,
+      "score": 0.6855
+    }
+  ],
+  "Nobody wants Saturday night lockouts and I cannot leave the van unmanned.": [
+    {
+      "agentId": "operations",
+      "confidence": 0.4313,
+      "score": 5.175
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1384,
+      "score": 1.661
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.1139,
+      "score": 1.3669
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.0971,
+      "score": 1.1653
+    }
+  ],
+  "Background-check packet for the new evening sitter before she is left alone with toddlers.": [
+    {
+      "agentId": "marketing",
+      "confidence": 0.2545,
+      "score": 3.0536
+    },
+    {
+      "agentId": "customer_service",
+      "confidence": 0.2382,
+      "score": 2.859
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1817,
+      "score": 2.1808
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.1177,
+      "score": 1.4125
+    }
+  ],
+  "Coach Hanae Mori on how to take a cake complaint without promising a remake.": null,
+  "Tip-pooling rules for the tasting counter so front and kitchen split the Saturday envelopes the same way.": [
+    {
+      "agentId": "operations",
+      "confidence": 0.3245,
+      "score": 3.8939
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.2006,
+      "score": 2.4074
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.155,
+      "score": 1.8594
+    },
+    {
+      "agentId": "marketing",
+      "confidence": 0.0875,
+      "score": 1.0503
+    }
+  ],
+  "Write a one-shift safety briefing for the new mover about elevator pads and building keys.": [
+    {
+      "agentId": "marketing",
+      "confidence": 0.3653,
+      "score": 4.3841
+    },
+    {
+      "agentId": "people",
+      "confidence": 0.3475,
+      "score": 4.17
+    },
+    {
+      "agentId": "sales",
+      "confidence": 0.1133,
+      "score": 1.3592
+    },
+    {
+      "agentId": "invoicing",
+      "confidence": 0.0537,
+      "score": 0.6444
+    }
+  ]
+}
