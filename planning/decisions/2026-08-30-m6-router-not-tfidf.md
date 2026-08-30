@@ -1,7 +1,7 @@
 # Decision: Do not promote TF-IDF router to production (Milestone 6)
 
 **Date:** 2026-08-30  
-**Status:** Accepted (pending merge of `cursor/milestone6-completion-b6dd`)  
+**Status:** Accepted for production routing; Milestone 6 remains HOLD
 **War room visibility:** This record supersedes the hybrid recommendation in `docs/ml-router-benchmark.md`.
 
 ## Context
@@ -11,6 +11,9 @@ validation-v3 (208 cases, leakage-checked) showed TF-IDF routing accuracy 51.9% 
 ## Decision
 
 **Keep production routing as heuristic (+ semantic intent/subject scoring) with Haiku when `ANTHROPIC_API_KEY` is present.** Do not deploy TF-IDF or cascades behind a flag until downstream action-eval shows improvement, not routing-only accuracy.
+
+This is a conservative no-change decision, not a completed six-arm bakeoff.
+Haiku and both Haiku cascades remain unmeasured on validation-v3.
 
 ## Rationale
 

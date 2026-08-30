@@ -8,12 +8,8 @@ handles that difference rather than flattening it away.
 
 Three cases, three encodings:
 
-  routed by the heuristic   OMITTED from the table. `useRouterPredictions`
-      returns null for an unlisted ask, and `classify()` then falls through to
-      the shipped router — which, for these asks, is the heuristic that already
-      chose them. Emitting a rescaled copy of the heuristic's own scores would
-      change the orchestrator's ambiguity behaviour (`isAmbiguous` reads raw
-      evidence) while claiming to change nothing.
+  routed by the heuristic   explicit `null`. The harness treats null as a
+      deliberate use of the shipped router and rejects a missing ask.
 
   routed by a fallback      one candidate at the chosen department, with the
       cascade's calibrated confidence and a score above MIN_BUSINESS_EVIDENCE
@@ -45,7 +41,7 @@ import joblib
 import datasets
 import heuristic as heuristic_router
 from decision import (MIN_BUSINESS_EVIDENCE, Cascade, Stage, always_accepts,
-                      confidence_accepts, heuristic_accepts)
+                      heuristic_accepts)
 from evaluate import Prediction
 
 ARTIFACTS = Path(__file__).resolve().parent / "artifacts"
@@ -84,20 +80,14 @@ def build(arch: str, asks: list[str], abstain_below: float) -> tuple[Cascade, li
             Stage("heuristic", heur, heuristic_accepts(MIN_BUSINESS_EVIDENCE), "heuristic_below_floor"),
             Stage("embedding", fb, always_accepts, "embedding_had_no_answer"),
         ]), heur
-    if arch == "G":
-        fb = _tfidf(asks)
-        return Cascade("G", [
-            Stage("heuristic", heur, heuristic_accepts(MIN_BUSINESS_EVIDENCE), "heuristic_below_floor"),
-            Stage("tfidf", fb, confidence_accepts(abstain_below), "tfidf_below_abstention_threshold"),
-        ]), heur
     raise ValueError(f"unknown architecture {arch!r}")
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--arch", choices=["C", "C2", "G"], required=True)
+    ap.add_argument("--arch", choices=["C", "C2"], required=True)
     ap.add_argument("--split", choices=["validation", "test"], default="test")
-    ap.add_argument("--validation-version", default=datasets.DEFAULT_VALIDATION, choices=["v1", "v2"])
+    ap.add_argument("--validation-version", default=datasets.DEFAULT_VALIDATION, choices=["v1", "v2", "v3"])
     ap.add_argument("--abstain-below", type=float, default=0.55)
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
@@ -112,11 +102,12 @@ def main() -> None:
     cascade, heur = build(args.arch, asks, args.abstain_below)
     decisions = cascade.run(len(asks))
 
-    table: dict[str, list[dict]] = {}
+    table: dict[str, list[dict] | None] = {}
     kept, filled, abstained = 0, 0, 0
     for ask, d in zip(asks, decisions):
         if d.source == "heuristic":
             kept += 1
+            table[ask] = None
             continue
         if d.abstained:
             abstained += 1
@@ -127,7 +118,11 @@ def main() -> None:
             ]
             continue
         filled += 1
-        conf = d.calibrated_confidence if d.calibrated_confidence is not None else (d.raw_score or 0.0)
+        conf = (
+            d.calibrated_confidence
+            if d.calibrated_confidence is not None
+            else d.source_confidence
+        )
         cands = [{"agentId": d.department, "confidence": round(float(conf), 4),
                   "score": round(float(conf) * SCORE_SCALE, 4)}]
         for alt in d.alternates[:2]:

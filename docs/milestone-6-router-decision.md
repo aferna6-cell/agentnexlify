@@ -1,8 +1,9 @@
 # Milestone 6 — Router / cascade decision
 
 **Date:** 2026-08-30  
+**Milestone status:** HOLD — Haiku-containing candidates are unmeasured on validation-v3.
 **Selection split:** `validation-v3` (208 cases, independent, leakage-checked)  
-**Frozen measurement split:** `action-eval-v1` (215 cases) — used only after selection
+**Frozen measurement split:** `action-eval-v1` (215 cases) — already run for the shipped path
 
 ## Candidates evaluated
 
@@ -22,7 +23,9 @@ Embeddings were **not** retained — no competitive artifact on this branch with
 
 ## Downstream action benchmark (frozen 215, offline heuristic + semantic pipeline)
 
-Run after router selection freeze — **not** used to tune routers.
+This run measures the shipped offline path. It does not complete the required
+six-candidate selection because Haiku, heuristic→Haiku, and
+heuristic→TF-IDF→Haiku remain unmeasured on validation-v3.
 
 | Metric | Result |
 |--------|--------|
@@ -54,6 +57,12 @@ Rationale:
 
 **Do not auto-promote TF-IDF or cascades.** A future `ML_ROUTING_ENABLED` feature flag may host architecture C for A/B measurement once downstream action eval shows improvement.
 
+Point estimates alone do not separate TF-IDF (51.9%) from
+heuristic→TF-IDF (48.1%) at this sample size (paired McNemar p≈0.17).
+`acceptable_departments` scoring and paired uncertainty must be included in the
+next selection run. Until the Haiku arms and downstream comparisons are
+measured, there is no final bakeoff winner.
+
 ## Confidence thresholds (if TF-IDF flag enabled later)
 
 | Threshold | % handled w/o LLM | Notes |
@@ -70,3 +79,5 @@ python3 ml/routing/milestone6.py --split validation --validation-version v3
 cd agent-service && npm run eval:actions -- --report
 cd agent-service && npm run eval:actions:gate
 ```
+
+**MILESTONE 6 HOLD**

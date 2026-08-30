@@ -22,7 +22,7 @@ Owner ask (email + address in ask)
   → Gmail: untouched
 Owner approves → claim → run_tool(send_email)
   → Gmail: exactly one message, Message-ID <aos-{execution_id}@actions.agentnexlify>
-  → os_tool_executions: status=succeeded, verification_status=verified
+  → os_tool_executions: status=succeeded, verification_state=passed
 Replay approve / redrive
   → No duplicate send (idempotency + RFC822 Msg-ID search)
 ```
@@ -50,6 +50,9 @@ Follow `docs/agent-action-eval.md` § Manual live-Gmail smoke procedure (steps 1
 2. Gmail message headers: `Message-ID` matches deterministic fingerprint
 3. Recipient and subject match approval card
 4. Second approve on same `execution_id` → no duplicate in Gmail
+5. A lookup/read-back outage leaves the row non-terminal and never attempts a
+   second send; recipient, decoded subject, and deterministic Message-ID must
+   all match before success is recorded.
 
 ## What was NOT done in this milestone
 

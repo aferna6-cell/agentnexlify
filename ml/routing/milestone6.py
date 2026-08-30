@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import platform
 import subprocess
 import sys
@@ -77,8 +78,14 @@ def embedding_predictions(asks: list[str]) -> list[Prediction] | None:
 def llm_predictions(asks: list[str]) -> tuple[list[Prediction] | None, dict]:
     """Live Haiku predictions, or None plus the reason and the cost estimate."""
     payload = "\n".join(json.dumps({"ask": a}) for a in asks) + "\n"
+    live = os.environ.get("RUN_LIVE_HAIKU_EVAL") == "1"
     proc = subprocess.run(
-        ["node", "--experimental-strip-types", "evals/export-llm-predictions.ts"],
+        [
+            "node",
+            "--experimental-strip-types",
+            "evals/export-llm-predictions.ts",
+            "--live" if live else "--estimate-only",
+        ],
         input=payload, capture_output=True, text=True, cwd=REPO / "agent-service", check=True,
     )
     if proc.stdout.lstrip()[:1] == "{":  # estimate object: no credential
@@ -368,7 +375,7 @@ def main() -> None:
                   f"ECE raw {r['methods']['identity']['ece_raw']:.3f} -> "
                   f"{r['methods'][r['chosen_method']]['ece_out_of_fold']:.3f}")
         if llm is not None:
-            calib["llm"] = calibrate_router("llm", labels, llm, use_vec=False)
+            calib["llm"] = calibrate_router("llm", labels, llm, use_vectors=False)
             chosen_values["llm"] = calib["llm"]["_calibrated_values"]
             print(f"  {'llm':<10} chosen={calib['llm']['chosen_method']}")
     else:

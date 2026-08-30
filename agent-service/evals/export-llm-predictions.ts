@@ -22,16 +22,24 @@
 import { createInterface } from "node:readline";
 import { classifyWithHaiku } from "../src/agent-os/agents/_classifier.ts";
 import { registry } from "../src/agent-os/agents/_registry.ts";
-import { estimateCostUsd, isModelAvailable } from "../src/agent-os/lib/anthropic.ts";
+import {
+  estimateCostUsd,
+  isModelAvailable,
+} from "../src/agent-os/lib/anthropic.ts";
 
-const ROUTING_MODEL = process.env.ANTHROPIC_MODEL_ROUTING ?? "claude-haiku-4-5-20251001";
+const ROUTING_MODEL =
+  process.env.ANTHROPIC_MODEL_ROUTING ?? "claude-haiku-4-5-20251001";
 const estimateOnly = process.argv.includes("--estimate-only");
+const liveRequested = process.argv.includes("--live");
 
 /** The catalogue block the routing prompt embeds, verbatim from the registry. */
 function cataloguePromptSize(): number {
   return registry
     .routable()
-    .map((a) => `- ${a.agent_id} (${a.bucket}): ${a.purpose} Routes here when: ${a.routes_here_when.join("; ")}`)
+    .map(
+      (a) =>
+        `- ${a.agent_id} (${a.bucket}): ${a.purpose} Routes here when: ${a.routes_here_when.join("; ")}`,
+    )
     .join("\n").length;
 }
 
@@ -50,9 +58,17 @@ for await (const line of rl) {
 }
 
 const promptChars = cataloguePromptSize() + SYSTEM_OVERHEAD_CHARS;
-const meanAskChars = asks.length ? asks.reduce((s, a) => s + a.length, 0) / asks.length : 0;
-const inputTokens = Math.round((promptChars + meanAskChars + 20) / CHARS_PER_TOKEN);
-const costPerCall = estimateCostUsd(ROUTING_MODEL, inputTokens, OUTPUT_TOKENS_PER_CALL);
+const meanAskChars = asks.length
+  ? asks.reduce((s, a) => s + a.length, 0) / asks.length
+  : 0;
+const inputTokens = Math.round(
+  (promptChars + meanAskChars + 20) / CHARS_PER_TOKEN,
+);
+const costPerCall = estimateCostUsd(
+  ROUTING_MODEL,
+  inputTokens,
+  OUTPUT_TOKENS_PER_CALL,
+);
 
 const estimate = {
   kind: "estimate",
@@ -70,10 +86,15 @@ const estimate = {
     "with the catalogue cached the input cost would be materially lower.",
 };
 
-if (estimateOnly || !isModelAvailable()) {
-  if (!estimateOnly) {
-    estimate.note += " NO CREDENTIAL PRESENT: no live measurement was taken.";
-  }
+if (liveRequested && !isModelAvailable()) {
+  console.error(
+    "Haiku evaluation requested but ANTHROPIC_API_KEY is unavailable.",
+  );
+  process.exit(2);
+}
+
+if (estimateOnly || !liveRequested) {
+  estimate.note += " Live calls require the explicit --live flag.";
   console.log(JSON.stringify(estimate, null, 2));
   process.exit(0);
 }
@@ -84,15 +105,23 @@ for (const ask of asks) {
   const cls = await classifyWithHaiku(ask);
   const latencyMs = Number(process.hrtime.bigint() - started) / 1e6;
   if (!cls || cls.candidates.length === 0) malformed++;
-  console.log(JSON.stringify({
-    ask,
-    llm_predicted: cls?.candidates[0]?.agentId ?? null,
-    confidence: cls?.candidates[0]?.confidence ?? 0,
-    ranked: (cls?.candidates ?? []).map((c) => c.agentId),
-    // True when the LLM produced nothing usable. Production would fall back to
-    // the heuristic here; the benchmark must not.
-    fallback_would_be_used: !cls || cls.candidates.length === 0,
-    latency_ms: latencyMs,
-  }));
+  console.log(
+    JSON.stringify({
+      ask,
+      llm_predicted: cls?.candidates[0]?.agentId ?? null,
+      confidence: cls?.candidates[0]?.confidence ?? 0,
+      ranked: (cls?.candidates ?? []).map((c) => c.agentId),
+      // True when the LLM produced nothing usable. Production would fall back to
+      // the heuristic here; the benchmark must not.
+      fallback_would_be_used: !cls || cls.candidates.length === 0,
+      latency_ms: latencyMs,
+    }),
+  );
 }
-console.error(JSON.stringify({ ...estimate, kind: "run_summary", malformed_or_unmapped: malformed }));
+console.error(
+  JSON.stringify({
+    ...estimate,
+    kind: "run_summary",
+    malformed_or_unmapped: malformed,
+  }),
+);
