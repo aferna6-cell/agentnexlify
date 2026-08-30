@@ -10,7 +10,13 @@ import assert from "node:assert/strict";
 import { executeAction } from "./executor.ts";
 import { toolRegistry } from "./registry.ts";
 import { resolveCustomer } from "./tools/add_customer_note.ts";
-import { sanitize, sanitizeRecord, isSecretKey, REDACTED, MAX_STRING_LENGTH } from "./sanitize.ts";
+import {
+  sanitize,
+  sanitizeRecord,
+  isSecretKey,
+  REDACTED,
+  MAX_STRING_LENGTH,
+} from "./sanitize.ts";
 import { harness, sampleContext, type Harness } from "./_testkit.ts";
 import type { SharedContext } from "../types/agent.ts";
 
@@ -20,7 +26,11 @@ beforeEach(() => {
   h = harness();
 });
 
-function run(toolId: string, input: unknown, context: SharedContext = h.context) {
+function run(
+  toolId: string,
+  input: unknown,
+  context: SharedContext = h.context,
+) {
   return executeAction({
     accountId: "tenantA",
     agentId: "admin_records",
@@ -36,18 +46,30 @@ function run(toolId: string, input: unknown, context: SharedContext = h.context)
 
 test("get_business_profile returns the profile and names what is missing", async () => {
   const outcome = await run("get_business_profile", {});
-  const output = outcome.output as { profile: Record<string, string>; presentFields: string[]; missingFields: string[] };
+  const output = outcome.output as {
+    profile: Record<string, string>;
+    presentFields: string[];
+    missingFields: string[];
+  };
 
   assert.equal(outcome.status, "succeeded");
   assert.equal(output.profile["ownerName"], "Maya");
   assert.ok(output.presentFields.includes("phone"));
-  assert.ok(output.missingFields.includes("website"), "an absent field is reported, never invented");
+  assert.ok(
+    output.missingFields.includes("website"),
+    "an absent field is reported, never invented",
+  );
   assert.equal(output.profile["website"], undefined);
 });
 
 test("get_business_profile can be narrowed to specific fields", async () => {
-  const outcome = await run("get_business_profile", { fields: ["businessName", "website"] });
-  const output = outcome.output as { profile: Record<string, string>; missingFields: string[] };
+  const outcome = await run("get_business_profile", {
+    fields: ["businessName", "website"],
+  });
+  const output = outcome.output as {
+    profile: Record<string, string>;
+    missingFields: string[];
+  };
 
   assert.deepEqual(Object.keys(output.profile), ["businessName"]);
   assert.deepEqual(output.missingFields, ["website"]);
@@ -55,8 +77,15 @@ test("get_business_profile can be narrowed to specific fields", async () => {
 
 test("get_business_profile on an empty profile reports everything missing", async () => {
   const empty = sampleContext({ businessProfile: {} });
-  const outcome = await run("get_business_profile", { fields: ["businessName"] }, empty);
-  const output = outcome.output as { profile: Record<string, string>; missingFields: string[] };
+  const outcome = await run(
+    "get_business_profile",
+    { fields: ["businessName"] },
+    empty,
+  );
+  const output = outcome.output as {
+    profile: Record<string, string>;
+    missingFields: string[];
+  };
 
   assert.equal(outcome.status, "succeeded");
   assert.deepEqual(output.profile, {});
@@ -64,7 +93,9 @@ test("get_business_profile on an empty profile reports everything missing", asyn
 });
 
 test("get_business_profile rejects a field it does not know", async () => {
-  const outcome = await run("get_business_profile", { fields: ["bank_account"] });
+  const outcome = await run("get_business_profile", {
+    fields: ["bank_account"],
+  });
 
   assert.equal(outcome.status, "failed");
   assert.equal(outcome.record.error?.code, "invalid_input");
@@ -77,7 +108,11 @@ test("add_customer_note writes the note and verifies it landed", async () => {
     customer_id: "lead_1",
     note: "Prefers texts after 5pm.",
   });
-  const output = outcome.output as { noteId: string; customerName: string; durable: boolean };
+  const output = outcome.output as {
+    noteId: string;
+    customerName: string;
+    durable: boolean;
+  };
 
   assert.equal(outcome.status, "succeeded");
   assert.equal(output.customerName, "Sarah Chen");
@@ -85,32 +120,57 @@ test("add_customer_note writes the note and verifies it landed", async () => {
   assert.equal(outcome.record.riskLevel, 1);
   assert.equal(outcome.record.mutating, true);
 
-  const notes = await h.notes.list({ accountId: "tenantA", customerId: "lead_1" });
+  const notes = await h.notes.list({
+    accountId: "tenantA",
+    customerId: "lead_1",
+  });
   assert.equal(notes.length, 1);
   assert.equal(notes[0]?.note, "Prefers texts after 5pm.");
   assert.equal(notes[0]?.source, "agent:admin_records");
 });
 
 test("add_customer_note records where the write landed and whether it is durable", async () => {
-  const outcome = await run("add_customer_note", { customer_id: "lead_1", note: "Called back." });
+  const outcome = await run("add_customer_note", {
+    customer_id: "lead_1",
+    note: "Called back.",
+  });
 
-  assert.deepEqual(outcome.record.effect, { port: "in_memory", durable: false });
-  assert.equal((outcome.output as { durable: boolean }).durable, false, "an in-memory port never claims durability");
+  assert.deepEqual(outcome.record.effect, {
+    port: "in_memory",
+    durable: false,
+  });
+  assert.equal(
+    (outcome.output as { durable: boolean }).durable,
+    false,
+    "an in-memory port never claims durability",
+  );
 });
 
 test("add_customer_note resolves a customer by name", async () => {
-  const outcome = await run("add_customer_note", { customer_name: "Mike Johnson", note: "Wants a Saturday slot." });
+  const outcome = await run("add_customer_note", {
+    customer_name: "Mike Johnson",
+    note: "Wants a Saturday slot.",
+  });
 
   assert.equal(outcome.status, "succeeded");
-  assert.equal((await h.notes.list({ accountId: "tenantA", customerId: "lead_2" })).length, 1);
+  assert.equal(
+    (await h.notes.list({ accountId: "tenantA", customerId: "lead_2" })).length,
+    1,
+  );
 });
 
 test("add_customer_note refuses a customer it cannot resolve, and writes nothing", async () => {
-  const outcome = await run("add_customer_note", { customer_name: "Nobody At All", note: "hi" });
+  const outcome = await run("add_customer_note", {
+    customer_name: "Nobody At All",
+    note: "hi",
+  });
 
   assert.equal(outcome.status, "failed");
   assert.equal(outcome.record.error?.code, "customer_not_found");
-  assert.equal((await h.notes.list({ accountId: "tenantA", customerId: "lead_1" })).length, 0);
+  assert.equal(
+    (await h.notes.list({ accountId: "tenantA", customerId: "lead_1" })).length,
+    0,
+  );
 });
 
 test("add_customer_note refuses an ambiguous name rather than guessing", () => {
@@ -120,7 +180,10 @@ test("add_customer_note refuses an ambiguous name rather than guessing", () => {
   ];
   assert.equal(resolveCustomer(leads, { customer_name: "Chris Green" }), null);
   // A unique prefix still resolves.
-  assert.equal(resolveCustomer([leads[0]!], { customer_name: "chris" })?.id, "a");
+  assert.equal(
+    resolveCustomer([leads[0]!], { customer_name: "chris" })?.id,
+    "a",
+  );
 });
 
 test("add_customer_note requires an identifier and a note", async () => {
@@ -128,13 +191,19 @@ test("add_customer_note requires an identifier and a note", async () => {
   assert.equal(noTarget.status, "failed");
   assert.equal(noTarget.record.error?.code, "invalid_input");
 
-  const empty = await run("add_customer_note", { customer_id: "lead_1", note: "" });
+  const empty = await run("add_customer_note", {
+    customer_id: "lead_1",
+    note: "",
+  });
   assert.equal(empty.status, "failed");
   assert.equal(empty.record.error?.code, "invalid_input");
 });
 
 test("a customer id from another tenant's pipeline cannot be written to", async () => {
-  const outcome = await run("add_customer_note", { customer_id: "lead_from_other_tenant", note: "hi" });
+  const outcome = await run("add_customer_note", {
+    customer_id: "lead_from_other_tenant",
+    note: "hi",
+  });
 
   assert.equal(outcome.status, "failed");
   assert.equal(outcome.record.error?.code, "customer_not_found");
@@ -145,7 +214,11 @@ test("a customer id from another tenant's pipeline cannot be written to", async 
 test("the shipped registry exposes honest metadata", () => {
   const meta = toolRegistry.metadata();
   const ids = meta.map((m) => m.id).sort();
-  assert.deepEqual(ids, ["add_customer_note", "get_business_profile"]);
+  assert.deepEqual(ids, [
+    "add_customer_note",
+    "get_business_profile",
+    "send_email",
+  ]);
 
   const read = meta.find((m) => m.id === "get_business_profile")!;
   assert.equal(read.riskLevel, 0);
@@ -158,13 +231,31 @@ test("the shipped registry exposes honest metadata", () => {
   assert.equal(note.mutating, true);
   assert.equal(note.verifiable, true);
   assert.equal(note.department, "admin_records");
+
+  const send = meta.find((m) => m.id === "send_email")!;
+  assert.equal(send.riskLevel, 2);
+  assert.equal(send.riskLabel, "external_communication");
+  assert.equal(send.mutating, true);
+  assert.equal(send.requiresApproval, true);
+  assert.equal(send.department, "sales");
 });
 
 test("availableFor honours a tenant's allow-list", () => {
-  const allowed = toolRegistry.availableFor({ enabledToolIds: ["get_business_profile"] });
-  assert.deepEqual(allowed.map((t) => t.id), ["get_business_profile"]);
+  const allowed = toolRegistry.availableFor({
+    enabledToolIds: ["get_business_profile"],
+  });
+  assert.deepEqual(
+    allowed.map((t) => t.id),
+    ["get_business_profile"],
+  );
 
-  const none = toolRegistry.availableFor({ disabledToolIds: ["get_business_profile", "add_customer_note"] });
+  const none = toolRegistry.availableFor({
+    disabledToolIds: [
+      "get_business_profile",
+      "add_customer_note",
+      "send_email",
+    ],
+  });
   assert.deepEqual(none, []);
 });
 
@@ -174,7 +265,11 @@ test("the sanitizer redacts secret-looking keys without eating ordinary ones", (
   assert.ok(isSecretKey("api_key"));
   assert.ok(isSecretKey("accessToken"));
   assert.ok(isSecretKey("Authorization"));
-  assert.equal(isSecretKey("businessName"), false, "'ssn' inside a word is not a secret");
+  assert.equal(
+    isSecretKey("businessName"),
+    false,
+    "'ssn' inside a word is not a secret",
+  );
   assert.equal(isSecretKey("keywords"), false);
 
   const cleaned = sanitizeRecord({
@@ -184,7 +279,10 @@ test("the sanitizer redacts secret-looking keys without eating ordinary ones", (
   });
   assert.equal(cleaned["businessName"], "Sunset Auto Care");
   assert.equal(cleaned["api_key"], REDACTED);
-  assert.equal((cleaned["nested"] as Record<string, unknown>)["refresh_token"], REDACTED);
+  assert.equal(
+    (cleaned["nested"] as Record<string, unknown>)["refresh_token"],
+    REDACTED,
+  );
   assert.equal((cleaned["nested"] as Record<string, unknown>)["note"], "fine");
 });
 

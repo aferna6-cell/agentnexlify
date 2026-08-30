@@ -7,7 +7,12 @@
 
 export * from "./types.ts";
 export { defineTool, type ToolSpec } from "./define-tool.ts";
-export { ToolRegistry, toolRegistry, describeTool, type AnyTool } from "./registry.ts";
+export {
+  ToolRegistry,
+  toolRegistry,
+  describeTool,
+  type AnyTool,
+} from "./registry.ts";
 export {
   evaluateActionPolicy,
   loadToolPolicy,
@@ -55,4 +60,10 @@ export {
 } from "./executor.ts";
 export { getBusinessProfile } from "./tools/get_business_profile.ts";
 export { addCustomerNote } from "./tools/add_customer_note.ts";
+export { sendEmail } from "./tools/send_email.ts";
+export {
+  sendEmailEnabled,
+  SEND_EMAIL_FLAG,
+  SEND_EMAIL_TOOL_ID,
+} from "./flags.ts";
 export { sanitize, sanitizeRecord, REDACTED } from "./sanitize.ts";
