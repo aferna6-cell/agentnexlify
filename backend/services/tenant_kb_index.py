@@ -121,7 +121,7 @@ def _looks_uuid(value: str) -> bool:
 
 
 def index_after_compile(client_id: str) -> None:
-    from backend.database import get_service_supabase
+    from backend.models.database import get_service_supabase
 
     try:
         db = get_service_supabase()

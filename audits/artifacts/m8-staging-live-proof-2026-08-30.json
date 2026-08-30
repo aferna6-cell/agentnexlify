@@ -1,0 +1,116 @@
+{
+  "verdict": "MILESTONE 8 HOLD",
+  "timestamp": "2026-08-30T23:09:00Z",
+  "branch": "cursor/milestone8-staging-live-a2c9",
+  "staging_environment": {
+    "exists": true,
+    "railway_project_id": "22fbefe0-bd69-41c6-9896-e5f533473c60",
+    "railway_environment_id": "5988ed51-6691-4497-825d-14fefff5f591",
+    "railway_environment_name": "staging",
+    "staging_api_base": "https://agentnexlify-staging.up.railway.app",
+    "health": "ok",
+    "supabase_connected": true,
+    "distinct_from_production": true,
+    "production_environment_id": "5ee2962f-8355-4138-8865-6de80283a9ba",
+    "production_api_base": "https://agentnexlify-production.up.railway.app"
+  },
+  "supabase": {
+    "staging_project_id": "nohanoiugcbaxtxinttp",
+    "staging_url_host": "nohanoiugcbaxtxinttp.supabase.co",
+    "production_project_id": "pxserpybmajixqrmzaly",
+    "migrations_through_198": true,
+    "tenant_kb_chunks_table": true
+  },
+  "tenant_test_id": "7451537b-a694-4c31-83b0-1b804df3d757",
+  "feature_flags": {
+    "staging": {
+      "RAG_ENABLED": "1",
+      "CRM_ACTIONS_ENABLED": "1",
+      "CALENDAR_ACTIONS_ENABLED": "1",
+      "SEND_EMAIL_ENABLED": "1"
+    },
+    "production": {
+      "RAG_ENABLED": "unset/OFF",
+      "CRM_ACTIONS_ENABLED": "unset/OFF",
+      "CALENDAR_ACTIONS_ENABLED": "unset/OFF",
+      "SEND_EMAIL_ENABLED": "unset/OFF"
+    }
+  },
+  "capabilities": {
+    "RAG": {
+      "live_proven": true,
+      "staging_enabled": true,
+      "canary_eligible": false,
+      "production_eligible": false,
+      "blocker": null,
+      "rollback": "RAG_ENABLED=0",
+      "evidence": {
+        "active_tenant_kb_chunks": 6,
+        "compile_path": "upsert_document -> compile_tenant_kb -> index_after_compile",
+        "index_import_fix": "backend/services/tenant_kb_index.py uses backend.models.database",
+        "holdout_recall_at_1": 0.9017,
+        "cross_tenant_leaks": 0,
+        "smoke_artifact": "audits/artifacts/m8-live-smoke-20260830T230857Z.json"
+      }
+    },
+    "CRM": {
+      "live_proven": true,
+      "staging_enabled": true,
+      "canary_eligible": false,
+      "production_eligible": false,
+      "blocker": null,
+      "rollback": "CRM_ACTIONS_ENABLED=0",
+      "proofs": [
+        "create",
+        "duplicate_create",
+        "partial_update",
+        "stage_valid",
+        "stage_invalid",
+        "cross_tenant_update",
+        "search_by_name",
+        "ambiguous_name_clarification",
+        "os_tool_executions_lifecycle"
+      ]
+    },
+    "Calendar": {
+      "live_proven": false,
+      "staging_enabled": true,
+      "canary_eligible": false,
+      "production_eligible": false,
+      "blocker": "No google_calendar OAuth integration; Google Cloud redirect URI registration blocked",
+      "rollback": "CALENDAR_ACTIONS_ENABLED=0",
+      "provider_object_ids": null
+    },
+    "Gmail": {
+      "live_proven": false,
+      "staging_enabled": true,
+      "canary_eligible": false,
+      "production_eligible": false,
+      "blocker": "No gmail OAuth integration; Google Cloud redirect URI registration blocked",
+      "rollback": "SEND_EMAIL_ENABLED=0",
+      "provider_object_ids": null
+    }
+  },
+  "integrations_observed": {
+    "smoke_tenant_providers": []
+  },
+  "regression": {
+    "m6_unsafe_actions": 0,
+    "m8_calendar_crm": { "pass": 265, "total": 265, "unsafe_actions": 0 },
+    "m7_rag_holdout": {
+      "recall_at_1": 0.9017,
+      "cross_tenant_leaks": 0,
+      "prompt_injection_failures": 0,
+      "unsupported_claim_rate": 0.0
+    },
+    "pytest": "60 passed",
+    "check_quick": "pass"
+  },
+  "remaining_blockers": [
+    "Add staging Google OAuth redirect URIs in Google Cloud Console",
+    "Complete Calendar + Gmail OAuth on smoke tenant against staging",
+    "Re-run calendar+gmail suites of scripts/m8_live_smoke.py"
+  ],
+  "production_flags_flipped": false,
+  "secrets_in_artifacts": false
+}

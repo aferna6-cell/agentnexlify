@@ -1,19 +1,10 @@
 # Milestone 8 — Calendar + CRM Business Actions
 
-**Status (2026-08-30 deploy-proof):** Offline + data-plane **merged** (#709/#710/#711).
-Migration **198 APPLIED**. Smoke-tenant RAG indexed (**6** active chunks) + retrieval
-proof pass; Railway still **production-only** (no staging env). Calendar/CRM/Gmail
-Action Executor live smokes **blocked** on OAuth + service credentials. Flags
-**default OFF**. Evidence: `audits/artifacts/m8-deploy-proof-report-2026-08-30.md`.
-Owner staging steps: `docs/ops/m8-staging-setup.md`.
-
-| State | Meaning |
-|-------|---------|
-| **Merged** | Code on `main` (offline tools, policy, evals, Collecting ports, docs) |
-| **Live-proven** | Controlled staging smoke with real Google / leads completed |
-| **Enabled** | Env flag `=1` on that environment |
-
-Today: **merged** yes · **live-proven** partial RAG only · **enabled** nowhere · **HOLD**.
+**Status (2026-08-30 staging live):** Staging Railway + staging Supabase provisioned.
+RAG + CRM live-proven on smoke tenant with flags **staging ON / production OFF**.
+Calendar + Gmail blocked on Google OAuth redirect registration.
+Evidence: `audits/artifacts/m8-staging-live-proof-report-2026-08-30.md`.
+**HOLD** — do not start Milestone 9.
 
 ## Architecture (locked)
 

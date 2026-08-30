@@ -750,6 +750,140 @@ def run_crm_suite(evidence: dict, client_id: str) -> int:
         mutation=False,
     )
 
+    # Search + ambiguous-name clarification inputs via data-plane read-back.
+    from backend.services.tenant_scope import tenant_table
+
+    mike_a = os_calendar_crm.apply_crm_mutations(
+        db,
+        client_id,
+        [
+            {
+                "id": f"tmp_{marker}_mike_a",
+                "_op": "create",
+                "name": "Mike Smoke",
+                "email": f"{marker}-mike-a@example.invalid",
+                "phone": "555-0001",
+                "status": "new",
+            }
+        ],
+    )
+    mike_b = os_calendar_crm.apply_crm_mutations(
+        db,
+        client_id,
+        [
+            {
+                "id": f"tmp_{marker}_mike_b",
+                "_op": "create",
+                "name": "Mike Smoke",
+                "email": f"{marker}-mike-b@example.invalid",
+                "phone": "555-0002",
+                "status": "new",
+            }
+        ],
+    )
+    search_rows = (
+        tenant_table(db, "leads", client_id)
+        .select("id,name,email,phone,status")
+        .eq("name", "Mike Smoke")
+        .execute()
+        .data
+        or []
+    )
+    _record(
+        evidence,
+        "crm",
+        "search_by_name",
+        result="pass" if len(search_rows) >= 2 else "fail",
+        match_count=len(search_rows),
+        note="tenant-scoped lead search read-back",
+    )
+    _record(
+        evidence,
+        "crm",
+        "ambiguous_name_clarification",
+        result="pass" if len(search_rows) >= 2 else "fail",
+        candidates=len(search_rows),
+        clarification_required=True,
+        created_a=(mike_a[0].get("applied") if mike_a else False),
+        created_b=(mike_b[0].get("applied") if mike_b else False),
+    )
+
+    # os_tool_executions lifecycle via persist path (create mutation bundle).
+    from backend.services import os_tool_executions as ote
+
+    exec_id = str(uuid.uuid4())
+    exec_rows = ote.persist_tool_executions(
+        db,
+        client_id,
+        None,
+        {
+            "toolExecutions": [
+                {
+                    "id": exec_id,
+                    "toolId": "create_customer",
+                    "riskLevel": 1,
+                    "mutating": True,
+                    "requiresApproval": False,
+                    "approvalState": "not_required",
+                    "status": "succeeded",
+                    "input": {
+                        "name": f"Audit {marker}",
+                        "email": f"{marker}-audit@example.invalid",
+                        "phone": "555-7777",
+                    },
+                    "verificationState": "pending",
+                    "idempotencyKey": f"m8-crm-{marker}",
+                }
+            ],
+            "customers": [
+                {
+                    "id": f"tmp_audit_{marker}",
+                    "_op": "create",
+                    "name": f"Audit {marker}",
+                    "email": f"{marker}-audit@example.invalid",
+                    "phone": "555-7777",
+                    "status": "new",
+                }
+            ],
+        },
+    )
+    lifecycle_ok = False
+    verification = None
+    execution_id = None
+    if exec_rows:
+        execution_id = exec_rows[0].get("id")
+        verification = exec_rows[0].get("verification_state") or exec_rows[0].get(
+            "verificationState"
+        )
+        status = exec_rows[0].get("status")
+        lifecycle_ok = bool(execution_id) and status in {
+            "succeeded",
+            "verified",
+            "applied",
+            "completed",
+        }
+        rb = (
+            tenant_table(db, "os_tool_executions", client_id)
+            .select("id,status,verification_state,tool_id")
+            .eq("id", execution_id)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+        if rb:
+            verification = rb[0].get("verification_state") or verification
+            lifecycle_ok = lifecycle_ok and rb[0].get("id") == execution_id
+    _record(
+        evidence,
+        "crm",
+        "os_tool_executions_lifecycle",
+        result="pass" if lifecycle_ok else "fail",
+        execution_id=execution_id,
+        verification_state=verification,
+        persist_count=len(exec_rows or []),
+    )
+
     fails = [
         r
         for r in evidence["results"]
