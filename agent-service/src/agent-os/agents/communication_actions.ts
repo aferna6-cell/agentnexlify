@@ -33,7 +33,7 @@ import type {
 } from "./_department.ts";
 import { authorizesAction, type AskIntent } from "./_intent.ts";
 import { describeAmbiguity, resolveCustomerAnywhere } from "./_resolve.ts";
-import { canProposeSendEmail } from "../actions/flags.ts";
+import { canProposeSendEmail } from "../capabilities/send_email.ts";
 import type { AgentOutput, SharedContext } from "../types/agent.ts";
 
 const EMAIL_RE = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;

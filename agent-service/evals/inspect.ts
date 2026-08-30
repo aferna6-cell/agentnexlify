@@ -1,6 +1,7 @@
 /**
- * Read-only replay of one ask. No --send, --approve, --yes, or --force.
- * Approval is an owner act against a durable row, not a CLI flag.
+ * Read-only replay of one ask. This CLI never flips the live-send flag
+ * and never claims an approval. Approval is an owner act against a
+ * durable row, not something this process can grant.
  */
 
 import { goOffline } from "./lib/offline.ts";
