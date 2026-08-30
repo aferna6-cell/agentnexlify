@@ -1,0 +1,45 @@
+{
+  "run": 114,
+  "date": "2026-08-30-pm",
+  "winner": {
+    "title": "Step 9K: Stale Subconscious Draft PR Audit (direct implementation)",
+    "category": "workflow_efficiency",
+    "type": "autonomous_executable_carry_forward",
+    "carry_forward_count": 1,
+    "files_changed": [".claude/skills/nightly-commit-review/SKILL.md"],
+    "bonus": "Step 9J detection fix (search_pull_requests for Dependabot)"
+  },
+  "mandate_checks": {
+    "step_9k_fires": "VERIFIED — Step 9K absent from SKILL.md pre-run (grep 0), implemented this run",
+    "step_9j_detection": "FIXED — search_pull_requests replacing list_pull_requests filter",
+    "gh_704_block_demo_role": "PASS — filed AND auto-fixed by nightly (commits 32e3566 + 44dc1f8)",
+    "gh_684_supabase_token": "FAIL — token still not set in Railway (38+ days stale), comment posted run 112",
+    "os_tool_executions_stable": "FAIL — last commit 2026-08-30 22:04, not 3d+ stable, deferred"
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "ideas_implemented": 1,
+  "ideas_deferred": 2,
+  "ideas_killed": 0,
+  "evidence_sources": [
+    "git log --since=3.days.ago (15 commits, M8 Calendar/CRM sprint)",
+    "ops/routines/logs/nightly-commit-review-2026-08-30.md",
+    "subconscious/runs/2026-08-30/winning-concept.md (run 113 mandate)",
+    "subconscious/state/governance.json",
+    "subconscious/state/memory.jsonl (last 5 entries)",
+    "docs/dev-knowledge/bug-patterns.md",
+    "docs/dev-knowledge/customer-gaps.md",
+    ".claude/skills/nightly-commit-review/SKILL.md (Step 9J/9K state)"
+  ],
+  "blocked_on_human": [
+    "GH #684: SUPABASE_ACCESS_TOKEN — set in Railway dashboard",
+    "GH #399: AUTOPILOT_GH_TOKEN — renew token for issue-to-PR loop"
+  ],
+  "next_run_mandates": [
+    "Verify Step 9K fires in nightly-2026-08-31",
+    "Count open subconscious PRs and stale count",
+    "Verify Step 9J finds Dependabot PRs via search API",
+    "GH #684: token set? Brain connector age reset?",
+    "os_tool_executions.py: stable 3+ days? If yes, god class split candidate"
+  ]
+}
