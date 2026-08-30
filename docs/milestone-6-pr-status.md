@@ -11,33 +11,25 @@
 | #699 | Unknown-send handling, pre-claim validation, claim-gated execution |
 | #700 | Sales-only `send_email` behind default-OFF `SEND_EMAIL_ENABLED` |
 
-## This milestone branch (`cursor/milestone6-completion-b6dd`)
+## Merged Milestone 6 completion
 
-Integrates from research **selectively** (not wholesale #693):
+| PR | Summary |
+|----|---------|
+| #705 | Production eval harness, semantic pipeline, v3 bakeoff, router decision. On main as of 2026-08-30. |
 
-- Production action evaluation harness (`agent-service/evals/`)
-- Semantic decision pipeline (`_intent.ts`, `_resolve.ts`, `communication_actions.ts`)
-- Communication capability config (`communication_capabilities.ts`)
-- ML router bakeoff tooling (`ml/routing/milestone6.py`, TF-IDF trainer)
-- Router decision + Gmail proof documentation
+A parallel research branch (`cursor/m6-decision-intelligence-ba5d`) extracted the same themes independently and is **not** a second production merge. Keep it as a reference; do not merge it wholesale onto #705.
 
 ## Reference / research — do not merge wholesale
 
 | PR / branch | Status | Notes |
 |-------------|--------|-------|
-| #693 (`claude/agent-action-executor-v8ntvk`) | **Reference** | Source for eval harness + semantics; decomposed into this PR |
-| #698–#703 | **Measurement experiments** | Evidence only; superseded by validation-v3 + this milestone's frozen run |
-
-## Superseded / ambiguous measurement PRs
-
-Older measurement PRs (#698–#702) should be **closed or labeled `superseded`** once this PR merges, with a comment pointing to:
-
-- `docs/milestone-6-router-decision.md`
-- `agent-service/evals/results/action-eval-action-eval-v1-2026-08-30.json`
-- `ml/routing/artifacts/milestone6-validation-v3.json`
-
-#703 (if present as latest measurement successor) remains the reference for methodology comparison only.
+| #693 (`claude/agent-action-executor-v8ntvk`) | **OPEN — reference only** | Source for eval harness + semantics. Decomposed into #694–#700 and #705. Do not merge wholesale. |
+| #698 | **CLOSED** | Measurement research. Superseded. |
+| #701 | **CLOSED** | Measurement research. Superseded. |
+| #702 | **CLOSED** | Measurement research. Superseded. |
+| #703 | **OPEN draft — evidence only** | Claim-then-execute methodology. Not a production merge. |
+| `cursor/m6-decision-intelligence-ba5d` | **Reference** | Parallel M6 extraction. Do not merge over #705. |
 
 ## Post-merge clarification
 
-Merged PRs #694–#700 descriptions that still say "do not merge" are stale — those changes **are** on main. This doc is the visible post-merge clarification.
+Merged PRs #694, #699, and #700 may still say "do not merge" in their original bodies. That draft language is stale — those changes **are** on main. This doc is the visible post-merge clarification.
