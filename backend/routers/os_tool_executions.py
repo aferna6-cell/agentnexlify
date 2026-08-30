@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
-from backend.dependencies import _get_current_tenant
+from backend.dependencies import _get_current_tenant, block_demo_role
 from backend.models.database import get_service_supabase
 from backend.services import (
     agent_os_bridge,
