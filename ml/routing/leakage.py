@@ -219,7 +219,7 @@ def template_families(collisions: Iterable[Collision], train: datasets.Split) ->
     }
 
 
-def report(validation_version: str = "v2") -> dict:
+def report(validation_version: str = "v3") -> dict:
     train = datasets.load_train()
     validation = datasets.load_validation(validation_version)
     test = datasets.load_test()
@@ -259,7 +259,7 @@ def report(validation_version: str = "v2") -> dict:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--validation-version", default="v2", choices=["v1", "v2"])
+    ap.add_argument("--validation-version", default="v3", choices=["v3"])
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
 

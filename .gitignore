@@ -20,6 +20,9 @@ coverage-python.xml
 coverage-*.xml
 coverage.xml
 
+# Reproducible local router binaries; commit JSON measurements, not joblib blobs.
+ml/routing/artifacts/*.joblib
+
 # Agent communication files (ephemeral, per-session)
 .claude/agent-comms/*.md
 .claude/agent-comms/*.json
