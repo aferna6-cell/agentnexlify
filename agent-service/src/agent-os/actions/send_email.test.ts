@@ -102,3 +102,12 @@ test("flag on: every capable department parks for approval", async () => {
     },
   );
 });
+
+test("approval record preserves the exact validated email body", async () => {
+  process.env[SEND_EMAIL_FLAG] = "1";
+  const body = "x".repeat(5000);
+  const outcome = await run("sales", { ...validInput, body });
+
+  assert.equal(outcome.status, "pending_approval");
+  assert.equal(outcome.record.input.body, body);
+});
