@@ -1,7 +1,7 @@
 # Milestone 7 kickoff plan — Business Knowledge / RAG
 
-**Status:** PLAN ONLY — do not implement until Milestone 6 is merged to `main`.  
-**Prerequisite:** M6 action eval harness + safety gate on `main`; optional staging Gmail proof.
+**Status:** Implemented on `cursor/milestone7-rag-b6dd` (2026-08-30). `RAG_ENABLED` remains default OFF.  
+**Prerequisite:** M6 merged (`#705`). Optional staging Gmail proof still outstanding.
 
 ---
 

@@ -4,6 +4,16 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 198_tenant_kb_chunks.sql (2026-08-30)
+
+**What:** New `tenant_kb_chunks` table + `match_tenant_kb_chunks(p_client_id, p_query_embedding, p_match_count)` RPC. Columns: `client_id` (NOT `tenant_id`), `document_id`, `chunk_index`, `source_type`, `title`, `section`, `content`, `content_sha256`, `status`, `version`, `effective_date`, `citation_label`, `embedding vector(512)`. HNSW cosine index. RLS deny-public + service_role policy.
+
+**Why:** Milestone 7 tenant RAG. `tenant_kb_documents` remains the approved source of truth; chunks are the retrievable projection. Voyage 512d matches `kb_articles` / `os_memory_entries`. Search RPC requires `p_client_id`.
+
+**Applied:** NOT YET — file-only until owner applies via Supabase. Request-time retrieval falls back to in-memory chunking of `tenant_kb_documents`.
+
+---
+
 ## 187_pending_automations_rls_policy.sql (2026-07-23)
 
 **What:** Explicit `pending_automations_service_role` policy (`FOR ALL TO service_role USING (true) WITH CHECK (true)`) on `pending_automations`. No table/column changes.

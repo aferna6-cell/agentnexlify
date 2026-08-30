@@ -1,0 +1,40 @@
+{
+  "dataset_version": "rag-eval-validation-v1",
+  "dense_voyage": "unmeasured (no VOYAGE_API_KEY in this environment)",
+  "methods": {
+    "bm25": {
+      "recall_at_1": 0.8798,
+      "recall_at_3": 0.9781,
+      "recall_at_5": 0.9781,
+      "mrr": 0.9271,
+      "ndcg_at_5": 0.9404,
+      "cases": 183
+    },
+    "tfidf": {
+      "recall_at_1": 0.9563,
+      "recall_at_3": 0.9781,
+      "recall_at_5": 0.9781,
+      "mrr": 0.9672,
+      "ndcg_at_5": 0.9701,
+      "cases": 183
+    },
+    "hybrid": {
+      "recall_at_1": 0.9508,
+      "recall_at_3": 0.9781,
+      "recall_at_5": 0.9781,
+      "mrr": 0.9645,
+      "ndcg_at_5": 0.9681,
+      "cases": 183
+    },
+    "hybrid_rerank": {
+      "recall_at_1": 0.8798,
+      "recall_at_3": 0.9781,
+      "recall_at_5": 0.9781,
+      "mrr": 0.9281,
+      "ndcg_at_5": 0.9396,
+      "cases": 183
+    }
+  },
+  "selected": "tfidf",
+  "note": "Winner is a retrieval-only pick. Production still uses BM25 via retrieve_business_context until Voyage dense is measured on this split."
+}

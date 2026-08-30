@@ -77,6 +77,17 @@ export interface KbEntry {
   answer: string;
 }
 
+/** Retrieved approved tenant knowledge. Optional — absent when RAG is off. */
+export interface RagEvidenceItem {
+  chunkId: string;
+  documentId: string;
+  accountId: string;
+  title: string;
+  citationLabel: string;
+  content: string;
+  score: number;
+}
+
 /** Everything an agent may read. Mirrors the production data layer. */
 export interface SharedContext {
   businessProfile: BusinessProfileData;
@@ -86,6 +97,9 @@ export interface SharedContext {
   invoices: InvoiceData[];
   agentRunHistory: AgentRunHistoryItem[];
   kb: KbEntry[];
+  /** Eval / FastAPI may attach a tenant-scoped corpus. Never another tenant. */
+  ragCorpus?: import("../rag/types.ts").RagChunk[];
+  ragEvidence?: RagEvidenceItem[];
 }
 
 export type Channel =
@@ -127,7 +141,10 @@ export interface StreamedTraceStep {
  */
 export interface TraceEmitter {
   /** Returns true when data was present (and the step marked completed). */
-  emit(step: string, payload?: { description: string; data: unknown }): Promise<boolean>;
+  emit(
+    step: string,
+    payload?: { description: string; data: unknown },
+  ): Promise<boolean>;
   /** An ordinary reasoning step the agent always performs. */
   work(step: string, description: string): Promise<void>;
   /** An explicit honest fallback line (e.g. "no KB yet — using a safe reply"). */

@@ -248,6 +248,11 @@ def compile_tenant_kb(client_id: str) -> dict:
 
     run_evals_after_compile(client_id)
 
+    # Retrievable projection. Fail-open — never breaks compile.
+    from backend.services.tenant_kb_index import index_after_compile
+
+    index_after_compile(client_id)
+
     return {"documents": len(sections), "chars": total, "truncated": truncated}
 
 
