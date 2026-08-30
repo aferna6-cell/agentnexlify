@@ -111,6 +111,18 @@ export interface AgentOutput {
   orchestratorNotes: string[];
   /** Set when the agent intentionally produced no draft. */
   noDraftReason?: string;
+  /**
+   * The department understood the request and needs one more detail from the
+   * owner to complete it — two customers named Mike, a note with no record to
+   * attach it to.
+   *
+   * Distinct from "no draft": a department that asks has not failed and has not
+   * declined, and the owner should see a question rather than an apology. The
+   * orchestrator already had a `needs_clarification` status for its own routing
+   * ties; this lets a department reach it too, instead of returning something
+   * that reads to the owner like a refusal.
+   */
+  needsClarification?: boolean;
 }
 
 /** A trace step as streamed to the client and persisted. */

@@ -6,7 +6,6 @@
  */
 
 export const SEND_EMAIL_FLAG = "SEND_EMAIL_ENABLED";
-export const SALES_DEPARTMENT = "sales";
 export const SEND_EMAIL_TOOL_ID = "send_email";
 
 const TRUTHY = new Set(["1", "true", "yes", "on"]);

@@ -4,9 +4,9 @@
 unreachable without a prior ``claim_for_execution``: a still-pending row never
 reaches an injected provider. The approve HTTP path stays claim-then-run.
 
-``send_email`` is Sales-only and gated by ``SEND_EMAIL_ENABLED`` (default
-off). When the flag is off, or the agent is not Sales, this module refuses
-before any mailbox port is used — including the production Gmail port.
+``send_email`` is capability-gated and controlled by ``SEND_EMAIL_ENABLED``
+(default off). When the flag is off, or the proposing department lacks the
+explicit capability, this module refuses before any mailbox port is used.
 Injected test ports still go through that refuse check.
 
 Distinct from ``backend/services/os_actions/`` (deliverable channel
@@ -25,7 +25,9 @@ logger = logging.getLogger(__name__)
 
 SEND_EMAIL_FLAG = "SEND_EMAIL_ENABLED"
 SEND_EMAIL_TOOL_ID = "send_email"
-SALES_DEPARTMENT = "sales"
+SEND_EMAIL_CAPABLE_DEPARTMENTS = frozenset(
+    {"sales", "marketing", "customer_service", "operations", "invoicing"}
+)
 
 _TRUTHY = frozenset({"1", "true", "yes", "on"})
 
@@ -62,8 +64,8 @@ def refuse_send_email(*, agent_id: str | None, tool_id: str | None = None) -> st
         return None
     if not send_email_enabled():
         return "send_email is disabled (SEND_EMAIL_ENABLED defaults off)"
-    if (agent_id or "") != SALES_DEPARTMENT:
-        return "send_email is only available to the Sales department"
+    if (agent_id or "") not in SEND_EMAIL_CAPABLE_DEPARTMENTS:
+        return "this department is not permitted to propose send_email"
     return None
 
 

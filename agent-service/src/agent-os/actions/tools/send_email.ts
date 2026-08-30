@@ -1,18 +1,18 @@
 /**
- * send_email — Sales-only external send (level 2), data-plane execute.
+ * send_email — capability-gated external send (level 2), data-plane execute.
  *
  * The engine declares this tool: id, schema, department, risk, approval.
  * It does not send mail. After the owner approves, FastAPI claims the
  * os_tool_executions row and the Python data plane talks to Gmail.
  *
- * SEND_EMAIL_ENABLED defaults off. Policy denies the tool when the flag
- * is off or the caller is not Sales, so it is not proposed or queued.
+ * SEND_EMAIL_ENABLED defaults off. Policy denies the tool when the flag is off
+ * or the proposing department lacks the explicit email capability.
  */
 
 import { z } from "zod";
 import { defineTool } from "../define-tool.ts";
 import { RISK_EXTERNAL_COMMUNICATION, ToolExecutionError } from "../types.ts";
-import { SALES_DEPARTMENT, SEND_EMAIL_TOOL_ID } from "../flags.ts";
+import { SEND_EMAIL_TOOL_ID } from "../flags.ts";
 
 const Input = z.object({
   to: z
@@ -44,8 +44,7 @@ export const sendEmail = defineTool({
   id: SEND_EMAIL_TOOL_ID,
   displayName: "Send email",
   description:
-    "Sends an email from the business's own connected Gmail mailbox. Sales only. External communication — the owner must approve every send.",
-  department: SALES_DEPARTMENT,
+    "Sends a single-recipient email from the business's own connected Gmail mailbox. Only explicitly capable departments may propose it, and the owner must approve every send.",
   requiredConnectors: ["gmail"],
   riskLevel: RISK_EXTERNAL_COMMUNICATION,
   mutating: true,

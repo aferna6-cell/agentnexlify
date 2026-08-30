@@ -18,11 +18,8 @@
  */
 
 import type { RiskLevel } from "./types.ts";
-import {
-  SALES_DEPARTMENT,
-  SEND_EMAIL_TOOL_ID,
-  sendEmailEnabled,
-} from "./flags.ts";
+import { canProposeSendEmail } from "./communication-capabilities.ts";
+import { SEND_EMAIL_TOOL_ID, sendEmailEnabled } from "./flags.ts";
 
 /**
  * The only tool facts policy needs. Keeping this narrow means policy never
@@ -133,12 +130,12 @@ export function evaluateActionPolicy(
         reason: "send_email is disabled (SEND_EMAIL_ENABLED defaults off)",
       };
     }
-    if (context.agentId !== SALES_DEPARTMENT) {
+    if (!canProposeSendEmail(context.agentId)) {
       return {
         decision: "deny",
         riskLevel,
         requiresApproval: false,
-        reason: "send_email is only available to the Sales department",
+        reason: "this department is not permitted to propose send_email",
       };
     }
   }

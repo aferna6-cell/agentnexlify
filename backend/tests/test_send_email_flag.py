@@ -1,8 +1,8 @@
-"""Sales-only send_email behind SEND_EMAIL_ENABLED (default off).
+"""Capability-gated send_email behind SEND_EMAIL_ENABLED (default off).
 
-Proves: the flag is off by default; an off flag cannot send; a non-Sales
-department cannot send even when the flag is on in tests. Production Gmail
-is reached only through the existing approve → claim → run_tool path.
+Proves: the flag is off by default; an off flag cannot send; only explicitly
+capable departments may send when the flag is on in tests. Production Gmail is
+reached only through the existing approve → claim → run_tool path.
 """
 
 import asyncio
@@ -149,12 +149,12 @@ def test_flag_off_approve_does_not_claim_or_send(monkeypatch):
     assert row.get("finished_at") in (None, "")
 
 
-# --- Sales-only --------------------------------------------------------------
+# --- explicit department capability -----------------------------------------
 
 
-def test_flag_on_non_sales_cannot_send(monkeypatch):
+def test_flag_on_department_without_capability_cannot_send(monkeypatch):
     monkeypatch.setenv("SEND_EMAIL_ENABLED", "1")
-    db = _pending_db(agent_id="marketing")
+    db = _pending_db(agent_id="admin_records")
     gmail = FakeGmailPort()
     sends = []
 
@@ -164,12 +164,32 @@ def test_flag_on_non_sales_cannot_send(monkeypatch):
 
     svc.claim_for_execution(db, CLIENT, EXEC_ID)
     with patch.object(gmail_connector, "send_message", _should_not_send):
-        outcome = asyncio.run(os_tools.run_tool(_ctx(db, gmail, agent_id="marketing")))
+        outcome = asyncio.run(
+            os_tools.run_tool(_ctx(db, gmail, agent_id="admin_records"))
+        )
 
     assert outcome["refused"] is True
-    assert "Sales department" in outcome["reason"]
+    assert "not permitted" in outcome["reason"]
     assert gmail.sends == []
     assert sends == []
+
+
+def test_flag_on_capable_departments_pass_policy_gate(monkeypatch):
+    monkeypatch.setenv("SEND_EMAIL_ENABLED", "1")
+    assert os_tools.SEND_EMAIL_CAPABLE_DEPARTMENTS == {
+        "sales",
+        "marketing",
+        "customer_service",
+        "operations",
+        "invoicing",
+    }
+    for department in os_tools.SEND_EMAIL_CAPABLE_DEPARTMENTS:
+        assert (
+            os_tools.refuse_send_email(
+                agent_id=department, tool_id=os_tools.SEND_EMAIL_TOOL_ID
+            )
+            is None
+        )
 
 
 def test_flag_on_sales_approve_claim_execute_uses_gmail(monkeypatch):

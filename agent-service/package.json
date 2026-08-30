@@ -13,6 +13,7 @@
     "vendor:agent-os": "bash scripts/vendor-agent-os.sh",
     "eval:actions": "node --experimental-strip-types evals/run-action-eval.ts",
     "eval:actions:gate": "node --experimental-strip-types evals/run-action-eval.ts --gate",
+    "eval:errors": "node --experimental-strip-types evals/analyze-errors.ts --dataset evals/datasets/validation/validation-v3.json",
     "eval:inspect": "node --experimental-strip-types evals/inspect.ts",
     "eval:validation": "node --experimental-strip-types evals/run-action-eval.ts --dataset evals/datasets/validation/validation-v3.json --report"
   },
