@@ -2,6 +2,8 @@
 __pycache__/
 *.pyc
 .venv/
+.venv312/
+.venv313/
 *.egg-info/
 .claude/state/
 dist/
