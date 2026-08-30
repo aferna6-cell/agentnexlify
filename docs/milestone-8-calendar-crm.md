@@ -74,6 +74,15 @@ Blocked until explicit authorization:
 SMS, computer use, browser automation, general multi-step planner, ten CRM
 vendors, RL/active learning.
 
-## Rollback
+## Status honesty
 
-Unset / keep flags at `0`. Tools remain registered but policy denies them.
+**Offline Action Executor + policy + evals + flag-gated department resolvers:** ready for review.
+
+**Not yet production-complete Milestone 8:**
+
+- Live Google Calendar / appointments data-plane persistence after Collecting ports
+- Controlled live Calendar + CRM smoke (owner authorization required)
+- Natural-language booking still requires explicit ISO start/end (by design — no invented times)
+- Flags remain default OFF
+
+Rollback: keep `CALENDAR_ACTIONS_ENABLED=0` and `CRM_ACTIONS_ENABLED=0`.
