@@ -367,7 +367,12 @@ export async function runCase(
       await import("../../src/agent-os-runtime/orchestrate.ts");
     // Only the ask is given to the system. `rationale`, the expected labels and
     // the tags stay out of the input: the evaluator must not coach the model.
-    const out = await runOrchestration({ accountId, ask: c.ask, context });
+    const out = await runOrchestration({
+      accountId,
+      ask: c.ask,
+      context,
+      requestOrigin: "owner",
+    });
     const latency_ms = Math.round((performance.now() - started) * 1000) / 1000;
 
     const result = out.result;

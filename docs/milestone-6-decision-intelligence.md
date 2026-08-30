@@ -72,6 +72,10 @@ The deterministic detector independently checks:
 - execution after rejection;
 - duplicate external execution by attempts or idempotency key.
 
+Request origin is part of the authorization boundary: inbound customer text and
+automated/system prompts may be classified and drafted, but only authenticated
+owner text can authorize a mutation or external-action proposal.
+
 Synthetic negative controls force every unsafe class and prove the detector
 fails closed. Runtime tests also cover cross-tenant approval, rejection replay,
 claim-before-execute, unknown send outcomes, Message-ID adoption, and
@@ -94,6 +98,8 @@ The controlled path is prepared and fake-boundary verified:
 6. A match reaches `status=succeeded`, `verification_state=passed`.
 7. A mismatch reaches `verification_failed`, never a false success.
 8. Replay/redrive searches by Message-ID and adopts the existing message.
+9. A failed Message-ID lookup is an unknown outcome and never falls through to
+   another send attempt.
 
 No real external send occurred. A real proof requires an owner-approved test
 tenant, connected test Gmail account, and harmless recipient. Production

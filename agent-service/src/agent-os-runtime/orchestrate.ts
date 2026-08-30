@@ -61,7 +61,7 @@ export async function runOrchestration(
     async () => {
       const result = await handle(input.accountId, input.ask, {
         ...(input.forceAgentId ? { forceAgentId: input.forceAgentId } : {}),
-        requestOrigin: input.requestOrigin ?? "owner",
+        requestOrigin: input.requestOrigin ?? "system",
       });
       return {
         result,

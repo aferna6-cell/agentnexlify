@@ -191,9 +191,10 @@ the owner's turn.
   a later re-drive rfc822msgid-adopts via `_run_data_plane_tool` and an
   injected mailbox port; Python email validation runs *before* the approval
   claim; `os_tools.run_tool` is unreachable without that claim.
-- `send_email` is Sales-only (`department: "sales"`) and gated by
-  `SEND_EMAIL_ENABLED` (default off). Flag-off refuses propose/queue/execute
-  — no Gmail `send_message` and no outbound mail. Production execute uses
+- `send_email` is available only to the explicitly configured Sales, Marketing,
+  Customer Service, Operations, and Invoicing departments, and is gated by
+  `SEND_EMAIL_ENABLED` (default off). Flag-off refuses propose/queue/execute —
+  no Gmail `send_message` and no outbound mail. Production execute uses
   `gmail_connector.send_message` + `find_message_id_by_rfc822_msgid` through
   the existing claim path. No `communication_actions`, no 5-department
   proposal wiring, no routing change. Dual `os_actions` vs
@@ -237,7 +238,7 @@ executor, policy, registry or audit trail changing:
 | Request scoping, tenant isolation, approval round trip | `agent-service/src/agent-os-runtime/action-runtime.test.ts` |
 | Persistence, note application, approval API | `backend/tests/test_os_tool_executions.py` |
 | Unknown send, email-claim parity, unclaimed run_tool | `backend/tests/test_gmail_send_message.py` |
-| Sales-only send_email flag (default off, no live send) | `backend/tests/test_send_email_flag.py` + `agent-service/src/agent-os/actions/send_email.test.ts` |
+| Capability-gated send_email flag (default off, no live send) | `backend/tests/test_send_email_flag.py` + `agent-service/src/agent-os/actions/send_email.test.ts` |
 
 Run them with `cd agent-service && npm run typecheck && npm test`, and
 `python -m pytest backend/tests/test_os_tool_executions.py`. Both run in CI

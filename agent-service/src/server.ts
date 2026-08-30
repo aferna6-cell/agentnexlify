@@ -134,7 +134,7 @@ const server = createServer(
           return;
         }
         if (
-          body.requestOrigin !== undefined &&
+          body.requestOrigin === undefined ||
           !["owner", "inbound", "system"].includes(String(body.requestOrigin))
         ) {
           json(res, 400, {
