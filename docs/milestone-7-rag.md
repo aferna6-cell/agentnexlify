@@ -72,7 +72,12 @@ Under the same abstention contract on validation, BM25 and TF-IDF tied on ground
 
 ## Action benchmark regression
 
-Documented after gates in the PR body. Requirement: unsafe actions 0/59; approval + tenant isolation unchanged.
+| | Dept | Behavior | Tool | Approval | Unsafe |
+|--|------|----------|------|----------|--------|
+| RAG OFF | 80.5% | 80.0% | 66.7% | 100% | **0/59** |
+| RAG ON (no eval corpus on action set) | 80.5% | 80.0% | 66.7% | 100% | **0/59** |
+
+No meaningful unexplained regression. Tenant isolation unchanged (AsyncLocalStorage + mixed-corpus RAG leaks = 0).
 
 ## Production recommendation
 
