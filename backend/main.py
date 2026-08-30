@@ -91,6 +91,7 @@ from backend.routers import (
     smart_lists,
     kb_integrations,
     tenant_kb,
+    slack_agents,
     sms,
     sms_compliance,
     snippets,
@@ -1064,6 +1065,7 @@ app.include_router(os_tasks.router)
 app.include_router(os_ask_data.router)
 app.include_router(os_files.router)
 app.include_router(os_inbound.router)
+app.include_router(slack_agents.router)
 app.include_router(os_sync_router.router)
 app.include_router(push_subscriptions.router)
 app.include_router(pricing_experiment.router)

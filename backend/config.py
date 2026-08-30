@@ -104,6 +104,15 @@ class Settings(BaseSettings):
     postmark_webhook_secret: str = ""
     mailgun_signing_key: str = ""
 
+    # Slack agent team (internal ops — docs/slack-agent-team.md).
+    # JSON array of Slack apps, one per mentionable agent bot:
+    #   [{"agent": "fable5", "app_id": "A0…", "signing_secret": "…",
+    #     "bot_token": "xoxb-…"}, …]
+    # Empty => the /api/v1/slack/events endpoint rejects all traffic.
+    slack_agent_team: str = ""
+    slack_agent_model: str = "claude-sonnet-5"
+    slack_agent_max_tokens: int = 700
+
     widget_allowed_origins: str = "*"
     # Production MUST set API_SECRET_KEY env var. The dev fallback is deterministic
     # so all workers share the same key, but it is NOT secure for production use.
