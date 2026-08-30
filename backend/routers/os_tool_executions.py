@@ -24,6 +24,7 @@ from backend.models.database import get_service_supabase
 from backend.services import (
     agent_os_bridge,
     agent_sdk_client,
+    os_calendar_crm,
     os_tool_executions,
     os_tools,
 )
@@ -140,6 +141,13 @@ async def approve_tool_execution(
         if refused:
             raise HTTPException(status_code=403, detail=refused)
 
+    if (existing.get("tool_id") or "") in os_calendar_crm.CALENDAR_L2_TOOL_IDS:
+        refused = os_calendar_crm.refuse_calendar_tool(
+            tool_id=existing.get("tool_id")
+        )
+        if refused:
+            raise HTTPException(status_code=403, detail=refused)
+
     claimed = await run_in_threadpool(
         os_tool_executions.claim_for_execution,
         db,
@@ -165,6 +173,74 @@ async def approve_tool_execution(
             port=os_tools.production_send_email_port(client_id, db),
         )
         outcome = await os_tools.run_tool(ctx)
+        return {
+            "execution": os_tool_executions.get_tool_execution(
+                db, client_id, execution_id
+            ),
+            "already_decided": False,
+            "outcome": outcome,
+        }
+
+    # Calendar L2: claim-gated data plane (booking/Google). Never Collecting.
+    if (claimed.get("tool_id") or "") in os_calendar_crm.CALENDAR_L2_TOOL_IDS:
+        outcome = await run_in_threadpool(
+            os_calendar_crm.run_calendar_l2, db, client_id, claimed
+        )
+        if outcome.get("refused"):
+            os_tool_executions.record_execution_outcome(
+                db,
+                client_id,
+                {
+                    "id": execution_id,
+                    "status": "failed",
+                    "error": {
+                        "code": "calendar_refused",
+                        "message": outcome.get("reason") or "refused",
+                    },
+                    "verificationState": "failed",
+                },
+            )
+        elif outcome.get("unknown"):
+            os_tool_executions.mark_engine_unavailable(
+                db,
+                client_id,
+                execution_id,
+                outcome.get("reason")
+                or "calendar provider outcome unknown; not retried",
+            )
+        elif outcome.get("executed"):
+            result = outcome.get("result") or {}
+            os_tool_executions.record_execution_outcome(
+                db,
+                client_id,
+                {
+                    "id": execution_id,
+                    "status": "succeeded",
+                    "result": {
+                        "eventId": result.get("id") or result.get("event_id"),
+                        "googleEventId": result.get("google_event_id"),
+                        "detail": outcome.get("reason"),
+                        "verified": bool(outcome.get("verified")),
+                    },
+                    "verificationState": (
+                        "passed" if outcome.get("verified") else "pending"
+                    ),
+                },
+            )
+        else:
+            os_tool_executions.record_execution_outcome(
+                db,
+                client_id,
+                {
+                    "id": execution_id,
+                    "status": "verification_failed",
+                    "error": {
+                        "code": "calendar_verify_failed",
+                        "message": outcome.get("reason") or "verification failed",
+                    },
+                    "verificationState": "failed",
+                },
+            )
         return {
             "execution": os_tool_executions.get_tool_execution(
                 db, client_id, execution_id
@@ -204,6 +280,20 @@ async def approve_tool_execution(
     if notes:
         await run_in_threadpool(
             os_tool_executions.apply_customer_notes, db, client_id, notes, [execution]
+        )
+    customers = out.get("customers") or []
+    if customers:
+        await run_in_threadpool(
+            os_calendar_crm.apply_crm_mutations, db, client_id, customers, [execution]
+        )
+    calendar_events = out.get("calendarEvents") or []
+    if calendar_events:
+        await run_in_threadpool(
+            os_calendar_crm.apply_calendar_mutations,
+            db,
+            client_id,
+            calendar_events,
+            [execution],
         )
     updated = await run_in_threadpool(
         os_tool_executions.record_execution_outcome, db, client_id, execution

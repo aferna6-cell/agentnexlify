@@ -168,24 +168,74 @@ export class CollectingCustomerNotesPort implements CustomerNotesPort {
 /**
  * Calendar port for the orchestration path. Mutations are held for FastAPI to
  * apply via google_calendar / appointments; verify() still reads back here.
+ *
+ * Availability is fail-closed until FastAPI seeds busy intervals (or an
+ * explicit provider error). Empty unseeded busy must never invent "all free".
  */
 export class CollectingCalendarPort implements CalendarPort {
   readonly name = "agent_service_calendar_bundle";
   readonly durable = true;
   private readonly inner = new InMemoryCalendarPort();
+  private readonly mutatedIds = new Set<string>();
+  private availabilitySeeded = false;
+  private availabilityError: string | null = null;
 
   /** Expose inner for tests that need to seed busy intervals. */
   get memory(): InMemoryCalendarPort {
     return this.inner;
   }
 
+  /** Seed Google/appointment busy blocks from SharedContext. */
+  seedAvailability(input: {
+    busy?: { start: string; end: string }[];
+    error?: string | null;
+  }): void {
+    this.availabilitySeeded = true;
+    this.availabilityError = input.error ?? null;
+    if (input.busy?.length) {
+      // Group by account is handled per-query; seed under a wildcard via memory API
+      // after orchestrate knows accountId — callers use seedBusyForAccount.
+    }
+  }
+
+  seedBusyForAccount(
+    accountId: string,
+    busy: { start: string; end: string }[],
+  ): void {
+    this.availabilitySeeded = true;
+    this.inner.seedBusy(accountId, busy);
+  }
+
+  markAvailabilityError(message: string): void {
+    this.availabilitySeeded = true;
+    this.availabilityError = message;
+  }
+
+  seedExistingEvent(event: CalendarEventRecord): void {
+    this.inner.seedEvent(event);
+  }
+
   getAvailability(
     query: CalendarAvailabilityQuery,
   ): Promise<CalendarAvailabilityResult> {
+    if (this.availabilityError) {
+      return Promise.reject(new Error(this.availabilityError));
+    }
+    if (!this.availabilitySeeded) {
+      return Promise.reject(
+        new Error(
+          "calendar availability could not be verified: no provider snapshot",
+        ),
+      );
+    }
     return this.inner.getAvailability(query);
   }
-  createEvent(input: CreateCalendarEventInput): Promise<CalendarEventRecord> {
-    return this.inner.createEvent(input);
+  async createEvent(
+    input: CreateCalendarEventInput,
+  ): Promise<CalendarEventRecord> {
+    const record = await this.inner.createEvent(input);
+    this.mutatedIds.add(record.id);
+    return record;
   }
   getEvent(input: {
     accountId: string;
@@ -203,29 +253,55 @@ export class CollectingCalendarPort implements CalendarPort {
   }): Promise<CalendarEventRecord | null> {
     return this.inner.findByFingerprint(input);
   }
-  rescheduleEvent(
+  async rescheduleEvent(
     input: RescheduleCalendarEventInput,
   ): Promise<CalendarEventRecord> {
-    return this.inner.rescheduleEvent(input);
+    const record = await this.inner.rescheduleEvent(input);
+    this.mutatedIds.add(record.id);
+    return record;
   }
-  cancelEvent(input: CancelCalendarEventInput): Promise<CalendarEventRecord> {
-    return this.inner.cancelEvent(input);
+  async cancelEvent(
+    input: CancelCalendarEventInput,
+  ): Promise<CalendarEventRecord> {
+    const record = await this.inner.cancelEvent(input);
+    this.mutatedIds.add(record.id);
+    return record;
   }
 
+  /** Events created/updated/cancelled this request — not seeded history. */
   toBundle(): CalendarEventRecord[] {
-    return this.inner.allEvents();
+    const byId = new Map(this.inner.allEvents().map((e) => [e.id, e]));
+    return [...this.mutatedIds]
+      .map((id) => byId.get(id))
+      .filter((e): e is CalendarEventRecord => Boolean(e))
+      .map((e) => ({ ...e }));
   }
 }
+
+export type CrmMutationBundle = CustomerRecord & {
+  _op: "create" | "update" | "stage";
+  fields?: UpdateCustomerInput["fields"];
+};
 
 /** CRM port for the orchestration path — collects mutations for FastAPI. */
 export class CollectingCrmPort implements CrmPort {
   readonly name = "agent_service_crm_bundle";
   readonly durable = true;
   private readonly inner = new InMemoryCrmPort();
-  private readonly mutatedIds = new Set<string>();
+  private readonly mutations = new Map<
+    string,
+    {
+      op: "create" | "update" | "stage";
+      fields?: UpdateCustomerInput["fields"];
+    }
+  >();
 
   get memory(): InMemoryCrmPort {
     return this.inner;
+  }
+
+  seedCustomer(customer: CustomerRecord): void {
+    this.inner.seed(customer);
   }
 
   getCustomer(input: {
@@ -239,26 +315,45 @@ export class CollectingCrmPort implements CrmPort {
   }
   async updateCustomer(input: UpdateCustomerInput): Promise<CustomerRecord> {
     const record = await this.inner.updateCustomer(input);
-    this.mutatedIds.add(record.id);
+    this.mutations.set(record.id, {
+      op: "update",
+      fields: { ...input.fields },
+    });
     return record;
   }
   async createCustomer(input: CreateCustomerInput): Promise<CustomerRecord> {
+    const before = input.id
+      ? await this.inner.getCustomer({
+          accountId: input.accountId,
+          customerId: input.id,
+        })
+      : null;
     const record = await this.inner.createCustomer(input);
-    this.mutatedIds.add(record.id);
+    // Hydrating an already-seeded lead is not a data-plane create.
+    if (!before) {
+      this.mutations.set(record.id, { op: "create" });
+    }
     return record;
   }
   async updateLeadStage(input: UpdateLeadStageInput): Promise<CustomerRecord> {
     const record = await this.inner.updateLeadStage(input);
-    this.mutatedIds.add(record.id);
+    this.mutations.set(record.id, { op: "stage" });
     return record;
   }
 
   /** Customers created or updated this request, for the data plane. */
-  toBundle(): CustomerRecord[] {
+  toBundle(): CrmMutationBundle[] {
     const byId = new Map(this.inner.allCustomers().map((c) => [c.id, c]));
-    return [...this.mutatedIds]
-      .map((id) => byId.get(id))
-      .filter((c): c is CustomerRecord => Boolean(c))
-      .map((c) => ({ ...c }));
+    const out: CrmMutationBundle[] = [];
+    for (const [id, meta] of this.mutations) {
+      const c = byId.get(id);
+      if (!c) continue;
+      out.push({
+        ...c,
+        _op: meta.op,
+        ...(meta.fields ? { fields: meta.fields } : {}),
+      });
+    }
+    return out;
   }
 }

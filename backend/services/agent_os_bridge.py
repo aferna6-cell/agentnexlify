@@ -153,18 +153,25 @@ def map_lead(row: dict) -> dict:
         "subject": row.get("areas_of_interest"),
         "quoteAmount": row.get("deal_value"),
         "lastContactDate": row.get("updated_at"),
+        "email": row.get("email"),
+        "phone": row.get("phone"),
+        "address": row.get("address"),
     }
     return {k: v for k, v in out.items() if v is not None}
 
 
 def map_appointment(row: dict) -> dict:
-    return {
+    out = {
         "id": row.get("id"),
         "customerName": row.get("customer_name") or "",
         "scheduledFor": row.get("start_time") or _now(),
+        "scheduledEnd": row.get("end_time"),
         "status": row.get("status") or "confirmed",
         "reviewRequested": False,
+        "googleEventId": row.get("google_event_id"),
+        "service": (row.get("notes") or "").split("\n")[0] or None,
     }
+    return {k: v for k, v in out.items() if v is not None}
 
 
 def map_invoice(row: dict) -> dict:
@@ -345,7 +352,55 @@ def assemble_shared_context(db: Any, client_id: str) -> dict:
         "invoices": [map_invoice(r) for r in invoices],
         "agentRunHistory": [map_agent_run_history(r) for r in runs],
         "kb": [],
+        **_calendar_busy_fields(client_id, appts),
     }
+
+
+def _calendar_busy_fields(client_id: str, appts: list) -> dict:
+    """Busy snapshot for Action Executor availability (fail-closed on Google error)."""
+    from datetime import datetime, timedelta, timezone
+
+    from backend.services.google_calendar import get_busy_times, get_integration
+
+    busy: list[dict] = []
+    for row in appts:
+        start = row.get("start_time")
+        end = row.get("end_time")
+        if (
+            start
+            and end
+            and (row.get("status") or "").lower() not in ("cancelled", "canceled")
+        ):
+            busy.append({"start": start, "end": end})
+
+    try:
+        if not get_integration(client_id):
+            return {"calendarBusy": busy, "calendarAvailabilityError": None}
+        now = datetime.now(timezone.utc)
+        google_busy = get_busy_times(client_id, now, now + timedelta(days=7))
+        if google_busy is None:
+            return {
+                "calendarBusy": busy,
+                "calendarAvailabilityError": (
+                    "calendar availability could not be verified: freebusy unavailable"
+                ),
+            }
+        for start, end in google_busy:
+            busy.append({"start": start.isoformat(), "end": end.isoformat()})
+    except Exception:
+        logger.warning(
+            "agent_os_bridge: calendar busy seed failed client_id=%s",
+            client_id,
+            exc_info=True,
+        )
+        return {
+            "calendarBusy": busy,
+            "calendarAvailabilityError": (
+                "calendar availability could not be verified: provider error"
+            ),
+        }
+
+    return {"calendarBusy": busy, "calendarAvailabilityError": None}
 
 
 def persist_orchestration(

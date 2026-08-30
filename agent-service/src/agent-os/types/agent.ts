@@ -63,8 +63,11 @@ export interface AppointmentData {
   customerName: string;
   service?: string;
   scheduledFor: string;
+  /** End time when known — used to seed calendar busy / events. */
+  scheduledEnd?: string;
   status: string;
   reviewRequested: boolean;
+  googleEventId?: string;
 }
 
 export interface InvoiceData {
@@ -122,6 +125,14 @@ export interface SharedContext {
   ragStatus?: RagStatus;
   /** Set when ragStatus is abstain or error. */
   ragAbstainReason?: string | null;
+  /**
+   * Busy intervals for calendar availability (Google freebusy + appointments).
+   * When absent and calendarAvailabilityError is unset, Collecting calendar
+   * still fails closed until seeded.
+   */
+  calendarBusy?: { start: string; end: string }[];
+  /** Honest provider failure — tools must surface, never invent free slots. */
+  calendarAvailabilityError?: string | null;
 }
 
 export type Channel =
