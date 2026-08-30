@@ -707,11 +707,16 @@ def _run_data_plane_tool(
         }
 
     if _int_or(row.get("attempts"), 0) > 0:
-        apply_unknown_send_outcome(
+        record_execution_outcome(
             db,
             client_id,
-            execution_id,
-            "prior Gmail attempt remains unresolved; automatic resend blocked",
+            {
+                "id": execution_id,
+                "verificationState": "pending",
+                "verificationDetail": (
+                    "prior Gmail attempt remains unresolved; automatic resend blocked"
+                ),
+            },
         )
         return {
             "executed": False,
@@ -749,6 +754,27 @@ def _run_data_plane_tool(
             "gmail accepted the message but the response was lost; outcome unknown",
         )
         return {"executed": True, "adopted": False, "unknown": True}
+
+    if sent.get("success") is not True:
+        detail = str(sent.get("detail") or "Gmail refused the message")[:500]
+        record_execution_outcome(
+            db,
+            client_id,
+            {
+                "id": execution_id,
+                "status": "failed",
+                "error": {"code": "provider_refused", "message": detail},
+                "verificationState": "not_applicable",
+                "finishedAt": _now(),
+            },
+        )
+        return {
+            "executed": False,
+            "adopted": False,
+            "unknown": False,
+            "refused": True,
+            "reason": detail,
+        }
 
     verification = _verify_sent_message(
         port,

@@ -121,7 +121,11 @@ class GmailMailboxPort:
         )
         if result.get("success"):
             return {"success": True, "message_id": result.get("message_id", "")}
-        return None
+        return {
+            "success": False,
+            "refused": True,
+            "detail": result.get("detail") or "Gmail refused the message",
+        }
 
     def verify(
         self, message_id: str, *, to: str, subject: str, rfc822_msgid: str

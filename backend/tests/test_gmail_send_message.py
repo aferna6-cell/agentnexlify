@@ -92,6 +92,10 @@ class FakeGmailPort:
         provider_id = f"gmail-{len(self.sends)}"
         self.mailbox[msgid] = provider_id
         self.messages[provider_id] = dict(kwargs)
+        if self.mode == "refused":
+            self.messages.pop(provider_id, None)
+            self.mailbox.pop(msgid, None)
+            return {"success": False, "refused": True, "detail": "Gmail 403"}
         if self.mode == "accept_then_lose":
             return None
         return {"success": True, "message_id": provider_id}
@@ -208,6 +212,22 @@ def test_lookup_failure_never_falls_through_to_a_second_send():
     assert outcome["executed"] is False
     assert gmail.sends == []
     assert row["status"] == "running"
+
+
+def test_definite_provider_refusal_is_terminal_failed_not_unknown():
+    db = _pending_db(idempotency_key="send-key-refused")
+    gmail = FakeGmailPort()
+    gmail.mode = "refused"
+    assert svc.claim_for_execution(db, CLIENT, EXEC_ID, "owner@test") is not None
+
+    outcome = drive_claimed_gmail_send(db, CLIENT, EXEC_ID, gmail)
+
+    row = svc.get_tool_execution(db, CLIENT, EXEC_ID)
+    assert outcome["refused"] is True
+    assert outcome["unknown"] is False
+    assert row["status"] == "failed"
+    assert row["error"]["code"] == "provider_refused"
+    assert "403" in row["error"]["message"]
 
 
 def test_inconclusive_readback_stays_non_terminal_for_safe_redrive():
