@@ -158,3 +158,61 @@ class TestBackendSupabaseClientPin:
     def test_requirements_pin_supports_modern_secret_keys(self):
         req = (ROOT / "backend" / "requirements.txt").read_text(encoding="utf-8")
         assert "supabase==2.28.3" in req
+
+
+class TestVerifyScriptOutput:
+    def _load_verify_module(self):
+        path = SCRIPTS / "m8_verify_staging_step3.py"
+        spec = importlib.util.spec_from_file_location("m8_verify_staging_step3", path)
+        mod = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_verify_modern_secret_functional_path(self, monkeypatch, capsys):
+        mod = self._load_verify_module()
+        client_id = "7451537b-a694-4c31-83b0-1b804df3d757"
+
+        def fake_get(url, headers):
+            if "tenant_kb_chunks" in url and headers.get("apikey") == LEGACY_ANON:
+                assert "Authorization" in headers
+                return 200, []
+            if client_id in url and headers.get("apikey") == MODERN_SECRET:
+                assert "Authorization" not in headers
+                return 200, [{"id": "chunk-1"}]
+            if url.endswith("/health"):
+                return 200, {"status": "ok"}
+            return 500, {"error": "unexpected"}
+
+        monkeypatch.setenv(
+            "M8_SMOKE_API_BASE", "https://agentnexlify-staging.up.railway.app"
+        )
+        monkeypatch.setenv("SUPABASE_URL", f"https://{STAGING_REF}.supabase.co")
+        monkeypatch.setenv("SUPABASE_KEY", LEGACY_ANON)
+        monkeypatch.setenv("SUPABASE_SERVICE_KEY", MODERN_SECRET)
+        monkeypatch.setenv("M8_SMOKE_CLIENT_ID", client_id)
+        monkeypatch.setenv("M8_SMOKE_LOGIN_EMAIL", "smoke-test@agentnexlify.invalid")
+        monkeypatch.setenv("M8_SMOKE_LOGIN_PASSWORD", "test-password")
+        monkeypatch.setattr(mod, "_get", fake_get)
+        monkeypatch.setattr(mod, "_post_json", lambda url, payload: (200, {"token": "jwt"}))
+
+        rc = mod.main()
+        out = capsys.readouterr().out
+        assert rc == 0
+        assert MODERN_SECRET not in out
+        assert "modern_secret_key" in out
+        assert "OK step-3 verification complete" in out
+
+    def test_verify_rejects_production_api_base(self, monkeypatch, capsys):
+        mod = self._load_verify_module()
+        monkeypatch.setenv(
+            "M8_SMOKE_API_BASE", "https://agentnexlify-production.up.railway.app"
+        )
+        monkeypatch.setenv("SUPABASE_URL", f"https://{STAGING_REF}.supabase.co")
+        monkeypatch.setenv("SUPABASE_KEY", LEGACY_ANON)
+        monkeypatch.setenv("SUPABASE_SERVICE_KEY", MODERN_SECRET)
+        rc = mod.main()
+        out = capsys.readouterr().out
+        assert rc == 1
+        assert "production API" in out
+        assert MODERN_SECRET not in out
