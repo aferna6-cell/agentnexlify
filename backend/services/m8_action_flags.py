@@ -5,8 +5,6 @@ until offline evals + controlled smoke pass. Mirrors SEND_EMAIL_ENABLED /
 RAG_ENABLED — unset is off.
 """
 
-from __future__ import annotations
-
 import os
 
 CALENDAR_ACTIONS_FLAG = "CALENDAR_ACTIONS_ENABLED"
