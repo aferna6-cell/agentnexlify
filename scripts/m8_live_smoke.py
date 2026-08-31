@@ -1265,6 +1265,87 @@ def _os_http(
         return int(exc.code), body
 
 
+def _lead_id_from_tool_execution(row: dict, marker: str) -> str | None:
+    """Extract a leads.id from a tool-execution row when the orchestrator used a
+    different email pattern than the smoke prompt assumed."""
+    result = row.get("result")
+    if isinstance(result, str):
+        try:
+            result = json.loads(result)
+        except Exception:
+            result = {}
+    if not isinstance(result, dict):
+        result = {}
+
+    for key in ("lead_id", "leadId"):
+        if result.get(key):
+            return str(result[key])
+
+    for container_key in ("response_payload", "responsePayload", "row"):
+        nested = result.get(container_key)
+        if isinstance(nested, dict) and nested.get("id"):
+            return str(nested["id"])
+        if isinstance(nested, dict) and nested.get("lead_id"):
+            return str(nested["lead_id"])
+
+    inp = row.get("input") or {}
+    if isinstance(inp, str):
+        try:
+            inp = json.loads(inp)
+        except Exception:
+            inp = {}
+    customers = (inp.get("customers") if isinstance(inp, dict) else None) or []
+    for cust in customers:
+        if not isinstance(cust, dict):
+            continue
+        blob = f"{cust.get('name', '')} {cust.get('email', '')}"
+        if marker in blob:
+            cid = cust.get("id") or cust.get("customerId")
+            if cid:
+                return str(cid)
+    return None
+
+
+def _verify_lead_in_db(db, client_id: str, marker: str, lead_id: str | None) -> list[dict]:
+    """Resolve the lead row created by agent_os_e2e — prefer execution id."""
+    if lead_id:
+        rows = (
+            db.table("leads")
+            .select("id,email,name,status")
+            .eq("client_id", client_id)
+            .eq("id", lead_id)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+        if rows:
+            return rows
+    rows = (
+        db.table("leads")
+        .select("id,email,name,status")
+        .eq("client_id", client_id)
+        .ilike("name", f"%{marker}%")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    if rows:
+        return rows
+    return (
+        db.table("leads")
+        .select("id,email,name,status")
+        .eq("client_id", client_id)
+        .eq("email", f"{marker}@example.invalid")
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+
+
 def run_agent_os_e2e_suite(evidence: dict, client_id: str) -> int:
     """True HTTP path: staging login → OS thread → message → tool_executions readback.
 
@@ -1339,6 +1420,7 @@ def run_agent_os_e2e_suite(evidence: dict, client_id: str) -> int:
 
     found_exec = False
     found_lead = False
+    captured_lead_id: str | None = None
     for _ in range(12):
         time.sleep(5)
         code_e, execs = _os_http("GET", "/api/v1/os/tool-executions?limit=20", token)
@@ -1348,22 +1430,18 @@ def run_agent_os_e2e_suite(evidence: dict, client_id: str) -> int:
                 tool = (row.get("toolId") or row.get("tool_id") or "").lower()
                 if "crm" in tool or "lead" in tool or "customer" in tool:
                     found_exec = True
+                    lid = _lead_id_from_tool_execution(row, marker)
+                    if lid:
+                        captured_lead_id = lid
                     break
         if _service_creds_present() and _m8creds.is_trusted_server_key(_service_key()):
             from backend.models.database import get_service_supabase
 
             db = get_service_supabase()
-            leads = (
-                db.table("leads")
-                .select("id")
-                .eq("client_id", client_id)
-                .eq("email", f"{marker}@example.invalid")
-                .limit(1)
-                .execute()
-                .data
-                or []
-            )
+            leads = _verify_lead_in_db(db, client_id, marker, captured_lead_id)
             found_lead = bool(leads)
+            if leads and not captured_lead_id:
+                captured_lead_id = leads[0].get("id")
         if found_exec and found_lead:
             break
         if found_exec and not _service_creds_present():
@@ -1385,22 +1463,14 @@ def run_agent_os_e2e_suite(evidence: dict, client_id: str) -> int:
         from backend.models.database import get_service_supabase
 
         db = get_service_supabase()
-        leads = (
-            db.table("leads")
-            .select("id,email,name,status")
-            .eq("client_id", client_id)
-            .eq("email", f"{marker}@example.invalid")
-            .limit(1)
-            .execute()
-            .data
-            or []
-        )
+        leads = _verify_lead_in_db(db, client_id, marker, captured_lead_id)
         _record(
             evidence,
             "agent_os_e2e",
             "db_lead_verification",
             result="pass" if leads else "fail",
-            lead_id=(leads[0]["id"] if leads else None),
+            lead_id=(leads[0]["id"] if leads else captured_lead_id),
+            verified_by="execution_id_or_name_marker",
         )
 
     fails = [

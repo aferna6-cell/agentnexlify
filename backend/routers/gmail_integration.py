@@ -37,7 +37,9 @@ def _jwt_secret() -> str:
     return api_secret if isinstance(api_secret, str) else ""
 
 
-def _encode_state(tenant_id: str, os_thread_id: str | None = None) -> str:
+def _encode_state(
+    tenant_id: str, os_thread_id: str | None = None, *, inbox: bool = False
+) -> str:
     """Signed, short-lived OAuth state token encoding tenant_id + an optional
     os_thread_id so the post-connect redirect can deep-link back to the
     Agent OS thread that prompted the connect (e.g. a connector-awareness
@@ -48,17 +50,19 @@ def _encode_state(tenant_id: str, os_thread_id: str | None = None) -> str:
     }
     if os_thread_id:
         payload["os_thread_id"] = os_thread_id
+    if inbox:
+        payload["inbox"] = True
     return jwt.encode(payload, _jwt_secret(), algorithm=_JWT_ALGORITHM)
 
 
-def _decode_state(state: str) -> tuple[str, str | None]:
-    """Validate the OAuth state token; returns (tenant_id, os_thread_id)."""
+def _decode_state(state: str) -> tuple[str, str | None, bool]:
+    """Validate the OAuth state token; returns (tenant_id, os_thread_id, inbox)."""
     try:
         payload = jwt.decode(state, _jwt_secret(), algorithms=[_JWT_ALGORITHM])
         tenant_id = payload.get("tenant_id")
         if not tenant_id:
             raise HTTPException(status_code=400, detail="Invalid state: missing tenant_id")
-        return tenant_id, payload.get("os_thread_id")
+        return tenant_id, payload.get("os_thread_id"), bool(payload.get("inbox"))
     except JWTError as exc:
         raise HTTPException(
             status_code=400, detail="Invalid or expired state parameter"
@@ -79,6 +83,13 @@ async def gmail_connect(
         default=None,
         description="Optional Agent OS thread to deep-link back to after connect",
     ),
+    inbox: bool = Query(
+        default=False,
+        description=(
+            "Request gmail.readonly in addition to gmail.send. "
+            "Only honored when GMAIL_INBOX_ENABLED=1 on the server."
+        ),
+    ),
     claims: dict = Depends(_get_current_tenant),
 ):
     """Generate the Gmail OAuth authorization URL."""
@@ -90,10 +101,27 @@ async def gmail_connect(
                 "message": "Gmail connection isn't set up on this platform yet.",
             },
         )
+    if inbox and not gmail_connector.gmail_inbox_scopes_enabled():
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "gmail_inbox_scopes_disabled",
+                "message": (
+                    "Gmail inbox scopes are disabled on this deployment. "
+                    "Connect with send-only (default) for M8, or enable "
+                    "GMAIL_INBOX_ENABLED after restricted-scope verification."
+                ),
+            },
+        )
     tenant_id: str = claims["tenant_id"]
-    state = _encode_state(tenant_id, os_thread_id)
-    auth_url = gmail_connector.get_auth_url(settings.gmail_redirect_uri, state)
-    return {"auth_url": auth_url}
+    state = _encode_state(tenant_id, os_thread_id, inbox=inbox)
+    auth_url = gmail_connector.get_auth_url(
+        settings.gmail_redirect_uri, state, inbox=inbox
+    )
+    return {
+        "auth_url": auth_url,
+        "scopes": gmail_connector.oauth_scopes(inbox=inbox),
+    }
 
 
 @router.get("/callback")
@@ -106,23 +134,27 @@ async def gmail_callback(
     Public route — the browser arrives here via a redirect from Google, not
     from the SPA, so tenant identity comes from the signed ``state`` token.
     """
-    tenant_id, os_thread_id = _decode_state(state)
+    tenant_id, os_thread_id, inbox_requested = _decode_state(state)
     redirect_uri = settings.gmail_redirect_uri
 
     try:
-        creds = gmail_connector.exchange_code(code, redirect_uri)
+        creds = gmail_connector.exchange_code(
+            code, redirect_uri, inbox=inbox_requested
+        )
     except Exception as exc:
         logger.exception("gmail: code exchange failed for tenant %s", tenant_id)
         raise HTTPException(
             status_code=400, detail="Failed to exchange authorization code"
         ) from exc
 
+    meta_seed: dict = {"oauth_scopes": list(creds.scopes or gmail_connector.oauth_scopes(inbox=inbox_requested))}
     try:
         gmail_connector.save_integration(
             tenant_id=tenant_id,
             access_token=creds.token,
             refresh_token=creds.refresh_token,
             token_expiry=creds.expiry.isoformat() if creds.expiry else "",
+            metadata=meta_seed,
         )
     except Exception as exc:
         logger.exception("gmail: failed to save integration for tenant %s", tenant_id)

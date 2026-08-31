@@ -25,6 +25,16 @@ TENANT_A = "00000000-0000-0000-0000-00000000000a"
 TENANT_B = "00000000-0000-0000-0000-00000000000b"
 
 
+@pytest.fixture(autouse=True)
+def _default_inbox_access(monkeypatch, request):
+    """Poll tests assume gmail.readonly unless a test opts out."""
+    if request.node.get_closest_marker("no_inbox_access_patch"):
+        return
+    monkeypatch.setattr(
+        inbox_monitor.gmail_connector, "has_inbox_access", lambda tenant_id: True
+    )
+
+
 def _integrations_result(rows):
     chain = MagicMock()
     chain.select.return_value = chain
@@ -52,6 +62,26 @@ def _parsed_email(**overrides):
     }
     base.update(overrides)
     return base
+
+
+@pytest.mark.asyncio
+@pytest.mark.no_inbox_access_patch
+async def test_poll_skips_send_only_gmail_without_readonly_scope(monkeypatch):
+    db = _fake_db([{"tenant_id": TENANT_A, "metadata": {"history_id": "100"}}])
+    monkeypatch.setattr(inbox_monitor, "get_service_supabase", lambda: db)
+    monkeypatch.setattr(
+        inbox_monitor.os_inbound_bridge, "is_bridge_enabled", lambda db, t, source: True
+    )
+    monkeypatch.setattr(
+        inbox_monitor.gmail_connector, "has_inbox_access", lambda tenant_id: False
+    )
+    poll_tenant = AsyncMock()
+    monkeypatch.setattr(inbox_monitor, "_poll_tenant", poll_tenant)
+
+    total = await inbox_monitor.run_inbox_poll()
+
+    assert total == 0
+    poll_tenant.assert_not_called()
 
 
 @pytest.mark.asyncio

@@ -51,6 +51,12 @@ async def run_inbox_poll() -> int:
         try:
             if not os_inbound_bridge.is_bridge_enabled(db, tenant_id, "email"):
                 continue
+            if not gmail_connector.has_inbox_access(tenant_id):
+                logger.debug(
+                    "inbox_monitor: skip tenant_id=%s — send-only Gmail (no readonly scope)",
+                    tenant_id,
+                )
+                continue
             total_ingested += await _poll_tenant(db, tenant_id, row.get("metadata") or {})
         except Exception:
             logger.exception("inbox_monitor: poll failed tenant_id=%s", tenant_id)
