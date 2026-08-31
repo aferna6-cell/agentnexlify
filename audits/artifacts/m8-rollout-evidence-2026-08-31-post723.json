@@ -1,0 +1,103 @@
+{
+  "verdict": "MILESTONE 8 HOLD — staging OAuth + live proof pending",
+  "timestamp": "2026-08-31T23:28:00Z",
+  "git_sha": "db4a026965e0395a9b392caf107aa937c8029d7d",
+  "pr723_merged": true,
+  "staging_environment": {
+    "api_base": "https://agentnexlify-staging.up.railway.app",
+    "railway_project_id": "22fbefe0-bd69-41c6-9896-e5f533473c60",
+    "railway_environment_id": "5988ed51-6691-4497-825d-14fefff5f591",
+    "deploy_branch": "main",
+    "deploy_commit": "db4a026965e0395a9b392caf107aa937c8029d7d",
+    "deploy_id": "48c756b0-4dd5-4448-a517-dda93d135406",
+    "deploy_status": "SUCCESS",
+    "supabase_project_id": "nohanoiugcbaxtxinttp"
+  },
+  "smoke_tenant_id": "7451537b-a694-4c31-83b0-1b804df3d757",
+  "encryption_verification": {
+    "local_script": "scripts/m8_verify_integrations_enc.py",
+    "result": "PASS",
+    "railway_integrations_enc_key_set": true,
+    "migration_176_applied": false,
+    "note": "Do not apply migration 176 until OAuth connect proves access_token_enc populated on staging integrations rows"
+  },
+  "google_oauth": {
+    "dedicated_staging_gcp_project": "NOT_DONE — owner must create AgentNexLiFy Staging (not Clemson project)",
+    "staging_redirect_uris_required": [
+      "https://agentnexlify-staging.up.railway.app/api/v1/integrations/google/callback",
+      "https://agentnexlify-staging.up.railway.app/api/v1/integrations/gmail/callback"
+    ],
+    "railway_google_client_id_set": true,
+    "railway_google_client_secret_set": true,
+    "railway_google_redirect_uri_set": true,
+    "railway_gmail_redirect_uri_set": true,
+    "gmail_inbox_enabled": "unset/OFF (correct for M8 send-only)",
+    "calendar_connected": false,
+    "gmail_connected": false,
+    "integrations_rows_smoke_tenant": 0,
+    "oauth_scopes_granted": null
+  },
+  "live_smoke": {
+    "artifact": "audits/artifacts/m8-live-smoke-20260831T232609Z.json",
+    "suites": {
+      "isolation": "pass",
+      "rag": "pass (recall@1 0.9017, cross_tenant_leaks 0)",
+      "crm": "pass",
+      "agent_os_e2e": "partial — login/thread/message/tool_executions pass; db_lead_verification fail (CRM tool row found, lead row not persisted for marker)",
+      "calendar": "blocked — no google_calendar OAuth integration",
+      "gmail": "blocked — no gmail connector"
+    }
+  },
+  "regression_gates": {
+    "check_quick": "pass",
+    "m8_verify_staging_step3": "ALL PASS",
+    "m8_verify_integrations_enc_local": "PASS",
+    "test_gmail_connector_router": "pass (67 tests in prior CI; local connector+router green)",
+    "test_inbox_monitor_async": "fail in VM without pytest-asyncio plugin (known; not M8 blocker)",
+    "m6_action_safety": "not_rerun_this_turn",
+    "m7_rag_holdout": "pass via live_smoke rag suite",
+    "m8_calendar_crm_eval": "blocked on OAuth",
+    "tenant_isolation": "pass via isolation suite"
+  },
+  "safety_counts": {
+    "unsafe_actions": null,
+    "cross_tenant_leaks": 0,
+    "cross_tenant_mutations": 0,
+    "unapproved_gmail_sends": null,
+    "unapproved_external_calendar_events": null,
+    "duplicate_external_effects_redrive": null
+  },
+  "action_execution_ids": [],
+  "provider_object_ids": {},
+  "verification_states": {},
+  "redrive_idempotency": "not_tested — OAuth blocked",
+  "cross_tenant_negative": "pass (isolation suite)",
+  "rollback": {
+    "production_m8_flags": "unset/OFF",
+    "RAG_ENABLED": "staging=1, production=unset",
+    "CALENDAR_ACTIONS_ENABLED": "staging=1, production=unset",
+    "CRM_ACTIONS_ENABLED": "staging=1, production=unset",
+    "SEND_EMAIL_ENABLED": "staging=1, production=unset",
+    "GMAIL_INBOX_ENABLED": "unset everywhere"
+  },
+  "agent_actions_this_turn": [
+    "Set INTEGRATIONS_ENC_KEY on Railway staging (Fernet; value not stored in repo)",
+    "Wired INTEGRATIONS_ENC_KEY in gitignored .env.staging for local verify",
+    "Connected Railway staging service source to main@db4a0269 (#723)",
+    "Redeploy SUCCESS with encryption key + main branch"
+  ],
+  "owner_blockers": [
+    "Create dedicated AgentNexLiFy Staging GCP project with exact redirect URIs and test user",
+    "Replace GOOGLE_CLIENT_ID/SECRET on Railway staging with new staging OAuth client (if still Clemson client)",
+    "Complete Calendar OAuth via /api/v1/integrations/google/auth as smoke-test@agentnexlify.invalid",
+    "Complete Gmail send-only OAuth via /api/v1/integrations/gmail/connect (no ?inbox=1)",
+    "Run Calendar 15-point + Gmail 10-point live proof checklists",
+    "Re-run full M8_SMOKE_SUITES=calendar,gmail,agent_os_e2e,isolation,rag,crm after OAuth"
+  ],
+  "post_m8_deferred": [
+    "Gmail UI: distinguish Send Connected vs Inbox Connected",
+    "Gmail inbox monitoring + restricted-scope verification (GMAIL_INBOX_ENABLED stays 0)"
+  ],
+  "m8_complete_criteria_met": false,
+  "ready_for_milestone_9": false
+}
