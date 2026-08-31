@@ -80,3 +80,13 @@ Do **not** start Milestone 9. Production M8 flags remain unset/OFF.
 4. Staging app is degraded for tenant-scoped jobs until Railway `SUPABASE_SERVICE_KEY` is fixed
 
 Staff engineer would approve the HOLD and the RLS move, and would **not** approve COMPLETE while (1)–(3) remain.
+
+## Immediate owner checklist
+
+1. Reveal staging Supabase **service_role** JWT (must start with `eyJ`, role claim `service_role`) → set Railway staging `SUPABASE_SERVICE_KEY` + `.env.staging` / `STAGING_SUPABASE_SERVICE_ROLE_KEY`
+2. Add Google redirect URIs (exact):
+   - `https://agentnexlify-staging.up.railway.app/api/v1/integrations/google/callback`
+   - `https://agentnexlify-staging.up.railway.app/api/v1/integrations/gmail/callback`
+3. Log into staging as `smoke-test@agentnexlify.invalid` and connect harmless Google Calendar + Gmail
+4. Ask Cursor to re-run `isolation,rag,crm,calendar,gmail,agent_os_e2e` + M6/M7/M8 gates
+
