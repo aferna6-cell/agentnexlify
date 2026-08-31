@@ -118,7 +118,7 @@ Unset / set `=0` on staging (and never flip production):
 ## Blockers until owner completes this
 
 1. ~~Railway staging environment does not exist (production only today)~~ **done** — staging env + API live
-2. **Inject real staging Supabase `service_role` into Railway staging `SUPABASE_SERVICE_KEY`** (anon-as-service-key breaks login/automation after RLS re-enable)
+2. **Inject real staging Supabase `service_role` JWT** into Railway staging `SUPABASE_SERVICE_KEY` and agent secret `STAGING_SUPABASE_SERVICE_ROLE_KEY` (anon-as-service-key breaks login/automation after RLS re-enable). Helper: `python3 scripts/m8_wire_staging_service_key.py` then Railway redeploy; gate: `python3 scripts/m8_verify_staging_step3.py`
 3. Add Google OAuth staging redirect URIs (Calendar + Gmail callbacks on `agentnexlify-staging.up.railway.app`)
 4. Connect Calendar + Gmail OAuth on smoke tenant in the staging app
 5. Re-run `M8_SMOKE_SUITES=isolation,rag,crm,calendar,gmail,agent_os_e2e` then M6/M7/M8 regression gates
