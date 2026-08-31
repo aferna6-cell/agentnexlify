@@ -10,12 +10,15 @@ Do **not** enable M8 flags on production. Do **not** use production customers.
 | Item | Value |
 |------|-------|
 | Railway project | `cheerful-freedom` / `22fbefe0-bd69-41c6-9896-e5f533473c60` |
+| Staging environment | `5988ed51-6691-4497-825d-14fefff5f591` |
+| Staging API | `https://agentnexlify-staging.up.railway.app` |
 | Production environment | `5ee2962f-8355-4138-8865-6de80283a9ba` |
 | Production API | `https://agentnexlify-production.up.railway.app` |
 | Services | `agentnexlify` (`293f3d78-…`), `agent-service` (`1f6f4f55-…`) |
 | Smoke tenant `client_id` | `7451537b-a694-4c31-83b0-1b804df3d757` |
 | Smoke business | `AgentNexLiFy Smoke Test` |
-| Supabase project | `pxserpybmajixqrmzaly` |
+| Staging Supabase project | `nohanoiugcbaxtxinttp` (**not** production) |
+| Production Supabase project | `pxserpybmajixqrmzaly` |
 
 ## 1. Create Railway staging environment
 
@@ -38,6 +41,39 @@ railway environment new staging
 Copy required production secrets into **staging** from your password manager /
 Railway dashboard (not from agent transcripts). Never put values in git,
 artifacts, or issue comments.
+
+### Staging Supabase server credential (required after RLS re-enable)
+
+**Recommended:** modern secret key (`sb_secret_...`) from the staging project
+dashboard:
+
+1. Open [Supabase Dashboard](https://supabase.com/dashboard) → project
+   **`nohanoiugcbaxtxinttp`** (staging)
+2. **Project Settings → API Keys**
+3. Under **Secret keys**, copy the default secret key (starts with `sb_secret_`)
+   — or create a new secret key if none exists
+
+**Legacy alternative:** same page → **Legacy API Keys** tab → copy
+`service_role` JWT (`eyJ...`, role=`service_role`).
+
+Set on **staging `agentnexlify` Railway service**:
+
+| Variable | Staging value | Notes |
+|----------|---------------|-------|
+| `SUPABASE_SERVICE_KEY` | `sb_secret_...` **or** legacy `service_role` JWT | Server-side only; bypasses RLS |
+| `SUPABASE_KEY` | `sb_publishable_...` or legacy `anon` JWT | Public/anon client key |
+
+AgentNexLiFy backend uses `supabase==2.28.3`, which supports both formats via
+`create_client(url, key)`. Do **not** paste secrets into chat, PRs, or artifacts.
+
+Local smoke wiring (gitignored `.env.staging` only):
+
+```bash
+export STAGING_SUPABASE_SERVICE_ROLE_KEY='sb_secret_...'   # from dashboard
+python3 scripts/m8_wire_staging_service_key.py
+set -a && source .env.staging && set +a
+python3 scripts/m8_verify_staging_step3.py
+```
 
 On **staging `agentnexlify`**, set feature flags **after** OAuth (step 4):
 
@@ -118,7 +154,7 @@ Unset / set `=0` on staging (and never flip production):
 ## Blockers until owner completes this
 
 1. ~~Railway staging environment does not exist (production only today)~~ **done** — staging env + API live
-2. **Inject real staging Supabase `service_role` JWT** into Railway staging `SUPABASE_SERVICE_KEY` and agent secret `STAGING_SUPABASE_SERVICE_ROLE_KEY` (anon-as-service-key breaks login/automation after RLS re-enable). Helpers: `python3 scripts/m8_wire_staging_service_key.py` then Railway redeploy; gate: `python3 scripts/m8_verify_staging_step3.py`
+2. **Inject real staging Supabase server credential** (`sb_secret_...` preferred, or legacy `service_role` JWT) into Railway staging `SUPABASE_SERVICE_KEY` and agent secret `STAGING_SUPABASE_SERVICE_ROLE_KEY` (anon-as-service-key breaks login/automation after RLS re-enable). Helpers: `python3 scripts/m8_wire_staging_service_key.py` then Railway redeploy; gate: `python3 scripts/m8_verify_staging_step3.py`
 3. Add Google OAuth staging redirect URIs (Calendar + Gmail callbacks on `agentnexlify-staging.up.railway.app`)
 4. Connect Calendar + Gmail OAuth on smoke tenant in the staging app (zero `google_calendar` / `gmail` rows until then)
 5. Re-run `M8_SMOKE_SUITES=isolation,rag,crm,calendar,gmail,agent_os_e2e` then M6/M7/M8 regression gates

@@ -30,6 +30,10 @@ def get_service_supabase() -> Client:
 
     Use this for internal jobs/admin operations only. Request-path tenant data
     should use ``get_tenant_supabase`` or the helpers in ``tenant_scope``.
+
+    ``settings.supabase_service_key`` accepts Supabase legacy ``service_role``
+    JWT keys (``eyJ...``) or modern secret keys (``sb_secret_...``). Requires
+    ``supabase>=2.28.0`` (pinned in backend/requirements.txt).
     """
     global _service_client
     if _service_client is None:

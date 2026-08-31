@@ -1,0 +1,68 @@
+{
+  "environment": "staging",
+  "timestamp": "2026-08-31T02:24:52.765063+00:00",
+  "git_sha": "79f9e8fee94d1e71eced7c15208e9727123f2a37",
+  "tenant_test_id": "7451537b-a694-4c31-83b0-1b804df3d757",
+  "suites": [
+    "isolation"
+  ],
+  "results": [
+    {
+      "suite": "staging",
+      "step": "health_probe",
+      "at": "2026-08-31T02:24:53.010727+00:00",
+      "result": "pass",
+      "http_status": 200,
+      "url": "https://agentnexlify-staging.up.railway.app/health",
+      "body_preview": "[redacted]"
+    },
+    {
+      "suite": "isolation",
+      "step": "anon_cannot_read_chunks",
+      "at": "2026-08-31T02:24:53.393217+00:00",
+      "result": "pass",
+      "http_status": 200,
+      "row_count": 0
+    },
+    {
+      "suite": "isolation",
+      "step": "anon_cannot_read_leads",
+      "at": "2026-08-31T02:24:53.681816+00:00",
+      "result": "pass",
+      "http_status": 200,
+      "row_count": 0
+    },
+    {
+      "suite": "isolation",
+      "step": "service_role_gate",
+      "at": "2026-08-31T02:24:53.681895+00:00",
+      "result": "blocked",
+      "blocker": "service key JWT role is not service_role (or ref mismatch); anon-as-service-key is refused after staging RLS re-enable",
+      "jwt_role": "anon",
+      "jwt_ref": "nohanoiugcbaxtxinttp"
+    }
+  ],
+  "staging": {
+    "api_base": "https://agentnexlify-staging.up.railway.app",
+    "railway_project_id": "22fbefe0-bd69-41c6-9896-e5f533473c60",
+    "railway_environment_id": "5988ed51-6691-4497-825d-14fefff5f591",
+    "railway_environment_name": "staging"
+  },
+  "feature_flags_process": {
+    "RAG_ENABLED": "1",
+    "CALENDAR_ACTIONS_ENABLED": "1",
+    "CRM_ACTIONS_ENABLED": "1",
+    "SEND_EMAIL_ENABLED": "1",
+    "DEFAULT_MIN_SCORE": 1.0,
+    "note": "Process-local only unless staging Railway vars are set by owner"
+  },
+  "exit_codes": [
+    3
+  ],
+  "rollback": {
+    "RAG_ENABLED": "0 / unset",
+    "CALENDAR_ACTIONS_ENABLED": "0 / unset",
+    "CRM_ACTIONS_ENABLED": "0 / unset",
+    "SEND_EMAIL_ENABLED": "0 / unset"
+  }
+}
