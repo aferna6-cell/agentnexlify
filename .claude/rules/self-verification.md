@@ -58,9 +58,11 @@ If you cannot verify in the current env, state WHY:
 - Confidence gate (`scripts/claude-hooks/confidence-gate.sh`) already demands evidence at Stop
 - This rule adds: verification line in EVERY task-done message, not just at session Stop
 - Invoke-regularly hook (`scripts/claude-hooks/invoke-opus-47-features.sh`) injects reminder
+- Escape hatch when &lt;90% is only a human/external blocker: `.claude/rules/confidence-gate-escape.md` (stop; do not busy-loop)
 
 ## Cross-refs
 - `rules/opus-4-7.md`
 - `rules/ultrareview.md` — after self-verification, optionally invoke `/ultrareview` for deeper audit
 - `scripts/claude-hooks/confidence-gate.sh`
+- `rules/confidence-gate-escape.md`
 - `rules/workflow-orchestration.md` (quality gates)

@@ -18,5 +18,5 @@ fi
 touch "$FLAG"
 
 cat << 'GATE'
-{"decision":"block","reason":"CONFIDENCE GATE: Before finishing, rate your confidence (0-100%) that this work is correct, complete, and production-ready. Consider: (1) Did you verify the fix works? (tests pass, build clean) (2) Did you check for regressions? (3) Did you handle edge cases? (4) Would a staff engineer approve this? If confidence >= 90%, state your score and finish. If < 90%, state what's uncertain and keep working."}
+{"decision":"block","reason":"CONFIDENCE GATE: Before finishing, rate your confidence (0-100%) that this work is correct, complete, and production-ready. Consider: (1) Did you verify the fix works? (tests pass, build clean) (2) Did you check for regressions? (3) Did you handle edge cases? (4) Would a staff engineer approve this? If confidence >= 90%, state your score and finish. If < 90% and the gap is agent-fixable, state what's uncertain and keep working. If < 90% solely due to a human/external blocker already reported (OAuth consent, secrets, dashboard clicks), follow .claude/rules/confidence-gate-escape.md: report HOLD with score, Verified line, and stop — do NOT remint/poll/busy-loop."}
 GATE
