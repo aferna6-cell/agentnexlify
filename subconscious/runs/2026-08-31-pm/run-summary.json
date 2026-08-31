@@ -1,0 +1,45 @@
+{
+  "run": 114,
+  "date": "2026-08-31-pm",
+  "winner": "Step 9K: Stale subconscious draft PR audit in nightly-commit-review SKILL.md",
+  "category": "workflow_efficiency",
+  "confidence": "HIGH",
+  "escalation": "1st_carry_forward_autonomous_executable",
+  "implemented_this_run": true,
+  "implementation": {
+    "file": ".claude/skills/nightly-commit-review/SKILL.md",
+    "changes": [
+      "Step 9K block inserted after Step 9J log result line (before 'step 10: Commit report'). Audits open subconscious/* PRs, computes age_days, warns if stale_count>=3, escalates PR comment if stale_count>=5 OR any critical (>60d).",
+      "Step 9J.1 detection fix: changed list_pull_requests(creator='dependabot[bot]') to search_pull_requests(query='is:pr is:open author:app/dependabot') — fixes 'No Dependabot PRs detected' failure mode."
+    ]
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "debate_verdicts": {
+    "Step 9K — nightly stale subconscious PR audit": "WINNER (governance mandate binding, 1st carry-forward)",
+    "M8 invariant scan in deploy checklist": "WEAKENED → Parking Lot (pre-commit already guards, root cause is hook bypass)",
+    "Step 9J detection fix": "WEAKENED → Bonus Action (same SKILL.md commit as Step 9K)"
+  },
+  "parking_lot": [
+    "M8 invariant scan in deploy checklist (re-evaluate if violations recur in run 115)",
+    "M8 OAuth blocker structured diagnostic in docs/ops/m8-staging-setup.md (lower priority while governance mandate fires)"
+  ],
+  "deferred": [
+    "os_tool_executions.py god class split (last commit 2026-08-30, 1d ago — needs 3d+ stability, deferred to run 115)"
+  ],
+  "evidence_gathered": {
+    "nightly_2026_08_31": "Ran — 1 LOW auto-fix (c159976: __future__ annotations removal from m8_action_flags.py). No Step 9K. Brain connector 39d stale. KB healthy 5d.",
+    "step_9k_absent": "grep -c 'Step 9K' .claude/skills/nightly-commit-review/SKILL.md = 0 (confirmed before this run)",
+    "run_dirs": "23 (2026-06-02 through 2026-08-29-pm)",
+    "os_tool_executions_last_commit": "2026-08-30 (a36f97a) — 1 day ago, NOT stable",
+    "m8_sprint_active": "7+ files in 3 days, OAuth/service_role HOLD ongoing"
+  },
+  "run_115_mandate": [
+    "Verify Step 9K fires in nightly-2026-09-01: grep 'Step 9K' ops/routines/logs/nightly-commit-review-2026-09-01.md",
+    "Count: how many open subconscious PRs? How many stale (>30d)? Critical (>60d)?",
+    "Step 9J search_pull_requests: did Step 9J find Dependabot PRs on 2026-09-01?",
+    "GH #684 SUPABASE_ACCESS_TOKEN: set in Railway after bonus comment? Brain connector health?",
+    "os_tool_executions.py: stable (0 commits 4d+)? If yes: run 115 god class split candidate",
+    "M8 OAuth/service_role HOLD: resolved to deploy Calendar+CRM?"
+  ]
+}
