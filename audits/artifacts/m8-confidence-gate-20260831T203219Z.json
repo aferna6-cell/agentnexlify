@@ -1,0 +1,50 @@
+{
+  "verdict": "HOLD",
+  "confidence_pct": 76,
+  "checked_at": "2026-08-31T20:32:19.136071+00:00",
+  "git_sha_branch": "db5f04b2",
+  "staging_deploy": {
+    "deployment_id": "4e92d059-8a7a-4de4-be42-186d1e931fe6",
+    "status": "SUCCESS",
+    "commit": "db5f04b",
+    "note": "docs HOLD commit atop dfa358d PKCE fix; PKCE still disabled on live auth URLs"
+  },
+  "pkce_fix_deploy": {
+    "deployment_id": "edf77734-3e42-4d80-84ca-b9896ddc19a4",
+    "commit": "dfa358d",
+    "status": "REMOVED (superseded by docs deploy; code still present)"
+  },
+  "step3_verify": "PASS (service_role JWT, health, anon RLS empty, smoke chunks n=5, login 200)",
+  "local_tests": "tests/test_google_oauth_pkce_disabled.py + backend/tests/test_oauth_service_wiring.py \u2192 14 passed",
+  "calendar": {
+    "api_connected": false,
+    "platform_configured": true,
+    "tenant_integrations_rows": 0,
+    "fresh_auth_url_pkce": false,
+    "redirect_uri": "https://agentnexlify-staging.up.railway.app/api/v1/integrations/google/callback"
+  },
+  "gmail": {
+    "api_connected": false,
+    "platform_configured": true,
+    "tenant_integrations_rows": 0,
+    "fresh_auth_url_pkce": false,
+    "redirect_uri": "https://agentnexlify-staging.up.railway.app/api/v1/integrations/gmail/callback"
+  },
+  "railway_logs_post_pkce": {
+    "window": "2026-08-31T20:21Z \u2192 now",
+    "callback_hits": 0,
+    "observed": "auth mint + status probes only; no /google/callback or /gmail/callback after PKCE deploy",
+    "prior_failed_consent": "20:17Z on a472c19 \u2192 both callbacks 400 Failed to exchange authorization code"
+  },
+  "production_m8_flags": "OFF (no RAG_ENABLED/CALENDAR_ACTIONS_ENABLED/CRM_ACTIONS_ENABLED/SEND_EMAIL_ENABLED on production vars)",
+  "blocker": "Calendar+Gmail still disconnected. Owner must complete Google consent on fresh PKCE-free URLs (minted_at 20260831T203055Z). No post-PKCE callback attempts yet.",
+  "complete_criteria_met": false,
+  "private_auth_urls_path": "/tmp/m8-oauth-auth-urls-private.json",
+  "auth_urls_minted_at": "20260831T203055Z",
+  "owner_action": [
+    "Open calendar_auth_url (full URL in agent final message / /tmp/m8-oauth-auth-urls-private.json)",
+    "Complete consent; expect Connected HTML (not 400)",
+    "Open gmail_auth_url and complete consent",
+    "Reply when both show connected=true so agent can run M8_SMOKE_SUITES=calendar,gmail,agent_os_e2e"
+  ]
+}
