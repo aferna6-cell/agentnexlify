@@ -1265,6 +1265,56 @@ def _os_http(
         return int(exc.code), body
 
 
+def _extract_pending_proposal(msg_body: dict, marker: str) -> dict | None:
+    """Return agent_run when the turn parked a draft/proposal instead of a tool row."""
+    runs = msg_body.get("agent_runs") if isinstance(msg_body, dict) else None
+    if not isinstance(runs, list) or not runs:
+        return None
+    run = runs[0]
+    if not isinstance(run, dict):
+        return None
+    status = (run.get("deliverable_status") or "").lower()
+    if status not in ("pending_approval", "pending"):
+        return None
+    deliverable = run.get("deliverable") or {}
+    blob = json.dumps(deliverable, default=str)
+    if marker not in blob:
+        return None
+    return run
+
+
+def _poll_e2e_tool_execution(
+    db, client_id: str, token: str, marker: str, poll_since: str
+) -> tuple[dict | None, bool]:
+    """Find a marker-scoped CRM tool execution created during this e2e run."""
+    import time
+
+    for _ in range(12):
+        time.sleep(5)
+        code_e, execs = _os_http("GET", "/api/v1/os/tool-executions?limit=50", token)
+        items = (execs or {}).get("items") if isinstance(execs, dict) else None
+        if code_e == 200 and isinstance(items, list):
+            for row in items:
+                if _e2e_exec_matches(row, marker, poll_since):
+                    return row, True
+        if _service_creds_present() and _m8creds.is_trusted_server_key(_service_key()):
+            rows = (
+                db.table("os_tool_executions")
+                .select("id,tool_id,status,result,input,created_at")
+                .eq("client_id", client_id)
+                .gte("created_at", poll_since[:19])
+                .order("created_at", desc=True)
+                .limit(20)
+                .execute()
+                .data
+                or []
+            )
+            for row in rows:
+                if _e2e_exec_matches(row, marker, poll_since):
+                    return row, True
+    return None, False
+
+
 def _e2e_exec_matches(row: dict, marker: str, since_iso: str) -> bool:
     """True when a tool-execution row belongs to this e2e run (not stale CRM audit)."""
     created = (row.get("created_at") or row.get("createdAt") or "")[:19]
@@ -1359,11 +1409,17 @@ def _verify_lead_in_db(db, client_id: str, marker: str, lead_id: str | None) -> 
 
 
 def run_agent_os_e2e_suite(evidence: dict, client_id: str) -> int:
-    """True HTTP path: staging login → OS thread → message → tool_executions readback.
+    """HTTP Agent OS smoke: connectivity vs action execution.
 
-    Exercises Agent OS → FastAPI → DB (and Action Executor when the turn emits
-    CRM/Calendar tool calls). Requires staging service_role on Railway so login
-    and OS routes can read tenants / write os_* rows.
+    Connectivity (must pass before action checks):
+      login → thread → message → engine_connectivity (FastAPI + agent-service)
+
+    Action E2E (strict — engine_live does NOT substitute):
+      action_tool_execution → matching os_tool_executions row for this marker
+      db_lead_verification → persisted lead row when mutation expected
+
+    When the turn legitimately parks a draft/proposal (marker in deliverable),
+    draft_proposal_artifact is asserted instead of treating absence as pass.
     """
     token, blocker = _staging_owner_token()
     if not token:
@@ -1440,7 +1496,7 @@ def run_agent_os_e2e_suite(evidence: dict, client_id: str) -> int:
         _record(
             evidence,
             "agent_os_e2e",
-            "engine_gate",
+            "engine_connectivity",
             result="blocked",
             blocker="agent-service unreachable or misconfigured on staging",
             assistant_preview=assistant_preview,
@@ -1448,9 +1504,9 @@ def run_agent_os_e2e_suite(evidence: dict, client_id: str) -> int:
         _record(
             evidence,
             "agent_os_e2e",
-            "tool_executions_chain",
+            "action_tool_execution",
             result="blocked",
-            blocker="engine offline — no CRM tool rows expected",
+            blocker="engine offline — no action rows expected",
         )
         _record(
             evidence,
@@ -1464,81 +1520,161 @@ def run_agent_os_e2e_suite(evidence: dict, client_id: str) -> int:
     _record(
         evidence,
         "agent_os_e2e",
-        "engine_gate",
+        "engine_connectivity",
         result="pass",
         action=action_kind,
-        note="agent-service orchestration reachable on staging",
+        note="FastAPI + agent-service orchestration reachable (connectivity only)",
     )
 
-    # Poll tool executions + leads for CRM effect.
-    import time
-
-    found_exec = False
-    found_lead = False
-    captured_lead_id: str | None = None
-    for _ in range(12):
-        time.sleep(5)
-        code_e, execs = _os_http("GET", "/api/v1/os/tool-executions?limit=20", token)
-        items = (execs or {}).get("items") if isinstance(execs, dict) else None
-        if code_e == 200 and isinstance(items, list):
-            for row in items:
-                if not _e2e_exec_matches(row, marker, poll_since):
-                    continue
-                found_exec = True
-                lid = _lead_id_from_tool_execution(row, marker)
-                if lid:
-                    captured_lead_id = lid
-                break
-        if _service_creds_present() and _m8creds.is_trusted_server_key(_service_key()):
-            from backend.models.database import get_service_supabase
-
-            db = get_service_supabase()
-            leads = _verify_lead_in_db(db, client_id, marker, captured_lead_id)
-            found_lead = bool(leads)
-            if leads and not captured_lead_id:
-                captured_lead_id = leads[0].get("id")
-        if found_exec and found_lead:
-            break
-        if found_exec and not _service_creds_present():
-            break
-
-    _record(
-        evidence,
-        "agent_os_e2e",
-        "tool_executions_chain",
-        result="pass" if (found_exec or engine_live) else "fail",
-        found_crm_tool_execution=found_exec,
-        engine_live=engine_live,
-        note=(
-            "Direct CRM tool row optional when engine parks drafts for approval; "
-            "crm suite proves create/update lifecycle on staging"
-        ),
-    )
-
+    db = None
     if _service_creds_present() and _m8creds.is_trusted_server_key(_service_key()):
         from backend.models.database import get_service_supabase
 
         db = get_service_supabase()
-        leads = _verify_lead_in_db(db, client_id, marker, captured_lead_id)
-        if leads:
-            db_result = "pass"
-        elif engine_live and found_lead is False:
-            db_result = "pass"
-            db_note = (
-                "engine live; lead marker not persisted on draft-only path — "
-                "crm suite covers lead DB mutations"
+
+    matched_exec: dict | None = None
+    found_exec = False
+    if db is not None:
+        matched_exec, found_exec = _poll_e2e_tool_execution(
+            db, client_id, token, marker, poll_since
+        )
+    else:
+        import time
+
+        for _ in range(12):
+            time.sleep(5)
+            code_e, execs = _os_http("GET", "/api/v1/os/tool-executions?limit=50", token)
+            items = (execs or {}).get("items") if isinstance(execs, dict) else None
+            if code_e == 200 and isinstance(items, list):
+                for row in items:
+                    if _e2e_exec_matches(row, marker, poll_since):
+                        matched_exec = row
+                        found_exec = True
+                        break
+            if found_exec:
+                break
+
+    captured_lead_id = (
+        _lead_id_from_tool_execution(matched_exec, marker) if matched_exec else None
+    )
+    proposal_run = _extract_pending_proposal(msg_body or {}, marker)
+    expect_proposal = os.environ.get("M8_E2E_EXPECT_PROPOSAL", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+    }
+
+    if found_exec:
+        _record(
+            evidence,
+            "agent_os_e2e",
+            "action_tool_execution",
+            result="pass",
+            execution_id=matched_exec.get("id") if matched_exec else None,
+            tool_id=matched_exec.get("tool_id") or matched_exec.get("toolId") if matched_exec else None,
+            verification_state=(matched_exec or {}).get("status"),
+            note="Marker-scoped os_tool_executions row created for this request",
+        )
+        _record(
+            evidence,
+            "agent_os_e2e",
+            "draft_proposal_artifact",
+            result="skipped",
+            note="Mutation path — draft assertion not applicable",
+        )
+        if db is not None:
+            leads = _verify_lead_in_db(db, client_id, marker, captured_lead_id)
+            _record(
+                evidence,
+                "agent_os_e2e",
+                "db_lead_verification",
+                result="pass" if leads else "fail",
+                lead_id=(leads[0]["id"] if leads else captured_lead_id),
+                verified_by="execution_id_or_name_marker",
             )
         else:
-            db_result = "fail"
-            db_note = None
+            _record(
+                evidence,
+                "agent_os_e2e",
+                "db_lead_verification",
+                result="blocked",
+                blocker="service_role required to verify lead persistence",
+            )
+    elif expect_proposal and proposal_run:
+        _record(
+            evidence,
+            "agent_os_e2e",
+            "action_tool_execution",
+            result="skipped",
+            note="Proposal-only mode — no os_tool_executions row expected",
+        )
+        _record(
+            evidence,
+            "agent_os_e2e",
+            "draft_proposal_artifact",
+            result="pass",
+            agent_run_id=proposal_run.get("id"),
+            deliverable_status=proposal_run.get("deliverable_status"),
+            note="Draft/proposal references e2e marker and is pending approval",
+        )
         _record(
             evidence,
             "agent_os_e2e",
             "db_lead_verification",
-            result=db_result,
-            lead_id=(leads[0]["id"] if leads else captured_lead_id),
-            verified_by="execution_id_or_name_marker_or_crm_suite_delegation",
-            note=db_note,
+            result="skipped",
+            note="Proposal-only mode — no CRM mutation expected yet",
+        )
+    else:
+        generic_proposal = None
+        if isinstance(msg_body, dict):
+            runs = msg_body.get("agent_runs") or []
+            if runs and isinstance(runs[0], dict):
+                status = (runs[0].get("deliverable_status") or "").lower()
+                if status in ("pending_approval", "pending") and runs[0].get("deliverable"):
+                    generic_proposal = runs[0]
+        _record(
+            evidence,
+            "agent_os_e2e",
+            "action_tool_execution",
+            result="fail",
+            found_crm_tool_execution=False,
+            note=(
+                "No marker-scoped os_tool_executions row — engine_live does not "
+                "substitute for action execution"
+            ),
+        )
+        if generic_proposal or proposal_run:
+            _record(
+                evidence,
+                "agent_os_e2e",
+                "draft_proposal_artifact",
+                result="fail",
+                agent_run_id=(proposal_run or generic_proposal or {}).get("id"),
+                deliverable_status=(proposal_run or generic_proposal or {}).get(
+                    "deliverable_status"
+                ),
+                note=(
+                    "Draft/proposal without matching tool execution — mutation prompt "
+                    "requires os_tool_executions row (set M8_E2E_EXPECT_PROPOSAL=1 "
+                    "only for proposal-only scenarios)"
+                ),
+            )
+        else:
+            _record(
+                evidence,
+                "agent_os_e2e",
+                "draft_proposal_artifact",
+                result="fail",
+                note="No tool execution and no draft/proposal artifact for this turn",
+            )
+        _record(
+            evidence,
+            "agent_os_e2e",
+            "db_lead_verification",
+            result="fail",
+            lead_id=None,
+            verified_by="execution_id_or_name_marker",
+            note="No persisted lead for this e2e marker",
         )
 
     fails = [
@@ -1547,6 +1683,14 @@ def run_agent_os_e2e_suite(evidence: dict, client_id: str) -> int:
         if r.get("suite") == "agent_os_e2e"
         and r.get("result") == "fail"
     ]
+    blocked = [
+        r
+        for r in evidence["results"]
+        if r.get("suite") == "agent_os_e2e"
+        and r.get("result") == "blocked"
+    ]
+    if blocked:
+        return 3
     return 4 if fails else 0
 
 
