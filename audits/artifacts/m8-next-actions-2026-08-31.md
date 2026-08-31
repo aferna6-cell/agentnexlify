@@ -90,3 +90,10 @@ Staff engineer would approve the HOLD and the RLS move, and would **not** approv
 3. Log into staging as `smoke-test@agentnexlify.invalid` and connect harmless Google Calendar + Gmail
 4. Ask Cursor to re-run `isolation,rag,crm,calendar,gmail,agent_os_e2e` + M6/M7/M8 gates
 
+## Confidence gate recheck (2026-08-31T01:52Z)
+
+**COMPLETE / production-ready confidence: still 42% (<90%).**
+
+Re-verified: service key role=`anon`; login 401; integrations 0; isolation anon checks pass; `service_role_gate` blocked.
+Smoke artifact: `audits/artifacts/m8-live-smoke-20260831T015206Z.json`.
+Supabase Reveal / DevTools extraction still fail; owner must paste `STAGING_SUPABASE_SERVICE_ROLE_KEY`.
