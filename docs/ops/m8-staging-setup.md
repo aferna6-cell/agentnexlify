@@ -103,10 +103,16 @@ Tenant `7451537b-a694-4c31-83b0-1b804df3d757` holds synthetic leads + KB only.
 
 ## 4. Connect Google Calendar + Gmail (normal product OAuth)
 
-Sign in as the smoke-tenant owner in the **staging** dashboard/app and connect:
+**Fast path (preferred for M8 live proof):** use the PKCE-free auth URLs in
+`audits/artifacts/m8-oauth-owner-urls.md` (agent remints ~hourly; state TTL ≈60m).
 
-1. Google Calendar through the normal OAuth path  
-2. Gmail through the normal OAuth path  
+1. Open the **Calendar** URL while signed into a **harmless Google test account**.
+2. Finish consent → staging must show **Connected** HTML (not `400 Failed to exchange authorization code`).
+3. Open the **Gmail** URL and finish consent the same way.
+4. Tell the agent `both connected` so it can run `M8_SMOKE_SUITES=calendar,gmail,agent_os_e2e`.
+
+**Dashboard path (equivalent):** sign in as the smoke-tenant owner on staging and
+connect Calendar + Gmail through the normal product UI.
 
 Verify rows exist (no token columns):
 
@@ -117,8 +123,12 @@ WHERE client_id = '7451537b-a694-4c31-83b0-1b804df3d757'
   AND provider IN ('google_calendar', 'gmail');
 ```
 
-Use a **harmless Google test account**. No external customers as attendees until
-the external-attendee approval path is under test.
+API check: `GET /api/v1/integrations/google/status` and `…/gmail/status` must both
+return `connected=true`.
+
+No external customers as attendees until the external-attendee approval path is
+under test. Agents cannot complete Google consent without a stored refresh token
+or Google account password (neither is kept in `.env.staging`).
 
 ## 5. Run live smoke
 
@@ -155,8 +165,8 @@ Unset / set `=0` on staging (and never flip production):
 
 1. ~~Railway staging environment does not exist (production only today)~~ **done** — staging env + API live
 2. **Inject real staging Supabase server credential** (`sb_secret_...` preferred, or legacy `service_role` JWT) into Railway staging `SUPABASE_SERVICE_KEY` and agent secret `STAGING_SUPABASE_SERVICE_ROLE_KEY` (anon-as-service-key breaks login/automation after RLS re-enable). Helpers: `python3 scripts/m8_wire_staging_service_key.py` then Railway redeploy; gate: `python3 scripts/m8_verify_staging_step3.py`
-3. Add Google OAuth staging redirect URIs (Calendar + Gmail callbacks on `agentnexlify-staging.up.railway.app`)
-4. Connect Calendar + Gmail OAuth on smoke tenant in the staging app (zero `google_calendar` / `gmail` rows until then)
+3. ~~Add Google OAuth staging redirect URIs~~ **done for smoke** — auth URLs reach Google sign-in; prior 20:17Z consent hit staging callbacks (failed only on pre-PKCE code exchange)
+4. **Connect Calendar + Gmail** via fresh PKCE-free URLs in `audits/artifacts/m8-oauth-owner-urls.md` (still zero `tenant_integrations` rows until owner consents after PKCE fix `dfa358d`)
 5. Re-run `M8_SMOKE_SUITES=isolation,rag,crm,calendar,gmail,agent_os_e2e` then M6/M7/M8 regression gates
 
 Note: agent environments cannot read Railway/Supabase secret values via OAuth MCP — owner must paste `STAGING_SUPABASE_SERVICE_ROLE_KEY` into the trusted smoke environment.
