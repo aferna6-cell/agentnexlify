@@ -10,12 +10,15 @@ Do **not** enable M8 flags on production. Do **not** use production customers.
 | Item | Value |
 |------|-------|
 | Railway project | `cheerful-freedom` / `22fbefe0-bd69-41c6-9896-e5f533473c60` |
+| Staging environment | `5988ed51-6691-4497-825d-14fefff5f591` |
+| Staging API | `https://agentnexlify-staging.up.railway.app` |
 | Production environment | `5ee2962f-8355-4138-8865-6de80283a9ba` |
 | Production API | `https://agentnexlify-production.up.railway.app` |
 | Services | `agentnexlify` (`293f3d78-…`), `agent-service` (`1f6f4f55-…`) |
 | Smoke tenant `client_id` | `7451537b-a694-4c31-83b0-1b804df3d757` |
 | Smoke business | `AgentNexLiFy Smoke Test` |
-| Supabase project | `pxserpybmajixqrmzaly` |
+| Staging Supabase project | `nohanoiugcbaxtxinttp` (**not** production) |
+| Production Supabase project | `pxserpybmajixqrmzaly` |
 
 ## 1. Create Railway staging environment
 
