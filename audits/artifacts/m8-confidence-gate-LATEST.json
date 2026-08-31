@@ -1,0 +1,64 @@
+{
+  "checked_at": "20260831T203611Z",
+  "verdict": "HOLD",
+  "confidence_pct": 76,
+  "complete": false,
+  "staging": {
+    "api_base": "https://agentnexlify-staging.up.railway.app",
+    "deployment_id": "0cac82cf-b0d8-413a-bdde-ae5919a95522",
+    "deploy_commit": "86309f7",
+    "deploy_branch": "cursor/m8-staging-secret-key-compat-a2c9",
+    "pkce_fix_in_history": "dfa358d"
+  },
+  "smoke_tenant": "7451537b-a694-4c31-83b0-1b804df3d757",
+  "calendar": {
+    "connected": false,
+    "platform_configured": true,
+    "fresh_auth_url_pkce": false,
+    "auth_url_meta": {
+      "ok": true,
+      "has_code_challenge": false,
+      "has_code_challenge_method": false,
+      "client_id": "1031969590686-ipmp1e4ob8463gv1pvnu0u98b6urm3ra.apps.googleusercontent.com",
+      "redirect_uri": "https://agentnexlify-staging.up.railway.app/api/v1/integrations/google/callback",
+      "state_prefix": "eyJhbGciOiJIUzI1NiIs",
+      "state_exp_hint": null,
+      "state_expires": "2026-08-31T21:35:34Z"
+    }
+  },
+  "gmail": {
+    "connected": false,
+    "platform_configured": true,
+    "fresh_auth_url_pkce": false,
+    "auth_url_meta": {
+      "ok": true,
+      "has_code_challenge": false,
+      "has_code_challenge_method": false,
+      "client_id": "1031969590686-ipmp1e4ob8463gv1pvnu0u98b6urm3ra.apps.googleusercontent.com",
+      "redirect_uri": "https://agentnexlify-staging.up.railway.app/api/v1/integrations/gmail/callback",
+      "state_prefix": "eyJhbGciOiJIUzI1NiIs",
+      "state_exp_hint": null,
+      "state_expires": "2026-08-31T21:35:34Z"
+    }
+  },
+  "tenant_integrations_rows": 0,
+  "tenant_integrations_total_rows": 0,
+  "railway_logs_since_pkce_fix": {
+    "window_start": "2026-08-31T20:15:00Z",
+    "callback_hits": 0,
+    "observed": "status probes + auth mint only; no /google/callback or /gmail/callback after PKCE deploy (edf77734/dfa358d @ 20:21Z)",
+    "prior_failed_consent": "20:17Z on a472c19 \u2192 both callbacks 400 Failed to exchange authorization code"
+  },
+  "blocker": "Calendar+Gmail still disconnected. Owner must complete Google consent on fresh PKCE-free URLs (minted_at 20260831T203534Z). No post-PKCE callback attempts yet.",
+  "auth_urls_minted_at": "20260831T203534Z",
+  "auth_urls_expire_at": "2026-08-31T21:35:34Z",
+  "private_auth_urls_path": "/tmp/m8-oauth-auth-urls-private.json",
+  "human_next_steps": [
+    "Open calendar_auth_url (full URL in agent final message / audits/artifacts/m8-oauth-owner-urls.md)",
+    "Complete consent; expect Connected HTML (not 400)",
+    "Open gmail_auth_url and complete consent",
+    "Reply when both show connected=true so agent can run M8_SMOKE_SUITES=calendar,gmail,agent_os_e2e"
+  ],
+  "production_m8_flags": "OFF (must remain OFF)",
+  "m9": "DO NOT START"
+}
