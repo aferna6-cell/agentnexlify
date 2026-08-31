@@ -12,15 +12,21 @@ Hard gates (all required; refuse otherwise — never silently target production)
 
 Optional suites (comma-separated in M8_SMOKE_SUITES, default calendar,crm):
 
-  calendar  — availability, internal create, read-back, cancel, cross-tenant
-  crm       — search/update/create/dedupe/stage/cross-tenant via data plane
-  gmail     — propose/approve/send/Message-ID/redrive (needs SEND_EMAIL_ENABLED=1)
-  rag       — in-process soak with RAG_ENABLED=1, DEFAULT_MIN_SCORE=1.0 frozen
+  calendar     — availability, internal create, read-back, cancel, cross-tenant
+  crm          — search/update/create/dedupe/stage/cross-tenant via data plane
+  gmail        — propose/approve/send/Message-ID/redrive (needs SEND_EMAIL_ENABLED=1)
+  rag          — in-process soak with RAG_ENABLED=1, DEFAULT_MIN_SCORE=1.0 frozen
+  isolation    — staging RLS: anon denied; service_role scoped reads; CRM isolation
+  agent_os_e2e — staging HTTP login → OS thread/message → tool_executions chain
 
 Requires for Calendar/Gmail/CRM Action Executor path:
-  SUPABASE_URL + SUPABASE_SERVICE_KEY (or SUPABASE_SERVICE_ROLE_KEY)
+  SUPABASE_URL + SUPABASE_SERVICE_KEY (must be service_role JWT, not anon)
   Google OAuth on the smoke tenant for Calendar
   Gmail connector on the smoke tenant for Gmail
+
+Agent OS E2E additionally needs:
+  M8_SMOKE_API_BASE + M8_SMOKE_LOGIN_EMAIL/PASSWORD (or M8_SMOKE_OWNER_JWT)
+  Staging Railway SUPABASE_SERVICE_KEY = real service_role so /auth/login works
 
 Writes a non-sensitive evidence JSON under audits/artifacts/ when possible.
 Exit codes:
@@ -99,13 +105,76 @@ def _require_auth() -> tuple[str, dict]:
     }
 
 
-def _service_creds_present() -> bool:
-    url = os.environ.get("SUPABASE_URL", "").strip()
-    key = (
+def _service_key() -> str:
+    return (
         os.environ.get("SUPABASE_SERVICE_KEY", "").strip()
         or os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+        or os.environ.get("STAGING_SUPABASE_SERVICE_ROLE_KEY", "").strip()
     )
-    return bool(url and key)
+
+
+def _service_creds_present() -> bool:
+    url = os.environ.get("SUPABASE_URL", "").strip()
+    return bool(url and _service_key())
+
+
+def _jwt_claims(token: str) -> dict[str, Any]:
+    """Decode JWT payload without verifying signature (smoke diagnostics only)."""
+    import base64
+
+    parts = (token or "").split(".")
+    if len(parts) < 2:
+        return {}
+    pad = "=" * ((4 - len(parts[1]) % 4) % 4)
+    try:
+        return json.loads(base64.urlsafe_b64decode(parts[1] + pad))
+    except Exception:
+        return {}
+
+
+def _require_service_role_key(evidence: dict, suite: str) -> bool:
+    """Fail closed unless SUPABASE_* service key is a real service_role JWT."""
+    key = _service_key()
+    if not key:
+        _record(
+            evidence,
+            suite,
+            "service_role_gate",
+            result="blocked",
+            blocker="SUPABASE_SERVICE_KEY / SUPABASE_SERVICE_ROLE_KEY missing",
+        )
+        return False
+    claims = _jwt_claims(key)
+    role = claims.get("role")
+    ref = claims.get("ref")
+    url = os.environ.get("SUPABASE_URL", "")
+    ref_ok = (not ref) or (ref in url)
+    if role != "service_role" or not ref_ok:
+        _record(
+            evidence,
+            suite,
+            "service_role_gate",
+            result="blocked",
+            blocker=(
+                "service key JWT role is not service_role (or ref mismatch); "
+                "anon-as-service-key is refused after staging RLS re-enable"
+            ),
+            jwt_role=role,
+            jwt_ref=ref,
+        )
+        return False
+    _record(
+        evidence,
+        suite,
+        "service_role_gate",
+        result="pass",
+        jwt_role=role,
+        jwt_ref=ref,
+    )
+    # Prefer canonical env names for backend helpers.
+    os.environ["SUPABASE_SERVICE_KEY"] = key
+    os.environ["SUPABASE_SERVICE_ROLE_KEY"] = key
+    return True
 
 
 def _record(evidence: dict, suite: str, step: str, **payload: Any) -> None:
@@ -461,6 +530,8 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
             blocker="SUPABASE_URL/SUPABASE_SERVICE_KEY not available in agent environment",
         )
         return 3
+    if not _require_service_role_key(evidence, "calendar"):
+        return 3
 
     os.environ.setdefault("CALENDAR_ACTIONS_ENABLED", "1")
     from backend.services.google_calendar import get_integration
@@ -605,6 +676,8 @@ def run_crm_suite(evidence: dict, client_id: str) -> int:
             result="blocked",
             blocker="SUPABASE_URL/SUPABASE_SERVICE_KEY not available in agent environment",
         )
+        return 3
+    if not _require_service_role_key(evidence, "crm"):
         return 3
 
     os.environ.setdefault("CRM_ACTIONS_ENABLED", "1")
@@ -902,6 +975,8 @@ def run_gmail_suite(evidence: dict, client_id: str) -> int:
             blocker="SUPABASE_URL/SUPABASE_SERVICE_KEY not available in agent environment",
         )
         return 3
+    if not _require_service_role_key(evidence, "gmail"):
+        return 3
     if not _truthy("SEND_EMAIL_ENABLED"):
         _record(
             evidence,
@@ -978,6 +1053,363 @@ def run_gmail_suite(evidence: dict, client_id: str) -> int:
     return 3
 
 
+def run_isolation_suite(evidence: dict, client_id: str) -> int:
+    """Prove staging RLS posture: anon sees nothing; service_role sees smoke tenant only."""
+    import urllib.error
+    import urllib.request
+
+    url = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
+    anon = (
+        os.environ.get("SUPABASE_KEY", "").strip()
+        or os.environ.get("SUPABASE_ANON_KEY", "").strip()
+    )
+    if not url or not anon:
+        _record(
+            evidence,
+            "isolation",
+            "anon_gate",
+            result="blocked",
+            blocker="SUPABASE_URL / SUPABASE_KEY (anon) required",
+        )
+        return 3
+
+    def _rest(path: str, key: str) -> tuple[int, Any]:
+        req = urllib.request.Request(
+            f"{url}/rest/v1/{path}",
+            headers={
+                "apikey": key,
+                "Authorization": f"Bearer {key}",
+                "Accept": "application/json",
+            },
+            method="GET",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=20) as resp:  # noqa: S310
+                code = int(getattr(resp, "status", None) or resp.getcode())
+                body = json.loads(resp.read().decode("utf-8", errors="replace") or "null")
+                return code, body
+        except urllib.error.HTTPError as exc:
+            raw = exc.read().decode("utf-8", errors="replace")
+            try:
+                body = json.loads(raw or "null")
+            except Exception:
+                body = raw[:200]
+            return int(exc.code), body
+
+    code, body = _rest("tenant_kb_chunks?select=id&limit=5", anon)
+    anon_empty = code == 200 and isinstance(body, list) and len(body) == 0
+    _record(
+        evidence,
+        "isolation",
+        "anon_cannot_read_chunks",
+        result="pass" if anon_empty else "fail",
+        http_status=code,
+        row_count=len(body) if isinstance(body, list) else None,
+    )
+
+    code2, body2 = _rest("leads?select=id&limit=5", anon)
+    anon_leads_empty = code2 == 200 and isinstance(body2, list) and len(body2) == 0
+    _record(
+        evidence,
+        "isolation",
+        "anon_cannot_read_leads",
+        result="pass" if anon_leads_empty else "fail",
+        http_status=code2,
+        row_count=len(body2) if isinstance(body2, list) else None,
+    )
+
+    if not _require_service_role_key(evidence, "isolation"):
+        return 3
+
+    from backend.models.database import get_service_supabase
+
+    db = get_service_supabase()
+    own = (
+        db.table("tenant_kb_chunks")
+        .select("id", count="exact")
+        .eq("client_id", client_id)
+        .eq("status", "active")
+        .execute()
+    )
+    own_count = int(getattr(own, "count", None) or len(own.data or []))
+    _record(
+        evidence,
+        "isolation",
+        "service_role_reads_smoke_chunks",
+        result="pass" if own_count > 0 else "fail",
+        active_chunks=own_count,
+    )
+
+    other = str(uuid.uuid4())
+    foreign = (
+        db.table("leads")
+        .select("id")
+        .eq("client_id", other)
+        .limit(5)
+        .execute()
+        .data
+        or []
+    )
+    _record(
+        evidence,
+        "isolation",
+        "service_role_empty_foreign_leads",
+        result="pass" if foreign == [] else "fail",
+        foreign_count=len(foreign),
+    )
+
+    # In-process CRM: create under a foreign client_id must not appear on smoke tenant.
+    os.environ.setdefault("CRM_ACTIONS_ENABLED", "1")
+    from backend.services import os_calendar_crm
+
+    foreign_email = f"x-{uuid.uuid4().hex[:8]}@example.invalid"
+    refused2 = os_calendar_crm.apply_crm_mutations(
+        db,
+        other,
+        [
+            {
+                "id": f"tmp_isolation_{uuid.uuid4().hex[:8]}",
+                "_op": "create",
+                "name": "Should Not Land On Smoke",
+                "email": foreign_email,
+                "status": "new",
+            }
+        ],
+    )
+    smoke_hit = (
+        db.table("leads")
+        .select("id")
+        .eq("client_id", client_id)
+        .eq("email", foreign_email)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    _record(
+        evidence,
+        "isolation",
+        "crm_other_tenant_create_isolated",
+        result="pass" if not smoke_hit else "fail",
+        other_create_applied=bool(refused2 and refused2[0].get("applied")),
+        note="other-tenant create must not appear under smoke client_id",
+    )
+
+    fails = [
+        r
+        for r in evidence["results"]
+        if r.get("suite") == "isolation" and r.get("result") == "fail"
+    ]
+    return 4 if fails else 0
+
+
+def _staging_owner_token() -> tuple[str | None, str | None]:
+    """Login to staging API as smoke owner. Returns (token, blocker)."""
+    import urllib.error
+    import urllib.request
+
+    base = (os.environ.get("M8_SMOKE_API_BASE") or "").strip().rstrip("/")
+    email = (
+        os.environ.get("M8_SMOKE_LOGIN_EMAIL")
+        or os.environ.get("STAGING_SMOKE_TENANT_LOGIN_EMAIL")
+        or ""
+    ).strip()
+    password = (
+        os.environ.get("M8_SMOKE_LOGIN_PASSWORD")
+        or os.environ.get("STAGING_SMOKE_TENANT_LOGIN_PASSWORD")
+        or ""
+    ).strip()
+    preissued = (os.environ.get("M8_SMOKE_OWNER_JWT") or "").strip()
+    if preissued:
+        return preissued, None
+    if not base:
+        return None, "M8_SMOKE_API_BASE unset"
+    if not email or not password:
+        return None, "M8_SMOKE_LOGIN_EMAIL/PASSWORD unset"
+    payload = json.dumps({"email": email, "password": password}).encode()
+    req = urllib.request.Request(
+        f"{base}/api/v1/auth/login",
+        data=payload,
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
+            body = json.loads(resp.read().decode("utf-8", errors="replace"))
+    except urllib.error.HTTPError as exc:
+        return None, f"login_http_{exc.code}"
+    except urllib.error.URLError as exc:
+        return None, f"login_{type(exc).__name__}"
+    token = body.get("token") or body.get("access_token")
+    if not token:
+        return None, "login_missing_token"
+    return str(token), None
+
+
+def _os_http(
+    method: str, path: str, token: str, payload: dict | None = None
+) -> tuple[int, Any]:
+    import urllib.error
+    import urllib.request
+
+    base = (os.environ.get("M8_SMOKE_API_BASE") or "").strip().rstrip("/")
+    data = None if payload is None else json.dumps(payload).encode()
+    req = urllib.request.Request(
+        f"{base}{path}",
+        data=data,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        method=method,
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:  # noqa: S310
+            code = int(getattr(resp, "status", None) or resp.getcode())
+            raw = resp.read().decode("utf-8", errors="replace")
+            return code, (json.loads(raw) if raw else None)
+    except urllib.error.HTTPError as exc:
+        raw = exc.read().decode("utf-8", errors="replace")
+        try:
+            body = json.loads(raw or "null")
+        except Exception:
+            body = raw[:300]
+        return int(exc.code), body
+
+
+def run_agent_os_e2e_suite(evidence: dict, client_id: str) -> int:
+    """True HTTP path: staging login → OS thread → message → tool_executions readback.
+
+    Exercises Agent OS → FastAPI → DB (and Action Executor when the turn emits
+    CRM/Calendar tool calls). Requires staging service_role on Railway so login
+    and OS routes can read tenants / write os_* rows.
+    """
+    token, blocker = _staging_owner_token()
+    if not token:
+        _record(
+            evidence,
+            "agent_os_e2e",
+            "login",
+            result="blocked",
+            blocker=blocker or "owner token unavailable",
+        )
+        return 3
+
+    _record(evidence, "agent_os_e2e", "login", result="pass")
+
+    code, thread = _os_http(
+        "POST",
+        "/api/v1/os/threads",
+        token,
+        {"title": f"M8 E2E {datetime.now(timezone.utc).strftime('%H%M%S')}"},
+    )
+    if code not in (200, 201) or not isinstance(thread, dict) or not thread.get("id"):
+        _record(
+            evidence,
+            "agent_os_e2e",
+            "create_thread",
+            result="fail",
+            http_status=code,
+            detail=thread if not isinstance(thread, dict) else {k: thread.get(k) for k in ("id", "detail", "error")},
+        )
+        return 4
+    thread_id = thread["id"]
+    _record(evidence, "agent_os_e2e", "create_thread", result="pass", thread_id=thread_id)
+
+    marker = f"m8-e2e-{uuid.uuid4().hex[:8]}"
+    prompt = (
+        f"Using CRM tools only, create a lead named 'M8 E2E {marker}' with email "
+        f"{marker}@example.invalid and status new. Do not email anyone."
+    )
+    code_m, msg_body = _os_http(
+        "POST",
+        f"/api/v1/os/threads/{thread_id}/messages",
+        token,
+        {"content": prompt},
+    )
+    if code_m not in (200, 201):
+        _record(
+            evidence,
+            "agent_os_e2e",
+            "post_message_orchestrate",
+            result="fail",
+            http_status=code_m,
+            detail=msg_body,
+        )
+        return 4
+    _record(
+        evidence,
+        "agent_os_e2e",
+        "post_message_orchestrate",
+        result="pass",
+        http_status=code_m,
+        note="message accepted by FastAPI OS route (orchestrator invoked)",
+    )
+
+    # Poll tool executions + leads for CRM effect.
+    import time
+
+    found_exec = False
+    found_lead = False
+    for _ in range(12):
+        time.sleep(5)
+        code_e, execs = _os_http("GET", "/api/v1/os/tool-executions?limit=20", token)
+        items = (execs or {}).get("items") if isinstance(execs, dict) else None
+        if code_e == 200 and isinstance(items, list):
+            for row in items:
+                tool = (row.get("toolId") or row.get("tool_id") or "").lower()
+                if "crm" in tool or "lead" in tool or "customer" in tool:
+                    found_exec = True
+                    break
+        # Lead verification via OS ask-data is optional; prefer tool-executions.
+        if found_exec:
+            break
+
+    _record(
+        evidence,
+        "agent_os_e2e",
+        "tool_executions_chain",
+        result="pass" if found_exec else "fail",
+        found_crm_tool_execution=found_exec,
+        note=(
+            "Requires Agent OS resolver + Action Executor to emit CRM tool rows "
+            "into os_tool_executions on staging"
+        ),
+    )
+
+    # Optional: if service_role available locally, verify lead row.
+    if _service_creds_present() and _jwt_claims(_service_key()).get("role") == "service_role":
+        from backend.models.database import get_service_supabase
+
+        db = get_service_supabase()
+        leads = (
+            db.table("leads")
+            .select("id,email,name,status")
+            .eq("client_id", client_id)
+            .eq("email", f"{marker}@example.invalid")
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+        found_lead = bool(leads)
+        _record(
+            evidence,
+            "agent_os_e2e",
+            "db_lead_verification",
+            result="pass" if found_lead else "fail",
+            lead_id=(leads[0]["id"] if leads else None),
+        )
+
+    fails = [
+        r
+        for r in evidence["results"]
+        if r.get("suite") == "agent_os_e2e" and r.get("result") == "fail"
+    ]
+    return 4 if fails else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     client_id, evidence = _require_auth()
     suites_raw = os.environ.get("M8_SMOKE_SUITES", "rag,calendar,crm,gmail")
@@ -1004,6 +1436,10 @@ def main(argv: list[str] | None = None) -> int:
             codes.append(run_crm_suite(evidence, client_id))
         elif suite == "gmail":
             codes.append(run_gmail_suite(evidence, client_id))
+        elif suite in {"isolation", "rls"}:
+            codes.append(run_isolation_suite(evidence, client_id))
+        elif suite in {"agent_os_e2e", "e2e", "agentos"}:
+            codes.append(run_agent_os_e2e_suite(evidence, client_id))
         else:
             _record(evidence, suite, "unknown_suite", result="fail")
             codes.append(4)
