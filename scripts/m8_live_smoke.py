@@ -20,13 +20,13 @@ Optional suites (comma-separated in M8_SMOKE_SUITES, default calendar,crm):
   agent_os_e2e — staging HTTP login → OS thread/message → tool_executions chain
 
 Requires for Calendar/Gmail/CRM Action Executor path:
-  SUPABASE_URL + SUPABASE_SERVICE_KEY (must be service_role JWT, not anon)
+  SUPABASE_URL + SUPABASE_SERVICE_KEY (legacy service_role JWT or sb_secret_ server key)
   Google OAuth on the smoke tenant for Calendar
   Gmail connector on the smoke tenant for Gmail
 
 Agent OS E2E additionally needs:
   M8_SMOKE_API_BASE + M8_SMOKE_LOGIN_EMAIL/PASSWORD (or M8_SMOKE_OWNER_JWT)
-  Staging Railway SUPABASE_SERVICE_KEY = real service_role so /auth/login works
+  Staging Railway SUPABASE_SERVICE_KEY = real server credential so /auth/login works
 
 Writes a non-sensitive evidence JSON under audits/artifacts/ when possible.
 Exit codes:
@@ -49,6 +49,10 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 ARTIFACT_DIR = ROOT / "audits" / "artifacts"
+_SCRIPTS = Path(__file__).resolve().parent
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
+import m8_staging_credentials as _m8creds
 
 
 def _now() -> str:
@@ -120,20 +124,11 @@ def _service_creds_present() -> bool:
 
 def _jwt_claims(token: str) -> dict[str, Any]:
     """Decode JWT payload without verifying signature (smoke diagnostics only)."""
-    import base64
-
-    parts = (token or "").split(".")
-    if len(parts) < 2:
-        return {}
-    pad = "=" * ((4 - len(parts[1]) % 4) % 4)
-    try:
-        return json.loads(base64.urlsafe_b64decode(parts[1] + pad))
-    except Exception:
-        return {}
+    return _m8creds.jwt_claims(token)
 
 
 def _require_service_role_key(evidence: dict, suite: str) -> bool:
-    """Fail closed unless SUPABASE_* service key is a real service_role JWT."""
+    """Fail closed unless SUPABASE_* server credential is trusted (JWT or sb_secret_)."""
     key = _service_key()
     if not key:
         _record(
@@ -144,45 +139,30 @@ def _require_service_role_key(evidence: dict, suite: str) -> bool:
             blocker="SUPABASE_SERVICE_KEY / SUPABASE_SERVICE_ROLE_KEY missing",
         )
         return False
-    # Reject UI-masked paste / modern-key placeholders that are not JWTs.
-    if (not key.startswith("eyJ")) or ("•" in key) or key.startswith("sb_secret_••••"):
+
+    sb_url = os.environ.get("SUPABASE_URL", "")
+    expected_ref = _m8creds.project_ref_from_supabase_url(sb_url) or None
+    validation = _m8creds.validate_staging_server_key(key, expected_project_ref=expected_ref)
+    if not validation.ok:
+        meta = _m8creds.safe_key_metadata(key, validation)
         _record(
             evidence,
             suite,
             "service_role_gate",
             result="blocked",
-            blocker="service key is not a JWT (masked UI paste or invalid secret rejected)",
-            key_kind="non_jwt",
+            blocker=validation.error or "invalid server credential",
+            **{k: v for k, v in meta.items() if k != "error"},
         )
         return False
-    claims = _jwt_claims(key)
-    role = claims.get("role")
-    ref = claims.get("ref")
-    url = os.environ.get("SUPABASE_URL", "")
-    ref_ok = (not ref) or (ref in url)
-    if role != "service_role" or not ref_ok:
-        _record(
-            evidence,
-            suite,
-            "service_role_gate",
-            result="blocked",
-            blocker=(
-                "service key JWT role is not service_role (or ref mismatch); "
-                "anon-as-service-key is refused after staging RLS re-enable"
-            ),
-            jwt_role=role,
-            jwt_ref=ref,
-        )
-        return False
+
+    meta = _m8creds.safe_key_metadata(key, validation)
     _record(
         evidence,
         suite,
         "service_role_gate",
         result="pass",
-        jwt_role=role,
-        jwt_ref=ref,
+        **meta,
     )
-    # Prefer canonical env names for backend helpers.
     os.environ["SUPABASE_SERVICE_KEY"] = key
     os.environ["SUPABASE_SERVICE_ROLE_KEY"] = key
     return True
@@ -1087,11 +1067,7 @@ def run_isolation_suite(evidence: dict, client_id: str) -> int:
     def _rest(path: str, key: str) -> tuple[int, Any]:
         req = urllib.request.Request(
             f"{url}/rest/v1/{path}",
-            headers={
-                "apikey": key,
-                "Authorization": f"Bearer {key}",
-                "Accept": "application/json",
-            },
+            headers=_m8creds.supabase_rest_headers(key),
             method="GET",
         )
         try:
@@ -1390,7 +1366,7 @@ def run_agent_os_e2e_suite(evidence: dict, client_id: str) -> int:
     )
 
     # Optional: if service_role available locally, verify lead row.
-    if _service_creds_present() and _jwt_claims(_service_key()).get("role") == "service_role":
+    if _service_creds_present() and _m8creds.is_trusted_server_key(_service_key()):
         from backend.models.database import get_service_supabase
 
         db = get_service_supabase()

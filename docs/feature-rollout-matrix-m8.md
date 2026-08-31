@@ -13,6 +13,7 @@
 - API: `https://agentnexlify-staging.up.railway.app`
 - Supabase staging: `nohanoiugcbaxtxinttp`
 - Smoke tenant: `7451537b-a694-4c31-83b0-1b804df3d757`
+- Staging server credential: `sb_secret_...` (preferred) or legacy `service_role` JWT → Railway `SUPABASE_SERVICE_KEY`; backend `supabase==2.28.3` supports both
 
 ## Evidence
 

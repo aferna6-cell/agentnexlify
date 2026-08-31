@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
-"""Wire staging service_role into gitignored .env.staging (never print secrets).
+"""Wire staging server credential into gitignored .env.staging (never print secrets).
 
 Reads STAGING_SUPABASE_SERVICE_ROLE_KEY from the environment (Cursor secret or
-shell export). Validates JWT role=service_role and ref matches SUPABASE_URL host.
+shell export). Accepts either:
+
+- legacy JWT service_role (eyJ...) with role=service_role
+- modern Supabase secret key (sb_secret_...)
+
 Updates SUPABASE_SERVICE_KEY and SUPABASE_SERVICE_ROLE_KEY in .env.staging only.
 
 Does NOT commit secrets. Does NOT write to artifacts. Railway vars must be set
@@ -10,33 +14,26 @@ separately via dashboard or Railway MCP set-variables by an operator with the
 same validated key.
 
 Usage (after owner pastes secret into agent env):
-  export STAGING_SUPABASE_SERVICE_ROLE_KEY='eyJ...'
+  export STAGING_SUPABASE_SERVICE_ROLE_KEY='sb_secret_...'   # preferred
+  # or legacy: export STAGING_SUPABASE_SERVICE_ROLE_KEY='eyJ...'
   python3 scripts/m8_wire_staging_service_key.py
   set -a && source .env.staging && set +a
 """
 
 from __future__ import annotations
 
-import base64
-import json
 import os
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
+
+SCRIPTS = Path(__file__).resolve().parent
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+import m8_staging_credentials as creds
 
 ROOT = Path(__file__).resolve().parents[1]
 ENV_PATH = ROOT / ".env.staging"
-
-
-def _jwt_claims(token: str) -> dict:
-    parts = token.split(".")
-    if len(parts) < 2:
-        return {}
-    pad = "=" * ((4 - len(parts[1]) % 4) % 4)
-    try:
-        return json.loads(base64.urlsafe_b64decode(parts[1] + pad))
-    except Exception:
-        return {}
 
 
 def _load_env_file(path: Path) -> dict[str, str]:
@@ -64,27 +61,18 @@ def main() -> int:
     if not raw:
         print("STOP: STAGING_SUPABASE_SERVICE_ROLE_KEY not set in environment")
         return 2
-    if "•" in raw or raw.startswith("sb_secret_•"):
-        print("STOP: value looks like a masked UI paste (bullet characters)")
-        return 2
-    if not raw.startswith("eyJ"):
-        print("STOP: expected Legacy JWT service_role (starts with eyJ)")
-        return 2
-
-    claims = _jwt_claims(raw)
-    role = claims.get("role")
-    ref = claims.get("ref")
-    if role != "service_role":
-        print(f"STOP: JWT role is {role!r}, expected service_role")
-        return 2
 
     env_existing = _load_env_file(ENV_PATH)
     supabase_url = (
         os.environ.get("SUPABASE_URL") or env_existing.get("SUPABASE_URL") or ""
     ).strip()
-    host = urlparse(supabase_url).netloc.split(".")[0] if supabase_url else ""
-    if ref and host and ref != host:
-        print(f"STOP: JWT ref {ref!r} does not match SUPABASE_URL host {host!r}")
+    expected_ref = creds.project_ref_from_supabase_url(supabase_url) or creds.STAGING_SUPABASE_PROJECT_REF
+
+    validation = creds.validate_staging_server_key(raw, expected_project_ref=expected_ref)
+    if not validation.ok:
+        print(f"STOP: {validation.error}")
+        meta = creds.safe_key_metadata(raw, validation)
+        print(f"    {meta}")
         return 2
 
     anon = (
@@ -93,7 +81,7 @@ def main() -> int:
         or ""
     ).strip()
     if anon:
-        anon_claims = _jwt_claims(anon)
+        anon_claims = creds.jwt_claims(anon)
         if anon_claims.get("role") != "anon":
             print("WARN: SUPABASE_KEY does not look like anon JWT")
 
@@ -107,10 +95,14 @@ def main() -> int:
         updates["SUPABASE_KEY"] = anon
 
     _write_env_file(ENV_PATH, updates)
+    meta = creds.safe_key_metadata(raw, validation)
     print("OK: updated .env.staging SUPABASE_SERVICE_KEY/SUPABASE_SERVICE_ROLE_KEY")
-    print(f"    jwt_role={role} jwt_ref={ref} len={len(raw)}")
-    print("Next: set Railway staging SUPABASE_SERVICE_KEY to the same JWT (not in chat)")
-    print("      then redeploy agentnexlify and run M8_SMOKE_SUITES=isolation")
+    print(f"    {meta}")
+    print(
+        "Next: set Railway staging SUPABASE_SERVICE_KEY to the same server credential "
+        "(not in chat), keep SUPABASE_KEY=anon publishable/anon key, redeploy agentnexlify"
+    )
+    print("      then run: python3 scripts/m8_verify_staging_step3.py")
     return 0
 
 
