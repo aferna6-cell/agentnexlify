@@ -113,7 +113,13 @@ async def gmail_callback(
     try:
         creds = gmail_connector.exchange_code(code, redirect_uri)
     except Exception as exc:
-        logger.exception("gmail: code exchange failed for tenant %s", tenant_id)
+        # Surface Google error class/message (no secrets) for staging diagnosis.
+        logger.exception(
+            "gmail: code exchange failed for tenant %s err_type=%s err=%s",
+            tenant_id,
+            type(exc).__name__,
+            str(exc)[:300],
+        )
         raise HTTPException(
             status_code=400, detail="Failed to exchange authorization code"
         ) from exc

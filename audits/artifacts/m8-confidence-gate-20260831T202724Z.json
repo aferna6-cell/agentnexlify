@@ -1,0 +1,64 @@
+{
+  "verdict": "HOLD",
+  "confidence_pct": 74,
+  "checked_at": "2026-08-31T20:27:24.068099+00:00",
+  "git_sha_branch": "dfa358d3",
+  "staging_deploy": {
+    "deployment_id": "edf77734-3e42-4d80-84ca-b9896ddc19a4",
+    "status": "SUCCESS",
+    "commit": "dfa358d",
+    "note": "PKCE disabled for Calendar/Gmail confidential client flows"
+  },
+  "step3_verify": "PASS (service_role JWT, health, anon RLS empty, smoke chunks n=5, login 200)",
+  "calendar": {
+    "api_connected": false,
+    "platform_configured": true,
+    "tenant_integrations_rows": 0,
+    "fresh_auth_url_pkce": false,
+    "redirect_uri": "https://agentnexlify-staging.up.railway.app/api/v1/integrations/google/callback",
+    "auth_url_meta": {
+      "has_code_challenge": false,
+      "has_code_challenge_method": false,
+      "redirect_uri": "https://agentnexlify-staging.up.railway.app/api/v1/integrations/google/callback",
+      "client_id_prefix": "1031969590686-ip",
+      "state_len": 173,
+      "access_type": "offline",
+      "prompt": "consent",
+      "scope": "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly"
+    }
+  },
+  "gmail": {
+    "api_connected": false,
+    "platform_configured": true,
+    "tenant_integrations_rows": 0,
+    "fresh_auth_url_pkce": false,
+    "redirect_uri": "https://agentnexlify-staging.up.railway.app/api/v1/integrations/gmail/callback",
+    "auth_url_meta": {
+      "has_code_challenge": false,
+      "has_code_challenge_method": false,
+      "redirect_uri": "https://agentnexlify-staging.up.railway.app/api/v1/integrations/gmail/callback",
+      "client_id_prefix": "1031969590686-ip",
+      "state_len": 173,
+      "access_type": "offline",
+      "prompt": "consent",
+      "scope": "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.modify"
+    }
+  },
+  "prior_consent_attempt": {
+    "at": "2026-08-31T20:17:08Z / 20:17:18Z",
+    "deploy_then": "a472c19 (TTL 60m only; PKCE still enabled)",
+    "result": "both google/callback and gmail/callback returned 400 Failed to exchange authorization code",
+    "interpretation": "Owner completed Google consent; token exchange failed on pre-PKCE-fix deploy. Redirect URIs are registered (callbacks reached staging)."
+  },
+  "blocker": "Calendar+Gmail still disconnected for smoke tenant. Need owner to open fresh PKCE-free auth URLs (minted post-dfa358d deploy) and complete consent again.",
+  "local_tests": "tests/test_google_oauth_pkce_disabled.py + backend/tests/test_oauth_service_wiring.py \u2192 14 passed",
+  "complete_criteria_met": false,
+  "production_m8_flags": "remain OFF (do not enable)",
+  "private_auth_urls_path": "/tmp/m8-oauth-auth-urls-private.json",
+  "owner_action": [
+    "Open calendar_auth_url from /tmp/m8-oauth-auth-urls-private.json in a browser signed into the smoke Google account",
+    "Complete consent; confirm Connected! page (not 400)",
+    "Repeat for gmail_auth_url",
+    "Re-run: M8_SMOKE_SUITES=calendar,gmail,agent_os_e2e python3 scripts/m8_live_smoke.py"
+  ]
+}

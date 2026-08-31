@@ -189,8 +189,13 @@ async def google_callback(
     try:
         creds = exchange_code(code, redirect_uri)
     except Exception as exc:
+        # Surface Google error class/message (no secrets) — prior staging
+        # failures were opaque 400s during PKCE code_verifier mismatch.
         logger.exception(
-            "Failed to exchange Google OAuth code for tenant %s", tenant_id
+            "Failed to exchange Google OAuth code for tenant %s err_type=%s err=%s",
+            tenant_id,
+            type(exc).__name__,
+            str(exc)[:300],
         )
         raise HTTPException(
             status_code=400, detail="Failed to exchange authorization code"
