@@ -58,11 +58,25 @@ Live run today: `agent_os_e2e.login` **blocked** (staging cannot read tenants un
 
 Do **not** start Milestone 9. Production M8 flags remain unset/OFF.
 
-## Immediate owner checklist
+## Confidence gate (2026-08-31T00:56Z)
 
-1. Reveal staging Supabase **service_role** → set Railway staging + `.env.staging`
-2. Add Google redirect URIs (exact):
-   - `https://agentnexlify-staging.up.railway.app/api/v1/integrations/google/callback`
-   - `https://agentnexlify-staging.up.railway.app/api/v1/integrations/gmail/callback`
-3. Log into staging as `smoke-test@agentnexlify.invalid` and connect harmless Google Calendar + Gmail
-4. Ask Cursor to re-run `isolation,rag,crm,calendar,gmail,agent_os_e2e` + M6/M7/M8 gates
+**Score for M8 COMPLETE / production-ready: 42% — KEEP WORKING (owner secrets required).**
+
+**Score for HOLD package accuracy (this PR’s claims): 88%.**
+
+### Verified again
+- Staging RLS still **140 on / 0 off**
+- Anon REST: chunks/leads/tenants → `[]`
+- Local service key JWT role still **anon**
+- Calendar/Gmail integrations still **0**
+- `service_role_gate` correctly **blocked**
+- Staging login still **401** (expected until Railway has real service_role)
+- `check:quick` + pytest 60 passed on prior turn; smoke script compiles
+
+### Uncertainties blocking ≥90% COMPLETE
+1. No real staging `service_role` JWT available (Reveal UI broken; masked `••••` paste rejected; Railway agent cannot read secret values)
+2. Google OAuth redirect URIs still blocked by Clemson org password
+3. Agent OS E2E + calendar/gmail live proofs not runnable until (1)+(2)
+4. Staging app is degraded for tenant-scoped jobs until Railway `SUPABASE_SERVICE_KEY` is fixed
+
+Staff engineer would approve the HOLD and the RLS move, and would **not** approve COMPLETE while (1)–(3) remain.

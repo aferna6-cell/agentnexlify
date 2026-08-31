@@ -144,6 +144,17 @@ def _require_service_role_key(evidence: dict, suite: str) -> bool:
             blocker="SUPABASE_SERVICE_KEY / SUPABASE_SERVICE_ROLE_KEY missing",
         )
         return False
+    # Reject UI-masked paste / modern-key placeholders that are not JWTs.
+    if (not key.startswith("eyJ")) or ("•" in key) or key.startswith("sb_secret_••••"):
+        _record(
+            evidence,
+            suite,
+            "service_role_gate",
+            result="blocked",
+            blocker="service key is not a JWT (masked UI paste or invalid secret rejected)",
+            key_kind="non_jwt",
+        )
+        return False
     claims = _jwt_claims(key)
     role = claims.get("role")
     ref = claims.get("ref")
