@@ -169,7 +169,7 @@ Unset / set `=0` on staging (and never flip production):
 1. ~~Railway staging environment does not exist (production only today)~~ **done** — staging env + API live
 2. **Inject real staging Supabase server credential** (`sb_secret_...` preferred, or legacy `service_role` JWT) into Railway staging `SUPABASE_SERVICE_KEY` and agent secret `STAGING_SUPABASE_SERVICE_ROLE_KEY` (anon-as-service-key breaks login/automation after RLS re-enable). Helpers: `python3 scripts/m8_wire_staging_service_key.py` then Railway redeploy; gate: `python3 scripts/m8_verify_staging_step3.py`
 3. ~~Add Google OAuth staging redirect URIs~~ **done for smoke** — auth URLs reach Google sign-in; prior 20:17Z consent hit staging callbacks (failed only on pre-PKCE code exchange)
-4. **Connect Calendar + Gmail** via fresh PKCE-free URLs in `audits/artifacts/m8-oauth-owner-urls.md` (still zero `integrations` rows for `google_calendar`/`gmail` until owner consents after PKCE fix `dfa358d`; re-checked 21:51Z — still 0 callbacks since 21:48Z)
+4. **Connect Calendar + Gmail** via fresh PKCE-free URLs in `audits/artifacts/m8-oauth-owner-urls.md` (still zero `integrations` rows for `google_calendar`/`gmail` until owner consents after PKCE fix `dfa358d`; re-checked 21:55Z — still 0 callbacks since 21:51Z)
 5. Re-run `M8_SMOKE_SUITES=isolation,rag,crm,calendar,gmail,agent_os_e2e` then M6/M7/M8 regression gates
 
 Note: agent environments cannot read Railway/Supabase secret values via OAuth MCP — owner must paste `STAGING_SUPABASE_SERVICE_ROLE_KEY` into the trusted smoke environment.
