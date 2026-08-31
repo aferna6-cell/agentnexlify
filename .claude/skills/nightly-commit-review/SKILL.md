@@ -392,6 +392,7 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
 9J. (Dependabot Auto-Merge) Merge CI-green Dependabot PRs with no review requests:
     1. **List open Dependabot PRs:**
        `mcp__github__search_pull_requests` with query="repo:aferna6-cell/agentnexlify is:pr is:open author:app/dependabot".
+       (Note: `list_pull_requests` with creator filter is unreliable for bot PRs in headless sessions — use search API instead.)
        If 0 results found: log "Step 9J: 0 Dependabot PRs found — skip" and continue to step 9K.
     2. **Initialize counters:** rebase_trigger_count = 0
     3. **For each Dependabot PR, check eligibility:**
@@ -421,25 +422,27 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
        On failure: log "Step 9J: merge failed PR #{N} — {error}" and continue to next PR.
     5. **Log result:**
        Add to nightly report: "Step 9J: {N} Dependabot PRs checked, {M} merged, {K} skipped (CI/review/label), {R} rebase-triggered (unknown state)"
-9K. **(Subconscious PR Audit)** Audit open subconscious draft PRs for staleness:
-    1. Call `mcp__github__list_pull_requests` with `state: "open"`, `per_page: 50`.
-    2. Filter: keep only PRs where `head.ref` starts with `"subconscious/"`.
-    3. For each, compute `age_days = (now - created_at).days`.
+9K. (Stale Subconscious Draft PR Audit) Detect accumulating unreviewed subconscious improvement PRs:
+    1. Call `mcp__github__list_pull_requests` with state="open", per_page=50.
+    2. Filter results: keep only PRs where `head.ref` starts with `"subconscious/"`.
+    3. For each matching PR, compute `age_days = (now - created_at).days`.
     4. Compute:
        - `total_count` = total open subconscious PRs
        - `stale_count` = PRs where `age_days > 30`
        - `critical_count` = PRs where `age_days > 60`
-    5. If `stale_count < 3`:
-         Log: "Step 9K: {total_count} open subconscious PRs — {stale_count} stale — under threshold"
-         Skip remaining steps.
-       If `stale_count >= 3` OR `critical_count >= 1`:
-         Log to nightly report: "⚠ Step 9K: {total_count} open subconscious PRs, {stale_count} stale (>30d), {critical_count} critical (>60d)"
-         List each stale PR: "  - #{number} {title} ({age_days}d)"
-       If `stale_count >= 5` OR `critical_count >= 1`:
-         Find oldest open subconscious PR (max age_days).
-         Post comment via `mcp__github__add_issue_comment` on that PR:
-           "Subconscious PR audit (Step 9K): This PR is {age_days} days old. There are currently {stale_count} stale subconscious draft PRs (>30 days). Please review, merge, or close to prevent backlog accumulation."
-    6. Add to nightly report: "Step 9K: {total_count} subconscious PRs open ({stale_count} stale, {critical_count} critical)"
+    5. Threshold logic:
+       a. If `stale_count < 3`:
+          - Log: "Step 9K: {total_count} open subconscious PRs — {stale_count} stale (>30d) — under threshold"
+          - Skip remaining steps.
+       b. If `stale_count >= 3` OR `critical_count >= 1`:
+          - Log to nightly report: "Step 9K: {total_count} open subconscious PRs, {stale_count} stale (>30d), {critical_count} critical (>60d)"
+          - List each stale PR: "  - #{number} {title} ({age_days}d)"
+          - Add warning to nightly report: "⚠ Step 9K: Stale subconscious PRs need review"
+       c. Additionally, if `stale_count >= 5` OR `critical_count >= 1`:
+          - Find the oldest open subconscious PR (max `age_days`).
+          - Post comment via `mcp__github__add_issue_comment` on that PR:
+            Body: "Subconscious PR audit (Step 9K): This PR is {age_days} days old. {stale_count} stale subconscious draft PRs (>30d) are open. Please review, merge, or close to prevent backlog accumulation."
+    6. Add to nightly summary: "Step 9K: {total_count} subconscious PRs open ({stale_count} stale, {critical_count} critical)"
 10. Commit report: `docs(nightly): review YYYY-MM-DD [auto-nightly]`
 11. Push to main
 12. If any guardrail tripped (forbidden path, >5 files, >50 LOC, test-check failed) — abort fixes, file issue only, still write report
