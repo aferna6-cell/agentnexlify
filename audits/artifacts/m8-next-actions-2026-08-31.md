@@ -58,6 +58,25 @@ Live run today: `agent_os_e2e.login` **blocked** (staging cannot read tenants un
 
 Do **not** start Milestone 9. Production M8 flags remain unset/OFF.
 
+## Merge with main (2026-08-31)
+
+- Fetched `origin/main`; branch is **current** (merge commit `e35a23d5`).
+- **One simple conflict** resolved in `docs/ops/m8-staging-setup.md` (blocker wording + deduped numbered list from main).
+- Auto-merged: `backend/services/m8_action_flags.py`, nightly review docs.
+- PR #716 CI: **all green**.
+
+## Step-3 re-check (2026-08-31T11:23Z)
+
+```
+PASS /health ok
+PASS anon tenant_kb_chunks []
+FAIL local service key role is not service_role
+FAIL service_role smoke chunks n=0
+FAIL smoke login http=401
+```
+
+`STAGING_SUPABASE_SERVICE_ROLE_KEY` still **unset** in agent environment.
+
 ## Confidence gate (2026-08-31T00:56Z)
 
 **Score for M8 COMPLETE / production-ready: 42% — KEEP WORKING (owner secrets required).**
