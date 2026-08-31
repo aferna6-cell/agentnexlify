@@ -139,7 +139,13 @@ def get_credentials(tenant_id: str) -> Credentials | None:
 
 
 def build_oauth_flow(redirect_uri: str) -> Flow:
-    """Create a ``google_auth_oauthlib`` Flow using application credentials."""
+    """Create a ``google_auth_oauthlib`` Flow using application credentials.
+
+    PKCE is disabled: auth URL and token exchange use separate Flow instances
+    (stateless callback), so an auto-generated ``code_verifier`` cannot round-trip
+    and would break ``fetch_token``. Web clients already authenticate with
+    ``client_secret``.
+    """
     client_config = {
         "web": {
             "client_id": settings.google_client_id,
@@ -150,6 +156,8 @@ def build_oauth_flow(redirect_uri: str) -> Flow:
     }
     flow = Flow.from_client_config(client_config, scopes=SCOPES)
     flow.redirect_uri = redirect_uri
+    flow.autogenerate_code_verifier = False
+    flow.code_verifier = None
     return flow
 
 
