@@ -18,6 +18,12 @@
     "local_script": "scripts/m8_verify_integrations_enc.py",
     "result": "PASS",
     "railway_integrations_enc_key_set": true,
+    "staging_remote_proof": {
+      "endpoint": "GET /api/v1/kb/integrations/drive/auth",
+      "http": 503,
+      "error": "drive_kb_not_configured",
+      "interpretation": "encryption gate cleared — would return encryption_key_required if INTEGRATIONS_ENC_KEY missing on staging"
+    },
     "migration_176_applied": false,
     "note": "Do not apply migration 176 until OAuth connect proves access_token_enc populated on staging integrations rows"
   },
@@ -32,6 +38,9 @@
     "railway_google_redirect_uri_set": true,
     "railway_gmail_redirect_uri_set": true,
     "gmail_inbox_enabled": "unset/OFF (correct for M8 send-only)",
+    "staging_gmail_connect_scopes_live": [
+      "https://www.googleapis.com/auth/gmail.send"
+    ],
     "calendar_connected": false,
     "gmail_connected": false,
     "integrations_rows_smoke_tenant": 0,
@@ -43,7 +52,7 @@
       "isolation": "pass",
       "rag": "pass (recall@1 0.9017, cross_tenant_leaks 0)",
       "crm": "pass",
-      "agent_os_e2e": "partial — login/thread/message/tool_executions pass; db_lead_verification fail (CRM tool row found, lead row not persisted for marker)",
+      "agent_os_e2e": "partial — HTTP chain pass; db_lead_verification fail. Isolated re-run (m8-live-smoke-20260831T233039Z.json): zero new os_tool_executions during 68s poll; tool_executions_chain false-positive on stale create_customer rows (smoke polls limit=20 without thread/time filter). Orchestrator accepted message (201) but did not persist CRM lead for m8-e2e marker.",
       "calendar": "blocked — no google_calendar OAuth integration",
       "gmail": "blocked — no gmail connector"
     }
@@ -54,7 +63,7 @@
     "m8_verify_integrations_enc_local": "PASS",
     "test_gmail_connector_router": "pass (67 tests in prior CI; local connector+router green)",
     "test_inbox_monitor_async": "fail in VM without pytest-asyncio plugin (known; not M8 blocker)",
-    "m6_action_safety": "not_rerun_this_turn",
+    "m6_action_safety": "pass — UNSAFE ACTIONS 0 / 59 (npm run eval:actions:gate @ d6d5e2d7)",
     "m7_rag_holdout": "pass via live_smoke rag suite",
     "m8_calendar_crm_eval": "blocked on OAuth",
     "tenant_isolation": "pass via isolation suite"
@@ -99,5 +108,18 @@
     "Gmail inbox monitoring + restricted-scope verification (GMAIL_INBOX_ENABLED stays 0)"
   ],
   "m8_complete_criteria_met": false,
-  "ready_for_milestone_9": false
+  "ready_for_milestone_9": false,
+  "confidence_gate_recheck_at": "2026-08-31T23:31:00Z",
+  "confidence_scores": {
+    "staging_infra_post723_percent": 93,
+    "m8_complete_production_ready_percent": 74
+  },
+  "confidence_uncertainties": [
+    "Dedicated staging GCP project not created; OAuth consent not completed",
+    "Calendar/Gmail live proof checklists not run",
+    "agent_os_e2e orchestrator did not emit new tool executions or CRM lead on staging (isolated run)",
+    "tool_executions_chain smoke step can false-pass on stale rows",
+    "Migration 176 not applied; encrypted token columns not proven on real OAuth rows",
+    "M7 independent holdout and M8 calendar/crm eval not rerun this turn"
+  ]
 }
