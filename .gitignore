@@ -94,3 +94,4 @@ pytest-of-*/
 # and driven by /gan. Commit the artifact the loop produces, not the loop's state.
 gan-harness/
 .env.staging
+/workspace/.env.staging.server_key.tmp
