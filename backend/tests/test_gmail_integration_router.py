@@ -71,16 +71,25 @@ class TestEncodeDecodeState:
     def test_round_trips_tenant_id_only(self):
         with patch.multiple(router_mod.settings, jwt_secret_key="s3cr3t"):
             token = router_mod._encode_state("tenant-1")
-            tenant_id, os_thread_id = router_mod._decode_state(token)
+            tenant_id, os_thread_id, inbox = router_mod._decode_state(token)
         assert tenant_id == "tenant-1"
         assert os_thread_id is None
+        assert inbox is False
 
     def test_round_trips_with_os_thread_id(self):
         with patch.multiple(router_mod.settings, jwt_secret_key="s3cr3t"):
             token = router_mod._encode_state("tenant-1", "thread-9")
-            tenant_id, os_thread_id = router_mod._decode_state(token)
+            tenant_id, os_thread_id, inbox = router_mod._decode_state(token)
         assert tenant_id == "tenant-1"
         assert os_thread_id == "thread-9"
+        assert inbox is False
+
+    def test_round_trips_inbox_flag(self):
+        with patch.multiple(router_mod.settings, jwt_secret_key="s3cr3t"):
+            token = router_mod._encode_state("tenant-1", inbox=True)
+            tenant_id, os_thread_id, inbox = router_mod._decode_state(token)
+        assert tenant_id == "tenant-1"
+        assert inbox is True
 
     def test_invalid_token_raises_400(self):
         with pytest.raises(Exception) as excinfo:
@@ -166,7 +175,9 @@ class TestCallback:
 
     def test_save_integration_failure_returns_500(self):
         state = _state_token()
-        creds = MagicMock(token="tok", refresh_token="rt", expiry=None)
+        creds = MagicMock(
+            token="tok", refresh_token="rt", expiry=None, scopes=["https://www.googleapis.com/auth/gmail.send"]
+        )
         client = _client()
         with patch.multiple(
             router_mod.settings,
@@ -187,7 +198,9 @@ class TestCallback:
 
     def test_profile_fetch_failure_is_best_effort_and_still_redirects(self):
         state = _state_token()
-        creds = MagicMock(token="tok", refresh_token="rt", expiry=None)
+        creds = MagicMock(
+            token="tok", refresh_token="rt", expiry=None, scopes=["https://www.googleapis.com/auth/gmail.send"]
+        )
         client = _client()
         with patch.multiple(
             router_mod.settings,
@@ -213,7 +226,9 @@ class TestCallback:
 
     def test_profile_success_updates_metadata_and_deep_links_thread(self):
         state = _state_token(os_thread_id="thread-9")
-        creds = MagicMock(token="tok", refresh_token="rt", expiry=None)
+        creds = MagicMock(
+            token="tok", refresh_token="rt", expiry=None, scopes=["https://www.googleapis.com/auth/gmail.send"]
+        )
         client = _client()
         with patch.multiple(
             router_mod.settings,
@@ -242,7 +257,9 @@ class TestCallback:
 
     def test_no_frontend_url_returns_html_fallback(self):
         state = _state_token()
-        creds = MagicMock(token="tok", refresh_token="rt", expiry=None)
+        creds = MagicMock(
+            token="tok", refresh_token="rt", expiry=None, scopes=["https://www.googleapis.com/auth/gmail.send"]
+        )
         client = _client()
         with patch.multiple(
             router_mod.settings,

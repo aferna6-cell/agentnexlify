@@ -48,16 +48,28 @@ def _with_key():
 
 
 class TestAuthUrl:
-    def test_url_carries_gmail_scopes_state_and_offline(self):
+    def test_default_url_is_send_only(self):
         with _with_oauth_settings():
             url = gc.get_auth_url(
                 "https://api.example.com/api/v1/integrations/gmail/callback", "state123"
             )
-        assert "gmail.readonly" in url
         assert "gmail.send" in url
-        assert "gmail.modify" in url
+        assert "gmail.modify" not in url
+        assert "gmail.readonly" not in url
         assert "state=state123" in url
         assert "access_type=offline" in url
+
+    def test_inbox_url_adds_readonly_when_flag_on(self, monkeypatch):
+        monkeypatch.setenv("GMAIL_INBOX_ENABLED", "1")
+        with _with_oauth_settings():
+            url = gc.get_auth_url(
+                "https://api.example.com/api/v1/integrations/gmail/callback",
+                "state123",
+                inbox=True,
+            )
+        assert "gmail.send" in url
+        assert "gmail.readonly" in url
+        assert "gmail.modify" not in url
 
 
 # ---------------------------------------------------------------------------
@@ -528,7 +540,9 @@ class TestExchangeCode:
         flow.credentials = MagicMock(token="tok")
         with patch.object(gc, "build_oauth_flow", return_value=flow) as build_mock:
             creds = gc.exchange_code("auth-code", "https://api.example.com/cb")
-        build_mock.assert_called_once_with("https://api.example.com/cb")
+        build_mock.assert_called_once_with(
+            "https://api.example.com/cb", scopes=gc.oauth_scopes()
+        )
         flow.fetch_token.assert_called_once_with(code="auth-code")
         assert creds is flow.credentials
 

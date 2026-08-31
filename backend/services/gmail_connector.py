@@ -16,6 +16,7 @@ Do NOT add 'from __future__ import annotations' — breaks Pydantic on FastAPI.
 
 import base64
 import logging
+import os
 from email.mime.text import MIMEText
 from email.utils import parseaddr
 from typing import Any
@@ -37,11 +38,49 @@ logger = logging.getLogger(__name__)
 
 PROVIDER = "gmail"
 
-SCOPES = [
-    "https://www.googleapis.com/auth/gmail.readonly",
-    "https://www.googleapis.com/auth/gmail.send",
-    "https://www.googleapis.com/auth/gmail.modify",
-]
+SCOPE_SEND = "https://www.googleapis.com/auth/gmail.send"
+SCOPE_READONLY = "https://www.googleapis.com/auth/gmail.readonly"
+
+# Legacy union kept for refresh on rows connected before scope split.
+LEGACY_SCOPES = [SCOPE_READONLY, SCOPE_SEND, "https://www.googleapis.com/auth/gmail.modify"]
+
+
+def gmail_inbox_scopes_enabled() -> bool:
+    """When false (default), OAuth requests gmail.send only (M8 send path).
+
+    gmail.readonly is restricted — enable only after production verification.
+    Set GMAIL_INBOX_ENABLED=1 when inbox monitoring should be offered at connect.
+    """
+    return os.environ.get("GMAIL_INBOX_ENABLED", "0").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def oauth_scopes(*, inbox: bool = False) -> list[str]:
+    """OAuth scope set for a new Gmail connect.
+
+    Default (M8): gmail.send only — propose → approve → send.
+    With inbox=True and GMAIL_INBOX_ENABLED: adds gmail.readonly for polling.
+    gmail.modify is never requested (no code path uses it).
+    """
+    scopes = [SCOPE_SEND]
+    if inbox and gmail_inbox_scopes_enabled():
+        scopes.append(SCOPE_READONLY)
+    return scopes
+
+
+def _scopes_for_integration(integration: dict | None) -> list[str]:
+    """Scopes to use when refreshing stored credentials."""
+    if not integration:
+        return oauth_scopes()
+    meta = integration.get("metadata") or {}
+    stored = meta.get("oauth_scopes")
+    if isinstance(stored, list) and stored:
+        return stored
+    return LEGACY_SCOPES
 
 _GMAIL_API_BASE = "https://gmail.googleapis.com/gmail/v1/users/me"
 
@@ -175,7 +214,7 @@ def get_credentials(tenant_id: str) -> Credentials | None:
         token_uri="https://oauth2.googleapis.com/token",
         client_id=settings.google_client_id,
         client_secret=settings.google_client_secret,
-        scopes=SCOPES,
+        scopes=_scopes_for_integration(integration),
     )
 
     if creds.expired and creds.refresh_token:
@@ -202,7 +241,7 @@ def get_credentials(tenant_id: str) -> Credentials | None:
 # ---------------------------------------------------------------------------
 
 
-def build_oauth_flow(redirect_uri: str) -> Flow:
+def build_oauth_flow(redirect_uri: str, scopes: list[str] | None = None) -> Flow:
     """Create a ``google_auth_oauthlib`` Flow using the platform's Google app."""
     client_config = {
         "web": {
@@ -212,14 +251,16 @@ def build_oauth_flow(redirect_uri: str) -> Flow:
             "token_uri": "https://oauth2.googleapis.com/token",
         }
     }
-    flow = Flow.from_client_config(client_config, scopes=SCOPES)
+    flow = Flow.from_client_config(client_config, scopes=scopes or oauth_scopes())
     flow.redirect_uri = redirect_uri
+    flow.autogenerate_code_verifier = False
+    flow.code_verifier = None
     return flow
 
 
-def get_auth_url(redirect_uri: str, state: str) -> str:
+def get_auth_url(redirect_uri: str, state: str, *, inbox: bool = False) -> str:
     """Return the Gmail OAuth authorization URL."""
-    flow = build_oauth_flow(redirect_uri)
+    flow = build_oauth_flow(redirect_uri, scopes=oauth_scopes(inbox=inbox))
     auth_url, _ = flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
@@ -229,11 +270,21 @@ def get_auth_url(redirect_uri: str, state: str) -> str:
     return auth_url
 
 
-def exchange_code(code: str, redirect_uri: str) -> Credentials:
+def exchange_code(
+    code: str, redirect_uri: str, *, inbox: bool = False
+) -> Credentials:
     """Exchange an authorization code for credentials."""
-    flow = build_oauth_flow(redirect_uri)
+    flow = build_oauth_flow(redirect_uri, scopes=oauth_scopes(inbox=inbox))
     flow.fetch_token(code=code)
     return flow.credentials
+
+
+def has_inbox_access(tenant_id: str) -> bool:
+    """True when the stored integration includes gmail.readonly."""
+    integration = get_integration(tenant_id)
+    if not integration:
+        return False
+    return SCOPE_READONLY in _scopes_for_integration(integration)
 
 
 # ---------------------------------------------------------------------------
