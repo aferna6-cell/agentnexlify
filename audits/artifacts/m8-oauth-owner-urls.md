@@ -1,9 +1,9 @@
 # M8 OAuth owner URLs (staging smoke tenant)
 
-Minted: `20260831T215823Z`  
+Minted: `20260831T220131Z`  
 Tenant: `7451537b-a694-4c31-83b0-1b804df3d757`  
 PKCE: calendar=`False` gmail=`False`  
-State expires: `2026-08-31T22:58:24+00:00` (≈60 minutes from mint)  
+State expires: `2026-08-31T23:01:31+00:00` (≈60 minutes from mint)  
 Google probe: calendar={'status': 200, 'final_host': 'accounts.google.com'} gmail={'status': 200, 'final_host': 'accounts.google.com'}
 
 ## Do this now (order matters)
@@ -20,8 +20,8 @@ Google probe: calendar={'status': 200, 'final_host': 'accounts.google.com'} gmai
 
 ## Calendar (Google Calendar)
 
-https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=1031969590686-ipmp1e4ob8463gv1pvnu0u98b6urm3ra.apps.googleusercontent.com&redirect_uri=https%3A%2F%2Fagentnexlify-staging.up.railway.app%2Fapi%2Fv1%2Fintegrations%2Fgoogle%2Fcallback&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar.events+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar.readonly&state=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiI3NDUxNTM3Yi1hNjk0LTRjMzEtODNiMC0xYjgwNGRmM2Q3NTciLCJleHAiOjE3ODgyMTcxMDR9.6bDuMGscQ_ar0ypN8hCHVXyPfFwnk9_IIfdI_X5wo20&access_type=offline&include_granted_scopes=true&prompt=consent
+https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=1031969590686-ipmp1e4ob8463gv1pvnu0u98b6urm3ra.apps.googleusercontent.com&redirect_uri=https%3A%2F%2Fagentnexlify-staging.up.railway.app%2Fapi%2Fv1%2Fintegrations%2Fgoogle%2Fcallback&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar.events+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar.readonly&state=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiI3NDUxNTM3Yi1hNjk0LTRjMzEtODNiMC0xYjgwNGRmM2Q3NTciLCJleHAiOjE3ODgyMTcyOTF9.3JEPEqjMPe3bk0da5yxNp0j2rM0LYrwUEqVpjkr2tHc&access_type=offline&include_granted_scopes=true&prompt=consent
 
 ## Gmail
 
-https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=1031969590686-ipmp1e4ob8463gv1pvnu0u98b6urm3ra.apps.googleusercontent.com&redirect_uri=https%3A%2F%2Fagentnexlify-staging.up.railway.app%2Fapi%2Fv1%2Fintegrations%2Fgmail%2Fcallback&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.readonly+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.send+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.modify&state=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiI3NDUxNTM3Yi1hNjk0LTRjMzEtODNiMC0xYjgwNGRmM2Q3NTciLCJleHAiOjE3ODgyMTcxMDR9.6bDuMGscQ_ar0ypN8hCHVXyPfFwnk9_IIfdI_X5wo20&access_type=offline&include_granted_scopes=true&prompt=consent
+https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=1031969590686-ipmp1e4ob8463gv1pvnu0u98b6urm3ra.apps.googleusercontent.com&redirect_uri=https%3A%2F%2Fagentnexlify-staging.up.railway.app%2Fapi%2Fv1%2Fintegrations%2Fgmail%2Fcallback&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.readonly+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.send+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.modify&state=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiI3NDUxNTM3Yi1hNjk0LTRjMzEtODNiMC0xYjgwNGRmM2Q3NTciLCJleHAiOjE3ODgyMTcyOTF9.3JEPEqjMPe3bk0da5yxNp0j2rM0LYrwUEqVpjkr2tHc&access_type=offline&include_granted_scopes=true&prompt=consent
