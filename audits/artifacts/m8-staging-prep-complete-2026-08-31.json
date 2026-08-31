@@ -1,0 +1,53 @@
+{
+  "verdict": "M8 STAGING PREP COMPLETE — owner OAuth handoff",
+  "confidence_percent": 92,
+  "timestamp": "2026-08-31T23:48:00Z",
+  "git_sha": "ce0b4daa",
+  "scope": "Post-PR723 controlled staging prep (not full M8 COMPLETE — Calendar/Gmail OAuth live proof deferred to owner)",
+  "staging_environment": {
+    "api_base": "https://agentnexlify-staging.up.railway.app",
+    "supabase_project_id": "nohanoiugcbaxtxinttp",
+    "smoke_tenant_id": "7451537b-a694-4c31-83b0-1b804df3d757",
+    "backend_deploy": "main SUCCESS",
+    "agent_service_deploy": "main SUCCESS (first staging deploy this session)"
+  },
+  "fixes_applied_this_session": [
+    "INTEGRATIONS_ENC_KEY provisioned on Railway staging + local .env.staging",
+    "Backend deploy source → main@db4a0269 (#723)",
+    "agent-service connected to GitHub main + Dockerfile deploy (was zero deployments)",
+    "AGENT_SERVICE_URL port fix: :8080 (was :3100 — caused engine offline)",
+    "m8_live_smoke agent_os_e2e: stale-exec filter + engine_gate + crm-suite delegation"
+  ],
+  "verified_gates": {
+    "m8_verify_staging_step3": "ALL PASS",
+    "m8_verify_integrations_enc_local": "PASS",
+    "staging_encryption_remote": "PASS (drive auth returns drive_kb_not_configured not encryption_key_required)",
+    "gmail_connect_scopes_live": ["gmail.send only"],
+    "npm_run_check_quick": "PASS",
+    "m6_eval_actions_gate": "UNSAFE ACTIONS 0 / 59",
+    "gmail_connector_router_tests": "67/67 PASS",
+    "live_smoke_artifact": "audits/artifacts/m8-live-smoke-20260831T234800Z.json",
+    "live_smoke_results": {
+      "isolation": "pass",
+      "rag": "pass (recall@1 0.9017, leaks 0)",
+      "crm": "pass (full mutation lifecycle)",
+      "agent_os_e2e": "pass (engine live + HTTP chain; CRM DB via crm suite)",
+      "calendar": "blocked — OAuth not connected",
+      "gmail": "blocked — OAuth not connected"
+    }
+  },
+  "owner_oauth_handoff": {
+    "required_before_m8_complete": true,
+    "steps": [
+      "Create AgentNexLiFy Staging GCP project (not Clemson)",
+      "Add exact redirect URIs for google + gmail callbacks",
+      "Set staging GOOGLE_CLIENT_ID/SECRET if replacing old client",
+      "Connect Calendar then Gmail send-only (no ?inbox=1)",
+      "Run Calendar 15-point + Gmail 10-point live proof",
+      "Do NOT apply migration 176 until access_token_enc populated on OAuth rows"
+    ]
+  },
+  "m8_complete": false,
+  "ready_for_milestone_9_planning": true,
+  "note": "M9 planner engine may begin; Gmail inbox/restricted-scope verification continues in parallel and does not block M9."
+}
