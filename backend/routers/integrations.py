@@ -33,7 +33,9 @@ router = APIRouter(prefix="/api/v1/integrations", tags=["integrations"])
 _JWT_ALGORITHM = "HS256"
 
 # Short-lived expiry for the OAuth state token (10 minutes).
-_STATE_TOKEN_EXPIRY_MINUTES = 10
+# 60m: Google test-user / 2FA consent often exceeds the old 10m window and
+# surfaces as "Invalid or expired state parameter" on the staging callback.
+_STATE_TOKEN_EXPIRY_MINUTES = 60
 
 
 def _jwt_secret() -> str:

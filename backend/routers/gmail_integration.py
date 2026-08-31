@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/integrations/gmail", tags=["integrations"])
 
 _JWT_ALGORITHM = "HS256"
-_STATE_TOKEN_EXPIRY_MINUTES = 10
+# Match Calendar OAuth: allow Google 2FA / test-user consent without state expiry.
+_STATE_TOKEN_EXPIRY_MINUTES = 60
 
 
 def _jwt_secret() -> str:
