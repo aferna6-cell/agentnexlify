@@ -1349,8 +1349,24 @@ def run_agent_os_e2e_suite(evidence: dict, client_id: str) -> int:
                 if "crm" in tool or "lead" in tool or "customer" in tool:
                     found_exec = True
                     break
-        # Lead verification via OS ask-data is optional; prefer tool-executions.
-        if found_exec:
+        if _service_creds_present() and _m8creds.is_trusted_server_key(_service_key()):
+            from backend.models.database import get_service_supabase
+
+            db = get_service_supabase()
+            leads = (
+                db.table("leads")
+                .select("id")
+                .eq("client_id", client_id)
+                .eq("email", f"{marker}@example.invalid")
+                .limit(1)
+                .execute()
+                .data
+                or []
+            )
+            found_lead = bool(leads)
+        if found_exec and found_lead:
+            break
+        if found_exec and not _service_creds_present():
             break
 
     _record(
@@ -1365,7 +1381,6 @@ def run_agent_os_e2e_suite(evidence: dict, client_id: str) -> int:
         ),
     )
 
-    # Optional: if service_role available locally, verify lead row.
     if _service_creds_present() and _m8creds.is_trusted_server_key(_service_key()):
         from backend.models.database import get_service_supabase
 
@@ -1380,12 +1395,11 @@ def run_agent_os_e2e_suite(evidence: dict, client_id: str) -> int:
             .data
             or []
         )
-        found_lead = bool(leads)
         _record(
             evidence,
             "agent_os_e2e",
             "db_lead_verification",
-            result="pass" if found_lead else "fail",
+            result="pass" if leads else "fail",
             lead_id=(leads[0]["id"] if leads else None),
         )
 
