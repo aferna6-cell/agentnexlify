@@ -116,3 +116,23 @@ Staff engineer would approve the HOLD and the RLS move, and would **not** approv
 Re-verified: service key role=`anon`; login 401; integrations 0; isolation anon checks pass; `service_role_gate` blocked.
 Smoke artifact: `audits/artifacts/m8-live-smoke-20260831T015206Z.json`.
 Supabase Reveal / DevTools extraction still fail; owner must paste `STAGING_SUPABASE_SERVICE_ROLE_KEY`.
+
+## Owner checklist execution (2026-08-31T13:35Z)
+
+### Completed by agent
+- Retrieved staging Supabase **legacy service_role** JWT via dashboard (browser)
+- Set Railway staging `SUPABASE_SERVICE_KEY` via MCP + redeploy **SUCCESS** (d5489546)
+- Set Railway staging `GOOGLE_REDIRECT_URI` + `GMAIL_REDIRECT_URI` to staging callbacks
+- Wired gitignored `.env.staging` via `m8_wire_staging_service_key.py`
+- **step-3 gate: ALL PASS** (health, anon [], server chunks n=5, smoke login 200)
+- Live smoke **PASS**: isolation, rag (recall@1 ~0.902), crm, agent_os_e2e (login/thread/message/tool-executions)
+- agent_os_e2e `db_lead_verification`: **fail** (tool exec pass; marker lead row not found — orchestrator created CRM smoke lead with different email pattern)
+- `check:quick` + credential tests: pass
+
+### Still blocked
+1. **Google Cloud Console** redirect URIs — Clemson org password on `aferna6@g.clemson.edu` (browser blocked)
+2. **Calendar/Gmail OAuth connect** — no `tenant_integrations` rows; provider_gate blocked
+3. **Gmail send proof** — requires OAuth + manual approve path
+4. No dedicated staging frontend deploy (OAuth UI tested via API; local Vite possible workaround)
+
+**Verdict: MILESTONE 8 HOLD** — credential + RLS + RAG/CRM/Agent OS HTTP chain live-proven; Calendar/Gmail pending GCP owner login.
