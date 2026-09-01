@@ -70,6 +70,18 @@ test("flag off: send_email is denied and not queued, even for Sales", async () =
   assert.equal(outcome.record.approvalState, "not_required");
 });
 
+test("flag off: denied send_email still stores a derived idempotencyKey; retry does not duplicate", async () => {
+  delete process.env[SEND_EMAIL_FLAG];
+  assert.equal(sendEmailEnabled(), false);
+  const first = await run("sales", validInput);
+  assert.equal(first.status, "denied");
+  assert.ok(first.record.idempotencyKey);
+  assert.match(first.record.idempotencyKey!, /^send_email-/);
+  const second = await run("sales", validInput);
+  assert.equal(second.executionId, first.executionId);
+  assert.equal(second.record.idempotencyKey, first.record.idempotencyKey);
+});
+
 test("flag on: a non-Sales department cannot propose or send", async () => {
   process.env[SEND_EMAIL_FLAG] = "1";
   for (const agentId of ["admin_records", "marketing", "service", undefined]) {

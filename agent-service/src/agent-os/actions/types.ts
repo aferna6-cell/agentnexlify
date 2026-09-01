@@ -147,7 +147,10 @@ export interface ActionExecutionRecord {
   policyReason: string;
   /** Number of times the tool body has actually been invoked. */
   attempts: number;
-  /** Caller-supplied de-duplication key, when provided. */
+  /**
+   * De-duplication key. Callers may supply one; the executor derives one for
+   * L2+ / approval tools when omitted. Persist and lookup use the same key.
+   */
   idempotencyKey?: string;
   effect?: EffectProvenance;
   createdAt: string;

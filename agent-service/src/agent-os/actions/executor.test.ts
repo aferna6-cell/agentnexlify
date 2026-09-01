@@ -177,6 +177,82 @@ test("a level-2 action cannot execute without approval", async () => {
   );
 });
 
+test("a level-2 action without an explicit idempotency key stores a derived replay key", async () => {
+  const outcome = await run("fixture_external_message", {
+    to: "sarah@example.com",
+    body: "hi",
+  });
+
+  assert.equal(outcome.status, "pending_approval");
+  assert.ok(outcome.record.idempotencyKey);
+  assert.ok(outcome.record.idempotencyKey!.trim().length >= 16);
+  assert.match(
+    outcome.record.idempotencyKey!,
+    /^fixture_external_message-run_1-/,
+  );
+});
+
+test("a level-0 action does not auto-derive an idempotency key", async () => {
+  const outcome = await run("get_business_profile", {});
+  assert.equal(outcome.status, "succeeded");
+  assert.equal(outcome.record.idempotencyKey, undefined);
+});
+
+function spyIdempotencyLookups(): string[] {
+  const keys: string[] = [];
+  const inner = h.store.findByIdempotencyKey.bind(h.store);
+  h.store.findByIdempotencyKey = async (accountId, toolId, key) => {
+    keys.push(key);
+    return inner(accountId, toolId, key);
+  };
+  return keys;
+}
+
+test("L2 retry with no caller key looks up the derived key and does not duplicate", async () => {
+  const payload = { to: "sarah@example.com", body: "hi" };
+  const first = await run("fixture_external_message", payload);
+  assert.equal(first.status, "pending_approval");
+  const derived = first.record.idempotencyKey;
+  assert.ok(derived);
+
+  const lookedUp = spyIdempotencyLookups();
+  const second = await run("fixture_external_message", payload);
+
+  assert.equal(second.executionId, first.executionId);
+  assert.equal(second.record.idempotencyKey, derived);
+  assert.ok(
+    lookedUp.includes(derived!),
+    `findByIdempotencyKey must query the derived key; got ${JSON.stringify(lookedUp)}`,
+  );
+  const history = await h.store.list({ accountId: "tenantA" });
+  assert.equal(
+    history.length,
+    1,
+    "retry must not insert a second execution row",
+  );
+});
+
+test("L2 retry with a different caller key still hits the derived key and does not duplicate", async () => {
+  const payload = { to: "sarah@example.com", body: "hi" };
+  const first = await run("fixture_external_message", payload);
+  const derived = first.record.idempotencyKey;
+  assert.ok(derived);
+
+  const lookedUp = spyIdempotencyLookups();
+  const second = await run("fixture_external_message", payload, {
+    idempotencyKey: "caller-other-key",
+  });
+
+  assert.equal(second.executionId, first.executionId);
+  assert.equal(second.record.idempotencyKey, derived);
+  assert.ok(
+    lookedUp.includes(derived!),
+    `findByIdempotencyKey must query the derived key on a mismatched caller key; got ${JSON.stringify(lookedUp)}`,
+  );
+  const history = await h.store.list({ accountId: "tenantA" });
+  assert.equal(history.length, 1);
+});
+
 test("a level-3 action always requires approval, even if the tenant lowers its threshold", async () => {
   const outcome = await run(
     "fixture_high_impact",
