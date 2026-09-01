@@ -788,9 +788,10 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
     from backend.services import os_tool_executions as ote
 
     ext_marker = f"m8-ext-{uuid.uuid4().hex[:8]}"
-    slot_jitter_minutes = int(uuid.uuid4().hex[:4], 16) % (12 * 60)
+    day_offset = 7 + (int(uuid.uuid4().hex[:2], 16) % 14)
+    slot_jitter_minutes = int(uuid.uuid4().hex[2:6], 16) % (24 * 60)
     ext_start = datetime.now(timezone.utc) + timedelta(
-        days=5, minutes=slot_jitter_minutes
+        days=day_offset, minutes=slot_jitter_minutes
     )
     ext_start = ext_start.replace(second=0, microsecond=0)
     ext_end = ext_start + timedelta(hours=1)

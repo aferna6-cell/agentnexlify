@@ -362,6 +362,26 @@ def test_record_execution_outcome_does_not_stamp_not_required_over_an_approved_c
     assert row["approval_state"] not in {"pending", "not_required"}
 
 
+def test_record_execution_outcome_does_not_wipe_stored_input():
+    db = _pending_db()
+    svc.claim_for_execution(db, CLIENT, EXEC_ID, approved_by="maya@sunsetauto.test")
+
+    svc.record_execution_outcome(
+        db,
+        CLIENT,
+        {
+            "id": EXEC_ID,
+            "status": "succeeded",
+            "result": {"messageId": "gm_123", "deduplicated": False},
+        },
+    )
+
+    row = db.rows("os_tool_executions")[0]
+    assert row["status"] == "succeeded"
+    assert row["input"]["subject"] == "Following up"
+    assert row["input"]["body"] == "Hi Sarah — can we book Tuesday?"
+
+
 # --- rejection -----------------------------------------------------------------
 
 

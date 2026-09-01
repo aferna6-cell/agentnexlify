@@ -530,6 +530,8 @@ def record_execution_outcome(
         if "approvedBy" not in execution and "approved_by" not in execution:
             patch.pop("approved_by", None)
             patch.pop("approved_at", None)
+    if "input" not in execution:
+        patch.pop("input", None)
     updated = (
         tenant_table(db, "os_tool_executions", client_id)
         .update(patch)
