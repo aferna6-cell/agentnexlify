@@ -113,6 +113,8 @@ const DRAFT_MARKERS = [
 const EXECUTE_MARKERS = [
   /\b(e-?mail|text|message|send|shoot|fire off)\b/i,
   /\b(add|log|record|save|attach|put|jot|note)\b/i,
+  // Level-1 CRM / record imperatives (create / update / stage moves).
+  /\b(create|update|change|set|move|mark)\b/i,
   /\b(go ahead and|please)\b/i,
 ];
 
@@ -140,8 +142,10 @@ const UPDATE_RECORD_RE =
   /\b(note|notes|noting|log|logged|record|records|recording|mark|flag|save|attach|jot|update|add)\b/i;
 const RETRIEVE_RE =
   /\b(what'?s?|which|who|show|list|pull up|look up|find|how many|how much|do (i|we) have|on file)\b/i;
-const SCHEDULE_RE = /\b(book|schedule|reschedule|cancel|move|slot|appointment|calendar)\b/i;
-const ANALYZE_RE = /\b(why|analy[sz]e|figure out|explain|breakdown|break down|trend|compare|should (i|we))\b/i;
+const SCHEDULE_RE =
+  /\b(book|schedule|reschedule|cancel|move|slot|appointment|calendar)\b/i;
+const ANALYZE_RE =
+  /\b(why|analy[sz]e|figure out|explain|breakdown|break down|trend|compare|should (i|we))\b/i;
 const DESTROY_RE = /\b(delete|remove|purge|wipe|erase|drop|get rid of)\b/i;
 
 /** Objects that make a "draft/write" ask a message rather than a new artifact. */
@@ -151,15 +155,79 @@ const MESSAGE_OBJECT_RE =
 /** The record-mutation shape: a note/flag placed ON a customer's record. */
 const RECORD_TARGET_RE = /\b(record|file|account|profile|crm|notes?)\b/i;
 
-function readIntent(ask: string, subject: SubjectType, isQuestion: boolean, subjectExists: boolean): TaskIntent {
+/**
+ * Explicit CRM create: "create/add a lead/customer …". Must beat communicate
+ * when the ask also mentions an email *address* or "do not email anyone".
+ */
+const CRM_CREATE_RE =
+  /\b(create|add|make)\b[\s\S]{0,50}\b(?:a |new )?(lead|customer|client|contact)\b/i;
+
+/** Field updates without requiring the word "record": "update Sarah's phone". */
+const CRM_FIELD_UPDATE_RE =
+  /\b(update|change|set)\b[\s\S]{0,80}\b(phone|email|address|name)\b/i;
+
+/** Pipeline stage vocabulary (canonical + common tenant labels). */
+const CRM_STAGE_WORD_RE =
+  /\b(new|contacted|qualified|quoted|won|lost|nurture|appointment[_ ]?booked|closed|proposal|negotiation|in[_ ]?progress)\b/i;
+
+/** Stage moves: "move Sarah to contacted", "mark Mike as won". */
+function isCrmStageAsk(ask: string): boolean {
+  if (
+    /\b(pipeline stage|lead stage|status|stage)\b/i.test(ask) &&
+    /\b(to|as|into)\b/i.test(ask)
+  ) {
+    return true;
+  }
+  // Known stage vocabulary after move/mark.
+  const move = ask.match(
+    /\b(?:move|mark)\s+(?:[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?|.+?)\s+(?:to|as)\s+([a-z_ ]+)/i,
+  );
+  if (move?.[1] && CRM_STAGE_WORD_RE.test(move[1].trim())) return true;
+  // Unknown stage token still counts as a CRM stage ask (tool validates).
+  // Exclude calendar phrasing so "move appointment to Tuesday" stays schedule.
+  if (
+    /\b(?:move|mark)\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\s+(?:to|as)\s+[a-z][a-z0-9_]*\b/i.test(
+      ask,
+    ) &&
+    !/\b(appointment|meeting|event|calendar|slot)\b/i.test(ask)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function readIntent(
+  ask: string,
+  subject: SubjectType,
+  isQuestion: boolean,
+  subjectExists: boolean,
+): TaskIntent {
   // Destruction first: it is the one intent whose misreading is unrecoverable.
   if (DESTROY_RE.test(ask)) return "destroy";
 
   // A note/flag placed on a customer's record is a record mutation, whatever
-  // noun the note happens to mention. This is what makes "note on Mike's record
-  // that he approved the tire quote" a record update rather than a quote task.
+  // noun the note happens to mention. Checked before CRM create so
+  // "add a note to Sarah's customer record" stays a note, not a create.
   if (UPDATE_RECORD_RE.test(ask) && RECORD_TARGET_RE.test(ask) && !isQuestion) {
     return "update_record";
+  }
+
+  // Explicit CRM field / stage mutations — before schedule ("move") and before
+  // communicate ("email" as a field value).
+  if (!isQuestion && (CRM_FIELD_UPDATE_RE.test(ask) || isCrmStageAsk(ask))) {
+    return "update_record";
+  }
+
+  // Explicit CRM create — before communicate so "create a lead … with email …"
+  // is create, not an outbound message.
+  if (!isQuestion && CRM_CREATE_RE.test(ask)) {
+    return "create";
+  }
+
+  // Hypotheticals ("what would a customer record for Sarah look like?") are
+  // analysis / drafting, never a retrieve that executes get_customer.
+  if (/\bwhat would\b/i.test(ask) && /\blook like\b/i.test(ask)) {
+    return "analyze";
   }
 
   // A question about practice ("should I be noting…") is analysis, never the
@@ -176,7 +244,10 @@ function readIntent(ask: string, subject: SubjectType, isQuestion: boolean, subj
     return "retrieve";
   }
 
-  if (SCHEDULE_RE.test(ask) && !COMMUNICATE_RE.test(ask)) return "schedule";
+  // Schedule, but not CRM stage moves ("move Sarah to contacted").
+  if (SCHEDULE_RE.test(ask) && !COMMUNICATE_RE.test(ask) && !isCrmStageAsk(ask)) {
+    return "schedule";
+  }
 
   // Communication outranks creation when the object of the verb is a message:
   // "draft an email" is communicating (with draft authorization), not creating
@@ -214,24 +285,53 @@ function readIntent(ask: string, subject: SubjectType, isQuestion: boolean, subj
  * and more constrained reading.
  */
 const SUBJECT_PATTERNS: [SubjectType, RegExp][] = [
-  ["complaint", /\b(complaints?|complained|furious|angry|upset|unhappy|apolog(y|ise|ize)|went wrong|ruined|damaged)\b/i],
+  [
+    "complaint",
+    /\b(complaints?|complained|furious|angry|upset|unhappy|apolog(y|ise|ize)|went wrong|ruined|damaged)\b/i,
+  ],
   ["review", /\b(reviews?|testimonials?|google review|yelp|star rating)\b/i],
-  ["invoice", /\b(invoices?|bills?|billing|past due|overdue|payments?|owes?|balance|refunds?)\b/i],
+  [
+    "invoice",
+    /\b(invoices?|bills?|billing|past due|overdue|payments?|owes?|balance|refunds?)\b/i,
+  ],
   ["quote", /\b(quotes?|quotation|estimates?|proposals?)\b/i],
   // "the car is ready" is service completion — the same operational subject as
   // "ready for pickup", which is why both halves of a hard-negative pair that
   // differ only in phrasing must land in the same department.
-  ["appointment", /\b(appointments?|bookings?|slots?|reschedul|visits?|drop[- ]?offs?|pick[- ]?ups?|(is|are)\s+ready|ready for pick)\b/i],
+  [
+    "appointment",
+    /\b(appointments?|bookings?|slots?|reschedul|visits?|drop[- ]?offs?|pick[- ]?ups?|(is|are)\s+ready|ready for pick)\b/i,
+  ],
   // Checked before customer_record: "email everyone in the pipeline a discount
   // offer" is a campaign that happens to name the pipeline, not a records task.
-  ["campaign", /\b(campaigns?|newsletters?|blast|promo|specials?|discounts?|offers?|social post|facebook|instagram|blog)\b/i],
-  ["customer_record", /\b(records?|files?|profiles?|crm|customer data|pipeline)\b/i],
-  ["staff", /\b(employees?|staff|hire|hiring|payroll|job posts?|training|handbook|team member)\b/i],
-  ["finances", /\b(revenue|financial|profit|cash flow|receivables|taxes?|quarterly|bookkeep)\b/i],
-  ["document", /\b(contracts?|agreements?|intake forms?|sop|polic(y|ies)|one[- ]?pagers?|templates?|checklists?)\b/i],
+  [
+    "campaign",
+    /\b(campaigns?|newsletters?|blast|promo|specials?|discounts?|offers?|social post|facebook|instagram|blog)\b/i,
+  ],
+  [
+    "customer_record",
+    // lead/customer/client beat outbound_message so "create a lead with email"
+    // stays a CRM subject rather than an email subject.
+    /\b(records?|files?|profiles?|crm|customer data|pipeline|leads?|customers?|clients?|contacts?)\b/i,
+  ],
+  [
+    "staff",
+    /\b(employees?|staff|hire|hiring|payroll|job posts?|training|handbook|team member)\b/i,
+  ],
+  [
+    "finances",
+    /\b(revenue|financial|profit|cash flow|receivables|taxes?|quarterly|bookkeep)\b/i,
+  ],
+  [
+    "document",
+    /\b(contracts?|agreements?|intake forms?|sop|polic(y|ies)|one[- ]?pagers?|templates?|checklists?)\b/i,
+  ],
   // Direction is decided below; the entry itself only detects "this is about a
   // message".
-  ["outbound_message", /\b(e-?mails?|messages?|texts?|repl(y|ies)|respond(ing)?|responses?|wording|note to)\b/i],
+  [
+    "outbound_message",
+    /\b(e-?mails?|messages?|texts?|repl(y|ies)|respond(ing)?|responses?|wording|note to)\b/i,
+  ],
 ];
 
 /** The business is answering something that came to it. */
@@ -252,9 +352,23 @@ function readSubject(ask: string): SubjectType {
 // --- Channel ---------------------------------------------------------------
 
 function readChannel(ask: string): IntentChannel {
-  if (/\b(e-?mail|inbox|cc|bcc)\b/i.test(ask)) return "email";
-  if (/\b(text|sms|txt)\b/i.test(ask)) return "sms";
-  if (/\b(call|phone|ring)\b/i.test(ask)) return "phone";
+  // Field mentions / negations are not an outbound channel choice.
+  const emailAsField =
+    /\bwith email\b/i.test(ask) ||
+    /\bemail\s+[^\s]+@[^\s]+/i.test(ask) ||
+    /\bdo not email\b/i.test(ask) ||
+    /\bdon'?t email\b/i.test(ask);
+  if (!emailAsField && /\b(e-?mail|inbox|cc|bcc)\b/i.test(ask)) return "email";
+  if (/\b(text|sms|txt)\b/i.test(ask) && !/\bwith (text|sms)\b/i.test(ask))
+    return "sms";
+  if (/\b(call|ring)\b/i.test(ask)) return "phone";
+  // "phone" as a CRM field ("update … phone to …") is not a phone channel.
+  if (
+    /\bphone\b/i.test(ask) &&
+    !/\b(update|change|set)\b[\s\S]{0,40}\bphone\b/i.test(ask)
+  ) {
+    return "phone";
+  }
   return "none";
 }
 
@@ -285,11 +399,14 @@ function readSubjectExists(ask: string): boolean {
 
 // --- Entry point -----------------------------------------------------------
 
-const QUESTION_RE = /^\s*(what|which|who|when|where|why|how|should|can|could|do|does|did|is|are|am)\b/i;
+const QUESTION_RE =
+  /^\s*(what|which|who|when|where|why|how|should|can|could|do|does|did|is|are|am)\b/i;
 
 /** Parse an owner ask onto the four semantic axes. Pure and deterministic. */
 export function readAskIntent(ask: string): AskIntent {
-  const isQuestion = QUESTION_RE.test(ask) || (ask.trim().endsWith("?") && !/^\s*(please|go ahead)/i.test(ask));
+  const isQuestion =
+    QUESTION_RE.test(ask) ||
+    (ask.trim().endsWith("?") && !/^\s*(please|go ahead)/i.test(ask));
   const subjectType = readSubject(ask);
   const subjectExists = readSubjectExists(ask);
   const intent = readIntent(ask, subjectType, isQuestion, subjectExists);
@@ -316,5 +433,9 @@ export function authorizesAction(intent: AskIntent): boolean {
   // Destruction and analysis never become actions in this system: there is no
   // tool behind them, and inventing one from a verb is exactly the failure mode
   // the approval model exists to prevent.
-  return intent.intent !== "destroy" && intent.intent !== "analyze" && intent.intent !== "unknown";
+  return (
+    intent.intent !== "destroy" &&
+    intent.intent !== "analyze" &&
+    intent.intent !== "unknown"
+  );
 }
