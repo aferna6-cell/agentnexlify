@@ -788,8 +788,12 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
     from backend.services import os_tool_executions as ote
 
     ext_marker = f"m8-ext-{uuid.uuid4().hex[:8]}"
-    ext_start = datetime.now(timezone.utc) + timedelta(days=5)
-    ext_start = ext_start.replace(minute=0, second=0, microsecond=0)
+    day_offset = 7 + (int(uuid.uuid4().hex[:2], 16) % 14)
+    slot_jitter_minutes = int(uuid.uuid4().hex[2:6], 16) % (24 * 60)
+    ext_start = datetime.now(timezone.utc) + timedelta(
+        days=day_offset, minutes=slot_jitter_minutes
+    )
+    ext_start = ext_start.replace(second=0, microsecond=0)
     ext_end = ext_start + timedelta(hours=1)
     ext_title = f"M8 external smoke {ext_marker}"
     ext_execution_id = str(uuid.uuid4())
@@ -911,11 +915,13 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
 
     ext_lookup = lookup_calendar_event(client_id, ext_google_id)
     ext_event = ext_lookup.get("event") if ext_lookup.get("state") == "found" else None
-    ext_readback_ok = ext_lookup.get("state") == "found" and _calendar_provider_matches(
+    ext_readback_ok = ext_lookup.get("state") == "found" and _calendar_external_provider_readback_matches(
         ext_event,
         google_id=ext_google_id,
+        marker=ext_marker,
         title=ext_title,
         start_iso=ext_start.isoformat(),
+        end_iso=ext_end.isoformat(),
     )
     attendee_emails = [
         (a.get("email") or "").lower() for a in (ext_event or {}).get("attendees") or []
@@ -2015,6 +2021,15 @@ def _provider_message_id_from_execution(row: dict | None) -> str | None:
     return text or None
 
 
+def _calendar_event_contains_marker(event: dict, marker: str) -> bool:
+    """Match M8 marker in fields the production booking path actually preserves."""
+    if not marker:
+        return False
+    summary = event.get("summary") or ""
+    description = event.get("description") or ""
+    return marker in summary or marker in description
+
+
 def _provider_events_matching_marker(
     client_id: str,
     marker: str,
@@ -2024,13 +2039,12 @@ def _provider_events_matching_marker(
     """Return (lookup_state, count). count is -1 when lookup_state != ok."""
     from backend.services.google_calendar import list_calendar_events_in_window
 
-    listed = list_calendar_events_in_window(
-        client_id, time_min, time_max, summary_contains=marker
-    )
+    # Bounded time-window list only — Google `q` may not search description.
+    listed = list_calendar_events_in_window(client_id, time_min, time_max)
     if listed.get("state") != "ok":
         return "unknown", -1
     events = listed.get("events") or []
-    matched = [ev for ev in events if marker in (ev.get("summary") or "")]
+    matched = [ev for ev in events if _calendar_event_contains_marker(ev, marker)]
     return "ok", len(matched)
 
 
@@ -2184,6 +2198,34 @@ def _calendar_provider_matches(
         return False
     provider_start = (fetched.get("start") or "")[:16]
     return start_iso[:16] in provider_start
+
+
+def _calendar_external_provider_readback_matches(
+    fetched: dict | None,
+    *,
+    google_id: str,
+    marker: str,
+    title: str,
+    start_iso: str,
+    end_iso: str,
+    guest_name: str = "M8 External Guest",
+) -> bool:
+    """External booking path stores marker in description notes, not summary."""
+    if not fetched or fetched.get("id") != google_id:
+        return False
+    summary = fetched.get("summary") or ""
+    if f"Appointment with {guest_name}" not in summary:
+        return False
+    description = fetched.get("description") or ""
+    if marker not in description and title not in description:
+        return False
+    provider_start = (fetched.get("start") or "")[:16]
+    provider_end = (fetched.get("end") or "")[:16]
+    if start_iso[:16] not in provider_start:
+        return False
+    if end_iso[:16] not in provider_end:
+        return False
+    return True
 
 
 def _extract_pending_proposal(msg_body: dict, marker: str) -> dict | None:

@@ -278,3 +278,114 @@ class TestProviderEventCountUnknown:
         )
         assert state == "unknown"
         assert count == -1
+
+
+class TestProviderEventMarkerMatching:
+    def test_marker_in_description_counts(self, monkeypatch):
+        from datetime import datetime, timezone
+
+        import backend.services.google_calendar as gcal
+
+        marker = "m8-ext-3df261f4"
+
+        def _fake_list(_client_id, _time_min, _time_max, summary_contains=None):
+            assert summary_contains is None
+            return {
+                "state": "ok",
+                "events": [
+                    {
+                        "id": "eoh24iqu5q06212ecl1sv4ru1k",
+                        "summary": "Appointment with M8 External Guest",
+                        "description": (
+                            "Customer: M8 External Guest\n"
+                            "Email: aidanfernandes31@gmail.com\n"
+                            f"Notes: M8 external smoke {marker}"
+                        ),
+                        "start": "2026-09-06T16:00:00Z",
+                        "end": "2026-09-06T17:00:00Z",
+                    }
+                ],
+            }
+
+        monkeypatch.setattr(gcal, "list_calendar_events_in_window", _fake_list)
+        now = datetime.now(timezone.utc)
+        state, count = m8._provider_events_matching_marker(
+            "tenant", marker, now, now
+        )
+        assert state == "ok"
+        assert count == 1
+
+    def test_marker_only_in_summary_still_counts(self, monkeypatch):
+        from datetime import datetime, timezone
+
+        import backend.services.google_calendar as gcal
+
+        marker = "m8-ext-summary-only"
+
+        def _fake_list(_client_id, _time_min, _time_max, summary_contains=None):
+            return {
+                "state": "ok",
+                "events": [
+                    {
+                        "summary": f"M8 smoke {marker}",
+                        "description": "Customer notes",
+                    }
+                ],
+            }
+
+        monkeypatch.setattr(gcal, "list_calendar_events_in_window", _fake_list)
+        now = datetime.now(timezone.utc)
+        state, count = m8._provider_events_matching_marker(
+            "tenant", marker, now, now
+        )
+        assert state == "ok"
+        assert count == 1
+
+    def test_no_marker_in_either_field_is_zero(self, monkeypatch):
+        from datetime import datetime, timezone
+
+        import backend.services.google_calendar as gcal
+
+        def _fake_list(_client_id, _time_min, _time_max, summary_contains=None):
+            return {
+                "state": "ok",
+                "events": [
+                    {
+                        "summary": "Appointment with Guest",
+                        "description": "Unrelated notes",
+                    }
+                ],
+            }
+
+        monkeypatch.setattr(gcal, "list_calendar_events_in_window", _fake_list)
+        now = datetime.now(timezone.utc)
+        state, count = m8._provider_events_matching_marker(
+            "tenant", "m8-ext-missing", now, now
+        )
+        assert state == "ok"
+        assert count == 0
+
+
+class TestExternalProviderReadback:
+    def test_external_readback_accepts_marker_in_description(self):
+        marker = "m8-ext-745f264a"
+        title = f"M8 external smoke {marker}"
+        fetched = {
+            "id": "jqoa5no0e8rejom07qn2fsn8n0",
+            "summary": "Appointment with M8 External Guest",
+            "description": (
+                "Customer: M8 External Guest\n"
+                "Email: guest@example.com\n"
+                f"Notes: {title}"
+            ),
+            "start": "2026-09-06T21:56:00Z",
+            "end": "2026-09-06T22:56:00Z",
+        }
+        assert m8._calendar_external_provider_readback_matches(
+            fetched,
+            google_id="jqoa5no0e8rejom07qn2fsn8n0",
+            marker=marker,
+            title=title,
+            start_iso="2026-09-06T21:56:00+00:00",
+            end_iso="2026-09-06T22:56:00+00:00",
+        )
