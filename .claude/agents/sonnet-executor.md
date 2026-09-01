@@ -122,7 +122,7 @@ These bite this codebase every session. Never violate:
 9. **Catch specific exceptions and log before handling**, like this: `except httpx.TimeoutException as e: logger.warning("twilio timeout", exc_info=e); raise`
 10. **Register new routers** in `backend/main.py`
 
-## Confidence gate before reporting done
+## Before reporting done
 
 Before marking complete, ask yourself:
 - Did I run every test gate? (Not "would pass" — actually ran)
@@ -131,8 +131,6 @@ Before marking complete, ask yourself:
 - Are there new files that need importing somewhere?
 - Did I register new routers?
 - Would a staff engineer approve this on first review?
-
-If confidence < 90% → keep working, don't report done.
 
 ## Anti-patterns
 

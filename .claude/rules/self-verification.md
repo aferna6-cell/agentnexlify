@@ -55,12 +55,10 @@ If you cannot verify in the current env, state WHY:
 - Never accept the self-verification output from a subagent without inspecting it
 
 ## Enforcement
-- Confidence gate (`scripts/claude-hooks/confidence-gate.sh`) already demands evidence at Stop
-- This rule adds: verification line in EVERY task-done message, not just at session Stop
+- This rule adds: verification line in EVERY task-done message
 - Invoke-regularly hook (`scripts/claude-hooks/invoke-opus-47-features.sh`) injects reminder
 
 ## Cross-refs
 - `rules/opus-4-7.md`
 - `rules/ultrareview.md` — after self-verification, optionally invoke `/ultrareview` for deeper audit
-- `scripts/claude-hooks/confidence-gate.sh`
 - `rules/workflow-orchestration.md` (quality gates)

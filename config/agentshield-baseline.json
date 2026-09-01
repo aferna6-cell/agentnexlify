@@ -361,24 +361,6 @@
       "fingerprint": "hooks-file-delete-260::scripts/claude-hooks/cleanup-worktree.sh::rm -rf"
     },
     {
-      "id": "hooks-file-delete-448",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook deletes files: rm -f",
-      "file": "scripts/claude-hooks/confidence-gate.sh",
-      "evidence": "rm -f",
-      "fingerprint": "hooks-file-delete-448::scripts/claude-hooks/confidence-gate.sh::rm -f"
-    },
-    {
-      "id": "hooks-logging-disabled-230",
-      "severity": "high",
-      "category": "hooks",
-      "title": "Hook disables logging: > /dev/null 2>&1",
-      "file": "scripts/claude-hooks/confidence-gate.sh",
-      "evidence": "> /dev/null 2>&1",
-      "fingerprint": "hooks-logging-disabled-230::scripts/claude-hooks/confidence-gate.sh::> /dev/null 2>&1"
-    },
-    {
       "id": "hooks-logging-disabled-164",
       "severity": "high",
       "category": "hooks",

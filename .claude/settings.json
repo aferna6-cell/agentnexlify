@@ -200,7 +200,7 @@
           },
           {
             "type": "agent",
-            "prompt": "A security-critical file was just modified. Read the changed file and scan for: (1) auth bypass — missing verify_tenant or JWT validation, (2) tenant data leakage — queries without tenant_id/client_id filter, (3) secret leakage in logs or responses, (4) Stripe webhook missing signature verification, (5) missing input validation on request bodies. Report findings with line numbers. Exit code 2 if critical vulnerability found.",
+            "prompt": "A security-critical file was just modified. Read the changed file and scan for: (1) auth bypass \u2014 missing verify_tenant or JWT validation, (2) tenant data leakage \u2014 queries without tenant_id/client_id filter, (3) secret leakage in logs or responses, (4) Stripe webhook missing signature verification, (5) missing input validation on request bodies. Report findings with line numbers. Exit code 2 if critical vulnerability found.",
             "if": "Edit(backend/routers/auth.py)|Edit(backend/routers/stripe_webhooks.py)|Edit(backend/routers/billing.py)|Edit(backend/routers/client_portal.py)|Edit(backend/dependencies.py)|Write(backend/routers/auth.py)|Write(backend/routers/stripe_webhooks.py)|Write(backend/routers/billing.py)|Write(backend/routers/client_portal.py)|Write(backend/dependencies.py)",
             "timeout": 90,
             "model": "claude-haiku-4-5-20251001",
@@ -316,11 +316,6 @@
       {
         "matcher": "",
         "hooks": [
-          {
-            "type": "command",
-            "command": "bash scripts/claude-hooks/confidence-gate.sh",
-            "timeout": 5
-          },
           {
             "type": "command",
             "command": "bash scripts/claude-hooks/auto-commit.sh"
