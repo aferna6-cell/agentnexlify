@@ -36,7 +36,10 @@
  *     that keeps every hard-negative pair on the right side of the line.
  */
 
-import type { ClarificationRequest, DepartmentActionRequest } from "./_department.ts";
+import type {
+  ClarificationRequest,
+  DepartmentActionRequest,
+} from "./_department.ts";
 import { authorizesAction, type AskIntent } from "./_intent.ts";
 import { describeAmbiguity, resolveCustomerAnywhere } from "./_resolve.ts";
 import type { AgentOutput, SharedContext } from "../types/agent.ts";
@@ -48,19 +51,37 @@ import type { AgentOutput, SharedContext } from "../types/agent.ts";
  */
 const EMAIL_RE = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
 
+/** Owner-provided subject/body in the ask — must be sent verbatim, not re-composed. */
+export function extractExplicitEmailPayload(
+  ask: string,
+): { subject: string; body: string } | undefined {
+  const match = ask.match(
+    /with subject ['"]([^'"]+)['"]\s+and body ['"]([^'"]+)['"]/i,
+  );
+  if (!match) return undefined;
+  const subject = match[1]?.trim();
+  const body = match[2]?.trim();
+  if (!subject || !body) return undefined;
+  if (!/\b(send exactly|exactly this email)\b/i.test(ask)) return undefined;
+  return { subject, body };
+}
+
 export function soleRecipient(ask: string): string | undefined {
   const found = [...new Set(ask.match(EMAIL_RE) ?? [])];
   return found.length === 1 ? found[0] : undefined;
 }
 
 /** A pronoun standing in for a person the ask never named. */
-const DANGLING_PRONOUN_RE = /\b(him|her|them|that customer|that guy|that lady|the customer)\b/i;
+const DANGLING_PRONOUN_RE =
+  /\b(him|her|them|that customer|that guy|that lady|the customer)\b/i;
 
 /** A definite reference to one business object: "the quote", "that invoice". */
-const DEFINITE_OBJECT_RE = /\b(the|that|this)\s+(quote|estimate|invoice|bill)\b/i;
+const DEFINITE_OBJECT_RE =
+  /\b(the|that|this)\s+(quote|estimate|invoice|bill)\b/i;
 
 /** A plural or group reference, which is not an ambiguity to resolve. */
-const GROUP_RE = /\b(everyone|all|customers|leads|people|three|two|several|each|both)\b/i;
+const GROUP_RE =
+  /\b(everyone|all|customers|leads|people|three|two|several|each|both)\b/i;
 
 /**
  * Decide whether a communication request is under-specified in a way that can
@@ -90,7 +111,8 @@ export function resolveCommunicationAmbiguity(args: {
   // An address in the ask settles the recipient regardless of names.
   if (soleRecipient(ownerAsk)) return undefined;
 
-  const named = typeof params.customer_name === "string" ? params.customer_name.trim() : "";
+  const named =
+    typeof params.customer_name === "string" ? params.customer_name.trim() : "";
 
   if (named) {
     const resolution = resolveCustomerAnywhere(context, named);
@@ -105,7 +127,10 @@ export function resolveCommunicationAmbiguity(args: {
 
   // No name at all, but the ask points at a particular person.
   if (DANGLING_PRONOUN_RE.test(ownerAsk)) {
-    return { clarify: "Who should this go to? I don't want to guess which customer you mean." };
+    return {
+      clarify:
+        "Who should this go to? I don't want to guess which customer you mean.",
+    };
   }
 
   // "Follow up on the quote" — which quote? Only a question when the business
@@ -147,6 +172,25 @@ export function resolveEmailSendFromOutput(args: {
 
   const to = soleRecipient(ownerAsk);
   if (!to) return undefined;
+
+  const explicit = extractExplicitEmailPayload(ownerAsk);
+  if (explicit) {
+    return {
+      toolId: "send_email",
+      input: { to, subject: explicit.subject, body: explicit.body },
+      describePending: (input) =>
+        `I've prepared this email to ${input.to} with the subject "${input.subject}". ` +
+        "Nothing has been sent — approve it and it goes out from your connected Gmail.",
+      describe: (result) => {
+        const out = result as
+          { to?: string; deduplicated?: boolean } | undefined;
+        if (out?.deduplicated) {
+          return `That email was already in your mailbox, so I didn't send a second copy to ${to}.`;
+        }
+        return `Sent the email to ${out?.to ?? to} from your Gmail.`;
+      },
+    };
+  }
 
   const draft = output.draft;
   if (!draft) return undefined;
