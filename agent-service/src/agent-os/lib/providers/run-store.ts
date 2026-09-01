@@ -21,7 +21,7 @@ export interface RoutingDecisionCreate {
   userId: string;
   runId?: string;
   ask: string;
-  classifier: "haiku" | "heuristic";
+  classifier: "haiku" | "heuristic" | "ml";
   /** "routed" | "ambiguous" | "wishlist_fallback" | "owner_override" | "direct_answer" | "declined" */
   decision: string;
   chosenAgent: string;
