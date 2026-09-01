@@ -22,6 +22,102 @@ function soleRecipient(ask: string): string | undefined {
   return found.length === 1 ? found[0] : undefined;
 }
 
+/** Closer that belongs to this opener. Mixed styles are not a pair. */
+const QUOTE_CLOSER: Record<string, string> = {
+  "'": "'",
+  '"': '"',
+  "\u201C": "\u201D",
+};
+
+function isLetter(ch: string | undefined): boolean {
+  return !!ch && /[A-Za-z]/.test(ch);
+}
+
+/** Apostrophe between letters (`it's`, `customer's`) is not a quote closer. */
+function isInnerApostrophe(
+  text: string,
+  i: number,
+  opener: string,
+  closer: string,
+): boolean {
+  return (
+    opener === "'" &&
+    closer === "'" &&
+    isLetter(text[i - 1]) &&
+    isLetter(text[i + 1])
+  );
+}
+
+/**
+ * Subject closer: same delimiter that opened, immediately before `and body`.
+ * First-apostrophe + lookahead is not pairing — `'word'` in the subject
+ * must not win.
+ */
+function findSubjectCloser(
+  text: string,
+  from: number,
+  opener: string,
+  closer: string,
+): number {
+  for (let i = from; i < text.length; i++) {
+    if (text[i] !== closer) continue;
+    if (isInnerApostrophe(text, i, opener, closer)) continue;
+    if (/^\s+and body\s+/i.test(text.slice(i + closer.length))) return i;
+  }
+  return -1;
+}
+
+/**
+ * Body closer: same delimiter that opened. Take the last paired closer so
+ * an inner `'word'` does not truncate the owner body.
+ */
+function findBodyCloser(
+  text: string,
+  from: number,
+  opener: string,
+  closer: string,
+): number {
+  let last = -1;
+  for (let i = from; i < text.length; i++) {
+    if (text[i] !== closer) continue;
+    if (isInnerApostrophe(text, i, opener, closer)) continue;
+    last = i;
+  }
+  return last;
+}
+
+function extractQuotedSubjectBody(
+  ask: string,
+): { subject: string; body: string } | undefined {
+  const head = /\bwith subject\s+/i.exec(ask);
+  if (!head || head.index === undefined) return undefined;
+
+  let i = head.index + head[0].length;
+  const opener = ask[i] ?? "";
+  const closer = QUOTE_CLOSER[opener];
+  if (!closer) return undefined;
+  i += opener.length;
+
+  const subjectEnd = findSubjectCloser(ask, i, opener, closer);
+  if (subjectEnd < 0) return undefined;
+  const subject = ask.slice(i, subjectEnd).trim();
+
+  i = subjectEnd + closer.length;
+  const mid = /^\s+and body\s+/i.exec(ask.slice(i));
+  if (!mid) return undefined;
+  i += mid[0].length;
+
+  // Body must open with the same delimiter the subject used.
+  if (ask.slice(i, i + opener.length) !== opener) return undefined;
+  i += opener.length;
+
+  const bodyEnd = findBodyCloser(ask, i, opener, closer);
+  if (bodyEnd < 0) return undefined;
+  const body = ask.slice(i, bodyEnd).trim();
+  if (!subject || !body) return undefined;
+  return { subject, body };
+}
+
 function extractOwnerSubjectBody(
   ask: string,
 ): { subject: string; body: string } | undefined {
@@ -32,16 +128,7 @@ function extractOwnerSubjectBody(
     if (subject && body) return { subject, body };
   }
 
-  const quoted = ask.match(
-    /\bwith subject\s+["“](.+?)["”]\s+and body\s+["“]([\s\S]+?)["”]/i,
-  );
-  if (quoted) {
-    const subject = quoted[1]?.trim() ?? "";
-    const body = quoted[2]?.trim() ?? "";
-    if (subject && body) return { subject, body };
-  }
-
-  return undefined;
+  return extractQuotedSubjectBody(ask);
 }
 
 function describePending(input: Record<string, unknown>): string {
