@@ -1,0 +1,34 @@
+{
+  "run": 115,
+  "date": "2026-09-01",
+  "winner": "Haiku CRM field-omission guard: file GH issue (ai-ready) for _extract.ts validation",
+  "winner_category": "code_health",
+  "winner_confidence": "HIGH",
+  "winner_action": "GH issue #728 filed with labels bug, agent-os, ai-ready",
+  "winner_gh_issue": 728,
+  "winner_autonomous_executable": false,
+  "evidence_summary": "PRs #726 (2026-08-31) and #727 (2026-09-01) both fix same Haiku CRM field-omission class (name/email/status missing) — 2 bugs in 2 days. Root cause: _extract.ts does not validate required CRM fields after Haiku extraction. admin_records_actions.ts backfill is a band-aid. Guard at extraction layer terminates recurrence.",
+  "mandate_checks": {
+    "step_9k_fires": "PASS — nightly-2026-09-01 confirms Step 9K executed: 3 stale subconscious PRs (30-35d), below comment threshold",
+    "subconscious_prs_stale": "3 open (30-35d), 0 critical (>60d) — healthy",
+    "step_9j_detection": "PASS — search_pull_requests found Dependabot PRs #721/#722, triggered @dependabot rebase",
+    "gh_684_supabase_access_token": "NOT SET — brain connector 40d stale, human has not actioned",
+    "os_tool_executions_stable": "FAIL — last commit 2026-08-30 (2 days ago, need 3+). Deferred to run 116.",
+    "m8_oauth_hold": "STILL HOLD — Calendar+CRM deploy blocked"
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "parking_lot": [
+    "Step 9K extension: auto-close implemented subconscious PRs (mechanism too fragile, re-evaluate run 120+)",
+    "os_tool_executions.py god class split (1 day short of 3-day stability condition, re-evaluate run 116)"
+  ],
+  "killed": [
+    "Step 9L: M8 deploy HOLD tracker (transient sprint state, no recurrence pattern)",
+    "Step 9C escalation extension (existing mechanism works, human action delay is the bottleneck)"
+  ],
+  "bonus_actions": [],
+  "commits_reviewed_nightly": 18,
+  "auto_fixes_nightly": 0,
+  "new_gh_issues_nightly": 0,
+  "run_116_mandate": "1. GH issue #728 filed? ai-ready label confirmed. 2. os_tool_executions.py stable (0 commits since 2026-08-30, 3+ days)? If yes: run 116 god class split candidate. 3. Step 9K second run: PRs count, stale count, critical count. 4. GH #684 SUPABASE_ACCESS_TOKEN: set in Railway? Brain connector staleness resolved? 5. M8 OAuth/service_role HOLD: Calendar+CRM deploy progress? 6. Did issue-to-pr-loop open a draft PR for GH #728?"
+}
