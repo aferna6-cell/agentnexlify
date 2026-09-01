@@ -18850,3 +18850,14 @@ fix(gmail): 401 refresh-once retry; Sales exact-email fallback
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Merge pull request #744 from aferna6-cell/cursor/sales-exact-email-park-51be
+
+fix(sales): park owner exact subject/body on single-quoted send
+**Date:** 2026-09-01
+**Commit:** b57c341
+**Author:** cursor[bot]
+**Files Changed:** 
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
