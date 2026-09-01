@@ -41,8 +41,32 @@ class TestGmailRecipientGate:
         assert "allowlist" in (blocker or "").lower()
 
 
+class TestGmailSmokePrompt:
+    def test_prompt_has_no_destructive_language(self):
+        subject, body, ask = m8._build_gmail_smoke_prompt(
+            "smoke@example.com", "m8-gmail-deadbeef"
+        )
+        assert m8._gmail_smoke_prompt_is_safe(subject, body, ask)
+        combined = f"{subject} {body} {ask}".lower()
+        for word in m8._GMAIL_SMOKE_FORBIDDEN_WORDS:
+            assert word not in combined
+
+    def test_prompt_targets_send_email_not_destructive_crm(self):
+        subject, body, ask = m8._build_gmail_smoke_prompt(
+            "smoke@example.com", "m8-gmail-deadbeef"
+        )
+        assert m8._gmail_smoke_ask_targets_send_email(ask)
+        assert m8._gmail_smoke_not_destructive_crm_intent(subject, body, ask)
+
+    def test_forbidden_word_rejected(self):
+        subject, body, ask = m8._build_gmail_smoke_prompt(
+            "smoke@example.com", "m8-gmail-deadbeef"
+        )
+        assert not m8._gmail_smoke_prompt_is_safe(subject, body + " delete this", ask)
+
+
 class TestCalendarProviderMatch:
-    def test_matches_summary_and_start(self):
+    def test_external_matches_summary_and_start(self):
         fetched = {
             "id": "evt_1",
             "summary": "M8 smoke internal 2026-09-05",
@@ -56,13 +80,119 @@ class TestCalendarProviderMatch:
             start_iso="2026-09-05T15:00:00+00:00",
         )
 
-    def test_rejects_wrong_id(self):
+    def test_external_rejects_wrong_id(self):
         assert not m8._calendar_provider_matches(
             {"id": "other", "summary": "x", "start": "2026-09-05T15:00:00Z"},
             google_id="evt_1",
             title="x",
             start_iso="2026-09-05T15:00:00+00:00",
         )
+
+
+class TestCalendarInternalBookingContract:
+    def test_db_matches_marker_notes_and_times(self):
+        row = {
+            "id": "appt-1",
+            "google_event_id": "g_evt_1",
+            "notes": "M8 smoke internal m8-cal-abc12345",
+            "start_time": "2026-09-05T15:00:00+00:00",
+            "end_time": "2026-09-05T16:00:00+00:00",
+        }
+        assert m8._calendar_internal_db_matches(
+            row,
+            marker="m8-cal-abc12345",
+            title="M8 smoke internal m8-cal-abc12345",
+            start_iso="2026-09-05T15:00:00+00:00",
+            end_iso="2026-09-05T16:00:00+00:00",
+            google_id="g_evt_1",
+        )
+
+    def test_db_rejects_missing_marker(self):
+        row = {
+            "id": "appt-1",
+            "google_event_id": "g_evt_1",
+            "notes": "unrelated appointment",
+            "start_time": "2026-09-05T15:00:00+00:00",
+            "end_time": "2026-09-05T16:00:00+00:00",
+        }
+        assert not m8._calendar_internal_db_matches(
+            row,
+            marker="m8-cal-abc12345",
+            title="M8 smoke internal m8-cal-abc12345",
+            start_iso="2026-09-05T15:00:00+00:00",
+            end_iso="2026-09-05T16:00:00+00:00",
+            google_id="g_evt_1",
+        )
+
+    def test_provider_readback_accepts_booking_summary_and_description(self):
+        fetched = {
+            "id": "g_evt_1",
+            "summary": "Appointment with Customer",
+            "description": "Customer: Customer\nEmail: noreply@agentnexlify.local\nNotes: M8 smoke internal m8-cal-abc12345",
+            "start": "2026-09-05T15:00:00Z",
+            "end": "2026-09-05T16:00:00Z",
+            "status": "confirmed",
+        }
+        assert m8._calendar_internal_provider_readback_matches(
+            fetched,
+            google_id="g_evt_1",
+            marker="m8-cal-abc12345",
+            title="M8 smoke internal m8-cal-abc12345",
+            expected_summary="Appointment with Customer",
+            start_iso="2026-09-05T15:00:00+00:00",
+            end_iso="2026-09-05T16:00:00+00:00",
+        )
+
+    def test_provider_readback_rejects_wrong_summary(self):
+        fetched = {
+            "id": "g_evt_1",
+            "summary": "M8 smoke internal m8-cal-abc12345",
+            "description": "Notes: M8 smoke internal m8-cal-abc12345",
+            "start": "2026-09-05T15:00:00Z",
+            "end": "2026-09-05T16:00:00Z",
+        }
+        assert not m8._calendar_internal_provider_readback_matches(
+            fetched,
+            google_id="g_evt_1",
+            marker="m8-cal-abc12345",
+            title="M8 smoke internal m8-cal-abc12345",
+            expected_summary="Appointment with Customer",
+            start_iso="2026-09-05T15:00:00+00:00",
+            end_iso="2026-09-05T16:00:00+00:00",
+        )
+
+    def test_provider_readback_rejects_missing_marker_in_description(self):
+        fetched = {
+            "id": "g_evt_1",
+            "summary": "Appointment with Customer",
+            "description": "Customer: Customer",
+            "start": "2026-09-05T15:00:00Z",
+            "end": "2026-09-05T16:00:00Z",
+        }
+        assert not m8._calendar_internal_provider_readback_matches(
+            fetched,
+            google_id="g_evt_1",
+            marker="m8-cal-abc12345",
+            title="M8 smoke internal m8-cal-abc12345",
+            expected_summary="Appointment with Customer",
+            start_iso="2026-09-05T15:00:00+00:00",
+            end_iso="2026-09-05T16:00:00+00:00",
+        )
+
+    def test_unknown_lookup_state_fails_readback(self):
+        lookup = {"state": "unknown", "reason": "api_error"}
+        internal_event = lookup.get("event")
+        readback_ok = lookup.get("state") == "found" and m8._calendar_internal_provider_readback_matches(
+            internal_event,
+            google_id="g_evt_1",
+            marker="m8-cal-abc12345",
+            title="M8 smoke internal m8-cal-abc12345",
+            expected_summary="Appointment with Customer",
+            start_iso="2026-09-05T15:00:00+00:00",
+            end_iso="2026-09-05T16:00:00+00:00",
+        )
+        assert lookup.get("state") == "unknown"
+        assert readback_ok is False
 
 
 class TestExecutionMarkerMatch:
@@ -92,14 +222,20 @@ class TestSendOnlyGmailProofHelpers:
             "input": {
                 "to": "smoke@example.com",
                 "subject": "M8 smoke m8-gmail-abc",
-                "body": "Milestone 8 controlled send m8-gmail-abc — safe to delete.",
+                "body": (
+                    "Milestone 8 controlled test message m8-gmail-abc. "
+                    "No follow-up action is required."
+                ),
             }
         }
         assert m8._send_payload_matches(
             row,
             "smoke@example.com",
             "M8 smoke m8-gmail-abc",
-            "Milestone 8 controlled send m8-gmail-abc — safe to delete.",
+            (
+                "Milestone 8 controlled test message m8-gmail-abc. "
+                "No follow-up action is required."
+            ),
             "m8-gmail-abc",
         )
 
