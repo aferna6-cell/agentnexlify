@@ -2015,6 +2015,15 @@ def _provider_message_id_from_execution(row: dict | None) -> str | None:
     return text or None
 
 
+def _calendar_event_contains_marker(event: dict, marker: str) -> bool:
+    """Match M8 marker in fields the production booking path actually preserves."""
+    if not marker:
+        return False
+    summary = event.get("summary") or ""
+    description = event.get("description") or ""
+    return marker in summary or marker in description
+
+
 def _provider_events_matching_marker(
     client_id: str,
     marker: str,
@@ -2024,13 +2033,12 @@ def _provider_events_matching_marker(
     """Return (lookup_state, count). count is -1 when lookup_state != ok."""
     from backend.services.google_calendar import list_calendar_events_in_window
 
-    listed = list_calendar_events_in_window(
-        client_id, time_min, time_max, summary_contains=marker
-    )
+    # Bounded time-window list only — Google `q` may not search description.
+    listed = list_calendar_events_in_window(client_id, time_min, time_max)
     if listed.get("state") != "ok":
         return "unknown", -1
     events = listed.get("events") or []
-    matched = [ev for ev in events if marker in (ev.get("summary") or "")]
+    matched = [ev for ev in events if _calendar_event_contains_marker(ev, marker)]
     return "ok", len(matched)
 
 

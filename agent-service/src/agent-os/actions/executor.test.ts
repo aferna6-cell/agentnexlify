@@ -177,6 +177,17 @@ test("a level-2 action cannot execute without approval", async () => {
   );
 });
 
+test("a level-2 action without an explicit idempotency key gets an auto-derived replay key", async () => {
+  const outcome = await run("fixture_external_message", {
+    to: "sarah@example.com",
+    body: "hi",
+  });
+
+  assert.equal(outcome.status, "pending_approval");
+  assert.ok(outcome.record.idempotencyKey);
+  assert.ok(outcome.record.idempotencyKey!.trim().length >= 16);
+});
+
 test("a level-3 action always requires approval, even if the tenant lowers its threshold", async () => {
   const outcome = await run(
     "fixture_high_impact",

@@ -13,7 +13,7 @@
  * workers all collapse to one tool invocation.
  */
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   evaluateActionPolicy,
   loadToolPolicy,
@@ -26,6 +26,7 @@ import { getActionStore } from "./store.ts";
 import { sanitize, sanitizeErrorMessage, sanitizeRecord } from "./sanitize.ts";
 import {
   RISK_HIGH_IMPACT,
+  RISK_EXTERNAL_COMMUNICATION,
   ToolExecutionError,
   type ActionExecutionRecord,
   type ActionExecutionStatus,
@@ -70,6 +71,48 @@ export interface ExecuteActionInput {
   registry?: ToolRegistry;
   /** Optional reasoning-trace emitter; tool use shows up in the honest trace. */
   trace?: TraceEmitter;
+}
+
+/** Mirror backend RISK_FAIL_CLOSED — L2+ must carry a replay key. */
+const RISK_FAIL_CLOSED = RISK_EXTERNAL_COMMUNICATION;
+
+function deriveIdempotencyKey(input: {
+  accountId: string;
+  runId?: string;
+  toolId: string;
+  payload: Record<string, unknown>;
+}): string {
+  const canonical = JSON.stringify({
+    accountId: input.accountId,
+    runId: input.runId ?? "",
+    toolId: input.toolId,
+    payload: input.payload,
+  });
+  const digest = createHash("sha256")
+    .update(canonical)
+    .digest("hex")
+    .slice(0, 32);
+  const prefix = `${input.toolId}-${input.runId ?? "norun"}`.slice(0, 120);
+  return `${prefix}-${digest}`.slice(0, 200);
+}
+
+function resolvedIdempotencyKey(
+  input: ExecuteActionInput,
+  toolId: string,
+  riskLevel: number,
+  requiresApproval: boolean,
+  parsedInput: Record<string, unknown>,
+): string | undefined {
+  const explicit = input.idempotencyKey?.trim();
+  if (explicit) return explicit;
+  const needsKey = riskLevel >= RISK_FAIL_CLOSED || requiresApproval;
+  if (!needsKey) return undefined;
+  return deriveIdempotencyKey({
+    accountId: input.accountId,
+    runId: input.runId,
+    toolId,
+    payload: parsedInput,
+  });
 }
 
 export interface ActionOutcome {
@@ -154,6 +197,7 @@ export async function executeAction(
   // a tool that does not exist is exactly the kind of thing we want a row for.
   // It is recorded at the highest risk level because nothing is known about it.
   if (!tool) {
+    const unknownInput = sanitizeRecord(input.input) as Record<string, unknown>;
     const record = await store.create(
       baseRecord({
         accountId: input.accountId,
@@ -165,9 +209,15 @@ export async function executeAction(
         requiresApproval: false,
         status: "denied",
         approvalState: "not_required",
-        input: sanitizeRecord(input.input),
+        input: unknownInput,
         policyReason: `unknown tool "${input.toolId}"`,
-        idempotencyKey: input.idempotencyKey,
+        idempotencyKey: resolvedIdempotencyKey(
+          input,
+          input.toolId,
+          RISK_HIGH_IMPACT,
+          false,
+          unknownInput,
+        ),
         error: {
           code: "unknown_tool",
           message: `unknown tool "${input.toolId}"`,
@@ -188,6 +238,7 @@ export async function executeAction(
     const message = parsed.error.issues
       .map((i) => `${i.path.join(".") || "input"}: ${i.message}`)
       .join("; ");
+    const invalidInput = sanitizeRecord(input.input) as Record<string, unknown>;
     const record = await store.create(
       baseRecord({
         accountId: input.accountId,
@@ -199,10 +250,16 @@ export async function executeAction(
         requiresApproval: tool.requiresApproval,
         status: "failed",
         approvalState: "not_required",
-        input: sanitizeRecord(input.input),
+        input: invalidInput,
         policyReason:
           "input rejected by the tool's schema — nothing was executed",
-        idempotencyKey: input.idempotencyKey,
+        idempotencyKey: resolvedIdempotencyKey(
+          input,
+          tool.id,
+          tool.riskLevel,
+          tool.requiresApproval,
+          invalidInput,
+        ),
         error: {
           code: "invalid_input",
           message: sanitizeErrorMessage(message),
@@ -225,6 +282,14 @@ export async function executeAction(
   });
   await trace?.work("tool_policy", `Permission check: ${evaluation.reason}`);
 
+  const idempotencyKey = resolvedIdempotencyKey(
+    input,
+    tool.id,
+    evaluation.riskLevel,
+    evaluation.requiresApproval,
+    sanitizeRecord(parsed.data) as Record<string, unknown>,
+  );
+
   const common = {
     accountId: input.accountId,
     runId: input.runId,
@@ -235,7 +300,7 @@ export async function executeAction(
     requiresApproval: evaluation.requiresApproval,
     input: sanitizeRecord(parsed.data),
     policyReason: evaluation.reason,
-    idempotencyKey: input.idempotencyKey,
+    idempotencyKey,
   };
 
   if (evaluation.decision === "deny") {

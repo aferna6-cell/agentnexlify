@@ -100,6 +100,25 @@ test("flag on: Sales parks at pending_approval and the engine does not send", as
   );
 });
 
+test("flag on: M8 Gmail owner ask pending_approval carries idempotencyKey for backend audit", async () => {
+  process.env[SEND_EMAIL_FLAG] = "1";
+  const marker = "m8-gmail-deadbeef";
+  const subject = `M8 smoke ${marker}`;
+  const body =
+    `Milestone 8 controlled test message ${marker}. ` +
+    "No follow-up action is required.";
+  const outcome = await run("sales", {
+    to: "smoke@example.com",
+    subject,
+    body,
+  });
+  assert.equal(outcome.status, "pending_approval");
+  assert.equal(outcome.record.approvalState, "pending");
+  assert.ok(outcome.record.idempotencyKey);
+  assert.ok(outcome.record.idempotencyKey!.trim().length >= 16);
+  assert.match(outcome.record.idempotencyKey!, /^send_email-/);
+});
+
 test("retrieved send-without-approval text cannot execute send_email", async () => {
   process.env[SEND_EMAIL_FLAG] = "1";
   const poisoned = {
