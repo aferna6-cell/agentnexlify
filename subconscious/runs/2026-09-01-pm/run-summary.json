@@ -1,0 +1,25 @@
+{
+  "run": 116,
+  "date": "2026-09-01-pm",
+  "evidence_summary": "Commit 8a60a59 (2026-08-30) added 101-line 401 retry fix to gmail_connector.py — production auth failure. connector_awareness.py and connector_registry.py have no 401 handling. os_tool_executions.py at 772L (god-class), committed 2026-09-01 (unstable). nightly-2026-09-01: Step 9K fired (3 stale subconscious PRs, below threshold), Step 9J triggered dependabot rebase on PRs #721/#722. GH #684 SUPABASE_ACCESS_TOKEN still unset (brain connector 40d stale). M8 sprint active (20+ commits in 3d).",
+  "ideas_count": 5,
+  "winner": "Step 9L — nightly connector auth pattern scan",
+  "confidence": "HIGH",
+  "rejected": [
+    "CRM eval CI gate — evidence unconfirmed, M8 timing",
+    "Close stale subconscious PRs — Step 9K handles escalation"
+  ],
+  "weakened": [
+    "os_tool_executions.py split issue — stability condition unmet (committed 2026-09-01), defer to run 117",
+    "Gmail auth KB article — parking lot, bonus with Step 9L"
+  ],
+  "mandate_check": {
+    "step_9k_fires": "PASS",
+    "step_9j_detection": "PASS",
+    "gh_684_supabase_token": "FAIL — still unset",
+    "os_tool_stability": "FAIL — committed 2026-09-01",
+    "m8_oauth_hold": "ONGOING"
+  },
+  "autonomous_executable": true,
+  "implementation_channel": "SKILL.md edit — same as Steps 9C/9E/9F/9G/9I/9J/9K"
+}
