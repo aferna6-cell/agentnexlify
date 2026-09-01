@@ -90,7 +90,7 @@ Study → Apply → Systemize.
 | Code | `/new-feature`, `/fix-bug`, backend-dev + frontend-dev agents |
 | Tool | Supabase MCP, Playwright MCP, Chrome DevTools MCP, GitHub plugin |
 | Memory | CLAUDE.md, `memory/`, `PROMPTLIBRARY.md`, `docs/dev-knowledge/` |
-| Workflow | 85 skills, 25 commands, 32 hooks, 60 agents, `issue-to-pr-loop` |
+| Workflow | 85 skills, 25 commands, 31 hooks, 60 agents, `issue-to-pr-loop` |
 
 ## Cross-refs
 - `.claude/rules/claude-usage-patterns.md` — 12 operating modes
