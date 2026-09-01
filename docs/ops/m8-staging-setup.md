@@ -142,6 +142,36 @@ python3 scripts/m8_live_smoke.py
 Gmail external send additionally requires `M8_SMOKE_ALLOW_EXTERNAL_SEND=1` and
 the manual approve procedure in `docs/milestone-6-gmail-proof.md`.
 
+Automated live proof (preferred once runner is green):
+
+```bash
+export M8_SMOKE_ALLOW_EXTERNAL_SEND=1
+export M8_SMOKE_GMAIL_RECIPIENT=<controlled inbox you own>
+export M8_SMOKE_GMAIL_RECIPIENT_ALLOWLIST=<same address or comma list>
+export M8_SMOKE_EXTERNAL_ATTENDEE=<harmless external guest email>
+# optional: independent recipient-side delivery check (NOT product Gmail OAuth read)
+export M8_SMOKE_GMAIL_RECIPIENT_VERIFY_URL=<https://your-verifier/check>
+export SEND_EMAIL_ENABLED=1   # also set on staging Railway backend + agent-service
+export CALENDAR_ACTIONS_ENABLED=1
+M8_SMOKE_SUITES=calendar,gmail,agent_os_e2e,crm,isolation,rag python3 scripts/m8_live_smoke.py
+```
+
+**Railway staging (required for live proof):** `SEND_EMAIL_ENABLED=1` on both the
+FastAPI backend and `agent-service` (TS proposal gate + Python execution gate).
+Keep production OFF. Same for `CALENDAR_ACTIONS_ENABLED=1` when exercising
+Calendar approval paths.
+
+Gmail uses **send-only** `gmail.send` OAuth. The smoke runner does **not** call
+`messages.list` / `messages.get` on the product connector (those require read
+scopes). Proof is: approved payload on the execution row, provider
+`messages.send` acknowledgement (`messageId` on the row), idempotent second
+approve. Optional `M8_SMOKE_GMAIL_RECIPIENT_VERIFY_URL` is a separate
+recipient-side checker if you want independent delivery proof.
+
+Calendar external-attendee approval and Gmail send both exercise the owner
+`/api/v1/os/tool-executions/{id}/approve` path — not direct Google calls for
+the approval boundary test.
+
 ## 6. Rollback
 
 Unset / set `=0` on staging (and never flip production):
