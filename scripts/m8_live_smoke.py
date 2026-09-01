@@ -563,6 +563,8 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
         return 3
 
     db = get_service_supabase()
+    cal_marker = f"m8-cal-{uuid.uuid4().hex[:8]}"
+    title_internal = f"M8 smoke internal {cal_marker}"
     start = datetime.now(timezone.utc) + timedelta(days=3)
     start = start.replace(minute=0, second=0, microsecond=0)
     end = start + timedelta(hours=1)
@@ -599,7 +601,7 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
         {
             "start": start.isoformat(),
             "end": end.isoformat(),
-            "title": f"M8 smoke internal {start.date().isoformat()}",
+            "title": title_internal,
             "sendInvitations": False,
             "attendees": [],
         },
@@ -615,6 +617,25 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
         return 4
     event_id = row.get("id")
     google_id = row.get("google_event_id")
+    db_ok = _calendar_internal_db_matches(
+        row,
+        marker=cal_marker,
+        title=title_internal,
+        start_iso=start.isoformat(),
+        end_iso=end.isoformat(),
+        google_id=google_id,
+    )
+    _record(
+        evidence,
+        "calendar",
+        "internal_db_readback",
+        result="pass" if db_ok else "fail",
+        appointment_id=event_id,
+        provider_event_id=google_id,
+        marker=cal_marker,
+    )
+    if not db_ok:
+        return 4
     _record(
         evidence,
         "calendar",
@@ -623,9 +644,9 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
         appointment_id=event_id,
         provider_event_id=google_id,
         verification=detail,
+        marker=cal_marker,
     )
 
-    title_internal = f"M8 smoke internal {start.date().isoformat()}"
     if not google_id:
         _record(
             evidence,
@@ -636,16 +657,20 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
         )
         return 4
     fetched_internal = lookup_calendar_event(client_id, google_id)
+    lookup_state = fetched_internal.get("state")
     internal_event = (
         fetched_internal.get("event")
-        if fetched_internal.get("state") == "found"
+        if lookup_state == "found"
         else None
     )
-    readback_ok = fetched_internal.get("state") == "found" and _calendar_provider_matches(
+    readback_ok = lookup_state == "found" and _calendar_internal_provider_readback_matches(
         internal_event,
         google_id=google_id,
+        marker=cal_marker,
         title=title_internal,
+        expected_summary="Appointment with Customer",
         start_iso=start.isoformat(),
+        end_iso=end.isoformat(),
     )
     _record(
         evidence,
@@ -653,10 +678,13 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
         "provider_readback",
         result="pass" if readback_ok else "fail",
         provider_event_id=google_id,
-        lookup_state=fetched_internal.get("state"),
+        lookup_state=lookup_state,
         provider_status=(internal_event or {}).get("status"),
+        provider_summary=(internal_event or {}).get("summary"),
         invented=False,
     )
+    if lookup_state == "unknown":
+        return 4
     if not readback_ok:
         return 4
 
@@ -667,7 +695,7 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
         {
             "start": start.isoformat(),
             "end": end.isoformat(),
-            "title": f"M8 smoke internal {start.date().isoformat()}",
+            "title": title_internal,
             "sendInvitations": False,
             "attendees": [],
         },
@@ -1412,8 +1440,16 @@ def run_gmail_suite(evidence: dict, client_id: str) -> int:
 
     db = get_service_supabase()
     marker = f"m8-gmail-{uuid.uuid4().hex[:8]}"
-    subject = f"M8 smoke {marker}"
-    body = f"Milestone 8 controlled send {marker} — safe to delete."
+    subject, body, ask = _build_gmail_smoke_prompt(recipient, marker)
+    if not _gmail_smoke_prompt_is_safe(subject, body, ask):
+        _record(
+            evidence,
+            "gmail",
+            "prompt_contract",
+            result="fail",
+            blocker="gmail smoke prompt contains forbidden destructive-action language",
+        )
+        return 4
 
     code_t, thread = _os_http(
         "POST",
@@ -1434,10 +1470,6 @@ def run_gmail_suite(evidence: dict, client_id: str) -> int:
     _record(evidence, "gmail", "create_thread", result="pass", thread_id=thread_id)
 
     poll_since = datetime.now(timezone.utc).isoformat()
-    ask = (
-        f"Using Sales email tools only, email {recipient} with subject '{subject}' "
-        f"and body '{body}'. This must require owner approval before sending."
-    )
     code_m, msg_body = _os_http(
         "POST",
         f"/api/v1/os/threads/{thread_id}/messages",
@@ -2047,6 +2079,96 @@ def _appointments_with_marker(db: Any, client_id: str, marker: str) -> list[dict
         .data
         or []
     )
+
+
+_GMAIL_SMOKE_FORBIDDEN_WORDS = ("delete", "remove", "erase", "destroy", "cancel")
+
+
+def _build_gmail_smoke_prompt(recipient: str, marker: str) -> tuple[str, str, str]:
+    """Build Gmail live-smoke subject/body/owner-ask without destructive-action language."""
+    subject = f"M8 smoke {marker}"
+    body = (
+        f"Milestone 8 controlled test message {marker}. "
+        "No follow-up action is required."
+    )
+    ask = (
+        f"Using Sales email tools only, send an email to {recipient} with subject "
+        f"'{subject}' and body '{body}'. Send exactly this email and perform no other "
+        "action. This email must require owner approval before sending."
+    )
+    return subject, body, ask
+
+
+def _gmail_smoke_prompt_is_safe(subject: str, body: str, ask: str) -> bool:
+    combined = f"{subject} {body} {ask}".lower()
+    return not any(word in combined for word in _GMAIL_SMOKE_FORBIDDEN_WORDS)
+
+
+def _gmail_smoke_ask_targets_send_email(ask: str) -> bool:
+    lower = ask.lower()
+    return (
+        "sales email tools only" in lower
+        and "send an email" in lower
+        and "owner approval" in lower
+    )
+
+
+def _gmail_smoke_not_destructive_crm_intent(subject: str, body: str, ask: str) -> bool:
+    return _gmail_smoke_prompt_is_safe(subject, body, ask) and _gmail_smoke_ask_targets_send_email(
+        ask
+    )
+
+
+def _calendar_internal_db_matches(
+    row: dict | None,
+    *,
+    marker: str,
+    title: str,
+    start_iso: str,
+    end_iso: str,
+    google_id: str | None,
+) -> bool:
+    if not row or not row.get("id"):
+        return False
+    if not google_id or row.get("google_event_id") != google_id:
+        return False
+    notes = row.get("notes") or ""
+    if marker not in notes and title not in notes:
+        return False
+    row_start = (row.get("start_time") or "")[:16]
+    row_end = (row.get("end_time") or "")[:16]
+    if start_iso[:16] not in row_start:
+        return False
+    if end_iso[:16] not in row_end:
+        return False
+    return True
+
+
+def _calendar_internal_provider_readback_matches(
+    fetched: dict | None,
+    *,
+    google_id: str,
+    marker: str,
+    title: str,
+    expected_summary: str,
+    start_iso: str,
+    end_iso: str,
+) -> bool:
+    if not fetched or fetched.get("id") != google_id:
+        return False
+    summary = fetched.get("summary") or ""
+    if expected_summary not in summary:
+        return False
+    description = fetched.get("description") or ""
+    if marker not in description and title not in description:
+        return False
+    provider_start = (fetched.get("start") or "")[:16]
+    provider_end = (fetched.get("end") or "")[:16]
+    if start_iso[:16] not in provider_start:
+        return False
+    if end_iso[:16] not in provider_end:
+        return False
+    return True
 
 
 def _calendar_provider_matches(
