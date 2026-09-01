@@ -154,6 +154,55 @@ test("create_customer: exact M8 E2E smoke phrasing", () => {
   });
 });
 
+test("create_customer: Haiku-empty params still resolve from ask text", () => {
+  // Staging failure mode: Haiku returned extracted_params without
+  // customer_name/email/status, and the resolver asked for a name instead
+  // of calling create_customer. Ask-text extraction must fill the gaps.
+  process.env[CRM_ACTIONS_FLAG] = "1";
+  const marker = "m8-e2e-82b2bb74";
+  const ask =
+    `Using CRM tools only, create a lead named 'M8 E2E ${marker}' with email ` +
+    `${marker}@example.invalid and status new. Do not email anyone.`;
+  const intent = readAskIntent(ask);
+  const out = resolveRecordAction({
+    ownerAsk: ask,
+    params: { request: ask },
+    context,
+    intent,
+  });
+  assert.equal(toolOf(out), "create_customer");
+  assert.deepEqual(inputOf(out), {
+    name: `M8 E2E ${marker}`,
+    email: `${marker}@example.invalid`,
+    status: "new",
+  });
+});
+
+test("create_customer: Haiku blank CRM fields do not block ask extraction", () => {
+  process.env[CRM_ACTIONS_FLAG] = "1";
+  const ask =
+    "Using CRM tools only, create a lead named 'M8 E2E blank' with email " +
+    "blank@example.invalid and status new. Do not email anyone.";
+  const intent = readAskIntent(ask);
+  const out = resolveRecordAction({
+    ownerAsk: ask,
+    params: {
+      request: ask,
+      customer_name: "   ",
+      email: "",
+      status: null,
+    },
+    context,
+    intent,
+  });
+  assert.equal(toolOf(out), "create_customer");
+  assert.deepEqual(inputOf(out), {
+    name: "M8 E2E blank",
+    email: "blank@example.invalid",
+    status: "new",
+  });
+});
+
 test("create_customer: never invents missing fields", () => {
   const { out } = resolve("Create a lead named Only Name.");
   const input = inputOf(out) ?? {};

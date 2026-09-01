@@ -234,7 +234,26 @@ export async function classifyWithHaiku(ask: string, runId?: string): Promise<Cl
       { agentId: routedTo, confidence: clamp(parsed.confidence ?? 0.5) },
       ...altCandidates,
     ];
-    const params = parsed.extracted_params ?? extractParams(ask);
+    const heuristic = extractParams(ask);
+    const haiku = parsed.extracted_params ?? {};
+    // Haiku may omit CRM fields it does not know about; never drop
+    // heuristically-extracted explicit values (name/email/phone/status).
+    const params: Record<string, unknown> = { ...heuristic };
+    for (const [k, v] of Object.entries(haiku)) {
+      if (v !== undefined && v !== null && !(typeof v === "string" && v.trim() === "")) {
+        params[k] = v;
+      }
+    }
+    for (const key of ["customer_name", "email", "phone", "address", "status"] as const) {
+      const hv = haiku[key];
+      if (
+        (hv === undefined || hv === null || (typeof hv === "string" && hv.trim() === "")) &&
+        heuristic[key] !== undefined &&
+        !(typeof heuristic[key] === "string" && heuristic[key].trim() === "")
+      ) {
+        params[key] = heuristic[key];
+      }
+    }
     return { classifier: "haiku", candidates, params };
   } catch (err) {
     if (err instanceof ModelUnavailableError) return null;

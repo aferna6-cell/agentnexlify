@@ -17,6 +17,7 @@ import type {
   DepartmentActionRequest,
 } from "./_department.ts";
 import { authorizesAction, type AskIntent } from "./_intent.ts";
+import { extractParams } from "./_extract.ts";
 import { describeAmbiguity, resolveCustomerAnywhere } from "./_resolve.ts";
 import { crmActionsEnabled } from "../actions/flags.ts";
 import type { SharedContext } from "../types/agent.ts";
@@ -47,10 +48,8 @@ export function extractNoteText(ask: string): string | undefined {
  */
 
 /** Stage-move phrasing: "move X to contacted", "mark X as won", pipeline stage. */
-const STAGE_ASK_RE =
-  /\b(pipeline\s+stage|lead\s+stage|status|stage)\b/i;
-const STAGE_MOVE_RE =
-  /\b(?:move|mark)\s+.+\s+(?:to|as)\s+['"]?[a-z]/i;
+const STAGE_ASK_RE = /\b(pipeline\s+stage|lead\s+stage|status|stage)\b/i;
+const STAGE_MOVE_RE = /\b(?:move|mark)\s+.+\s+(?:to|as)\s+['"]?[a-z]/i;
 
 /** Field-update phrasing without requiring the word "record". */
 const FIELD_ASK_RE =
@@ -128,13 +127,41 @@ function explicitUpdateFields(
   return fields;
 }
 
+function blank(v: unknown): boolean {
+  return (
+    v === undefined || v === null || (typeof v === "string" && v.trim() === "")
+  );
+}
+
+/** Prefer orchestrator params; fill gaps from the ask so Haiku omissions cannot drop explicit CRM fields. */
+function crmParams(
+  ownerAsk: string,
+  params: Record<string, unknown>,
+): Record<string, unknown> {
+  const extracted = extractParams(ownerAsk);
+  const merged: Record<string, unknown> = { ...extracted, ...params };
+  for (const key of [
+    "customer_name",
+    "email",
+    "phone",
+    "address",
+    "status",
+  ] as const) {
+    if (blank(params[key]) && !blank(extracted[key])) {
+      merged[key] = extracted[key];
+    }
+  }
+  return merged;
+}
+
 export function resolveRecordAction(args: {
   ownerAsk: string;
   params: Record<string, unknown>;
   context: SharedContext;
   intent: AskIntent;
 }): DepartmentActionRequest | ClarificationRequest | undefined {
-  const { ownerAsk, params, context, intent } = args;
+  const { ownerAsk, params: rawParams, context, intent } = args;
+  const params = crmParams(ownerAsk, rawParams);
 
   if (intent.intent === "retrieve" && BUSINESS_PROFILE_RE.test(ownerAsk)) {
     return {
