@@ -180,7 +180,11 @@ async def gmail_callback(
 
     if settings.frontend_url:
         base = settings.frontend_url.rstrip("/")
-        target = f"{base}/#agent-os/threads/{os_thread_id}" if os_thread_id else f"{base}/#integrations"
+        target = (
+            f"{base}/dashboard/agent-os?thread={os_thread_id}&connected=gmail"
+            if os_thread_id
+            else f"{base}/dashboard/integrations"
+        )
         return RedirectResponse(url=target)
 
     return HTMLResponse(

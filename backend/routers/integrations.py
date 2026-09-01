@@ -229,7 +229,7 @@ async def google_callback(
         provider_label="Google Calendar",
         os_thread_id=os_thread_id,
         return_to=return_to,
-        fallback_hash="/#integrations",
+        fallback_hash="/dashboard/integrations?google=connected",
     )
 
 
@@ -387,7 +387,7 @@ async def m365_callback(
         provider_label="Microsoft 365",
         os_thread_id=os_thread_id,
         return_to=return_to,
-        fallback_hash="/#integrations",
+        fallback_hash="/dashboard/integrations?google=connected",
     )
 
 
