@@ -18839,3 +18839,14 @@ fix(ci): align execution-layer counts and Agent OS types
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Merge pull request #743 from aferna6-cell/cursor/gmail-401-sales-exact-email-b5e4
+
+fix(gmail): 401 refresh-once retry; Sales exact-email fallback
+**Date:** 2026-09-01
+**Commit:** 7ef4d1f
+**Author:** cursor[bot]
+**Files Changed:** 
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
