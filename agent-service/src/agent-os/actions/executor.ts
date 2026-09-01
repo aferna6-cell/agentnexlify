@@ -126,9 +126,19 @@ function derivedIdempotencyKey(
 }
 
 /**
- * Lookup by any of the keys that might already be stored. Caller-supplied and
- * derived keys are both queried so a retry that omitted (or changed) the
- * caller key still finds the L2+/approval row.
+ * Canonical replay key: when derivation applies it wins persist AND lookup.
+ * One field cannot store both; caller-wins persist with derived-only lookup
+ * misses on a retry that omits the caller key.
+ */
+function canonicalIdempotencyKey(
+  explicit: string | undefined,
+  derived: string | undefined,
+): string | undefined {
+  return derived ?? explicit;
+}
+
+/**
+ * Lookup the canonical key. Persist writes the same value.
  */
 async function findByAnyIdempotencyKey(
   store: ActionStore,
@@ -237,11 +247,12 @@ export async function executeAction(
       false,
       unknownInput,
     );
+    const canonical = canonicalIdempotencyKey(explicit, derived);
     const replay = await findByAnyIdempotencyKey(
       store,
       input.accountId,
       input.toolId,
-      [derived],
+      [canonical],
     );
     if (replay) return outcomeOf(replay);
     const record = await store.create(
@@ -257,7 +268,7 @@ export async function executeAction(
         approvalState: "not_required",
         input: unknownInput,
         policyReason: `unknown tool "${input.toolId}"`,
-        idempotencyKey: explicit ?? derived,
+        idempotencyKey: canonical,
         error: {
           code: "unknown_tool",
           message: `unknown tool "${input.toolId}"`,
@@ -286,11 +297,12 @@ export async function executeAction(
       tool.requiresApproval,
       invalidInput,
     );
+    const canonical = canonicalIdempotencyKey(explicit, derived);
     const replay = await findByAnyIdempotencyKey(
       store,
       input.accountId,
       tool.id,
-      [derived],
+      [canonical],
     );
     if (replay) return outcomeOf(replay);
     const record = await store.create(
@@ -307,7 +319,7 @@ export async function executeAction(
         input: invalidInput,
         policyReason:
           "input rejected by the tool's schema — nothing was executed",
-        idempotencyKey: explicit ?? derived,
+        idempotencyKey: canonical,
         error: {
           code: "invalid_input",
           message: sanitizeErrorMessage(message),
@@ -338,11 +350,12 @@ export async function executeAction(
     evaluation.requiresApproval,
     parsedInput,
   );
+  const canonical = canonicalIdempotencyKey(explicit, derived);
   const replay = await findByAnyIdempotencyKey(
     store,
     input.accountId,
     tool.id,
-    [derived],
+    [canonical],
   );
   if (replay) return outcomeOf(replay);
 
@@ -356,7 +369,7 @@ export async function executeAction(
     requiresApproval: evaluation.requiresApproval,
     input: parsedInput,
     policyReason: evaluation.reason,
-    idempotencyKey: explicit ?? derived,
+    idempotencyKey: canonical,
   };
 
   if (evaluation.decision === "deny") {

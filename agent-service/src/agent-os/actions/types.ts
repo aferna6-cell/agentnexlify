@@ -148,8 +148,9 @@ export interface ActionExecutionRecord {
   /** Number of times the tool body has actually been invoked. */
   attempts: number;
   /**
-   * De-duplication key. Callers may supply one; the executor derives one for
-   * L2+ / approval tools when omitted. Persist and lookup use the same key.
+   * De-duplication key. When the executor derives one (L2+/approval), that
+   * derived value is canonical for persist and lookup even if a caller key
+   * was also supplied.
    */
   idempotencyKey?: string;
   effect?: EffectProvenance;

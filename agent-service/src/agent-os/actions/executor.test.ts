@@ -253,6 +253,34 @@ test("L2 retry with a different caller key still hits the derived key and does n
   assert.equal(history.length, 1);
 });
 
+test("L2 persist with a caller key stores the derived key; retry with none finds it", async () => {
+  const payload = { to: "sarah@example.com", body: "hi" };
+  const first = await run("fixture_external_message", payload, {
+    idempotencyKey: "caller-supplied-key",
+  });
+  assert.equal(first.status, "pending_approval");
+  const stored = first.record.idempotencyKey;
+  assert.ok(stored);
+  assert.notEqual(stored, "caller-supplied-key");
+  assert.match(stored!, /^fixture_external_message-run_1-/);
+
+  const lookedUp = spyIdempotencyLookups();
+  const second = await run("fixture_external_message", payload);
+
+  assert.equal(second.executionId, first.executionId);
+  assert.equal(second.record.idempotencyKey, stored);
+  assert.ok(
+    lookedUp.includes(stored!),
+    `retry with no caller key must look up the stored derived key; got ${JSON.stringify(lookedUp)}`,
+  );
+  const history = await h.store.list({ accountId: "tenantA" });
+  assert.equal(
+    history.length,
+    1,
+    "retry must not insert a second execution row",
+  );
+});
+
 test("a level-3 action always requires approval, even if the tenant lowers its threshold", async () => {
   const outcome = await run(
     "fixture_high_impact",
