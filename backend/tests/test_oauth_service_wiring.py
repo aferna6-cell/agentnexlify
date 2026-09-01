@@ -82,3 +82,11 @@ def test_save_integration_updates_existing_row(svc):
     updated = chain.update.call_args.args[0]
     assert updated["access_token"] == "new-at"
     assert updated["metadata"] == {"scope": "calendar"}
+
+
+def test_google_calendar_oauth_flow_disables_pkce():
+    flow = google_calendar.build_oauth_flow(
+        "https://agentnexlify-staging.up.railway.app/api/v1/integrations/google/callback"
+    )
+    assert flow.autogenerate_code_verifier is False
+    assert flow.code_verifier is None

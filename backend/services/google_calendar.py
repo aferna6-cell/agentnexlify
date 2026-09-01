@@ -150,6 +150,12 @@ def build_oauth_flow(redirect_uri: str) -> Flow:
     }
     flow = Flow.from_client_config(client_config, scopes=SCOPES)
     flow.redirect_uri = redirect_uri
+    # Web-server OAuth with client_secret must not use PKCE unless the verifier
+    # is round-tripped through state. gmail_connector disables PKCE the same way
+    # (staging log: calendar callback 400 exchange after auth URL carried
+    # code_challenge).
+    flow.autogenerate_code_verifier = False
+    flow.code_verifier = None
     return flow
 
 
