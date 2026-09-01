@@ -236,9 +236,73 @@ def get_credentials(tenant_id: str) -> Credentials | None:
     return creds
 
 
-# ---------------------------------------------------------------------------
-# OAuth flow helpers (mirrors google_calendar.py)
-# ---------------------------------------------------------------------------
+def _refresh_and_persist(tenant_id: str, creds: Credentials) -> Credentials | None:
+    """Refresh an access token and persist it. Returns None on failure."""
+    if not creds.refresh_token:
+        return None
+    try:
+        creds.refresh(Request())
+        save_integration(
+            tenant_id=tenant_id,
+            access_token=creds.token,
+            refresh_token=creds.refresh_token,
+            token_expiry=creds.expiry.isoformat() if creds.expiry else "",
+        )
+        logger.info("gmail_connector: refreshed credentials tenant=%s", tenant_id)
+        return creds
+    except Exception:
+        logger.warning(
+            "gmail_connector: refresh failed tenant=%s", tenant_id, exc_info=True
+        )
+        return None
+
+
+def _authorized_request(
+    tenant_id: str,
+    method: str,
+    path: str,
+    *,
+    params: dict | None = None,
+    json_body: dict | None = None,
+) -> dict | None:
+    """Gmail Data API call with one 401 refresh retry (mirrors Calendar client)."""
+    creds = get_credentials(tenant_id)
+    if not creds:
+        return None
+    url = f"{_GMAIL_API_BASE}{path}"
+    for attempt in range(2):
+        headers = {"Authorization": f"Bearer {creds.token}"}
+        try:
+            if method == "GET":
+                resp = httpx.get(url, headers=headers, params=params or {}, timeout=20.0)
+            else:
+                headers["Content-Type"] = "application/json"
+                resp = httpx.post(url, headers=headers, json=json_body or {}, timeout=20.0)
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 401 and attempt == 0:
+                refreshed = _refresh_and_persist(tenant_id, creds)
+                if refreshed:
+                    creds = refreshed
+                    logger.warning(
+                        "gmail_connector: retrying %s %s after 401 tenant=%s",
+                        method,
+                        path,
+                        tenant_id,
+                    )
+                    continue
+            raise GmailApiError(e.response.status_code, e.response.text[:200]) from e
+        except Exception:
+            logger.warning(
+                "gmail_connector: %s %s failed tenant=%s",
+                method,
+                path,
+                tenant_id,
+                exc_info=True,
+            )
+            return None
+    return None
 
 
 def build_oauth_flow(redirect_uri: str, scopes: list[str] | None = None) -> Flow:
@@ -303,53 +367,14 @@ def _api_get(tenant_id: str, path: str, params: dict | None = None) -> dict | No
     status code (e.g. 404 = expired history cursor) can branch on it;
     transport-level failures log and return ``None``.
     """
-    creds = get_credentials(tenant_id)
-    if not creds:
-        return None
-    try:
-        resp = httpx.get(
-            f"{_GMAIL_API_BASE}{path}",
-            headers={"Authorization": f"Bearer {creds.token}"},
-            params=params or {},
-            timeout=20.0,
-        )
-        resp.raise_for_status()
-        return resp.json()
-    except httpx.HTTPStatusError as e:
-        raise GmailApiError(e.response.status_code, e.response.text[:200]) from e
-    except Exception:
-        logger.warning(
-            "gmail_connector: GET %s failed tenant=%s", path, tenant_id, exc_info=True
-        )
-        return None
+    return _authorized_request(tenant_id, "GET", path, params=params)
 
 
 def _api_post(tenant_id: str, path: str, json_body: dict) -> dict | None:
     """POST against the Gmail Data API for this tenant. Same contract as
     ``_api_get`` (raises ``GmailApiError`` on non-2xx, ``None`` on missing
     credentials or transport failure)."""
-    creds = get_credentials(tenant_id)
-    if not creds:
-        return None
-    try:
-        resp = httpx.post(
-            f"{_GMAIL_API_BASE}{path}",
-            headers={
-                "Authorization": f"Bearer {creds.token}",
-                "Content-Type": "application/json",
-            },
-            json=json_body,
-            timeout=20.0,
-        )
-        resp.raise_for_status()
-        return resp.json()
-    except httpx.HTTPStatusError as e:
-        raise GmailApiError(e.response.status_code, e.response.text[:200]) from e
-    except Exception:
-        logger.warning(
-            "gmail_connector: POST %s failed tenant=%s", path, tenant_id, exc_info=True
-        )
-        return None
+    return _authorized_request(tenant_id, "POST", path, json_body=json_body)
 
 
 def get_profile(tenant_id: str) -> dict:

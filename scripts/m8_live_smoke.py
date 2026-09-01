@@ -914,11 +914,13 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
 
     ext_lookup = lookup_calendar_event(client_id, ext_google_id)
     ext_event = ext_lookup.get("event") if ext_lookup.get("state") == "found" else None
-    ext_readback_ok = ext_lookup.get("state") == "found" and _calendar_provider_matches(
+    ext_readback_ok = ext_lookup.get("state") == "found" and _calendar_external_provider_readback_matches(
         ext_event,
         google_id=ext_google_id,
+        marker=ext_marker,
         title=ext_title,
         start_iso=ext_start.isoformat(),
+        end_iso=ext_end.isoformat(),
     )
     attendee_emails = [
         (a.get("email") or "").lower() for a in (ext_event or {}).get("attendees") or []
@@ -2169,6 +2171,34 @@ def _calendar_internal_provider_readback_matches(
         return False
     summary = fetched.get("summary") or ""
     if expected_summary not in summary:
+        return False
+    description = fetched.get("description") or ""
+    if marker not in description and title not in description:
+        return False
+    provider_start = (fetched.get("start") or "")[:16]
+    provider_end = (fetched.get("end") or "")[:16]
+    if start_iso[:16] not in provider_start:
+        return False
+    if end_iso[:16] not in provider_end:
+        return False
+    return True
+
+
+def _calendar_external_provider_readback_matches(
+    fetched: dict | None,
+    *,
+    google_id: str,
+    marker: str,
+    title: str,
+    start_iso: str,
+    end_iso: str,
+    guest_name: str = "M8 External Guest",
+) -> bool:
+    """External booking path stores marker in description notes, not summary."""
+    if not fetched or fetched.get("id") != google_id:
+        return False
+    summary = fetched.get("summary") or ""
+    if f"Appointment with {guest_name}" not in summary:
         return False
     description = fetched.get("description") or ""
     if marker not in description and title not in description:

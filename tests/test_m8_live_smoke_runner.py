@@ -364,3 +364,28 @@ class TestProviderEventMarkerMatching:
         )
         assert state == "ok"
         assert count == 0
+
+
+class TestExternalProviderReadback:
+    def test_external_readback_accepts_marker_in_description(self):
+        marker = "m8-ext-745f264a"
+        title = f"M8 external smoke {marker}"
+        fetched = {
+            "id": "jqoa5no0e8rejom07qn2fsn8n0",
+            "summary": "Appointment with M8 External Guest",
+            "description": (
+                "Customer: M8 External Guest\n"
+                "Email: guest@example.com\n"
+                f"Notes: {title}"
+            ),
+            "start": "2026-09-06T21:56:00Z",
+            "end": "2026-09-06T22:56:00Z",
+        }
+        assert m8._calendar_external_provider_readback_matches(
+            fetched,
+            google_id="jqoa5no0e8rejom07qn2fsn8n0",
+            marker=marker,
+            title=title,
+            start_iso="2026-09-06T21:56:00+00:00",
+            end_iso="2026-09-06T22:56:00+00:00",
+        )

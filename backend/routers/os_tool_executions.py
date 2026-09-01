@@ -157,8 +157,34 @@ async def approve_tool_execution(
     )
     if claimed is None:
         # Already approved, rejected, running or finished. Idempotent: report
-        # where it stands rather than running the tool a second time.
+        # where it stands rather than running the tool a second time — except
+        # send_email rows stuck in running after a lost/timeout response may
+        # adopt on re-drive without resending.
         current = os_tool_executions.get_tool_execution(db, client_id, execution_id)
+        if (
+            current
+            and (current.get("tool_id") or "") == os_tools.SEND_EMAIL_TOOL_ID
+            and current.get("status") == "running"
+            and (current.get("error") or {}).get("code") == "engine_unavailable"
+        ):
+            ctx = os_tools.ToolContext(
+                db=db,
+                client_id=client_id,
+                execution_id=execution_id,
+                tool_id=current["tool_id"],
+                input=current.get("input") or {},
+                agent_id=current.get("agent_id"),
+                approved_by=_actor(claims),
+                port=os_tools.production_send_email_port(client_id, db),
+            )
+            outcome = await os_tools.run_tool(ctx)
+            return {
+                "execution": os_tool_executions.get_tool_execution(
+                    db, client_id, execution_id
+                ),
+                "already_decided": True,
+                "outcome": outcome,
+            }
         return {"execution": current, "already_decided": True}
 
     if (claimed.get("tool_id") or "") == os_tools.SEND_EMAIL_TOOL_ID:
