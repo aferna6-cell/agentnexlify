@@ -18777,3 +18777,14 @@ Claude-Session: https://claude.ai/code/session_01TYhtKNxVi4HHoSGJBNhLUg
 **Author:** Claude
 **Files Changed:** backend/routers/connectors.py,ops/routines/logs/nightly-commit-review-2026-08-02.md
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Merge pull request #725 from aferna6-cell/cursor/m8-e2e-strict-gate-a2c9
+
+fix(m8): strict agent_os_e2e — connectivity vs action execution
+**Date:** 2026-09-01
+**Commit:** cb1ab75
+**Author:** cursor[bot]
+**Files Changed:** 
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
