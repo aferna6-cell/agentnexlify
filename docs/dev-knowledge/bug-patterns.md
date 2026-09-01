@@ -18806,3 +18806,14 @@ Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
 **Author:** aferna6-cell
 **Files Changed:** agent-service/evals/datasets/crm-decision-path/crm-decision-path-v1.json,agent-service/evals/run-crm-decision-path-eval.ts,agent-service/package.json,agent-service/src/agent-os/agents/_extract.ts,agent-service/src/agent-os/agents/_intent.ts,agent-service/src/agent-os/agents/admin_records_actions.test.ts,agent-service/src/agent-os/agents/admin_records_actions.ts
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Merge pull request #733 from aferna6-cell/cursor/m8-calendar-pkce-fix-a2c9
+
+fix(oauth): disable PKCE on Google Calendar connect (staging 400 exchange)
+**Date:** 2026-09-01
+**Commit:** e5d0b5b
+**Author:** aferna6-cell
+**Files Changed:** 
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
