@@ -345,7 +345,7 @@ def get_calendar_event(tenant_id: str, event_id: str) -> dict | None:
     """Fetch one Google Calendar event for independent verification.
 
     Returns a normalized dict on success:
-      ``{id, status, summary, start, end, attendees}``
+      ``{id, status, summary, description, start, end, attendees}``
     Returns ``None`` when credentials/API fail or the event is missing —
     callers must treat that as verification failure / unknown, never invent.
     """
@@ -371,6 +371,7 @@ def get_calendar_event(tenant_id: str, event_id: str) -> dict | None:
             "id": event.get("id"),
             "status": event.get("status") or "confirmed",
             "summary": event.get("summary") or "",
+            "description": event.get("description") or "",
             "start": start,
             "end": end,
             "attendees": attendees,
@@ -410,6 +411,7 @@ def _normalize_calendar_event(event: dict) -> dict:
         "id": event.get("id"),
         "status": event.get("status") or "confirmed",
         "summary": event.get("summary") or "",
+        "description": event.get("description") or "",
         "start": start,
         "end": end,
         "attendees": attendees,
