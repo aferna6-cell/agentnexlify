@@ -40,7 +40,7 @@ from backend.config import settings
 from backend.models.database import get_service_supabase
 from backend.services.integration_key_vault import (
     decrypt_integration_row,
-    encrypt_oauth_tokens,
+    oauth_integration_payload_for_db,
 )
 
 logger = logging.getLogger(__name__)
@@ -98,7 +98,7 @@ def save_integration(
     if metadata is not None:
         payload["metadata"] = metadata
 
-    payload = encrypt_oauth_tokens(payload)
+    payload = oauth_integration_payload_for_db(payload)
 
     existing = get_integration(tenant_id)
     if existing:
