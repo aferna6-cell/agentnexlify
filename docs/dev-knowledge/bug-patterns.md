@@ -18788,3 +18788,21 @@ fix(m8): strict agent_os_e2e — connectivity vs action execution
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(m8): complete CRM NL resolve path for create/update/stage (#726)
+
+Admin Records now resolves owner asks to create_customer,
+update_customer, and update_lead_stage (CRM flag gated). Intent and
+extract recognize CRM imperatives without treating questions/drafts
+as mutations. Adds resolver NL tests and a decision-path eval gate
+that cannot be satisfied by direct executeAction alone.
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+**Date:** 2026-09-01
+**Commit:** 81507fa
+**Author:** aferna6-cell
+**Files Changed:** agent-service/evals/datasets/crm-decision-path/crm-decision-path-v1.json,agent-service/evals/run-crm-decision-path-eval.ts,agent-service/package.json,agent-service/src/agent-os/agents/_extract.ts,agent-service/src/agent-os/agents/_intent.ts,agent-service/src/agent-os/agents/admin_records_actions.test.ts,agent-service/src/agent-os/agents/admin_records_actions.ts
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
