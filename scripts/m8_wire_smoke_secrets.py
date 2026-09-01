@@ -45,10 +45,30 @@ KEYS = [
 DEFAULTS = {
     "M8_SMOKE_CLIENT_ID": "3ddd9072-ad9f-4214-970d-11386d8c1b4a",
     "M8_SMOKE_API_BASE": "https://agentnexlify-staging.up.railway.app",
-    "M8_SMOKE_ALLOW_EXTERNAL_SEND": "1",
-    "SEND_EMAIL_ENABLED": "1",
     "CALENDAR_ACTIONS_ENABLED": "1",
 }
+
+# Fail-closed: never persist send enablement. Process env must already have them.
+OMIT_SEND_ENABLEMENT_KEYS = frozenset(
+    {
+        "SEND_EMAIL_ENABLED",
+        "M8_SMOKE_ALLOW_EXTERNAL_SEND",
+    }
+)
+
+
+def _omit_send_enablement(values: dict[str, str]) -> dict[str, str]:
+    return {k: v for k, v in values.items() if k not in OMIT_SEND_ENABLEMENT_KEYS}
+
+
+def merge_wired(existing: dict[str, str], pulled_env: dict[str, str]) -> dict[str, str]:
+    merged = dict(existing)
+    for key, val in pulled_env.items():
+        if val:
+            merged[key] = val
+    for key, val in DEFAULTS.items():
+        merged.setdefault(key, val)
+    return _omit_send_enablement(merged)
 
 
 def _load_env_file(path: Path) -> dict[str, str]:
@@ -65,15 +85,14 @@ def _load_env_file(path: Path) -> dict[str, str]:
 
 
 def main() -> int:
-    merged = _load_env_file(ENV_PATH)
+    pulled_env = {}
     pulled = 0
     for key in KEYS:
         val = (os.environ.get(key) or "").strip()
         if val:
-            merged[key] = val
+            pulled_env[key] = val
             pulled += 1
-    for key, val in DEFAULTS.items():
-        merged.setdefault(key, val)
+    merged = merge_wired(_load_env_file(ENV_PATH), pulled_env)
 
     if pulled == 0:
         print("STOP: no smoke secret env vars set in shell")

@@ -41,10 +41,32 @@ PULL_KEYS = [
     "M8_SMOKE_GMAIL_RECIPIENT_ALLOWLIST",
     "M8_SMOKE_EXTERNAL_ATTENDEE",
     "M8_SMOKE_API_BASE",
-    "M8_SMOKE_ALLOW_EXTERNAL_SEND",
-    "SEND_EMAIL_ENABLED",
     "CALENDAR_ACTIONS_ENABLED",
 ]
+
+DEFAULTS = {
+    "M8_SMOKE_API_BASE": "https://agentnexlify-staging.up.railway.app",
+    "CALENDAR_ACTIONS_ENABLED": "1",
+}
+
+# Fail-closed: never persist send enablement. Process env must already have them.
+OMIT_SEND_ENABLEMENT_KEYS = frozenset(
+    {
+        "SEND_EMAIL_ENABLED",
+        "M8_SMOKE_ALLOW_EXTERNAL_SEND",
+    }
+)
+
+
+def _omit_send_enablement(values: dict[str, str]) -> dict[str, str]:
+    return {k: v for k, v in values.items() if k not in OMIT_SEND_ENABLEMENT_KEYS}
+
+
+def merge_pulled(pulled: dict[str, str]) -> dict[str, str]:
+    merged = dict(pulled)
+    for key, val in DEFAULTS.items():
+        merged.setdefault(key, val)
+    return _omit_send_enablement(merged)
 
 
 def _load_env_file(path: Path) -> dict[str, str]:
@@ -63,6 +85,7 @@ def _load_env_file(path: Path) -> dict[str, str]:
 def _write_env_file(path: Path, values: dict[str, str]) -> None:
     existing = _load_env_file(path)
     existing.update(values)
+    existing = _omit_send_enablement(existing)
     lines = [f"{k}={existing[k]}" for k in sorted(existing)]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     path.chmod(0o600)
@@ -139,14 +162,12 @@ def main() -> int:
         return 2
 
     # Sensible defaults for support-tenant proof when not yet on Railway.
-    pulled.setdefault("M8_SMOKE_API_BASE", "https://agentnexlify-staging.up.railway.app")
-    pulled.setdefault("M8_SMOKE_ALLOW_EXTERNAL_SEND", "1")
-    pulled.setdefault("SEND_EMAIL_ENABLED", "1")
-    pulled.setdefault("CALENDAR_ACTIONS_ENABLED", "1")
+    # Do not default or persist send enablement flags.
     pulled.setdefault(
         "M8_SMOKE_CLIENT_ID", "3ddd9072-ad9f-4214-970d-11386d8c1b4a"
     )
 
+    pulled = merge_pulled(pulled)
     _write_env_file(ENV_PATH, pulled)
     present = sorted(pulled.keys())
     missing = [k for k in PULL_KEYS if k not in pulled]

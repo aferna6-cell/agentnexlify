@@ -20,11 +20,29 @@ ENV_PATH = ROOT / ".env.staging"
 
 DEFAULTS = {
     "M8_SMOKE_API_BASE": "https://agentnexlify-staging.up.railway.app",
-    "M8_SMOKE_ALLOW_EXTERNAL_SEND": "1",
     "M8_SMOKE_CLIENT_ID": "3ddd9072-ad9f-4214-970d-11386d8c1b4a",
-    "SEND_EMAIL_ENABLED": "1",
     "CALENDAR_ACTIONS_ENABLED": "1",
 }
+
+# Fail-closed: never persist send enablement. Process env must already have them.
+OMIT_SEND_ENABLEMENT_KEYS = frozenset(
+    {
+        "SEND_EMAIL_ENABLED",
+        "M8_SMOKE_ALLOW_EXTERNAL_SEND",
+    }
+)
+
+
+def _omit_send_enablement(values: dict[str, str]) -> dict[str, str]:
+    return {k: v for k, v in values.items() if k not in OMIT_SEND_ENABLEMENT_KEYS}
+
+
+def merge_imported(existing: dict[str, str], raw: dict) -> dict[str, str]:
+    merged = dict(existing)
+    merged.update({str(k): str(v) for k, v in raw.items() if v is not None})
+    for k, v in DEFAULTS.items():
+        merged.setdefault(k, v)
+    return _omit_send_enablement(merged)
 
 
 def _load_env_file(path: Path) -> dict[str, str]:
@@ -53,10 +71,7 @@ def main() -> int:
         print("STOP: expected JSON object from railway variables --json")
         return 2
 
-    merged = _load_env_file(ENV_PATH)
-    merged.update({str(k): str(v) for k, v in raw.items() if v is not None})
-    for k, v in DEFAULTS.items():
-        merged.setdefault(k, v)
+    merged = merge_imported(_load_env_file(ENV_PATH), raw)
     ENV_PATH.write_text("\n".join(f"{k}={merged[k]}" for k in sorted(merged)) + "\n")
     ENV_PATH.chmod(0o600)
     print(f"OK: imported {len(raw)} Railway vars into .env.staging ({len(merged)} total keys)")

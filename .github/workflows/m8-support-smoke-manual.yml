@@ -53,9 +53,7 @@ jobs:
           M8_SMOKE_CONFIRM_ENV: staging
           M8_SMOKE_CLIENT_ID: "3ddd9072-ad9f-4214-970d-11386d8c1b4a"
           M8_SMOKE_API_BASE: "https://agentnexlify-staging.up.railway.app"
-          M8_SMOKE_ALLOW_EXTERNAL_SEND: "1"
           M8_SMOKE_SUITES: ${{ github.event.inputs.suites }}
-          SEND_EMAIL_ENABLED: "1"
           CALENDAR_ACTIONS_ENABLED: "1"
           SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_KEY }}
