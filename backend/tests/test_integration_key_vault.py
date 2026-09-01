@@ -391,6 +391,21 @@ class TestEncryptOauthTokens:
         assert "access_token_enc" in out
         assert "refresh_token_enc" not in out
 
+    def test_db_payload_strips_plaintext_after_encryption(self):
+        payload = {
+            "tenant_id": "ten1",
+            "provider": "gmail",
+            "access_token": "at-secret",
+            "refresh_token": "rt-secret",
+            "token_expiry": "2026-08-01T00:00:00+00:00",
+        }
+        with _with_key(KEY_A):
+            out = vault.oauth_integration_payload_for_db(payload)
+        assert "access_token" not in out
+        assert "refresh_token" not in out
+        assert out["access_token_enc"].startswith("\\x")
+        assert out["metadata"]["enc_key_version"] == 1
+
 
 class TestDecryptIntegrationRow:
     def test_none_row_passthrough(self):

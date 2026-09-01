@@ -285,6 +285,26 @@ def encrypt_oauth_tokens(payload: dict) -> dict:
     return out
 
 
+def oauth_integration_payload_for_db(payload: dict) -> dict:
+    """Encrypt OAuth tokens and return a row dict safe for ``integrations`` upsert.
+
+    After migration 176 the plaintext ``access_token`` / ``refresh_token``
+    columns are gone; writers must persist ciphertext only. When the vault is
+    live, plaintext keys are stripped from the returned dict so PostgREST never
+    sees dropped columns.
+    """
+    out = encrypt_oauth_tokens(payload)
+    if not encryption_configured():
+        return out
+    for plain_col, _enc_col in _OAUTH_TOKEN_COLUMNS:
+        out.pop(plain_col, None)
+    if out.get("access_token_enc") is not None or out.get("refresh_token_enc") is not None:
+        meta = dict(out.get("metadata") or {})
+        meta.setdefault("enc_key_version", DEFAULT_KEY_VERSION)
+        out["metadata"] = meta
+    return out
+
+
 def decrypt_integration_row(row: dict | None) -> dict | None:
     """Overlay decrypted token values onto an ``integrations`` row.
 

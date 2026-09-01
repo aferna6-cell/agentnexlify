@@ -106,6 +106,8 @@ class TestSaveIntegration:
         inserted = chain.insert.call_args.args[0]
         assert inserted["access_token_enc"].startswith("\\x")
         assert inserted["refresh_token_enc"].startswith("\\x")
+        assert "access_token" not in inserted
+        assert "refresh_token" not in inserted
         assert inserted["provider"] == "gmail"
         with _with_key():
             assert (

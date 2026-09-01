@@ -65,9 +65,12 @@ export function AuthProvider({ children }) {
 
     // Refresh plan + pay-gate fields from /me - JWT claims go stale after plan
     // changes and plan data must come from live API (frontend-patterns.md).
-    fetch(`${import.meta.env.VITE_API_URL || ""}/api/v1/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    fetch(
+      `${import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || ""}/api/v1/auth/me`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    )
       .then((r) => (r.ok ? r.json() : null))
       .then((me) => {
         if (!me) return;

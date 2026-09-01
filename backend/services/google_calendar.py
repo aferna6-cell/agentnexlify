@@ -14,7 +14,7 @@ from backend.config import settings
 from backend.models.database import get_service_supabase
 from backend.services.integration_key_vault import (
     decrypt_integration_row,
-    encrypt_oauth_tokens,
+    oauth_integration_payload_for_db,
 )
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,7 @@ def save_integration(
     if metadata is not None:
         payload["metadata"] = metadata
 
-    payload = encrypt_oauth_tokens(payload)
+    payload = oauth_integration_payload_for_db(payload)
 
     existing = get_integration(tenant_id)
     if existing:
@@ -167,6 +167,12 @@ def get_auth_url(redirect_uri: str, state: str) -> str:
 
 def exchange_code(code: str, redirect_uri: str) -> Credentials:
     """Exchange an authorization code for credentials."""
+    import os
+
+    # Calendar auth uses include_granted_scopes; Google may return scopes from
+    # prior Gmail connects on the same OAuth client. Relax scope matching so
+    # token exchange succeeds (staging log: exchange 400 after gmail.send grant).
+    os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")
     flow = build_oauth_flow(redirect_uri)
     flow.fetch_token(code=code)
     return flow.credentials
