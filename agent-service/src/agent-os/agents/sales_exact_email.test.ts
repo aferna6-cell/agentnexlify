@@ -79,7 +79,7 @@ test("unambiguous labeled send preserves owner subject and body, not the compose
   assert.notEqual(out?.input.body, composed.draft?.body);
 });
 
-test("unambiguous quoted send preserves owner subject and body", () => {
+test("unambiguous quoted send preserves owner subject and body even if the body says delete", () => {
   const out = resolveExact(EXACT_QUOTED);
   assert.equal(out?.toolId, "send_email");
   assert.deepEqual(out?.input, {

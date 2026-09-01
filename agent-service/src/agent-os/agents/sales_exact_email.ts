@@ -12,7 +12,7 @@
  */
 
 import type { DepartmentActionRequest } from "./_department.ts";
-import { authorizesAction, type AskIntent } from "./_intent.ts";
+import type { AskIntent } from "./_intent.ts";
 import type { AgentOutput, SharedContext } from "../types/agent.ts";
 
 const EMAIL_RE = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
@@ -71,8 +71,11 @@ export function resolveSalesExactEmailFromOutput(args: {
   output: AgentOutput;
 }): DepartmentActionRequest | undefined {
   const { ownerAsk, intent } = args;
-  if (!authorizesAction(intent)) return undefined;
-  if (intent.intent !== "communicate") return undefined;
+  // Permission axis only. Do not use authorizesAction() here: a word in the
+  // owner's body ("safe to delete") can classify intent as destroy and would
+  // veto a send the owner already wrote out in full.
+  if (intent.authorization !== "execute") return undefined;
+  if (intent.isQuestion) return undefined;
 
   const to = soleRecipient(ownerAsk);
   if (!to) return undefined;
