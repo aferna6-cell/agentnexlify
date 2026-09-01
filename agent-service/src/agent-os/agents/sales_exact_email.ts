@@ -22,6 +22,74 @@ function soleRecipient(ask: string): string | undefined {
   return found.length === 1 ? found[0] : undefined;
 }
 
+/** Closer that belongs to this opener. Mixed styles are not a pair. */
+const QUOTE_CLOSER: Record<string, string> = {
+  "'": "'",
+  '"': '"',
+  "\u201C": "\u201D",
+};
+
+function isLetter(ch: string | undefined): boolean {
+  return !!ch && /[A-Za-z]/.test(ch);
+}
+
+/**
+ * Index of the closer that pairs with `opener`. An ASCII apostrophe between
+ * letters (`it's`, `customer's`) is not a closer.
+ */
+function findPairedCloser(
+  text: string,
+  from: number,
+  opener: string,
+  closer: string,
+): number {
+  for (let i = from; i < text.length; i++) {
+    if (text[i] !== closer) continue;
+    if (
+      opener === "'" &&
+      closer === "'" &&
+      isLetter(text[i - 1]) &&
+      isLetter(text[i + 1])
+    ) {
+      continue;
+    }
+    return i;
+  }
+  return -1;
+}
+
+function extractQuotedSubjectBody(
+  ask: string,
+): { subject: string; body: string } | undefined {
+  const head = /\bwith subject\s+/i.exec(ask);
+  if (!head || head.index === undefined) return undefined;
+
+  let i = head.index + head[0].length;
+  const opener = ask[i] ?? "";
+  const closer = QUOTE_CLOSER[opener];
+  if (!closer) return undefined;
+  i += opener.length;
+
+  const subjectEnd = findPairedCloser(ask, i, opener, closer);
+  if (subjectEnd < 0) return undefined;
+  const subject = ask.slice(i, subjectEnd).trim();
+
+  i = subjectEnd + closer.length;
+  const mid = /^\s+and body\s+/i.exec(ask.slice(i));
+  if (!mid) return undefined;
+  i += mid[0].length;
+
+  // Body must open with the same delimiter the subject used.
+  if (ask.slice(i, i + opener.length) !== opener) return undefined;
+  i += opener.length;
+
+  const bodyEnd = findPairedCloser(ask, i, opener, closer);
+  if (bodyEnd < 0) return undefined;
+  const body = ask.slice(i, bodyEnd).trim();
+  if (!subject || !body) return undefined;
+  return { subject, body };
+}
+
 function extractOwnerSubjectBody(
   ask: string,
 ): { subject: string; body: string } | undefined {
@@ -32,29 +100,7 @@ function extractOwnerSubjectBody(
     if (subject && body) return { subject, body };
   }
 
-  // Paired matchers — do not put `'` in the double-quote class. A shared
-  // class treats the apostrophe in "It's ready" as the closer and parks
-  // a truncated body. Single-quoted closer must be `'` then space / end /
-  // sentence punct so an inner It's does not win.
-  const doubleQuoted = ask.match(
-    /\bwith subject\s+["“](.+?)["”]\s+and body\s+["“]([\s\S]+?)["”]/i,
-  );
-  if (doubleQuoted) {
-    const subject = doubleQuoted[1]?.trim() ?? "";
-    const body = doubleQuoted[2]?.trim() ?? "";
-    if (subject && body) return { subject, body };
-  }
-
-  const singleQuoted = ask.match(
-    /\bwith subject\s+'([\s\S]+?)'\s+and body\s+'([\s\S]+?)'(?=\s|$|[.,;:!?])/i,
-  );
-  if (singleQuoted) {
-    const subject = singleQuoted[1]?.trim() ?? "";
-    const body = singleQuoted[2]?.trim() ?? "";
-    if (subject && body) return { subject, body };
-  }
-
-  return undefined;
+  return extractQuotedSubjectBody(ask);
 }
 
 function describePending(input: Record<string, unknown>): string {

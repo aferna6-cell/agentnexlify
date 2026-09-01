@@ -84,8 +84,28 @@ const EXACT_LABELED =
 const EXACT_QUOTED =
   'Email sarah@example.com with subject "AOS smoke 2026-08-30" and body "Milestone 6 controlled send — safe to delete."';
 
+const EXACT_CURLY =
+  "Email sarah@example.com with subject \u201CBrake quote follow-up\u201D and body \u201CHi Sarah, the quote is ready whenever you are.\u201D";
+
 const COMPOSE_FALLBACK =
   "Please send an email to sarah@example.com following up on her brake quote.";
+
+const MISMATCHED_DOUBLE_THEN_SINGLE =
+  "Send an email to sarah@example.com with subject \"Hi Sarah\" and body 'It's ready.'";
+
+const MISMATCHED_SINGLE_THEN_DOUBLE =
+  "Send an email to sarah@example.com with subject 'Hi Sarah' and body \"It's ready.\"";
+
+const APOSTROPHE_SUBJECT = "Follow up on the customer's quote";
+const APOSTROPHE_BODY = "It's ready whenever you are.";
+const APOSTROPHE_ASK =
+  "Send exactly this email to sarah@example.com with subject " +
+  `'${APOSTROPHE_SUBJECT}' and body '${APOSTROPHE_BODY}'`;
+const APOSTROPHE_INPUT = {
+  to: "sarah@example.com",
+  subject: APOSTROPHE_SUBJECT,
+  body: APOSTROPHE_BODY,
+};
 
 // Same shape as scripts/m8_live_smoke.py _build_gmail_smoke_prompt (single quotes).
 const LIVE_SMOKE_SUBJECT = "M8 smoke m8-live-20260901T215330Z";
@@ -138,14 +158,45 @@ test("double-quoted body with an apostrophe is not truncated", () => {
 });
 
 test("single-quoted body with an apostrophe keeps the full owner text", () => {
-  const out = resolveExact(
-    "Email sarah@example.com with subject 'Sarah's quote' and body 'It's ready whenever you are.'",
-  );
+  const out = resolveExact(APOSTROPHE_ASK);
+  assert.equal(out?.toolId, "send_email");
+  assert.deepEqual(out?.input, APOSTROPHE_INPUT);
+  assert.equal(out?.input.subject, APOSTROPHE_SUBJECT);
+  assert.equal(out?.input.body, APOSTROPHE_BODY);
+});
+
+test("curly-quoted send preserves owner subject and body", () => {
+  const out = resolveExact(EXACT_CURLY);
   assert.equal(out?.toolId, "send_email");
   assert.deepEqual(out?.input, {
     to: "sarah@example.com",
-    subject: "Sarah's quote",
-    body: "It's ready whenever you are.",
+    subject: "Brake quote follow-up",
+    body: "Hi Sarah, the quote is ready whenever you are.",
+  });
+});
+
+test("mismatched quotes do not parse as exact — Sales falls back to compose", () => {
+  assert.equal(resolveExact(MISMATCHED_DOUBLE_THEN_SINGLE), undefined);
+  assert.equal(resolveExact(MISMATCHED_SINGLE_THEN_DOUBLE), undefined);
+
+  const composedDoubleThenSingle = salesFromOutput(
+    MISMATCHED_DOUBLE_THEN_SINGLE,
+  );
+  assert.equal(composedDoubleThenSingle?.toolId, "send_email");
+  assert.deepEqual(composedDoubleThenSingle?.input, {
+    to: "sarah@example.com",
+    subject: "COMPOSED SUBJECT",
+    body: "COMPOSED BODY that must not replace the owner's words.",
+  });
+
+  const composedSingleThenDouble = salesFromOutput(
+    MISMATCHED_SINGLE_THEN_DOUBLE,
+  );
+  assert.equal(composedSingleThenDouble?.toolId, "send_email");
+  assert.deepEqual(composedSingleThenDouble?.input, {
+    to: "sarah@example.com",
+    subject: "COMPOSED SUBJECT",
+    body: "COMPOSED BODY that must not replace the owner's words.",
   });
 });
 
@@ -252,10 +303,37 @@ test("park write: Sales pending row input equals owner subject and body", async 
   assert.equal(outcome.status, "pending_approval");
   assert.equal(outcome.record.approvalState, "pending");
   assert.deepEqual(outcome.record.input, LIVE_SMOKE_INPUT);
+  assert.equal(outcome.record.input.subject, LIVE_SMOKE_SUBJECT);
+  assert.equal(outcome.record.input.body, LIVE_SMOKE_BODY);
   const parked = await h.store.list({ accountId: "tenantA" });
   assert.equal(parked.length, 1);
   assert.deepEqual(parked[0]?.input, LIVE_SMOKE_INPUT);
+  assert.equal(parked[0]?.input.subject, LIVE_SMOKE_SUBJECT);
+  assert.equal(parked[0]?.input.body, LIVE_SMOKE_BODY);
   assert.equal(parked[0]?.status, "pending_approval");
+});
+
+test("park write: single-quoted customer's / it's is byte-for-byte owner payload", async () => {
+  process.env[SEND_EMAIL_FLAG] = "1";
+  const request = salesFromOutput(APOSTROPHE_ASK);
+  assert.ok(request);
+  const outcome = await executeAction({
+    accountId: "tenantA",
+    agentId: "sales",
+    runId: "run_park_apostrophe",
+    toolId: "send_email",
+    input: request.input,
+    sharedContext: h.context,
+  });
+  assert.equal(outcome.status, "pending_approval");
+  assert.equal(outcome.record.input.subject, APOSTROPHE_SUBJECT);
+  assert.equal(outcome.record.input.body, APOSTROPHE_BODY);
+  assert.deepEqual(outcome.record.input, APOSTROPHE_INPUT);
+  const parked = await h.store.list({ accountId: "tenantA" });
+  assert.equal(parked.length, 1);
+  assert.equal(parked[0]?.status, "pending_approval");
+  assert.equal(parked[0]?.input.subject, APOSTROPHE_SUBJECT);
+  assert.equal(parked[0]?.input.body, APOSTROPHE_BODY);
 });
 
 test("park write: non-unambiguous ask still parks current compose", async () => {
