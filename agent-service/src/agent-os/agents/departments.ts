@@ -10,6 +10,7 @@ import {
   resolveCommunicationAmbiguity,
   resolveEmailSendFromOutput,
 } from "./communication_actions.ts";
+import { resolveSalesExactEmailFromOutput } from "./sales_exact_email.ts";
 
 // v1 worker agents, now used as internal skills.
 import { booking } from "./booking/agent.ts";
@@ -103,15 +104,14 @@ export const sales = defineDepartment({
     },
   ],
   defaultSkillId: "lead_nurture",
-  // The first department that can send something real. Sales composes exactly
-  // as before; when the owner named a recipient address in the ask, the
-  // composed text becomes a send_email action the owner approves instead of a
-  // draft they copy elsewhere. Anything ambiguous still drafts.
-  // See communication_actions.ts.
+  // The first department that can send something real. An unambiguous
+  // "send exactly this email" with owner subject/body uses those words;
+  // anything else falls back to current compose (communication_actions.ts).
   // Asked before composing: a communication whose recipient cannot be pinned
   // down has no safe continuation, and drafting to nobody is not one.
   resolveAction: resolveCommunicationAmbiguity,
-  resolveActionFromOutput: resolveEmailSendFromOutput,
+  resolveActionFromOutput: (args) =>
+    resolveSalesExactEmailFromOutput(args) ?? resolveEmailSendFromOutput(args),
   // V-02: pipeline-aware skill selection. "Follow up with X on her quote" must
   // pull X's existing quote and run quote-followup, NOT quote-generation (which
   // would ask for line items the owner didn't give). New line items in the ask

@@ -708,3 +708,113 @@ class TestExtractBodyText:
     def test_falls_through_to_empty_string_when_nothing_matches(self):
         payload = {"mimeType": "application/octet-stream", "body": {}}
         assert gc._extract_body_text(payload) == ""
+
+
+# ---------------------------------------------------------------------------
+# send_message — HTTP 401 refreshes once; timeout/403/5xx do not retry
+# ---------------------------------------------------------------------------
+
+
+def _send_request():
+    return httpx.Request(
+        "POST", "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
+    )
+
+
+def _http_status(code: int, text: str = ""):
+    return httpx.Response(code, request=_send_request(), text=text)
+
+
+def _ok_send_response(message_id: str = "sent-ok"):
+    resp = MagicMock()
+    resp.status_code = 200
+    resp.raise_for_status.return_value = None
+    resp.json.return_value = {"id": message_id, "threadId": "t1"}
+    resp.text = ""
+    return resp
+
+
+def _send_hi():
+    return gc.send_message(
+        db=object(),
+        tenant_id=TENANT_ID,
+        to="sarah@example.com",
+        subject="Hi",
+        body_html="<p>Hello</p>",
+    )
+
+
+class TestSendMessage401Retry:
+    def test_401_refreshes_credentials_and_retries_send_exactly_once(self):
+        old = MagicMock(token="old-tok")
+        new = MagicMock(token="new-tok")
+        with patch.object(gc, "get_credentials", return_value=old), patch.object(
+            gc, "_force_refresh_credentials", return_value=new
+        ) as refresh, patch.object(
+            gc.httpx,
+            "post",
+            side_effect=[_http_status(401, "invalid token"), _ok_send_response()],
+        ) as post:
+            result = _send_hi()
+
+        assert result["success"] is True
+        assert result["message_id"] == "sent-ok"
+        assert post.call_count == 2
+        refresh.assert_called_once_with(TENANT_ID)
+        assert post.call_args_list[0].kwargs["headers"]["Authorization"] == "Bearer old-tok"
+        assert post.call_args_list[1].kwargs["headers"]["Authorization"] == "Bearer new-tok"
+
+    def test_timeout_stays_unknown_and_does_not_resend(self):
+        creds = MagicMock(token="tok123")
+        with patch.object(gc, "get_credentials", return_value=creds), patch.object(
+            gc, "_force_refresh_credentials"
+        ) as refresh, patch.object(
+            gc.httpx, "post", side_effect=httpx.TimeoutException("timed out")
+        ) as post:
+            result = _send_hi()
+
+        assert result["success"] is False
+        assert post.call_count == 1
+        refresh.assert_not_called()
+
+    def test_403_does_not_refresh_or_retry(self):
+        creds = MagicMock(token="tok123")
+        with patch.object(gc, "get_credentials", return_value=creds), patch.object(
+            gc, "_force_refresh_credentials"
+        ) as refresh, patch.object(
+            gc.httpx, "post", return_value=_http_status(403, "forbidden")
+        ) as post:
+            result = _send_hi()
+
+        assert result["success"] is False
+        assert "403" in result["detail"]
+        assert post.call_count == 1
+        refresh.assert_not_called()
+
+    def test_5xx_does_not_refresh_or_retry(self):
+        creds = MagicMock(token="tok123")
+        with patch.object(gc, "get_credentials", return_value=creds), patch.object(
+            gc, "_force_refresh_credentials"
+        ) as refresh, patch.object(
+            gc.httpx, "post", return_value=_http_status(500, "server error")
+        ) as post:
+            result = _send_hi()
+
+        assert result["success"] is False
+        assert "500" in result["detail"]
+        assert post.call_count == 1
+        refresh.assert_not_called()
+
+    def test_401_refresh_failure_does_not_send_again(self):
+        creds = MagicMock(token="old-tok")
+        with patch.object(gc, "get_credentials", return_value=creds), patch.object(
+            gc, "_force_refresh_credentials", return_value=None
+        ) as refresh, patch.object(
+            gc.httpx, "post", return_value=_http_status(401, "invalid token")
+        ) as post:
+            result = _send_hi()
+
+        assert result["success"] is False
+        assert "401" in result["detail"]
+        assert post.call_count == 1
+        refresh.assert_called_once_with(TENANT_ID)

@@ -236,6 +236,64 @@ def get_credentials(tenant_id: str) -> Credentials | None:
     return creds
 
 
+def _force_refresh_credentials(tenant_id: str) -> Credentials | None:
+    """Refresh even when local expiry still says the access token is valid.
+
+    Gmail can 401 a token google-auth has not yet marked expired (clock skew,
+    early invalidation). One refresh attempt. Returns ``None`` if there is no
+    refresh token or the refresh itself fails. Does not retry the original
+    HTTP call — callers decide whether to send once more.
+    """
+    integration = get_integration(tenant_id)
+    if not integration or not integration.get("refresh_token"):
+        return None
+    creds = Credentials(
+        token=integration.get("access_token"),
+        refresh_token=integration.get("refresh_token"),
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=settings.google_client_id,
+        client_secret=settings.google_client_secret,
+        scopes=_scopes_for_integration(integration),
+    )
+    try:
+        creds.refresh(Request())
+        save_integration(
+            tenant_id=tenant_id,
+            access_token=creds.token,
+            refresh_token=creds.refresh_token,
+            token_expiry=creds.expiry.isoformat() if creds.expiry else "",
+        )
+        logger.info("gmail_connector: forced refresh after 401 tenant=%s", tenant_id)
+        return creds
+    except Exception:
+        logger.warning(
+            "gmail_connector: forced refresh failed tenant=%s", tenant_id, exc_info=True
+        )
+        return None
+
+
+def _request_with_401_retry(tenant_id: str, send) -> dict | None:
+    """Run one Gmail HTTP call; on HTTP 401 only, refresh and send once more.
+
+    403 / 5xx stay ``GmailApiError``. Timeout / transport errors propagate so
+    callers can log and return ``None`` (unknown) without a second send.
+    """
+    creds = get_credentials(tenant_id)
+    if not creds:
+        return None
+    resp = send(creds.token)
+    if resp.status_code == 401:
+        creds = _force_refresh_credentials(tenant_id)
+        if creds is None:
+            raise GmailApiError(401, (resp.text or "")[:200])
+        resp = send(creds.token)
+    try:
+        resp.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        raise GmailApiError(e.response.status_code, e.response.text[:200]) from e
+    return resp.json()
+
+
 # ---------------------------------------------------------------------------
 # OAuth flow helpers (mirrors google_calendar.py)
 # ---------------------------------------------------------------------------
@@ -301,22 +359,21 @@ def _api_get(tenant_id: str, path: str, params: dict | None = None) -> dict | No
     Returns ``None`` when there are no usable credentials. Raises
     ``GmailApiError`` on a non-2xx response so callers that care about the
     status code (e.g. 404 = expired history cursor) can branch on it;
-    transport-level failures log and return ``None``.
+    transport-level failures log and return ``None``. HTTP 401 refreshes
+    credentials and retries the GET once.
     """
-    creds = get_credentials(tenant_id)
-    if not creds:
-        return None
-    try:
-        resp = httpx.get(
+    def send(token: str):
+        return httpx.get(
             f"{_GMAIL_API_BASE}{path}",
-            headers={"Authorization": f"Bearer {creds.token}"},
+            headers={"Authorization": f"Bearer {token}"},
             params=params or {},
             timeout=20.0,
         )
-        resp.raise_for_status()
-        return resp.json()
-    except httpx.HTTPStatusError as e:
-        raise GmailApiError(e.response.status_code, e.response.text[:200]) from e
+
+    try:
+        return _request_with_401_retry(tenant_id, send)
+    except GmailApiError:
+        raise
     except Exception:
         logger.warning(
             "gmail_connector: GET %s failed tenant=%s", path, tenant_id, exc_info=True
@@ -327,24 +384,24 @@ def _api_get(tenant_id: str, path: str, params: dict | None = None) -> dict | No
 def _api_post(tenant_id: str, path: str, json_body: dict) -> dict | None:
     """POST against the Gmail Data API for this tenant. Same contract as
     ``_api_get`` (raises ``GmailApiError`` on non-2xx, ``None`` on missing
-    credentials or transport failure)."""
-    creds = get_credentials(tenant_id)
-    if not creds:
-        return None
-    try:
-        resp = httpx.post(
+    credentials or transport failure). HTTP 401 refreshes credentials and
+    retries the POST once — not 403, not 5xx, not timeout/unknown.
+    """
+    def send(token: str):
+        return httpx.post(
             f"{_GMAIL_API_BASE}{path}",
             headers={
-                "Authorization": f"Bearer {creds.token}",
+                "Authorization": f"Bearer {token}",
                 "Content-Type": "application/json",
             },
             json=json_body,
             timeout=20.0,
         )
-        resp.raise_for_status()
-        return resp.json()
-    except httpx.HTTPStatusError as e:
-        raise GmailApiError(e.response.status_code, e.response.text[:200]) from e
+
+    try:
+        return _request_with_401_retry(tenant_id, send)
+    except GmailApiError:
+        raise
     except Exception:
         logger.warning(
             "gmail_connector: POST %s failed tenant=%s", path, tenant_id, exc_info=True
