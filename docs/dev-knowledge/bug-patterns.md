@@ -18817,3 +18817,14 @@ fix(oauth): disable PKCE on Google Calendar connect (staging 400 exchange)
 **Author:** aferna6-cell
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Merge pull request #741 from aferna6-cell/cursor/m8-calendar-marker-readback-1b8a
+
+fix(m8): calendar smoke marker-in-description readback slice
+**Date:** 2026-09-01
+**Commit:** fd08beb
+**Author:** cursor[bot]
+**Files Changed:** 
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
