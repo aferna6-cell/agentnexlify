@@ -3,11 +3,8 @@
 from __future__ import annotations
 
 import importlib.util
-import os
 import sys
 from pathlib import Path
-
-import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
@@ -72,3 +69,76 @@ class TestExecutionMarkerMatch:
     def test_finds_marker_in_input(self):
         row = {"input": {"subject": "M8 smoke m8-gmail-deadbeef"}}
         assert m8._execution_input_contains(row, "m8-gmail-deadbeef")
+
+
+class TestSendOnlyGmailProofHelpers:
+    def test_pending_not_sent_requires_pending_status(self):
+        row = {"status": "succeeded", "result": {}}
+        assert m8._send_email_pending_not_sent(row) is False
+
+    def test_pending_not_sent_rejects_existing_provider_id(self):
+        row = {
+            "status": "pending_approval",
+            "result": {"messageId": "gm_123"},
+        }
+        assert m8._send_email_pending_not_sent(row) is False
+
+    def test_pending_not_sent_passes_clean_pending_row(self):
+        row = {"status": "pending_approval", "result": None}
+        assert m8._send_email_pending_not_sent(row) is True
+
+    def test_payload_matches_approved_fields(self):
+        row = {
+            "input": {
+                "to": "smoke@example.com",
+                "subject": "M8 smoke m8-gmail-abc",
+                "body": "Milestone 8 controlled send m8-gmail-abc — safe to delete.",
+            }
+        }
+        assert m8._send_payload_matches(
+            row,
+            "smoke@example.com",
+            "M8 smoke m8-gmail-abc",
+            "Milestone 8 controlled send m8-gmail-abc — safe to delete.",
+            "m8-gmail-abc",
+        )
+
+    def test_provider_message_id_from_result(self):
+        row = {"result": {"messageId": "186abc"}}
+        assert m8._provider_message_id_from_execution(row) == "186abc"
+
+
+class TestCalendarCancelLookup:
+    def test_not_found_proves_deleted(self):
+        assert m8._cancel_lookup_proves_deleted({"state": "not_found"}) is True
+
+    def test_found_cancelled_proves_deleted(self):
+        assert m8._cancel_lookup_proves_deleted(
+            {"state": "found", "event": {"status": "cancelled"}}
+        )
+
+    def test_unknown_does_not_prove_deleted(self):
+        assert m8._cancel_lookup_proves_deleted({"state": "unknown"}) is False
+
+    def test_found_confirmed_does_not_prove_deleted(self):
+        assert m8._cancel_lookup_proves_deleted(
+            {"state": "found", "event": {"status": "confirmed"}}
+        ) is False
+
+
+class TestProviderEventCountUnknown:
+    def test_unknown_lookup_is_not_zero(self, monkeypatch):
+        from datetime import datetime, timezone
+
+        import backend.services.google_calendar as gcal
+
+        def _fake_list(*_a, **_k):
+            return {"state": "unknown", "reason": "api_error", "events": []}
+
+        monkeypatch.setattr(gcal, "list_calendar_events_in_window", _fake_list)
+        now = datetime.now(timezone.utc)
+        state, count = m8._provider_events_matching_marker(
+            "tenant", "m8-ext-abc", now, now
+        )
+        assert state == "unknown"
+        assert count == -1

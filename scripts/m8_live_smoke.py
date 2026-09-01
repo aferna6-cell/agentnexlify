@@ -14,9 +14,9 @@ Optional suites (comma-separated in M8_SMOKE_SUITES, default calendar,crm):
 
   calendar     — availability, internal create, read-back, cancel, cross-tenant
   crm          — search/update/create/dedupe/stage/cross-tenant via data plane
-  gmail        — OS ask → pending_approval → approve/send/Message-ID/redrive
-                 (needs SEND_EMAIL_ENABLED=1, M8_SMOKE_ALLOW_EXTERNAL_SEND=1,
-                  M8_SMOKE_GMAIL_RECIPIENT, owner login/API base)
+  gmail        — OS ask → pending_approval → approve/send (send-only proof) → redrive
+                 (needs SEND_EMAIL_ENABLED=1 on staging backend **and** agent-service,
+                  M8_SMOKE_ALLOW_EXTERNAL_SEND=1, M8_SMOKE_GMAIL_RECIPIENT, owner login)
   rag          — in-process soak with RAG_ENABLED=1, DEFAULT_MIN_SCORE=1.0 frozen
   isolation    — staging RLS: anon denied; service_role scoped reads; CRM isolation
   agent_os_e2e — staging HTTP login → OS thread/message → tool_executions chain
@@ -34,6 +34,14 @@ Gmail live send additionally needs:
   M8_SMOKE_ALLOW_EXTERNAL_SEND=1
   M8_SMOKE_GMAIL_RECIPIENT=<controlled inbox>
   optional M8_SMOKE_GMAIL_RECIPIENT_ALLOWLIST=comma-separated allowlist
+  optional M8_SMOKE_GMAIL_RECIPIENT_VERIFY_URL=<recipient-side delivery checker>
+
+  Send-only OAuth (gmail.send) cannot read the sender mailbox. Proof uses the
+  approved execution payload + provider messages.send acknowledgement recorded
+  on the row — not messages.list/get on the product connector.
+
+  SEND_EMAIL_ENABLED must be ON on staging Railway backend **and** agent-service
+  (proposal gate in TS, execution gate in Python). Local export alone is not enough.
 
 Calendar external-attendee approval additionally needs:
   M8_SMOKE_EXTERNAL_ATTENDEE=<controlled external email>
@@ -536,7 +544,11 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
         return 3
 
     os.environ.setdefault("CALENDAR_ACTIONS_ENABLED", "1")
-    from backend.services.google_calendar import get_integration, get_calendar_event
+    from backend.services.google_calendar import (
+        get_integration,
+        lookup_calendar_event,
+        list_calendar_events_in_window,
+    )
     from backend.services import os_calendar_crm
     from backend.models.database import get_service_supabase
 
@@ -623,9 +635,14 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
             blocker="internal create missing google_event_id",
         )
         return 4
-    fetched_internal = get_calendar_event(client_id, google_id)
-    readback_ok = _calendar_provider_matches(
-        fetched_internal,
+    fetched_internal = lookup_calendar_event(client_id, google_id)
+    internal_event = (
+        fetched_internal.get("event")
+        if fetched_internal.get("state") == "found"
+        else None
+    )
+    readback_ok = fetched_internal.get("state") == "found" and _calendar_provider_matches(
+        internal_event,
         google_id=google_id,
         title=title_internal,
         start_iso=start.isoformat(),
@@ -636,7 +653,8 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
         "provider_readback",
         result="pass" if readback_ok else "fail",
         provider_event_id=google_id,
-        provider_status=(fetched_internal or {}).get("status"),
+        lookup_state=fetched_internal.get("state"),
+        provider_status=(internal_event or {}).get("status"),
         invented=False,
     )
     if not readback_ok:
@@ -690,17 +708,24 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
         appointment_id=event_id,
     )
     if applied_c and google_id:
-        fetched_cancelled = get_calendar_event(client_id, google_id)
-        cancel_readback_ok = fetched_cancelled is None or (
-            fetched_cancelled.get("status") or ""
-        ).lower() in {"cancelled", "canceled"}
+        cancel_lookup = lookup_calendar_event(client_id, google_id)
+        cancel_state = cancel_lookup.get("state")
+        if cancel_state == "not_found":
+            cancel_readback_ok = True
+        elif cancel_state == "found":
+            cancel_readback_ok = (
+                cancel_lookup.get("event") or {}
+            ).get("status", "").lower() in {"cancelled", "canceled"}
+        else:
+            cancel_readback_ok = False
         _record(
             evidence,
             "calendar",
             "provider_cancel_readback",
             result="pass" if cancel_readback_ok else "fail",
             provider_event_id=google_id,
-            provider_status=(fetched_cancelled or {}).get("status"),
+            lookup_state=cancel_state,
+            provider_status=(cancel_lookup.get("event") or {}).get("status"),
             invented=False,
         )
         if not cancel_readback_ok:
@@ -787,22 +812,22 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
     if not pending_ok:
         return 4
 
-    pre_appts = _appointments_with_marker(db, client_id, ext_marker)
-    pre_provider_ids = [
-        row.get("google_event_id")
-        for row in pre_appts
-        if row.get("google_event_id")
-    ]
+    ext_window_min = ext_start - timedelta(hours=1)
+    ext_window_max = ext_end + timedelta(hours=1)
+    pre_state, pre_count = _provider_events_matching_marker(
+        client_id, ext_marker, ext_window_min, ext_window_max
+    )
+    pre_provider_ok = pre_state == "ok" and pre_count == 0
     _record(
         evidence,
         "calendar",
         "external_pre_approve_no_provider_event",
-        result="pass" if not pre_provider_ids else "fail",
-        local_appointments=len(pre_appts),
-        provider_event_ids=pre_provider_ids,
-        note="No Google event before owner approval",
+        result="pass" if pre_provider_ok else "fail",
+        lookup_state=pre_state,
+        provider_event_count=pre_count,
+        note="Provider list query by marker/time window — zero before approval",
     )
-    if pre_provider_ids:
+    if not pre_provider_ok:
         return 4
 
     code_a, approve_body = _approve_tool_execution(token, ext_execution_id)
@@ -841,15 +866,31 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
     if not approve_ok or not ext_google_id:
         return 4
 
-    fetched_ext = get_calendar_event(client_id, ext_google_id)
-    ext_readback_ok = _calendar_provider_matches(
-        fetched_ext,
+    post_state, post_count = _provider_events_matching_marker(
+        client_id, ext_marker, ext_window_min, ext_window_max
+    )
+    post_one_ok = post_state == "ok" and post_count == 1
+    _record(
+        evidence,
+        "calendar",
+        "external_post_approve_one_provider_event",
+        result="pass" if post_one_ok else "fail",
+        lookup_state=post_state,
+        provider_event_count=post_count,
+    )
+    if not post_one_ok:
+        return 4
+
+    ext_lookup = lookup_calendar_event(client_id, ext_google_id)
+    ext_event = ext_lookup.get("event") if ext_lookup.get("state") == "found" else None
+    ext_readback_ok = ext_lookup.get("state") == "found" and _calendar_provider_matches(
+        ext_event,
         google_id=ext_google_id,
         title=ext_title,
         start_iso=ext_start.isoformat(),
     )
     attendee_emails = [
-        (a.get("email") or "").lower() for a in (fetched_ext or {}).get("attendees") or []
+        (a.get("email") or "").lower() for a in (ext_event or {}).get("attendees") or []
     ]
     _record(
         evidence,
@@ -859,6 +900,7 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
         if ext_readback_ok and ext_email.lower() in attendee_emails
         else "fail",
         provider_event_id=ext_google_id,
+        lookup_state=ext_lookup.get("state"),
         attendee_count=len(attendee_emails),
         invented=False,
     )
@@ -871,11 +913,9 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
         if isinstance(redrive_body, dict)
         else None
     )
-    redrive_ids = {
-        row.get("google_event_id")
-        for row in _appointments_with_marker(db, client_id, ext_marker)
-        if row.get("google_event_id")
-    }
+    redrive_state, redrive_count = _provider_events_matching_marker(
+        client_id, ext_marker, ext_window_min, ext_window_max
+    )
     _record(
         evidence,
         "calendar",
@@ -884,17 +924,20 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
         if code_redrive == 200
         and isinstance(redrive_body, dict)
         and redrive_body.get("already_decided") is True
-        and len(redrive_ids) <= 1
+        and redrive_state == "ok"
+        and redrive_count == 1
         else "fail",
         http_status=code_redrive,
-        provider_event_count=len(redrive_ids),
+        lookup_state=redrive_state,
+        provider_event_count=redrive_count,
         execution_status=(redrive_exec or {}).get("status"),
     )
     if (
         code_redrive != 200
         or not isinstance(redrive_body, dict)
         or redrive_body.get("already_decided") is not True
-        or len(redrive_ids) > 1
+        or redrive_state != "ok"
+        or redrive_count != 1
     ):
         return 4
 
@@ -938,10 +981,16 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
     cancel_ok = code_cancel == 200 and isinstance(cancel_exec, dict) and (
         cancel_exec.get("status") in {"succeeded", "verified", "completed"}
     )
-    fetched_ext_after = get_calendar_event(client_id, ext_google_id)
-    ext_cancel_readback = fetched_ext_after is None or (
-        fetched_ext_after.get("status") or ""
-    ).lower() in {"cancelled", "canceled"}
+    ext_cancel_lookup = lookup_calendar_event(client_id, ext_google_id)
+    ext_cancel_state = ext_cancel_lookup.get("state")
+    if ext_cancel_state == "not_found":
+        ext_cancel_readback = True
+    elif ext_cancel_state == "found":
+        ext_cancel_readback = (
+            ext_cancel_lookup.get("event") or {}
+        ).get("status", "").lower() in {"cancelled", "canceled"}
+    else:
+        ext_cancel_readback = False
     _record(
         evidence,
         "calendar",
@@ -949,7 +998,8 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
         result="pass" if cancel_ok and ext_cancel_readback else "fail",
         http_status=code_cancel,
         provider_event_id=ext_google_id,
-        provider_status=(fetched_ext_after or {}).get("status"),
+        lookup_state=ext_cancel_state,
+        provider_status=(ext_cancel_lookup.get("event") or {}).get("status"),
     )
     if not cancel_ok or not ext_cancel_readback:
         return 4
@@ -1359,7 +1409,6 @@ def run_gmail_suite(evidence: dict, client_id: str) -> int:
     _record(evidence, "gmail", "owner_login", result="pass")
 
     from backend.models.database import get_service_supabase
-    from backend.services import os_tool_executions as ote
 
     db = get_service_supabase()
     marker = f"m8-gmail-{uuid.uuid4().hex[:8]}"
@@ -1442,24 +1491,37 @@ def run_gmail_suite(evidence: dict, client_id: str) -> int:
     if not sales_ok:
         return 4
 
-    pre_send_count = _gmail_message_count_by_execution(client_id, execution_id)
+    payload_ok = _send_payload_matches(pending, recipient, subject, body, marker)
+    not_sent_yet = _send_email_pending_not_sent(pending)
     _record(
         evidence,
         "gmail",
-        "pre_approve_gmail_untouched",
-        result="pass" if pre_send_count == 0 else "fail",
+        "pre_approve_not_sent",
+        result="pass" if payload_ok and not_sent_yet else "fail",
         execution_id=execution_id,
-        gmail_messages_by_fingerprint=pre_send_count,
+        payload_matches=payload_ok,
+        status=pending.get("status"),
+        note=(
+            "Send-only OAuth: prove pending_approval + approved payload, "
+            "no provider messageId on row (no sender mailbox read)"
+        ),
     )
-    if pre_send_count != 0:
+    if not payload_ok or not not_sent_yet:
         return 4
+
+    first_msg_id_before = _provider_message_id_from_execution(pending)
 
     code_a, approve_body = _approve_tool_execution(token, execution_id)
     exec_after = (
         (approve_body or {}).get("execution") if isinstance(approve_body, dict) else None
     )
-    approve_ok = code_a == 200 and isinstance(exec_after, dict) and (
-        exec_after.get("status") in {"succeeded", "verified", "completed"}
+    provider_msg_id = _provider_message_id_from_execution(exec_after or {})
+    approve_ok = (
+        code_a == 200
+        and isinstance(exec_after, dict)
+        and exec_after.get("status") in {"succeeded", "verified", "completed"}
+        and bool(provider_msg_id)
+        and _send_payload_matches(exec_after, recipient, subject, body, marker)
     )
     _record(
         evidence,
@@ -1469,51 +1531,52 @@ def run_gmail_suite(evidence: dict, client_id: str) -> int:
         http_status=code_a,
         execution_id=execution_id,
         execution_status=(exec_after or {}).get("status"),
+        provider_message_id=provider_msg_id,
         already_decided=(approve_body or {}).get("already_decided")
         if isinstance(approve_body, dict)
         else None,
+        note="Succeeded only when users.messages.send returned a provider message id",
     )
     if not approve_ok:
         return 4
 
-    msgid = ote.rfc822_msgid_for(execution_id)
-    gmail_msg_id = gmail_connector.find_message_id_by_rfc822_msgid(client_id, msgid)
-    if not gmail_msg_id:
+    verify_url = os.environ.get("M8_SMOKE_GMAIL_RECIPIENT_VERIFY_URL", "").strip()
+    if verify_url:
+        delivery_ok = _optional_recipient_delivery_verify(verify_url, marker, recipient)
         _record(
             evidence,
             "gmail",
-            "message_id_verification",
-            result="fail",
-            blocker="provider Message-ID fingerprint not found in Gmail",
-            rfc822_msgid=msgid,
+            "recipient_side_delivery",
+            result="pass" if delivery_ok else "fail",
+            note="Independent recipient-side verifier (not product OAuth read)",
         )
-        return 4
-
-    parsed = gmail_connector.get_message(client_id, gmail_msg_id)
-    subject_ok = parsed and marker in (parsed.get("subject") or "")
-    recipient_ok = parsed and recipient.lower() in (
-        parsed.get("recipient") or ""
-    ).lower()
-    _record(
-        evidence,
-        "gmail",
-        "message_id_verification",
-        result="pass" if subject_ok and recipient_ok else "fail",
-        rfc822_msgid=msgid,
-        gmail_message_id=gmail_msg_id,
-        subject_matches=bool(subject_ok),
-        recipient_matches=bool(recipient_ok),
-    )
-    if not subject_ok or not recipient_ok:
-        return 4
+        if not delivery_ok:
+            return 4
+    else:
+        _record(
+            evidence,
+            "gmail",
+            "recipient_side_delivery",
+            result="skipped",
+            note=(
+                "No M8_SMOKE_GMAIL_RECIPIENT_VERIFY_URL — send-only scope cannot "
+                "read sender mailbox; provider ack on execution row is the proof"
+            ),
+        )
 
     code_redrive, redrive_body = _approve_tool_execution(token, execution_id)
-    post_count = _gmail_message_count_by_execution(client_id, execution_id)
+    redrive_exec = (
+        (redrive_body or {}).get("execution") if isinstance(redrive_body, dict) else None
+    )
+    redrive_msg_id = _provider_message_id_from_execution(redrive_exec or {})
+    redrive_outcome = (redrive_body or {}).get("outcome") if isinstance(redrive_body, dict) else None
     redrive_ok = (
         code_redrive == 200
         and isinstance(redrive_body, dict)
         and redrive_body.get("already_decided") is True
-        and post_count == 1
+        and redrive_msg_id == provider_msg_id
+        and redrive_msg_id != ""
+        and not (isinstance(redrive_outcome, dict) and redrive_outcome.get("executed"))
     )
     _record(
         evidence,
@@ -1521,10 +1584,15 @@ def run_gmail_suite(evidence: dict, client_id: str) -> int:
         "redrive_no_duplicate",
         result="pass" if redrive_ok else "fail",
         http_status=code_redrive,
-        gmail_messages_by_fingerprint=post_count,
-        execution_status=((redrive_body or {}).get("execution") or {}).get("status")
-        if isinstance(redrive_body, dict)
+        provider_message_id=redrive_msg_id,
+        first_provider_message_id=first_msg_id_before or provider_msg_id,
+        outcome_executed=(redrive_outcome or {}).get("executed")
+        if isinstance(redrive_outcome, dict)
         else None,
+        execution_status=(redrive_exec or {}).get("status")
+        if isinstance(redrive_exec, dict)
+        else None,
+        note="Second approve is idempotent; send must not run again",
     )
 
     fails = [
@@ -1861,17 +1929,111 @@ def _poll_tool_execution(
     return None
 
 
-def _gmail_message_count_by_execution(client_id: str, execution_id: str) -> int | None:
-    """Return 0/1 for deterministic fingerprint, or None when lookup is unknown."""
-    from backend.services import gmail_connector, os_tool_executions as ote
+def _parse_execution_field(row: dict | None, field: str) -> dict:
+    if not isinstance(row, dict):
+        return {}
+    raw = row.get(field) or {}
+    if isinstance(raw, str):
+        try:
+            parsed = json.loads(raw)
+            return parsed if isinstance(parsed, dict) else {}
+        except Exception:
+            return {}
+    return raw if isinstance(raw, dict) else {}
 
-    msgid = ote.rfc822_msgid_for(execution_id)
-    found = gmail_connector.find_message_id_by_rfc822_msgid(client_id, msgid)
-    if found:
-        return 1
-    # Distinguish "none" from API/credential failure is not exposed; treat as 0
-    # only when connector exists — caller checks integration separately.
-    return 0
+
+def _send_email_pending_not_sent(row: dict | None) -> bool:
+    """True when row is parked and has no provider send acknowledgement yet."""
+    if not isinstance(row, dict):
+        return False
+    if (row.get("status") or "") != "pending_approval":
+        return False
+    result = _parse_execution_field(row, "result")
+    return not _provider_message_id_from_execution({"result": result})
+
+
+def _send_payload_matches(
+    row: dict | None,
+    recipient: str,
+    subject: str,
+    body: str,
+    marker: str,
+) -> bool:
+    inp = _parse_execution_field(row, "input")
+    to = (inp.get("to") or "").strip().lower()
+    subj = inp.get("subject") or ""
+    bod = inp.get("body") or ""
+    return (
+        to == recipient.strip().lower()
+        and marker in subj
+        and marker in bod
+        and subject in subj
+        and body in bod
+    )
+
+
+def _provider_message_id_from_execution(row: dict | None) -> str | None:
+    if not isinstance(row, dict):
+        return None
+    result = _parse_execution_field(row, "result")
+    mid = result.get("messageId") or result.get("message_id")
+    if mid is None and "result" not in row:
+        mid = row.get("messageId") or row.get("message_id")
+    text = str(mid).strip() if mid else ""
+    return text or None
+
+
+def _provider_events_matching_marker(
+    client_id: str,
+    marker: str,
+    time_min: datetime,
+    time_max: datetime,
+) -> tuple[str, int]:
+    """Return (lookup_state, count). count is -1 when lookup_state != ok."""
+    from backend.services.google_calendar import list_calendar_events_in_window
+
+    listed = list_calendar_events_in_window(
+        client_id, time_min, time_max, summary_contains=marker
+    )
+    if listed.get("state") != "ok":
+        return "unknown", -1
+    events = listed.get("events") or []
+    matched = [ev for ev in events if marker in (ev.get("summary") or "")]
+    return "ok", len(matched)
+
+
+def _cancel_lookup_proves_deleted(lookup: dict) -> bool:
+    state = lookup.get("state")
+    if state == "not_found":
+        return True
+    if state == "found":
+        return (lookup.get("event") or {}).get("status", "").lower() in {
+            "cancelled",
+            "canceled",
+        }
+    return False
+
+
+def _optional_recipient_delivery_verify(
+    verify_url: str, marker: str, recipient: str
+) -> bool:
+    """POST to a controlled recipient-side verifier (not product Gmail OAuth)."""
+    import urllib.error
+    import urllib.request
+
+    payload = json.dumps({"marker": marker, "recipient": recipient}).encode()
+    req = urllib.request.Request(
+        verify_url,
+        data=payload,
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
+            body = json.loads(resp.read().decode("utf-8", errors="replace") or "{}")
+    except (urllib.error.HTTPError, urllib.error.URLError, json.JSONDecodeError):
+        return False
+    return bool(body.get("found") or body.get("delivered"))
 
 
 def _appointments_with_marker(db: Any, client_id: str, marker: str) -> list[dict]:

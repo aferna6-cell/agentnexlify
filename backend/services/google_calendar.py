@@ -3,6 +3,7 @@
 
 import logging
 from datetime import datetime, timezone
+from typing import Any
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -393,6 +394,100 @@ def get_calendar_event(tenant_id: str, event_id: str) -> dict | None:
             exc_info=True,
         )
         return None
+
+
+def _normalize_calendar_event(event: dict) -> dict:
+    start = (event.get("start") or {}).get("dateTime") or (event.get("start") or {}).get(
+        "date"
+    )
+    end = (event.get("end") or {}).get("dateTime") or (event.get("end") or {}).get("date")
+    attendees = [
+        {"email": a.get("email"), "displayName": a.get("displayName")}
+        for a in (event.get("attendees") or [])
+        if a.get("email")
+    ]
+    return {
+        "id": event.get("id"),
+        "status": event.get("status") or "confirmed",
+        "summary": event.get("summary") or "",
+        "start": start,
+        "end": end,
+        "attendees": attendees,
+        "htmlLink": event.get("htmlLink"),
+    }
+
+
+def lookup_calendar_event(tenant_id: str, event_id: str) -> dict:
+    """Tri-state Google Calendar event lookup for verification callers.
+
+    Returns one of:
+      ``{"state": "found", "event": {...}}``
+      ``{"state": "not_found"}`` — explicit provider 404
+      ``{"state": "unknown", "reason": ...}`` — credentials/API failure
+    """
+    try:
+        service = _build_service(tenant_id)
+        if not service:
+            return {"state": "unknown", "reason": "no_credentials"}
+        event = (
+            service.events()
+            .get(calendarId="primary", eventId=event_id)
+            .execute()
+        )
+        return {"state": "found", "event": _normalize_calendar_event(event)}
+    except HttpError as e:
+        if e.resp.status == 404:
+            return {"state": "not_found"}
+        return {"state": "unknown", "reason": f"http_{e.resp.status}"}
+    except Exception as exc:
+        logger.warning(
+            "lookup_calendar_event failed tenant=%s event=%s",
+            tenant_id,
+            event_id,
+            exc_info=True,
+        )
+        return {"state": "unknown", "reason": type(exc).__name__}
+
+
+def list_calendar_events_in_window(
+    tenant_id: str,
+    time_min: datetime,
+    time_max: datetime,
+    *,
+    summary_contains: str | None = None,
+) -> dict:
+    """List provider events in a time window (tri-state).
+
+    Returns ``{"state": "ok", "events": [...]}`` on success or
+    ``{"state": "unknown", "reason": ..., "events": []}`` when the query could
+    not be verified.
+    """
+    try:
+        service = _build_service(tenant_id)
+        if not service:
+            return {"state": "unknown", "reason": "no_credentials", "events": []}
+        params: dict[str, Any] = {
+            "calendarId": "primary",
+            "timeMin": time_min.isoformat(),
+            "timeMax": time_max.isoformat(),
+            "singleEvents": True,
+            "maxResults": 50,
+        }
+        if summary_contains:
+            params["q"] = summary_contains
+        result = service.events().list(**params).execute()
+        items = result.get("items") or []
+        return {
+            "state": "ok",
+            "events": [_normalize_calendar_event(ev) for ev in items],
+        }
+    except Exception as exc:
+        logger.warning(
+            "list_calendar_events_in_window failed tenant=%s",
+            tenant_id,
+            exc_info=True,
+        )
+        return {"state": "unknown", "reason": type(exc).__name__, "events": []}
 
 
 def get_busy_times(

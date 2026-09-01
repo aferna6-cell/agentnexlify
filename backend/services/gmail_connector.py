@@ -527,6 +527,11 @@ def find_message_id_by_rfc822_msgid(tenant_id: str, rfc822_msgid: str) -> str | 
     Returns the Gmail message id, or ``None`` when there is no match, no
     credentials, or the search fails — callers treat ``None`` as unknown,
     never as "definitely not sent".
+
+    **Send-only OAuth:** ``users.messages.list`` / ``get`` require read scopes
+    (``gmail.metadata``, ``gmail.readonly``, etc.) that ``gmail.send`` alone
+    does not grant. With send-only connectors this lookup typically fails and
+    returns ``None``; do not interpret that as "no message exists".
     """
     if not rfc822_msgid:
         return None

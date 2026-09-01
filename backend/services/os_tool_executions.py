@@ -16,10 +16,19 @@ Three responsibilities:
    moves out of ``pending_approval`` with a conditional update *before* the
    engine is called, so a double-clicked approval cannot run a tool twice.
    4. **Re-drive a claimed row** through ``_run_data_plane_tool`` with an injected
-   mailbox port. A timeout or lost response stays non-terminal; a later
-   re-drive rfc822msgid-adopts. Production ``send_email`` uses
-   ``os_tools.run_tool`` + ``GmailMailboxPort``, gated by
-   ``SEND_EMAIL_ENABLED`` (default off) and Sales-only.
+   mailbox port. A timeout or lost response stays non-terminal (``running`` +
+   unknown). Production ``send_email`` uses ``os_tools.run_tool`` +
+   ``GmailMailboxPort``, gated by ``SEND_EMAIL_ENABLED`` (default off) and
+   Sales-only.
+
+   **Send-only Gmail contract (``gmail.send`` scope):** Normal approval/redrive
+   is protected by the DB claim / idempotency gate. A successful send records
+   the provider ``messageId`` from ``users.messages.send`` and moves the row to
+   ``succeeded``. A lost/timeout response stays ``running`` with unknown outcome
+   — it is **not** automatically retried. Pre-send RFC822 Message-ID mailbox
+   lookup (``find_message_id_by_rfc822_msgid``) requires read scopes that
+   send-only OAuth does not grant; when lookup is unavailable the adoption path
+   cannot independently prove whether a prior send happened.
 
 Distinct from ``backend/services/os_actions/``: that package fires a channel
 handler when the owner approves a *deliverable*. This one records and gates an
@@ -640,6 +649,11 @@ def _run_data_plane_tool(
     ``port`` is an injected mailbox. Production ``send_email`` attaches
     ``GmailMailboxPort`` only after ``os_tools.refuse_send_email`` returns
     None (flag on + Sales).
+
+    With send-only ``gmail.send`` OAuth, ``port.find_by_rfc822_msgid`` usually
+    cannot run (no read scope). A ``None`` lookup is **not** proof that no send
+    happened — only the provider ``messages.send`` acknowledgement or the DB
+    claim gate may be relied on for at-most-once semantics.
     """
     row = get_tool_execution(db, client_id, execution_id)
     if row is None or row.get("status") != "running":
