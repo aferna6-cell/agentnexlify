@@ -32,15 +32,25 @@ function extractOwnerSubjectBody(
     if (subject && body) return { subject, body };
   }
 
-  // Live smoke (and owners) often use single quotes:
-  //   send … with subject 'M8 smoke …' and body 'Milestone 8 …'
-  // Double / curly quotes stay valid. Mixed quote styles are still exact.
-  const quoted = ask.match(
-    /\bwith subject\s+["“'](.+?)["”']\s+and body\s+["“']([\s\S]+?)["”']/i,
+  // Paired matchers — do not put `'` in the double-quote class. A shared
+  // class treats the apostrophe in "It's ready" as the closer and parks
+  // a truncated body. Single-quoted closer must be `'` then space / end /
+  // sentence punct so an inner It's does not win.
+  const doubleQuoted = ask.match(
+    /\bwith subject\s+["“](.+?)["”]\s+and body\s+["“]([\s\S]+?)["”]/i,
   );
-  if (quoted) {
-    const subject = quoted[1]?.trim() ?? "";
-    const body = quoted[2]?.trim() ?? "";
+  if (doubleQuoted) {
+    const subject = doubleQuoted[1]?.trim() ?? "";
+    const body = doubleQuoted[2]?.trim() ?? "";
+    if (subject && body) return { subject, body };
+  }
+
+  const singleQuoted = ask.match(
+    /\bwith subject\s+'([\s\S]+?)'\s+and body\s+'([\s\S]+?)'(?=\s|$|[.,;:!?])/i,
+  );
+  if (singleQuoted) {
+    const subject = singleQuoted[1]?.trim() ?? "";
+    const body = singleQuoted[2]?.trim() ?? "";
     if (subject && body) return { subject, body };
   }
 

@@ -125,6 +125,30 @@ test("unambiguous quoted send preserves owner subject and body even if the body 
   });
 });
 
+test("double-quoted body with an apostrophe is not truncated", () => {
+  const out = resolveExact(
+    'Email sarah@example.com with subject "Brake quote" and body "It\'s ready whenever you are."',
+  );
+  assert.equal(out?.toolId, "send_email");
+  assert.deepEqual(out?.input, {
+    to: "sarah@example.com",
+    subject: "Brake quote",
+    body: "It's ready whenever you are.",
+  });
+});
+
+test("single-quoted body with an apostrophe keeps the full owner text", () => {
+  const out = resolveExact(
+    "Email sarah@example.com with subject 'Sarah's quote' and body 'It's ready whenever you are.'",
+  );
+  assert.equal(out?.toolId, "send_email");
+  assert.deepEqual(out?.input, {
+    to: "sarah@example.com",
+    subject: "Sarah's quote",
+    body: "It's ready whenever you are.",
+  });
+});
+
 test("non-unambiguous ask does not take the exact path (compose fallback)", () => {
   assert.equal(resolveExact(COMPOSE_FALLBACK), undefined);
 });
@@ -216,6 +240,7 @@ test("park write: Sales pending row input equals owner subject and body", async 
   process.env[SEND_EMAIL_FLAG] = "1";
   const request = salesFromOutput(LIVE_SMOKE_ASK);
   assert.ok(request);
+  // Production park write: shipped toolRegistry + in-memory store from harness().
   const outcome = await executeAction({
     accountId: "tenantA",
     agentId: "sales",
