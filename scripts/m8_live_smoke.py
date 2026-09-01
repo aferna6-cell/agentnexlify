@@ -14,7 +14,9 @@ Optional suites (comma-separated in M8_SMOKE_SUITES, default calendar,crm):
 
   calendar     — availability, internal create, read-back, cancel, cross-tenant
   crm          — search/update/create/dedupe/stage/cross-tenant via data plane
-  gmail        — propose/approve/send/Message-ID/redrive (needs SEND_EMAIL_ENABLED=1)
+  gmail        — OS ask → pending_approval → approve/send/Message-ID/redrive
+                 (needs SEND_EMAIL_ENABLED=1, M8_SMOKE_ALLOW_EXTERNAL_SEND=1,
+                  M8_SMOKE_GMAIL_RECIPIENT, owner login/API base)
   rag          — in-process soak with RAG_ENABLED=1, DEFAULT_MIN_SCORE=1.0 frozen
   isolation    — staging RLS: anon denied; service_role scoped reads; CRM isolation
   agent_os_e2e — staging HTTP login → OS thread/message → tool_executions chain
@@ -27,6 +29,15 @@ Requires for Calendar/Gmail/CRM Action Executor path:
 Agent OS E2E additionally needs:
   M8_SMOKE_API_BASE + M8_SMOKE_LOGIN_EMAIL/PASSWORD (or M8_SMOKE_OWNER_JWT)
   Staging Railway SUPABASE_SERVICE_KEY = real server credential so /auth/login works
+
+Gmail live send additionally needs:
+  M8_SMOKE_ALLOW_EXTERNAL_SEND=1
+  M8_SMOKE_GMAIL_RECIPIENT=<controlled inbox>
+  optional M8_SMOKE_GMAIL_RECIPIENT_ALLOWLIST=comma-separated allowlist
+
+Calendar external-attendee approval additionally needs:
+  M8_SMOKE_EXTERNAL_ATTENDEE=<controlled external email>
+  owner login/API base (approve path exercises Action Executor)
 
 Writes a non-sensitive evidence JSON under audits/artifacts/ when possible.
 Exit codes:
@@ -525,7 +536,7 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
         return 3
 
     os.environ.setdefault("CALENDAR_ACTIONS_ENABLED", "1")
-    from backend.services.google_calendar import get_integration
+    from backend.services.google_calendar import get_integration, get_calendar_event
     from backend.services import os_calendar_crm
     from backend.models.database import get_service_supabase
 
@@ -602,6 +613,35 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
         verification=detail,
     )
 
+    title_internal = f"M8 smoke internal {start.date().isoformat()}"
+    if not google_id:
+        _record(
+            evidence,
+            "calendar",
+            "provider_readback",
+            result="fail",
+            blocker="internal create missing google_event_id",
+        )
+        return 4
+    fetched_internal = get_calendar_event(client_id, google_id)
+    readback_ok = _calendar_provider_matches(
+        fetched_internal,
+        google_id=google_id,
+        title=title_internal,
+        start_iso=start.isoformat(),
+    )
+    _record(
+        evidence,
+        "calendar",
+        "provider_readback",
+        result="pass" if readback_ok else "fail",
+        provider_event_id=google_id,
+        provider_status=(fetched_internal or {}).get("status"),
+        invented=False,
+    )
+    if not readback_ok:
+        return 4
+
     # Redrive / idempotency: same fingerprint should dedupe.
     applied2, detail2, row2 = os_calendar_crm._upsert_local_event(
         db,
@@ -649,6 +689,270 @@ def run_calendar_suite(evidence: dict, client_id: str) -> int:
         detail=detail_c,
         appointment_id=event_id,
     )
+    if applied_c and google_id:
+        fetched_cancelled = get_calendar_event(client_id, google_id)
+        cancel_readback_ok = fetched_cancelled is None or (
+            fetched_cancelled.get("status") or ""
+        ).lower() in {"cancelled", "canceled"}
+        _record(
+            evidence,
+            "calendar",
+            "provider_cancel_readback",
+            result="pass" if cancel_readback_ok else "fail",
+            provider_event_id=google_id,
+            provider_status=(fetched_cancelled or {}).get("status"),
+            invented=False,
+        )
+        if not cancel_readback_ok:
+            return 4
+
+    # External-attendee path — Action Executor approval boundary (not direct Google).
+    if not _require_staging_api(evidence, "calendar"):
+        return 3
+    ext_email, ext_blocker = _external_attendee_email()
+    if not ext_email:
+        _record(
+            evidence,
+            "calendar",
+            "external_attendee_gate",
+            result="blocked",
+            blocker=ext_blocker,
+        )
+        return 3
+
+    token, login_blocker = _staging_owner_token()
+    if not token:
+        _record(
+            evidence,
+            "calendar",
+            "external_owner_login",
+            result="blocked",
+            blocker=login_blocker or "owner token unavailable",
+        )
+        return 3
+    _record(evidence, "calendar", "external_owner_login", result="pass")
+
+    from backend.services import os_tool_executions as ote
+
+    ext_marker = f"m8-ext-{uuid.uuid4().hex[:8]}"
+    ext_start = datetime.now(timezone.utc) + timedelta(days=5)
+    ext_start = ext_start.replace(minute=0, second=0, microsecond=0)
+    ext_end = ext_start + timedelta(hours=1)
+    ext_title = f"M8 external smoke {ext_marker}"
+    ext_execution_id = str(uuid.uuid4())
+    ext_idempotency = f"m8-cal-ext-{ext_marker}"
+
+    proposed = ote.propose_tool_execution(
+        db,
+        client_id,
+        None,
+        {
+            "id": ext_execution_id,
+            "toolId": "create_calendar_event",
+            "agentId": "operations",
+            "riskLevel": 2,
+            "mutating": True,
+            "requiresApproval": True,
+            "approvalState": "pending",
+            "status": "pending_approval",
+            "input": {
+                "start": ext_start.isoformat(),
+                "end": ext_end.isoformat(),
+                "title": ext_title,
+                "attendees": [
+                    {"email": ext_email, "display_name": "M8 External Guest"}
+                ],
+                "send_invitations": True,
+            },
+            "policyReason": (
+                "calendar event includes external attendees or invitations — "
+                "owner approval required"
+            ),
+            "idempotencyKey": ext_idempotency,
+        },
+    )
+    pending_ok = bool(
+        proposed
+        and (proposed.get("status") or "") == "pending_approval"
+        and (proposed.get("tool_id") or "") == "create_calendar_event"
+    )
+    _record(
+        evidence,
+        "calendar",
+        "external_pending_approval",
+        result="pass" if pending_ok else "fail",
+        execution_id=ext_execution_id,
+        approval_state=proposed.get("approval_state") if proposed else None,
+    )
+    if not pending_ok:
+        return 4
+
+    pre_appts = _appointments_with_marker(db, client_id, ext_marker)
+    pre_provider_ids = [
+        row.get("google_event_id")
+        for row in pre_appts
+        if row.get("google_event_id")
+    ]
+    _record(
+        evidence,
+        "calendar",
+        "external_pre_approve_no_provider_event",
+        result="pass" if not pre_provider_ids else "fail",
+        local_appointments=len(pre_appts),
+        provider_event_ids=pre_provider_ids,
+        note="No Google event before owner approval",
+    )
+    if pre_provider_ids:
+        return 4
+
+    code_a, approve_body = _approve_tool_execution(token, ext_execution_id)
+    exec_after = (
+        (approve_body or {}).get("execution") if isinstance(approve_body, dict) else None
+    )
+    approve_ok = code_a == 200 and isinstance(exec_after, dict) and (
+        exec_after.get("status") in {"succeeded", "verified", "completed"}
+    )
+    ext_google_id = None
+    if isinstance(exec_after, dict):
+        result = exec_after.get("result") or {}
+        if isinstance(result, str):
+            try:
+                result = json.loads(result)
+            except Exception:
+                result = {}
+        ext_google_id = result.get("googleEventId") or result.get("google_event_id")
+    if not ext_google_id:
+        post_appts = _appointments_with_marker(db, client_id, ext_marker)
+        if post_appts:
+            ext_google_id = post_appts[0].get("google_event_id")
+
+    _record(
+        evidence,
+        "calendar",
+        "external_approve_once",
+        result="pass" if approve_ok and ext_google_id else "fail",
+        http_status=code_a,
+        execution_id=ext_execution_id,
+        provider_event_id=ext_google_id,
+        already_decided=(approve_body or {}).get("already_decided")
+        if isinstance(approve_body, dict)
+        else None,
+    )
+    if not approve_ok or not ext_google_id:
+        return 4
+
+    fetched_ext = get_calendar_event(client_id, ext_google_id)
+    ext_readback_ok = _calendar_provider_matches(
+        fetched_ext,
+        google_id=ext_google_id,
+        title=ext_title,
+        start_iso=ext_start.isoformat(),
+    )
+    attendee_emails = [
+        (a.get("email") or "").lower() for a in (fetched_ext or {}).get("attendees") or []
+    ]
+    _record(
+        evidence,
+        "calendar",
+        "external_provider_readback",
+        result="pass"
+        if ext_readback_ok and ext_email.lower() in attendee_emails
+        else "fail",
+        provider_event_id=ext_google_id,
+        attendee_count=len(attendee_emails),
+        invented=False,
+    )
+    if not ext_readback_ok or ext_email.lower() not in attendee_emails:
+        return 4
+
+    code_redrive, redrive_body = _approve_tool_execution(token, ext_execution_id)
+    redrive_exec = (
+        (redrive_body or {}).get("execution")
+        if isinstance(redrive_body, dict)
+        else None
+    )
+    redrive_ids = {
+        row.get("google_event_id")
+        for row in _appointments_with_marker(db, client_id, ext_marker)
+        if row.get("google_event_id")
+    }
+    _record(
+        evidence,
+        "calendar",
+        "external_redrive_no_duplicate",
+        result="pass"
+        if code_redrive == 200
+        and isinstance(redrive_body, dict)
+        and redrive_body.get("already_decided") is True
+        and len(redrive_ids) <= 1
+        else "fail",
+        http_status=code_redrive,
+        provider_event_count=len(redrive_ids),
+        execution_status=(redrive_exec or {}).get("status"),
+    )
+    if (
+        code_redrive != 200
+        or not isinstance(redrive_body, dict)
+        or redrive_body.get("already_decided") is not True
+        or len(redrive_ids) > 1
+    ):
+        return 4
+
+    ext_appt = _appointments_with_marker(db, client_id, ext_marker)
+    ext_appt_id = ext_appt[0]["id"] if ext_appt else None
+    cancel_exec_id = str(uuid.uuid4())
+    cancel_proposed = ote.propose_tool_execution(
+        db,
+        client_id,
+        None,
+        {
+            "id": cancel_exec_id,
+            "toolId": "cancel_calendar_event",
+            "agentId": "operations",
+            "riskLevel": 2,
+            "mutating": True,
+            "requiresApproval": True,
+            "approvalState": "pending",
+            "status": "pending_approval",
+            "input": {
+                "event_id": ext_appt_id,
+                "provider_event_id": ext_google_id,
+            },
+            "policyReason": "level 2 requires approval",
+            "idempotencyKey": f"m8-cal-ext-cancel-{ext_marker}",
+        },
+    )
+    if not cancel_proposed or cancel_proposed.get("status") != "pending_approval":
+        _record(
+            evidence,
+            "calendar",
+            "external_cancel_proposal",
+            result="fail",
+            execution_id=cancel_exec_id,
+        )
+        return 4
+    code_cancel, cancel_body = _approve_tool_execution(token, cancel_exec_id)
+    cancel_exec = (
+        (cancel_body or {}).get("execution") if isinstance(cancel_body, dict) else None
+    )
+    cancel_ok = code_cancel == 200 and isinstance(cancel_exec, dict) and (
+        cancel_exec.get("status") in {"succeeded", "verified", "completed"}
+    )
+    fetched_ext_after = get_calendar_event(client_id, ext_google_id)
+    ext_cancel_readback = fetched_ext_after is None or (
+        fetched_ext_after.get("status") or ""
+    ).lower() in {"cancelled", "canceled"}
+    _record(
+        evidence,
+        "calendar",
+        "external_cancel",
+        result="pass" if cancel_ok and ext_cancel_readback else "fail",
+        http_status=code_cancel,
+        provider_event_id=ext_google_id,
+        provider_status=(fetched_ext_after or {}).get("status"),
+    )
+    if not cancel_ok or not ext_cancel_readback:
+        return 4
 
     fails = [
         r
@@ -977,8 +1281,29 @@ def run_gmail_suite(evidence: dict, client_id: str) -> int:
             blocker="SEND_EMAIL_ENABLED not set for this process; refusing live send",
         )
         return 3
+    if not _truthy("M8_SMOKE_ALLOW_EXTERNAL_SEND"):
+        _record(
+            evidence,
+            "gmail",
+            "external_send_gate",
+            result="blocked",
+            blocker="M8_SMOKE_ALLOW_EXTERNAL_SEND=1 required for live Gmail proof",
+        )
+        return 3
+    if not _require_staging_api(evidence, "gmail"):
+        return 3
 
-    # Live Gmail remains owner-operated; this runner only confirms preconditions.
+    recipient, recipient_blocker = _gmail_recipient_allowed()
+    if not recipient:
+        _record(
+            evidence,
+            "gmail",
+            "recipient_gate",
+            result="blocked",
+            blocker=recipient_blocker,
+        )
+        return 3
+
     from backend.services import gmail_connector
 
     try:
@@ -1021,27 +1346,193 @@ def run_gmail_suite(evidence: dict, client_id: str) -> int:
         )
         return 3
 
-    _record(
-        evidence,
-        "gmail",
-        "manual_checkpoint",
-        result="blocked",
-        blocker=(
-            "Gmail connector present but automated send still requires owner "
-            "approve against a controlled recipient — follow docs/milestone-6-gmail-proof.md"
-        ),
-        note="Runner will not auto-approve external email without M8_SMOKE_ALLOW_EXTERNAL_SEND=1",
-    )
-    if not _truthy("M8_SMOKE_ALLOW_EXTERNAL_SEND"):
+    token, login_blocker = _staging_owner_token()
+    if not token:
+        _record(
+            evidence,
+            "gmail",
+            "owner_login",
+            result="blocked",
+            blocker=login_blocker or "owner token unavailable",
+        )
         return 3
+    _record(evidence, "gmail", "owner_login", result="pass")
+
+    from backend.models.database import get_service_supabase
+    from backend.services import os_tool_executions as ote
+
+    db = get_service_supabase()
+    marker = f"m8-gmail-{uuid.uuid4().hex[:8]}"
+    subject = f"M8 smoke {marker}"
+    body = f"Milestone 8 controlled send {marker} — safe to delete."
+
+    code_t, thread = _os_http(
+        "POST",
+        "/api/v1/os/threads",
+        token,
+        {"title": f"M8 Gmail smoke {marker}"},
+    )
+    if code_t not in (200, 201) or not isinstance(thread, dict) or not thread.get("id"):
+        _record(
+            evidence,
+            "gmail",
+            "create_thread",
+            result="fail",
+            http_status=code_t,
+        )
+        return 4
+    thread_id = thread["id"]
+    _record(evidence, "gmail", "create_thread", result="pass", thread_id=thread_id)
+
+    poll_since = datetime.now(timezone.utc).isoformat()
+    ask = (
+        f"Using Sales email tools only, email {recipient} with subject '{subject}' "
+        f"and body '{body}'. This must require owner approval before sending."
+    )
+    code_m, msg_body = _os_http(
+        "POST",
+        f"/api/v1/os/threads/{thread_id}/messages",
+        token,
+        {"content": ask},
+    )
+    if code_m not in (200, 201):
+        _record(
+            evidence,
+            "gmail",
+            "owner_ask",
+            result="fail",
+            http_status=code_m,
+            detail=msg_body if not isinstance(msg_body, dict) else None,
+        )
+        return 4
+    _record(evidence, "gmail", "owner_ask", result="pass", http_status=code_m)
+
+    pending = _poll_tool_execution(
+        db,
+        client_id,
+        token,
+        tool_id="send_email",
+        marker=marker,
+        poll_since=poll_since,
+        status="pending_approval",
+    )
+    if not pending:
+        _record(
+            evidence,
+            "gmail",
+            "pending_approval",
+            result="fail",
+            blocker="no send_email pending_approval row after owner ask",
+        )
+        return 4
+
+    execution_id = pending.get("id")
+    agent_id = pending.get("agent_id") or pending.get("agentId")
+    sales_ok = (agent_id or "") == "sales"
     _record(
         evidence,
         "gmail",
-        "external_send",
-        result="blocked",
-        blocker="automated external send not implemented in this runner; use manual procedure",
+        "pending_approval",
+        result="pass" if sales_ok else "fail",
+        execution_id=execution_id,
+        agent_id=agent_id,
+        approval_state=pending.get("approval_state"),
+        note="Sales department required for live send",
     )
-    return 3
+    if not sales_ok:
+        return 4
+
+    pre_send_count = _gmail_message_count_by_execution(client_id, execution_id)
+    _record(
+        evidence,
+        "gmail",
+        "pre_approve_gmail_untouched",
+        result="pass" if pre_send_count == 0 else "fail",
+        execution_id=execution_id,
+        gmail_messages_by_fingerprint=pre_send_count,
+    )
+    if pre_send_count != 0:
+        return 4
+
+    code_a, approve_body = _approve_tool_execution(token, execution_id)
+    exec_after = (
+        (approve_body or {}).get("execution") if isinstance(approve_body, dict) else None
+    )
+    approve_ok = code_a == 200 and isinstance(exec_after, dict) and (
+        exec_after.get("status") in {"succeeded", "verified", "completed"}
+    )
+    _record(
+        evidence,
+        "gmail",
+        "approve_send_once",
+        result="pass" if approve_ok else "fail",
+        http_status=code_a,
+        execution_id=execution_id,
+        execution_status=(exec_after or {}).get("status"),
+        already_decided=(approve_body or {}).get("already_decided")
+        if isinstance(approve_body, dict)
+        else None,
+    )
+    if not approve_ok:
+        return 4
+
+    msgid = ote.rfc822_msgid_for(execution_id)
+    gmail_msg_id = gmail_connector.find_message_id_by_rfc822_msgid(client_id, msgid)
+    if not gmail_msg_id:
+        _record(
+            evidence,
+            "gmail",
+            "message_id_verification",
+            result="fail",
+            blocker="provider Message-ID fingerprint not found in Gmail",
+            rfc822_msgid=msgid,
+        )
+        return 4
+
+    parsed = gmail_connector.get_message(client_id, gmail_msg_id)
+    subject_ok = parsed and marker in (parsed.get("subject") or "")
+    recipient_ok = parsed and recipient.lower() in (
+        parsed.get("recipient") or ""
+    ).lower()
+    _record(
+        evidence,
+        "gmail",
+        "message_id_verification",
+        result="pass" if subject_ok and recipient_ok else "fail",
+        rfc822_msgid=msgid,
+        gmail_message_id=gmail_msg_id,
+        subject_matches=bool(subject_ok),
+        recipient_matches=bool(recipient_ok),
+    )
+    if not subject_ok or not recipient_ok:
+        return 4
+
+    code_redrive, redrive_body = _approve_tool_execution(token, execution_id)
+    post_count = _gmail_message_count_by_execution(client_id, execution_id)
+    redrive_ok = (
+        code_redrive == 200
+        and isinstance(redrive_body, dict)
+        and redrive_body.get("already_decided") is True
+        and post_count == 1
+    )
+    _record(
+        evidence,
+        "gmail",
+        "redrive_no_duplicate",
+        result="pass" if redrive_ok else "fail",
+        http_status=code_redrive,
+        gmail_messages_by_fingerprint=post_count,
+        execution_status=((redrive_body or {}).get("execution") or {}).get("status")
+        if isinstance(redrive_body, dict)
+        else None,
+    )
+
+    fails = [
+        r
+        for r in evidence["results"]
+        if r.get("suite") == "gmail" and r.get("result") == "fail"
+    ]
+    return 4 if fails else 0
 
 
 def run_isolation_suite(evidence: dict, client_id: str) -> int:
@@ -1263,6 +1754,152 @@ def _os_http(
         except Exception:
             body = raw[:300]
         return int(exc.code), body
+
+
+def _require_staging_api(evidence: dict, suite: str) -> bool:
+    base = (os.environ.get("M8_SMOKE_API_BASE") or "").strip()
+    if base:
+        return True
+    _record(
+        evidence,
+        suite,
+        "api_base_gate",
+        result="blocked",
+        blocker="M8_SMOKE_API_BASE unset — owner HTTP path required",
+    )
+    return False
+
+
+def _gmail_recipient_allowed() -> tuple[str | None, str | None]:
+    """Return (recipient, blocker). Recipient must pass optional allowlist."""
+    recipient = os.environ.get("M8_SMOKE_GMAIL_RECIPIENT", "").strip()
+    if not recipient:
+        return None, "M8_SMOKE_GMAIL_RECIPIENT unset"
+    allowlist_raw = os.environ.get("M8_SMOKE_GMAIL_RECIPIENT_ALLOWLIST", "").strip()
+    if allowlist_raw:
+        allowed = {
+            part.strip().lower()
+            for part in allowlist_raw.split(",")
+            if part.strip()
+        }
+        if recipient.lower() not in allowed:
+            return None, "recipient not in M8_SMOKE_GMAIL_RECIPIENT_ALLOWLIST"
+    return recipient, None
+
+
+def _external_attendee_email() -> tuple[str | None, str | None]:
+    email = os.environ.get("M8_SMOKE_EXTERNAL_ATTENDEE", "").strip()
+    if not email:
+        return None, "M8_SMOKE_EXTERNAL_ATTENDEE unset"
+    return email, None
+
+
+def _execution_input_contains(row: dict, marker: str) -> bool:
+    blob = json.dumps(row.get("input") or row.get("result") or {}, default=str)
+    return marker in blob
+
+
+def _approve_tool_execution(token: str, execution_id: str) -> tuple[int, Any]:
+    return _os_http(
+        "POST", f"/api/v1/os/tool-executions/{execution_id}/approve", token
+    )
+
+
+def _poll_tool_execution(
+    db: Any,
+    client_id: str,
+    token: str | None,
+    *,
+    tool_id: str,
+    marker: str,
+    poll_since: str,
+    status: str | None = "pending_approval",
+    attempts: int = 24,
+    sleep_s: float = 5.0,
+) -> dict | None:
+    """Find a tool execution row scoped to this smoke run."""
+    import time
+
+    since = poll_since[:19]
+    for _ in range(attempts):
+        if token:
+            path = "/api/v1/os/tool-executions?limit=50"
+            if status:
+                path += f"&status={status}"
+            code, execs = _os_http("GET", path, token)
+            items = (execs or {}).get("items") if isinstance(execs, dict) else None
+            if code == 200 and isinstance(items, list):
+                for row in items:
+                    created = (row.get("created_at") or row.get("createdAt") or "")[:19]
+                    if created and created < since:
+                        continue
+                    tid = row.get("tool_id") or row.get("toolId") or ""
+                    if tid != tool_id:
+                        continue
+                    if not _execution_input_contains(row, marker):
+                        continue
+                    if status and (row.get("status") or "") != status:
+                        continue
+                    return row
+        if db is not None:
+            q = (
+                db.table("os_tool_executions")
+                .select("*")
+                .eq("client_id", client_id)
+                .eq("tool_id", tool_id)
+                .gte("created_at", since)
+                .order("created_at", desc=True)
+                .limit(30)
+            )
+            if status:
+                q = q.eq("status", status)
+            rows = q.execute().data or []
+            for row in rows:
+                if _execution_input_contains(row, marker):
+                    return row
+        time.sleep(sleep_s)
+    return None
+
+
+def _gmail_message_count_by_execution(client_id: str, execution_id: str) -> int | None:
+    """Return 0/1 for deterministic fingerprint, or None when lookup is unknown."""
+    from backend.services import gmail_connector, os_tool_executions as ote
+
+    msgid = ote.rfc822_msgid_for(execution_id)
+    found = gmail_connector.find_message_id_by_rfc822_msgid(client_id, msgid)
+    if found:
+        return 1
+    # Distinguish "none" from API/credential failure is not exposed; treat as 0
+    # only when connector exists — caller checks integration separately.
+    return 0
+
+
+def _appointments_with_marker(db: Any, client_id: str, marker: str) -> list[dict]:
+    from backend.services.tenant_scope import tenant_table
+
+    return (
+        tenant_table(db, "appointments", client_id)
+        .select("id,google_event_id,status,notes,start_time,end_time")
+        .ilike("notes", f"%{marker}%")
+        .execute()
+        .data
+        or []
+    )
+
+
+def _calendar_provider_matches(
+    fetched: dict | None,
+    *,
+    google_id: str,
+    title: str,
+    start_iso: str,
+) -> bool:
+    if not fetched or fetched.get("id") != google_id:
+        return False
+    if title and title not in (fetched.get("summary") or ""):
+        return False
+    provider_start = (fetched.get("start") or "")[:16]
+    return start_iso[:16] in provider_start
 
 
 def _extract_pending_proposal(msg_body: dict, marker: str) -> dict | None:
