@@ -13,7 +13,7 @@
  * workers all collapse to one tool invocation.
  */
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   evaluateActionPolicy,
   loadToolPolicy,
@@ -22,9 +22,10 @@ import {
 } from "./policy.ts";
 import { getToolPorts } from "./ports.ts";
 import { toolRegistry, type ToolRegistry } from "./registry.ts";
-import { getActionStore } from "./store.ts";
+import { getActionStore, type ActionStore } from "./store.ts";
 import { sanitize, sanitizeErrorMessage, sanitizeRecord } from "./sanitize.ts";
 import {
+  RISK_EXTERNAL_COMMUNICATION,
   RISK_HIGH_IMPACT,
   ToolExecutionError,
   type ActionExecutionRecord,
@@ -70,6 +71,80 @@ export interface ExecuteActionInput {
   registry?: ToolRegistry;
   /** Optional reasoning-trace emitter; tool use shows up in the honest trace. */
   trace?: TraceEmitter;
+}
+
+/** Mirror backend RISK_FAIL_CLOSED — L2+ must carry a replay key. */
+const RISK_FAIL_CLOSED = RISK_EXTERNAL_COMMUNICATION;
+
+function deriveIdempotencyKey(input: {
+  accountId: string;
+  runId?: string;
+  toolId: string;
+  payload: Record<string, unknown>;
+}): string {
+  const canonical = JSON.stringify({
+    accountId: input.accountId,
+    runId: input.runId ?? "",
+    toolId: input.toolId,
+    payload: input.payload,
+  });
+  const digest = createHash("sha256")
+    .update(canonical)
+    .digest("hex")
+    .slice(0, 32);
+  const prefix = `${input.toolId}-${input.runId ?? "norun"}`.slice(0, 120);
+  return `${prefix}-${digest}`.slice(0, 200);
+}
+
+function needsDerivedIdempotencyKey(
+  riskLevel: number,
+  requiresApproval: boolean,
+): boolean {
+  return riskLevel >= RISK_FAIL_CLOSED || requiresApproval;
+}
+
+function explicitIdempotencyKey(input: ExecuteActionInput): string | undefined {
+  const explicit = input.idempotencyKey?.trim();
+  return explicit || undefined;
+}
+
+function derivedIdempotencyKey(
+  input: ExecuteActionInput,
+  toolId: string,
+  riskLevel: number,
+  requiresApproval: boolean,
+  parsedInput: Record<string, unknown>,
+): string | undefined {
+  if (!needsDerivedIdempotencyKey(riskLevel, requiresApproval))
+    return undefined;
+  return deriveIdempotencyKey({
+    accountId: input.accountId,
+    runId: input.runId,
+    toolId,
+    payload: parsedInput,
+  });
+}
+
+/**
+ * Locked pairing for L2+: derived wins. Persist and lookup use this one key.
+ * Caller-supplied keys are ignored when a derived key exists — never
+ * `explicit ?? derived`, never lookup [explicit, derived].
+ */
+function canonicalIdempotencyKey(
+  explicit: string | undefined,
+  derived: string | undefined,
+): string | undefined {
+  return derived ?? explicit;
+}
+
+async function findByCanonicalKey(
+  store: ActionStore,
+  accountId: string,
+  toolId: string,
+  key: string | undefined,
+): Promise<ActionExecutionRecord | null> {
+  if (!key) return null;
+  return store.findByIdempotencyKey(accountId, toolId, key);
 }
 
 export interface ActionOutcome {
@@ -138,15 +213,7 @@ export async function executeAction(
   const store = getActionStore();
   const registry = input.registry ?? toolRegistry;
   const trace = input.trace;
-
-  if (input.idempotencyKey) {
-    const existing = await store.findByIdempotencyKey(
-      input.accountId,
-      input.toolId,
-      input.idempotencyKey,
-    );
-    if (existing) return outcomeOf(existing);
-  }
+  const explicit = explicitIdempotencyKey(input);
 
   const tool = registry.find(input.toolId);
 
@@ -154,6 +221,22 @@ export async function executeAction(
   // a tool that does not exist is exactly the kind of thing we want a row for.
   // It is recorded at the highest risk level because nothing is known about it.
   if (!tool) {
+    const unknownInput = sanitizeRecord(input.input) as Record<string, unknown>;
+    const derived = derivedIdempotencyKey(
+      input,
+      input.toolId,
+      RISK_HIGH_IMPACT,
+      false,
+      unknownInput,
+    );
+    const canonical = canonicalIdempotencyKey(explicit, derived);
+    const replay = await findByCanonicalKey(
+      store,
+      input.accountId,
+      input.toolId,
+      canonical,
+    );
+    if (replay) return outcomeOf(replay);
     const record = await store.create(
       baseRecord({
         accountId: input.accountId,
@@ -165,9 +248,9 @@ export async function executeAction(
         requiresApproval: false,
         status: "denied",
         approvalState: "not_required",
-        input: sanitizeRecord(input.input),
+        input: unknownInput,
         policyReason: `unknown tool "${input.toolId}"`,
-        idempotencyKey: input.idempotencyKey,
+        idempotencyKey: canonical,
         error: {
           code: "unknown_tool",
           message: `unknown tool "${input.toolId}"`,
@@ -188,6 +271,22 @@ export async function executeAction(
     const message = parsed.error.issues
       .map((i) => `${i.path.join(".") || "input"}: ${i.message}`)
       .join("; ");
+    const invalidInput = sanitizeRecord(input.input) as Record<string, unknown>;
+    const derived = derivedIdempotencyKey(
+      input,
+      tool.id,
+      tool.riskLevel,
+      tool.requiresApproval,
+      invalidInput,
+    );
+    const canonical = canonicalIdempotencyKey(explicit, derived);
+    const replay = await findByCanonicalKey(
+      store,
+      input.accountId,
+      tool.id,
+      canonical,
+    );
+    if (replay) return outcomeOf(replay);
     const record = await store.create(
       baseRecord({
         accountId: input.accountId,
@@ -199,10 +298,10 @@ export async function executeAction(
         requiresApproval: tool.requiresApproval,
         status: "failed",
         approvalState: "not_required",
-        input: sanitizeRecord(input.input),
+        input: invalidInput,
         policyReason:
           "input rejected by the tool's schema — nothing was executed",
-        idempotencyKey: input.idempotencyKey,
+        idempotencyKey: canonical,
         error: {
           code: "invalid_input",
           message: sanitizeErrorMessage(message),
@@ -225,6 +324,23 @@ export async function executeAction(
   });
   await trace?.work("tool_policy", `Permission check: ${evaluation.reason}`);
 
+  const parsedInput = sanitizeRecord(parsed.data) as Record<string, unknown>;
+  const derived = derivedIdempotencyKey(
+    input,
+    tool.id,
+    evaluation.riskLevel,
+    evaluation.requiresApproval,
+    parsedInput,
+  );
+  const canonical = canonicalIdempotencyKey(explicit, derived);
+  const replay = await findByCanonicalKey(
+    store,
+    input.accountId,
+    tool.id,
+    canonical,
+  );
+  if (replay) return outcomeOf(replay);
+
   const common = {
     accountId: input.accountId,
     runId: input.runId,
@@ -233,9 +349,9 @@ export async function executeAction(
     riskLevel: evaluation.riskLevel,
     mutating: tool.mutating,
     requiresApproval: evaluation.requiresApproval,
-    input: sanitizeRecord(parsed.data),
+    input: parsedInput,
     policyReason: evaluation.reason,
-    idempotencyKey: input.idempotencyKey,
+    idempotencyKey: canonical,
   };
 
   if (evaluation.decision === "deny") {
