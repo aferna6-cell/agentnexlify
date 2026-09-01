@@ -126,9 +126,9 @@ function derivedIdempotencyKey(
 }
 
 /**
- * Canonical replay key: when derivation applies it wins persist AND lookup.
- * One field cannot store both; caller-wins persist with derived-only lookup
- * misses on a retry that omits the caller key.
+ * Locked pairing for L2+: derived wins. Persist and lookup use this one key.
+ * Caller-supplied keys are ignored when a derived key exists — never
+ * `explicit ?? derived`, never lookup [explicit, derived].
  */
 function canonicalIdempotencyKey(
   explicit: string | undefined,
@@ -137,23 +137,14 @@ function canonicalIdempotencyKey(
   return derived ?? explicit;
 }
 
-/**
- * Lookup the canonical key. Persist writes the same value.
- */
-async function findByAnyIdempotencyKey(
+async function findByCanonicalKey(
   store: ActionStore,
   accountId: string,
   toolId: string,
-  keys: Array<string | undefined>,
+  key: string | undefined,
 ): Promise<ActionExecutionRecord | null> {
-  const seen = new Set<string>();
-  for (const key of keys) {
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    const existing = await store.findByIdempotencyKey(accountId, toolId, key);
-    if (existing) return existing;
-  }
-  return null;
+  if (!key) return null;
+  return store.findByIdempotencyKey(accountId, toolId, key);
 }
 
 export interface ActionOutcome {
@@ -224,15 +215,6 @@ export async function executeAction(
   const trace = input.trace;
   const explicit = explicitIdempotencyKey(input);
 
-  if (explicit) {
-    const existing = await store.findByIdempotencyKey(
-      input.accountId,
-      input.toolId,
-      explicit,
-    );
-    if (existing) return outcomeOf(existing);
-  }
-
   const tool = registry.find(input.toolId);
 
   // An unknown tool is audited, not swallowed: an agent (or a model) asking for
@@ -248,11 +230,11 @@ export async function executeAction(
       unknownInput,
     );
     const canonical = canonicalIdempotencyKey(explicit, derived);
-    const replay = await findByAnyIdempotencyKey(
+    const replay = await findByCanonicalKey(
       store,
       input.accountId,
       input.toolId,
-      [canonical],
+      canonical,
     );
     if (replay) return outcomeOf(replay);
     const record = await store.create(
@@ -298,11 +280,11 @@ export async function executeAction(
       invalidInput,
     );
     const canonical = canonicalIdempotencyKey(explicit, derived);
-    const replay = await findByAnyIdempotencyKey(
+    const replay = await findByCanonicalKey(
       store,
       input.accountId,
       tool.id,
-      [canonical],
+      canonical,
     );
     if (replay) return outcomeOf(replay);
     const record = await store.create(
@@ -351,11 +333,11 @@ export async function executeAction(
     parsedInput,
   );
   const canonical = canonicalIdempotencyKey(explicit, derived);
-  const replay = await findByAnyIdempotencyKey(
+  const replay = await findByCanonicalKey(
     store,
     input.accountId,
     tool.id,
-    [canonical],
+    canonical,
   );
   if (replay) return outcomeOf(replay);
 

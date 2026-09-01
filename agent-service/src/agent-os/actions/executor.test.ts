@@ -220,9 +220,10 @@ test("L2 retry with no caller key looks up the derived key and does not duplicat
 
   assert.equal(second.executionId, first.executionId);
   assert.equal(second.record.idempotencyKey, derived);
-  assert.ok(
-    lookedUp.includes(derived!),
-    `findByIdempotencyKey must query the derived key; got ${JSON.stringify(lookedUp)}`,
+  assert.deepEqual(
+    lookedUp,
+    [derived],
+    "L2 lookup must query only the derived key",
   );
   const history = await h.store.list({ accountId: "tenantA" });
   assert.equal(
@@ -245,9 +246,10 @@ test("L2 retry with a different caller key still hits the derived key and does n
 
   assert.equal(second.executionId, first.executionId);
   assert.equal(second.record.idempotencyKey, derived);
-  assert.ok(
-    lookedUp.includes(derived!),
-    `findByIdempotencyKey must query the derived key on a mismatched caller key; got ${JSON.stringify(lookedUp)}`,
+  assert.deepEqual(
+    lookedUp,
+    [derived],
+    "L2 lookup must be derived-only, not the caller key",
   );
   const history = await h.store.list({ accountId: "tenantA" });
   assert.equal(history.length, 1);
@@ -269,10 +271,12 @@ test("L2 persist with a caller key stores the derived key; retry with none finds
 
   assert.equal(second.executionId, first.executionId);
   assert.equal(second.record.idempotencyKey, stored);
-  assert.ok(
-    lookedUp.includes(stored!),
-    `retry with no caller key must look up the stored derived key; got ${JSON.stringify(lookedUp)}`,
+  assert.deepEqual(
+    lookedUp,
+    [stored],
+    "retry with no caller key must look up only the derived key",
   );
+  assert.equal(lookedUp.includes("caller-supplied-key"), false);
   const history = await h.store.list({ accountId: "tenantA" });
   assert.equal(
     history.length,
