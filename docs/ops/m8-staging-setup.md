@@ -189,4 +189,42 @@ Unset / set `=0` on staging (and never flip production):
 4. Connect Calendar + Gmail OAuth on smoke tenant in the staging app (zero `google_calendar` / `gmail` rows until then)
 5. Re-run `M8_SMOKE_SUITES=isolation,rag,crm,calendar,gmail,agent_os_e2e` then M6/M7/M8 regression gates
 
+## Run without Cursor Cloud Agent (usage / secret injection workaround)
+
+When Cloud Agent Runtime Secrets do not reach the pod, run locally or via GitHub Actions instead.
+
+### Option A — Your laptop + Railway CLI (fastest)
+
+```bash
+railway login
+cd agentnexlify
+railway link -p cheerful-freedom -e staging -s agentnexlify
+
+# Pull staging vars (includes GOOGLE_* + INTEGRATIONS_ENC_KEY + SUPABASE_*)
+railway variables --json > /tmp/railway-staging.json
+python3 scripts/m8_import_railway_vars_json.py /tmp/railway-staging.json
+
+# Add support-tenant smoke secrets (not on Railway by default)
+export M8_SMOKE_LOGIN_EMAIL='support@agentnexlify.com'
+export M8_SMOKE_LOGIN_PASSWORD='...'
+export M8_SMOKE_GMAIL_RECIPIENT='...'
+export M8_SMOKE_GMAIL_RECIPIENT_ALLOWLIST='...'
+export M8_SMOKE_EXTERNAL_ATTENDEE='...'
+python3 scripts/m8_wire_smoke_secrets.py
+
+bash scripts/m8_run_support_smoke.sh
+```
+
+Or one shot: `railway run bash scripts/m8_run_support_smoke.sh` after exporting the five `M8_*` secrets above in your shell.
+
+### Option B — GitHub Actions manual workflow
+
+Workflow: `.github/workflows/m8-support-smoke-manual.yml` (`workflow_dispatch`).
+
+Add repository secrets listed in that file, then **Actions → M8 Support Live Smoke (manual) → Run workflow**. Evidence uploads as a workflow artifact.
+
+### Option C — Copy Google OAuth from Railway dashboard
+
+If CLI is unavailable, paste `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` from **Railway → staging → agentnexlify → Variables** into gitignored `.env.staging`, then use `m8_wire_smoke_secrets.py` for the five support-tenant vars above.
+
 Note: agent environments cannot read Railway/Supabase secret values via OAuth MCP — owner must paste `STAGING_SUPABASE_SERVICE_ROLE_KEY` into the trusted smoke environment.

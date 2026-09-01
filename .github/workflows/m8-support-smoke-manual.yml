@@ -1,0 +1,76 @@
+# Manual M8 support-tenant Calendar+Gmail live smoke (staging).
+# Use when Cursor Cloud Agent secrets / usage are unavailable.
+#
+# One-time setup: add these GitHub repository secrets (Settings → Secrets → Actions):
+#   STAGING_SUPABASE_URL
+#   STAGING_SUPABASE_SERVICE_KEY
+#   STAGING_INTEGRATIONS_ENC_KEY
+#   STAGING_GOOGLE_CLIENT_ID
+#   STAGING_GOOGLE_CLIENT_SECRET
+#   M8_SUPPORT_LOGIN_EMAIL          (support@agentnexlify.com)
+#   M8_SUPPORT_LOGIN_PASSWORD
+#   M8_GMAIL_RECIPIENT
+#   M8_GMAIL_RECIPIENT_ALLOWLIST    (same as recipient)
+#   M8_EXTERNAL_ATTENDEE
+#
+# Trigger: Actions → "M8 Support Live Smoke (manual)" → Run workflow
+
+name: M8 Support Live Smoke (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      suites:
+        description: "Comma-separated suites (default calendar,gmail)"
+        required: false
+        default: "calendar,gmail"
+
+concurrency:
+  group: m8-support-live-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: M8 support tenant live smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run M8 live smoke (support tenant)
+        env:
+          M8_SMOKE_AUTHORIZED: "1"
+          M8_SMOKE_ENV: staging
+          M8_SMOKE_CONFIRM_ENV: staging
+          M8_SMOKE_CLIENT_ID: "3ddd9072-ad9f-4214-970d-11386d8c1b4a"
+          M8_SMOKE_API_BASE: "https://agentnexlify-staging.up.railway.app"
+          M8_SMOKE_SUITES: ${{ github.event.inputs.suites }}
+          CALENDAR_ACTIONS_ENABLED: "1"
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_KEY }}
+          INTEGRATIONS_ENC_KEY: ${{ secrets.STAGING_INTEGRATIONS_ENC_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.STAGING_GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.STAGING_GOOGLE_CLIENT_SECRET }}
+          M8_SMOKE_LOGIN_EMAIL: ${{ secrets.M8_SUPPORT_LOGIN_EMAIL }}
+          M8_SMOKE_LOGIN_PASSWORD: ${{ secrets.M8_SUPPORT_LOGIN_PASSWORD }}
+          M8_SMOKE_GMAIL_RECIPIENT: ${{ secrets.M8_GMAIL_RECIPIENT }}
+          M8_SMOKE_GMAIL_RECIPIENT_ALLOWLIST: ${{ secrets.M8_GMAIL_RECIPIENT_ALLOWLIST }}
+          M8_SMOKE_EXTERNAL_ATTENDEE: ${{ secrets.M8_EXTERNAL_ATTENDEE }}
+        run: python3 scripts/m8_live_smoke.py
+
+      - name: Upload evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m8-live-smoke-evidence
+          path: audits/artifacts/m8-live-smoke-*.json
+          if-no-files-found: warn
