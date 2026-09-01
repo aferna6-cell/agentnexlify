@@ -10,6 +10,8 @@ const NAME_TRIGGERS = [
   "for", "to", "with", "from", "text", "email", "call", "remind", "ask", "tell", "send", "contact",
   // imperative booking/finance verbs that precede a customer name (B-08):
   "confirm", "book", "schedule", "reschedule", "cancel", "follow", "chase", "invoice", "quote", "thank",
+  // CRM create / update / stage verbs and nouns that precede a customer name:
+  "add", "create", "update", "change", "set", "move", "mark", "customer", "lead", "client",
 ];
 const STOPWORDS = new Set([
   "the", "a", "an", "my", "our", "your", "me", "us", "them", "everyone", "customer",
@@ -17,17 +19,44 @@ const STOPWORDS = new Set([
 ]);
 
 function extractName(ask: string): string | undefined {
+  // Quoted name: named 'M8 E2E abc' / named "Sarah Jones"
+  const quoted = ask.match(/\bnamed\s+['"“”]([^'"“”]+)['"“”]/i);
+  if (quoted) {
+    const q = quoted[1]!.trim();
+    if (q) return q;
+  }
+
+  // Explicit "named X" before add-customer patterns so "lead named Sarah" is Sarah.
+  const named = ask.match(/\bnamed\s+([A-Z][A-Za-z0-9_-]*(?:\s+[A-Z][A-Za-z0-9_-]*)?)/);
+  if (named && !STOPWORDS.has(named[1]!.toLowerCase())) return named[1];
+
   // Leading "Firstname [Lastname] <action-verb>" (e.g. "Mike Johnson called …").
   const lead = ask.match(/^([A-Z][a-z]+(?: [A-Z][a-z]+)?)\s+(?:called|wants?|wanted|needs?|asked|emailed|texted|reached out|stopped by)/);
   if (lead) return lead[1];
 
-  // Possessive: "<name>'s <thing>" (e.g. "Confirm Mike Johnson's tire rotation").
+  // Possessive: "<name>'s <thing>". If a CRM verb prefixes the match ("Update Mike's"),
+  // keep only the person token(s) after the verb.
   const poss = ask.match(/\b([A-Z][a-z]+(?: [A-Z][a-z]+)?)'s\b/);
-  if (poss && !STOPWORDS.has(poss[1]!.toLowerCase())) return poss[1];
+  if (poss && !STOPWORDS.has(poss[1]!.toLowerCase())) {
+    const parts = poss[1]!.split(/\s+/);
+    if (parts.length > 1 && NAME_TRIGGERS.includes(parts[0]!.toLowerCase())) {
+      return parts.slice(1).join(" ");
+    }
+    return poss[1];
+  }
 
-  // Explicit "named X" / "customer named X" / "a lead named X".
-  const named = ask.match(/\bnamed\s+([A-Z][a-z]+(?: [A-Z][a-z]+)?)/);
-  if (named && !STOPWORDS.has(named[1]!.toLowerCase())) return named[1];
+  // Stage moves: "Move Sarah Jones to contacted" / "Mark Mike Smith as won".
+  const moveMark = ask.match(
+    /\b(?:move|mark)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:to|as)\b/,
+  );
+  if (moveMark && !STOPWORDS.has(moveMark[1]!.toLowerCase())) return moveMark[1];
+
+  // "Add/create customer|lead Mike Smith" when "named" is absent.
+  // Case-sensitive so "named" cannot be captured as a person name.
+  const addCust = ask.match(
+    /\b(?:[Aa]dd|[Cc]reate|[Mm]ake)\s+(?:a\s+|new\s+)?(?:customer|lead|client|contact)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/,
+  );
+  if (addCust) return addCust[1]!.trim();
 
   const tokens = ask.split(/\s+/);
   for (let i = 0; i < tokens.length - 1; i++) {
@@ -36,7 +65,9 @@ function extractName(ask: string): string | undefined {
     const name: string[] = [];
     for (let j = i + 1; j < tokens.length && name.length < 2; j++) {
       const raw = tokens[j]!.replace(/[^A-Za-z'-]/g, "");
-      if (/^[A-Z][a-zA-Z'-]+$/.test(raw) && !STOPWORDS.has(raw.toLowerCase())) name.push(raw);
+      // Drop trailing possessive so trigger paths don't keep "Mike's".
+      const token = raw.replace(/'s$/i, "");
+      if (/^[A-Z][a-zA-Z-]+$/.test(token) && !STOPWORDS.has(token.toLowerCase())) name.push(token);
       else break;
     }
     if (name.length > 0) return name.join(" ");
@@ -124,6 +155,42 @@ function extractSchedulingConstraints(ask: string): string[] {
   return out;
 }
 
+function extractEmail(ask: string): string | undefined {
+  const m = ask.match(/\b([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})\b/i);
+  return m ? m[1]!.toLowerCase() : undefined;
+}
+
+function extractPhone(ask: string): string | undefined {
+  const m = ask.match(/\b(\+?\d[\d\-().\s]{6,}\d)\b/);
+  if (!m) return undefined;
+  const digits = m[1]!.replace(/\D/g, "");
+  return digits.length >= 7 ? m[1]!.trim() : undefined;
+}
+
+function extractAddress(ask: string): string | undefined {
+  const m = ask.match(/\baddress(?:\s+(?:is|to))?\s+([0-9].+?)(?:[.!?]|$)/i);
+  if (!m) return undefined;
+  const addr = m[1]!.trim().replace(/[,;]+$/, "");
+  return addr.length >= 5 ? addr : undefined;
+}
+
+function extractStatus(ask: string): string | undefined {
+  // Prefer compound "pipeline stage" / "lead stage" so "pipeline" alone is not captured.
+  const explicit = ask.match(
+    /\b(?:pipeline\s+stage|lead\s+stage|status|stage)\s+(?:to|as|of|=)?\s*['"]?([a-z][a-z0-9_]*)['"]?/i,
+  );
+  if (explicit) return explicit[1]!.trim().toLowerCase();
+  const withStatus = ask.match(
+    /\b(?:with|and)\s+status\s+['"]?([a-z][a-z0-9_]*)['"]?/i,
+  );
+  if (withStatus) return withStatus[1]!.trim().toLowerCase();
+  const move = ask.match(
+    /\b(?:move|mark)\s+.+?\s+(?:to|as)\s+['"]?([a-z][a-z0-9_]*)['"]?/i,
+  );
+  if (move) return move[1]!.trim().toLowerCase();
+  return undefined;
+}
+
 export function extractParams(ask: string): Record<string, unknown> {
   const params: Record<string, unknown> = {};
   const name = extractName(ask);
@@ -133,7 +200,15 @@ export function extractParams(ask: string): Record<string, unknown> {
   const serviceType = extractServiceType(ask);
   const vehicle = extractVehicle(ask);
   const schedulingConstraints = extractSchedulingConstraints(ask);
+  const email = extractEmail(ask);
+  const phone = extractPhone(ask);
+  const address = extractAddress(ask);
+  const status = extractStatus(ask);
   if (name) params.customer_name = name;
+  if (email) params.email = email;
+  if (phone) params.phone = phone;
+  if (address) params.address = address;
+  if (status) params.status = status;
   if (amount !== undefined) params.amount = amount;
   if (platform) params.platform = platform;
   if (slot) params.offered_slot = slot;

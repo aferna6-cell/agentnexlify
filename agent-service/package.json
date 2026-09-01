@@ -25,7 +25,9 @@
     "eval:rag:calibrate": "python3 ../ml/rag/calibrate_abstention.py",
     "eval:rag:downstream": "python3 ../ml/rag/downstream_bakeoff.py",
     "eval:calendar-crm": "node --experimental-strip-types evals/run-calendar-crm-eval.ts",
-    "eval:calendar-crm:gate": "node --experimental-strip-types evals/run-calendar-crm-eval.ts --gate"
+    "eval:calendar-crm:gate": "node --experimental-strip-types evals/run-calendar-crm-eval.ts --gate",
+    "eval:crm-decision-path": "node --experimental-strip-types evals/run-crm-decision-path-eval.ts",
+    "eval:crm-decision-path:gate": "node --experimental-strip-types evals/run-crm-decision-path-eval.ts --gate"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.110",
