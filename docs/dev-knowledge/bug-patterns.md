@@ -18828,3 +18828,14 @@ fix(m8): calendar smoke marker-in-description readback slice
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Merge pull request #742 from aferna6-cell/cursor/ci-repair-guardrail-types-638a
+
+fix(ci): align execution-layer counts and Agent OS types
+**Date:** 2026-09-01
+**Commit:** 188a360
+**Author:** cursor[bot]
+**Files Changed:** 
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
