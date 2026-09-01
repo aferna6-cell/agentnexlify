@@ -32,8 +32,11 @@ function extractOwnerSubjectBody(
     if (subject && body) return { subject, body };
   }
 
+  // Live smoke (and owners) often use single quotes:
+  //   send … with subject 'M8 smoke …' and body 'Milestone 8 …'
+  // Double / curly quotes stay valid. Mixed quote styles are still exact.
   const quoted = ask.match(
-    /\bwith subject\s+["“](.+?)["”]\s+and body\s+["“]([\s\S]+?)["”]/i,
+    /\bwith subject\s+["“'](.+?)["”']\s+and body\s+["“']([\s\S]+?)["”']/i,
   );
   if (quoted) {
     const subject = quoted[1]?.trim() ?? "";

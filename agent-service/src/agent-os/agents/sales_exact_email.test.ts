@@ -1,11 +1,18 @@
 /**
  * Sales-only exact-email: owner subject/body on unambiguous send; otherwise
  * fall back to current compose. Other departments stay on compose.
+ *
+ * Live miss (72273a6 / m8-live-smoke-20260901T215330Z): the park write is
+ * executeAction via Sales resolveActionFromOutput. Single-quoted
+ * "with subject '…' and body '…'" must win; compose must not.
  */
 
-import { test } from "node:test";
+import { afterEach, beforeEach, test } from "node:test";
 import assert from "node:assert/strict";
 
+import { executeAction } from "../actions/executor.ts";
+import { SEND_EMAIL_FLAG } from "../actions/flags.ts";
+import { harness, type Harness } from "../actions/_testkit.ts";
 import { resolveSalesExactEmailFromOutput } from "./sales_exact_email.ts";
 import { resolveEmailSendFromOutput } from "./communication_actions.ts";
 import { marketing, sales } from "./departments.ts";
@@ -13,6 +20,19 @@ import { extractParams } from "./_extract.ts";
 import { readAskIntent } from "./_intent.ts";
 import type { DepartmentSpec } from "./_department.ts";
 import type { AgentOutput, SharedContext } from "../types/agent.ts";
+
+let h: Harness;
+const previousFlag = process.env[SEND_EMAIL_FLAG];
+
+beforeEach(() => {
+  h = harness();
+  delete process.env[SEND_EMAIL_FLAG];
+});
+
+afterEach(() => {
+  if (previousFlag === undefined) delete process.env[SEND_EMAIL_FLAG];
+  else process.env[SEND_EMAIL_FLAG] = previousFlag;
+});
 
 const context: SharedContext = {
   businessProfile: { businessName: "Sunset Auto Care" },
@@ -66,6 +86,22 @@ const EXACT_QUOTED =
 
 const COMPOSE_FALLBACK =
   "Please send an email to sarah@example.com following up on her brake quote.";
+
+// Same shape as scripts/m8_live_smoke.py _build_gmail_smoke_prompt (single quotes).
+const LIVE_SMOKE_SUBJECT = "M8 smoke m8-live-20260901T215330Z";
+const LIVE_SMOKE_BODY =
+  "Milestone 8 controlled test message m8-live-20260901T215330Z. " +
+  "No follow-up action is required.";
+const LIVE_SMOKE_ASK =
+  "Using Sales email tools only, send an email to sarah@example.com with subject " +
+  `'${LIVE_SMOKE_SUBJECT}' and body '${LIVE_SMOKE_BODY}'. Send exactly this email and perform no other ` +
+  "action. This email must require owner approval before sending.";
+
+const LIVE_SMOKE_INPUT = {
+  to: "sarah@example.com",
+  subject: LIVE_SMOKE_SUBJECT,
+  body: LIVE_SMOKE_BODY,
+};
 
 test("unambiguous labeled send preserves owner subject and body, not the composed draft", () => {
   const out = resolveExact(EXACT_LABELED);
@@ -166,4 +202,53 @@ test("other departments stay on current compose — not the Sales exact path", (
     marketingOut?.input.body,
     "COMPOSED BODY that must not replace the owner's words.",
   );
+});
+
+test("live smoke single-quoted ask preserves owner subject and body, not compose", () => {
+  const out = salesFromOutput(LIVE_SMOKE_ASK);
+  assert.equal(out?.toolId, "send_email");
+  assert.deepEqual(out?.input, LIVE_SMOKE_INPUT);
+  assert.notEqual(out?.input.subject, composed.draft?.title);
+  assert.notEqual(out?.input.body, composed.draft?.body);
+});
+
+test("park write: Sales pending row input equals owner subject and body", async () => {
+  process.env[SEND_EMAIL_FLAG] = "1";
+  const request = salesFromOutput(LIVE_SMOKE_ASK);
+  assert.ok(request);
+  const outcome = await executeAction({
+    accountId: "tenantA",
+    agentId: "sales",
+    runId: "run_park_exact",
+    toolId: "send_email",
+    input: request.input,
+    sharedContext: h.context,
+  });
+  assert.equal(outcome.status, "pending_approval");
+  assert.equal(outcome.record.approvalState, "pending");
+  assert.deepEqual(outcome.record.input, LIVE_SMOKE_INPUT);
+  const parked = await h.store.list({ accountId: "tenantA" });
+  assert.equal(parked.length, 1);
+  assert.deepEqual(parked[0]?.input, LIVE_SMOKE_INPUT);
+  assert.equal(parked[0]?.status, "pending_approval");
+});
+
+test("park write: non-unambiguous ask still parks current compose", async () => {
+  process.env[SEND_EMAIL_FLAG] = "1";
+  const request = salesFromOutput(COMPOSE_FALLBACK);
+  assert.ok(request);
+  const outcome = await executeAction({
+    accountId: "tenantA",
+    agentId: "sales",
+    runId: "run_park_compose",
+    toolId: "send_email",
+    input: request.input,
+    sharedContext: h.context,
+  });
+  assert.equal(outcome.status, "pending_approval");
+  assert.deepEqual(outcome.record.input, {
+    to: "sarah@example.com",
+    subject: "COMPOSED SUBJECT",
+    body: "COMPOSED BODY that must not replace the owner's words.",
+  });
 });
