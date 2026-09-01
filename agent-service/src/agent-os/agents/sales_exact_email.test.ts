@@ -107,6 +107,17 @@ const APOSTROPHE_INPUT = {
   body: APOSTROPHE_BODY,
 };
 
+const INNER_WORD_SUBJECT = "Follow up on the customer's quote";
+const INNER_WORD_BODY = "Please review the 'quote' and confirm it's ready.";
+const INNER_WORD_ASK =
+  "Send exactly this email to sarah@example.com with subject " +
+  `'${INNER_WORD_SUBJECT}' and body '${INNER_WORD_BODY}'`;
+const INNER_WORD_INPUT = {
+  to: "sarah@example.com",
+  subject: INNER_WORD_SUBJECT,
+  body: INNER_WORD_BODY,
+};
+
 // Same shape as scripts/m8_live_smoke.py _build_gmail_smoke_prompt (single quotes).
 const LIVE_SMOKE_SUBJECT = "M8 smoke m8-live-20260901T215330Z";
 const LIVE_SMOKE_BODY =
@@ -311,6 +322,31 @@ test("park write: Sales pending row input equals owner subject and body", async 
   assert.equal(parked[0]?.input.subject, LIVE_SMOKE_SUBJECT);
   assert.equal(parked[0]?.input.body, LIVE_SMOKE_BODY);
   assert.equal(parked[0]?.status, "pending_approval");
+});
+
+test("park write: inner single-quoted word in single-quoted body is byte-for-byte", async () => {
+  process.env[SEND_EMAIL_FLAG] = "1";
+  const request = salesFromOutput(INNER_WORD_ASK);
+  assert.ok(request);
+  assert.equal(request.input.subject, INNER_WORD_SUBJECT);
+  assert.equal(request.input.body, INNER_WORD_BODY);
+  const outcome = await executeAction({
+    accountId: "tenantA",
+    agentId: "sales",
+    runId: "run_park_inner_word",
+    toolId: "send_email",
+    input: request.input,
+    sharedContext: h.context,
+  });
+  assert.equal(outcome.status, "pending_approval");
+  assert.equal(outcome.record.input.subject, INNER_WORD_SUBJECT);
+  assert.equal(outcome.record.input.body, INNER_WORD_BODY);
+  assert.deepEqual(outcome.record.input, INNER_WORD_INPUT);
+  const parked = await h.store.list({ accountId: "tenantA" });
+  assert.equal(parked.length, 1);
+  assert.equal(parked[0]?.status, "pending_approval");
+  assert.equal(parked[0]?.input.subject, INNER_WORD_SUBJECT);
+  assert.equal(parked[0]?.input.body, INNER_WORD_BODY);
 });
 
 test("park write: single-quoted customer's / it's is byte-for-byte owner payload", async () => {

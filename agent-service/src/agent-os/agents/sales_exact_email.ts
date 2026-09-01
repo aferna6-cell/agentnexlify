@@ -33,11 +33,27 @@ function isLetter(ch: string | undefined): boolean {
   return !!ch && /[A-Za-z]/.test(ch);
 }
 
+/** Apostrophe between letters (`it's`, `customer's`) is not a quote closer. */
+function isInnerApostrophe(
+  text: string,
+  i: number,
+  opener: string,
+  closer: string,
+): boolean {
+  return (
+    opener === "'" &&
+    closer === "'" &&
+    isLetter(text[i - 1]) &&
+    isLetter(text[i + 1])
+  );
+}
+
 /**
- * Index of the closer that pairs with `opener`. An ASCII apostrophe between
- * letters (`it's`, `customer's`) is not a closer.
+ * Subject closer: same delimiter that opened, immediately before `and body`.
+ * First-apostrophe + lookahead is not pairing — `'word'` in the subject
+ * must not win.
  */
-function findPairedCloser(
+function findSubjectCloser(
   text: string,
   from: number,
   opener: string,
@@ -45,17 +61,29 @@ function findPairedCloser(
 ): number {
   for (let i = from; i < text.length; i++) {
     if (text[i] !== closer) continue;
-    if (
-      opener === "'" &&
-      closer === "'" &&
-      isLetter(text[i - 1]) &&
-      isLetter(text[i + 1])
-    ) {
-      continue;
-    }
-    return i;
+    if (isInnerApostrophe(text, i, opener, closer)) continue;
+    if (/^\s+and body\s+/i.test(text.slice(i + closer.length))) return i;
   }
   return -1;
+}
+
+/**
+ * Body closer: same delimiter that opened. Take the last paired closer so
+ * an inner `'word'` does not truncate the owner body.
+ */
+function findBodyCloser(
+  text: string,
+  from: number,
+  opener: string,
+  closer: string,
+): number {
+  let last = -1;
+  for (let i = from; i < text.length; i++) {
+    if (text[i] !== closer) continue;
+    if (isInnerApostrophe(text, i, opener, closer)) continue;
+    last = i;
+  }
+  return last;
 }
 
 function extractQuotedSubjectBody(
@@ -70,7 +98,7 @@ function extractQuotedSubjectBody(
   if (!closer) return undefined;
   i += opener.length;
 
-  const subjectEnd = findPairedCloser(ask, i, opener, closer);
+  const subjectEnd = findSubjectCloser(ask, i, opener, closer);
   if (subjectEnd < 0) return undefined;
   const subject = ask.slice(i, subjectEnd).trim();
 
@@ -83,7 +111,7 @@ function extractQuotedSubjectBody(
   if (ask.slice(i, i + opener.length) !== opener) return undefined;
   i += opener.length;
 
-  const bodyEnd = findPairedCloser(ask, i, opener, closer);
+  const bodyEnd = findBodyCloser(ask, i, opener, closer);
   if (bodyEnd < 0) return undefined;
   const body = ask.slice(i, bodyEnd).trim();
   if (!subject || !body) return undefined;
