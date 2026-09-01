@@ -163,6 +163,125 @@ def test_wrong_tenant_event_not_found():
     assert row is None
 
 
+def test_upsert_local_event_does_not_dedupe_same_slot_different_title():
+    """Slot-only single-match must not upsert a different title onto the existing row."""
+    db = MagicMock()
+    start = "2026-09-06T16:00:00+00:00"
+    end = "2026-09-06T17:00:00+00:00"
+    old_title = "M8 external smoke m8-ext-oldmarker"
+    new_title = "M8 external smoke m8-ext-newmarker"
+    existing_appt = {
+        "id": "appt_old",
+        "start_time": start,
+        "end_time": end,
+        "notes": old_title,
+        "google_event_id": "gcal_old",
+        "status": "scheduled",
+    }
+    created_appt = {
+        "id": "appt_new",
+        "start_time": start,
+        "end_time": end,
+        "notes": new_title,
+        "google_event_id": "gcal_new",
+        "status": "scheduled",
+    }
+
+    def tenant_table(_db, name, _cid):
+        t = MagicMock()
+        if name == "appointments":
+            chain = MagicMock()
+            chain.eq.return_value.eq.return_value.neq.return_value.limit.return_value.execute.return_value = MagicMock(
+                data=[existing_appt]
+            )
+            t.select.return_value = chain
+            t.update.return_value.eq.return_value.execute.return_value = MagicMock(
+                data=[created_appt]
+            )
+        return t
+
+    with (
+        patch("backend.services.os_calendar_crm.tenant_table", side_effect=tenant_table),
+        patch("backend.services.booking.create_appointment", return_value=created_appt) as create,
+        patch(
+            "backend.services.google_calendar.get_integration",
+            return_value={"access_token": "x"},
+        ),
+        patch(
+            "backend.services.google_calendar.create_calendar_event",
+            return_value="gcal_new",
+        ),
+        patch(
+            "backend.services.google_calendar.get_calendar_event",
+            return_value={"start": start, "status": "confirmed"},
+        ),
+    ):
+        applied, detail, row = svc._upsert_local_event(
+            db,
+            CLIENT,
+            {
+                "start": start,
+                "end": end,
+                "title": new_title,
+                "attendees": [{"email": "guest@example.com", "displayName": "Guest"}],
+                "sendInvitations": True,
+            },
+        )
+
+    assert applied is True
+    assert detail == "created"
+    assert row["id"] == "appt_new"
+    assert row["google_event_id"] == "gcal_new"
+    create.assert_called_once()
+
+
+def test_upsert_local_event_dedupes_same_slot_when_title_in_notes():
+    """Subsequent write of the same title still matches the existing appointment."""
+    db = MagicMock()
+    start = "2026-09-06T16:00:00+00:00"
+    end = "2026-09-06T17:00:00+00:00"
+    title = "Consult — marker m8-cal-abc12345"
+    existing_appt = {
+        "id": "appt_same",
+        "start_time": start,
+        "end_time": end,
+        "notes": title,
+        "google_event_id": "gcal_same",
+        "status": "scheduled",
+    }
+
+    def tenant_table(_db, name, _cid):
+        t = MagicMock()
+        if name == "appointments":
+            chain = MagicMock()
+            chain.eq.return_value.eq.return_value.neq.return_value.limit.return_value.execute.return_value = MagicMock(
+                data=[existing_appt]
+            )
+            t.select.return_value = chain
+        return t
+
+    with (
+        patch("backend.services.os_calendar_crm.tenant_table", side_effect=tenant_table),
+        patch("backend.services.booking.create_appointment") as create,
+    ):
+        applied, detail, row = svc._upsert_local_event(
+            db,
+            CLIENT,
+            {
+                "start": start,
+                "end": end,
+                "title": title,
+                "description": "Notes: Consult — marker m8-cal-abc12345",
+            },
+        )
+
+    assert applied is True
+    assert detail == "deduplicated"
+    assert row["id"] == "appt_same"
+    assert row["google_event_id"] == "gcal_same"
+    create.assert_not_called()
+
+
 def test_persist_applies_crm_bundle(monkeypatch):
     """Collecting CRM mutations reach apply_crm_mutations via persist."""
     from backend.services import os_tool_executions as persist_svc

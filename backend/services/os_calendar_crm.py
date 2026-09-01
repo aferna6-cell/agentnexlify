@@ -431,8 +431,6 @@ def _upsert_local_event(
         if title and title in (row.get("notes") or ""):
             match = row
             break
-    if match is None and len(existing) == 1:
-        match = existing[0]
     if match:
         return True, "deduplicated", match
 
