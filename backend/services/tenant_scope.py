@@ -40,6 +40,8 @@ _TENANT_COLUMN_OVERRIDES = {
     "os_scheduled_tasks": "client_id",
     "os_projects": "client_id",
     "os_project_steps": "client_id",
+    "os_workflows": "client_id",
+    "os_workflow_steps": "client_id",
     "escalations": "client_id",
 }
 
