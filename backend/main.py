@@ -934,6 +934,11 @@ class RequestContextMiddleware:
 
 app.add_middleware(RequestContextMiddleware)
 
+# GH #669: central demo-role mutation guard (allowlist + money-router Depends).
+from backend.middleware.demo_role_guard import DemoRoleBlockMiddleware  # noqa: E402
+
+app.add_middleware(DemoRoleBlockMiddleware)
+
 
 # --- Routers ---
 app.include_router(analytics.router)
