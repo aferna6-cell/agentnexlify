@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-08-31-pm",
-  "total_runs": 114,
+  "last_run": "2026-09-02-pm",
+  "total_runs": 115,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -219,7 +219,28 @@
   "run_112_mandate_executed": "EXECUTED 2026-08-30 (run 113). All mandate items checked: (1) @dependabot rebase in nightly-2026-08-30: FAIL — Step 9J skipped entirely ('No Dependabot PRs detected'). NEW failure mode: detection fails (0 PRs found). Prior nightlies (2026-08-28/29) found 3 PRs with unknown state; 2026-08-30 found 0. Root cause: list_pull_requests creator filter unreliable in headless sessions. Fix needed: use search_pull_requests with 'is:pr is:open author:app/dependabot'. (2) Rebases triggered: 0. (3) PRs clean+merged: 0/unknown (Step 9J skipped). (4) GH #684 SUPABASE_ACCESS_TOKEN: NOT SET — credential-rotation-schedule.md still shows unknown. (5) Step 9K readiness: CONFIRMED >=3 — 23 run directories exist, governance tracked 5+ open PRs in run 102. Step 9K IS run 113 winner. (6) GH #669: STALLED — confirmed in nightly 9D section, AUTOPILOT_GH_TOKEN expired blocks loop.",
   "run_113_mandate": "EXECUTED 2026-08-31-pm (run 114). All mandate items checked: (1) Step 9K in nightly-2026-08-31.md: FAIL — nightly ran but did not fire Step 9K (Step 9K absent from SKILL.md pre-run). 1st carry-forward mandate fires. ESCALATED: implemented directly this run. (2) Open subconscious PRs: 23 run directories confirmed; governance tracked 5+ open PRs in run 102. (3) Step 9J detection fix: IMPLEMENTED this run — changed list_pull_requests(creator='dependabot[bot]') to search_pull_requests(query='is:pr is:open author:app/dependabot') in Step 9J.1. (4) GH #704: NOT CHECKED — out of scope for governance mandate. (5) GH #684 SUPABASE_ACCESS_TOKEN: NOT SET — nightly-2026-08-31 confirms brain connector 39d stale. (6) os_tool_executions.py stable: FAIL — last commit 2026-08-30 (1 day ago). Needs 3+ days. Deferred to run 115.",
   "run_114_mandate": "1. Verify Step 9K fires in nightly-2026-09-01: grep 'Step 9K' ops/routines/logs/nightly-commit-review-2026-09-01.md. 2. Count: how many open subconscious PRs? How many stale (>30d)? Critical (>60d)? 3. Step 9J detection fix: did Step 9J find Dependabot PRs on 2026-09-01 with search_pull_requests? 4. GH #684 SUPABASE_ACCESS_TOKEN: set in Railway after bonus comment? Brain connector health check. 5. os_tool_executions.py: stable (0 commits 4d+)? If yes: run 115 god class split candidate. 6. M8 OAuth/service_role HOLD: resolved to deploy Calendar+CRM?",
+  "run_115_mandate": "1. Did nightly-2026-09-03 show 'Step 9J: N Dependabot PRs found' — confirming Step 9J diagnostic log line fires? If N=0, skip confirmed correct; if N>0 and still skipped, detection bug. 2. os_tool_executions.py: 0 commits since 2026-09-02 (4d+ clean window)? If yes, run 116 god class split candidate. 3. GH #684 SUPABASE_ACCESS_TOKEN: still unset in Railway? 4. M9.2 persistence engine: schema migration filed (migrations/NNN_m9_workflow_state.sql)? 5. Step 9L mechanism: any update on Supabase MCP headless availability? 6. Stale subconscious PRs: count and ages — approaching escalation threshold (>=5 or any >60d)?",
+  "run_115_mandate_executed": "EXECUTED 2026-09-02-pm (run 115). All mandate items checked: (1) Step 9K in nightly-2026-09-01: PASS — confirmed '9K: 3 stale subconscious PRs (30-35d), below comment threshold'. nightly-2026-09-02: '9K subconscious PRs: 4 stale (>30d), under comment threshold'. Both runs fired. (2) Stale PR count: 4 stale (>30d), 0 critical (>60d). (3) Step 9J detection: AMBIGUOUS — fired 2026-09-01 (rebased #721 and #722), 'skipped' 2026-09-02 with no diagnostic. Unknown if correct. Winner addresses this. (4) GH #684 SUPABASE_ACCESS_TOKEN: NOT SET — still unset in Railway, 40+ days stale. (5) os_tool_executions.py stability: NOT MET — 2 commits since 2026-08-30 (M8 close fixes). Deferred to run 116 when 4d threshold may clear. (6) M8 HOLD: RESOLVED — GH #669 merged (4ceaaa5), M9 started, M9.1 merged (PR #751). Winner: Step 9J Diagnostic Enhancement — add PRs-found count log before skip decision (~3-line SKILL.md edit, autonomous-executable). total_runs: 114 -> 115.",
+  "run_116_mandate": "1. Did nightly-2026-09-03 show 'Step 9J: N Dependabot PRs found'? If N=0, skip confirmed correct; if N>0 and still skipped, detection bug — Step 9J re-fix needed. 2. os_tool_executions.py (775 lines, 3 concerns): 0 commits since 2026-09-02? If yes, run 116 god class split candidate (split into os_persist.py, os_apply.py, os_approval.py). 3. GH #684 SUPABASE_ACCESS_TOKEN: still unset in Railway? Brain connector health. 4. M9.2 persistence engine: schema migration filed (migrations/NNN_m9_workflow_state.sql)? 5. Stale subconscious PRs: count — approaching >=5 stale (escalation comment threshold per Step 9K)? 6. Step 9L per-tenant widget health: any update on Supabase MCP headless availability?",
   "active_directions": [
+    {
+      "title": "Step 9J Diagnostic Enhancement: add PRs-found count log before skip decision in nightly-commit-review SKILL.md Step 9J (run 115 winner)",
+      "date": "2026-09-02-pm",
+      "confidence": "HIGH",
+      "status": "pending_autonomous_executable",
+      "implemented": false,
+      "autonomous_executable": true,
+      "requires_human": false,
+      "category": "workflow_efficiency",
+      "moratorium_override": false,
+      "source_run": 115,
+      "effort": "XS",
+      "evidence": "nightly-2026-09-02 shows '9J Dependabot: skipped' with zero diagnostic context. Three consecutive nightly logs with Step 9J ambiguity: fired 2026-09-01 (rebased #721 and #722), skipped 2026-09-02 with no detail. Cannot distinguish 'correctly skipped because 0 PRs' from 'detection failure'. bug-patterns.md 'silent-green automation' pattern (Keys Koffee) is directly applicable: a step that says 'skipped' is indistinguishable from these two cases.",
+      "action": "Edit .claude/skills/nightly-commit-review/SKILL.md Step 9J block: after the mcp__github__search_pull_requests call, add mandatory log line 'Step 9J: {len(results)} Dependabot PRs found via search_pull_requests' BEFORE the skip/proceed branch. This makes every nightly self-diagnosing.",
+      "implementation_sketch": "subconscious/runs/2026-09-02-pm/winning-concept.md",
+      "escalation_condition": "Autonomous-executable if not approved by run 116 (1st carry-forward mandate)",
+      "note": "~3-line SKILL.md edit. Same channel as Steps 9C/9E/9F/9G/9I/9J/9K. Zero production code. Zero architectural risk. Makes nightly logs definitively readable."
+    },
     {
       "title": "Step 9K: Stale subconscious draft PR audit in nightly-commit-review SKILL.md (run 113 winner — IMPLEMENTED run 114)",
       "date": "2026-08-30",
