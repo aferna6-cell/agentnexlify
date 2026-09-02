@@ -33,9 +33,13 @@ def verify_tenant(claims: dict, tenant_id: str) -> None:
 
 
 async def block_demo_role(claims: dict = Depends(_get_current_tenant)) -> dict:
-    """Router-level guard for money/destructive surfaces (billing, phone
-    provisioning, account deletion): the public live-demo "demo" role gets
-    403 here while keeping full sandbox access everywhere else."""
+    """Belt-and-suspenders guard for money/destructive routers.
+
+    GH #669 also registers ``DemoRoleBlockMiddleware`` which blocks
+    role=demo mutations outside an allowlist. Keep this Depends on billing,
+    phone provisioning, and account deletion so money surfaces that share
+    allowlisted prefixes (e.g. ``/api/v1/auth``) stay closed to demo JWTs.
+    """
     if claims.get("role") == "demo":
         raise HTTPException(
             status_code=403,

@@ -452,6 +452,70 @@ def check_agent_sessions_are_budgeted(failures: list[str]) -> None:
     )
 
 
+def check_demo_role_middleware(failures: list[str]) -> None:
+    """GH #669: central demo-role mutation guard must stay wired.
+
+    Asserts middleware module + allowlist exist, main.py registers
+    DemoRoleBlockMiddleware, and money/destructive routers keep
+    belt-and-suspenders ``block_demo_role`` Depends.
+    """
+    guard = ROOT / "backend" / "middleware" / "demo_role_guard.py"
+    main_py = ROOT / "backend" / "main.py"
+    if not guard.is_file():
+        check("demo-role middleware module present", False, failures, [str(guard)])
+        return
+    guard_text = read_text(guard)
+    check(
+        "DemoRoleBlockMiddleware class defined",
+        "class DemoRoleBlockMiddleware" in guard_text,
+        failures,
+        [rel(guard)],
+    )
+    check(
+        "DEMO_MUTATION_ALLOWLIST_PREFIXES defined",
+        "DEMO_MUTATION_ALLOWLIST_PREFIXES" in guard_text,
+        failures,
+        [rel(guard)],
+    )
+    missing_prefixes = [
+        prefix
+        for prefix in ("/api/v1/auth", "/api/v1/webhooks", "/api/v1/widget")
+        if prefix not in guard_text
+    ]
+    check(
+        "demo mutation allowlist covers auth/webhooks/widget",
+        not missing_prefixes,
+        failures,
+        missing_prefixes,
+    )
+
+    main_text = read_text(main_py)
+    check(
+        "DemoRoleBlockMiddleware registered in main.py",
+        "add_middleware(DemoRoleBlockMiddleware)" in main_text,
+        failures,
+        [rel(main_py)],
+    )
+
+    money_routers = (
+        ROOT / "backend" / "routers" / "billing.py",
+        ROOT / "backend" / "routers" / "auth_billing.py",
+        ROOT / "backend" / "routers" / "phone.py",
+        ROOT / "backend" / "routers" / "account_deletion.py",
+    )
+    missing_depends = [
+        rel(path)
+        for path in money_routers
+        if "block_demo_role" not in read_text(path)
+    ]
+    check(
+        "money routers keep block_demo_role Depends",
+        not missing_depends,
+        failures,
+        missing_depends,
+    )
+
+
 def main() -> int:
     failures: list[str] = []
     check_router_future_imports(failures)
@@ -461,6 +525,7 @@ def main() -> int:
     check_widget_assets(failures)
     check_website_copy_avoids_em_dashes(failures)
     check_anthropic_sdk_usage(failures)
+    check_demo_role_middleware(failures)
 
     if failures:
         print(f"{len(failures)} invariant(s) failed.")

@@ -1,10 +1,14 @@
 """Public live-demo login — drops a visitor into the demo sandbox tenant.
 
 POST /api/v1/auth/demo-login issues a short-lived JWT (role="demo") for the
-tenant flagged ``is_demo``. No credentials involved; the token grants the
-normal tenant surface EXCEPT routers guarded by ``block_demo_role``
-(billing, phone provisioning, account deletion), and all outbound sends
-no-op via ``demo_guard``. Demo data resets nightly.
+tenant flagged ``is_demo``. No credentials involved.
+
+Demo JWTs can read the tenant surface and mutate allowlisted ingress
+(auth / widget / webhooks / public book). All other POST/PUT/PATCH/DELETE
+calls are blocked centrally by ``DemoRoleBlockMiddleware`` (GH #669). Money
+and destructive routers under allowlisted prefixes still carry
+``Depends(block_demo_role)`` as belt-and-suspenders. Outbound sends no-op
+via ``demo_guard``. Demo data resets nightly.
 
 Optional query param:
   vertical — one of "plumbing", "salon", "financial_services".
