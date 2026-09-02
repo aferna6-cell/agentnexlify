@@ -105,7 +105,9 @@ def test_approve_then_succeed_unlocks_dependent():
         ],
     )
     eng.queue_ready_for_execution(CLIENT, wf["id"])
-    eng.record_running_outcome(CLIENT, "list", outcome="succeeded")
+    eng.record_running_outcome(
+        CLIENT, "list", outcome="succeeded", verification_state="passed"
+    )
     steps = eng.recover(CLIENT, wf["id"])["steps"]
     by_id = {s["id"]: s for s in steps}
     assert by_id["list"]["state"] == "succeeded"
@@ -114,7 +116,11 @@ def test_approve_then_succeed_unlocks_dependent():
     eng.queue_ready_for_execution(CLIENT, wf["id"])
     eng.approve_step(CLIENT, "email")
     eng.record_running_outcome(
-        CLIENT, "email", outcome="succeeded", execution_id="exec-1"
+        CLIENT,
+        "email",
+        outcome="succeeded",
+        execution_id="exec-1",
+        verification_state="passed",
     )
     done = eng.recover(CLIENT, wf["id"])
     assert done["status"] == "succeeded"
@@ -459,3 +465,178 @@ def test_supabase_store_cas_roundtrip():
         )
 
     assert store.get_step(CLIENT, "missing") is None
+
+
+def test_retryable_failure_keeps_workflow_running():
+    """First failure with retries remaining must not terminalize the workflow."""
+    eng = _engine()
+    wf = eng.create(
+        client_id=CLIENT,
+        owner_goal="x",
+        steps=[{"id": "s1", "description": "y", "risk_level": 1, "max_retries": 2}],
+    )
+    eng.queue_ready_for_execution(CLIENT, wf["id"])
+    eng.record_running_outcome(CLIENT, "s1", outcome="failed", error="boom")
+    mid = eng.recover(CLIENT, wf["id"])
+    assert mid["status"] == "running"
+    by_id = {s["id"]: s for s in mid["steps"]}
+    assert by_id["s1"]["state"] == "failed"
+    assert by_id["s1"]["retry_count"] == 0
+    assert by_id["s1"]["max_retries"] == 2
+
+
+def test_exhausted_failure_marks_workflow_failed():
+    eng = _engine()
+    wf = eng.create(
+        client_id=CLIENT,
+        owner_goal="x",
+        steps=[{"id": "s1", "description": "y", "risk_level": 1, "max_retries": 1}],
+    )
+    eng.queue_ready_for_execution(CLIENT, wf["id"])
+    eng.record_running_outcome(CLIENT, "s1", outcome="failed", error="boom")
+    assert eng.recover(CLIENT, wf["id"])["status"] == "running"
+    eng.retry_failed_step(CLIENT, "s1")
+    eng.queue_ready_for_execution(CLIENT, wf["id"])
+    eng.record_running_outcome(CLIENT, "s1", outcome="failed", error="boom2")
+    done = eng.recover(CLIENT, wf["id"])
+    assert done["status"] == "failed"
+    with pytest.raises(WorkflowStoreError, match="exhausted retries"):
+        eng.retry_failed_step(CLIENT, "s1")
+
+
+def test_execution_success_without_verifier_stays_verifying():
+    eng = _engine()
+    wf = eng.create(
+        client_id=CLIENT,
+        owner_goal="x",
+        steps=[{"id": "s1", "description": "y", "risk_level": 0}],
+    )
+    eng.queue_ready_for_execution(CLIENT, wf["id"])
+    mid = eng.record_running_outcome(CLIENT, "s1", outcome="succeeded")
+    assert mid["state"] == "verifying"
+    assert mid["verification_state"] == "pending"
+    refreshed = eng.recover(CLIENT, wf["id"])
+    assert refreshed["status"] == "running"
+    assert refreshed["steps"][0]["state"] == "verifying"
+
+
+def test_explicit_verification_pass_succeeds():
+    eng = _engine()
+    wf = eng.create(
+        client_id=CLIENT,
+        owner_goal="x",
+        steps=[{"id": "s1", "description": "y", "risk_level": 0}],
+    )
+    eng.queue_ready_for_execution(CLIENT, wf["id"])
+    mid = eng.record_running_outcome(CLIENT, "s1", outcome="succeeded")
+    assert mid["state"] == "verifying"
+    done = eng.record_running_outcome(
+        CLIENT, "s1", outcome="succeeded", verification_state="passed"
+    )
+    assert done["state"] == "succeeded"
+    assert done["verification_state"] == "passed"
+    assert eng.recover(CLIENT, wf["id"])["status"] == "succeeded"
+
+
+def test_not_required_verification_can_succeed_inline():
+    eng = _engine()
+    wf = eng.create(
+        client_id=CLIENT,
+        owner_goal="x",
+        steps=[{"id": "s1", "description": "y", "risk_level": 0}],
+    )
+    eng.queue_ready_for_execution(CLIENT, wf["id"])
+    done = eng.record_running_outcome(
+        CLIENT, "s1", outcome="succeeded", verification_state="not_required"
+    )
+    assert done["state"] == "succeeded"
+    assert done["verification_state"] == "not_required"
+
+
+def test_l0_unknown_cannot_exceed_max_retries():
+    eng = _engine()
+    wf = eng.create(
+        client_id=CLIENT,
+        owner_goal="x",
+        steps=[{"id": "s1", "description": "read", "risk_level": 0, "max_retries": 1}],
+    )
+    eng.queue_ready_for_execution(CLIENT, wf["id"])
+    eng.record_running_outcome(CLIENT, "s1", outcome="unknown")
+    recovered = eng.retry_failed_step(CLIENT, "s1")
+    assert recovered["state"] == "ready"
+    assert recovered["retry_count"] == 1
+    eng.queue_ready_for_execution(CLIENT, wf["id"])
+    eng.record_running_outcome(CLIENT, "s1", outcome="unknown")
+    with pytest.raises(WorkflowStoreError, match="exhausted retries"):
+        eng.retry_failed_step(CLIENT, "s1")
+
+
+def test_cross_tenant_workflow_step_pair_rejected():
+    from backend.tests.fake_supabase_store import FakeSupabase
+
+    db = FakeSupabase({"os_workflows": [], "os_workflow_steps": []})
+    wf = db.rpc(
+        "create_os_workflow",
+        {
+            "p_client_id": CLIENT,
+            "p_owner_goal": "goal",
+            "p_steps": [{"id": "s1", "description": "ok"}],
+            "p_workflow_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        },
+    ).execute().data[0]
+    other = "22222222-2222-2222-2222-222222222222"
+    with pytest.raises(RuntimeError, match="workflow_client_fkey"):
+        db.insert_step_enforcing_tenant_fk(
+            {
+                "id": "s-cross",
+                "workflow_id": wf["id"],
+                "client_id": other,
+                "ordinal": 1,
+                "description": "cross-tenant",
+                "state": "planned",
+            }
+        )
+
+
+def test_failed_step_insert_leaves_no_partial_workflow():
+    from backend.services.os_workflows.store import SupabaseWorkflowStore
+    from backend.tests.fake_supabase_store import FakeSupabase
+
+    db = FakeSupabase({"os_workflows": [], "os_workflow_steps": []})
+    db.fail_create_os_workflow = True
+    store = SupabaseWorkflowStore(db)
+    with pytest.raises(WorkflowStoreError, match="atomic create_os_workflow"):
+        store.create_workflow(
+            client_id=CLIENT,
+            owner_goal="goal",
+            steps=[
+                {"id": "s1", "description": "one"},
+                {"id": "s2", "description": "two"},
+            ],
+            workflow_id="cccccccc-cccc-cccc-cccc-cccccccccccc",
+        )
+    assert db.rows("os_workflows") == []
+    assert db.rows("os_workflow_steps") == []
+
+
+def test_inmemory_create_is_atomic_on_duplicate_step():
+    store = InMemoryWorkflowStore()
+    store.create_workflow(
+        client_id=CLIENT,
+        owner_goal="first",
+        steps=[{"id": "keep", "description": "ok"}],
+        workflow_id="dddddddd-dddd-dddd-dddd-dddddddddddd",
+    )
+    with pytest.raises(WorkflowStoreError, match="already exists"):
+        store.create_workflow(
+            client_id=CLIENT,
+            owner_goal="second",
+            steps=[
+                {"id": "new", "description": "ok"},
+                {"id": "keep", "description": "dup"},
+            ],
+            workflow_id="eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+        )
+    assert store.get_workflow(CLIENT, "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee") is None
+    assert store.get_step(CLIENT, "new") is None
+    assert store.get_step(CLIENT, "keep") is not None

@@ -103,10 +103,40 @@ class InMemoryWorkflowStore:
         steps: List[Dict[str, Any]],
         workflow_id: Optional[str] = None,
     ) -> Dict[str, Any]:
+        """Create workflow + steps atomically (all-or-nothing in memory)."""
         wf_id = workflow_id or _new_id()
         if wf_id in self.workflows:
             raise WorkflowStoreError(f"workflow {wf_id} already exists")
         now = _now()
+        prepared_steps = []
+        seen_step_ids = set()
+        for index, raw in enumerate(steps):
+            step_id = str(raw.get("id") or _new_id())
+            if step_id in self.steps or step_id in seen_step_ids:
+                raise WorkflowStoreError(f"step {step_id} already exists")
+            seen_step_ids.add(step_id)
+            prepared_steps.append(
+                {
+                    "id": step_id,
+                    "workflow_id": wf_id,
+                    "client_id": client_id,
+                    "ordinal": int(raw.get("ordinal", index)),
+                    "description": str(raw["description"]),
+                    "dependencies": [str(d) for d in (raw.get("dependencies") or [])],
+                    "department": raw.get("department"),
+                    "tool_intent": copy.deepcopy(raw.get("tool_intent")),
+                    "state": str(raw.get("state") or "planned"),
+                    "risk_level": int(raw.get("risk_level", 1)),
+                    "execution_id": raw.get("execution_id"),
+                    "verification_state": raw.get("verification_state"),
+                    "error": raw.get("error"),
+                    "retry_count": int(raw.get("retry_count", 0)),
+                    "max_retries": int(raw.get("max_retries", 2)),
+                    "row_version": 1,
+                    "created_at": now,
+                    "updated_at": now,
+                }
+            )
         workflow = {
             "id": wf_id,
             "client_id": client_id,
@@ -116,36 +146,12 @@ class InMemoryWorkflowStore:
             "created_at": now,
             "updated_at": now,
         }
-        created_steps = []
-        for index, raw in enumerate(steps):
-            step_id = str(raw.get("id") or _new_id())
-            if step_id in self.steps:
-                raise WorkflowStoreError(f"step {step_id} already exists")
-            step = {
-                "id": step_id,
-                "workflow_id": wf_id,
-                "client_id": client_id,
-                "ordinal": int(raw.get("ordinal", index)),
-                "description": str(raw["description"]),
-                "dependencies": [str(d) for d in (raw.get("dependencies") or [])],
-                "department": raw.get("department"),
-                "tool_intent": copy.deepcopy(raw.get("tool_intent")),
-                "state": str(raw.get("state") or "planned"),
-                "risk_level": int(raw.get("risk_level", 1)),
-                "execution_id": raw.get("execution_id"),
-                "verification_state": raw.get("verification_state"),
-                "error": raw.get("error"),
-                "retry_count": int(raw.get("retry_count", 0)),
-                "max_retries": int(raw.get("max_retries", 2)),
-                "row_version": 1,
-                "created_at": now,
-                "updated_at": now,
-            }
-            self.steps[step_id] = step
-            created_steps.append(copy.deepcopy(step))
+        # Commit only after every step validates.
         self.workflows[wf_id] = workflow
+        for step in prepared_steps:
+            self.steps[step["id"]] = step
         out = copy.deepcopy(workflow)
-        out["steps"] = created_steps
+        out["steps"] = copy.deepcopy(prepared_steps)
         return out
 
     def get_workflow(self, client_id: str, workflow_id: str) -> Optional[Dict[str, Any]]:
@@ -263,45 +269,45 @@ class SupabaseWorkflowStore:
         steps: List[Dict[str, Any]],
         workflow_id: Optional[str] = None,
     ) -> Dict[str, Any]:
+        """Create workflow + steps via atomic Postgres RPC (no partial rows)."""
         wf_id = workflow_id or _new_id()
-        now = _now()
-        workflow = {
-            "id": wf_id,
-            "client_id": client_id,
-            "owner_goal": owner_goal,
-            "status": "planned",
-            "row_version": 1,
-            "created_at": now,
-            "updated_at": now,
-        }
-        tenant_insert(self._db, "os_workflows", client_id, workflow).execute()
-        created_steps = []
+        payload_steps = []
         for index, raw in enumerate(steps):
-            step = {
-                "id": str(raw.get("id") or _new_id()),
-                "workflow_id": wf_id,
-                "client_id": client_id,
-                "ordinal": int(raw.get("ordinal", index)),
-                "description": str(raw["description"]),
-                "dependencies": [str(d) for d in (raw.get("dependencies") or [])],
-                "department": raw.get("department"),
-                "tool_intent": raw.get("tool_intent"),
-                "state": str(raw.get("state") or "planned"),
-                "risk_level": int(raw.get("risk_level", 1)),
-                "execution_id": raw.get("execution_id"),
-                "verification_state": raw.get("verification_state"),
-                "error": raw.get("error"),
-                "retry_count": int(raw.get("retry_count", 0)),
-                "max_retries": int(raw.get("max_retries", 2)),
-                "row_version": 1,
-                "created_at": now,
-                "updated_at": now,
-            }
-            tenant_insert(self._db, "os_workflow_steps", client_id, step).execute()
-            created_steps.append(step)
-        out = dict(workflow)
-        out["steps"] = created_steps
-        return out
+            payload_steps.append(
+                {
+                    "id": str(raw.get("id") or _new_id()),
+                    "ordinal": int(raw.get("ordinal", index)),
+                    "description": str(raw["description"]),
+                    "dependencies": [str(d) for d in (raw.get("dependencies") or [])],
+                    "department": raw.get("department"),
+                    "tool_intent": raw.get("tool_intent"),
+                    "state": str(raw.get("state") or "planned"),
+                    "risk_level": int(raw.get("risk_level", 1)),
+                    "execution_id": raw.get("execution_id"),
+                    "verification_state": raw.get("verification_state"),
+                    "error": raw.get("error"),
+                    "retry_count": int(raw.get("retry_count", 0)),
+                    "max_retries": int(raw.get("max_retries", 2)),
+                }
+            )
+        try:
+            result = self._db.rpc(
+                "create_os_workflow",
+                {
+                    "p_client_id": client_id,
+                    "p_owner_goal": owner_goal,
+                    "p_steps": payload_steps,
+                    "p_workflow_id": wf_id,
+                },
+            ).execute()
+        except Exception as exc:  # noqa: BLE001 - surface as store error
+            raise WorkflowStoreError(f"atomic create_os_workflow failed: {exc}") from exc
+        data = result.data
+        if isinstance(data, list):
+            data = data[0] if data else None
+        if not isinstance(data, dict):
+            raise WorkflowStoreError("create_os_workflow returned no workflow")
+        return data
 
     def get_workflow(self, client_id: str, workflow_id: str) -> Optional[Dict[str, Any]]:
         result = (

@@ -4,6 +4,16 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 200_os_workflows_integrity.sql (2026-09-02)
+
+**What:** Forward hardening on top of 199 (199 not edited). Adds `UNIQUE (id, client_id)` on `os_workflows`, replaces step `workflow_id` FK with composite `FOREIGN KEY (workflow_id, client_id) REFERENCES os_workflows (id, client_id)`, and adds `create_os_workflow(p_client_id, p_owner_goal, p_steps, p_workflow_id)` SECURITY DEFINER RPC for atomic workflow+steps insert.
+
+**Why:** Service-role bypasses RLS; composite FK prevents cross-tenant step/workflow pairs. Atomic RPC prevents partial durable creates when a mid-batch step insert fails.
+
+**Applied:** APPLIED to prod (`pxserpybmajixqrmzaly`) and staging (`nohanoiugcbaxtxinttp`) 2026-09-02 via Supabase `apply_migration` (`200_os_workflows_integrity`). Verified: composite FK rejects mismatched `client_id`; `create_os_workflow` present.
+
+---
+
 ## 199_os_workflows.sql (2026-09-02)
 
 **What:** New `os_workflows` + `os_workflow_steps` tables for M9 Persistent Planner. Columns use `client_id` (NOT `tenant_id`). Steps store `tool_intent` JSON (intent only), optional `execution_id` FK → `os_tool_executions`, `retry_count` / `max_retries`, and `row_version` for CAS transitions. RLS deny-public on both tables (service-role via `tenant_scope.py`).
