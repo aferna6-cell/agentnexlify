@@ -516,6 +516,53 @@ def check_demo_role_middleware(failures: list[str]) -> None:
     )
 
 
+def check_workflow_planner_import_boundary(failures: list[str]) -> None:
+    """M9: planner/workflow modules must not import Action Executor/providers.
+
+    Turns the M9.1 ``assert_planner_cannot_execute`` rule into a repository
+    boundary. Workflow code may reference the typed contract only — never
+    provider SDKs or the Action Executor implementation.
+    """
+    import re
+
+    roots = (
+        ROOT / "backend" / "services" / "os_workflows",
+        ROOT / "agent-service" / "src" / "agent-os" / "workflows",
+    )
+    forbidden_patterns = (
+        re.compile(r"backend\.services\.os_tool_executions"),
+        re.compile(r"backend\.services\.os_tools"),
+        re.compile(r"backend\.services\.google_calendar"),
+        re.compile(r"backend\.services\.gmail"),
+        re.compile(r"backend\.services\.hubspot"),
+        re.compile(r"agent-os/actions/executor"),
+        re.compile(r"actions/executor"),
+        re.compile(r"actions/tools/"),
+        re.compile(r"GmailMailboxPort"),
+        re.compile(r"CalendarPort"),
+    )
+    offenders: list[str] = []
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for path in sorted(root.rglob("*")):
+            if path.suffix not in {".py", ".ts", ".tsx"}:
+                continue
+            if path.name.endswith(".test.ts") or path.name.startswith("test_"):
+                continue
+            text = read_text(path)
+            for pattern in forbidden_patterns:
+                if pattern.search(text):
+                    offenders.append(f"{rel(path)} matches {pattern.pattern}")
+                    break
+    check(
+        "workflow/planner modules do not import Action Executor/providers",
+        not offenders,
+        failures,
+        offenders[:20],
+    )
+
+
 def main() -> int:
     failures: list[str] = []
     check_router_future_imports(failures)
@@ -526,6 +573,7 @@ def main() -> int:
     check_website_copy_avoids_em_dashes(failures)
     check_anthropic_sdk_usage(failures)
     check_demo_role_middleware(failures)
+    check_workflow_planner_import_boundary(failures)
 
     if failures:
         print(f"{len(failures)} invariant(s) failed.")

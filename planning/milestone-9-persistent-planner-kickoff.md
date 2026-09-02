@@ -1,8 +1,8 @@
 # Milestone 9 START — Persistent Planner / Workflow State Machine
 
 **Date:** 2026-09-02
-**Status:** START — M9.1 contract in flight (`cursor/m9-workflow-contract-a2c9`)
-**Preceded by:** M8 COMPLETE · #747 CI restore · #749/#669 demo-role middleware · #750 governance
+**Status:** START — M9.1 merged (#751); M9.2 persistence engine in flight
+**Preceded by:** M8 COMPLETE · #747 CI restore · #749/#669 demo-role middleware · #750 governance · #751 M9.1 contract
 
 ## Governance gate (this kickoff)
 
@@ -73,7 +73,15 @@ Artifacts:
 
 ### M9.2 — Persistence + deterministic engine
 
-Workflow/step persistence, dependency resolution, resume after restart, pause/resume on approval, terminal detection, bounded retry, unknown stays unknown. Still no LLM planning.
+Workflow/step persistence (`migrations/199_os_workflows.sql`), dependency
+resolution, resume after restart, pause/resume on approval, terminal
+detection, bounded retry, L2/L3 unknown non-replayable. Still no LLM planning.
+
+Artifacts:
+- `backend/services/os_workflows/store.py`
+- `backend/services/os_workflows/engine.py`
+- `backend/tests/test_os_workflows_engine.py`
+- CI import-boundary invariant in `scripts/check_project_invariants.py`
 
 ### M9.3 — Frozen evaluation harness
 
