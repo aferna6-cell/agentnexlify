@@ -18872,3 +18872,14 @@ fix(m8): preserve send_email input on data-plane outcome write
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Merge pull request #747 from aferna6-cell/cursor/brace-expansion-audit-fix-a2c9
+
+fix(deps): resolve high-severity brace-expansion npm audit finding
+**Date:** 2026-09-02
+**Commit:** 821a049
+**Author:** cursor[bot]
+**Files Changed:** 
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
