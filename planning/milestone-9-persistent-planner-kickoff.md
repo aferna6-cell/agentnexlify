@@ -64,23 +64,16 @@ succeeded | failed | unknown | blocked | cancelled
 
 Deliverable: Pydantic/TS types + schema sketch + ADR. **No LLM. No executor calls.**
 
-Enforced policies:
-- L0/L1: `ready → running`; L2/L3: `ready → pending_approval → running`
-- Step terminal = `succeeded | cancelled` (`failed` retryable)
-- Workflow `failed` is terminal (no outbound)
-- L0/L1 `unknown` may recover; L2/L3 `unknown` = cancel only
-
 Artifacts:
 - `backend/services/os_workflows/contract.py`
 - `agent-service/src/agent-os/workflows/types.ts`
-- `agent-service/src/agent-os/workflows/types.test.ts`
 - `specs/m9-persistent-planner_spec.md`
 - `specs/m9-workflow-schema-sketch.sql`
 - `planning/decisions/2026-09-02-m9-persistent-planner-architecture.md`
 
 ### M9.2 — Persistence + deterministic engine
 
-Workflow/step persistence, dependency resolution, resume after restart, pause/resume on approval, terminal detection, bounded retry, L2/L3 unknown non-replayable. Still no LLM planning.
+Workflow/step persistence, dependency resolution, resume after restart, pause/resume on approval, terminal detection, bounded retry, unknown stays unknown. Still no LLM planning.
 
 ### M9.3 — Frozen evaluation harness
 
