@@ -1,0 +1,40 @@
+{
+  "run": 117,
+  "date": "2026-09-02",
+  "branch_run_context": "Branch already had runs 115 (2026-09-01) and 116 (2026-09-01-pm). This session is run 117.",
+  "winner": "Step 9L/9M: ai-ready loop stall diagnostic in nightly SKILL.md",
+  "winner_category": "workflow_efficiency",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "step_name_note": "Use Step 9L if absent; use Step 9M if Step 9L already occupied by run 116 connector auth scan",
+  "bonus": "Step 9E 60d advisory log bundled (same commit)",
+  "mandate_items_checked": 6,
+  "mandate_pass": 4,
+  "mandate_fail": 2,
+  "mandate_fails": [
+    "GH #684 SUPABASE_ACCESS_TOKEN still NOT set in Railway (40d stale)",
+    "os_tool_executions.py NOT stable (772L, 5 commits in 4d)"
+  ],
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "debate_verdicts": {
+    "Idea 1 Step 9L loop stall diagnostic": "SURVIVES",
+    "Idea 2 sales_exact_email test matrix": "WEAKENED",
+    "Idea 4 Step 9E 60d advisory": "KILLED as standalone, bundled as bonus"
+  },
+  "key_evidence": [
+    "ai-ready loop stalled: 3 issues (#669 #660 #643) >24h, AUTOPILOT_GH_TOKEN valid at 60d, 0 loop PRs in nightly logs",
+    "Step 9K working: fired nightly-2026-09-01 + 2026-09-02 (3-4 stale PRs, under threshold)",
+    "Step 9J working: triggered rebase #721+#722 on 2026-09-01, skipped 2026-09-02",
+    "M8/Agent OS sprint: 26+ commits in 24h, high velocity",
+    "sales_exact_email.ts: 4 PRs in 3d for same quote-pairing bug",
+    "os_tool_executions.py: 772L, NOT stable (5 commits in 4d)"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-09-02/ideas/candidates.md",
+    "subconscious/runs/2026-09-02/debate/debate-log.md",
+    "subconscious/runs/2026-09-02/winning-concept.md",
+    "subconscious/runs/2026-09-02/improvement-backlog.md",
+    "subconscious/runs/2026-09-02/run-summary.json"
+  ]
+}
