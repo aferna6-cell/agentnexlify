@@ -70,10 +70,17 @@ def test_client(mock_settings):
         patch("backend.routers.auth.get_service_supabase", return_value=db_mock),
         patch("backend.routers.auth.settings", mock_settings),
         patch("backend.routers.invoices.get_service_supabase", return_value=db_mock),
-        patch("backend.routers.invoices.send_email", new_callable=AsyncMock),
-        patch("backend.routers.invoices.send_sms", new_callable=AsyncMock),
+        patch("backend.services.invoice_send.send_email", new_callable=AsyncMock),
+        patch("backend.services.invoice_send.send_sms", new_callable=AsyncMock),
     ]
-    started = [p.start() for p in patches]
+    started = []
+    try:
+        for p in patches:
+            started.append(p.start())
+    except Exception:
+        for p in started:
+            p.stop()
+        raise
     send_email_mock = started[4]
     send_sms_mock = started[5]
     send_email_mock.return_value = {"success": True}

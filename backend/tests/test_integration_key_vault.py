@@ -406,6 +406,30 @@ class TestEncryptOauthTokens:
         assert out["access_token_enc"].startswith("\\x")
         assert out["metadata"]["enc_key_version"] == 1
 
+    def test_db_payload_no_key_is_noop(self):
+        # Covers oauth_integration_payload_for_db early-return when vault is dark.
+        payload = {
+            "tenant_id": "ten1",
+            "provider": "gmail",
+            "access_token": "at-secret",
+            "refresh_token": "rt-secret",
+        }
+        with _without_keys():
+            out = vault.oauth_integration_payload_for_db(payload)
+        assert out == payload
+        assert "access_token_enc" not in out
+        assert "metadata" not in out
+
+    def test_db_payload_no_tokens_skips_enc_metadata(self):
+        # Covers the false branch of "any ciphertext present?" (line 301→305).
+        payload = {"tenant_id": "ten1", "provider": "gmail", "access_token": ""}
+        with _with_key(KEY_A):
+            out = vault.oauth_integration_payload_for_db(payload)
+        assert "access_token" not in out
+        assert "access_token_enc" not in out
+        assert "refresh_token_enc" not in out
+        assert "metadata" not in out
+
 
 class TestDecryptIntegrationRow:
     def test_none_row_passthrough(self):
