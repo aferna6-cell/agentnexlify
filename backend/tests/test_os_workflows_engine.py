@@ -232,3 +232,230 @@ def test_cross_tenant_get_is_none():
     )
     assert store.get_workflow("other-tenant", wf["id"]) is None
     assert store.get_step("other-tenant", "s1") is None
+
+
+def test_reject_step_cancels_pending_approval():
+    eng = _engine()
+    wf = eng.create(
+        client_id=CLIENT,
+        owner_goal="x",
+        steps=[{"id": "s1", "description": "email", "risk_level": 2}],
+    )
+    eng.queue_ready_for_execution(CLIENT, wf["id"])
+    rejected = eng.reject_step(CLIENT, "s1", reason="owner said no")
+    assert rejected["state"] == "cancelled"
+    assert rejected["error"] == "owner said no"
+
+
+def test_verifying_then_failed_outcome():
+    eng = _engine()
+    wf = eng.create(
+        client_id=CLIENT,
+        owner_goal="x",
+        steps=[{"id": "s1", "description": "y", "risk_level": 0}],
+    )
+    eng.queue_ready_for_execution(CLIENT, wf["id"])
+    mid = eng.record_running_outcome(CLIENT, "s1", outcome="verifying")
+    assert mid["state"] == "verifying"
+    failed = eng.record_running_outcome(
+        CLIENT, "s1", outcome="failed", error="verify miss"
+    )
+    assert failed["state"] == "failed"
+
+
+def test_unsupported_outcome_rejected():
+    eng = _engine()
+    wf = eng.create(
+        client_id=CLIENT,
+        owner_goal="x",
+        steps=[{"id": "s1", "description": "y", "risk_level": 0}],
+    )
+    eng.queue_ready_for_execution(CLIENT, wf["id"])
+    with pytest.raises(WorkflowStoreError, match="unsupported outcome"):
+        eng.record_running_outcome(CLIENT, "s1", outcome="exploded")
+
+
+def test_invalid_outcome_from_ready_raises():
+    eng = _engine()
+    wf = eng.create(
+        client_id=CLIENT,
+        owner_goal="x",
+        steps=[{"id": "s1", "description": "y", "risk_level": 0}],
+    )
+    with pytest.raises(InvalidWorkflowTransition):
+        eng.record_running_outcome(CLIENT, "s1", outcome="succeeded")
+
+
+def test_failed_workflow_aggregation():
+    eng = _engine()
+    wf = eng.create(
+        client_id=CLIENT,
+        owner_goal="x",
+        steps=[{"id": "s1", "description": "y", "risk_level": 1, "max_retries": 0}],
+    )
+    eng.queue_ready_for_execution(CLIENT, wf["id"])
+    eng.record_running_outcome(CLIENT, "s1", outcome="failed")
+    with pytest.raises(WorkflowStoreError, match="exhausted retries"):
+        eng.retry_failed_step(CLIENT, "s1")
+    done = eng.recover(CLIENT, wf["id"])
+    assert done["status"] == "failed"
+
+
+def test_all_cancelled_aggregates():
+    from backend.services.os_workflows.engine import derive_workflow_status
+
+    assert derive_workflow_status([]) == "planned"
+    assert (
+        derive_workflow_status(
+            [{"state": "cancelled"}, {"state": "cancelled"}]
+        )
+        == "cancelled"
+    )
+    assert (
+        derive_workflow_status(
+            [{"state": "succeeded"}, {"state": "cancelled"}]
+        )
+        == "succeeded"
+    )
+
+
+def test_self_dependency_rejected():
+    with pytest.raises(WorkflowGraphError, match="itself"):
+        validate_dependency_graph(
+            [{"id": "a", "dependencies": ["a"], "state": "planned"}]
+        )
+
+
+def test_missing_workflow_and_step_errors():
+    eng = _engine()
+    with pytest.raises(WorkflowStoreError, match="workflow"):
+        eng.recover(CLIENT, "00000000-0000-0000-0000-000000000000")
+    with pytest.raises(WorkflowStoreError, match="step"):
+        eng.approve_step(CLIENT, "00000000-0000-0000-0000-000000000000")
+
+
+def test_inmemory_duplicate_ids_and_patch():
+    store = InMemoryWorkflowStore()
+    store.create_workflow(
+        client_id=CLIENT,
+        owner_goal="x",
+        steps=[{"id": "s1", "description": "y"}],
+        workflow_id="wf1",
+    )
+    with pytest.raises(WorkflowStoreError, match="already exists"):
+        store.create_workflow(
+            client_id=CLIENT,
+            owner_goal="x",
+            steps=[{"id": "s2", "description": "y"}],
+            workflow_id="wf1",
+        )
+    with pytest.raises(WorkflowStoreError, match="already exists"):
+        store.create_workflow(
+            client_id=CLIENT,
+            owner_goal="z",
+            steps=[{"id": "s1", "description": "y"}],
+            workflow_id="wf2",
+        )
+    patched = store.patch_step(
+        client_id=CLIENT,
+        step_id="s1",
+        expected_version=1,
+        patch={"error": "note", "id": "ignored"},
+    )
+    assert patched["error"] == "note"
+    assert patched["id"] == "s1"
+    with pytest.raises(ConcurrentModification):
+        store.patch_step(
+            client_id=CLIENT,
+            step_id="s1",
+            expected_version=1,
+            patch={"error": "stale"},
+        )
+
+
+def test_supabase_store_cas_roundtrip():
+    from backend.services.os_workflows.store import SupabaseWorkflowStore
+    from backend.services.tenant_scope import tenant_scope_column
+    from backend.tests.fake_supabase_store import FakeSupabase
+
+    assert tenant_scope_column("os_workflows") == "client_id"
+    assert tenant_scope_column("os_workflow_steps") == "client_id"
+
+    db = FakeSupabase({"os_workflows": [], "os_workflow_steps": []})
+    store = SupabaseWorkflowStore(db)
+    created = store.create_workflow(
+        client_id=CLIENT,
+        owner_goal="goal",
+        steps=[
+            {
+                "id": "s1",
+                "description": "step",
+                "risk_level": 2,
+                "tool_intent": {"tool_name": "send_email", "arguments": {}},
+            }
+        ],
+        workflow_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    )
+    assert created["id"] == "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+    assert store.get_workflow(CLIENT, created["id"])["owner_goal"] == "goal"
+    assert store.get_workflow("other", created["id"]) is None
+    steps = store.list_steps(CLIENT, created["id"])
+    assert len(steps) == 1
+    step = store.get_step(CLIENT, "s1")
+    assert step["risk_level"] == 2
+
+    moved = store.transition_step_cas(
+        client_id=CLIENT,
+        step_id="s1",
+        expected_state="planned",
+        expected_version=1,
+        target_state="ready",
+        risk_level=2,
+    )
+    assert moved["state"] == "ready"
+    assert moved["row_version"] == 2
+
+    with pytest.raises(ConcurrentModification):
+        store.transition_step_cas(
+            client_id=CLIENT,
+            step_id="s1",
+            expected_state="planned",
+            expected_version=1,
+            target_state="ready",
+            risk_level=2,
+        )
+
+    wf = store.transition_workflow_cas(
+        client_id=CLIENT,
+        workflow_id=created["id"],
+        expected_status="planned",
+        expected_version=1,
+        target_status="running",
+    )
+    assert wf["status"] == "running"
+    with pytest.raises(ConcurrentModification):
+        store.transition_workflow_cas(
+            client_id=CLIENT,
+            workflow_id=created["id"],
+            expected_status="planned",
+            expected_version=1,
+            target_status="running",
+        )
+
+    patched = store.patch_step(
+        client_id=CLIENT,
+        step_id="s1",
+        expected_version=2,
+        patch={"error": "holding", "state": "should-ignore"},
+    )
+    assert patched["error"] == "holding"
+    assert patched["state"] == "ready"
+    with pytest.raises(ConcurrentModification):
+        store.patch_step(
+            client_id=CLIENT,
+            step_id="s1",
+            expected_version=2,
+            patch={"error": "stale"},
+        )
+
+    assert store.get_step(CLIENT, "missing") is None
