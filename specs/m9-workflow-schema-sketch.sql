@@ -1,0 +1,63 @@
+-- M9.1 schema sketch — DO NOT APPLY until M9.2.
+-- Intended migration number when applied: 199_os_workflows.sql (adjust if
+-- another migration lands first).
+--
+-- Naming: tenant scope column is client_id (never tenant_id).
+-- Risk levels mirror os_tool_executions (0–3).
+-- Planner never executes tools; steps reference tool intent + optional
+-- execution_id into os_tool_executions after Action Executor runs.
+
+-- CREATE TABLE public.os_workflows (
+--   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+--   client_id uuid NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE,
+--   owner_goal text NOT NULL,
+--   status text NOT NULL DEFAULT 'planned'
+--     CHECK (status IN (
+--       'planned', 'running', 'paused', 'succeeded', 'failed', 'cancelled'
+--     )),
+--   created_at timestamptz NOT NULL DEFAULT now(),
+--   updated_at timestamptz NOT NULL DEFAULT now()
+-- );
+--
+-- CREATE INDEX os_workflows_client_id_idx ON public.os_workflows (client_id);
+-- CREATE INDEX os_workflows_client_status_idx
+--   ON public.os_workflows (client_id, status);
+--
+-- CREATE TABLE public.os_workflow_steps (
+--   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+--   workflow_id uuid NOT NULL REFERENCES public.os_workflows(id) ON DELETE CASCADE,
+--   client_id uuid NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE,
+--   ordinal integer NOT NULL CHECK (ordinal >= 0),
+--   description text NOT NULL,
+--   dependencies uuid[] NOT NULL DEFAULT '{}',
+--   department text,
+--   tool_intent jsonb,
+--   state text NOT NULL DEFAULT 'planned'
+--     CHECK (state IN (
+--       'planned', 'ready', 'pending_approval', 'running', 'verifying',
+--       'succeeded', 'failed', 'unknown', 'blocked', 'cancelled'
+--     )),
+--   risk_level smallint NOT NULL DEFAULT 1
+--     CHECK (risk_level BETWEEN 0 AND 3),
+--   execution_id uuid REFERENCES public.os_tool_executions(id) ON DELETE SET NULL,
+--   verification_state text
+--     CHECK (
+--       verification_state IS NULL OR verification_state IN (
+--         'not_required', 'pending', 'passed', 'failed', 'unknown'
+--       )
+--     ),
+--   error text,
+--   created_at timestamptz NOT NULL DEFAULT now(),
+--   updated_at timestamptz NOT NULL DEFAULT now()
+-- );
+--
+-- CREATE INDEX os_workflow_steps_workflow_id_idx
+--   ON public.os_workflow_steps (workflow_id);
+-- CREATE INDEX os_workflow_steps_client_state_idx
+--   ON public.os_workflow_steps (client_id, state);
+--
+-- ALTER TABLE public.os_workflows ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE public.os_workflow_steps ENABLE ROW LEVEL SECURITY;
+--
+-- -- RLS policies (sketch): tenant isolation via client_id matching JWT claim.
+-- -- Exact policy SQL lands with M9.2 apply migration.
