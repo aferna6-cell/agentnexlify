@@ -6,9 +6,16 @@
  * Non-negotiable: the planner may decide what should happen next; it may
  * never independently perform the action. Execution stays on the existing
  * Action Executor + risk + approval + verification path.
+ *
+ * Risk-aware transition policy:
+ * - L0/L1: ready → running allowed
+ * - L2/L3: ready → pending_approval → running required
+ * - L0/L1 unknown: controlled recovery (planned|ready|blocked|cancelled)
+ * - L2/L3 unknown: cancelled only (no automatic replay)
  */
 
 import type { RiskLevel } from "../actions/types.ts";
+import { RISK_EXTERNAL_COMMUNICATION } from "../actions/types.ts";
 
 export type { RiskLevel };
 
@@ -30,9 +37,9 @@ export type WorkflowStatus =
 export type VerificationState =
   "not_required" | "pending" | "passed" | "failed" | "unknown";
 
+/** failed is retryable under M9.2 engine policy — not terminal. */
 export const STEP_TERMINAL_STATES: readonly StepState[] = [
   "succeeded",
-  "failed",
   "cancelled",
 ];
 
@@ -42,7 +49,7 @@ export const WORKFLOW_TERMINAL_STATUSES: readonly WorkflowStatus[] = [
   "cancelled",
 ];
 
-/** Explicit allow-list — keep in sync with Python contract. */
+/** Base allow-list. Risk gates further restrict some edges. */
 export const ALLOWED_STEP_TRANSITIONS: Readonly<
   Record<StepState, readonly StepState[]>
 > = {
@@ -53,8 +60,8 @@ export const ALLOWED_STEP_TRANSITIONS: Readonly<
   verifying: ["succeeded", "failed", "unknown"],
   blocked: ["ready", "cancelled"],
   failed: ["planned", "ready", "cancelled"],
-  // L2/L3 unknown: cancel only — never auto-replay.
-  unknown: ["cancelled"],
+  // L0/L1 recovery edges; L2/L3 narrowed by risk gate to cancelled only.
+  unknown: ["cancelled", "planned", "ready", "blocked"],
   succeeded: [],
   cancelled: [],
 };
@@ -66,9 +73,15 @@ export const ALLOWED_WORKFLOW_TRANSITIONS: Readonly<
   running: ["paused", "succeeded", "failed", "cancelled"],
   paused: ["running", "cancelled"],
   succeeded: [],
-  failed: ["cancelled"],
+  failed: [],
   cancelled: [],
 };
+
+const UNKNOWN_RECOVERY_TARGETS: ReadonlySet<StepState> = new Set([
+  "planned",
+  "ready",
+  "blocked",
+]);
 
 export interface ToolIntent {
   /** Registry name resolved by Action Executor at run time — not callable here. */
@@ -140,14 +153,44 @@ export function isWorkflowTerminal(status: WorkflowStatus): boolean {
   return (WORKFLOW_TERMINAL_STATUSES as readonly string[]).includes(status);
 }
 
+function effectiveRisk(riskLevel: RiskLevel | undefined): number {
+  return riskLevel === undefined ? 3 : riskLevel;
+}
+
+function enforceRiskGates(
+  current: StepState,
+  target: StepState,
+  riskLevel: RiskLevel | undefined,
+): void {
+  const level = effectiveRisk(riskLevel);
+
+  if (
+    current === "ready" &&
+    target === "running" &&
+    level >= RISK_EXTERNAL_COMMUNICATION
+  ) {
+    throw new InvalidWorkflowTransition("step", current, target);
+  }
+
+  if (
+    current === "unknown" &&
+    UNKNOWN_RECOVERY_TARGETS.has(target) &&
+    level >= RISK_EXTERNAL_COMMUNICATION
+  ) {
+    throw new InvalidWorkflowTransition("step", current, target);
+  }
+}
+
 export function transitionStep(
   current: StepState,
   target: StepState,
+  riskLevel?: RiskLevel,
 ): StepState {
   const allowed = ALLOWED_STEP_TRANSITIONS[current];
   if (!allowed.includes(target)) {
     throw new InvalidWorkflowTransition("step", current, target);
   }
+  enforceRiskGates(current, target, riskLevel);
   return target;
 }
 

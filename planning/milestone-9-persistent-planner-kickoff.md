@@ -1,7 +1,7 @@
 # Milestone 9 START — Persistent Planner / Workflow State Machine
 
-**Date:** 2026-09-02  
-**Status:** START — M9.1 contract in flight (`cursor/m9-workflow-contract-a2c9`)  
+**Date:** 2026-09-02
+**Status:** START — M9.1 contract in flight (`cursor/m9-workflow-contract-a2c9`)
 **Preceded by:** M8 COMPLETE · #747 CI restore · #749/#669 demo-role middleware · #750 governance
 
 ## Governance gate (this kickoff)

@@ -1,7 +1,7 @@
 # M9 — Persistent Planner / Workflow State Machine
 
-**Date:** 2026-09-02  
-**Status:** Accepted — M9.1 contract in progress  
+**Date:** 2026-09-02
+**Status:** Accepted — M9.1 contract (correction pass on #751)
 **Preceded by:** M8 COMPLETE · governance #750 · demo-role middleware #749
 
 ## Context
@@ -33,20 +33,45 @@ planned | ready | pending_approval | running | verifying
 succeeded | failed | unknown | blocked | cancelled
 ```
 
-`unknown` is sticky for L2/L3: cancel only — no automatic replay.
+Step terminal states: `succeeded | cancelled`.
+`failed` is retryable under explicit M9.2 bounded-retry policy.
 
-### 4. Tenant column naming
+### 4. Risk-aware approval is enforced (not advisory)
+
+**Decision:** Transition helpers take `risk_level` / `riskLevel`.
+
+- L0/L1: `ready → running` allowed
+- L2/L3: `ready → pending_approval → running` required;
+  `ready → running` is rejected
+- Missing risk on gated edges fails closed (treated as L3)
+
+### 5. Unknown outcomes are risk-tiered
+
+**Decision:**
+
+- L0/L1 `unknown`: controlled recovery to `planned` / `ready` / `blocked`
+  / `cancelled` (bounded policy in M9.2)
+- L2/L3 `unknown`: `cancelled` only — never automatically replayed
+
+The risk gate — not a globally closed allowlist — enforces the L2/L3 rule.
+
+### 6. Workflow failure is terminal
+
+**Decision:** Workflow status `failed` has no outbound transitions
+(including no `failed → cancelled`). Terminal workflow statuses:
+`succeeded | failed | cancelled`.
+
+### 7. Tenant column naming
 
 **Decision:** API / agent-service use `tenantId`. Postgres uses `client_id`
 (same value). Never introduce `tenant_id` on workflow tables.
 
-### 5. Risk levels reuse Action Executor integers
+### 8. Risk levels reuse Action Executor integers
 
 **Decision:** `riskLevel` is `0 | 1 | 2 | 3` — identical semantics to
-`os_tool_executions.risk_level`. L2+ steps enter `pending_approval` before
-`running`.
+`os_tool_executions.risk_level`.
 
-### 6. Precursor `os_projects` stays separate
+### 9. Precursor `os_projects` stays separate
 
 **Decision:** `specs/os-projects_spec.md` / migration 183 remain a
 dashboard-facing precursor. M9 workflows are the planner state machine and
@@ -57,6 +82,8 @@ do not merge into `os_projects` in M9.1–M9.3.
 - No new tool ports in M9.1–M9.2.
 - No LLM planning until M9.3 eval is solid.
 - Schema sketch may land as migration 199+ at M9.2 apply time.
+- M9.2 should add a CI invariant forbidding planner/workflow modules from
+  importing Action Executor / provider implementations directly.
 
 ## References
 

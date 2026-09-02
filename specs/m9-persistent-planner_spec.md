@@ -1,7 +1,7 @@
 # Spec — M9 Persistent Planner / Workflow State Machine
 
-**Status:** M9.1 contract  
-**Date:** 2026-09-02  
+**Status:** M9.1 contract
+**Date:** 2026-09-02
 **ADR:** `planning/decisions/2026-09-02-m9-persistent-planner-architecture.md`
 
 ## Goal
@@ -32,7 +32,8 @@ Planner
 |----------|------|
 | Python contract | `backend/services/os_workflows/contract.py` |
 | TS mirror | `agent-service/src/agent-os/workflows/types.ts` |
-| Tests | `backend/tests/test_os_workflows_contract.py` |
+| Python tests | `backend/tests/test_os_workflows_contract.py` |
+| TS tests | `agent-service/src/agent-os/workflows/types.test.ts` |
 | Schema sketch | `specs/m9-workflow-schema-sketch.sql` |
 | ADR | `planning/decisions/2026-09-02-m9-persistent-planner-architecture.md` |
 
@@ -74,22 +75,29 @@ planned | ready | pending_approval | running | verifying
 succeeded | failed | unknown | blocked | cancelled
 ```
 
-### Transition rules (allow-list)
+### Transition rules (allow-list + risk gates)
 
-See `ALLOWED_STEP_TRANSITIONS` / `ALLOWED_WORKFLOW_TRANSITIONS` in the
-Python and TS contracts. Notable policies:
+See `ALLOWED_STEP_TRANSITIONS` / `ALLOWED_WORKFLOW_TRANSITIONS` plus
+risk-aware gates in the Python and TS contracts. Notable policies:
 
 - L0/L1 may go `ready → running`.
-- L2/L3 should go `ready → pending_approval → running`.
-- `unknown → running|ready` is forbidden (no auto-replay of L2/L3 unknowns).
-- `succeeded` / `cancelled` are terminal for steps.
+- L2/L3 **must** go `ready → pending_approval → running`;
+  `ready → running` is rejected.
+- Step terminal = `succeeded | cancelled`. `failed` is retryable
+  (`failed → planned|ready|cancelled`) under M9.2 bounded-retry policy.
+- Workflow `failed` is genuinely terminal (no outbound edges).
+- L0/L1 `unknown`: controlled recovery to `planned|ready|blocked|cancelled`.
+- L2/L3 `unknown`: `cancelled` only — no automatic replay.
+- Missing risk on gated edges fails closed (treated as L3).
 
 ## M9.2 (next)
 
 - Apply schema sketch as numbered migration.
 - Persist workflows/steps; dependency resolution; resume after restart;
   pause/resume on approval; terminal detection; bounded retry;
-  unknown stays unknown.
+  L2/L3 unknown stays non-replayable.
+- CI invariant: planner/workflow modules must not import Action Executor
+  / provider implementations directly.
 
 ## M9.3 (after M9.2)
 
@@ -99,8 +107,8 @@ plan generation.
 ## Acceptance (M9.1)
 
 - [x] Pydantic models for Workflow / WorkflowStep / ToolIntent
-- [x] Explicit transition helpers with tests
-- [x] `assert_planner_cannot_execute` hard forbid
-- [x] TS type mirror
+- [x] Explicit risk-aware transition helpers with Python + TS tests
+- [x] `assert_planner_cannot_execute` / `assertPlannerCannotExecute` sentinel
+- [x] TS type + transition mirror
 - [x] Schema sketch (not applied)
 - [x] ADR recorded

@@ -11,16 +11,21 @@ Execution always flows:
       → approval gate → Action Executor → provider → independent verification
       → workflow state transition
 
-Unknown external outcomes stay ``unknown``. L2/L3 unknown outcomes must not
-be automatically replayed (enforced here as a transition forbid; engine
-policy lands in M9.2).
+Risk-aware transition policy (enforced here):
+
+- L0/L1: ``ready → running`` is allowed (approval optional).
+- L2/L3: ``ready → pending_approval → running`` is required;
+  ``ready → running`` is rejected.
+- L0/L1 ``unknown``: controlled recovery to ``planned`` / ``ready`` /
+  ``blocked`` / ``cancelled`` is allowed (bounded retry policy lands in M9.2).
+- L2/L3 ``unknown``: ``cancelled`` only — never automatically replayed.
 
 DB boundary uses ``client_id`` (never ``tenant_id`` on tenant-scoped rows).
 API / agent-service camelCase uses ``tenantId`` for the same value.
 """
 
 from datetime import datetime, timezone
-from typing import Any, List, Literal, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -58,47 +63,43 @@ VerificationState = Literal[
     "unknown",
 ]
 
-STEP_TERMINAL_STATES: frozenset[str] = frozenset(
+# ``failed`` is retryable under explicit M9.2 engine policy — not terminal.
+STEP_TERMINAL_STATES: frozenset = frozenset({"succeeded", "cancelled"})
+
+WORKFLOW_TERMINAL_STATUSES: frozenset = frozenset(
     {"succeeded", "failed", "cancelled"}
 )
 
-# ``unknown`` is sticky for L2/L3 — not terminal for workflow aggregation,
-# but cannot auto-advance to running/ready (no replay).
-STEP_NON_REPLAYABLE_STATES: frozenset[str] = frozenset({"unknown"})
-
-WORKFLOW_TERMINAL_STATUSES: frozenset[str] = frozenset(
-    {"succeeded", "failed", "cancelled"}
-)
-
-# Explicit allow-list of step transitions. Anything else raises.
-ALLOWED_STEP_TRANSITIONS: dict[str, frozenset[str]] = {
+# Base allow-list. Risk-aware gates below further restrict some edges.
+ALLOWED_STEP_TRANSITIONS: dict = {
     "planned": frozenset({"ready", "blocked", "cancelled"}),
     "ready": frozenset({"pending_approval", "running", "blocked", "cancelled"}),
     "pending_approval": frozenset({"running", "blocked", "cancelled"}),
     "running": frozenset({"verifying", "failed", "unknown", "cancelled"}),
     "verifying": frozenset({"succeeded", "failed", "unknown"}),
     "blocked": frozenset({"ready", "cancelled"}),
-    # failed may be retried only via explicit engine policy (M9.2); contract
-    # allows a controlled return to planned/ready for bounded retry.
+    # failed may be retried only via explicit engine policy (M9.2).
     "failed": frozenset({"planned", "ready", "cancelled"}),
-    # unknown: manual cancel only — never auto-replay to running/ready.
-    "unknown": frozenset({"cancelled"}),
+    # Base recovery edges for L0/L1 unknown; L2/L3 narrowed by risk gate.
+    "unknown": frozenset({"cancelled", "planned", "ready", "blocked"}),
     "succeeded": frozenset(),
     "cancelled": frozenset(),
 }
 
-ALLOWED_WORKFLOW_TRANSITIONS: dict[str, frozenset[str]] = {
+ALLOWED_WORKFLOW_TRANSITIONS: dict = {
     "planned": frozenset({"running", "paused", "cancelled"}),
     "running": frozenset({"paused", "succeeded", "failed", "cancelled"}),
     "paused": frozenset({"running", "cancelled"}),
     "succeeded": frozenset(),
-    "failed": frozenset({"cancelled"}),
+    "failed": frozenset(),
     "cancelled": frozenset(),
 }
 
+_UNKNOWN_RECOVERY_TARGETS = frozenset({"planned", "ready", "blocked"})
+
 
 class InvalidWorkflowTransition(ValueError):
-    """Requested state transition is not in the allow-list."""
+    """Requested state transition is not allowed."""
 
     def __init__(self, kind: str, current: str, target: str):
         super().__init__(f"invalid {kind} transition: {current!r} → {target!r}")
@@ -131,16 +132,29 @@ def is_workflow_terminal(status: str) -> bool:
     return status in WORKFLOW_TERMINAL_STATUSES
 
 
-def _forbid_l2_unknown_replay(
+def _effective_risk(risk_level: Optional[int]) -> int:
+    """Missing risk fails closed at the highest tier."""
+    if risk_level is None:
+        return 3
+    return int(risk_level)
+
+
+def _enforce_risk_gates(
     current: str, target: str, risk_level: Optional[int]
 ) -> None:
-    """L2/L3 unknown must not return to executable states."""
-    if current != "unknown":
-        return
-    if target in {"ready", "running", "pending_approval", "planned", "verifying"}:
-        level = 3 if risk_level is None else int(risk_level)
-        if level >= RISK_FAIL_CLOSED:
-            raise InvalidWorkflowTransition("step", current, target)
+    level = _effective_risk(risk_level)
+
+    # L2/L3 cannot skip approval.
+    if current == "ready" and target == "running" and level >= RISK_FAIL_CLOSED:
+        raise InvalidWorkflowTransition("step", current, target)
+
+    # L2/L3 unknown: cancel only — never replay into recovery states.
+    if (
+        current == "unknown"
+        and target in _UNKNOWN_RECOVERY_TARGETS
+        and level >= RISK_FAIL_CLOSED
+    ):
+        raise InvalidWorkflowTransition("step", current, target)
 
 
 def transition_step(
@@ -149,13 +163,13 @@ def transition_step(
     *,
     risk_level: Optional[int] = None,
 ) -> str:
-    """Validate and return the next step state."""
+    """Validate and return the next step state (risk-aware)."""
     allowed = ALLOWED_STEP_TRANSITIONS.get(current)
     if allowed is None:
         raise InvalidWorkflowTransition("step", current, target)
     if target not in allowed:
         raise InvalidWorkflowTransition("step", current, target)
-    _forbid_l2_unknown_replay(current, target, risk_level)
+    _enforce_risk_gates(current, target, risk_level)
     return target
 
 
@@ -181,7 +195,7 @@ class ToolIntent(BaseModel):
     """
 
     tool_name: str = Field(..., min_length=1, max_length=128)
-    arguments: dict[str, Any] = Field(default_factory=dict)
+    arguments: dict = Field(default_factory=dict)
     department: Optional[str] = Field(
         default=None,
         description="Optional department hint (sales, ops, support, …).",

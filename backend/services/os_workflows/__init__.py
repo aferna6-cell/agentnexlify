@@ -7,6 +7,7 @@ happen next; it must never independently perform the action.
 
 from backend.services.os_workflows.contract import (
     ALLOWED_STEP_TRANSITIONS,
+    ALLOWED_WORKFLOW_TRANSITIONS,
     STEP_TERMINAL_STATES,
     WORKFLOW_TERMINAL_STATUSES,
     InvalidWorkflowTransition,
@@ -27,6 +28,7 @@ from backend.services.os_workflows.contract import (
 
 __all__ = [
     "ALLOWED_STEP_TRANSITIONS",
+    "ALLOWED_WORKFLOW_TRANSITIONS",
     "STEP_TERMINAL_STATES",
     "WORKFLOW_TERMINAL_STATUSES",
     "InvalidWorkflowTransition",

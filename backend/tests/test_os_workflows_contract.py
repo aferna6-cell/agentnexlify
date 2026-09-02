@@ -4,6 +4,7 @@ import pytest
 
 from backend.services.os_workflows import (
     ALLOWED_STEP_TRANSITIONS,
+    ALLOWED_WORKFLOW_TRANSITIONS,
     InvalidWorkflowTransition,
     PlannerExecutionForbidden,
     ToolIntent,
@@ -15,14 +16,24 @@ from backend.services.os_workflows import (
     transition_step,
     transition_workflow,
 )
+from backend.services.os_workflows.contract import STEP_TERMINAL_STATES
 
 
-def test_step_happy_path_to_succeeded():
-    state = "planned"
-    for target in ("ready", "running", "verifying", "succeeded"):
-        state = transition_step(state, target, risk_level=1)
-    assert state == "succeeded"
-    assert is_step_terminal(state)
+def test_l0_l1_ready_may_run_without_approval():
+    assert transition_step("ready", "running", risk_level=0) == "running"
+    assert transition_step("ready", "running", risk_level=1) == "running"
+
+
+def test_l2_l3_cannot_skip_approval():
+    with pytest.raises(InvalidWorkflowTransition):
+        transition_step("ready", "running", risk_level=2)
+    with pytest.raises(InvalidWorkflowTransition):
+        transition_step("ready", "running", risk_level=3)
+
+
+def test_missing_risk_on_ready_to_running_fails_closed():
+    with pytest.raises(InvalidWorkflowTransition):
+        transition_step("ready", "running")
 
 
 def test_approval_path_for_l2():
@@ -32,20 +43,47 @@ def test_approval_path_for_l2():
     assert state == "running"
 
 
-def test_unknown_cannot_auto_replay_even_if_allowlist_widened():
-    """L2/L3 unknown must stay unknown except manual cancel."""
-    with pytest.raises(InvalidWorkflowTransition):
-        transition_step("unknown", "running", risk_level=2)
-    with pytest.raises(InvalidWorkflowTransition):
-        transition_step("unknown", "ready", risk_level=3)
-    assert transition_step("unknown", "cancelled", risk_level=2) == "cancelled"
+def test_step_happy_path_l1_to_succeeded():
+    state = "planned"
+    for target in ("ready", "running", "verifying", "succeeded"):
+        state = transition_step(state, target, risk_level=1)
+    assert state == "succeeded"
+    assert is_step_terminal(state)
+
+
+def test_failed_is_retryable_not_terminal():
+    assert "failed" not in STEP_TERMINAL_STATES
+    assert not is_step_terminal("failed")
+    assert transition_step("failed", "ready", risk_level=1) == "ready"
+    assert transition_step("failed", "planned", risk_level=1) == "planned"
+    assert transition_step("failed", "cancelled", risk_level=1) == "cancelled"
 
 
 def test_terminal_steps_have_empty_outbound():
     for terminal in ("succeeded", "cancelled"):
+        assert is_step_terminal(terminal)
         assert ALLOWED_STEP_TRANSITIONS[terminal] == frozenset()
         with pytest.raises(InvalidWorkflowTransition):
             transition_step(terminal, "ready")
+
+
+def test_l0_l1_unknown_allows_controlled_recovery():
+    assert transition_step("unknown", "ready", risk_level=0) == "ready"
+    assert transition_step("unknown", "planned", risk_level=1) == "planned"
+    assert transition_step("unknown", "blocked", risk_level=1) == "blocked"
+    assert transition_step("unknown", "cancelled", risk_level=1) == "cancelled"
+
+
+def test_l2_l3_unknown_cancel_only_no_replay():
+    with pytest.raises(InvalidWorkflowTransition):
+        transition_step("unknown", "running", risk_level=2)
+    with pytest.raises(InvalidWorkflowTransition):
+        transition_step("unknown", "ready", risk_level=2)
+    with pytest.raises(InvalidWorkflowTransition):
+        transition_step("unknown", "planned", risk_level=3)
+    with pytest.raises(InvalidWorkflowTransition):
+        transition_step("unknown", "blocked", risk_level=3)
+    assert transition_step("unknown", "cancelled", risk_level=2) == "cancelled"
 
 
 def test_workflow_pause_resume():
@@ -54,6 +92,13 @@ def test_workflow_pause_resume():
     status = transition_workflow(status, "running")
     assert status == "running"
     assert not is_workflow_terminal(status)
+
+
+def test_workflow_failed_is_genuinely_terminal():
+    assert ALLOWED_WORKFLOW_TRANSITIONS["failed"] == frozenset()
+    assert is_workflow_terminal("failed")
+    with pytest.raises(InvalidWorkflowTransition):
+        transition_workflow("failed", "cancelled")
 
 
 def test_planner_cannot_execute():
@@ -94,7 +139,7 @@ def test_step_rejects_self_dependency():
         )
 
 
-def test_step_transition_to_helper():
+def test_step_transition_to_helper_enforces_l2_approval():
     step = WorkflowStep(
         id="s1",
         workflow_id="w1",
@@ -103,9 +148,11 @@ def test_step_transition_to_helper():
         risk_level=2,
         state="ready",
     )
+    with pytest.raises(InvalidWorkflowTransition):
+        step.transition_to("running")
     next_step = step.transition_to("pending_approval")
     assert next_step.state == "pending_approval"
-    assert step.state == "ready"  # immutable copy
+    assert step.state == "ready"
 
 
 def test_workflow_step_mismatch_rejected():
@@ -123,7 +170,3 @@ def test_workflow_step_mismatch_rejected():
                 )
             ],
         )
-
-
-def test_l0_ready_may_skip_approval():
-    assert transition_step("ready", "running", risk_level=0) == "running"
