@@ -32,8 +32,10 @@ router = APIRouter(prefix="/api/v1/integrations", tags=["integrations"])
 
 _JWT_ALGORITHM = "HS256"
 
-# Short-lived expiry for the OAuth state token (10 minutes).
-_STATE_TOKEN_EXPIRY_MINUTES = 10
+# OAuth state TTL. Must cover 2FA + Google "unverified app" delays; the
+# authorization code is issued only after consent, so a short state TTL
+# (10m) caused repeated staging 400s: "Invalid or expired state parameter".
+_STATE_TOKEN_EXPIRY_MINUTES = 60
 
 
 def _jwt_secret() -> str:
@@ -93,9 +95,15 @@ def _decode_state(state: str) -> dict:
             "return_to": payload.get("return_to"),
         }
     except JWTError as exc:
-        raise HTTPException(
-            status_code=400, detail="Invalid or expired state parameter"
-        ) from exc
+        # jose raises ExpiredSignatureError (a JWTError) when exp has passed.
+        detail = (
+            "OAuth state expired — click Connect again and finish Google consent "
+            f"within {_STATE_TOKEN_EXPIRY_MINUTES} minutes"
+            if type(exc).__name__ == "ExpiredSignatureError"
+            or "expired" in str(exc).lower()
+            else "Invalid or expired state parameter"
+        )
+        raise HTTPException(status_code=400, detail=detail) from exc
 
 
 def _safe_return_to(return_to: str | None) -> str | None:
