@@ -362,6 +362,45 @@ def test_record_execution_outcome_does_not_stamp_not_required_over_an_approved_c
     assert row["approval_state"] not in {"pending", "not_required"}
 
 
+def test_record_execution_outcome_preserves_parked_input_when_omitted():
+    """send_email data-plane success omits input. Must not wipe approval payload."""
+    parked = {
+        "to": "buyer@example.com",
+        "subject": "M8 smoke subject",
+        "body": "M8 smoke body marker-xyz",
+    }
+    db = FakeSupabase(
+        {
+            "os_tool_executions": [
+                {
+                    "id": EXEC_ID,
+                    "client_id": CLIENT,
+                    "tool_id": "send_email",
+                    "agent_id": "sales",
+                    "status": "running",
+                    "approval_state": "approved",
+                    "approved_by": "maya@sunsetauto.test",
+                    "input": parked,
+                }
+            ]
+        }
+    )
+
+    svc.record_execution_outcome(
+        db,
+        CLIENT,
+        {
+            "id": EXEC_ID,
+            "status": "succeeded",
+            "result": {"messageId": "abc123", "deduplicated": False},
+        },
+    )
+
+    row = db.rows("os_tool_executions")[0]
+    assert row["input"] == parked
+    assert row["result"]["messageId"] == "abc123"
+
+
 # --- rejection -----------------------------------------------------------------
 
 

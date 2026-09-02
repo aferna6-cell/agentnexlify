@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/integrations/gmail", tags=["integrations"])
 
 _JWT_ALGORITHM = "HS256"
-_STATE_TOKEN_EXPIRY_MINUTES = 10
+# Match Calendar OAuth: 60m covers 2FA + unverified-app consent delays.
+_STATE_TOKEN_EXPIRY_MINUTES = 60
 
 
 def _jwt_secret() -> str:
@@ -64,9 +65,14 @@ def _decode_state(state: str) -> tuple[str, str | None, bool]:
             raise HTTPException(status_code=400, detail="Invalid state: missing tenant_id")
         return tenant_id, payload.get("os_thread_id"), bool(payload.get("inbox"))
     except JWTError as exc:
-        raise HTTPException(
-            status_code=400, detail="Invalid or expired state parameter"
-        ) from exc
+        detail = (
+            "OAuth state expired — click Connect again and finish Google consent "
+            f"within {_STATE_TOKEN_EXPIRY_MINUTES} minutes"
+            if type(exc).__name__ == "ExpiredSignatureError"
+            or "expired" in str(exc).lower()
+            else "Invalid or expired state parameter"
+        )
+        raise HTTPException(status_code=400, detail=detail) from exc
 
 
 def _platform_configured() -> bool:

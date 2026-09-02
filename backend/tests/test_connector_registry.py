@@ -405,9 +405,17 @@ class TestOAuthStateRoundTrip:
         with pytest.raises(HTTPException) as exc_info:
             integrations_router._decode_state(expired)
         assert exc_info.value.status_code == 400
+        assert "expired" in str(exc_info.value.detail).lower()
 
 
-class TestSafeReturnTo:
+    def test_state_token_ttl_covers_interactive_oauth_delays(self):
+        """2FA + unverified-app warning routinely exceed a 10-minute state TTL."""
+        from backend.routers import integrations as integrations_router
+        from backend.routers import gmail_integration as gmail_router
+
+        assert integrations_router._STATE_TOKEN_EXPIRY_MINUTES >= 60
+        assert gmail_router._STATE_TOKEN_EXPIRY_MINUTES >= 60
+
     def test_relative_path_accepted(self):
         from backend.routers import integrations as integrations_router
 
