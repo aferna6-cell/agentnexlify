@@ -1,0 +1,206 @@
+/**
+ * M9 Persistent Planner — workflow contract types (M9.1).
+ *
+ * Mirror of `backend/services/os_workflows/contract.py`.
+ *
+ * Non-negotiable: the planner may decide what should happen next; it may
+ * never independently perform the action. Execution stays on the existing
+ * Action Executor + risk + approval + verification path.
+ *
+ * Risk-aware transition policy:
+ * - L0/L1: ready → running allowed
+ * - L2/L3: ready → pending_approval → running required
+ * - L0/L1 unknown: controlled recovery (planned|ready|blocked|cancelled)
+ * - L2/L3 unknown: cancelled only (no automatic replay)
+ */
+
+import type { RiskLevel } from "../actions/types.ts";
+import { RISK_EXTERNAL_COMMUNICATION } from "../actions/types.ts";
+
+export type { RiskLevel };
+
+export type StepState =
+  | "planned"
+  | "ready"
+  | "pending_approval"
+  | "running"
+  | "verifying"
+  | "succeeded"
+  | "failed"
+  | "unknown"
+  | "blocked"
+  | "cancelled";
+
+export type WorkflowStatus =
+  "planned" | "running" | "paused" | "succeeded" | "failed" | "cancelled";
+
+export type VerificationState =
+  "not_required" | "pending" | "passed" | "failed" | "unknown";
+
+/** failed is retryable under M9.2 engine policy — not terminal. */
+export const STEP_TERMINAL_STATES: readonly StepState[] = [
+  "succeeded",
+  "cancelled",
+];
+
+export const WORKFLOW_TERMINAL_STATUSES: readonly WorkflowStatus[] = [
+  "succeeded",
+  "failed",
+  "cancelled",
+];
+
+/** Base allow-list. Risk gates further restrict some edges. */
+export const ALLOWED_STEP_TRANSITIONS: Readonly<
+  Record<StepState, readonly StepState[]>
+> = {
+  planned: ["ready", "blocked", "cancelled"],
+  ready: ["pending_approval", "running", "blocked", "cancelled"],
+  pending_approval: ["running", "blocked", "cancelled"],
+  running: ["verifying", "failed", "unknown", "cancelled"],
+  verifying: ["succeeded", "failed", "unknown"],
+  blocked: ["ready", "cancelled"],
+  failed: ["planned", "ready", "cancelled"],
+  // L0/L1 recovery edges; L2/L3 narrowed by risk gate to cancelled only.
+  unknown: ["cancelled", "planned", "ready", "blocked"],
+  succeeded: [],
+  cancelled: [],
+};
+
+export const ALLOWED_WORKFLOW_TRANSITIONS: Readonly<
+  Record<WorkflowStatus, readonly WorkflowStatus[]>
+> = {
+  planned: ["running", "paused", "cancelled"],
+  running: ["paused", "succeeded", "failed", "cancelled"],
+  paused: ["running", "cancelled"],
+  succeeded: [],
+  failed: [],
+  cancelled: [],
+};
+
+const UNKNOWN_RECOVERY_TARGETS: ReadonlySet<StepState> = new Set([
+  "planned",
+  "ready",
+  "blocked",
+]);
+
+export interface ToolIntent {
+  /** Registry name resolved by Action Executor at run time — not callable here. */
+  toolName: string;
+  arguments?: Record<string, unknown>;
+  department?: string | null;
+}
+
+export interface WorkflowStep {
+  id: string;
+  workflowId: string;
+  ordinal: number;
+  description: string;
+  dependencies: string[];
+  department?: string | null;
+  toolIntent?: ToolIntent | null;
+  state: StepState;
+  riskLevel: RiskLevel;
+  executionId?: string | null;
+  verificationState?: VerificationState | null;
+  error?: string | null;
+}
+
+/**
+ * API shape. Persist `tenantId` as Postgres `client_id`.
+ */
+export interface Workflow {
+  id: string;
+  tenantId: string;
+  ownerGoal: string;
+  status: WorkflowStatus;
+  steps?: WorkflowStep[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export class InvalidWorkflowTransition extends Error {
+  readonly kind: "step" | "workflow";
+  readonly current: string;
+  readonly target: string;
+
+  constructor(kind: "step" | "workflow", current: string, target: string) {
+    super(`invalid ${kind} transition: ${current} → ${target}`);
+    this.name = "InvalidWorkflowTransition";
+    this.kind = kind;
+    this.current = current;
+    this.target = target;
+  }
+}
+
+export class PlannerExecutionForbidden extends Error {
+  constructor(context = "planner") {
+    super(
+      `${context} must not execute tools; enqueue a WorkflowStep for the Action Executor instead`,
+    );
+    this.name = "PlannerExecutionForbidden";
+  }
+}
+
+export function assertPlannerCannotExecute(context = "planner"): never {
+  throw new PlannerExecutionForbidden(context);
+}
+
+export function isStepTerminal(state: StepState): boolean {
+  return (STEP_TERMINAL_STATES as readonly string[]).includes(state);
+}
+
+export function isWorkflowTerminal(status: WorkflowStatus): boolean {
+  return (WORKFLOW_TERMINAL_STATUSES as readonly string[]).includes(status);
+}
+
+function effectiveRisk(riskLevel: RiskLevel | undefined): number {
+  return riskLevel === undefined ? 3 : riskLevel;
+}
+
+function enforceRiskGates(
+  current: StepState,
+  target: StepState,
+  riskLevel: RiskLevel | undefined,
+): void {
+  const level = effectiveRisk(riskLevel);
+
+  if (
+    current === "ready" &&
+    target === "running" &&
+    level >= RISK_EXTERNAL_COMMUNICATION
+  ) {
+    throw new InvalidWorkflowTransition("step", current, target);
+  }
+
+  if (
+    current === "unknown" &&
+    UNKNOWN_RECOVERY_TARGETS.has(target) &&
+    level >= RISK_EXTERNAL_COMMUNICATION
+  ) {
+    throw new InvalidWorkflowTransition("step", current, target);
+  }
+}
+
+export function transitionStep(
+  current: StepState,
+  target: StepState,
+  riskLevel?: RiskLevel,
+): StepState {
+  const allowed = ALLOWED_STEP_TRANSITIONS[current];
+  if (!allowed.includes(target)) {
+    throw new InvalidWorkflowTransition("step", current, target);
+  }
+  enforceRiskGates(current, target, riskLevel);
+  return target;
+}
+
+export function transitionWorkflow(
+  current: WorkflowStatus,
+  target: WorkflowStatus,
+): WorkflowStatus {
+  const allowed = ALLOWED_WORKFLOW_TRANSITIONS[current];
+  if (!allowed.includes(target)) {
+    throw new InvalidWorkflowTransition("workflow", current, target);
+  }
+  return target;
+}

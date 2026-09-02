@@ -1,8 +1,8 @@
 # Milestone 9 START — Persistent Planner / Workflow State Machine
 
-**Date:** 2026-09-02  
-**Status:** START — governance prerequisites recorded; M9.1 is next build slice  
-**Preceded by:** M8 COMPLETE · #747 CI restore · #749/#669 demo-role middleware
+**Date:** 2026-09-02
+**Status:** START — M9.1 contract in flight (`cursor/m9-workflow-contract-a2c9`)
+**Preceded by:** M8 COMPLETE · #747 CI restore · #749/#669 demo-role middleware · #750 governance
 
 ## Governance gate (this kickoff)
 
@@ -63,6 +63,13 @@ succeeded | failed | unknown | blocked | cancelled
 ```
 
 Deliverable: Pydantic/TS types + schema sketch + ADR. **No LLM. No executor calls.**
+
+Artifacts:
+- `backend/services/os_workflows/contract.py`
+- `agent-service/src/agent-os/workflows/types.ts`
+- `specs/m9-persistent-planner_spec.md`
+- `specs/m9-workflow-schema-sketch.sql`
+- `planning/decisions/2026-09-02-m9-persistent-planner-architecture.md`
 
 ### M9.2 — Persistence + deterministic engine
 
