@@ -1,0 +1,212 @@
+{
+  "environment": "staging",
+  "timestamp": "2026-09-01T16:26:20.760610+00:00",
+  "git_sha": "ec3a99cb6a0e07477fb691f072323b8b34f27f4d",
+  "tenant_test_id": "3ddd9072-ad9f-4214-970d-11386d8c1b4a",
+  "suites": [
+    "calendar",
+    "gmail"
+  ],
+  "results": [
+    {
+      "suite": "staging",
+      "step": "health_probe",
+      "at": "2026-09-01T16:26:21.035061+00:00",
+      "result": "pass",
+      "http_status": 200,
+      "url": "https://agentnexlify-staging.up.railway.app/health",
+      "body_preview": "[redacted]"
+    },
+    {
+      "suite": "calendar",
+      "step": "service_role_gate",
+      "at": "2026-09-01T16:26:21.035214+00:00",
+      "result": "pass",
+      "key_kind": "legacy_service_role_jwt",
+      "key_len": 219,
+      "jwt_role": "service_role",
+      "jwt_ref": "nohanoiugcbaxtxinttp"
+    },
+    {
+      "suite": "calendar",
+      "step": "availability",
+      "at": "2026-09-01T16:26:23.118873+00:00",
+      "result": "pass",
+      "slot_count": 0,
+      "provider": "google_calendar",
+      "invented": false
+    },
+    {
+      "suite": "calendar",
+      "step": "internal_db_readback",
+      "at": "2026-09-01T16:26:26.500073+00:00",
+      "result": "pass",
+      "appointment_id": "80607a1a-68be-485d-bba8-5893fe0e5196",
+      "provider_event_id": "1pe7j16upb79vglqerb6l4ia6k",
+      "marker": "m8-cal-19e8834d"
+    },
+    {
+      "suite": "calendar",
+      "step": "internal_create",
+      "at": "2026-09-01T16:26:26.500082+00:00",
+      "result": "pass",
+      "appointment_id": "80607a1a-68be-485d-bba8-5893fe0e5196",
+      "provider_event_id": "1pe7j16upb79vglqerb6l4ia6k",
+      "verification": "created",
+      "marker": "m8-cal-19e8834d"
+    },
+    {
+      "suite": "calendar",
+      "step": "provider_readback",
+      "at": "2026-09-01T16:26:27.091728+00:00",
+      "result": "pass",
+      "provider_event_id": "1pe7j16upb79vglqerb6l4ia6k",
+      "lookup_state": "found",
+      "provider_status": "confirmed",
+      "provider_summary": "Appointment with Customer",
+      "invented": false
+    },
+    {
+      "suite": "calendar",
+      "step": "redrive_create",
+      "at": "2026-09-01T16:26:27.202657+00:00",
+      "result": "pass",
+      "detail": "deduplicated",
+      "appointment_id": "80607a1a-68be-485d-bba8-5893fe0e5196",
+      "idempotency": "best-effort fingerprint/search-before-create; not Google exactly-once"
+    },
+    {
+      "suite": "calendar",
+      "step": "cross_tenant_cancel",
+      "at": "2026-09-01T16:26:27.302277+00:00",
+      "result": "pass",
+      "detail": "event_not_found",
+      "provider_mutation": false
+    },
+    {
+      "suite": "calendar",
+      "step": "cancel",
+      "at": "2026-09-01T16:26:29.732529+00:00",
+      "result": "pass",
+      "detail": "cancelled",
+      "appointment_id": "80607a1a-68be-485d-bba8-5893fe0e5196"
+    },
+    {
+      "suite": "calendar",
+      "step": "provider_cancel_readback",
+      "at": "2026-09-01T16:26:30.342344+00:00",
+      "result": "pass",
+      "provider_event_id": "1pe7j16upb79vglqerb6l4ia6k",
+      "lookup_state": "found",
+      "provider_status": "cancelled",
+      "invented": false
+    },
+    {
+      "suite": "calendar",
+      "step": "external_owner_login",
+      "at": "2026-09-01T16:26:30.789799+00:00",
+      "result": "pass"
+    },
+    {
+      "suite": "calendar",
+      "step": "external_pending_approval",
+      "at": "2026-09-01T16:26:31.148613+00:00",
+      "result": "pass",
+      "execution_id": "93b3595b-4956-42e4-a6ea-88cca38d3f24",
+      "approval_state": "pending"
+    },
+    {
+      "suite": "calendar",
+      "step": "external_pre_approve_no_provider_event",
+      "at": "2026-09-01T16:26:31.830307+00:00",
+      "result": "pass",
+      "lookup_state": "ok",
+      "provider_event_count": 0,
+      "note": "Provider list query by marker/time window \u2014 zero before approval"
+    },
+    {
+      "suite": "calendar",
+      "step": "external_approve_once",
+      "at": "2026-09-01T16:26:32.284351+00:00",
+      "result": "fail",
+      "http_status": 200,
+      "execution_id": "93b3595b-4956-42e4-a6ea-88cca38d3f24",
+      "provider_event_id": null,
+      "already_decided": false
+    },
+    {
+      "suite": "gmail",
+      "step": "service_role_gate",
+      "at": "2026-09-01T16:26:32.284438+00:00",
+      "result": "pass",
+      "key_kind": "legacy_service_role_jwt",
+      "key_len": 219,
+      "jwt_role": "service_role",
+      "jwt_ref": "nohanoiugcbaxtxinttp"
+    },
+    {
+      "suite": "gmail",
+      "step": "owner_login",
+      "at": "2026-09-01T16:26:32.775523+00:00",
+      "result": "pass"
+    },
+    {
+      "suite": "gmail",
+      "step": "create_thread",
+      "at": "2026-09-01T16:26:33.019955+00:00",
+      "result": "pass",
+      "thread_id": "bfe0f99e-7658-4d17-897c-619186ffa147"
+    },
+    {
+      "suite": "gmail",
+      "step": "owner_ask",
+      "at": "2026-09-01T16:26:49.003261+00:00",
+      "result": "pass",
+      "http_status": 201
+    },
+    {
+      "suite": "gmail",
+      "step": "pending_approval",
+      "at": "2026-09-01T16:26:49.254769+00:00",
+      "result": "pass",
+      "execution_id": "2684139f-0dfa-4a40-8cb1-fc29d5fffd76",
+      "agent_id": "sales",
+      "approval_state": "pending",
+      "note": "Sales department required for live send"
+    },
+    {
+      "suite": "gmail",
+      "step": "pre_approve_not_sent",
+      "at": "2026-09-01T16:26:49.254793+00:00",
+      "result": "fail",
+      "execution_id": "2684139f-0dfa-4a40-8cb1-fc29d5fffd76",
+      "payload_matches": false,
+      "status": "pending_approval",
+      "note": "Send-only OAuth: prove pending_approval + approved payload, no provider messageId on row (no sender mailbox read)"
+    }
+  ],
+  "staging": {
+    "api_base": "https://agentnexlify-staging.up.railway.app",
+    "railway_project_id": "22fbefe0-bd69-41c6-9896-e5f533473c60",
+    "railway_environment_id": "5988ed51-6691-4497-825d-14fefff5f591",
+    "railway_environment_name": "staging"
+  },
+  "feature_flags_process": {
+    "RAG_ENABLED": "1",
+    "CALENDAR_ACTIONS_ENABLED": "1",
+    "CRM_ACTIONS_ENABLED": "1",
+    "SEND_EMAIL_ENABLED": "1",
+    "DEFAULT_MIN_SCORE": 1.0,
+    "note": "Process-local only unless staging Railway vars are set by owner"
+  },
+  "exit_codes": [
+    4,
+    4
+  ],
+  "rollback": {
+    "RAG_ENABLED": "0 / unset",
+    "CALENDAR_ACTIONS_ENABLED": "0 / unset",
+    "CRM_ACTIONS_ENABLED": "0 / unset",
+    "SEND_EMAIL_ENABLED": "0 / unset"
+  }
+}

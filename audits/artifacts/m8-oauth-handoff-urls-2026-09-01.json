@@ -1,0 +1,29 @@
+{
+  "generated_at": "2026-09-01T01:51:05.626740+00:00",
+  "staging_login_email": "smoke-test@agentnexlify.invalid",
+  "steps": [
+    {
+      "integration": "calendar",
+      "auth_url": "https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=1031969590686-ipmp1e4ob8463gv1pvnu0u98b6urm3ra.apps.googleusercontent.com&redirect_uri=https%3A%2F%2Fagentnexlify-staging.up.railway.app%2Fapi%2Fv1%2Fintegrations%2Fgoogle%2Fcallback&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar.events+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar.readonly&state=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiI3NDUxNTM3Yi1hNjk0LTRjMzEtODNiMC0xYjgwNGRmM2Q3NTciLCJleHAiOjE3ODgyMjgwNjV9.jaNTTAXVYNgH6BD_o3J-KbJKFMNQwKjO-FbQ19-qIII&code_challenge=EFED2yfrpBwN5hq_MEN3nU5atZhY00erBUmCpsG5fvo&code_challenge_method=S256&access_type=offline&include_granted_scopes=true&prompt=consent",
+      "scopes": null
+    },
+    {
+      "integration": "gmail",
+      "auth_url": "https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=1031969590686-ipmp1e4ob8463gv1pvnu0u98b6urm3ra.apps.googleusercontent.com&redirect_uri=https%3A%2F%2Fagentnexlify-staging.up.railway.app%2Fapi%2Fv1%2Fintegrations%2Fgmail%2Fcallback&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.send&state=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiI3NDUxNTM3Yi1hNjk0LTRjMzEtODNiMC0xYjgwNGRmM2Q3NTciLCJleHAiOjE3ODgyMjgwNjV9.jaNTTAXVYNgH6BD_o3J-KbJKFMNQwKjO-FbQ19-qIII&access_type=offline&include_granted_scopes=true&prompt=consent",
+      "scopes": [
+        "https://www.googleapis.com/auth/gmail.send"
+      ]
+    }
+  ],
+  "google_status": {
+    "connected": false,
+    "email": null,
+    "calendar_name": null,
+    "platform_configured": true
+  },
+  "gmail_status": {
+    "connected": false,
+    "email": null,
+    "platform_configured": true
+  }
+}

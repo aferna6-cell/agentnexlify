@@ -1,0 +1,123 @@
+{
+  "environment": "staging",
+  "timestamp": "2026-09-01T14:14:09.715631+00:00",
+  "git_sha": "4dbc852fdbbbc63dfd4bd264bb3d44b33bf1ceb0",
+  "tenant_test_id": "3ddd9072-ad9f-4214-970d-11386d8c1b4a",
+  "suites": [
+    "calendar",
+    "gmail"
+  ],
+  "results": [
+    {
+      "suite": "staging",
+      "step": "health_probe",
+      "at": "2026-09-01T14:14:09.997803+00:00",
+      "result": "pass",
+      "http_status": 200,
+      "url": "https://agentnexlify-staging.up.railway.app/health",
+      "body_preview": "[redacted]"
+    },
+    {
+      "suite": "calendar",
+      "step": "service_role_gate",
+      "at": "2026-09-01T14:14:09.997963+00:00",
+      "result": "pass",
+      "key_kind": "legacy_service_role_jwt",
+      "key_len": 219,
+      "jwt_role": "service_role",
+      "jwt_ref": "nohanoiugcbaxtxinttp"
+    },
+    {
+      "suite": "calendar",
+      "step": "availability",
+      "at": "2026-09-01T14:14:11.791745+00:00",
+      "result": "pass",
+      "slot_count": 0,
+      "provider": "google_calendar",
+      "invented": false
+    },
+    {
+      "suite": "calendar",
+      "step": "internal_create",
+      "at": "2026-09-01T14:14:14.241026+00:00",
+      "result": "pass",
+      "appointment_id": "f7ce196c-f9bb-48c3-b782-167594ff565e",
+      "provider_event_id": "qpcjcplbqkceftmnfm2th5cstc",
+      "verification": "created"
+    },
+    {
+      "suite": "calendar",
+      "step": "redrive_create",
+      "at": "2026-09-01T14:14:14.337526+00:00",
+      "result": "pass",
+      "detail": "deduplicated",
+      "appointment_id": "f7ce196c-f9bb-48c3-b782-167594ff565e",
+      "idempotency": "best-effort fingerprint/search-before-create; not Google exactly-once"
+    },
+    {
+      "suite": "calendar",
+      "step": "cross_tenant_cancel",
+      "at": "2026-09-01T14:14:14.448587+00:00",
+      "result": "pass",
+      "detail": "event_not_found",
+      "provider_mutation": false
+    },
+    {
+      "suite": "calendar",
+      "step": "cancel",
+      "at": "2026-09-01T14:14:16.921709+00:00",
+      "result": "pass",
+      "detail": "cancelled",
+      "appointment_id": "f7ce196c-f9bb-48c3-b782-167594ff565e"
+    },
+    {
+      "suite": "gmail",
+      "step": "service_role_gate",
+      "at": "2026-09-01T14:14:16.921797+00:00",
+      "result": "pass",
+      "key_kind": "legacy_service_role_jwt",
+      "key_len": 219,
+      "jwt_role": "service_role",
+      "jwt_ref": "nohanoiugcbaxtxinttp"
+    },
+    {
+      "suite": "gmail",
+      "step": "manual_checkpoint",
+      "at": "2026-09-01T14:14:17.026870+00:00",
+      "result": "blocked",
+      "blocker": "Gmail connector present but automated send still requires owner approve against a controlled recipient \u2014 follow docs/milestone-6-gmail-proof.md",
+      "note": "Runner will not auto-approve external email without M8_SMOKE_ALLOW_EXTERNAL_SEND=1"
+    },
+    {
+      "suite": "gmail",
+      "step": "external_send",
+      "at": "2026-09-01T14:14:17.026887+00:00",
+      "result": "blocked",
+      "blocker": "automated external send not implemented in this runner; use manual procedure"
+    }
+  ],
+  "staging": {
+    "api_base": "https://agentnexlify-staging.up.railway.app",
+    "railway_project_id": "22fbefe0-bd69-41c6-9896-e5f533473c60",
+    "railway_environment_id": "5988ed51-6691-4497-825d-14fefff5f591",
+    "railway_environment_name": "staging"
+  },
+  "feature_flags_process": {
+    "RAG_ENABLED": "1",
+    "CALENDAR_ACTIONS_ENABLED": "1",
+    "CRM_ACTIONS_ENABLED": "1",
+    "SEND_EMAIL_ENABLED": "1",
+    "DEFAULT_MIN_SCORE": 1.0,
+    "note": "Process-local only unless staging Railway vars are set by owner"
+  },
+  "exit_codes": [
+    0,
+    3
+  ],
+  "rollback": {
+    "RAG_ENABLED": "0 / unset",
+    "CALENDAR_ACTIONS_ENABLED": "0 / unset",
+    "CRM_ACTIONS_ENABLED": "0 / unset",
+    "SEND_EMAIL_ENABLED": "0 / unset"
+  }
+}

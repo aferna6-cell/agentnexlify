@@ -1,0 +1,14 @@
+{
+  "full_client_id": "1031969590686-ipmp1e4ob8463gv1pvnu0u98b6urm3ra.apps.googleusercontent.com",
+  "client_name": "Agent Nexlify Backend",
+  "verify_page_on_edit": true,
+  "redirect_uri_mismatch_confirmed": true,
+  "uris_required": [
+    "https://agentnexlify-staging.up.railway.app/api/v1/integrations/google/callback",
+    "https://agentnexlify-staging.up.railway.app/api/v1/integrations/gmail/callback"
+  ],
+  "uris_present_on_client": false,
+  "edit_url": "https://console.cloud.google.com/apis/credentials/oauthclient/1031969590686-ipmp1e4ob8463gv1pvnu0u98b6urm3ra.apps.googleusercontent.com",
+  "railway_redirect_env_set": true,
+  "step3_pass": true
+}

@@ -1,0 +1,366 @@
+{
+  "environment": "staging",
+  "timestamp": "2026-09-01T02:42:47.827330+00:00",
+  "git_sha": "f4d8c5237d75d02578cdb33631551bcf32501e23",
+  "tenant_test_id": "7451537b-a694-4c31-83b0-1b804df3d757",
+  "suites": [
+    "agent_os_e2e",
+    "crm",
+    "isolation",
+    "rag"
+  ],
+  "results": [
+    {
+      "suite": "staging",
+      "step": "health_probe",
+      "at": "2026-09-01T02:42:48.113261+00:00",
+      "result": "pass",
+      "http_status": 200,
+      "url": "https://agentnexlify-staging.up.railway.app/health",
+      "body_preview": "[redacted]"
+    },
+    {
+      "suite": "agent_os_e2e",
+      "step": "login",
+      "at": "2026-09-01T02:42:48.549910+00:00",
+      "result": "pass"
+    },
+    {
+      "suite": "agent_os_e2e",
+      "step": "create_thread",
+      "at": "2026-09-01T02:42:48.784214+00:00",
+      "result": "pass",
+      "thread_id": "8ab2b0a0-dd01-4e4d-9731-eb1a7d91c499"
+    },
+    {
+      "suite": "agent_os_e2e",
+      "step": "post_message_orchestrate",
+      "at": "2026-09-01T02:42:51.105384+00:00",
+      "result": "pass",
+      "http_status": 201,
+      "note": "message accepted by FastAPI OS route (orchestrator invoked)"
+    },
+    {
+      "suite": "agent_os_e2e",
+      "step": "engine_connectivity",
+      "at": "2026-09-01T02:42:51.105413+00:00",
+      "result": "pass",
+      "action": "delegate",
+      "note": "FastAPI + agent-service orchestration reachable (connectivity only)"
+    },
+    {
+      "suite": "agent_os_e2e",
+      "step": "action_tool_execution",
+      "at": "2026-09-01T02:43:57.648083+00:00",
+      "result": "fail",
+      "found_crm_tool_execution": false,
+      "note": "No marker-scoped os_tool_executions row \u2014 engine_live does not substitute for action execution"
+    },
+    {
+      "suite": "agent_os_e2e",
+      "step": "draft_proposal_artifact",
+      "at": "2026-09-01T02:43:57.648100+00:00",
+      "result": "fail",
+      "note": "No tool execution and no draft/proposal artifact for this turn"
+    },
+    {
+      "suite": "agent_os_e2e",
+      "step": "db_lead_verification",
+      "at": "2026-09-01T02:43:57.648103+00:00",
+      "result": "fail",
+      "lead_id": null,
+      "verified_by": "execution_id_or_name_marker",
+      "note": "No persisted lead for this e2e marker"
+    },
+    {
+      "suite": "crm",
+      "step": "service_role_gate",
+      "at": "2026-09-01T02:43:57.648190+00:00",
+      "result": "pass",
+      "key_kind": "legacy_service_role_jwt",
+      "key_len": 219,
+      "jwt_role": "service_role",
+      "jwt_ref": "nohanoiugcbaxtxinttp"
+    },
+    {
+      "suite": "crm",
+      "step": "create",
+      "at": "2026-09-01T02:43:58.483133+00:00",
+      "result": "pass",
+      "customer_id": "deeff87b-1944-4572-879c-26fc81cfb8cb",
+      "detail": "created"
+    },
+    {
+      "suite": "crm",
+      "step": "duplicate_create",
+      "at": "2026-09-01T02:43:58.597563+00:00",
+      "result": "pass",
+      "detail": "deduplicated",
+      "customer_id": "deeff87b-1944-4572-879c-26fc81cfb8cb"
+    },
+    {
+      "suite": "crm",
+      "step": "partial_update",
+      "at": "2026-09-01T02:43:59.426051+00:00",
+      "result": "pass",
+      "customer_id": "deeff87b-1944-4572-879c-26fc81cfb8cb",
+      "changed_field": "phone",
+      "preserved": [
+        "email",
+        "name"
+      ]
+    },
+    {
+      "suite": "crm",
+      "step": "stage_valid",
+      "at": "2026-09-01T02:44:00.191251+00:00",
+      "result": "pass",
+      "detail": "stage_updated"
+    },
+    {
+      "suite": "crm",
+      "step": "stage_invalid",
+      "at": "2026-09-01T02:44:00.191270+00:00",
+      "result": "pass",
+      "detail": "invalid_lead_stage",
+      "mutation": false
+    },
+    {
+      "suite": "crm",
+      "step": "cross_tenant_update",
+      "at": "2026-09-01T02:44:00.318109+00:00",
+      "result": "pass",
+      "detail": "customer_not_found",
+      "mutation": false
+    },
+    {
+      "suite": "crm",
+      "step": "search_by_name",
+      "at": "2026-09-01T02:44:00.893024+00:00",
+      "result": "pass",
+      "match_count": 2,
+      "note": "tenant-scoped lead search read-back"
+    },
+    {
+      "suite": "crm",
+      "step": "ambiguous_name_clarification",
+      "at": "2026-09-01T02:44:00.893039+00:00",
+      "result": "pass",
+      "candidates": 2,
+      "clarification_required": true,
+      "created_a": true,
+      "created_b": true
+    },
+    {
+      "suite": "crm",
+      "step": "os_tool_executions_lifecycle",
+      "at": "2026-09-01T02:44:01.672116+00:00",
+      "result": "pass",
+      "execution_id": "6453d2f1-4525-4787-a46d-8aee20554c2f",
+      "verification_state": "pending",
+      "persist_count": 1
+    },
+    {
+      "suite": "isolation",
+      "step": "anon_cannot_read_chunks",
+      "at": "2026-09-01T02:44:01.818195+00:00",
+      "result": "pass",
+      "http_status": 200,
+      "row_count": 0
+    },
+    {
+      "suite": "isolation",
+      "step": "anon_cannot_read_leads",
+      "at": "2026-09-01T02:44:01.941850+00:00",
+      "result": "pass",
+      "http_status": 200,
+      "row_count": 0
+    },
+    {
+      "suite": "isolation",
+      "step": "service_role_gate",
+      "at": "2026-09-01T02:44:01.941922+00:00",
+      "result": "pass",
+      "key_kind": "legacy_service_role_jwt",
+      "key_len": 219,
+      "jwt_role": "service_role",
+      "jwt_ref": "nohanoiugcbaxtxinttp"
+    },
+    {
+      "suite": "isolation",
+      "step": "service_role_reads_smoke_chunks",
+      "at": "2026-09-01T02:44:02.066972+00:00",
+      "result": "pass",
+      "active_chunks": 6
+    },
+    {
+      "suite": "isolation",
+      "step": "service_role_empty_foreign_leads",
+      "at": "2026-09-01T02:44:02.175232+00:00",
+      "result": "pass",
+      "foreign_count": 0
+    },
+    {
+      "suite": "isolation",
+      "step": "crm_other_tenant_create_isolated",
+      "at": "2026-09-01T02:44:02.546956+00:00",
+      "result": "pass",
+      "other_create_applied": false,
+      "note": "other-tenant create must not appear under smoke client_id"
+    },
+    {
+      "suite": "rag",
+      "step": "holdout_soak",
+      "at": "2026-09-01T02:44:02.619756+00:00",
+      "result": "pass",
+      "rag_enabled_process": true,
+      "railway_flag_unchanged": true,
+      "default_min_score": 1.0,
+      "recall_at_1": 0.9017,
+      "correct_refusal_rate": 1.0,
+      "false_refusal_rate": 0.0,
+      "unsupported_claim_rate": 0.0,
+      "cross_tenant_leaks": 0,
+      "prompt_injection_failures": 0,
+      "note": "Process-local RAG_ENABLED=1 soak against independent holdout. Does not enable Railway production RAG_ENABLED."
+    },
+    {
+      "suite": "rag",
+      "step": "tenant_kb_chunks",
+      "at": "2026-09-01T02:44:03.025708+00:00",
+      "result": "pass",
+      "source": "db_documents_compile_path",
+      "active_chunks": 6,
+      "note": "Does not flip Railway production RAG_ENABLED"
+    },
+    {
+      "suite": "rag",
+      "step": "tenant_query_services",
+      "at": "2026-09-01T02:44:03.025975+00:00",
+      "result": "pass",
+      "abstain": false,
+      "reason": "ok",
+      "citations": [
+        "m8-smoke-kb.md \u00a7Services",
+        "m8-smoke-kb.md \u00a7FAQs",
+        "m8-smoke-kb.md \u00a7Out of scope note"
+      ],
+      "top_score": 2.8242,
+      "cross_tenant_evidence": 0,
+      "expected_abstain": false
+    },
+    {
+      "suite": "rag",
+      "step": "tenant_query_prices",
+      "at": "2026-09-01T02:44:03.026256+00:00",
+      "result": "pass",
+      "abstain": false,
+      "reason": "ok",
+      "citations": [
+        "m8-smoke-kb.md \u00a7Prices",
+        "m8-smoke-kb.md \u00a7Services"
+      ],
+      "top_score": 4.5307,
+      "cross_tenant_evidence": 0,
+      "expected_abstain": false
+    },
+    {
+      "suite": "rag",
+      "step": "tenant_query_warranty",
+      "at": "2026-09-01T02:44:03.026460+00:00",
+      "result": "pass",
+      "abstain": false,
+      "reason": "ok",
+      "citations": [
+        "m8-smoke-kb.md \u00a7Warranty",
+        "m8-smoke-kb.md \u00a7Prices",
+        "m8-smoke-kb.md \u00a7Services"
+      ],
+      "top_score": 3.8752,
+      "cross_tenant_evidence": 0,
+      "expected_abstain": false
+    },
+    {
+      "suite": "rag",
+      "step": "tenant_query_cancellation",
+      "at": "2026-09-01T02:44:03.026629+00:00",
+      "result": "pass",
+      "abstain": false,
+      "reason": "ok",
+      "citations": [
+        "m8-smoke-kb.md \u00a7Cancellation Policy",
+        "m8-smoke-kb.md \u00a7Prices",
+        "m8-smoke-kb.md \u00a7FAQs"
+      ],
+      "top_score": 3.0504,
+      "cross_tenant_evidence": 0,
+      "expected_abstain": false
+    },
+    {
+      "suite": "rag",
+      "step": "tenant_query_faq",
+      "at": "2026-09-01T02:44:03.026779+00:00",
+      "result": "pass",
+      "abstain": false,
+      "reason": "ok",
+      "citations": [
+        "m8-smoke-kb.md \u00a7FAQs",
+        "m8-smoke-kb.md \u00a7Out of scope note"
+      ],
+      "top_score": 7.6041,
+      "cross_tenant_evidence": 0,
+      "expected_abstain": false
+    },
+    {
+      "suite": "rag",
+      "step": "tenant_query_no_answer",
+      "at": "2026-09-01T02:44:03.026939+00:00",
+      "result": "pass",
+      "abstain": true,
+      "reason": "low_overlap",
+      "citations": [
+        "m8-smoke-kb.md \u00a7Prices",
+        "m8-smoke-kb.md \u00a7FAQs"
+      ],
+      "top_score": 2.3165,
+      "cross_tenant_evidence": 0,
+      "expected_abstain": true
+    },
+    {
+      "suite": "rag",
+      "step": "attach_rag_contract",
+      "at": "2026-09-01T02:44:03.027228+00:00",
+      "result": "pass",
+      "price_status": "ok",
+      "no_answer_status": "abstain",
+      "no_answer_reason": "low_overlap",
+      "agent_os_http": "not_run_without_staging_api"
+    }
+  ],
+  "staging": {
+    "api_base": "https://agentnexlify-staging.up.railway.app",
+    "railway_project_id": "22fbefe0-bd69-41c6-9896-e5f533473c60",
+    "railway_environment_id": "5988ed51-6691-4497-825d-14fefff5f591",
+    "railway_environment_name": "staging"
+  },
+  "feature_flags_process": {
+    "RAG_ENABLED": "1",
+    "CALENDAR_ACTIONS_ENABLED": "1",
+    "CRM_ACTIONS_ENABLED": "1",
+    "SEND_EMAIL_ENABLED": "1",
+    "DEFAULT_MIN_SCORE": 1.0,
+    "note": "Process-local only unless staging Railway vars are set by owner"
+  },
+  "exit_codes": [
+    4,
+    0,
+    0,
+    0
+  ],
+  "rollback": {
+    "RAG_ENABLED": "0 / unset",
+    "CALENDAR_ACTIONS_ENABLED": "0 / unset",
+    "CRM_ACTIONS_ENABLED": "0 / unset",
+    "SEND_EMAIL_ENABLED": "0 / unset"
+  }
+}
