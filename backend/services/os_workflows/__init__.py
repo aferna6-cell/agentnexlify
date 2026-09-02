@@ -1,13 +1,13 @@
-"""M9 Persistent Planner — workflow contract surface.
+"""M9 Persistent Planner — workflow contract + engine surface.
 
-M9.1 ships types and transition rules only. Persistence and the
-deterministic engine land in M9.2. The planner may decide what should
-happen next; it must never independently perform the action.
+M9.1: types and transition rules.
+M9.2: durable store + deterministic engine (no LLM, no tool execution).
 """
 
 from backend.services.os_workflows.contract import (
     ALLOWED_STEP_TRANSITIONS,
     ALLOWED_WORKFLOW_TRANSITIONS,
+    RISK_FAIL_CLOSED,
     STEP_TERMINAL_STATES,
     WORKFLOW_TERMINAL_STATUSES,
     InvalidWorkflowTransition,
@@ -25,24 +25,47 @@ from backend.services.os_workflows.contract import (
     transition_step,
     transition_workflow,
 )
+from backend.services.os_workflows.engine import (
+    WorkflowEngine,
+    WorkflowGraphError,
+    compute_ready_step_ids,
+    derive_workflow_status,
+    validate_dependency_graph,
+)
+from backend.services.os_workflows.store import (
+    ConcurrentModification,
+    InMemoryWorkflowStore,
+    SupabaseWorkflowStore,
+    WorkflowStoreError,
+)
 
 __all__ = [
     "ALLOWED_STEP_TRANSITIONS",
     "ALLOWED_WORKFLOW_TRANSITIONS",
+    "RISK_FAIL_CLOSED",
     "STEP_TERMINAL_STATES",
     "WORKFLOW_TERMINAL_STATUSES",
+    "ConcurrentModification",
+    "InMemoryWorkflowStore",
     "InvalidWorkflowTransition",
     "PlannerExecutionForbidden",
     "RiskLevel",
     "StepState",
+    "SupabaseWorkflowStore",
     "ToolIntent",
     "VerificationState",
     "Workflow",
+    "WorkflowEngine",
+    "WorkflowGraphError",
     "WorkflowStatus",
     "WorkflowStep",
+    "WorkflowStoreError",
     "assert_planner_cannot_execute",
+    "compute_ready_step_ids",
+    "derive_workflow_status",
     "is_step_terminal",
     "is_workflow_terminal",
     "transition_step",
     "transition_workflow",
+    "validate_dependency_graph",
 ]

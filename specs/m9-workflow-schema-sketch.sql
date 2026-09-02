@@ -1,6 +1,5 @@
--- M9.1 schema sketch — DO NOT APPLY until M9.2.
--- Intended migration number when applied: 199_os_workflows.sql (adjust if
--- another migration lands first).
+-- M9.1 schema sketch — APPLIED as migrations/199_os_workflows.sql in M9.2.
+-- Kept for historical reference; prefer the numbered migration file.
 --
 -- Naming: tenant scope column is client_id (never tenant_id).
 -- Risk levels mirror os_tool_executions (0–3).

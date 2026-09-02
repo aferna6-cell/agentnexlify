@@ -4,6 +4,16 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 199_os_workflows.sql (2026-09-02)
+
+**What:** New `os_workflows` + `os_workflow_steps` tables for M9 Persistent Planner. Columns use `client_id` (NOT `tenant_id`). Steps store `tool_intent` JSON (intent only), optional `execution_id` FK → `os_tool_executions`, `retry_count` / `max_retries`, and `row_version` for CAS transitions. RLS deny-public on both tables (service-role via `tenant_scope.py`).
+
+**Why:** M9.2 durable workflow state machine. Planner never executes tools; Action Executor remains the only side-effect path.
+
+**Applied:** APPLIED to prod (`pxserpybmajixqrmzaly`) and staging (`nohanoiugcbaxtxinttp`) 2026-09-02 via Supabase `apply_migration` (`199_os_workflows`).
+
+---
+
 ## 198_tenant_kb_chunks.sql (2026-08-30, reviewed 2026-08-30)
 
 **What:** New `tenant_kb_chunks` table + `match_tenant_kb_chunks(p_client_id, p_query_embedding, p_match_count)` RPC. Columns: `client_id` (NOT `tenant_id`), `document_id` **FK → tenant_kb_documents(id) ON DELETE CASCADE**, `chunk_index`, `source_type`, `title`, `section`, `content`, `content_sha256`, `status`, `version`, `effective_date`, `citation_label`, `embedding vector(512)` (nullable). HNSW cosine index. RLS deny-public + service_role policy. RPC filters `client_id`, `status='active'`, and `embedding IS NOT NULL`.
