@@ -170,3 +170,33 @@ def test_workflow_step_mismatch_rejected():
                 )
             ],
         )
+
+
+def test_unknown_current_state_rejected():
+    with pytest.raises(InvalidWorkflowTransition):
+        transition_step("not_a_state", "ready", risk_level=1)
+    with pytest.raises(InvalidWorkflowTransition):
+        transition_workflow("not_a_status", "running")
+
+
+def test_tool_intent_rejects_whitespace_only_name():
+    with pytest.raises(ValueError, match="non-empty"):
+        ToolIntent(tool_name="   ")
+
+
+def test_duplicate_dependencies_are_deduped():
+    step = WorkflowStep(
+        id="s1",
+        workflow_id="w1",
+        ordinal=0,
+        description="x",
+        dependencies=["a", "b", "a"],
+    )
+    assert step.dependencies == ["a", "b"]
+
+
+def test_workflow_transition_to_helper():
+    wf = Workflow(id="w1", tenantId="t1", ownerGoal="goal")
+    next_wf = wf.transition_to("running")
+    assert next_wf.status == "running"
+    assert wf.status == "planned"
