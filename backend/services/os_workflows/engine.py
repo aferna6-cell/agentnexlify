@@ -95,28 +95,48 @@ def compute_ready_step_ids(steps: List[Dict[str, Any]]) -> List[str]:
     return ready
 
 
+def _retries_exhausted(step: Dict[str, Any]) -> bool:
+    retry_count = int(step.get("retry_count", 0))
+    max_retries = int(step.get("max_retries", DEFAULT_MAX_RETRIES))
+    return retry_count >= max_retries
+
+
 def derive_workflow_status(steps: List[Dict[str, Any]]) -> str:
-    """Aggregate step states into a workflow status recommendation."""
+    """Aggregate step states into a workflow status recommendation.
+
+    A ``failed`` step keeps the workflow ``running`` while retries remain.
+    Workflow ``failed`` only when every failed step has exhausted max_retries
+    (and no other active work remains).
+    """
     if not steps:
         return "planned"
     states = [str(s.get("state")) for s in steps]
     if any(s == "pending_approval" for s in states):
         return "paused"
+
+    has_retryable_failure = any(
+        str(s.get("state")) == "failed" and not _retries_exhausted(s) for s in steps
+    )
+    has_exhausted_failure = any(
+        str(s.get("state")) == "failed" and _retries_exhausted(s) for s in steps
+    )
+    has_active = any(
+        s in {"planned", "ready", "running", "verifying", "blocked", "unknown"}
+        for s in states
+    ) or has_retryable_failure
+
+    if has_active:
+        return "running"
+
+    # No active / retryable work left.
+    if has_exhausted_failure:
+        return "failed"
+    if all(s == "cancelled" for s in states):
+        return "cancelled"
     if all(s in {"succeeded", "cancelled"} for s in states) and any(
         s == "succeeded" for s in states
     ):
-        # All finished; succeed if at least one succeeded and none failed/unknown.
-        if all(s != "failed" and s != "unknown" for s in states):
-            return "succeeded"
-    if all(s in {"succeeded", "cancelled", "failed"} for s in states):
-        if any(s == "failed" for s in states):
-            return "failed"
-        if all(s == "cancelled" for s in states):
-            return "cancelled"
         return "succeeded"
-    if any(s in _ACTIVE_STEP_STATES for s in states):
-        if any(s in {"ready", "running", "verifying", "planned", "blocked", "failed", "unknown"} for s in states):
-            return "running"
     return "running"
 
 
@@ -264,8 +284,15 @@ class WorkflowEngine:
         """Record executor/provider outcome without calling providers.
 
         ``outcome`` is one of: verifying | succeeded | failed | unknown |
-        cancelled. ``verifying`` is used when execution finished but
-        independent verification is still pending.
+        cancelled.
+
+        Execution success and verification success are separate:
+        - ``running`` + ``succeeded`` with no verifier result → ``verifying``
+          and ``verification_state="pending"`` (does **not** auto-succeed).
+        - ``running`` + ``succeeded`` with ``verification_state`` in
+          ``{passed, not_required}`` → ``verifying`` then ``succeeded``.
+        - ``verifying`` + ``succeeded`` requires an explicit verifier result
+          (``passed`` or ``not_required``).
         """
         if outcome not in {
             "verifying",
@@ -287,6 +314,8 @@ class WorkflowEngine:
             patch["error"] = error
 
         if state == "running" and outcome == "verifying":
+            if "verification_state" not in patch:
+                patch["verification_state"] = "pending"
             updated = self._store.transition_step_cas(
                 client_id=client_id,
                 step_id=step_id,
@@ -307,7 +336,10 @@ class WorkflowEngine:
                 patch=patch or None,
             )
         elif state == "running" and outcome == "succeeded":
-            # Require verifying axis unless verification already passed inline.
+            # Execution success ≠ verification success.
+            vstate = verification_state if verification_state is not None else "pending"
+            mid_patch = dict(patch)
+            mid_patch["verification_state"] = vstate
             mid = self._store.transition_step_cas(
                 client_id=client_id,
                 step_id=step_id,
@@ -315,18 +347,43 @@ class WorkflowEngine:
                 expected_version=int(step["row_version"]),
                 target_state="verifying",
                 risk_level=risk,
-                patch=patch or None,
+                patch=mid_patch,
             )
+            if vstate in {"passed", "not_required"}:
+                updated = self._store.transition_step_cas(
+                    client_id=client_id,
+                    step_id=step_id,
+                    expected_state="verifying",
+                    expected_version=int(mid["row_version"]),
+                    target_state="succeeded",
+                    risk_level=risk,
+                    patch={"verification_state": vstate},
+                )
+            else:
+                updated = mid
+        elif state == "verifying" and outcome == "succeeded":
+            vstate = (
+                verification_state
+                if verification_state is not None
+                else step.get("verification_state")
+            )
+            if vstate not in {"passed", "not_required"}:
+                raise WorkflowStoreError(
+                    "explicit verification result required "
+                    "(passed|not_required) to leave verifying"
+                )
+            verify_patch = dict(patch)
+            verify_patch["verification_state"] = vstate
             updated = self._store.transition_step_cas(
                 client_id=client_id,
                 step_id=step_id,
                 expected_state="verifying",
-                expected_version=int(mid["row_version"]),
+                expected_version=int(step["row_version"]),
                 target_state="succeeded",
                 risk_level=risk,
-                patch={"verification_state": verification_state or "passed"},
+                patch=verify_patch,
             )
-        elif state == "verifying" and outcome in {"succeeded", "failed", "unknown"}:
+        elif state == "verifying" and outcome in {"failed", "unknown"}:
             updated = self._store.transition_step_cas(
                 client_id=client_id,
                 step_id=step_id,
@@ -340,20 +397,27 @@ class WorkflowEngine:
             raise InvalidWorkflowTransition("step", state, outcome)
 
         wf_id = str(updated["workflow_id"])
-        if outcome == "succeeded":
+        if updated.get("state") == "succeeded":
             self.mark_ready_steps(client_id, wf_id)
         self.sync_workflow_status(client_id, wf_id)
         return updated
 
     def retry_failed_step(self, client_id: str, step_id: str) -> Dict[str, Any]:
-        """Bounded retry for ``failed`` steps. Never auto-replays L2/L3 unknown."""
+        """Bounded retry for ``failed`` / L0-L1 ``unknown``. Never replays L2/L3 unknown."""
         step = self._require_step(client_id, step_id)
         state = str(step["state"])
         risk = int(step.get("risk_level", 1))
+        retry_count = int(step.get("retry_count", 0))
+        max_retries = int(step.get("max_retries", DEFAULT_MAX_RETRIES))
+
         if state == "unknown":
             if risk >= RISK_FAIL_CLOSED:
                 raise InvalidWorkflowTransition("step", "unknown", "ready")
-            # L0/L1 controlled recovery
+            if retry_count >= max_retries:
+                raise WorkflowStoreError(
+                    f"step {step_id} exhausted retries ({retry_count}/{max_retries})"
+                )
+            # L0/L1 controlled recovery — same bound as failed retries.
             updated = self._store.transition_step_cas(
                 client_id=client_id,
                 step_id=step_id,
@@ -362,8 +426,10 @@ class WorkflowEngine:
                 target_state="ready",
                 risk_level=risk,
                 patch={
-                    "retry_count": int(step.get("retry_count", 0)) + 1,
+                    "retry_count": retry_count + 1,
                     "error": None,
+                    "execution_id": None,
+                    "verification_state": None,
                 },
             )
             self.sync_workflow_status(client_id, str(updated["workflow_id"]))
@@ -372,8 +438,6 @@ class WorkflowEngine:
         if state != "failed":
             raise InvalidWorkflowTransition("step", state, "ready")
 
-        retry_count = int(step.get("retry_count", 0))
-        max_retries = int(step.get("max_retries", DEFAULT_MAX_RETRIES))
         if retry_count >= max_retries:
             raise WorkflowStoreError(
                 f"step {step_id} exhausted retries ({retry_count}/{max_retries})"
