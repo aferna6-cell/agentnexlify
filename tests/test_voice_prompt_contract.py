@@ -77,9 +77,9 @@ def _tables(business_type, business_name, faqs=None):
 
 
 class TestPromptContract:
-    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
-    @patch("backend.routers.calls.get_service_supabase")
-    @patch("backend.routers.calls._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks.call_claude_messages", new_callable=AsyncMock)
+    @patch("backend.routers.calls_webhooks.get_service_supabase")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
     def test_plumbing_tenant_gets_trade_guidance_and_lead_directive(
         self, mock_find, mock_db, mock_claude
     ):
@@ -105,9 +105,9 @@ class TestPromptContract:
         first_pack_answer = vertical_guidance("plumbing")[0]["answer"][:120]
         assert first_pack_answer[:60] in system
 
-    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
-    @patch("backend.routers.calls.get_service_supabase")
-    @patch("backend.routers.calls._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks.call_claude_messages", new_callable=AsyncMock)
+    @patch("backend.routers.calls_webhooks.get_service_supabase")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
     def test_salon_tenant_gets_salon_guidance_not_contractor_guidance(
         self, mock_find, mock_db, mock_claude
     ):
@@ -127,9 +127,9 @@ class TestPromptContract:
         assert salon_first in system
         assert contractor_first not in system
 
-    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
-    @patch("backend.routers.calls.get_service_supabase")
-    @patch("backend.routers.calls._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks.call_claude_messages", new_callable=AsyncMock)
+    @patch("backend.routers.calls_webhooks.get_service_supabase")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
     def test_tenant_faqs_reach_the_prompt(self, mock_find, mock_db, mock_claude):
         mock_find.return_value = _tenant("plumbing", "Acme Plumbing")
         db = MagicMock()
@@ -148,9 +148,9 @@ class TestPromptContract:
 
 
 class TestSafetyContract:
-    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
-    @patch("backend.routers.calls.get_service_supabase")
-    @patch("backend.routers.calls._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks.call_claude_messages", new_callable=AsyncMock)
+    @patch("backend.routers.calls_webhooks.get_service_supabase")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
     def test_model_output_is_xml_escaped_into_twiml(self, mock_find, mock_db, mock_claude):
         mock_find.return_value = _tenant("plumbing", "Acme Plumbing")
         db = MagicMock()
@@ -166,9 +166,9 @@ class TestSafetyContract:
         assert "<Dial>" not in resp.text
         assert "&lt;Dial&gt;" in resp.text
 
-    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
-    @patch("backend.routers.calls.get_service_supabase")
-    @patch("backend.routers.calls._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks.call_claude_messages", new_callable=AsyncMock)
+    @patch("backend.routers.calls_webhooks.get_service_supabase")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
     def test_claude_failure_returns_graceful_twiml_not_5xx(
         self, mock_find, mock_db, mock_claude
     ):
@@ -187,9 +187,9 @@ class TestSafetyContract:
 
 
 class TestFlowContract:
-    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
-    @patch("backend.routers.calls.get_service_supabase")
-    @patch("backend.routers.calls._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks.call_claude_messages", new_callable=AsyncMock)
+    @patch("backend.routers.calls_webhooks.get_service_supabase")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
     def test_mid_conversation_round_gathers_with_next_round(
         self, mock_find, mock_db, mock_claude
     ):
@@ -203,10 +203,10 @@ class TestFlowContract:
         assert "<Gather" in resp.text
         assert "round=2" in resp.text
 
-    @patch("backend.routers.calls._finalize_ai_call", new_callable=AsyncMock)
-    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
-    @patch("backend.routers.calls.get_service_supabase")
-    @patch("backend.routers.calls._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks._finalize_ai_call", new_callable=AsyncMock)
+    @patch("backend.routers.calls_webhooks.call_claude_messages", new_callable=AsyncMock)
+    @patch("backend.routers.calls_webhooks.get_service_supabase")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
     def test_max_rounds_says_goodbye_and_finalizes(
         self, mock_find, mock_db, mock_claude, mock_finalize
     ):

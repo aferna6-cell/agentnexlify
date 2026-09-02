@@ -1,9 +1,9 @@
 """Vault wiring in the OAuth integration services (GH #266 step 2).
 
 google_calendar / m365_calendar / hubspot_tenant must route reads through
-decrypt_integration_row and writes through encrypt_oauth_tokens. With no
-encryption key configured (prod today) both are strict no-ops, so these tests
-assert the wiring is invoked, not the crypto (covered in the vault tests).
+decrypt_integration_row and writes through oauth_integration_payload_for_db.
+With no encryption key configured (prod today) both are strict no-ops, so these
+tests assert the wiring is invoked, not the crypto (covered in the vault tests).
 """
 
 from unittest.mock import MagicMock, patch
@@ -53,7 +53,7 @@ def test_get_integration_none_when_no_row(svc):
 def test_save_integration_routes_through_encrypt(svc):
     db, chain = _db_with_row(None)  # no existing row -> insert path
     with patch.object(svc, "get_service_supabase", return_value=db), patch.object(
-        svc, "encrypt_oauth_tokens", side_effect=lambda p: dict(p, enc_marker=True)
+        svc, "oauth_integration_payload_for_db", side_effect=lambda p: dict(p, enc_marker=True)
     ) as enc:
         svc.save_integration(
             tenant_id="t1",
@@ -71,7 +71,10 @@ def test_save_integration_routes_through_encrypt(svc):
 def test_save_integration_updates_existing_row(svc):
     existing = {"id": "i-9", "access_token": "old"}
     db, chain = _db_with_row(existing)
-    with patch.object(svc, "get_service_supabase", return_value=db):
+    # Passthrough payload helper so this asserts the update path, not crypto.
+    with patch.object(svc, "get_service_supabase", return_value=db), patch.object(
+        svc, "oauth_integration_payload_for_db", side_effect=lambda p: p
+    ):
         svc.save_integration(
             tenant_id="t1",
             access_token="new-at",

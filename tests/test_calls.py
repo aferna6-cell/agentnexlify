@@ -85,7 +85,7 @@ def _setup_table_mock(db_mock, table_responses):
 class TestVoiceIncoming:
     """Tests for POST /api/v1/calls/voice/incoming."""
 
-    @patch("backend.routers.calls._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
     def test_incoming_call_returns_twiml(self, mock_find):
         mock_find.return_value = {
             "id": "tenant-001",
@@ -119,7 +119,7 @@ class TestVoiceIncoming:
         assert 'input="speech"' in body
         assert "voice/respond" in body
 
-    @patch("backend.routers.calls._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
     def test_incoming_call_no_tenant(self, mock_find):
         mock_find.return_value = None
 
@@ -139,7 +139,7 @@ class TestVoiceIncoming:
         assert "<Response>" in resp.text
         assert "unable to take your call" in resp.text
 
-    @patch("backend.routers.calls._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
     def test_incoming_call_empty_body(self, mock_find):
         mock_find.return_value = None
 
@@ -152,7 +152,7 @@ class TestVoiceIncoming:
         assert resp.status_code == 200
         assert "application/xml" in resp.headers["content-type"]
 
-    @patch("backend.routers.calls._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
     def test_incoming_call_xml_escapes_business_name(self, mock_find):
         mock_find.return_value = {
             "id": "tenant-001",
@@ -181,7 +181,7 @@ class TestVoiceIncoming:
         assert "Bob&apos;s" in body
 
 
-    @patch("backend.routers.calls._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
     def test_incoming_call_defaults_to_voicemail_mode(self, mock_find):
         """G3: live AI answering is opt-in — without voice_ai_enabled the
         caller reaches voicemail (Record), feeding the recovery pipeline."""
@@ -209,7 +209,7 @@ class TestVoiceIncoming:
         assert "voice/recording-complete" in body
         assert "<Gather" not in body
 
-    @patch("backend.routers.calls._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
     def test_incoming_call_ai_mode_requires_plan(self, mock_find):
         """voice_ai_enabled on a growth-plan tenant still gets voicemail —
         AI answering is the Professional-tier feature."""
@@ -239,7 +239,7 @@ class TestVoiceIncoming:
 class TestCallStatus:
     """POST /api/v1/calls/voice/call-status — end-of-call finalization hook."""
 
-    @patch("backend.routers.calls._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
     def test_non_completed_status_is_noop(self, mock_find):
         form_data = urlencode({
             "CallStatus": "ringing",
@@ -254,7 +254,7 @@ class TestCallStatus:
         assert resp.status_code == 200
         mock_find.assert_not_called()
 
-    @patch("backend.routers.calls._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
     def test_completed_status_returns_ok(self, mock_find):
         mock_find.return_value = {"id": "tenant-001", "business_name": "Acme"}
         form_data = urlencode({
@@ -280,11 +280,11 @@ class TestCallStatus:
 class TestRecordingComplete:
     """Tests for POST /api/v1/calls/voice/recording-complete."""
 
-    @patch("backend.routers.calls.fire_event_background")
-    @patch("backend.routers.calls.send_sms", new_callable=AsyncMock)
-    @patch("backend.routers.calls.log_activity")
-    @patch("backend.routers.calls._find_tenant_by_phone")
-    @patch("backend.routers.calls.get_service_supabase")
+    @patch("backend.routers.calls_webhooks.fire_event_background")
+    @patch("backend.routers.calls_webhooks.send_sms", new_callable=AsyncMock)
+    @patch("backend.routers.calls_webhooks.log_activity")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks.get_service_supabase")
     def test_recording_complete_stores_call(
         self, mock_db, mock_find, mock_activity, mock_sms, mock_fire
     ):
@@ -335,7 +335,7 @@ class TestRecordingComplete:
         fire_args = mock_fire.call_args
         assert fire_args[1]["event"] == "call.completed" or fire_args[0][1] == "call.completed"
 
-    @patch("backend.routers.calls._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
     def test_recording_skipped_if_not_completed(self, mock_find):
         """Non-completed recording statuses should be skipped."""
         mock_find.return_value = {
@@ -361,7 +361,7 @@ class TestRecordingComplete:
         assert resp.status_code == 200
         assert resp.text == "OK"
 
-    @patch("backend.routers.calls._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
     def test_recording_no_tenant(self, mock_find):
         mock_find.return_value = None
 
@@ -565,7 +565,7 @@ class TestTwimlHelpers:
     """Unit tests for TwiML generation helpers."""
 
     def test_build_twiml_greeting(self):
-        from backend.routers.calls import _build_twiml_greeting
+        from backend.services.voice_twiml import _build_twiml_greeting
 
         twiml = _build_twiml_greeting("Test Business", "https://example.com/callback")
         assert '<?xml version="1.0"' in twiml
@@ -576,7 +576,7 @@ class TestTwimlHelpers:
         assert "https://example.com/callback" in twiml
 
     def test_build_twiml_greeting_with_transcription(self):
-        from backend.routers.calls import _build_twiml_greeting
+        from backend.services.voice_twiml import _build_twiml_greeting
 
         twiml = _build_twiml_greeting(
             "Test Business",
@@ -587,21 +587,21 @@ class TestTwimlHelpers:
         assert 'transcriptionUrl="https://example.com/transcription"' in twiml
 
     def test_build_twiml_greeting_without_transcription(self):
-        from backend.routers.calls import _build_twiml_greeting
+        from backend.services.voice_twiml import _build_twiml_greeting
 
         twiml = _build_twiml_greeting("Test Business", "https://example.com/callback")
         assert "transcribe" not in twiml
         assert "transcriptionUrl" not in twiml
 
     def test_build_twiml_error(self):
-        from backend.routers.calls import _build_twiml_error
+        from backend.services.voice_twiml import _build_twiml_error
 
         twiml = _build_twiml_error()
         assert "<Response>" in twiml
         assert "unable to take your call" in twiml
 
     def test_twiml_greeting_escapes_special_chars(self):
-        from backend.routers.calls import _build_twiml_greeting
+        from backend.services.voice_twiml import _build_twiml_greeting
 
         twiml = _build_twiml_greeting(
             "Bob's <Fish> & Chips",
@@ -620,7 +620,7 @@ class TestTwimlHelpers:
 class TestTranscriptionComplete:
     """Tests for POST /api/v1/calls/voice/transcription-complete."""
 
-    @patch("backend.routers.calls.get_service_supabase")
+    @patch("backend.routers.calls_webhooks.get_service_supabase")
     def test_transcription_stores_and_triggers_summary(self, mock_db):
         """Completed transcription should store transcript and trigger background summary."""
         mock_client = MagicMock()
@@ -692,7 +692,7 @@ class TestTranscriptionComplete:
 
         assert resp.status_code == 200
 
-    @patch("backend.routers.calls.get_service_supabase")
+    @patch("backend.routers.calls_webhooks.get_service_supabase")
     def test_transcription_unknown_call_sid(self, mock_db):
         """Transcription for an unknown call SID should return OK without error."""
         mock_client = MagicMock()
@@ -745,9 +745,9 @@ class TestTranscriptionComplete:
 class TestVoiceRespond:
     """Tests for POST /api/v1/calls/voice/respond."""
 
-    @patch("backend.routers.calls.call_claude_messages", new_callable=AsyncMock)
-    @patch("backend.routers.calls.get_service_supabase")
-    @patch("backend.routers.calls._find_tenant_by_phone")
+    @patch("backend.routers.calls_webhooks.call_claude_messages", new_callable=AsyncMock)
+    @patch("backend.routers.calls_webhooks.get_service_supabase")
+    @patch("backend.routers.calls_webhooks._find_tenant_by_phone")
     def test_voice_respond_uses_llm_runtime(self, mock_find, mock_db, mock_call_claude):
         mock_find.return_value = {
             "id": "tenant-001",

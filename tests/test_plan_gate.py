@@ -36,9 +36,9 @@ async def test_marketing_plans_pass(monkeypatch, plan):
     assert await plan_gate.require_marketing_access(claims) is claims
 
 
-@pytest.mark.parametrize("plan", ["free", "growth", "", None])
+@pytest.mark.parametrize("plan", ["free", "chatbot", "", None])
 @pytest.mark.asyncio
-async def test_below_growth_blocked_with_402(monkeypatch, plan):
+async def test_non_marketing_plans_blocked_with_402(monkeypatch, plan):
     db = _db_with_tenant_rows([{"plan": plan}])
     monkeypatch.setattr(plan_gate, "get_service_supabase", lambda: db)
     with pytest.raises(HTTPException) as exc_info:
