@@ -530,6 +530,9 @@ def record_execution_outcome(
         if "approvedBy" not in execution and "approved_by" not in execution:
             patch.pop("approved_by", None)
             patch.pop("approved_at", None)
+    # Data-plane success (send_email) omits input — do not wipe the parked payload.
+    if "input" not in execution and "Input" not in execution:
+        patch.pop("input", None)
     updated = (
         tenant_table(db, "os_tool_executions", client_id)
         .update(patch)
