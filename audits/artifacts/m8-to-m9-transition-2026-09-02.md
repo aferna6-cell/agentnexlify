@@ -1,21 +1,23 @@
 # Transition record — 2026-09-02
 
-**M8 COMPLETE → merge completion evidence → restore mandatory green CI → close demo-role security gap → M9 planner.**
+**M8 COMPLETE → restore mandatory green CI → close demo-role security gap → M9 planner.**
 
 ## Done
 
 1. **M8 formal completion** — canonical six-suite PASS @ runtime SHA `962da79b`; evidence commit `ac80a1bd`.
-2. **#748 MERGED** — `1f36818f` into `main` (input preservation + OAuth state TTL 60m + evidence). Ready-for-review + merge completed; no six-suite rerun needed for docs-only head advance.
+2. **#748 MERGED** — input preservation + OAuth state TTL 60m + evidence.
+3. **#747 MERGED** — brace-expansion + frontend/demo audits + stale-test retargets + key-vault 100% gate. PR Validation SUCCESS on `a9d54243`.
+4. **#749 MERGED** — central `DemoRoleBlockMiddleware` for GH #669. PR Validation SUCCESS on `4ceaaa5a`.
+5. **#669 allowlist audit** — PASS (`audits/artifacts/gh-669-allowlist-audit-2026-09-02.md`). Issue close blocked for this integration (403); owner paste closure checklist.
 
-## In progress
+## Blocked / in flight
 
-3. **#747** — rebased onto post-#748 `main`, `[skip ci]` removed, marked ready.
-   - Change remains one-file `package-lock.json` (brace-expansion high → 0).
-   - **Blocked on GitHub Actions PR Validation not enqueueing** for this PR (no run after push / ready / reopen). Agent cannot `workflow_dispatch` (403).
-   - Owner: Actions → PR Validation → Run workflow on `cursor/brace-expansion-audit-fix-a2c9`, confirm full gate passes end-to-end, then merge.
+6. **Branch protection on `main`** — private-repo rulesets require GitHub Pro. See `audits/artifacts/branch-protection-blocker-2026-09-02.md`. Do not make the repo public.
+7. **Auto-log bot** — converting from direct `main` pushes to docs PRs.
 
-## Next (owner / subsequent agent)
+## Next
 
-4. Enable **branch protection** on `main`: require PR Validation; block direct pushes except defined break-glass.
-5. **#669** — central demo-role mutation guard (middleware + allowlist + CI route audit + tests). Not ~100 route-level Depends.
-6. **M9** — only after #669: durable planner state machine (`goal → plan → steps → execute via Action Executor → verify → approve → resume`). Planner never gains independent tool authority.
+8. **M9 START** — `planning/milestone-9-persistent-planner-kickoff.md`
+9. M9.1 typed workflow/state contract (no real tools)
+10. M9.2 persistence + deterministic engine
+11. M9.3 frozen planner eval, then LLM plans

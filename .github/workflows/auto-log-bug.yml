@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -19,34 +20,38 @@ jobs:
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%B)
           echo "Commit message: $COMMIT_MSG"
+          # Skip the bot's own docs commits to avoid loops.
+          if echo "$COMMIT_MSG" | grep -iqE "^docs: auto-log bug fix"; then
+            echo "is_fix=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping auto-log of an auto-log commit."
+            exit 0
+          fi
           if echo "$COMMIT_MSG" | grep -iqE "^fix|bug.?fix|hotfix|patch:|fixes #"; then
-            echo "is_fix=true" >> $GITHUB_OUTPUT
+            echo "is_fix=true" >> "$GITHUB_OUTPUT"
             echo "This looks like a bug fix commit."
           else
-            echo "is_fix=false" >> $GITHUB_OUTPUT
+            echo "is_fix=false" >> "$GITHUB_OUTPUT"
             echo "Not a bug fix commit. Skipping."
           fi
 
-      - name: Log fix details
+      - name: Log fix details on a docs PR branch
         if: steps.check.outputs.is_fix == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           COMMIT_MSG=$(git log -1 --pretty=%B)
-          COMMIT_HASH=$(git log -1 --pretty=%H)
           COMMIT_SHORT=$(git log -1 --pretty=%h)
           FILES_CHANGED=$(git diff-tree --no-commit-id --name-only -r HEAD | tr '\n' ', ' | sed 's/,$//')
           DATE=$(date -u '+%Y-%m-%d')
           AUTHOR=$(git log -1 --pretty=%an)
+          BRANCH="bot/auto-log-bug-${COMMIT_SHORT}"
 
-          # Ensure directory exists
           mkdir -p docs/dev-knowledge
-
-          # Create file if it doesn't exist
           if [ ! -f "docs/dev-knowledge/bug-patterns.md" ]; then
-            echo "# Bug Patterns - AgentNexLiFy" > docs/dev-knowledge/bug-patterns.md
-            echo "" >> docs/dev-knowledge/bug-patterns.md
+            printf '# Bug Patterns - AgentNexLiFy\n\n' > docs/dev-knowledge/bug-patterns.md
           fi
 
-          # Append to bug patterns file
           cat >> docs/dev-knowledge/bug-patterns.md << EOF
 
           ---
@@ -59,13 +64,24 @@ jobs:
           **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
           EOF
 
-          echo "Bug fix logged to docs/dev-knowledge/bug-patterns.md"
-
-      - name: Commit updated bug log
-        if: steps.check.outputs.is_fix == 'true'
-        run: |
           git config user.name "AgentNexLiFy Bot"
           git config user.email "bot@agentnexlify.com"
+          git checkout -B "$BRANCH"
           git add docs/dev-knowledge/bug-patterns.md
-          git diff --cached --quiet || git commit -m "docs: auto-log bug fix from $(git log -1 --pretty=%h HEAD)"
-          git push
+          if git diff --cached --quiet; then
+            echo "No bug-log changes to publish."
+            exit 0
+          fi
+          git commit -m "docs: auto-log bug fix from ${COMMIT_SHORT}"
+          git push -u origin "$BRANCH" --force-with-lease
+
+          # Open or reuse a PR instead of pushing directly to main.
+          if gh pr list --head "$BRANCH" --state open --json number --jq 'length' | grep -qx '0'; then
+            gh pr create \
+              --title "docs: auto-log bug fix from ${COMMIT_SHORT}" \
+              --body "Automated bug-pattern log for \`${COMMIT_SHORT}\`. Low-risk docs-only PR (no direct push to main)." \
+              --base main \
+              --head "$BRANCH"
+          else
+            echo "Open PR already exists for ${BRANCH}"
+          fi
