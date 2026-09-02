@@ -18883,3 +18883,14 @@ fix(deps): resolve high-severity brace-expansion npm audit finding
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Merge pull request #749 from aferna6-cell/cursor/demo-role-middleware-669-a2c9
+
+fix(security): central demo-role mutation middleware (GH #669)
+**Date:** 2026-09-02
+**Commit:** 17bab2d
+**Author:** cursor[bot]
+**Files Changed:** 
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
