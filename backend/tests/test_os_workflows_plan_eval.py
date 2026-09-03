@@ -378,6 +378,136 @@ def test_department_and_verification_expectations_are_scored():
     assert bad_score.verification_placement_accuracy < 1.0
 
 
+def test_department_swap_is_not_perfect():
+    """Swapping catalog departments must not score department_accuracy=1.0.
+
+    Post-merge QA on #758: set-overlap of expected departments treated
+    search_customers→sales + send_email→admin_records as perfect.
+    """
+    case = FrozenCase(
+        id="dept-swap",
+        category="simple_sequential",
+        goal="email unpaid",
+        client_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        expected=ExpectedPlan(
+            departments=["admin_records", "sales"],
+            required_tools=["search_customers", "send_email"],
+            allowed_tools=["search_customers", "send_email"],
+            dependency_edges=[["search_customers", "send_email"]],
+            approval_required_tools=["send_email"],
+            verification_required_tools=["send_email"],
+            max_steps=5,
+        ),
+    )
+    swapped = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="search_customers",
+                department="sales",
+                risk_level=0,
+            ),
+            PlanStepSpec(
+                id="s1",
+                tool_name="send_email",
+                department="admin_records",
+                dependencies=["s0"],
+                risk_level=2,
+                approval_required=True,
+                verification_required=True,
+            ),
+        ],
+    )
+    correct = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="search_customers",
+                department="admin_records",
+                risk_level=0,
+            ),
+            PlanStepSpec(
+                id="s1",
+                tool_name="send_email",
+                department="sales",
+                dependencies=["s0"],
+                risk_level=2,
+                approval_required=True,
+                verification_required=True,
+            ),
+        ],
+    )
+    swapped_score = score_plan(case, swapped, mode="gold")
+    correct_score = score_plan(case, correct, mode="gold")
+    assert swapped_score.department_accuracy < 1.0
+    assert swapped_score.department_accuracy == 0.0
+    assert swapped_score.overall_plan_validity < 1.0
+    assert correct_score.department_accuracy == 1.0
+    assert correct_score.overall_plan_validity > swapped_score.overall_plan_validity
+
+
+def test_department_accuracy_toolless_and_unknown_tools():
+    """Tool-less terminals stay perfect; unknown tools are not catalog-scored."""
+    toolless_case = FrozenCase(
+        id="dept-toolless",
+        category="impossible_goals_clarification",
+        goal="unclear",
+        client_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        expected=ExpectedPlan(
+            departments=[],
+            required_tools=[],
+            max_steps=0,
+            terminal="clarification_needed",
+            expect_no_side_effects=True,
+        ),
+    )
+    toolless = CandidatePlan(
+        client_id=toolless_case.client_id,
+        owner_goal=toolless_case.goal,
+        steps=[],
+        terminal="clarification_needed",
+    )
+    toolless_score = score_plan(toolless_case, toolless, mode="gold")
+    assert toolless_score.department_accuracy == 1.0
+
+    mixed_case = FrozenCase(
+        id="dept-unknown",
+        category="simple_sequential",
+        goal="lookup",
+        client_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        expected=ExpectedPlan(
+            departments=["admin_records"],
+            required_tools=["search_customers"],
+            allowed_tools=["search_customers"],
+            max_steps=5,
+        ),
+    )
+    mixed = CandidatePlan(
+        client_id=mixed_case.client_id,
+        owner_goal=mixed_case.goal,
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="search_customers",
+                department="admin_records",
+                risk_level=0,
+            ),
+            PlanStepSpec(
+                id="s1",
+                tool_name="totally_fake_tool",
+                department="sales",
+                risk_level=1,
+            ),
+        ],
+    )
+    mixed_score = score_plan(mixed_case, mixed, mode="gold")
+    assert mixed_score.department_accuracy == 1.0
+
+
 def test_category_counts_are_balanced(cases):
     counts = Counter(c.category for c in cases)
     # Every required category should have at least a few cases.

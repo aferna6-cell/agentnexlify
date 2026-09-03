@@ -6,7 +6,8 @@ Loads authoritative Action metadata from the generated read-only manifest at
 
 Planner import boundary: this module must **not** import Action Executor,
 Gmail/Calendar/CRM SDKs, or tool execute implementations. The manifest is
-static JSON parsed from Action ``defineTool`` metadata only.
+static JSON parsed from registered Action tools in ``registry.ts`` plus
+``defineTool`` metadata (unregistered ``tools/*.ts`` files are omitted).
 
 Planner policy overlay (deterministic, derived from manifest fields — not
 hand-edited per tool):
