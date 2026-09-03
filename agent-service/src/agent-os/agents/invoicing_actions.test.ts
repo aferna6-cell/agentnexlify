@@ -92,6 +92,50 @@ test("send_invoice_reminder: overdue invoice queues reminder (no guesses)", () =
   assert.deepEqual(out.input, { invoice_id: "inv_2", method: "email" });
 });
 
+test("send_invoice_reminder: paid invoice is no action + clarification, never send_invoice", () => {
+  const out = runResolve("Send Steve an overdue invoice reminder.", {
+    invoices: [
+      {
+        id: "inv_paid",
+        customerName: "Steve",
+        number: "INV-0001-010",
+        amount: 850,
+        issuedAt: "2026-08-01",
+        dueAt: "2026-08-15",
+        status: "paid",
+      },
+    ],
+  });
+
+  assert.ok(out);
+  if (!out || !("clarify" in out)) throw new Error("expected clarification");
+  assert.equal("toolId" in out, false);
+  assert.match(out.clarify, /already paid/i);
+  assert.doesNotMatch(out.clarify, /queued the invoice send/i);
+});
+
+test("send_invoice_reminder: non-overdue invoice is no action + clarification, never send_invoice", () => {
+  const out = runResolve("Send Steve an overdue invoice reminder.", {
+    invoices: [
+      {
+        id: "inv_sent",
+        customerName: "Steve",
+        number: "INV-0001-011",
+        amount: 850,
+        issuedAt: "2026-09-01",
+        dueAt: "2099-01-01",
+        status: "sent",
+      },
+    ],
+  });
+
+  assert.ok(out);
+  if (!out || !("clarify" in out)) throw new Error("expected clarification");
+  assert.equal("toolId" in out, false);
+  assert.match(out.clarify, /isn't overdue/i);
+  assert.doesNotMatch(out.clarify, /queued the invoice send/i);
+});
+
 test("send_invoice: clarification when multiple invoices match by customer+amount", () => {
   const out = runResolve("Send the invoice to Steve for $850.", {
     invoices: [

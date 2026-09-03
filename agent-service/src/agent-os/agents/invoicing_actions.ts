@@ -8,6 +8,8 @@
  *       → send_invoice (L2 owner-approval; data plane only)
  *   - Overdue reminder / escalate past due
  *       → send_invoice_reminder (L2 owner-approval; data plane only)
+ *   - Explicit reminder on paid / non-overdue
+ *       → no action + clarification (never substitute send_invoice)
  *
  * Hard rule: never invent/mis-target a customer or invoice. If the ask
  * matches 0 or >1 candidates, return a clarification request.
@@ -300,18 +302,18 @@ export function resolveInvoicingAction(args: {
 
   const invoice = invoiceMatches[0]!;
 
-  // Reminder tool must only be proposed for overdue invoices.
+  // Reminder tool must only be proposed for overdue invoices. An explicit
+  // reminder ask on paid or non-overdue is no action + explanation — never
+  // a substituted send_invoice (that would change the owner's requested act).
   if (toolIntent === "reminder") {
     if (invoice.status !== "overdue") {
-      // If the owner explicitly asked for a reminder but it's not overdue,
-      // don't spam: require a correction by choosing send instead.
-      // This keeps the approval model honest and avoids "refused" surprises.
+      if (invoice.status === "paid") {
+        return {
+          clarify: `Invoice ${invoice.number} is already paid, so I didn't queue a reminder or a resend. Tell me if you meant a different invoice.`,
+        };
+      }
       return {
-        toolId: "send_invoice",
-        input: { invoice_id: invoice.id, method },
-        describePending: () =>
-          `That invoice isn't marked overdue right now. I queued the invoice send instead — approve to send ${invoice.number}.`,
-        describe: () => `Sent invoice ${invoice.number}.`,
+        clarify: `Invoice ${invoice.number} isn't overdue, so I didn't queue a reminder. Ask me to send the invoice if that's what you wanted instead.`,
       };
     }
 
