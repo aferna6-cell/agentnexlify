@@ -1,0 +1,62 @@
+{
+  "run": 116,
+  "date": "2026-09-03-pm",
+  "winner": "Step 9L: Unapplied migration nightly alerter",
+  "winner_category": "workflow_efficiency",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "carry_forward_escalation_run": 117,
+  "ideas_count": 5,
+  "ideas": [
+    {
+      "title": "Step 9L: Unapplied Migration Nightly Alerter",
+      "verdict": "SURVIVES STRONG -> WINNER"
+    },
+    {
+      "title": "Fix M9.2 Dead Code in derive_workflow_status()",
+      "verdict": "WEAKENED -> Parking Lot"
+    },
+    {
+      "title": "File GH Issue for Migrations 196/197",
+      "verdict": "KILLED — subsumed by Step 9L"
+    },
+    {
+      "title": "Step 9M: Env-var/Connector Staleness Watchdog",
+      "verdict": "Not debated — promote run 116"
+    },
+    {
+      "title": "Governance.json active_directions Pruner",
+      "verdict": "Not debated — low urgency"
+    }
+  ],
+  "evidence_digest": {
+    "migrations_unapplied": [
+      "196 (os_tool_executions status CHECK tighten)",
+      "197 (L2 idempotency, double-invoice prevention)"
+    ],
+    "billing_automation_v1_shipped": "f22ef04 2026-09-03",
+    "step_9j_status": "PASS — 19 Dependabot PRs found, 2 rebases triggered on #721/#722",
+    "step_9k_status": "PASS — PR #753 at 1d old, under 3d threshold, no action",
+    "gh_684_token": "NOT SET — 42d stale brain connector, pure human action",
+    "os_tool_stability": "783L, last commit 2026-09-03 — not stable",
+    "m8_oauth": "HOLD ongoing"
+  },
+  "mandate_check_results": {
+    "step_9k_firing": "PASS",
+    "step_9j_detection": "PASS",
+    "gh_684_action_required": true,
+    "os_split_deferred": true,
+    "m8_oauth_hold": true
+  },
+  "artifacts": [
+    "subconscious/runs/2026-09-03-pm/ideas/ideas.md",
+    "subconscious/runs/2026-09-03-pm/debate/debate-log.md",
+    "subconscious/runs/2026-09-03-pm/winning-concept.md",
+    "subconscious/runs/2026-09-03-pm/improvement-backlog.md",
+    "subconscious/runs/2026-09-03-pm/run-summary.json"
+  ],
+  "pr_dedup": {
+    "existing_subconscious_pr": "#753",
+    "action": "commit onto existing PR branch"
+  }
+}
