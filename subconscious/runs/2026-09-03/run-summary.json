@@ -1,0 +1,49 @@
+{
+  "run": 115,
+  "date": "2026-09-03",
+  "winner": "Fix M9.2 dead guard in derive_workflow_status() — backend/services/os_workflows/engine.py lines 108-110",
+  "category": "code_health",
+  "effort": "XS",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "requires_human": false,
+  "evidence_sources": [
+    "nightly-commit-review-2026-09-03.md — code note, flagged dead guard explicitly",
+    "direct read: backend/services/os_workflows/engine.py:105-110",
+    "git log last 3 days: M9.2 (ff3ab04) landed 2026-09-02"
+  ],
+  "mandate_checks": {
+    "step_9k_fires": "PASS — nightly-2026-09-03: 1 subconscious PR (#753), 1d old, under threshold",
+    "subconscious_prs_open": 1,
+    "subconscious_prs_stale": 0,
+    "subconscious_prs_critical": 0,
+    "step_9j_detection_fix": "PASS — 19 Dependabot PRs found, rebases triggered on #721/#722",
+    "gh_684_supabase_token": "FAIL — 42 days stale, SUPABASE_ACCESS_TOKEN not set",
+    "os_tool_executions_stable": "FAIL — commits 2 days ago (839e338, 2026-09-01), needs 4d+ stability",
+    "m8_oauth_hold": "RESOLVED — PR #710 merged (Calendar/CRM production data plane)"
+  },
+  "ideas_count": 5,
+  "debate_outcomes": {
+    "Idea 1 - dead code fix": "SURVIVES → WINNER",
+    "Idea 2 - store tests": "SURVIVES → parking lot (file as ai-ready GH issue)",
+    "Idea 3 - Step 9L enrichment": "WEAKENED → parking lot",
+    "Idea 4 - god class split": "WEAKENED → deferred, stability condition not met",
+    "Idea 5 - GH #728 escalation": "Bonus action"
+  },
+  "key_evidence": [
+    "M9.2 landed: engine.py (474L) + store.py (429L) + migration 199 — major new feature",
+    "Dead code: derive_workflow_status() inner guard always True (outer restricts to succeeded/cancelled)",
+    "GH #669 fixed (demo-role middleware PR #749)",
+    "Brain connector 42 days stale — SUPABASE_ACCESS_TOKEN missing",
+    "KB 8 days stale — Step 9F/9G triggered",
+    "os_tool_executions.py 775 lines (god class), last commit 2026-09-01"
+  ],
+  "run_116_mandate": [
+    "Verify dead guard removed: grep returns 0 for 's != .failed. and s != .unknown.' in engine.py",
+    "test_os_workflows_engine.py still passes",
+    "GH #684 SUPABASE_ACCESS_TOKEN: set in Railway? (42d+ stale)",
+    "os_tool_executions.py stability: git log --since='4 days ago' returns empty? If yes: propose god class split",
+    "File test_os_workflows_store.py as ai-ready GH issue",
+    "Step 9J: did Dependabot PRs #721/#722 become clean + merge after rebase trigger?"
+  ]
+}
