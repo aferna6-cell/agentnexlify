@@ -219,12 +219,17 @@ test("the shipped registry exposes honest metadata", () => {
     "cancel_calendar_event",
     "create_calendar_event",
     "create_customer",
+    "create_invoice_draft",
     "get_business_profile",
     "get_calendar_availability",
     "get_customer",
+    "get_invoice",
+    "list_overdue_invoices",
     "reschedule_calendar_event",
     "search_customers",
     "send_email",
+    "send_invoice",
+    "send_invoice_reminder",
     "update_customer",
     "update_lead_stage",
   ]);
@@ -247,6 +252,16 @@ test("the shipped registry exposes honest metadata", () => {
   assert.equal(send.mutating, true);
   assert.equal(send.requiresApproval, true);
   assert.equal(send.department, "sales");
+
+  const draft = meta.find((m) => m.id === "create_invoice_draft")!;
+  assert.equal(draft.riskLevel, 1);
+  assert.equal(draft.mutating, true);
+  assert.equal(draft.department, "invoicing");
+
+  const invoiceSend = meta.find((m) => m.id === "send_invoice")!;
+  assert.equal(invoiceSend.riskLevel, 2);
+  assert.equal(invoiceSend.requiresApproval, true);
+  assert.equal(invoiceSend.department, "invoicing");
 });
 
 test("availableFor honours a tenant's allow-list", () => {
