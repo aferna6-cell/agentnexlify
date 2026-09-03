@@ -18894,3 +18894,21 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(security): guard residual demo-write routes (#776)
+
+Add block_demo_role to authenticated writes that sit under the
+middleware allowlist: widget-config, online-status, allowed-domains,
+FAQ create/delete, conversation tags, and widget feedback delete.
+FAQ update keeps require_role(owner, admin). Public widget feedback
+POST and auth/webhook ingress stay open.
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+**Date:** 2026-09-03
+**Commit:** bc29de4
+**Author:** aferna6-cell
+**Files Changed:** backend/routers/auth.py,backend/routers/conversations.py,backend/routers/faq.py,backend/routers/widget_config.py,tests/test_demo_residual_writes.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
