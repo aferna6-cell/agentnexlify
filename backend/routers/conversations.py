@@ -4,6 +4,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from backend.dependencies import block_demo_role
 from backend.services.auth_service import get_current_tenant as _get_current_tenant
 from backend.services import conversations_service as _conv_svc
 
@@ -40,7 +41,7 @@ async def update_conversation_tags(
     tenant_id: str,
     session_id: str,
     req: dict,
-    claims: dict = Depends(_get_current_tenant),
+    claims: dict = Depends(block_demo_role),
 ):
     """Update tags on a conversation. Body: {"tags": ["tag1", "tag2"]}"""
     if claims["tenant_id"] != tenant_id:
