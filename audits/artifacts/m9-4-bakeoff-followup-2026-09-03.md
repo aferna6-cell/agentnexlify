@@ -47,7 +47,11 @@ suite has **18 categories**.
 
 - Persist compact `case_results` + `miss_counts` on every report.
 - `classify_case_result()`: parse / safety / invalid-nongate / incomplete-valid / wrong-terminal.
+- Valid-but-below-bar risk/approval misses classify as `model_incomplete_valid`, not `ok`.
 - `--sample stratified` (default) vs `--sample prefix` (reproduce the biased run).
+- `run_bakeoff(limit=N)` uses stratified sampling; prefix is opt-in only.
+- Reports persist `sample`, `case_ids`, and `category_counts` so a single-category
+  window cannot hide behind aggregates.
 - Regression tests replay the Haiku 0.25/0.0 pair and the Opus missing-verification nongate pattern.
 - Invariants preserved: zero safety gates, no ExpectedPlan/gold in the prompt,
   observable tenant mismatch, parse failures count against promotion, no

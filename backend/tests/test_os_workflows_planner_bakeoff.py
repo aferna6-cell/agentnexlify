@@ -51,7 +51,7 @@ def test_system_prompt_lists_catalog_and_forbids_execution():
 
 
 def test_user_prompt_includes_case_fields(cases):
-    case = cases[0]
+    case = next(c for c in cases if c.gold_plan is not None and c.expected.required_tools)
     prompt = build_planner_user_prompt(case)
     assert case.client_id in prompt
     assert case.id in prompt
@@ -59,6 +59,12 @@ def test_user_prompt_includes_case_fields(cases):
     assert "terminal_hint" not in prompt
     assert "required_tools_hint" not in prompt
     assert "forbidden_tools" not in prompt
+    assert "ExpectedPlan" not in prompt
+    assert "gold_plan" not in prompt
+    assert "required_tools" not in prompt
+    assert "approval_required_tools" not in prompt
+    assert "dependency_edges" not in prompt
+    assert case.gold_plan.model_dump_json() not in prompt
 
 
 def test_parse_candidate_plan_preserves_client_id(cases):
@@ -358,6 +364,9 @@ def test_bakeoff_module_does_not_import_store_or_executor():
     assert "os_tool_executions" not in joined
     assert "google_calendar" not in joined
     assert "gmail" not in joined
+    assert "executor" not in joined
+    assert "action_executor" not in joined
+    assert "crm" not in joined.lower()
 
 
 def test_haiku_incomplete_pattern_matches_bounded_live_limit2(cases):
@@ -537,9 +546,93 @@ def test_prefix_limit_reproduces_biased_live_window(cases):
 def test_stratified_limit_covers_multiple_categories(cases):
     selected = select_planner_cases(cases, limit=10, strategy="stratified")
     assert len(selected) == 10
-    assert len({c.category for c in selected}) >= 8
-    assert "l2_l3_approval_placement" in {c.category for c in selected}
+    assert len({c.category for c in selected}) == 10
     assert {c.category for c in selected} != {"l2_l3_approval_placement"}
+
+
+def test_stratified_limit_24_covers_every_gold_category(cases):
+    gold_cats = {c.category for c in cases if c.gold_plan is not None}
+    selected = select_planner_cases(cases, limit=24, strategy="stratified")
+    assert len(selected) == 24
+    assert set(c.category for c in selected) == gold_cats
+    counts = {}
+    for case in selected:
+        counts[case.category] = counts.get(case.category, 0) + 1
+    extras = sum(1 for n in counts.values() if n > 1)
+    assert extras == 24 - len(gold_cats)
+
+
+def test_run_bakeoff_limit_defaults_to_stratified(cases):
+    report = run_bakeoff(
+        cases,
+        models=(CHEAP_PLANNER_MODEL,),
+        repetitions=(0,),
+        mode="fixture",
+        limit=10,
+    )
+    assert report.sample == "stratified"
+    assert len(report.case_ids) == 10
+    assert len(report.category_counts) == 10
+    assert set(report.category_counts) != {"l2_l3_approval_placement"}
+    payload = report.to_dict()
+    assert payload["sample"] == "stratified"
+    assert "category_counts" in payload["models"][0]
+
+
+def test_run_bakeoff_prefix_limit_still_reproduces_bias(cases):
+    report = run_bakeoff(
+        cases,
+        models=(CHEAP_PLANNER_MODEL,),
+        repetitions=(0,),
+        mode="fixture",
+        limit=10,
+        sample="prefix",
+    )
+    assert report.sample == "prefix"
+    assert report.case_ids == [
+        "apr-0-0",
+        "apr-0-1",
+        "apr-0-2",
+        "apr-0-3",
+        "apr-0-4",
+        "apr-1-0",
+        "apr-1-1",
+        "apr-1-2",
+        "apr-1-3",
+        "apr-1-4",
+    ]
+    assert report.category_counts == {"l2_l3_approval_placement": 10}
+
+
+def test_overapproval_quality_miss_is_not_ok(cases):
+    case = next(c for c in cases if c.id == "apr-0-0")
+    gold = case.gold_plan
+    assert gold is not None
+
+    def overapprove(c, model, seed):
+        steps = []
+        for step in gold.steps:
+            extra = {}
+            if step.tool_name == "search_customers":
+                extra = {"approval_required": True, "risk_level": 2}
+            steps.append(step.model_copy(update=extra))
+        plan = gold.model_copy(update={"steps": steps})
+        return PlannerAttempt(
+            raw_text=plan.model_dump_json(), evidence_type="live_output"
+        )
+
+    report = run_model_bakeoff(
+        [case],
+        model=CHEAP_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=overapprove,
+    )
+    score = report.case_results[0].score
+    assert score is not None
+    assert score.valid is True
+    assert score.risk_approval_accuracy < PROMOTION_BAR["risk_approval_accuracy"]
+    assert report.case_results[0].miss_class == MISS_INCOMPLETE
 
 
 def test_estimate_next_live_run_cost():

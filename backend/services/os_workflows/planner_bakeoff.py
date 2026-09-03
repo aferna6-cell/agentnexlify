@@ -246,7 +246,12 @@ def classify_case_result(result: "BakeoffCaseResult") -> str:
         return MISS_OK if ok else MISS_WRONG_TERMINAL
     if not score.valid:
         return MISS_INVALID_NONGATE
-    if score.step_intent_accuracy < 0.95 or score.dependency_edge_accuracy < 0.95:
+    # Valid but below the promotion quality bar — do not report as ok.
+    if (
+        score.step_intent_accuracy < PROMOTION_BAR["required_step_recall"]
+        or score.dependency_edge_accuracy < PROMOTION_BAR["dependency_accuracy"]
+        or score.risk_approval_accuracy < PROMOTION_BAR["risk_approval_accuracy"]
+    ):
         return MISS_INCOMPLETE
     return MISS_OK
 
@@ -441,6 +446,7 @@ class ModelBakeoffReport:
             "case_count": len(self.case_results),
             "parse_failures": sum(1 for r in self.case_results if not r.parse_ok),
             "miss_counts": dict(self.miss_counts),
+            "category_counts": dict(Counter(r.category for r in self.case_results)),
             "case_results": [r.to_dict() for r in self.case_results],
         }
 
@@ -450,6 +456,9 @@ class BakeoffReport:
     models: List[ModelBakeoffReport]
     promotion_bar: Dict[str, Any] = field(default_factory=lambda: dict(PROMOTION_BAR))
     mode: str = "fixture"
+    sample: str = "caller"
+    case_ids: List[str] = field(default_factory=list)
+    category_counts: Dict[str, int] = field(default_factory=dict)
     notes: str = (
         "M9.4 offline bakeoff — no WorkflowStore persistence, no Action Executor."
     )
@@ -457,6 +466,9 @@ class BakeoffReport:
     def to_dict(self) -> Dict[str, Any]:
         return {
             "mode": self.mode,
+            "sample": self.sample,
+            "case_ids": list(self.case_ids),
+            "category_counts": dict(self.category_counts),
             "notes": self.notes,
             "promotion_bar": self.promotion_bar,
             "models": [m.to_dict() for m in self.models],
@@ -746,17 +758,19 @@ def run_model_bakeoff(
     mode: str = "fixture",
     planner: Optional[PlannerFn] = None,
     limit: Optional[int] = None,
+    sample: Optional[str] = None,
 ) -> ModelBakeoffReport:
     """Run offline bakeoff for one model. Never persists or executes plans."""
     fn = _resolve_planner(mode, planner)
-    selected = list(cases[:limit] if limit is not None else cases)
+    if limit is not None or sample is not None:
+        selected = select_planner_cases(
+            cases, limit=limit, strategy=sample or "stratified"
+        )
+    else:
+        selected = list(cases)
     results: List[BakeoffCaseResult] = []
 
     for case in selected:
-        # Attack-only cases are validator robustness, not planner quality.
-        if case.gold_plan is None and case.expected.terminal == "valid_plan":
-            # Still allow clarify/reject cases that have gold empty plans.
-            pass
         for repetition in repetitions:
             started = time.perf_counter()
             try:
@@ -821,6 +835,7 @@ def run_bakeoff(
     mode: str = "fixture",
     planner: Optional[PlannerFn] = None,
     limit: Optional[int] = None,
+    sample: Optional[str] = None,
 ) -> BakeoffReport:
     """Compare models offline. Default mode=fixture (no API key required)."""
     if mode == "live" and planner is None and not os.environ.get("ANTHROPIC_API_KEY"):
@@ -828,18 +843,30 @@ def run_bakeoff(
             "live bakeoff requires ANTHROPIC_API_KEY "
             "(or use mode=fixture / inject planner=)"
         )
+    if limit is not None or sample is not None:
+        strategy = sample or "stratified"
+        selected = select_planner_cases(cases, limit=limit, strategy=strategy)
+        sample_used = strategy
+    else:
+        selected = list(cases)
+        sample_used = "caller"
     model_reports = [
         run_model_bakeoff(
-            cases,
+            selected,
             model=model,
             repetitions=repetitions,
             mode=mode,
             planner=planner,
-            limit=limit,
         )
         for model in models
     ]
-    return BakeoffReport(models=model_reports, mode=mode)
+    return BakeoffReport(
+        models=model_reports,
+        mode=mode,
+        sample=sample_used,
+        case_ids=[case.id for case in selected],
+        category_counts=dict(Counter(case.category for case in selected)),
+    )
 
 
 def write_bakeoff_report(report: BakeoffReport, path: Path) -> Path:

@@ -27,7 +27,6 @@ from backend.services.os_workflows.planner_bakeoff import (
     DEFAULT_MODELS,
     STRONG_PLANNER_MODEL,
     run_bakeoff,
-    select_planner_cases,
     write_bakeoff_report,
 )
 
@@ -68,17 +67,13 @@ def main() -> int:
     repetitions = tuple(int(s.strip()) for s in args.repetitions.split(",") if s.strip())
     # Planner quality only — skip attack-only rows without gold plans.
     # Default stratified so --limit is not all apr-* approval cases.
-    cases = select_planner_cases(
-        build_frozen_cases(),
-        limit=args.limit,
-        strategy=args.sample,
-    )
-
     report = run_bakeoff(
-        cases,
+        build_frozen_cases(),
         models=models,
         repetitions=repetitions,
         mode=args.mode,
+        limit=args.limit,
+        sample=args.sample,
     )
     out = write_bakeoff_report(report, Path(args.out))
     print(json.dumps(report.to_dict(), indent=2))
