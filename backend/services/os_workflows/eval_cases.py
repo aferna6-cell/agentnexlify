@@ -20,6 +20,19 @@ CLIENT_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 _MAX = 8
 
 
+def _departments_for(*tools: str) -> List[str]:
+    """Unique non-null departments for tools (Action registry may omit department)."""
+    out: List[str] = []
+    seen = set()
+    for tool in tools:
+        meta = TOOL_CATALOG.get(tool)
+        dept = meta.get("department") if meta else None
+        if dept and dept not in seen:
+            seen.add(dept)
+            out.append(dept)
+    return out
+
+
 def _step(
     sid: str,
     tool: str,
@@ -233,7 +246,7 @@ def _approval_cases() -> List[FrozenCase]:
                     "l2_l3_approval_placement",
                     goal,
                     ExpectedPlan(
-                        departments=[TOOL_CATALOG[tool]["department"], "admin_records"],
+                        departments=_departments_for("search_customers", tool),
                         required_tools=["search_customers", tool],
                         allowed_tools=["search_customers", tool],
                         dependency_edges=[["search_customers", tool]],
@@ -273,7 +286,7 @@ def _verification_cases() -> List[FrozenCase]:
                     "verification_requirements",
                     goal,
                     ExpectedPlan(
-                        departments=[TOOL_CATALOG[tool]["department"]],
+                        departments=_departments_for(tool),
                         required_tools=[tool],
                         allowed_tools=[tool],
                         approval_required_tools=[tool]
