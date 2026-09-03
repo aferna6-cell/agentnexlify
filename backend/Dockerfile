@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend/ backend/
 COPY widget/ widget/
 COPY VERSION VERSION
+COPY agent-service/src/agent-os/actions/action_manifest.json agent-service/src/agent-os/actions/action_manifest.json
 
 # Run as non-root (semgrep dockerfile.security.missing-user; ports >1024 so no root needed)
 RUN useradd --create-home --uid 10001 appuser \
