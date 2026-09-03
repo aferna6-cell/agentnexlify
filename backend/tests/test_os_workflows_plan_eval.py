@@ -70,10 +70,34 @@ def test_absolute_gates_zero(suite):
 
 
 def test_gold_plans_are_structurally_valid(suite):
-    goldish = [s for s in suite.scores if s.overall_plan_validity >= 0.5 or s.valid]
-    # Every score entry should be valid under its mode (gold pass / attack caught).
-    assert all(s.valid for s in suite.scores)
+    # Planner quality averages exclude attack catch scores.
+    assert suite.planner_scores
+    assert all(s.valid for s in suite.planner_scores)
+    assert all(s.score_kind == "planner" for s in suite.planner_scores)
     assert suite.mean_overall_validity >= 0.9
+    assert suite.mean_planner_quality == suite.mean_overall_validity
+    # Attack robustness is tracked separately — do not mix into planner mean.
+    assert suite.attacks_total >= 40
+    assert suite.attacks_caught == suite.attacks_total
+    assert suite.attack_catch_rate == 1.0
+    assert all(s.valid and s.score_kind == "attack" for s in suite.attack_scores)
+
+
+def test_attack_scores_not_mixed_into_planner_mean(cases):
+    """Caught attacks score overall=1.0 but must not inflate planner quality."""
+    from backend.services.os_workflows.plan_eval import run_suite
+
+    subset = [c for c in cases if c.attack_plan is not None][:5]
+    # Ensure at least one gold exists alongside attacks.
+    golds = [c for c in cases if c.gold_plan is not None][:3]
+    report = run_suite(golds + subset)
+    attack_overalls = [s.overall_plan_validity for s in report.attack_scores]
+    assert attack_overalls and all(v == 1.0 for v in attack_overalls)
+    planner_mean = sum(s.overall_plan_validity for s in report.planner_scores) / len(
+        report.planner_scores
+    )
+    assert report.mean_planner_quality == pytest.approx(planner_mean)
+    assert report.mean_overall_validity == pytest.approx(planner_mean)
 
 
 def test_validator_rejects_cycle():
@@ -208,6 +232,12 @@ def test_attack_plans_are_caught(cases):
 
 
 def test_tool_catalog_covers_known_actions():
+    from backend.services.os_workflows.tool_catalog import (
+        assert_catalog_matches_manifest,
+        reload_catalog,
+    )
+
+    reload_catalog()
     required = {
         "send_email",
         "search_customers",
@@ -216,6 +246,130 @@ def test_tool_catalog_covers_known_actions():
         "cancel_calendar_event",
     }
     assert required <= set(TOOL_CATALOG)
+    # Full parity with Action manifest (not just five smoke IDs).
+    assert_catalog_matches_manifest()
+    assert TOOL_CATALOG["send_email"]["risk_level"] == 2
+    assert TOOL_CATALOG["send_email"]["requires_approval"] is True
+    assert TOOL_CATALOG["get_customer"]["risk_level"] == 0
+    assert TOOL_CATALOG["get_business_profile"]["department"] is None
+
+
+def test_overprotection_is_valid_but_quality_penalized():
+    """Underrate remains a gate; overrate stays valid with quality penalty."""
+    case = FrozenCase(
+        id="overprotect",
+        category="simple_sequential",
+        goal="lookup customer",
+        client_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        expected=ExpectedPlan(
+            departments=["admin_records"],
+            required_tools=["get_customer"],
+            allowed_tools=["get_customer"],
+            max_steps=3,
+        ),
+    )
+    exact = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="get_customer",
+                department="admin_records",
+                risk_level=0,
+                approval_required=False,
+                verification_required=False,
+            )
+        ],
+    )
+    over = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="get_customer",
+                department="admin_records",
+                risk_level=3,
+                approval_required=True,
+                verification_required=True,
+            )
+        ],
+    )
+    exact_score = score_plan(case, exact, mode="gold")
+    over_score = score_plan(case, over, mode="gold")
+    assert exact_score.valid
+    assert over_score.valid  # overrate is not a hard reject
+    assert over_score.unnecessary_approval_rate > 0
+    assert over_score.unnecessary_verification_rate > 0
+    assert over_score.risk_tier_accuracy < 1.0
+    assert over_score.overall_plan_validity < exact_score.overall_plan_validity
+
+
+def test_department_and_verification_expectations_are_scored():
+    case = FrozenCase(
+        id="dept-verify",
+        category="verification_requirements",
+        goal="email unpaid",
+        client_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        expected=ExpectedPlan(
+            departments=["admin_records", "sales"],
+            required_tools=["search_customers", "send_email"],
+            allowed_tools=["search_customers", "send_email"],
+            dependency_edges=[["search_customers", "send_email"]],
+            approval_required_tools=["send_email"],
+            verification_required_tools=["send_email"],
+            max_steps=5,
+        ),
+    )
+    good = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="search_customers",
+                department="admin_records",
+                risk_level=0,
+            ),
+            PlanStepSpec(
+                id="s1",
+                tool_name="send_email",
+                department="sales",
+                dependencies=["s0"],
+                risk_level=2,
+                approval_required=True,
+                verification_required=True,
+            ),
+        ],
+    )
+    bad_dept = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="search_customers",
+                department="sales",
+                risk_level=0,
+            ),
+            PlanStepSpec(
+                id="s1",
+                tool_name="send_email",
+                department="sales",
+                dependencies=["s0"],
+                risk_level=2,
+                approval_required=True,
+                verification_required=False,
+            ),
+        ],
+    )
+    good_score = score_plan(case, good, mode="gold")
+    bad_score = score_plan(case, bad_dept, mode="gold")
+    assert good_score.department_accuracy == 1.0
+    assert good_score.verification_placement_accuracy == 1.0
+    assert bad_score.department_accuracy < 1.0
+    assert bad_score.verification_placement_accuracy < 1.0
 
 
 def test_category_counts_are_balanced(cases):

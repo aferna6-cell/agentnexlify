@@ -1,19 +1,33 @@
-"""Frozen tool catalog for M9.3 planner eval (no Action Executor imports).
+"""Frozen planner tool catalog for M9.3+ offline evaluation.
 
-Mirrors agent-service tool ids / departments / risk levels as a static
-table so the planner eval and validator stay import-isolated from
-execution code (CI boundary in ``check_project_invariants``).
+Loads authoritative Action metadata from the generated read-only manifest at
+``agent-service/src/agent-os/actions/action_manifest.json`` (produced by
+``scripts/generate_action_manifest.py``).
+
+Planner import boundary: this module must **not** import Action Executor,
+Gmail/Calendar/CRM SDKs, or tool execute implementations. The manifest is
+static JSON parsed from Action ``defineTool`` metadata only.
+
+Planner policy overlay (deterministic, derived from manifest fields — not
+hand-edited per tool):
+  verification_required = verifiable OR mutating
+
+Risk, approval, department, and tool IDs must match the Action registry
+exactly. ``scripts/check_project_invariants.py`` and
+``generate_action_manifest.py --check`` enforce parity in CI.
 """
 
-from typing import Dict, FrozenSet, TypedDict
+from __future__ import annotations
 
+import json
+from functools import lru_cache
+from pathlib import Path
+from typing import Dict, FrozenSet, Optional, TypedDict
 
-class ToolMeta(TypedDict):
-    department: str
-    risk_level: int
-    requires_approval: bool
-    verification_required: bool
-
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_MANIFEST_PATH = (
+    _REPO_ROOT / "agent-service" / "src" / "agent-os" / "actions" / "action_manifest.json"
+)
 
 # Risk mirrors agent-service/src/agent-os/actions/types.ts
 RISK_READ_ONLY = 0
@@ -21,80 +35,53 @@ RISK_INTERNAL_MUTATION = 1
 RISK_EXTERNAL_COMMUNICATION = 2
 RISK_HIGH_IMPACT = 3
 
-TOOL_CATALOG: Dict[str, ToolMeta] = {
-    "get_business_profile": {
-        "department": "admin_records",
-        "risk_level": RISK_READ_ONLY,
-        "requires_approval": False,
-        "verification_required": False,
-    },
-    "get_customer": {
-        "department": "admin_records",
-        "risk_level": RISK_READ_ONLY,
-        "requires_approval": False,
-        "verification_required": False,
-    },
-    "search_customers": {
-        "department": "admin_records",
-        "risk_level": RISK_READ_ONLY,
-        "requires_approval": False,
-        "verification_required": False,
-    },
-    "get_calendar_availability": {
-        "department": "admin_records",
-        "risk_level": RISK_READ_ONLY,
-        "requires_approval": False,
-        "verification_required": False,
-    },
-    "create_customer": {
-        "department": "admin_records",
-        "risk_level": RISK_INTERNAL_MUTATION,
-        "requires_approval": False,
-        "verification_required": True,
-    },
-    "update_customer": {
-        "department": "admin_records",
-        "risk_level": RISK_INTERNAL_MUTATION,
-        "requires_approval": False,
-        "verification_required": True,
-    },
-    "update_lead_stage": {
-        "department": "admin_records",
-        "risk_level": RISK_INTERNAL_MUTATION,
-        "requires_approval": False,
-        "verification_required": True,
-    },
-    "add_customer_note": {
-        "department": "admin_records",
-        "risk_level": RISK_INTERNAL_MUTATION,
-        "requires_approval": False,
-        "verification_required": True,
-    },
-    "create_calendar_event": {
-        "department": "admin_records",
-        "risk_level": RISK_INTERNAL_MUTATION,
-        "requires_approval": False,
-        "verification_required": True,
-    },
-    "send_email": {
-        "department": "sales",
-        "risk_level": RISK_EXTERNAL_COMMUNICATION,
-        "requires_approval": True,
-        "verification_required": True,
-    },
-    "reschedule_calendar_event": {
-        "department": "admin_records",
-        "risk_level": RISK_EXTERNAL_COMMUNICATION,
-        "requires_approval": True,
-        "verification_required": True,
-    },
-    "cancel_calendar_event": {
-        "department": "admin_records",
-        "risk_level": RISK_EXTERNAL_COMMUNICATION,
-        "requires_approval": True,
-        "verification_required": True,
-    },
-}
+
+class ToolMeta(TypedDict):
+    department: Optional[str]
+    risk_level: int
+    requires_approval: bool
+    verification_required: bool
+    mutating: bool
+    verifiable: bool
+
+
+def _load_manifest() -> dict:
+    if not _MANIFEST_PATH.is_file():
+        raise FileNotFoundError(
+            f"Action manifest missing: {_MANIFEST_PATH}. "
+            "Run: python3 scripts/generate_action_manifest.py"
+        )
+    return json.loads(_MANIFEST_PATH.read_text(encoding="utf-8"))
+
+
+def _tool_from_manifest_entry(entry: dict) -> ToolMeta:
+    verifiable = bool(entry.get("verifiable"))
+    mutating = bool(entry.get("mutating"))
+    # Planner overlay: require verification for Action-verifiable tools OR mutations.
+    verification_required = verifiable or mutating
+    return ToolMeta(
+        department=entry.get("department"),
+        risk_level=int(entry["risk_level"]),
+        requires_approval=bool(entry["requires_approval"]),
+        verification_required=verification_required,
+        mutating=mutating,
+        verifiable=verifiable,
+    )
+
+
+@lru_cache(maxsize=1)
+def _catalog() -> Dict[str, ToolMeta]:
+    data = _load_manifest()
+    tools = data.get("tools") or {}
+    return {tid: _tool_from_manifest_entry(meta) for tid, meta in tools.items()}
+
+
+def catalog_as_dict() -> Dict[str, ToolMeta]:
+    """Return a fresh mapping of tool_id → ToolMeta (cached source)."""
+    return dict(_catalog())
+
+
+TOOL_CATALOG: Dict[str, ToolMeta] = catalog_as_dict()
 
 # Tools that must never appear in any planner output (eval attack surface).
 ALWAYS_FORBIDDEN_TOOLS: FrozenSet[str] = frozenset(
@@ -121,11 +108,11 @@ def tool_risk(tool_name: str) -> int:
     return int(meta["risk_level"])
 
 
-def tool_department(tool_name: str) -> str:
+def tool_department(tool_name: str) -> Optional[str]:
     meta = TOOL_CATALOG.get(tool_name)
     if meta is None:
-        return "unknown"
-    return str(meta["department"])
+        return None
+    return meta.get("department")
 
 
 def tool_requires_approval(tool_name: str) -> bool:
@@ -133,3 +120,53 @@ def tool_requires_approval(tool_name: str) -> bool:
     if meta is None:
         return True
     return bool(meta["requires_approval"]) or int(meta["risk_level"]) >= RISK_EXTERNAL_COMMUNICATION
+
+
+def tool_verification_required(tool_name: str) -> bool:
+    meta = TOOL_CATALOG.get(tool_name)
+    if meta is None:
+        return True
+    return bool(meta["verification_required"])
+
+
+def assert_catalog_matches_manifest() -> None:
+    """Fail if in-memory catalog diverges from the on-disk Action manifest.
+
+    Compares authoritative fields (department, risk, approval, mutating,
+    verifiable) and the derived verification_required policy.
+    """
+    data = _load_manifest()
+    tools = data.get("tools") or {}
+    catalog = catalog_as_dict()
+    if set(catalog.keys()) != set(tools.keys()):
+        missing = set(tools.keys()) - set(catalog.keys())
+        extra = set(catalog.keys()) - set(tools.keys())
+        raise AssertionError(
+            f"Tool catalog ID mismatch vs Action manifest. "
+            f"missing={sorted(missing)} extra={sorted(extra)}"
+        )
+    for tid, entry in tools.items():
+        expected = _tool_from_manifest_entry(entry)
+        actual = catalog[tid]
+        for field in (
+            "department",
+            "risk_level",
+            "requires_approval",
+            "mutating",
+            "verifiable",
+            "verification_required",
+        ):
+            if actual[field] != expected[field]:  # type: ignore[literal-required]
+                raise AssertionError(
+                    f"Tool catalog drift for {tid}.{field}: "
+                    f"catalog={actual[field]!r} "  # type: ignore[literal-required]
+                    f"manifest-derived={expected[field]!r}"  # type: ignore[literal-required]
+                )
+
+
+def reload_catalog() -> None:
+    """Clear cache and refresh TOOL_CATALOG (tests / after regenerating manifest)."""
+    _catalog.cache_clear()
+    global TOOL_CATALOG, KNOWN_TOOL_IDS
+    TOOL_CATALOG = catalog_as_dict()
+    KNOWN_TOOL_IDS = frozenset(TOOL_CATALOG.keys())
