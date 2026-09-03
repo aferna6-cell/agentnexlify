@@ -4,6 +4,16 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 201_website_connections.sql (2026-09-03)
+
+**What:** New `website_connections` table — one row per tenant (`UNIQUE (tenant_id)`). Columns: `tenant_id`, `website_url`, `platform` / `detected_platform` (`wordpress|wix|squarespace|godaddy|custom|unknown`), `platform_override`, `status` (`needs_action|verifying|connected|failed`), verification timestamps/detail, `next_action_code`. RLS on + explicit `service_role` policy. Index `(tenant_id, status)`.
+
+**Why:** Website/Chatbot Connect v1 (GH #767). "connected" is only written after a live HTML fetch finds `agentnexlify-widget.js` **and** this tenant's `data-api-key`. No CMS passwords. No fake self-report connected state.
+
+**Applied:** NOT applied (this PR is code-only; no prod/schema deploy).
+
+---
+
 ## 200_os_workflows_integrity.sql (2026-09-02)
 
 **What:** Forward hardening on top of 199 (199 not edited). Adds `UNIQUE (id, client_id)` on `os_workflows`, replaces step `workflow_id` FK with composite `FOREIGN KEY (workflow_id, client_id) REFERENCES os_workflows (id, client_id)`, and adds `create_os_workflow(p_client_id, p_owner_goal, p_steps, p_workflow_id)` SECURITY DEFINER RPC for atomic workflow+steps insert.
