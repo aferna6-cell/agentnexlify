@@ -18894,3 +18894,34 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(m9): harden department scoring and Action registry manifest parity (#777)
+
+* fix(m9): score planner department placement per catalog tool
+
+Department accuracy compared only the set of departments present, so a
+plan that swapped search_customers→sales and send_email→admin_records
+scored 1.0. Score each known tool step against tool_department instead.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+* fix(m9): generate Action manifest from registered tools only
+
+The generator scanned every tools/*.ts defineTool block, so deleting
+toolRegistry.register(sendEmail) still left send_email planner-visible.
+Parse registry.ts registrations deterministically and fail on unsupported
+shapes. Manifest IDs must match the runtime registry exactly.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+---------
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+**Date:** 2026-09-03
+**Commit:** ffcc70e
+**Author:** aferna6-cell
+**Files Changed:** backend/services/os_workflows/plan_eval.py,backend/services/os_workflows/tool_catalog.py,backend/tests/test_os_workflows_plan_eval.py,scripts/check_project_invariants.py,scripts/generate_action_manifest.py,tests/test_generate_action_manifest.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
