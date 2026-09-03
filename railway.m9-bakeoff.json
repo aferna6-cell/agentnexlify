@@ -5,7 +5,7 @@
     "dockerfilePath": "Dockerfile.m9-bakeoff"
   },
   "deploy": {
-    "startCommand": "python -m backend.services.os_workflows.run_live_bakeoff",
+    "startCommand": "python -c \"print('m9-bakeoff-runner idle')\"",
     "restartPolicyType": "NEVER",
     "restartPolicyMaxRetries": 0
   }

@@ -1,3 +1,5 @@
+# Staging-only M9.4 bakeoff image. Do not copy these extras into backend/Dockerfile.
+# Production API does not load the planner catalog at startup.
 FROM python:3.11-slim
 
 WORKDIR /app
