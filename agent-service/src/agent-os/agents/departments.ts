@@ -11,6 +11,7 @@ import {
   resolveEmailSendFromOutput,
 } from "./communication_actions.ts";
 import { resolveSalesExactEmailFromOutput } from "./sales_exact_email.ts";
+import { resolveInvoicingAction } from "./invoicing_actions.ts";
 
 // v1 worker agents, now used as internal skills.
 import { booking } from "./booking/agent.ts";
@@ -412,8 +413,7 @@ export const invoicing = defineDepartment({
   // Sending is a system capability, not a Sales one: any department that writes
   // to a customer can propose the send, under the same authorization and the
   // same approval gate. See communication_actions.ts.
-  resolveAction: resolveCommunicationAmbiguity,
-  resolveActionFromOutput: resolveEmailSendFromOutput,
+  resolveAction: resolveInvoicingAction,
   examples: [
     {
       owner_ask:
