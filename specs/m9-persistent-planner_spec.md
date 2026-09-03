@@ -1,7 +1,7 @@
 # Spec — M9 Persistent Planner / Workflow State Machine
 
-**Status:** M9.2 COMPLETE · M9.3 frozen eval  
-**Date:** 2026-09-03  
+**Status:** M9.2 COMPLETE · M9.3 frozen eval
+**Date:** 2026-09-03
 **ADR:** `planning/decisions/2026-09-02-m9-persistent-planner-architecture.md`
 
 ## Goal

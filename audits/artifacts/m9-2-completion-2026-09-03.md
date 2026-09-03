@@ -1,7 +1,7 @@
 # M9.2 completion — Persistent Planner persistence + correction pass
 
-**Date:** 2026-09-03  
-**Status:** COMPLETE  
+**Date:** 2026-09-03
+**Status:** COMPLETE
 **Head on main after merge:** `9f0dc889` (#754); current `main` also includes #756 morning digest → `697d7601` (docs-only; no M9 runtime change).
 
 ## Sequence

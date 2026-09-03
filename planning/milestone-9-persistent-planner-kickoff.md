@@ -1,7 +1,7 @@
 # Milestone 9 START — Persistent Planner / Workflow State Machine
 
-**Date:** 2026-09-02  
-**Status:** M9.1 + M9.2 COMPLETE → M9.3 frozen eval in flight  
+**Date:** 2026-09-02
+**Status:** M9.1 + M9.2 COMPLETE → M9.3 frozen eval in flight
 **Preceded by:** M8 COMPLETE · #747 CI restore · #749/#669 demo-role middleware · #750 governance · #751 M9.1 · #752/#754 M9.2
 
 ## Governance gate (this kickoff)
