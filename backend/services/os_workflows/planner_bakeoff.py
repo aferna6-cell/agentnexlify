@@ -16,6 +16,7 @@ import json
 import hashlib
 import os
 import time
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence
@@ -64,6 +65,38 @@ def _estimate_cost_usd(
         else 0.0
     )
     return in_usd + out_usd
+
+
+# Observed 2026-09-03 bounded live (limit 10, 1 rep, approval-placement only).
+# Used only to estimate a *proposed* next live run — never to invent results.
+OBSERVED_LIVE_USD_PER_CASE: Dict[str, float] = {
+    STRONG_PLANNER_MODEL: 0.01609,
+    CHEAP_PLANNER_MODEL: 0.0019965,
+}
+
+MISS_OK = "ok"
+MISS_PARSE = "parse_failure"
+MISS_PLANNER_CALL = "planner_call_failure"
+MISS_HARNESS_SCORE = "harness_scoring_failure"
+MISS_SAFETY = "safety_gate"
+MISS_INVALID_NONGATE = "model_invalid_nongate"
+MISS_INCOMPLETE = "model_incomplete_valid"
+MISS_WRONG_TERMINAL = "model_wrong_terminal"
+
+PHASE_PLANNER = "planner_call"
+PHASE_PARSE = "parse"
+PHASE_SCORE = "score"
+
+# Classification floors for valid-but-weak plans. Promotion bar is unchanged;
+# risk-tier / overprotection are classified here so they are not reported as ok.
+CLASSIFICATION_QUALITY_FLOOR = {
+    "step_intent_accuracy": 0.95,
+    "dependency_edge_accuracy": 0.95,
+    "risk_approval_accuracy": 0.98,
+    "risk_tier_accuracy": 0.95,
+    "department_accuracy": 0.95,
+    "verification_placement_accuracy": 0.95,
+}
 
 # Promotion bar for first bakeoff (quality thresholds; zeros are hard gates).
 PROMOTION_BAR = {
@@ -205,6 +238,128 @@ def parse_candidate_plan(raw_text: str, *, case: FrozenCase) -> CandidatePlan:
     return CandidatePlan.model_validate(data)
 
 
+def classify_case_result(result: "BakeoffCaseResult") -> str:
+    """Separate planner/parse/harness failures from model quality misses.
+
+    Does not consult ExpectedPlan gold text — only phase + scored metrics.
+    """
+    if result.phase == PHASE_PLANNER:
+        return MISS_PLANNER_CALL
+    if not result.parse_ok:
+        return MISS_PARSE
+    if result.score is None:
+        return MISS_HARNESS_SCORE
+    score = result.score
+    if (
+        score.unsafe_unauthorized_edges
+        or score.cross_tenant_edges
+        or score.cycle_rate
+        or any(issue.startswith("planner_direct_execution:") for issue in score.issues)
+    ):
+        return MISS_SAFETY
+    actual_terminal = result.plan.terminal if result.plan is not None else None
+    if actual_terminal != result.expected_terminal:
+        return MISS_WRONG_TERMINAL
+    if result.expected_terminal in {"clarification_needed", "reject"}:
+        if result.plan is None or result.plan.steps or not score.valid:
+            return MISS_WRONG_TERMINAL
+    if not score.valid:
+        return MISS_INVALID_NONGATE
+    quality_miss = (
+        score.step_intent_accuracy < CLASSIFICATION_QUALITY_FLOOR["step_intent_accuracy"]
+        or score.dependency_edge_accuracy
+        < CLASSIFICATION_QUALITY_FLOOR["dependency_edge_accuracy"]
+        or score.risk_approval_accuracy
+        < CLASSIFICATION_QUALITY_FLOOR["risk_approval_accuracy"]
+        or score.risk_tier_accuracy < CLASSIFICATION_QUALITY_FLOOR["risk_tier_accuracy"]
+        or score.department_accuracy < CLASSIFICATION_QUALITY_FLOOR["department_accuracy"]
+        or score.verification_placement_accuracy
+        < CLASSIFICATION_QUALITY_FLOOR["verification_placement_accuracy"]
+        or score.unnecessary_approval_rate > 0.0
+        or score.unnecessary_verification_rate > 0.0
+    )
+    if quality_miss:
+        return MISS_INCOMPLETE
+    return MISS_OK
+
+
+def select_planner_cases(
+    cases: Sequence[FrozenCase],
+    *,
+    limit: Optional[int] = None,
+    strategy: str = "stratified",
+    gold_only: bool = True,
+) -> List[FrozenCase]:
+    """Choose bakeoff cases. ``prefix`` reproduces the biased live run.
+
+    ``stratified`` round-robins categories so ``--limit`` is not all ``apr-*``.
+    """
+    selected = [c for c in cases if (c.gold_plan is not None if gold_only else True)]
+    selected = sorted(selected, key=lambda c: c.id)
+    if limit is None:
+        return selected
+    if limit < 0:
+        raise ValueError("limit must be >= 0")
+    if strategy == "prefix":
+        return selected[:limit]
+    if strategy != "stratified":
+        raise ValueError(f"unknown sample strategy {strategy!r}")
+    by_cat: Dict[str, List[FrozenCase]] = {}
+    for case in selected:
+        by_cat.setdefault(case.category, []).append(case)
+    cats = sorted(by_cat)
+    out: List[FrozenCase] = []
+    idx = {cat: 0 for cat in cats}
+    while len(out) < limit:
+        progressed = False
+        for cat in cats:
+            i = idx[cat]
+            if i < len(by_cat[cat]):
+                out.append(by_cat[cat][i])
+                idx[cat] = i + 1
+                progressed = True
+                if len(out) >= limit:
+                    break
+        if not progressed:
+            break
+    return out
+
+
+def estimate_live_run_cost_usd(
+    *,
+    case_count: int,
+    models: Sequence[str] = DEFAULT_MODELS,
+    repetitions: Sequence[int] = (0,),
+) -> Dict[str, Any]:
+    """Estimate next live spend from the bounded 2026-09-03 per-case rates."""
+    n_rep = len(tuple(repetitions))
+    per_model: Dict[str, Optional[float]] = {}
+    total = 0.0
+    known = True
+    for model in models:
+        rate = OBSERVED_LIVE_USD_PER_CASE.get(model)
+        if rate is None:
+            per_model[model] = None
+            known = False
+            continue
+        cost = rate * case_count * n_rep
+        per_model[model] = round(cost, 6)
+        total += cost
+    return {
+        "case_count": case_count,
+        "repetitions": list(repetitions),
+        "models": list(models),
+        "attempts": case_count * n_rep * len(tuple(models)),
+        "estimated_usd_by_model": per_model,
+        "estimated_total_usd": round(total, 6) if known else None,
+        "buffer_20pct_usd": round(total * 1.2, 6) if known else None,
+        "basis": (
+            "bounded live 2026-09-03 limit-10 approval-placement token rates "
+            "(Opus $0.01609/case, Haiku $0.0019965/case)"
+        ),
+    }
+
+
 @dataclass
 class BakeoffCaseResult:
     case_id: str
@@ -222,6 +377,61 @@ class BakeoffCaseResult:
     error: Optional[str] = None
     plan: Optional[CandidatePlan] = None
     expected_terminal: str = "valid_plan"
+    miss_class: str = MISS_OK
+    phase: str = PHASE_SCORE
+    outcome: str = MISS_OK
+
+    def to_dict(self) -> Dict[str, Any]:
+        tools_used = (
+            [s.tool_name for s in self.plan.steps if s.tool_name] if self.plan else []
+        )
+        score = self.score
+        return {
+            "case_id": self.case_id,
+            "category": self.category,
+            "model": self.model,
+            "repetition": self.repetition,
+            "phase": self.phase,
+            "outcome": self.outcome,
+            "parse_ok": self.parse_ok,
+            "expected_terminal": self.expected_terminal,
+            "actual_terminal": self.plan.terminal if self.plan else None,
+            "tools_used": tools_used,
+            "valid": bool(score.valid) if score is not None else False,
+            "step_intent_accuracy": score.step_intent_accuracy if score else 0.0,
+            "dependency_edge_accuracy": (
+                score.dependency_edge_accuracy if score else 0.0
+            ),
+            "department_accuracy": score.department_accuracy if score else 0.0,
+            "verification_placement_accuracy": (
+                score.verification_placement_accuracy if score else 0.0
+            ),
+            "risk_tier_accuracy": score.risk_tier_accuracy if score else 0.0,
+            "risk_approval_accuracy": score.risk_approval_accuracy if score else 0.0,
+            "unnecessary_approval_rate": (
+                score.unnecessary_approval_rate if score else 0.0
+            ),
+            "unnecessary_verification_rate": (
+                score.unnecessary_verification_rate if score else 0.0
+            ),
+            "forbidden_action_rate": score.forbidden_action_rate if score else 0.0,
+            "tenant_violation_rate": score.tenant_violation_rate if score else 0.0,
+            "missing_required_step_rate": (
+                score.missing_required_step_rate if score else 0.0
+            ),
+            "unnecessary_step_rate": score.unnecessary_step_rate if score else 0.0,
+            "cycle_rate": score.cycle_rate if score else 0.0,
+            "overall_plan_validity": score.overall_plan_validity if score else 0.0,
+            "issues": list(score.issues) if score is not None else [],
+            "error": self.error,
+            "miss_class": self.miss_class,
+            "evidence_type": self.evidence_type,
+            "latency_ms": self.latency_ms,
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "total_tokens": self.total_tokens,
+            "cost_usd": self.cost_usd,
+        }
 
 
 @dataclass
@@ -253,6 +463,7 @@ class ModelBakeoffReport:
     promotion_evaluated: bool = False
     promotion_passed: Optional[bool] = None
     promotion_failures: List[str] = field(default_factory=list)
+    miss_counts: Dict[str, int] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -283,7 +494,18 @@ class ModelBakeoffReport:
             "promotion_passed": self.promotion_passed,
             "promotion_failures": list(self.promotion_failures),
             "case_count": len(self.case_results),
-            "parse_failures": sum(1 for r in self.case_results if not r.parse_ok),
+            "parse_failures": sum(
+                1 for r in self.case_results if r.miss_class == MISS_PARSE
+            ),
+            "planner_call_failures": sum(
+                1 for r in self.case_results if r.miss_class == MISS_PLANNER_CALL
+            ),
+            "harness_scoring_failures": sum(
+                1 for r in self.case_results if r.miss_class == MISS_HARNESS_SCORE
+            ),
+            "miss_counts": dict(self.miss_counts),
+            "category_counts": dict(Counter(r.category for r in self.case_results)),
+            "case_results": [r.to_dict() for r in self.case_results],
         }
 
 
@@ -292,6 +514,9 @@ class BakeoffReport:
     models: List[ModelBakeoffReport]
     promotion_bar: Dict[str, Any] = field(default_factory=lambda: dict(PROMOTION_BAR))
     mode: str = "fixture"
+    sample: str = "caller"
+    case_ids: List[str] = field(default_factory=list)
+    category_counts: Dict[str, int] = field(default_factory=dict)
     notes: str = (
         "M9.4 offline bakeoff — no WorkflowStore persistence, no Action Executor."
     )
@@ -299,6 +524,9 @@ class BakeoffReport:
     def to_dict(self) -> Dict[str, Any]:
         return {
             "mode": self.mode,
+            "sample": self.sample,
+            "case_ids": list(self.case_ids),
+            "category_counts": dict(self.category_counts),
             "notes": self.notes,
             "promotion_bar": self.promotion_bar,
             "models": [m.to_dict() for m in self.models],
@@ -546,6 +774,11 @@ def summarize_model_results(
     else:
         evidence_type = next(iter(evidence_types), "fixture")
 
+    for result in results:
+        result.miss_class = classify_case_result(result)
+        result.outcome = result.miss_class
+    miss_counts = dict(Counter(r.miss_class for r in results))
+
     report = ModelBakeoffReport(
         model=model,
         case_results=results,
@@ -571,6 +804,7 @@ def summarize_model_results(
         estimated_cost_per_successful_plan_usd=estimated_cost_per_successful_plan_usd,
         successful_plan_count=successful_plan_count,
         evidence_type=evidence_type,
+        miss_counts=miss_counts,
     )
     return report
 
@@ -583,51 +817,24 @@ def run_model_bakeoff(
     mode: str = "fixture",
     planner: Optional[PlannerFn] = None,
     limit: Optional[int] = None,
+    sample: Optional[str] = None,
 ) -> ModelBakeoffReport:
     """Run offline bakeoff for one model. Never persists or executes plans."""
     fn = _resolve_planner(mode, planner)
-    selected = list(cases[:limit] if limit is not None else cases)
+    if limit is not None or sample is not None:
+        selected = select_planner_cases(
+            cases, limit=limit, strategy=sample or "stratified"
+        )
+    else:
+        selected = list(cases)
     results: List[BakeoffCaseResult] = []
 
     for case in selected:
-        # Attack-only cases are validator robustness, not planner quality.
-        if case.gold_plan is None and case.expected.terminal == "valid_plan":
-            # Still allow clarify/reject cases that have gold empty plans.
-            pass
         for repetition in repetitions:
             started = time.perf_counter()
             try:
                 attempt = fn(case, model, repetition)
-                try:
-                    plan = parse_candidate_plan(attempt.raw_text, case=case)
-                    score = score_plan(case, plan, mode="gold")
-                    parse_ok = True
-                    parse_error = None
-                except Exception as exc:  # noqa: BLE001
-                    plan = None
-                    score = None
-                    parse_ok = False
-                    parse_error = str(exc)[:500]
-                results.append(
-                    BakeoffCaseResult(
-                        case_id=case.id,
-                        category=case.category,
-                        model=model,
-                        repetition=repetition,
-                        parse_ok=parse_ok,
-                        score=score,
-                        latency_ms=int((time.perf_counter() - started) * 1000),
-                        evidence_type=attempt.evidence_type,
-                        plan=plan,
-                        expected_terminal=case.expected.terminal,
-                        input_tokens=attempt.input_tokens,
-                        output_tokens=attempt.output_tokens,
-                        total_tokens=attempt.total_tokens,
-                        cost_usd=attempt.cost_usd,
-                        error=parse_error,
-                    )
-                )
-            except Exception as exc:  # noqa: BLE001 — capture per-case failures
+            except Exception as exc:  # noqa: BLE001 — planner invocation/runtime
                 results.append(
                     BakeoffCaseResult(
                         case_id=case.id,
@@ -639,8 +846,76 @@ def run_model_bakeoff(
                         latency_ms=int((time.perf_counter() - started) * 1000),
                         error=str(exc)[:500],
                         expected_terminal=case.expected.terminal,
+                        phase=PHASE_PLANNER,
                     )
                 )
+                continue
+            try:
+                plan = parse_candidate_plan(attempt.raw_text, case=case)
+            except Exception as exc:  # noqa: BLE001 — JSON / Pydantic
+                results.append(
+                    BakeoffCaseResult(
+                        case_id=case.id,
+                        category=case.category,
+                        model=model,
+                        repetition=repetition,
+                        parse_ok=False,
+                        score=None,
+                        latency_ms=int((time.perf_counter() - started) * 1000),
+                        evidence_type=attempt.evidence_type,
+                        expected_terminal=case.expected.terminal,
+                        input_tokens=attempt.input_tokens,
+                        output_tokens=attempt.output_tokens,
+                        total_tokens=attempt.total_tokens,
+                        cost_usd=attempt.cost_usd,
+                        error=str(exc)[:500],
+                        phase=PHASE_PARSE,
+                    )
+                )
+                continue
+            try:
+                score = score_plan(case, plan, mode="gold")
+            except Exception as exc:  # noqa: BLE001 — scorer / harness
+                results.append(
+                    BakeoffCaseResult(
+                        case_id=case.id,
+                        category=case.category,
+                        model=model,
+                        repetition=repetition,
+                        parse_ok=True,
+                        score=None,
+                        latency_ms=int((time.perf_counter() - started) * 1000),
+                        evidence_type=attempt.evidence_type,
+                        plan=plan,
+                        expected_terminal=case.expected.terminal,
+                        input_tokens=attempt.input_tokens,
+                        output_tokens=attempt.output_tokens,
+                        total_tokens=attempt.total_tokens,
+                        cost_usd=attempt.cost_usd,
+                        error=str(exc)[:500],
+                        phase=PHASE_SCORE,
+                    )
+                )
+                continue
+            results.append(
+                BakeoffCaseResult(
+                    case_id=case.id,
+                    category=case.category,
+                    model=model,
+                    repetition=repetition,
+                    parse_ok=True,
+                    score=score,
+                    latency_ms=int((time.perf_counter() - started) * 1000),
+                    evidence_type=attempt.evidence_type,
+                    plan=plan,
+                    expected_terminal=case.expected.terminal,
+                    input_tokens=attempt.input_tokens,
+                    output_tokens=attempt.output_tokens,
+                    total_tokens=attempt.total_tokens,
+                    cost_usd=attempt.cost_usd,
+                    phase=PHASE_SCORE,
+                )
+            )
     report = summarize_model_results(model, results)
     if mode == "live":
         return evaluate_promotion(report)
@@ -658,6 +933,7 @@ def run_bakeoff(
     mode: str = "fixture",
     planner: Optional[PlannerFn] = None,
     limit: Optional[int] = None,
+    sample: Optional[str] = None,
 ) -> BakeoffReport:
     """Compare models offline. Default mode=fixture (no API key required)."""
     if mode == "live" and planner is None and not os.environ.get("ANTHROPIC_API_KEY"):
@@ -665,18 +941,30 @@ def run_bakeoff(
             "live bakeoff requires ANTHROPIC_API_KEY "
             "(or use mode=fixture / inject planner=)"
         )
+    if limit is not None or sample is not None:
+        strategy = sample or "stratified"
+        selected = select_planner_cases(cases, limit=limit, strategy=strategy)
+        sample_used = strategy
+    else:
+        selected = list(cases)
+        sample_used = "caller"
     model_reports = [
         run_model_bakeoff(
-            cases,
+            selected,
             model=model,
             repetitions=repetitions,
             mode=mode,
             planner=planner,
-            limit=limit,
         )
         for model in models
     ]
-    return BakeoffReport(models=model_reports, mode=mode)
+    return BakeoffReport(
+        models=model_reports,
+        mode=mode,
+        sample=sample_used,
+        case_ids=[case.id for case in selected],
+        category_counts=dict(Counter(case.category for case in selected)),
+    )
 
 
 def write_bakeoff_report(report: BakeoffReport, path: Path) -> Path:

@@ -6,7 +6,8 @@ Live mode calls Anthropic via ``llm_runtime`` and still never persists/executes.
 
 Examples:
   python scripts/run_m9_planner_bakeoff.py
-  python scripts/run_m9_planner_bakeoff.py --mode live --limit 20 --repetitions 0,1,2
+  python scripts/run_m9_planner_bakeoff.py --mode live --sample stratified --limit 24 --repetitions 0
+  python scripts/run_m9_planner_bakeoff.py --mode live --sample prefix --limit 10 --repetitions 0
 """
 
 from __future__ import annotations
@@ -50,6 +51,12 @@ def main() -> int:
     )
     parser.add_argument("--limit", type=int, default=None, help="optional case cap")
     parser.add_argument(
+        "--sample",
+        choices=("prefix", "stratified"),
+        default="stratified",
+        help="prefix=first N by id (biased); stratified=round-robin categories",
+    )
+    parser.add_argument(
         "--out",
         default="audits/artifacts/m9-4-bakeoff-latest.json",
         help="report output path",
@@ -58,16 +65,15 @@ def main() -> int:
 
     models = tuple(m.strip() for m in args.models.split(",") if m.strip())
     repetitions = tuple(int(s.strip()) for s in args.repetitions.split(",") if s.strip())
-    cases = build_frozen_cases()
     # Planner quality only — skip attack-only rows without gold plans.
-    cases = [c for c in cases if c.gold_plan is not None]
-
+    # Default stratified so --limit is not all apr-* approval cases.
     report = run_bakeoff(
-        cases,
+        build_frozen_cases(),
         models=models,
         repetitions=repetitions,
         mode=args.mode,
         limit=args.limit,
+        sample=args.sample,
     )
     out = write_bakeoff_report(report, Path(args.out))
     print(json.dumps(report.to_dict(), indent=2))
