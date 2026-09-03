@@ -30,6 +30,10 @@ TOOLS_DIR = ACTIONS_DIR / "tools"
 REGISTRY_PATH = ACTIONS_DIR / "registry.ts"
 FLAGS_PATH = ACTIONS_DIR / "flags.ts"
 MANIFEST_PATH = ACTIONS_DIR / "action_manifest.json"
+# Sidecar for images that copy backend/ only (Railway bakeoff, backend/Dockerfile).
+BACKEND_MANIFEST_PATH = (
+    ROOT / "backend" / "services" / "os_workflows" / "action_manifest.json"
+)
 
 RISK_ALIASES = {
     "RISK_READ_ONLY": 0,
@@ -362,11 +366,11 @@ def registered_tool_ids(
 
 
 def write_manifest(manifest: dict) -> None:
+    payload = json.dumps(manifest, indent=2, sort_keys=True) + "\n"
     MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
-    MANIFEST_PATH.write_text(
-        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    MANIFEST_PATH.write_text(payload, encoding="utf-8")
+    BACKEND_MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
+    BACKEND_MANIFEST_PATH.write_text(payload, encoding="utf-8")
 
 
 def check_manifest(manifest: dict, manifest_path: Path | None = None) -> int:
@@ -407,10 +411,14 @@ def main() -> int:
     args = parser.parse_args()
     manifest = build_manifest()
     if args.check:
-        return check_manifest(manifest)
+        primary = check_manifest(manifest)
+        if primary != 0:
+            return primary
+        return check_manifest(manifest, manifest_path=BACKEND_MANIFEST_PATH)
     write_manifest(manifest)
     print(
-        f"Wrote {MANIFEST_PATH.relative_to(ROOT)} "
+        f"Wrote {MANIFEST_PATH.relative_to(ROOT)} and "
+        f"{BACKEND_MANIFEST_PATH.relative_to(ROOT)} "
         f"({len(manifest['tools'])} registered Action tools)"
     )
     return 0

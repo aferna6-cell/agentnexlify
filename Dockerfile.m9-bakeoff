@@ -10,6 +10,10 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend/ backend/
 COPY scripts/run_m9_planner_bakeoff.py scripts/run_m9_planner_bakeoff.py
 COPY agent-service/src/agent-os/actions/action_manifest.json agent-service/src/agent-os/actions/action_manifest.json
+# Fail the build if either catalog path is missing. Railway has shipped
+# backend-only images that crash on TOOL_CATALOG import.
+RUN test -f agent-service/src/agent-os/actions/action_manifest.json \
+    && test -f backend/services/os_workflows/action_manifest.json
 
 ENV PYTHONUNBUFFERED=1
 ENV LLM_TRACE_ENABLED=0

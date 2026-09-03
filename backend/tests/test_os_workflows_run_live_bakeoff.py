@@ -165,7 +165,38 @@ def test_run_live_bakeoff_has_no_store_or_executor_imports():
 def test_production_dockerfile_does_not_copy_bakeoff_manifest():
     production = (_REPO_ROOT / "backend" / "Dockerfile").read_text(encoding="utf-8")
     staging = (_REPO_ROOT / "Dockerfile.m9-bakeoff").read_text(encoding="utf-8")
+    sidecar = (
+        _REPO_ROOT
+        / "backend"
+        / "services"
+        / "os_workflows"
+        / "action_manifest.json"
+    )
+    canonical = (
+        _REPO_ROOT
+        / "agent-service"
+        / "src"
+        / "agent-os"
+        / "actions"
+        / "action_manifest.json"
+    )
     assert "action_manifest.json" not in production
     assert "run_live_bakeoff" not in production
     assert "action_manifest.json" in staging
     assert "Staging-only" in staging
+    assert sidecar.is_file()
+    assert sidecar.read_text(encoding="utf-8") == canonical.read_text(encoding="utf-8")
+
+
+def test_catalog_loads_from_backend_sidecar_when_agent_service_missing(tmp_path, monkeypatch):
+    """Railway backend-only images crash without this sidecar (2026-09-03)."""
+    import backend.services.os_workflows.tool_catalog as catalog
+
+    missing = tmp_path / "missing-agent-service-manifest.json"
+    sidecar = Path(catalog._BACKEND_MANIFEST_PATH)
+    assert sidecar.is_file()
+    monkeypatch.setattr(catalog, "_MANIFEST_PATH", missing)
+    catalog._catalog.cache_clear()
+    loaded = catalog._load_manifest()
+    assert "send_email" in (loaded.get("tools") or {})
+    catalog._catalog.cache_clear()
