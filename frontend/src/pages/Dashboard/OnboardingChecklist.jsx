@@ -5,6 +5,7 @@ import { fetchAvailability, updateAvailability } from "../../utils/api/appointme
 import { updateTenantSettings } from "../../utils/api/dashboard";
 import { createFromTemplate, fetchSequences } from "../../utils/api/automations";
 import { trackEvent } from "../../utils/analytics";
+import { getWebsiteConnection, verifyWebsiteConnection } from "../../utils/api/websiteConnect";
 
 const STORAGE_KEY_PREFIX = "anx_onboarding_";
 
@@ -38,15 +39,17 @@ const COLOR_SWATCHES = [
 ];
 
 const PLATFORM_INSTRUCTIONS = {
-  HTML: "Paste this snippet before the closing </body> tag of your website.",
   WordPress:
-    "Go to Appearance > Theme Editor > footer.php and paste the snippet before </body>. Or use a plugin like 'Insert Headers and Footers'.",
-  Shopify:
-    "Go to Online Store > Themes > Edit Code > theme.liquid and paste before </body>.",
+    "Download the AgentNexLiFy plugin, activate it, then paste your public widget key under Settings → AgentNexLiFy. Theme-file paste is the fallback only.",
   Wix: "Go to Settings > Custom Code > Add Custom Code and paste as Body - End.",
+  Squarespace:
+    "Go to Settings → Developer Tools → Code Injection and paste the snippet in Footer.",
+  GoDaddy:
+    "In GoDaddy Website Builder, add an HTML section and paste the snippet.",
+  Custom: "Paste this snippet before the closing </body> tag of your website.",
 };
 
-function computeSteps(dashData, stored) {
+function computeSteps(dashData, stored, websiteConnected) {
   const wc = dashData?.widget_config || {};
   const defaultBotSuffix = " Assistant";
   const businessName = dashData?.business_name || "";
@@ -85,7 +88,7 @@ function computeSteps(dashData, stored) {
       key: "install",
       title: "Install Widget",
       description: "Add the embed code to your website",
-      complete: !!stored.installedDone,
+      complete: !!websiteConnected,
     },
     {
       key: "test",
@@ -133,7 +136,10 @@ export default function OnboardingChecklist({
   const [saveError, setSaveError] = useState(null);
   const [faqError, setFaqError] = useState(null);
   const [copied, setCopied] = useState(false);
-  const [platform, setPlatform] = useState("HTML");
+  const [platform, setPlatform] = useState("WordPress");
+  const [websiteConnected, setWebsiteConnected] = useState(false);
+  const [verifyingInstall, setVerifyingInstall] = useState(false);
+  const [verifyInstallError, setVerifyInstallError] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [creatingSequence, setCreatingSequence] = useState(false);
   const [sequenceCreated, setSequenceCreated] = useState(false);
@@ -147,7 +153,7 @@ export default function OnboardingChecklist({
   const [services, setServices] = useState([]);
   const [addingService, setAddingService] = useState(false);
 
-  const steps = computeSteps(dashData, stored);
+  const steps = computeSteps(dashData, stored, websiteConnected);
 
   // Merge API-driven onboarding status into steps if available
   if (onboardingStatus?.steps) {
@@ -180,6 +186,16 @@ export default function OnboardingChecklist({
     setSelectedColor(wc.primary_color || DEFAULT_COLOR);
     setPosition(wc.position || "bottom-right");
   }, [dashData]);
+
+  useEffect(() => {
+    if (!token) return;
+    getWebsiteConnection(token)
+      .then((payload) => {
+        const status = payload?.connection?.status || payload?.status;
+        setWebsiteConnected(status === "connected");
+      })
+      .catch(() => setWebsiteConnected(false));
+  }, [token]);
 
   // Load FAQ entries when agent step opens
   useEffect(() => {
@@ -381,9 +397,24 @@ export default function OnboardingChecklist({
     });
   };
 
-  const handleMarkInstalled = () => {
-    updateStored({ installedDone: true });
-    onStepComplete?.();
+  const handleVerifyInstalled = async () => {
+    if (!token) {
+      onNavigate?.("website_connect");
+      return;
+    }
+    setVerifyingInstall(true);
+    setVerifyInstallError(null);
+    try {
+      const payload = await verifyWebsiteConnection(token);
+      const connected = (payload?.status || payload?.connection?.status) === "connected";
+      setWebsiteConnected(connected);
+      if (connected) onStepComplete?.();
+      else setVerifyInstallError(payload?.verification_detail || "Widget not found on the live site yet.");
+    } catch (e) {
+      setVerifyInstallError(e.body?.detail || e.message || "Connect your website first, then verify.");
+    } finally {
+      setVerifyingInstall(false);
+    }
   };
 
   const handleTestPreview = () => {
@@ -720,12 +751,29 @@ export default function OnboardingChecklist({
                 {copied ? "Copied!" : "Copy"}
               </button>
             </div>
-            <button
-              className="onboarding-save-btn"
-              onClick={handleMarkInstalled}
-            >
-              Mark as Installed
-            </button>
+            {verifyInstallError && (
+              <div className="onboarding-error">{verifyInstallError}</div>
+            )}
+            {websiteConnected ? (
+              <p className="onboarding-hint">Verified on your live website.</p>
+            ) : (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  className="onboarding-save-btn"
+                  onClick={handleVerifyInstalled}
+                  disabled={verifyingInstall}
+                >
+                  {verifyingInstall ? "Verifying…" : "Verify on my website"}
+                </button>
+                <button
+                  className="onboarding-save-btn"
+                  type="button"
+                  onClick={() => onNavigate?.("website_connect")}
+                >
+                  Open Connect website
+                </button>
+              </div>
+            )}
           </div>
         );
 
