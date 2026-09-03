@@ -36,6 +36,7 @@ export * from "./tags";
 export * from "./team";
 export * from "./webhooks";
 export * from "./widget-config";
+export * from "./websiteConnect";
 export * from "./referral";
 
 export { request, BASE, ApiError } from "./_client";

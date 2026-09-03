@@ -142,6 +142,7 @@ TENANT_DATA_TABLES: tuple[str, ...] = (
     "job_applications",
     "chat_flows",
     "widget_configs",
+    "website_connections",
     "wizard_events",
     # Integrations + billing artifacts
     "tenant_integrations",
