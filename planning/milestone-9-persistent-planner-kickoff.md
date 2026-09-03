@@ -1,8 +1,8 @@
 # Milestone 9 START — Persistent Planner / Workflow State Machine
 
-**Date:** 2026-09-02
-**Status:** START — M9.1 merged (#751); M9.2 persistence engine in flight
-**Preceded by:** M8 COMPLETE · #747 CI restore · #749/#669 demo-role middleware · #750 governance · #751 M9.1 contract
+**Date:** 2026-09-02  
+**Status:** M9.1 + M9.2 COMPLETE → M9.3 frozen eval in flight  
+**Preceded by:** M8 COMPLETE · #747 CI restore · #749/#669 demo-role middleware · #750 governance · #751 M9.1 · #752/#754 M9.2
 
 ## Governance gate (this kickoff)
 
@@ -71,21 +71,28 @@ Artifacts:
 - `specs/m9-workflow-schema-sketch.sql`
 - `planning/decisions/2026-09-02-m9-persistent-planner-architecture.md`
 
-### M9.2 — Persistence + deterministic engine
+### M9.2 — Persistence + deterministic engine ✅
 
-Workflow/step persistence (`migrations/199_os_workflows.sql`), dependency
-resolution, resume after restart, pause/resume on approval, terminal
-detection, bounded retry, L2/L3 unknown non-replayable. Still no LLM planning.
+Workflow/step persistence (`migrations/199_os_workflows.sql` + integrity
+`200_os_workflows_integrity.sql`), dependency resolution, resume after restart,
+pause/resume on approval, terminal detection, bounded retry, L2/L3 unknown
+non-replayable, execution≠verification separation. Still no LLM planning.
 
 Artifacts:
 - `backend/services/os_workflows/store.py`
 - `backend/services/os_workflows/engine.py`
 - `backend/tests/test_os_workflows_engine.py`
 - CI import-boundary invariant in `scripts/check_project_invariants.py`
+- Completion: `audits/artifacts/m9-2-completion-2026-09-03.md`
 
 ### M9.3 — Frozen evaluation harness
 
-Before any model generates plans, score dependency graphs on frozen cases (sequential, parallel, approvals, failed prerequisites, unknown outcomes, partial completion, cross-tenant, prompt injection, destructive requests, resume, duplicate/replay).
+Before any model generates plans, score dependency graphs on frozen cases
+(sequential, parallel, approvals, failed prerequisites, unknown outcomes,
+partial completion, cross-tenant, prompt injection, destructive requests,
+resume, duplicate/replay). Deterministic plan validator rejects cycles,
+missing deps, invalid risk/approval, excess steps, and direct provider
+execution. Absolute gates: unsafe/unauthorized edges = 0, cross-tenant = 0.
 
 Only after M9.3 is solid: LLM-generated plans.
 

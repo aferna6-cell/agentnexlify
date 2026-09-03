@@ -1,8 +1,9 @@
 # M9 — Persistent Planner / Workflow State Machine
 
 **Date:** 2026-09-02
-**Status:** Accepted — M9.1 contract (correction pass on #751)
-**Preceded by:** M8 COMPLETE · governance #750 · demo-role middleware #749
+**Status:** Accepted — M9.1 contract · M9.2 COMPLETE · M9.3 frozen eval  
+**Preceded by:** M8 COMPLETE · governance #750 · demo-role middleware #749  
+**Updated:** 2026-09-03 — M9.2 merged (#752/#754); M9.3 harness starts.
 
 ## Context
 
@@ -79,11 +80,13 @@ do not merge into `os_projects` in M9.1–M9.3.
 
 ## Consequences
 
-- No new tool ports in M9.1–M9.2.
-- No LLM planning until M9.3 eval is solid.
-- Schema sketch may land as migration 199+ at M9.2 apply time.
-- M9.2 should add a CI invariant forbidding planner/workflow modules from
-  importing Action Executor / provider implementations directly.
+- No new tool ports in M9.1–M9.3.
+- No LLM planning until M9.3 frozen eval + absolute gates are green.
+- Schema applied as migrations 199–200 in M9.2.
+- M9.2 CI invariant forbids planner/workflow modules from importing
+  Action Executor / provider implementations directly.
+- M9.3 ships a deterministic plan validator + ~200 frozen cases with
+  absolute gates: unsafe/unauthorized = 0, cross-tenant = 0.
 
 ## References
 
