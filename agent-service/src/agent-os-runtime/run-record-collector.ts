@@ -24,7 +24,10 @@ import type {
   CalendarEventRecord,
   CustomerNoteRecord,
 } from "../agent-os/actions/ports.ts";
-import type { CrmMutationBundle } from "./action-collector.ts";
+import type {
+  CrmMutationBundle,
+  InvoiceMutationBundle,
+} from "./action-collector.ts";
 
 export interface CollectedDecision extends RoutingDecisionCreate {
   id: string;
@@ -64,6 +67,11 @@ export interface RunRecordBundle {
    * CRM mutations this turn. FastAPI applies to ``leads`` with read-back.
    */
   customers: CrmMutationBundle[];
+  /**
+   * Invoice drafts created this turn. FastAPI applies to ``invoices``.
+   * L2 send/reminder stay claim-gated in the data plane.
+   */
+  invoices: InvoiceMutationBundle[];
 }
 
 export class RunRecordCollector implements RunStore {
@@ -78,6 +86,7 @@ export class RunRecordCollector implements RunStore {
     customerNotes: [],
     calendarEvents: [],
     customers: [],
+    invoices: [],
   };
 
   async createRoutingDecision(
@@ -146,6 +155,7 @@ export class RunRecordCollector implements RunStore {
     customerNotes: CustomerNoteRecord[],
     calendarEvents: CalendarEventRecord[] = [],
     customers: CrmMutationBundle[] = [],
+    invoices: InvoiceMutationBundle[] = [],
   ): RunRecordBundle {
     return {
       ...this.bundle,
@@ -153,6 +163,7 @@ export class RunRecordCollector implements RunStore {
       customerNotes,
       calendarEvents,
       customers,
+      invoices,
     };
   }
 }

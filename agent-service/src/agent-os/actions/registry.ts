@@ -30,6 +30,11 @@ import { searchCustomers } from "./tools/search_customers.ts";
 import { updateCustomer } from "./tools/update_customer.ts";
 import { createCustomer } from "./tools/create_customer.ts";
 import { updateLeadStage } from "./tools/update_lead_stage.ts";
+import { listOverdueInvoices } from "./tools/list_overdue_invoices.ts";
+import { getInvoice } from "./tools/get_invoice.ts";
+import { createInvoiceDraft } from "./tools/create_invoice_draft.ts";
+import { sendInvoice } from "./tools/send_invoice.ts";
+import { sendInvoiceReminder } from "./tools/send_invoice_reminder.ts";
 
 export type AnyTool = ErasedTool;
 
@@ -142,3 +147,8 @@ toolRegistry.register(searchCustomers);
 toolRegistry.register(updateCustomer);
 toolRegistry.register(createCustomer);
 toolRegistry.register(updateLeadStage);
+toolRegistry.register(listOverdueInvoices);
+toolRegistry.register(getInvoice);
+toolRegistry.register(createInvoiceDraft);
+toolRegistry.register(sendInvoice);
+toolRegistry.register(sendInvoiceReminder);

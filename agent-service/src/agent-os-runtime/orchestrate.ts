@@ -20,6 +20,7 @@ import {
   CollectingCalendarPort,
   CollectingCrmPort,
   CollectingCustomerNotesPort,
+  CollectingInvoicePort,
 } from "./action-collector.ts";
 import type { TenantToolPolicy } from "../agent-os/actions/policy.ts";
 import { applyRagToContext } from "../agent-os/rag/attach.ts";
@@ -58,6 +59,7 @@ export async function runOrchestration(
     notes: new CollectingCustomerNotesPort(),
     calendar: new CollectingCalendarPort(),
     crm: new CollectingCrmPort(),
+    invoices: new CollectingInvoicePort(),
     policy: input.toolPolicy ?? {},
   };
   const context = applyRagToContext(input.accountId, input.ask, input.context);
@@ -66,6 +68,7 @@ export async function runOrchestration(
     context,
     actions.calendar,
     actions.crm,
+    actions.invoices,
   );
   return requestScope.run(
     { accountId: input.accountId, context, record, actions },
@@ -82,6 +85,7 @@ export async function runOrchestration(
           actions.notes.toBundle(),
           actions.calendar.toBundle(),
           actions.crm.toBundle(),
+          actions.invoices.toBundle(),
         ),
       };
     },

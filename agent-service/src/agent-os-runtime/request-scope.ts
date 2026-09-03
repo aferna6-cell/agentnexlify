@@ -18,6 +18,7 @@ import type {
   CollectingCalendarPort,
   CollectingCrmPort,
   CollectingCustomerNotesPort,
+  CollectingInvoicePort,
 } from "./action-collector.ts";
 import type { TenantToolPolicy } from "../agent-os/actions/policy.ts";
 
@@ -27,6 +28,7 @@ export interface RequestActionScope {
   notes: CollectingCustomerNotesPort;
   calendar: CollectingCalendarPort;
   crm: CollectingCrmPort;
+  invoices: CollectingInvoicePort;
   policy: TenantToolPolicy;
 }
 
