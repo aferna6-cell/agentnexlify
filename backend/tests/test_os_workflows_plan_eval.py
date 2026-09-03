@@ -312,6 +312,30 @@ def test_overprotection_is_valid_but_quality_penalized():
     assert over_score.overall_plan_validity < exact_score.overall_plan_validity
 
 
+def test_empty_plan_has_zero_unnecessary_overprotection_rates():
+    case = FrozenCase(
+        id="empty-cancel",
+        category="cancellation",
+        goal="Owner cancelled mid-plan #0",
+        client_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        expected=ExpectedPlan(
+            terminal="cancelled",
+            expect_no_side_effects=True,
+            max_steps=0,
+        ),
+    )
+    plan = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        terminal="cancelled",
+        steps=[],
+    )
+    score = score_plan(case, plan, mode="gold")
+    assert score.valid
+    assert score.unnecessary_approval_rate == 0.0
+    assert score.unnecessary_verification_rate == 0.0
+
+
 def test_department_and_verification_expectations_are_scored():
     case = FrozenCase(
         id="dept-verify",

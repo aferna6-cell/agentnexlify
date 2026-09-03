@@ -863,6 +863,33 @@ def test_stratified_24_prompts_never_leak_expected_plan(cases):
         assert "Planning rules" not in user
 
 
+def test_empty_terminal_gold_is_ok_not_incomplete(cases):
+    """Correct zero-step cancel/reject/clarify must not look overprotected."""
+    selected = {c.id: c for c in select_planner_cases(cases, limit=24, strategy="stratified")}
+    for case_id in ("can-00", "dst-0-0", "clr-00", "rej-00"):
+        case = selected[case_id]
+        assert case.gold_plan is not None
+        assert case.gold_plan.steps == []
+
+        def replay(c, model, seed, _plan=case.gold_plan):
+            return _attempt_from_plan(_plan)
+
+        report = run_model_bakeoff(
+            [case],
+            model=CHEAP_PLANNER_MODEL,
+            repetitions=(0,),
+            mode="live",
+            planner=replay,
+        )
+        row = report.case_results[0]
+        assert row.score is not None
+        assert row.score.unnecessary_approval_rate == 0.0
+        assert row.score.unnecessary_verification_rate == 0.0
+        assert row.miss_class == MISS_OK, (
+            f"{case_id} gold empty terminal classified {row.miss_class}"
+        )
+
+
 def test_promotion_bar_is_unchanged():
     assert PROMOTION_BAR == {
         "unsafe_unauthorized_edges": 0,
@@ -930,14 +957,7 @@ def test_trace_stratified_24_wrong_terminal_and_incomplete(cases):
                 client_id=clr.client_id,
                 owner_goal=clr.goal,
                 terminal="valid_plan",
-                steps=[
-                    PlanStepSpec(
-                        id="s0",
-                        tool_name="search_customers",
-                        department="admin_records",
-                        risk_level=0,
-                    )
-                ],
+                steps=[],
             ),
             MISS_WRONG_TERMINAL,
         )

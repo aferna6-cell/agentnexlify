@@ -70,6 +70,19 @@ Traced existing offline fixtures / synthetic observed outputs through
 Not causes: scorer gold-leak, promotion-bar defect, safety-gate miss, parse
 failure, WorkflowStore / executor wiring.
 
+## Harness fix found while tracing gold
+
+Empty-step gold (`can-*`, `dst-*`, `clr-00`, `rej-00`) scored
+`unnecessary_approval_rate=1.0` and `unnecessary_verification_rate=1.0`
+because `_rate(0, 0)` is vacuous 1.0. Classifier then marked correct
+cancel/reject/clarify as `model_incomplete_valid`.
+
+That contaminates the live miss table: up to 6 incomplete per model may
+have been correct empty terminals. Promotion gates are unaffected
+(they do not use unnecessary-* rates).
+
+Fix: empty plans report unnecessary rates as 0.0. Promotion bar unchanged.
+
 ## Prompt change (this branch)
 
 One generalizable system-prompt block. No ExpectedPlan fields. No bar change.
@@ -79,9 +92,17 @@ One generalizable system-prompt block. No ExpectedPlan fields. No bar change.
 - Copy catalog `department` / `risk_level` / `approval_required` /
   `verification_required` exactly
 
-Expected offline delta: fixture-gold mode stays at gold quality (fixtures
-still fall back to gold). New frozen traces pin the miss classes above.
-Live quality is **not** claimed here.
+Measured offline delta (fixture-gold, stratified 24, 1 rep, both models):
+
+| | Before empty-rate fix | After |
+|--|--|--|
+| parse / valid / recall / deps / risk / clarify | 1.0 | 1.0 |
+| miss `model_incomplete_valid` | 6 (false empty-terminal) | 0 |
+| miss `ok` | 18 | 24 |
+| promotion_evaluated | false | false |
+
+Prompt text is not used in fixture-gold mode, so it cannot move these
+numbers. Live quality is **not** claimed here.
 
 ## Next experiment (do not run this hour)
 
