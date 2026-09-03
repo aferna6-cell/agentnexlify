@@ -1,0 +1,19 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY backend/requirements.txt backend/requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt
+
+COPY backend/ backend/
+COPY scripts/run_m9_planner_bakeoff.py scripts/run_m9_planner_bakeoff.py
+
+ENV PYTHONUNBUFFERED=1
+ENV LLM_TRACE_ENABLED=0
+
+RUN useradd --create-home --uid 10001 appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
+# One-shot planner bakeoff. No healthcheck and no HTTP listener on purpose.
+CMD ["python", "scripts/run_m9_planner_bakeoff.py", "--mode", "live", "--sample", "stratified", "--limit", "24", "--repetitions", "0", "--models", "claude-opus-4-8,claude-haiku-4-5-20251001", "--out", "/tmp/m9-4-bakeoff-live-stratified-24.json"]
