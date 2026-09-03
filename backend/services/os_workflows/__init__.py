@@ -2,6 +2,7 @@
 
 M9.1: types and transition rules.
 M9.2: durable store + deterministic engine (no LLM, no tool execution).
+M9.3: frozen planner eval + deterministic plan validator (still no LLM).
 """
 
 from backend.services.os_workflows.contract import (
@@ -38,6 +39,9 @@ from backend.services.os_workflows.store import (
     SupabaseWorkflowStore,
     WorkflowStoreError,
 )
+from backend.services.os_workflows.plan_validator import validate_plan
+from backend.services.os_workflows.plan_eval import assert_absolute_gates, run_suite
+from backend.services.os_workflows.eval_cases import build_frozen_cases
 
 __all__ = [
     "ALLOWED_STEP_TRANSITIONS",
@@ -68,4 +72,8 @@ __all__ = [
     "transition_step",
     "transition_workflow",
     "validate_dependency_graph",
+    "validate_plan",
+    "assert_absolute_gates",
+    "run_suite",
+    "build_frozen_cases",
 ]
