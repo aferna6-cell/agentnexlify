@@ -25,7 +25,10 @@ from urllib.parse import urlparse
 
 import pytest
 
-from backend.services.url_validation import is_safe_url as real_is_safe_url
+from backend.services.url_validation import (
+    PinnedTarget,
+    pin_safe_url as real_pin_safe_url,
+)
 from backend.services.website_connect import (
     FORBIDDEN_CREDENTIAL_FIELDS,
     PLATFORMS,
@@ -196,6 +199,22 @@ class TestWidgetPresence:
         )
         assert widget_is_present(html, KEY_A) is False
 
+    def test_key_on_a_different_tag_is_not_connected(self):
+        html = (
+            f'<div data-api-key="{KEY_A}"></div>'
+            '<script src="https://app.agentnexlify.com/widget/'
+            'agentnexlify-widget.js"></script>'
+        )
+        assert widget_is_present(html, KEY_A) is False
+
+    def test_other_script_key_does_not_count_for_widget(self):
+        html = (
+            f'<script src="https://cdn.example/other.js" data-api-key="{KEY_A}"></script>'
+            '<script src="https://app.agentnexlify.com/widget/'
+            'agentnexlify-widget.js"></script>'
+        )
+        assert widget_is_present(html, KEY_A) is False
+
     def test_empty_key_never_matches(self):
         assert widget_is_present(_wp_html(KEY_A), "") is False
         assert widget_is_present(_wp_html(KEY_A), None) is False
@@ -274,9 +293,10 @@ class _FakeHTTPResponse:
 
 
 class _FakeHTTPClient:
-    def __init__(self, routes, seen):
+    def __init__(self, routes, seen, connects=None):
         self._routes = routes
         self.seen = seen
+        self.connects = connects if connects is not None else []
 
     def __enter__(self):
         return self
@@ -284,22 +304,52 @@ class _FakeHTTPClient:
     def __exit__(self, *_exc):
         return False
 
-    def get(self, url, headers=None):
-        self.seen.append(url)
-        if url not in self._routes:
-            raise AssertionError(f"fetch_public_page requested blocked URL {url}")
-        return self._routes[url]
+    def get(self, url, headers=None, extensions=None):
+        headers = headers or {}
+        host = headers.get("Host") or headers.get("host")
+        parsed = urlparse(url)
+        if host:
+            logical = f"{parsed.scheme}://{host}{parsed.path or ''}"
+            if parsed.query:
+                logical += f"?{parsed.query}"
+        else:
+            logical = url
+        self.seen.append(logical)
+        self.connects.append(
+            {"url": url, "headers": headers, "extensions": extensions or {}}
+        )
+        if logical not in self._routes and url not in self._routes:
+            raise AssertionError(
+                f"fetch_public_page requested blocked URL {url} (logical {logical})"
+            )
+        return self._routes.get(logical) or self._routes[url]
 
 
 def _addrinfo(ip):
     return [(2, 1, 6, "", (ip, 0))]
 
 
-def _allow_public_hosts(url: str) -> bool:
+PUBLIC_PIN_IP = "8.8.8.8"
+
+
+def _pin_public_hosts(url: str) -> PinnedTarget | None:
     host = (urlparse(url).hostname or "").lower()
     if host in {"example.com", "example.org", "safe.example"}:
-        return True
-    return real_is_safe_url(url)
+        parsed = urlparse(url)
+        ip_netloc = f"{PUBLIC_PIN_IP}:{parsed.port}" if parsed.port else PUBLIC_PIN_IP
+        connect = f"{parsed.scheme}://{ip_netloc}{parsed.path or ''}"
+        if parsed.query:
+            connect += f"?{parsed.query}"
+        host_header = f"{host}:{parsed.port}" if parsed.port else host
+        return PinnedTarget(
+            url=url,
+            connect_url=connect,
+            hostname=host,
+            ip=PUBLIC_PIN_IP,
+            host_header=host_header,
+            sni_hostname=host,
+        )
+    return real_pin_safe_url(url)
 
 
 class TestFetchPublicPageSSRF:
@@ -336,7 +386,7 @@ class TestFetchPublicPageSSRF:
             lambda *a, **k: _FakeHTTPClient(routes, seen),
         )
         monkeypatch.setattr(
-            "backend.services.website_connect.is_safe_url", _allow_public_hosts
+            "backend.services.website_connect.pin_safe_url", _pin_public_hosts
         )
         page = fetch_public_page(start)
         assert page.ok is False
@@ -354,7 +404,7 @@ class TestFetchPublicPageSSRF:
             "//169.254.169.254/",
         ]
         monkeypatch.setattr(
-            "backend.services.website_connect.is_safe_url", _allow_public_hosts
+            "backend.services.website_connect.pin_safe_url", _pin_public_hosts
         )
         for location in hops:
             seen.clear()
@@ -405,6 +455,82 @@ class TestFetchPublicPageSSRF:
         assert page.error == "unsafe_url"
         assert seen == []
 
+    def test_public_at_check_private_at_connect_uses_pinned_ip(self, monkeypatch):
+        """Hostname is public on the first resolve, private if re-resolved.
+
+        Connect must use the first validated IP with Host/SNI, never the
+        hostname (which would rebind) and never the later private answer.
+        """
+        seen = []
+        connects = []
+        lookups = {"n": 0}
+
+        def flipping_getaddrinfo(host, *a, **k):
+            if host != "rebind.attacker.test":
+                raise OSError("unexpected host")
+            lookups["n"] += 1
+            if lookups["n"] == 1:
+                return _addrinfo("8.8.8.8")
+            return _addrinfo("10.0.0.5")
+
+        start = "https://rebind.attacker.test/page"
+        routes = {
+            start: _FakeHTTPResponse(start, status=200, content=b"<html>ok</html>"),
+            "https://8.8.8.8/page": _FakeHTTPResponse(
+                "https://8.8.8.8/page", status=200, content=b"<html>ok</html>"
+            ),
+        }
+        monkeypatch.setattr(
+            "backend.services.url_validation.socket.getaddrinfo",
+            flipping_getaddrinfo,
+        )
+        monkeypatch.setattr(
+            "backend.services.website_connect.httpx.Client",
+            lambda *a, **k: _FakeHTTPClient(routes, seen, connects),
+        )
+        page = fetch_public_page(start)
+        assert page.ok is True
+        assert "ok" in page.html
+        assert connects, "expected a pinned-IP connect"
+        assert [c["url"] for c in connects] == ["https://8.8.8.8/page"]
+        assert connects[0]["headers"].get("Host") == "rebind.attacker.test"
+        assert connects[0]["extensions"].get("sni_hostname") == "rebind.attacker.test"
+        assert all("10.0.0.5" not in c["url"] for c in connects)
+        assert all(urlparse(c["url"]).hostname == "8.8.8.8" for c in connects)
+
+    def test_redirect_is_repinned_with_host_and_sni(self, monkeypatch):
+        seen = []
+        connects = []
+        start = "https://example.com"
+        dest = "https://example.com/page?x=1"
+        routes = {
+            start: _FakeHTTPResponse(
+                start, status=302, headers={"location": "/page?x=1"}
+            ),
+            dest: _FakeHTTPResponse(dest, status=200, content=b"<html>q</html>"),
+        }
+        monkeypatch.setattr(
+            "backend.services.website_connect.httpx.Client",
+            lambda *a, **k: _FakeHTTPClient(routes, seen, connects),
+        )
+        monkeypatch.setattr(
+            "backend.services.website_connect.pin_safe_url", _pin_public_hosts
+        )
+        page = fetch_public_page(start)
+        assert page.ok is True
+        assert [c["url"] for c in connects] == [
+            f"https://{PUBLIC_PIN_IP}",
+            f"https://{PUBLIC_PIN_IP}/page?x=1",
+        ]
+        assert [c["headers"].get("Host") for c in connects] == [
+            "example.com",
+            "example.com",
+        ]
+        assert [c["extensions"].get("sni_hostname") for c in connects] == [
+            "example.com",
+            "example.com",
+        ]
+
     def test_empty_redirect_location_is_not_success(self, monkeypatch):
         seen = []
         start = "https://example.com"
@@ -414,7 +540,7 @@ class TestFetchPublicPageSSRF:
             lambda *a, **k: _FakeHTTPClient(routes, seen),
         )
         monkeypatch.setattr(
-            "backend.services.website_connect.is_safe_url", _allow_public_hosts
+            "backend.services.website_connect.pin_safe_url", _pin_public_hosts
         )
         page = fetch_public_page(start)
         assert page.ok is False
@@ -436,7 +562,7 @@ class TestFetchPublicPageSSRF:
             lambda *a, **k: _FakeHTTPClient(routes, seen),
         )
         monkeypatch.setattr(
-            "backend.services.website_connect.is_safe_url", _allow_public_hosts
+            "backend.services.website_connect.pin_safe_url", _pin_public_hosts
         )
         page = fetch_public_page(start)
         assert page.ok is True
@@ -453,7 +579,7 @@ class TestFetchPublicPageSSRF:
             lambda *a, **k: _FakeHTTPClient(routes, seen),
         )
         monkeypatch.setattr(
-            "backend.services.website_connect.is_safe_url", _allow_public_hosts
+            "backend.services.website_connect.pin_safe_url", _pin_public_hosts
         )
         page = fetch_public_page(start)
         assert page.ok is True
@@ -478,7 +604,7 @@ class TestFetchPublicPageSSRF:
             lambda *a, **k: _FakeHTTPClient(routes, seen),
         )
         monkeypatch.setattr(
-            "backend.services.website_connect.is_safe_url", _allow_public_hosts
+            "backend.services.website_connect.pin_safe_url", _pin_public_hosts
         )
         page = fetch_public_page(start)
         assert page.ok is False

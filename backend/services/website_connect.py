@@ -8,14 +8,16 @@ checkbox, or another tenant's key is never enough.
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from html.parser import HTMLParser
 from typing import Callable
 from urllib.parse import urljoin, urlparse
 
 import httpx
 
-from backend.services.url_validation import is_safe_url
+from backend.services.url_validation import is_safe_url, pin_safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -225,15 +227,42 @@ def detect_platform(
     return "custom"
 
 
+_SCRIPT_OPEN_RE = re.compile(r"<script\b", re.IGNORECASE)
+
+
+class _WidgetScriptParser(HTMLParser):
+    """True when one <script> tag loads the widget with this tenant key."""
+
+    def __init__(self, api_key: str):
+        super().__init__(convert_charrefs=True)
+        self.api_key = api_key
+        self.found = False
+
+    def handle_starttag(self, tag, attrs):
+        if self.found or tag.lower() != "script":
+            return
+        attr_map = {(k or "").lower(): (v or "") for k, v in attrs}
+        src = attr_map.get("src", "")
+        key = attr_map.get("data-api-key", "")
+        if WIDGET_SCRIPT_MARKER in src and key == self.api_key:
+            self.found = True
+
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
+
+
 def widget_is_present(html: str, api_key: str | None) -> bool:
     if not html or not api_key:
         return False
-    if WIDGET_SCRIPT_MARKER not in html:
+    if WIDGET_SCRIPT_MARKER not in html or not _SCRIPT_OPEN_RE.search(html):
         return False
-    return (
-        f'data-api-key="{api_key}"' in html
-        or f"data-api-key='{api_key}'" in html
-    )
+    parser = _WidgetScriptParser(api_key)
+    try:
+        parser.feed(html)
+        parser.close()
+    except Exception:
+        return False
+    return parser.found
 
 
 def next_action(platform: str, *, connected: bool) -> dict:
@@ -249,14 +278,27 @@ def next_action(platform: str, *, connected: bool) -> dict:
 
 
 def fetch_public_page(url: str) -> PageFetch:
-    """GET a public page with SSRF + redirect re-validation."""
+    """GET a public page with pinned-IP connect and per-hop revalidation.
+
+    Each hop is resolved once. The TCP connect uses that validated IP with
+    the original Host header and TLS SNI so a name that was public at check
+    cannot rebind to a private address at connect time.
+    """
     current = _drop_url_userinfo(url)
     try:
         with httpx.Client(timeout=FETCH_TIMEOUT_S, follow_redirects=False) as client:
             for _hop in range(MAX_REDIRECTS + 1):
-                if not is_safe_url(current):
+                pinned = pin_safe_url(current)
+                if pinned is None:
                     return PageFetch(current, "", {}, False, "unsafe_url")
-                resp = client.get(current, headers={"User-Agent": "AgentNexLiFy-WebsiteConnect/1.0"})
+                resp = client.get(
+                    pinned.connect_url,
+                    headers={
+                        "User-Agent": "AgentNexLiFy-WebsiteConnect/1.0",
+                        "Host": pinned.host_header,
+                    },
+                    extensions={"sni_hostname": pinned.sni_hostname},
+                )
                 if resp.is_redirect:
                     location = resp.headers.get("location")
                     if not location:
@@ -266,7 +308,7 @@ def fetch_public_page(url: str) -> PageFetch:
                 raw = resp.content[:MAX_HTML_BYTES]
                 html = raw.decode(resp.encoding or "utf-8", errors="replace")
                 return PageFetch(
-                    url=str(resp.url),
+                    url=current,
                     html=html,
                     headers={k: v for k, v in resp.headers.items()},
                     ok=resp.is_success,
