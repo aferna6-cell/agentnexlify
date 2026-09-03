@@ -6,6 +6,7 @@ import {
   toggleWidgetOnlineStatus,
 } from "../utils/api/widget-config";
 import { autoGenerateKb } from "../utils/api/onboarding";
+import { getWebsiteConnection } from "../utils/api/websiteConnect";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 const POSITIONS = [
@@ -37,7 +38,7 @@ function UpgradeHint({ plan }) {
   return <span className="branding-upgrade-hint">Requires {plan} plan</span>;
 }
 
-export default function WidgetPage() {
+export default function WidgetPage({ onNavigate }) {
   const { user, token } = useAuth();
   const [livePlan, setLivePlan] = useState(user?.plan || "free");
   const plan = livePlan;
@@ -46,6 +47,7 @@ export default function WidgetPage() {
   const [saved, setSaved] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [copied, setCopied] = useState(false);
+  const [websiteLive, setWebsiteLive] = useState(false);
   const [form, setForm] = useState({
     bot_name: "",
     primary_color: "#00BFFF",
@@ -77,6 +79,14 @@ export default function WidgetPage() {
     setLoading(true);
     try {
       const dash = await fetchDashboard(user.tenantId, token);
+      try {
+        const connect = await getWebsiteConnection(token);
+        setWebsiteLive(
+          (connect?.connection?.status || connect?.status) === "connected",
+        );
+      } catch {
+        setWebsiteLive(false);
+      }
       if (dash.plan) setLivePlan(dash.plan);
       setApiKey(dash.widget_api_key || "");
       if (dash.widget_config) {
@@ -90,7 +100,8 @@ export default function WidgetPage() {
           position: dash.widget_config.position || "bottom-right",
           pre_chat_form: dash.widget_config.pre_chat_form || null,
           enable_ai_fallback: dash.widget_config.enable_ai_fallback === true,
-          enable_structured_lead_parser: dash.widget_config.enable_structured_lead_parser === true,
+          enable_structured_lead_parser:
+            dash.widget_config.enable_structured_lead_parser === true,
         });
         setIsOnline(dash.widget_config.is_online !== false);
         if (dash.widget_config.branding) {
@@ -192,6 +203,24 @@ export default function WidgetPage() {
       <div className="page-header">
         <h1>Widget</h1>
         <p>Customize and install your AI chat widget</p>
+      </div>
+
+      <div className="settings-card" data-testid="widget-connect-status">
+        <h3>
+          {websiteLive ? "AI receptionist is live" : "Website not verified yet"}
+        </h3>
+        <p className="settings-card-desc">
+          {websiteLive
+            ? "We found this tenant's widget key on the connected site."
+            : "A widget key here is not the same as being live on your site. Connect and verify the public page."}
+        </p>
+        <button
+          className="btn-secondary"
+          type="button"
+          onClick={() => onNavigate?.("website_connect")}
+        >
+          {websiteLive ? "Manage website connection" : "Connect your website"}
+        </button>
       </div>
 
       <div className="widget-page-grid">
