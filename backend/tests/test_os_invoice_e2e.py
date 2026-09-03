@@ -298,6 +298,10 @@ def test_approve_send_runs_once_and_verifies_then_second_approve_is_noop():
 
 
 def test_overdue_reminder_approval_path_and_paid_non_overdue_never_remind():
+    """Overdue reminder approves once. Paid/non-overdue reminder parks are
+    executor defense-in-depth: refuse without sending. The Agent OS resolver
+    must not propose send_invoice or send_invoice_reminder for those asks.
+    """
     overdue = {
         **{
             "id": INV,
@@ -421,6 +425,9 @@ def test_overdue_reminder_approval_path_and_paid_non_overdue_never_remind():
     assert not_due.json()["execution"]["error"]["code"] == "invoice_not_overdue"
     assert reminder_sends == []
     assert db2.rows("activity_log") == []
+    # Resolver must not propose send_invoice for these reminder asks;
+    # this fixture only parks send_invoice_reminder to prove executor refusal.
+    assert all(r["tool_id"] != "send_invoice" for r in db2.rows("os_tool_executions"))
 
 
 def test_tenant_isolation_and_unknown_outcome_is_not_replayed():

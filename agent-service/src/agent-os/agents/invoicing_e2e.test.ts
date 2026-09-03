@@ -4,7 +4,8 @@
  * Runs the Invoicing department the way the orchestrator does (resolveAction
  * → executeAction). Proves create preserves the exact payload, send parks
  * with no pre-approval effect, overdue reminders queue, paid/non-overdue
- * never propose a reminder, and tenant isolation holds on the invoice port.
+ * reminder asks propose neither send_invoice_reminder nor send_invoice, and
+ * tenant isolation holds on the invoice port.
  */
 
 import { afterEach, beforeEach, test } from "node:test";
@@ -71,6 +72,16 @@ async function runInvoicing(ownerAsk: string, ctx: SharedContext) {
   });
 }
 
+function countInvoiceTools(
+  rows: { toolId: string; input: Record<string, unknown> }[],
+  toolId: string,
+  invoiceId: string,
+): number {
+  return rows.filter(
+    (r) => r.toolId === toolId && r.input.invoice_id === invoiceId,
+  ).length;
+}
+
 function dueIn14Days(): string {
   const due = new Date();
   due.setUTCDate(due.getUTCDate() + 14);
@@ -134,7 +145,7 @@ test("department create → exact payload → send parks with no pre-approval ef
   assert.deepEqual(parked.input, { invoice_id: draft.id, method: "email" });
 });
 
-test("overdue reminder parks; paid and non-overdue never propose a reminder", async () => {
+test("overdue reminder parks; paid and non-overdue reminder asks propose no action", async () => {
   const overdueCtx = context([
     {
       id: "inv_overdue",
@@ -177,22 +188,15 @@ test("overdue reminder parks; paid and non-overdue never propose a reminder", as
   );
   const paidRows = await h.store.list({ accountId: "tenantA" });
   assert.equal(
-    paidRows.filter(
-      (r) =>
-        r.toolId === "send_invoice_reminder" &&
-        r.input.invoice_id === "inv_paid",
-    ).length,
+    countInvoiceTools(paidRows, "send_invoice_reminder", "inv_paid"),
     0,
   );
-  assert.equal(
-    paidRows.some(
-      (r) => r.toolId === "send_invoice" && r.input.invoice_id === "inv_paid",
-    ),
-    true,
-  );
-  assert.match(
+  assert.equal(countInvoiceTools(paidRows, "send_invoice", "inv_paid"), 0);
+  assert.equal(paid.needsClarification, true);
+  assert.match(paid.orchestratorNotes?.[0] ?? "", /already paid/i);
+  assert.doesNotMatch(
     paid.orchestratorNotes?.[0] ?? "",
-    /isn't marked overdue|queued the invoice send/i,
+    /queued the invoice send/i,
   );
 
   const notDue = await runInvoicing(
@@ -211,22 +215,15 @@ test("overdue reminder parks; paid and non-overdue never propose a reminder", as
   );
   const later = await h.store.list({ accountId: "tenantA" });
   assert.equal(
-    later.filter(
-      (r) =>
-        r.toolId === "send_invoice_reminder" &&
-        r.input.invoice_id === "inv_sent",
-    ).length,
+    countInvoiceTools(later, "send_invoice_reminder", "inv_sent"),
     0,
   );
-  assert.equal(
-    later.some(
-      (r) => r.toolId === "send_invoice" && r.input.invoice_id === "inv_sent",
-    ),
-    true,
-  );
-  assert.match(
+  assert.equal(countInvoiceTools(later, "send_invoice", "inv_sent"), 0);
+  assert.equal(notDue.needsClarification, true);
+  assert.match(notDue.orchestratorNotes?.[0] ?? "", /isn't overdue/i);
+  assert.doesNotMatch(
     notDue.orchestratorNotes?.[0] ?? "",
-    /isn't marked overdue|queued the invoice send/i,
+    /queued the invoice send/i,
   );
 });
 
