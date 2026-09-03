@@ -6,7 +6,7 @@ Live mode calls Anthropic via ``llm_runtime`` and still never persists/executes.
 
 Examples:
   python scripts/run_m9_planner_bakeoff.py
-  python scripts/run_m9_planner_bakeoff.py --mode live --limit 20 --seeds 0,1,2
+  python scripts/run_m9_planner_bakeoff.py --mode live --limit 20 --repetitions 0,1,2
 """
 
 from __future__ import annotations
@@ -43,7 +43,11 @@ def main() -> int:
         default=",".join(DEFAULT_MODELS),
         help=f"comma-separated model ids (default {STRONG_PLANNER_MODEL},{CHEAP_PLANNER_MODEL})",
     )
-    parser.add_argument("--seeds", default="0,1", help="comma-separated int seeds")
+    parser.add_argument(
+        "--repetitions",
+        default="0,1",
+        help="comma-separated int repetition ids (for stability analysis)",
+    )
     parser.add_argument("--limit", type=int, default=None, help="optional case cap")
     parser.add_argument(
         "--out",
@@ -53,7 +57,7 @@ def main() -> int:
     args = parser.parse_args()
 
     models = tuple(m.strip() for m in args.models.split(",") if m.strip())
-    seeds = tuple(int(s.strip()) for s in args.seeds.split(",") if s.strip())
+    repetitions = tuple(int(s.strip()) for s in args.repetitions.split(",") if s.strip())
     cases = build_frozen_cases()
     # Planner quality only — skip attack-only rows without gold plans.
     cases = [c for c in cases if c.gold_plan is not None]
@@ -61,7 +65,7 @@ def main() -> int:
     report = run_bakeoff(
         cases,
         models=models,
-        seeds=seeds,
+        repetitions=repetitions,
         mode=args.mode,
         limit=args.limit,
     )

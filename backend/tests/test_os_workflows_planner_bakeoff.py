@@ -28,6 +28,7 @@ from backend.services.os_workflows.planner_bakeoff import (
     run_model_bakeoff,
     write_bakeoff_report,
     write_fixture_from_plan,
+    PlannerAttempt,
 )
 
 
@@ -49,10 +50,12 @@ def test_user_prompt_includes_case_fields(cases):
     assert case.client_id in prompt
     assert case.id in prompt
     assert case.goal in prompt
-    assert "structural_hints_json" in prompt
+    assert "terminal_hint" not in prompt
+    assert "required_tools_hint" not in prompt
+    assert "forbidden_tools" not in prompt
 
 
-def test_parse_candidate_plan_coerces_client_id(cases):
+def test_parse_candidate_plan_preserves_client_id(cases):
     case = cases[0]
     raw = json.dumps(
         {
@@ -64,7 +67,7 @@ def test_parse_candidate_plan_coerces_client_id(cases):
         }
     )
     plan = parse_candidate_plan(raw, case=case)
-    assert plan.client_id == case.client_id
+    assert plan.client_id == "wrong-tenant"
 
 
 def test_parse_candidate_plan_accepts_fenced_json(cases):
@@ -95,8 +98,9 @@ def test_fixture_roundtrip_and_missing_fixture(cases, tmp_path, monkeypatch):
     path = write_fixture_from_plan(case, CHEAP_PLANNER_MODEL, 7, case.gold_plan)
     assert path.is_file()
     loaded = load_fixture_plan(case, CHEAP_PLANNER_MODEL, 7)
-    assert loaded.client_id == case.client_id
-    assert len(loaded.steps) == len(case.gold_plan.steps)
+    plan = parse_candidate_plan(loaded.raw_text, case=case)
+    assert plan.client_id == case.client_id
+    assert len(plan.steps) == len(case.gold_plan.steps)
 
     orphan = FrozenCase(
         id="no-gold-no-fixture",
@@ -136,19 +140,20 @@ def test_live_planner_uses_llm_runtime(cases):
         "backend.services.llm_runtime.call_claude_messages_sync",
         return_value=fake,
     ) as mocked:
-        plan = _live_planner(case, STRONG_PLANNER_MODEL, seed=3)
+        attempt = _live_planner(case, STRONG_PLANNER_MODEL, seed=3)
+    plan = parse_candidate_plan(attempt.raw_text, case=case)
     assert plan.client_id == case.client_id
     mocked.assert_called_once()
     kwargs = mocked.call_args.kwargs
     assert kwargs["model"] == STRONG_PLANNER_MODEL
-    assert kwargs["metadata"]["seed"] == 3
+    assert kwargs["metadata"]["repetition"] == 3
     assert kwargs["operation"] == "m9_planner_bakeoff"
 
 
 def test_live_bakeoff_requires_api_key(cases, monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     with pytest.raises(RuntimeError, match="ANTHROPIC_API_KEY"):
-        run_bakeoff(cases[:1], mode="live", seeds=(0,))
+        run_bakeoff(cases[:1], mode="live", repetitions=(0,))
 
 
 def test_planner_exception_is_captured(cases):
@@ -160,7 +165,7 @@ def test_planner_exception_is_captured(cases):
     report = run_model_bakeoff(
         [case],
         model=CHEAP_PLANNER_MODEL,
-        seeds=(0,),
+        repetitions=(0,),
         planner=boom,
     )
     assert report.case_results[0].parse_ok is False
@@ -195,17 +200,18 @@ def test_clarify_reject_correctness_scored(cases):
     )
 
     def good(c, model, seed):
-        return CandidatePlan(
+        plan = CandidatePlan(
             client_id=c.client_id,
             owner_goal=c.goal,
             terminal=c.expected.terminal,
             steps=[],
         )
+        return PlannerAttempt(raw_text=plan.model_dump_json(), evidence_type="live_output")
 
     report = run_model_bakeoff(
         [case],
         model=CHEAP_PLANNER_MODEL,
-        seeds=(0,),
+        repetitions=(0,),
         planner=good,
     )
     assert report.clarify_reject_correctness == 1.0
@@ -216,7 +222,7 @@ def test_fixture_bakeoff_uses_gold_and_keeps_zero_gates(cases, tmp_path):
     report = run_bakeoff(
         subset,
         models=(STRONG_PLANNER_MODEL, CHEAP_PLANNER_MODEL),
-        seeds=(0,),
+        repetitions=(0,),
         mode="fixture",
     )
     assert report.mode == "fixture"
@@ -227,7 +233,9 @@ def test_fixture_bakeoff_uses_gold_and_keeps_zero_gates(cases, tmp_path):
         assert model_report.direct_provider_execution_attempts == 0
         assert model_report.mean_cycle_rate == 0.0
         assert model_report.valid_plan_rate == 1.0
-        assert model_report.promotion_passed
+        assert model_report.promotion_evaluated is False
+        assert model_report.promotion_passed is None
+        assert model_report.evidence_type == "fixture_gold"
 
     out = write_bakeoff_report(report, tmp_path / "bakeoff.json")
     payload = json.loads(out.read_text(encoding="utf-8"))
@@ -239,7 +247,7 @@ def test_injected_unsafe_planner_fails_promotion(cases):
     case = next(c for c in cases if "send_email" in c.expected.required_tools)
 
     def bad_planner(c, model, seed):
-        return CandidatePlan(
+        plan = CandidatePlan(
             client_id=c.client_id,
             owner_goal=c.goal,
             steps=[
@@ -254,17 +262,63 @@ def test_injected_unsafe_planner_fails_promotion(cases):
                 )
             ],
         )
+        return PlannerAttempt(raw_text=plan.model_dump_json(), evidence_type="live_output")
 
     report = run_model_bakeoff(
         [case],
         model=CHEAP_PLANNER_MODEL,
-        seeds=(0,),
-        mode="fixture",
+        repetitions=(0,),
+        mode="live",
         planner=bad_planner,
     )
     assert report.unsafe_unauthorized_edges > 0 or report.direct_provider_execution_attempts > 0
-    assert not report.promotion_passed
+    assert report.promotion_evaluated is True
+    assert report.promotion_passed is False
     assert report.promotion_failures
+
+
+def test_wrong_tenant_client_id_hard_fails(cases):
+    case = cases[0]
+
+    def wrong_tenant_planner(c, model, repetition):
+        plan = CandidatePlan(
+            client_id="wrong-tenant",
+            owner_goal=c.goal,
+            terminal="valid_plan",
+            steps=[],
+        )
+        return PlannerAttempt(raw_text=plan.model_dump_json(), evidence_type="live_output")
+
+    report = run_model_bakeoff(
+        [case],
+        model=CHEAP_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=wrong_tenant_planner,
+    )
+    assert report.parse_success_rate == 1.0
+    assert report.cross_tenant_edges > 0
+    assert report.promotion_evaluated is True
+    assert report.promotion_passed is False
+
+
+def test_parse_failures_count_in_denominators(cases):
+    case = cases[0]
+
+    def broken_json_planner(c, model, repetition):
+        return PlannerAttempt(raw_text="not-json", evidence_type="live_output")
+
+    report = run_model_bakeoff(
+        [case],
+        model=CHEAP_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=broken_json_planner,
+    )
+    assert report.attempts == 1
+    assert report.parse_success_rate == 0.0
+    assert report.valid_plan_rate == 0.0
+    assert report.promotion_passed is False
 
 
 def test_promotion_bar_zeros_are_non_negotiable():
