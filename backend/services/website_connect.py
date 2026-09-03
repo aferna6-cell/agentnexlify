@@ -11,7 +11,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Callable
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import httpx
 
@@ -131,6 +131,28 @@ def reject_credential_fields(payload: dict) -> None:
         raise ValueError("CMS passwords are not accepted")
 
 
+def _http_netloc(parsed) -> str | None:
+    """Host[:port] with IPv6 brackets. Drops userinfo so credentials never persist."""
+    hostname = (parsed.hostname or "").lower()
+    if not hostname:
+        return None
+    netloc = f"[{hostname}]" if ":" in hostname else hostname
+    if parsed.port:
+        netloc = f"{netloc}:{parsed.port}"
+    return netloc
+
+
+def _drop_url_userinfo(url: str) -> str:
+    parsed = urlparse(url)
+    netloc = _http_netloc(parsed)
+    if parsed.scheme not in ("http", "https") or not netloc:
+        return url
+    rebuilt = f"{parsed.scheme}://{netloc}{parsed.path or ''}"
+    if parsed.query:
+        rebuilt += f"?{parsed.query}"
+    return rebuilt
+
+
 def normalize_website_url(raw: str) -> str:
     url = (raw or "").strip()
     if not url:
@@ -138,11 +160,11 @@ def normalize_website_url(raw: str) -> str:
     if "://" not in url:
         url = f"https://{url}"
     parsed = urlparse(url)
-    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+    netloc = _http_netloc(parsed)
+    if parsed.scheme not in ("http", "https") or not netloc:
         raise ValueError("Enter a public http(s) website URL")
-    host = parsed.netloc.lower()
     path = parsed.path.rstrip("/")
-    normalized = f"{parsed.scheme}://{host}{path}"
+    normalized = f"{parsed.scheme}://{netloc}{path}"
     if not is_safe_url(normalized):
         raise ValueError("That URL is not a public website we can check")
     return normalized
@@ -228,7 +250,7 @@ def next_action(platform: str, *, connected: bool) -> dict:
 
 def fetch_public_page(url: str) -> PageFetch:
     """GET a public page with SSRF + redirect re-validation."""
-    current = url
+    current = _drop_url_userinfo(url)
     try:
         with httpx.Client(timeout=FETCH_TIMEOUT_S, follow_redirects=False) as client:
             for _hop in range(MAX_REDIRECTS + 1):
@@ -239,10 +261,7 @@ def fetch_public_page(url: str) -> PageFetch:
                     location = resp.headers.get("location")
                     if not location:
                         return PageFetch(current, "", dict(resp.headers), False, "redirect")
-                    if location.startswith("/"):
-                        parsed = urlparse(current)
-                        location = f"{parsed.scheme}://{parsed.netloc}{location}"
-                    current = location
+                    current = _drop_url_userinfo(urljoin(current, location))
                     continue
                 raw = resp.content[:MAX_HTML_BYTES]
                 html = raw.decode(resp.encoding or "utf-8", errors="replace")

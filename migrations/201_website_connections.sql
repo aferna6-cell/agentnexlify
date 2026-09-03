@@ -7,7 +7,7 @@
 
 CREATE TABLE IF NOT EXISTS website_connections (
     id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id            uuid NOT NULL,
+    tenant_id            uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     website_url          text NOT NULL,
     platform             text NOT NULL DEFAULT 'unknown'
         CHECK (platform IN ('wordpress', 'wix', 'squarespace', 'godaddy', 'custom', 'unknown')),
@@ -30,6 +30,14 @@ CREATE INDEX IF NOT EXISTS website_connections_tenant_status_idx
     ON website_connections (tenant_id, status);
 
 ALTER TABLE website_connections ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS website_connections_deny_public ON website_connections;
+CREATE POLICY website_connections_deny_public
+    ON website_connections
+    FOR ALL
+    TO public
+    USING (false)
+    WITH CHECK (false);
 
 DROP POLICY IF EXISTS website_connections_service_role ON website_connections;
 CREATE POLICY website_connections_service_role

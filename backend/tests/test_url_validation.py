@@ -49,6 +49,14 @@ def test_rejects_cloud_metadata_link_local():
     assert is_safe_url("http://169.254.169.254/latest/meta-data/") is False
 
 
+def test_rejects_ipv6_loopback_link_local_and_mapped_private():
+    assert is_safe_url("http://[::1]/") is False
+    assert is_safe_url("http://[fe80::1]/") is False
+    assert is_safe_url("http://[::ffff:127.0.0.1]/") is False
+    assert is_safe_url("http://[::ffff:169.254.169.254]/") is False
+    assert is_safe_url("http://[fc00::1]/") is False
+
+
 def test_rejects_internal_suffixes():
     assert is_safe_url("http://db.internal/") is False
     assert is_safe_url("http://printer.local/") is False
