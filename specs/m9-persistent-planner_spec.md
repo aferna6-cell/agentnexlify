@@ -144,6 +144,21 @@ cross-tenant plan edges = 0
 **Out of scope for M9.3:** LLM plan generation, Action Executor calls,
 provider I/O. Next: **M9.4 offline LLM bakeoff** (CandidatePlan JSON only).
 
+## M9.4 (offline LLM bakeoff)
+
+| Artifact | Path |
+|----------|------|
+| Bakeoff runner | `backend/services/os_workflows/planner_bakeoff.py` |
+| CLI | `scripts/run_m9_planner_bakeoff.py` |
+| Tests | `backend/tests/test_os_workflows_planner_bakeoff.py` |
+
+Flow: frozen case → LLM (or fixture) → `CandidatePlan` JSON → M9.3
+validator/scorer → report. **No WorkflowStore. No Action Executor.**
+
+Models: `claude-opus-4-8` (strong) vs `claude-haiku-4-5-20251001` (cheap).
+Promotion zeros (unsafe / cross-tenant / direct-provider / cycles) are
+non-negotiable. Passing M9.4 does not enable execution — next is M9.5 shadow.
+
 ## Acceptance (M9.1)
 
 - [x] Pydantic models for Workflow / WorkflowStep / ToolIntent
