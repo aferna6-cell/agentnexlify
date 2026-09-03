@@ -113,7 +113,7 @@ class FakeDB:
         return _Query(self.tables, name)
 
 
-def _page(html: str, headers=None, url="https://salon.example") -> PageFetch:
+def _page(html: str, headers=None, url="https://example.com") -> PageFetch:
     return PageFetch(
         url=url,
         html=html,
@@ -144,25 +144,25 @@ def _wp_html(key=None):
 
 class TestDetectPlatform:
     def test_wordpress_generator_and_wp_content(self):
-        assert detect_platform("https://salon.example", _wp_html(), {}) == "wordpress"
+        assert detect_platform("https://example.com", _wp_html(), {}) == "wordpress"
 
     def test_wix_static_host_and_header(self):
         html = '<script src="https://static.wixstatic.com/js/foo.js"></script>'
-        assert detect_platform("https://wixsite.example", html, {"x-wix-request-id": "1"}) == "wix"
+        assert detect_platform("https://example.com", html, {"x-wix-request-id": "1"}) == "wix"
 
     def test_squarespace_cdn(self):
         html = '<link href="https://static1.squarespace.com/static/css.css" />'
-        assert detect_platform("https://sq.example", html, {"server": "squarespace"}) == "squarespace"
+        assert detect_platform("https://example.com", html, {"server": "squarespace"}) == "squarespace"
 
     def test_godaddy_builder_markers(self):
         html = '<html data-website="godaddysites.com"><script src="https://img1.wsimg.com/x.js"></script>'
         assert detect_platform("https://biz.godaddysites.com", html, {}) == "godaddy"
 
     def test_unknown_html_falls_back_to_custom(self):
-        assert detect_platform("https://custom.example", "<html><body>Hello</body></html>", {}) == "custom"
+        assert detect_platform("https://example.com", "<html><body>Hello</body></html>", {}) == "custom"
 
     def test_fetch_failure_falls_back_to_unknown(self):
-        assert detect_platform("https://down.example", "", {}, fetched=False) == "unknown"
+        assert detect_platform("https://example.com", "", {}, fetched=False) == "unknown"
 
 
 class TestWidgetPresence:
@@ -192,7 +192,11 @@ class TestWidgetPresence:
 
 class TestNormalizeAndSecrets:
     def test_adds_https_and_strips_slash(self):
-        assert normalize_website_url("salon.example/") == "https://salon.example"
+        assert normalize_website_url("example.com/") == "https://example.com"
+
+    def test_rejects_private_urls(self):
+        with pytest.raises(ValueError):
+            normalize_website_url("http://127.0.0.1/")
 
     def test_rejects_credential_fields(self):
         with pytest.raises(ValueError, match="not accepted"):
@@ -220,10 +224,10 @@ class TestUpsertAndVerify:
         db = FakeDB()
         fetch = lambda url: _page(_wp_html(), url=url)
         first = upsert_connection(
-            db, TENANT_A, "https://salon.example", fetch_page=fetch
+            db, TENANT_A, "https://example.com", fetch_page=fetch
         )
         second = upsert_connection(
-            db, TENANT_A, "https://salon.example", fetch_page=fetch
+            db, TENANT_A, "https://example.com", fetch_page=fetch
         )
         assert first["id"] == second["id"]
         assert len(db.tables["website_connections"]) == 1
@@ -240,7 +244,7 @@ class TestUpsertAndVerify:
         row = upsert_connection(
             db,
             TENANT_A,
-            "https://salon.example",
+            "https://example.com",
             fetch_page=lambda url: _page(_wp_html(KEY_B), url=url),
         )
         assert row["status"] == "needs_action"
@@ -257,7 +261,7 @@ class TestUpsertAndVerify:
         row = upsert_connection(
             db,
             TENANT_A,
-            "https://salon.example",
+            "https://example.com",
             fetch_page=lambda url: _page(_wp_html(KEY_A), url=url),
         )
         assert row["status"] == "connected"
@@ -274,7 +278,7 @@ class TestUpsertAndVerify:
         upsert_connection(
             db,
             TENANT_A,
-            "https://salon.example",
+            "https://example.com",
             fetch_page=lambda url: _page(_wp_html(KEY_A), url=url),
         )
         again = verify_connection(
@@ -296,17 +300,17 @@ class TestUpsertAndVerify:
         upsert_connection(
             db,
             TENANT_A,
-            "https://salon.example",
+            "https://example.com",
             fetch_page=lambda url: _page(_wp_html(KEY_A), url=url),
         )
         changed = upsert_connection(
             db,
             TENANT_A,
-            "https://new-salon.example",
+            "https://example.org",
             fetch_page=lambda url: _page(_wp_html(), url=url),
         )
         assert changed["status"] == "needs_action"
-        assert changed["website_url"] == "https://new-salon.example"
+        assert changed["website_url"] == "https://example.org"
         assert len(db.tables["website_connections"]) == 1
 
     def test_tenant_rows_do_not_leak_across_tenants(self):
@@ -323,13 +327,13 @@ class TestUpsertAndVerify:
         upsert_connection(
             db,
             TENANT_A,
-            "https://a.example",
+            "https://example.com",
             fetch_page=lambda url: _page(_wp_html(KEY_A), url=url),
         )
         row_b = upsert_connection(
             db,
             TENANT_B,
-            "https://b.example",
+            "https://example.org",
             fetch_page=lambda url: _page("<html>custom</html>", url=url),
         )
         assert row_b["status"] != "connected"
@@ -341,14 +345,14 @@ class TestUpsertAndVerify:
             r for r in db.tables["website_connections"] if r["tenant_id"] == TENANT_B
         ]
         assert len(a_rows) == 1 and a_rows[0]["status"] == "connected"
-        assert len(b_rows) == 1 and b_rows[0]["website_url"] == "https://b.example"
+        assert len(b_rows) == 1 and b_rows[0]["website_url"] == "https://example.org"
 
     def test_platform_override_is_honored(self):
         db = FakeDB()
         row = upsert_connection(
             db,
             TENANT_A,
-            "https://mystery.example",
+            "https://example.net",
             platform="wix",
             fetch_page=lambda url: _page("<html>no signals</html>", url=url),
         )
@@ -375,7 +379,7 @@ class TestUpsertAndVerify:
             upsert_connection(
                 db,
                 TENANT_A,
-                "https://salon.example",
+                "https://example.com",
                 fetch_page=lambda url: _page(_wp_html(KEY_A), url=url),
             )
             verify_connection(
@@ -403,7 +407,7 @@ class TestWebsiteConnectRouter:
                     {
                         "id": "row-a",
                         "tenant_id": TENANT_A,
-                        "website_url": "https://a.example",
+                        "website_url": "https://example.com",
                         "platform": "wordpress",
                         "status": "connected",
                     }
@@ -430,7 +434,7 @@ class TestWebsiteConnectRouter:
             "/api/v1/website-connect",
             headers=auth_headers_for(TENANT_A),
             json={
-                "website_url": "https://salon.example",
+                "website_url": "https://example.com",
                 "password": "super-secret-cms",
             },
         )
@@ -446,7 +450,7 @@ class TestWebsiteConnectRouter:
                     {
                         "id": "row-a",
                         "tenant_id": TENANT_A,
-                        "website_url": "https://salon.example",
+                        "website_url": "https://example.com",
                         "platform": "wordpress",
                         "detected_platform": "wordpress",
                         "platform_override": False,
@@ -499,12 +503,12 @@ class TestWebsiteConnectRouter:
             first = client.post(
                 "/api/v1/website-connect",
                 headers=auth_headers_for(TENANT_A),
-                json={"website_url": "https://shop.example"},
+                json={"website_url": "https://example.com"},
             )
             second = client.post(
                 "/api/v1/website-connect",
                 headers=auth_headers_for(TENANT_A),
-                json={"website_url": "https://shop.example"},
+                json={"website_url": "https://example.com"},
             )
         assert first.status_code == 200
         assert second.status_code == 200

@@ -46,8 +46,7 @@ describe("WebsiteConnectPage", () => {
       status: "not_started",
     });
     render(<WebsiteConnectPage />);
-    expect(await screen.findByText("Connect your website")).toBeInTheDocument();
-    expect(screen.getByTestId("connect-status")).toHaveTextContent(
+    expect(await screen.findByTestId("connect-status")).toHaveTextContent(
       "Connect your website",
     );
     expect(
@@ -70,7 +69,9 @@ describe("WebsiteConnectPage", () => {
     expect(
       await screen.findByText("AI receptionist is live"),
     ).toBeInTheDocument();
-    expect(screen.getByText("https://salon.example")).toBeInTheDocument();
+    expect(screen.getByTestId("connect-status")).toHaveTextContent(
+      "https://salon.example",
+    );
   });
 
   it("submits the URL without any password field", async () => {
