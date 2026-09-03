@@ -498,6 +498,9 @@ class TestMigration201Shape:
         assert "USING (false)" in sql
         assert "TO service_role" in sql
         assert "USING (true)" in sql
+        from backend.services.account_deletion import TENANT_DATA_TABLES
+
+        assert "website_connections" in TENANT_DATA_TABLES
 
 
 # ---------------------------------------------------------------------------
