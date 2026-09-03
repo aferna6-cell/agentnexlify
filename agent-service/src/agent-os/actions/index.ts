@@ -40,6 +40,7 @@ export {
   InMemoryCustomerNotesPort,
   InMemoryCalendarPort,
   InMemoryCrmPort,
+  InMemoryInvoicePort,
   CANONICAL_LEAD_STATUSES,
   setToolPorts,
   getToolPorts,
@@ -49,9 +50,11 @@ export {
   type CustomerNotesPort,
   type CalendarPort,
   type CrmPort,
+  type InvoicePort,
   type ToolPorts,
   type CalendarEventRecord,
   type CustomerRecord,
+  type InvoiceRecord,
 } from "./ports.ts";
 export {
   executeAction,
@@ -77,15 +80,23 @@ export { searchCustomers } from "./tools/search_customers.ts";
 export { updateCustomer } from "./tools/update_customer.ts";
 export { createCustomer } from "./tools/create_customer.ts";
 export { updateLeadStage } from "./tools/update_lead_stage.ts";
+export { listOverdueInvoices } from "./tools/list_overdue_invoices.ts";
+export { getInvoice } from "./tools/get_invoice.ts";
+export { createInvoiceDraft } from "./tools/create_invoice_draft.ts";
+export { sendInvoice } from "./tools/send_invoice.ts";
+export { sendInvoiceReminder } from "./tools/send_invoice_reminder.ts";
 export {
   sendEmailEnabled,
   SEND_EMAIL_FLAG,
   SEND_EMAIL_TOOL_ID,
   calendarActionsEnabled,
   crmActionsEnabled,
+  invoiceActionsEnabled,
   CALENDAR_ACTIONS_FLAG,
   CRM_ACTIONS_FLAG,
+  INVOICE_ACTIONS_FLAG,
   CALENDAR_TOOL_IDS,
   CRM_TOOL_IDS,
+  INVOICE_TOOL_IDS,
 } from "./flags.ts";
 export { sanitize, sanitizeRecord, REDACTED } from "./sanitize.ts";

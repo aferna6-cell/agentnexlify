@@ -83,6 +83,7 @@ On **staging `agentnexlify`**, set feature flags **after** OAuth (step 4):
 | `CRM_ACTIONS_ENABLED` | `1` | Smoke tenant only testing |
 | `CALENDAR_ACTIONS_ENABLED` | `1` | After Google Calendar OAuth on smoke tenant |
 | `SEND_EMAIL_ENABLED` | `1` | After Gmail OAuth on smoke tenant |
+| `INVOICE_ACTIONS_ENABLED` | leave `0` | Billing Automation v1 stays off until invoice smoke |
 | (leave unset / `0` on production) | — | Production stays OFF |
 
 Keep retrieval threshold frozen in code: `DEFAULT_MIN_SCORE=1.0`.
@@ -180,6 +181,7 @@ Unset / set `=0` on staging (and never flip production):
 - `CRM_ACTIONS_ENABLED`
 - `CALENDAR_ACTIONS_ENABLED`
 - `SEND_EMAIL_ENABLED`
+- `INVOICE_ACTIONS_ENABLED`
 
 ## Blockers until owner completes this
 

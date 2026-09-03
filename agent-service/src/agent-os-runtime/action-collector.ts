@@ -29,10 +29,15 @@ import type {
   CancelCalendarEventInput,
   CreateCalendarEventInput,
   CreateCustomerInput,
+  CreateInvoiceDraftInput,
   CrmPort,
   CustomerNoteRecord,
   CustomerNotesPort,
   CustomerRecord,
+  InvoiceLineItem,
+  InvoiceListQuery,
+  InvoicePort,
+  InvoiceRecord,
   RescheduleCalendarEventInput,
   UpdateCustomerInput,
   UpdateLeadStageInput,
@@ -40,6 +45,7 @@ import type {
 import {
   InMemoryCalendarPort,
   InMemoryCrmPort,
+  InMemoryInvoicePort,
 } from "../agent-os/actions/ports.ts";
 
 /** Collects execution rows for the data plane to persist. */
@@ -342,5 +348,65 @@ export class CollectingCrmPort implements CrmPort {
       });
     }
     return out;
+  }
+}
+
+export type InvoiceMutationBundle = InvoiceRecord & {
+  _op: "create";
+};
+
+/** Invoice port for the orchestration path — collects draft creates for FastAPI. */
+export class CollectingInvoicePort implements InvoicePort {
+  readonly name = "agent_service_invoice_bundle";
+  readonly durable = true;
+  private readonly inner = new InMemoryInvoicePort();
+  private readonly createdIds = new Set<string>();
+
+  get memory(): InMemoryInvoicePort {
+    return this.inner;
+  }
+
+  seedInvoice(invoice: InvoiceRecord): void {
+    this.inner.seed(invoice);
+  }
+
+  listInvoices(query: InvoiceListQuery): Promise<InvoiceRecord[]> {
+    return this.inner.listInvoices(query);
+  }
+  getInvoice(input: {
+    accountId: string;
+    invoiceId: string;
+  }): Promise<InvoiceRecord | null> {
+    return this.inner.getInvoice(input);
+  }
+  findByFingerprint(input: {
+    accountId: string;
+    customerId: string;
+    items: InvoiceLineItem[];
+    dueDate?: string;
+    total: number;
+    idempotencyKey?: string;
+  }): Promise<InvoiceRecord | null> {
+    return this.inner.findByFingerprint(input);
+  }
+  async createDraft(input: CreateInvoiceDraftInput): Promise<InvoiceRecord> {
+    const before = await this.inner.findByFingerprint({
+      accountId: input.accountId,
+      customerId: input.customerId,
+      items: input.items,
+      dueDate: input.dueDate,
+      total: input.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0),
+      idempotencyKey: input.idempotencyKey,
+    });
+    const record = await this.inner.createDraft(input);
+    if (!before) this.createdIds.add(record.id);
+    return record;
+  }
+
+  toBundle(): InvoiceMutationBundle[] {
+    return this.inner
+      .allInvoices()
+      .filter((inv) => this.createdIds.has(inv.id))
+      .map((inv) => ({ ...inv, _op: "create" as const }));
   }
 }

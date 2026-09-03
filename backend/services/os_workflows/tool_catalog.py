@@ -69,11 +69,29 @@ def _tool_from_manifest_entry(entry: dict) -> ToolMeta:
     )
 
 
+# Billing Automation v1 tools live in the Action registry + manifest but are
+# not planner-executable yet (PR 1 typed bridge only). Catalog keys ∪ this
+# set must equal manifest keys.
+PLANNER_EXCLUDED_TOOLS: FrozenSet[str] = frozenset(
+    {
+        "list_overdue_invoices",
+        "get_invoice",
+        "create_invoice_draft",
+        "send_invoice",
+        "send_invoice_reminder",
+    }
+)
+
+
 @lru_cache(maxsize=1)
 def _catalog() -> Dict[str, ToolMeta]:
     data = _load_manifest()
     tools = data.get("tools") or {}
-    return {tid: _tool_from_manifest_entry(meta) for tid, meta in tools.items()}
+    return {
+        tid: _tool_from_manifest_entry(meta)
+        for tid, meta in tools.items()
+        if tid not in PLANNER_EXCLUDED_TOOLS
+    }
 
 
 def catalog_as_dict() -> Dict[str, ToolMeta]:
@@ -138,14 +156,24 @@ def assert_catalog_matches_manifest() -> None:
     data = _load_manifest()
     tools = data.get("tools") or {}
     catalog = catalog_as_dict()
-    if set(catalog.keys()) != set(tools.keys()):
-        missing = set(tools.keys()) - set(catalog.keys())
-        extra = set(catalog.keys()) - set(tools.keys())
+    expected = set(tools.keys()) - PLANNER_EXCLUDED_TOOLS
+    if set(catalog.keys()) != expected:
+        missing = expected - set(catalog.keys())
+        extra = set(catalog.keys()) - expected
         raise AssertionError(
             f"Tool catalog ID mismatch vs Action manifest. "
-            f"missing={sorted(missing)} extra={sorted(extra)}"
+            f"missing={sorted(missing)} extra={sorted(extra)} "
+            f"excluded={sorted(PLANNER_EXCLUDED_TOOLS)}"
+        )
+    unknown_excluded = PLANNER_EXCLUDED_TOOLS - set(tools.keys())
+    if unknown_excluded:
+        raise AssertionError(
+            f"PLANNER_EXCLUDED_TOOLS not in Action manifest: "
+            f"{sorted(unknown_excluded)}"
         )
     for tid, entry in tools.items():
+        if tid in PLANNER_EXCLUDED_TOOLS:
+            continue
         expected = _tool_from_manifest_entry(entry)
         actual = catalog[tid]
         for field in (
