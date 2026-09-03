@@ -10,12 +10,13 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from html.parser import HTMLParser
 from typing import Callable
 from urllib.parse import urljoin, urlparse
 
 import httpx
 
-from backend.services.url_validation import is_safe_url
+from backend.services.url_validation import ValidatedIPTransport, is_safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -225,15 +226,31 @@ def detect_platform(
     return "custom"
 
 
+class _WidgetScriptParser(HTMLParser):
+    """True only when loader src + tenant key sit on one live <script> tag."""
+
+    def __init__(self, api_key: str):
+        super().__init__(convert_charrefs=True)
+        self.api_key = api_key
+        self.found = False
+
+    def handle_starttag(self, tag, attrs):
+        if self.found or tag != "script":
+            return
+        attr_map = {str(name).lower(): (value or "") for name, value in attrs}
+        src = attr_map.get("src", "")
+        key = attr_map.get("data-api-key", "")
+        if WIDGET_SCRIPT_MARKER in src and key == self.api_key:
+            self.found = True
+
+
 def widget_is_present(html: str, api_key: str | None) -> bool:
     if not html or not api_key:
         return False
-    if WIDGET_SCRIPT_MARKER not in html:
-        return False
-    return (
-        f'data-api-key="{api_key}"' in html
-        or f"data-api-key='{api_key}'" in html
-    )
+    parser = _WidgetScriptParser(api_key)
+    parser.feed(html)
+    parser.close()
+    return parser.found
 
 
 def next_action(platform: str, *, connected: bool) -> dict:
@@ -249,10 +266,20 @@ def next_action(platform: str, *, connected: bool) -> dict:
 
 
 def fetch_public_page(url: str) -> PageFetch:
-    """GET a public page with SSRF + redirect re-validation."""
+    """GET a public page with SSRF + redirect re-validation.
+
+    ``is_safe_url`` is the pre-check. The request itself uses
+    ``ValidatedIPTransport`` so the TCP connect is opened to a public IP
+    from that hop's resolve, not a second hostname lookup that could
+    rebind to a private address.
+    """
     current = _drop_url_userinfo(url)
     try:
-        with httpx.Client(timeout=FETCH_TIMEOUT_S, follow_redirects=False) as client:
+        with httpx.Client(
+            timeout=FETCH_TIMEOUT_S,
+            follow_redirects=False,
+            transport=ValidatedIPTransport(),
+        ) as client:
             for _hop in range(MAX_REDIRECTS + 1):
                 if not is_safe_url(current):
                     return PageFetch(current, "", {}, False, "unsafe_url")

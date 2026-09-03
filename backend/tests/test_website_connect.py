@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import io
 import logging
+import socket
 import uuid
 import zipfile
 from pathlib import Path
@@ -29,6 +30,7 @@ from backend.services.url_validation import is_safe_url as real_is_safe_url
 from backend.services.website_connect import (
     FORBIDDEN_CREDENTIAL_FIELDS,
     PLATFORMS,
+    WIDGET_SCRIPT_MARKER,
     PageFetch,
     detect_platform,
     fetch_public_page,
@@ -199,6 +201,37 @@ class TestWidgetPresence:
     def test_empty_key_never_matches(self):
         assert widget_is_present(_wp_html(KEY_A), "") is False
         assert widget_is_present(_wp_html(KEY_A), None) is False
+
+    def test_comment_with_loader_and_key_is_not_connected(self):
+        html = (
+            f"<!-- <script src=\"https://app.agentnexlify.com/widget/"
+            f"agentnexlify-widget.js\" data-api-key=\"{KEY_A}\"></script> -->"
+        )
+        assert WIDGET_SCRIPT_MARKER in html
+        assert KEY_A in html
+        assert widget_is_present(html, KEY_A) is False
+
+    def test_loader_and_key_must_share_the_script_element(self):
+        html = (
+            '<script src="https://app.agentnexlify.com/widget/'
+            'agentnexlify-widget.js"></script>'
+            f'<div data-api-key="{KEY_A}"></div>'
+        )
+        assert widget_is_present(html, KEY_A) is False
+
+    def test_substrings_in_text_are_not_connected(self):
+        html = (
+            f"<p>agentnexlify-widget.js</p>"
+            f"<p>data-api-key=\"{KEY_A}\"</p>"
+        )
+        assert widget_is_present(html, KEY_A) is False
+
+    def test_single_quoted_script_attributes_still_match(self):
+        html = (
+            "<script async src='https://app.agentnexlify.com/widget/"
+            f"agentnexlify-widget.js' data-api-key='{KEY_A}'></script>"
+        )
+        assert widget_is_present(html, KEY_A) is True
 
 
 class TestNormalizeAndSecrets:
@@ -389,6 +422,57 @@ class TestFetchPublicPageSSRF:
         assert page.ok is False
         assert page.error == "unsafe_url"
         assert seen == []
+
+    def test_public_at_check_private_at_connect_is_blocked(self, monkeypatch):
+        """Hostname is public for is_safe_url, then private for the socket.
+
+        The fetch must not open a TCP connection to the private address.
+        """
+        import ipaddress
+
+        hostname_lookups = []
+        connected = []
+
+        def flipping_getaddrinfo(host, port, *args, **kwargs):
+            host_s = host.decode() if isinstance(host, bytes) else str(host)
+            try:
+                ipaddress.ip_address(host_s.split("%")[0])
+                family = socket.AF_INET6 if ":" in host_s else socket.AF_INET
+                return [(family, socket.SOCK_STREAM, 6, "", (host_s, port or 0))]
+            except ValueError:
+                pass
+            hostname_lookups.append(host_s)
+            if len(hostname_lookups) == 1:
+                return _addrinfo("93.184.216.34")
+            return _addrinfo("127.0.0.1")
+
+        def spy_create_connection(address, *args, **kwargs):
+            dest = address[0]
+            try:
+                ipaddress.ip_address(dest)
+                dest_ips = [dest]
+            except ValueError:
+                infos = flipping_getaddrinfo(dest, address[1] if len(address) > 1 else 0)
+                dest_ips = [item[4][0] for item in infos]
+            connected.extend(dest_ips)
+            raise OSError("test must not complete a real connect")
+
+        monkeypatch.setattr(
+            "backend.services.url_validation.socket.getaddrinfo",
+            flipping_getaddrinfo,
+        )
+        monkeypatch.setattr("socket.getaddrinfo", flipping_getaddrinfo)
+        monkeypatch.setattr(
+            "httpcore._backends.sync.socket.create_connection",
+            spy_create_connection,
+        )
+
+        page = fetch_public_page("https://rebind.attacker.test/")
+        assert page.ok is False
+        assert "127.0.0.1" not in connected
+        assert all(
+            ip not in {"10.0.0.5", "169.254.169.254", "::1"} for ip in connected
+        )
 
     def test_dns_rebind_to_ipv6_loopback_is_not_requested(self, monkeypatch):
         seen = []
