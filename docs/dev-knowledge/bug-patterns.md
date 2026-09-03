@@ -18894,3 +18894,14 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Merge pull request #754 from aferna6-cell/cursor/m9-2-correction-pass-a2c9
+
+fix(m9): M9.2 correction — retry/verify semantics + DB integrity
+**Date:** 2026-09-03
+**Commit:** 9f0dc88
+**Author:** aferna6-cell
+**Files Changed:** 
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
