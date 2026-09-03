@@ -14,10 +14,17 @@ from backend.services.os_workflows.plan_schema import (
 )
 from backend.services.os_workflows.planner_bakeoff import (
     CHEAP_PLANNER_MODEL,
+    MISS_HARNESS_SCORE,
     MISS_INCOMPLETE,
     MISS_INVALID_NONGATE,
+    MISS_OK,
     MISS_PARSE,
+    MISS_PLANNER_CALL,
     MISS_SAFETY,
+    MISS_WRONG_TERMINAL,
+    PHASE_PARSE,
+    PHASE_PLANNER,
+    PHASE_SCORE,
     PROMOTION_BAR,
     STRONG_PLANNER_MODEL,
     ModelBakeoffReport,
@@ -182,6 +189,10 @@ def test_planner_exception_is_captured(cases):
     )
     assert report.case_results[0].parse_ok is False
     assert "model exploded" in (report.case_results[0].error or "")
+    assert report.case_results[0].phase == PHASE_PLANNER
+    assert report.case_results[0].miss_class == MISS_PLANNER_CALL
+    assert report.parse_success_rate == 0.0
+    assert report.valid_plan_rate == 0.0
 
 
 def test_evaluate_promotion_flags_quality_and_safety():
@@ -490,6 +501,7 @@ def test_parse_failure_miss_class(cases):
         planner=broken,
     )
     assert report.case_results[0].miss_class == MISS_PARSE
+    assert report.case_results[0].phase == PHASE_PARSE
     assert report.miss_counts[MISS_PARSE] == 1
 
 
@@ -633,6 +645,165 @@ def test_overapproval_quality_miss_is_not_ok(cases):
     assert score.valid is True
     assert score.risk_approval_accuracy < PROMOTION_BAR["risk_approval_accuracy"]
     assert report.case_results[0].miss_class == MISS_INCOMPLETE
+
+
+def test_planner_runtime_error_is_not_parse_failure(cases):
+    def boom(c, model, seed):
+        raise RuntimeError("transport unavailable")
+
+    report = run_model_bakeoff(
+        [cases[0]],
+        model=CHEAP_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=boom,
+    )
+    row = report.case_results[0]
+    assert row.phase == PHASE_PLANNER
+    assert row.miss_class == MISS_PLANNER_CALL
+    assert row.miss_class != MISS_PARSE
+    assert report.miss_counts == {MISS_PLANNER_CALL: 1}
+    assert MISS_PARSE not in report.miss_counts
+    assert report.parse_success_rate == 0.0
+    assert report.valid_plan_rate == 0.0
+    payload = report.to_dict()
+    assert payload["parse_failures"] == 0
+    assert payload["planner_call_failures"] == 1
+
+
+def test_scorer_exception_is_not_parse_failure(cases):
+    def good(c, model, seed):
+        plan = CandidatePlan(
+            client_id=c.client_id,
+            owner_goal=c.goal,
+            terminal="valid_plan",
+            steps=[],
+        )
+        return PlannerAttempt(
+            raw_text=plan.model_dump_json(),
+            evidence_type="live_output",
+            input_tokens=11,
+            output_tokens=7,
+            total_tokens=18,
+            cost_usd=0.001,
+        )
+
+    with patch(
+        "backend.services.os_workflows.planner_bakeoff.score_plan",
+        side_effect=RuntimeError("scorer exploded"),
+    ):
+        report = run_model_bakeoff(
+            [cases[0]],
+            model=CHEAP_PLANNER_MODEL,
+            repetitions=(0,),
+            mode="live",
+            planner=good,
+        )
+    row = report.case_results[0]
+    assert row.parse_ok is True
+    assert row.score is None
+    assert row.phase == PHASE_SCORE
+    assert row.miss_class == MISS_HARNESS_SCORE
+    assert row.miss_class != MISS_PARSE
+    assert report.miss_counts == {MISS_HARNESS_SCORE: 1}
+    assert report.parse_success_rate == 1.0
+    assert report.valid_plan_rate == 0.0
+    payload = report.to_dict()
+    assert payload["parse_failures"] == 0
+    assert payload["harness_scoring_failures"] == 1
+    assert payload["case_results"][0]["input_tokens"] == 11
+    assert payload["case_results"][0]["output_tokens"] == 7
+    assert payload["case_results"][0]["total_tokens"] == 18
+
+
+def test_valid_plan_to_clarification_is_wrong_terminal(cases):
+    case = next(c for c in cases if c.id == "apr-0-0")
+
+    def clarify(c, model, seed):
+        plan = CandidatePlan(
+            client_id=c.client_id,
+            owner_goal=c.goal,
+            terminal="clarification_needed",
+            steps=[],
+        )
+        return PlannerAttempt(
+            raw_text=plan.model_dump_json(), evidence_type="live_output"
+        )
+
+    report = run_model_bakeoff(
+        [case],
+        model=CHEAP_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=clarify,
+    )
+    row = report.case_results[0]
+    assert row.expected_terminal == "valid_plan"
+    assert row.plan is not None and row.plan.terminal == "clarification_needed"
+    assert row.miss_class == MISS_WRONG_TERMINAL
+    assert row.miss_class != MISS_INCOMPLETE
+    assert row.miss_class != MISS_OK
+
+
+def test_risk_overrated_read_plan_is_not_ok(cases):
+    case = next(c for c in cases if c.id == "apr-0-0")
+    gold = case.gold_plan
+    assert gold is not None
+
+    def overrate_read(c, model, seed):
+        steps = []
+        for step in gold.steps:
+            extra = {}
+            if step.tool_name == "search_customers":
+                extra = {"risk_level": 2}
+            steps.append(step.model_copy(update=extra))
+        plan = gold.model_copy(update={"steps": steps})
+        return PlannerAttempt(
+            raw_text=plan.model_dump_json(), evidence_type="live_output"
+        )
+
+    report = run_model_bakeoff(
+        [case],
+        model=CHEAP_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=overrate_read,
+    )
+    row = report.case_results[0]
+    score = row.score
+    assert score is not None
+    assert score.valid is True
+    assert score.risk_tier_accuracy == 0.5
+    assert score.risk_approval_accuracy >= PROMOTION_BAR["risk_approval_accuracy"]
+    assert row.miss_class == MISS_INCOMPLETE
+    payload = row.to_dict()
+    assert payload["risk_tier_accuracy"] == 0.5
+    assert payload["department_accuracy"] is not None
+    assert payload["verification_placement_accuracy"] is not None
+    assert payload["overall_plan_validity"] is not None
+    assert payload["unnecessary_approval_rate"] is not None
+    assert payload["cycle_rate"] == 0.0
+    assert "raw_text" not in payload
+    assert "system" not in payload
+    assert "prompt" not in payload
+
+
+def test_json_parse_failure_keeps_parse_phase(cases):
+    def broken(c, model, seed):
+        return PlannerAttempt(raw_text="not-json", evidence_type="live_output")
+
+    report = run_model_bakeoff(
+        [cases[0]],
+        model=CHEAP_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=broken,
+    )
+    row = report.case_results[0]
+    assert row.phase == PHASE_PARSE
+    assert row.miss_class == MISS_PARSE
+    assert report.parse_success_rate == 0.0
+    assert report.valid_plan_rate == 0.0
 
 
 def test_estimate_next_live_run_cost():

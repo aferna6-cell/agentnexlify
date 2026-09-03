@@ -4,7 +4,8 @@
   "repetitions": [0],
   "sample": "prefix",
   "no_additional_paid_calls": true,
-  "total_estimated_spend_usd": 0.229,
+  "total_estimated_spend_usd": 0.23326,
+  "total_estimated_spend_note": "Sum of listed run/model costs: 0.003936 + 0.04148 + 0.006979 + 0.1609 + 0.019965 = 0.23326. The earlier 0.229 figure omitted the Haiku limit-2 smoke ($0.003936) and rounded the remainder.",
   "case_selection": {
     "method": "cases[:limit] after gold filter + sort by id",
     "limit_10_ids": [

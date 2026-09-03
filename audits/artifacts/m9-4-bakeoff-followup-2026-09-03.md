@@ -46,6 +46,11 @@ suite has **18 categories**.
 ## Offline fixes in this slice
 
 - Persist compact `case_results` + `miss_counts` on every report.
+- Phase-separate `planner_call_failure`, `parse_failure`, and `harness_scoring_failure`.
+- Terminal mismatch is classified for every expected terminal, not only clarify/reject.
+- Risk-tier / overprotection quality misses classify as `model_incomplete_valid`, not `ok`.
+- Per-case rows include tokens plus scorer fields needed to audit the class.
+- Bounded-live listed spend is **$0.23326** (sum of the five run/model costs), not $0.229.
 - `classify_case_result()`: parse / safety / invalid-nongate / incomplete-valid / wrong-terminal.
 - Valid-but-below-bar risk/approval misses classify as `model_incomplete_valid`, not `ok`.
 - `--sample stratified` (default) vs `--sample prefix` (reproduce the biased run).

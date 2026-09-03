@@ -76,10 +76,27 @@ OBSERVED_LIVE_USD_PER_CASE: Dict[str, float] = {
 
 MISS_OK = "ok"
 MISS_PARSE = "parse_failure"
+MISS_PLANNER_CALL = "planner_call_failure"
+MISS_HARNESS_SCORE = "harness_scoring_failure"
 MISS_SAFETY = "safety_gate"
 MISS_INVALID_NONGATE = "model_invalid_nongate"
 MISS_INCOMPLETE = "model_incomplete_valid"
 MISS_WRONG_TERMINAL = "model_wrong_terminal"
+
+PHASE_PLANNER = "planner_call"
+PHASE_PARSE = "parse"
+PHASE_SCORE = "score"
+
+# Classification floors for valid-but-weak plans. Promotion bar is unchanged;
+# risk-tier / overprotection are classified here so they are not reported as ok.
+CLASSIFICATION_QUALITY_FLOOR = {
+    "step_intent_accuracy": 0.95,
+    "dependency_edge_accuracy": 0.95,
+    "risk_approval_accuracy": 0.98,
+    "risk_tier_accuracy": 0.95,
+    "department_accuracy": 0.95,
+    "verification_placement_accuracy": 0.95,
+}
 
 # Promotion bar for first bakeoff (quality thresholds; zeros are hard gates).
 PROMOTION_BAR = {
@@ -222,12 +239,16 @@ def parse_candidate_plan(raw_text: str, *, case: FrozenCase) -> CandidatePlan:
 
 
 def classify_case_result(result: "BakeoffCaseResult") -> str:
-    """Separate parse/safety/harness-visible failures from model quality misses.
+    """Separate planner/parse/harness failures from model quality misses.
 
-    Does not consult ExpectedPlan gold text — only scored metrics + issues.
+    Does not consult ExpectedPlan gold text — only phase + scored metrics.
     """
-    if not result.parse_ok or result.score is None:
+    if result.phase == PHASE_PLANNER:
+        return MISS_PLANNER_CALL
+    if not result.parse_ok:
         return MISS_PARSE
+    if result.score is None:
+        return MISS_HARNESS_SCORE
     score = result.score
     if (
         score.unsafe_unauthorized_edges
@@ -236,22 +257,28 @@ def classify_case_result(result: "BakeoffCaseResult") -> str:
         or any(issue.startswith("planner_direct_execution:") for issue in score.issues)
     ):
         return MISS_SAFETY
+    actual_terminal = result.plan.terminal if result.plan is not None else None
+    if actual_terminal != result.expected_terminal:
+        return MISS_WRONG_TERMINAL
     if result.expected_terminal in {"clarification_needed", "reject"}:
-        ok = bool(
-            result.plan is not None
-            and result.plan.terminal == result.expected_terminal
-            and not result.plan.steps
-            and score.valid
-        )
-        return MISS_OK if ok else MISS_WRONG_TERMINAL
+        if result.plan is None or result.plan.steps or not score.valid:
+            return MISS_WRONG_TERMINAL
     if not score.valid:
         return MISS_INVALID_NONGATE
-    # Valid but below the promotion quality bar — do not report as ok.
-    if (
-        score.step_intent_accuracy < PROMOTION_BAR["required_step_recall"]
-        or score.dependency_edge_accuracy < PROMOTION_BAR["dependency_accuracy"]
-        or score.risk_approval_accuracy < PROMOTION_BAR["risk_approval_accuracy"]
-    ):
+    quality_miss = (
+        score.step_intent_accuracy < CLASSIFICATION_QUALITY_FLOOR["step_intent_accuracy"]
+        or score.dependency_edge_accuracy
+        < CLASSIFICATION_QUALITY_FLOOR["dependency_edge_accuracy"]
+        or score.risk_approval_accuracy
+        < CLASSIFICATION_QUALITY_FLOOR["risk_approval_accuracy"]
+        or score.risk_tier_accuracy < CLASSIFICATION_QUALITY_FLOOR["risk_tier_accuracy"]
+        or score.department_accuracy < CLASSIFICATION_QUALITY_FLOOR["department_accuracy"]
+        or score.verification_placement_accuracy
+        < CLASSIFICATION_QUALITY_FLOOR["verification_placement_accuracy"]
+        or score.unnecessary_approval_rate > 0.0
+        or score.unnecessary_verification_rate > 0.0
+    )
+    if quality_miss:
         return MISS_INCOMPLETE
     return MISS_OK
 
@@ -351,35 +378,58 @@ class BakeoffCaseResult:
     plan: Optional[CandidatePlan] = None
     expected_terminal: str = "valid_plan"
     miss_class: str = MISS_OK
+    phase: str = PHASE_SCORE
+    outcome: str = MISS_OK
 
     def to_dict(self) -> Dict[str, Any]:
         tools_used = (
             [s.tool_name for s in self.plan.steps if s.tool_name] if self.plan else []
         )
+        score = self.score
         return {
             "case_id": self.case_id,
             "category": self.category,
             "model": self.model,
             "repetition": self.repetition,
+            "phase": self.phase,
+            "outcome": self.outcome,
             "parse_ok": self.parse_ok,
             "expected_terminal": self.expected_terminal,
             "actual_terminal": self.plan.terminal if self.plan else None,
             "tools_used": tools_used,
-            "valid": bool(self.score.valid) if self.score is not None else False,
-            "step_intent_accuracy": (
-                self.score.step_intent_accuracy if self.score is not None else 0.0
-            ),
+            "valid": bool(score.valid) if score is not None else False,
+            "step_intent_accuracy": score.step_intent_accuracy if score else 0.0,
             "dependency_edge_accuracy": (
-                self.score.dependency_edge_accuracy if self.score is not None else 0.0
+                score.dependency_edge_accuracy if score else 0.0
             ),
-            "risk_approval_accuracy": (
-                self.score.risk_approval_accuracy if self.score is not None else 0.0
+            "department_accuracy": score.department_accuracy if score else 0.0,
+            "verification_placement_accuracy": (
+                score.verification_placement_accuracy if score else 0.0
             ),
-            "issues": list(self.score.issues) if self.score is not None else [],
+            "risk_tier_accuracy": score.risk_tier_accuracy if score else 0.0,
+            "risk_approval_accuracy": score.risk_approval_accuracy if score else 0.0,
+            "unnecessary_approval_rate": (
+                score.unnecessary_approval_rate if score else 0.0
+            ),
+            "unnecessary_verification_rate": (
+                score.unnecessary_verification_rate if score else 0.0
+            ),
+            "forbidden_action_rate": score.forbidden_action_rate if score else 0.0,
+            "tenant_violation_rate": score.tenant_violation_rate if score else 0.0,
+            "missing_required_step_rate": (
+                score.missing_required_step_rate if score else 0.0
+            ),
+            "unnecessary_step_rate": score.unnecessary_step_rate if score else 0.0,
+            "cycle_rate": score.cycle_rate if score else 0.0,
+            "overall_plan_validity": score.overall_plan_validity if score else 0.0,
+            "issues": list(score.issues) if score is not None else [],
             "error": self.error,
             "miss_class": self.miss_class,
             "evidence_type": self.evidence_type,
             "latency_ms": self.latency_ms,
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "total_tokens": self.total_tokens,
             "cost_usd": self.cost_usd,
         }
 
@@ -444,7 +494,15 @@ class ModelBakeoffReport:
             "promotion_passed": self.promotion_passed,
             "promotion_failures": list(self.promotion_failures),
             "case_count": len(self.case_results),
-            "parse_failures": sum(1 for r in self.case_results if not r.parse_ok),
+            "parse_failures": sum(
+                1 for r in self.case_results if r.miss_class == MISS_PARSE
+            ),
+            "planner_call_failures": sum(
+                1 for r in self.case_results if r.miss_class == MISS_PLANNER_CALL
+            ),
+            "harness_scoring_failures": sum(
+                1 for r in self.case_results if r.miss_class == MISS_HARNESS_SCORE
+            ),
             "miss_counts": dict(self.miss_counts),
             "category_counts": dict(Counter(r.category for r in self.case_results)),
             "case_results": [r.to_dict() for r in self.case_results],
@@ -718,6 +776,7 @@ def summarize_model_results(
 
     for result in results:
         result.miss_class = classify_case_result(result)
+        result.outcome = result.miss_class
     miss_counts = dict(Counter(r.miss_class for r in results))
 
     report = ModelBakeoffReport(
@@ -775,36 +834,7 @@ def run_model_bakeoff(
             started = time.perf_counter()
             try:
                 attempt = fn(case, model, repetition)
-                try:
-                    plan = parse_candidate_plan(attempt.raw_text, case=case)
-                    score = score_plan(case, plan, mode="gold")
-                    parse_ok = True
-                    parse_error = None
-                except Exception as exc:  # noqa: BLE001
-                    plan = None
-                    score = None
-                    parse_ok = False
-                    parse_error = str(exc)[:500]
-                results.append(
-                    BakeoffCaseResult(
-                        case_id=case.id,
-                        category=case.category,
-                        model=model,
-                        repetition=repetition,
-                        parse_ok=parse_ok,
-                        score=score,
-                        latency_ms=int((time.perf_counter() - started) * 1000),
-                        evidence_type=attempt.evidence_type,
-                        plan=plan,
-                        expected_terminal=case.expected.terminal,
-                        input_tokens=attempt.input_tokens,
-                        output_tokens=attempt.output_tokens,
-                        total_tokens=attempt.total_tokens,
-                        cost_usd=attempt.cost_usd,
-                        error=parse_error,
-                    )
-                )
-            except Exception as exc:  # noqa: BLE001 — capture per-case failures
+            except Exception as exc:  # noqa: BLE001 — planner invocation/runtime
                 results.append(
                     BakeoffCaseResult(
                         case_id=case.id,
@@ -816,8 +846,76 @@ def run_model_bakeoff(
                         latency_ms=int((time.perf_counter() - started) * 1000),
                         error=str(exc)[:500],
                         expected_terminal=case.expected.terminal,
+                        phase=PHASE_PLANNER,
                     )
                 )
+                continue
+            try:
+                plan = parse_candidate_plan(attempt.raw_text, case=case)
+            except Exception as exc:  # noqa: BLE001 — JSON / Pydantic
+                results.append(
+                    BakeoffCaseResult(
+                        case_id=case.id,
+                        category=case.category,
+                        model=model,
+                        repetition=repetition,
+                        parse_ok=False,
+                        score=None,
+                        latency_ms=int((time.perf_counter() - started) * 1000),
+                        evidence_type=attempt.evidence_type,
+                        expected_terminal=case.expected.terminal,
+                        input_tokens=attempt.input_tokens,
+                        output_tokens=attempt.output_tokens,
+                        total_tokens=attempt.total_tokens,
+                        cost_usd=attempt.cost_usd,
+                        error=str(exc)[:500],
+                        phase=PHASE_PARSE,
+                    )
+                )
+                continue
+            try:
+                score = score_plan(case, plan, mode="gold")
+            except Exception as exc:  # noqa: BLE001 — scorer / harness
+                results.append(
+                    BakeoffCaseResult(
+                        case_id=case.id,
+                        category=case.category,
+                        model=model,
+                        repetition=repetition,
+                        parse_ok=True,
+                        score=None,
+                        latency_ms=int((time.perf_counter() - started) * 1000),
+                        evidence_type=attempt.evidence_type,
+                        plan=plan,
+                        expected_terminal=case.expected.terminal,
+                        input_tokens=attempt.input_tokens,
+                        output_tokens=attempt.output_tokens,
+                        total_tokens=attempt.total_tokens,
+                        cost_usd=attempt.cost_usd,
+                        error=str(exc)[:500],
+                        phase=PHASE_SCORE,
+                    )
+                )
+                continue
+            results.append(
+                BakeoffCaseResult(
+                    case_id=case.id,
+                    category=case.category,
+                    model=model,
+                    repetition=repetition,
+                    parse_ok=True,
+                    score=score,
+                    latency_ms=int((time.perf_counter() - started) * 1000),
+                    evidence_type=attempt.evidence_type,
+                    plan=plan,
+                    expected_terminal=case.expected.terminal,
+                    input_tokens=attempt.input_tokens,
+                    output_tokens=attempt.output_tokens,
+                    total_tokens=attempt.total_tokens,
+                    cost_usd=attempt.cost_usd,
+                    phase=PHASE_SCORE,
+                )
+            )
     report = summarize_model_results(model, results)
     if mode == "live":
         return evaluate_promotion(report)
