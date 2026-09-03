@@ -504,6 +504,70 @@ def test_exhausted_failure_marks_workflow_failed():
         eng.retry_failed_step(CLIENT, "s1")
 
 
+def test_exhausted_failed_prerequisite_terminalizes_unreachable_dependent():
+    """Exhausted failure must not leave a dependent planned step running forever."""
+    eng = _engine()
+    wf = eng.create(
+        client_id=CLIENT,
+        owner_goal="x",
+        steps=[
+            {
+                "id": "root",
+                "description": "root",
+                "risk_level": 1,
+                "max_retries": 0,
+            },
+            {
+                "id": "child",
+                "description": "child",
+                "risk_level": 0,
+                "dependencies": ["root"],
+            },
+        ],
+    )
+    eng.queue_ready_for_execution(CLIENT, wf["id"])
+    eng.record_running_outcome(CLIENT, "root", outcome="failed", error="boom")
+    done = eng.recover(CLIENT, wf["id"])
+    assert done["status"] == "failed"
+    assert [(s["id"], s["state"]) for s in done["steps"]] == [
+        ("root", "failed"),
+        ("child", "planned"),
+    ]
+    from backend.services.os_workflows.engine import derive_workflow_status
+
+    assert derive_workflow_status(done["steps"]) == "failed"
+
+
+def test_exhausted_failure_does_not_fail_fast_independent_running_branch():
+    """A sibling that can still execute keeps the workflow running."""
+    from backend.services.os_workflows.engine import derive_workflow_status
+
+    assert (
+        derive_workflow_status(
+            [
+                {
+                    "id": "failed_branch",
+                    "state": "failed",
+                    "max_retries": 0,
+                    "retry_count": 0,
+                    "dependencies": [],
+                },
+                {
+                    "id": "blocked_child",
+                    "state": "planned",
+                    "dependencies": ["failed_branch"],
+                },
+                {
+                    "id": "independent",
+                    "state": "running",
+                    "dependencies": [],
+                },
+            ]
+        )
+        == "running"
+    )
+
+
 def test_execution_success_without_verifier_stays_verifying():
     eng = _engine()
     wf = eng.create(
