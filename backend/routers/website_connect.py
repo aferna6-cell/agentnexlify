@@ -111,7 +111,10 @@ def download_wordpress_plugin(claims: dict = Depends(_get_current_tenant)):
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for path in sorted(_PLUGIN_DIR.rglob("*")):
             if path.is_file():
-                zf.write(path, arcname=f"agentnexlify/{path.relative_to(_PLUGIN_DIR)}")
+                info = zipfile.ZipInfo(f"agentnexlify/{path.relative_to(_PLUGIN_DIR)}")
+                info.date_time = (2026, 1, 1, 0, 0, 0)
+                info.compress_type = zipfile.ZIP_DEFLATED
+                zf.writestr(info, path.read_bytes())
     buf.seek(0)
     logger.info(
         "website_connect wordpress plugin downloaded tenant=%s",
