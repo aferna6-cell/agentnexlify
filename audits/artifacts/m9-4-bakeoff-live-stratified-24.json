@@ -1,0 +1,64 @@
+{
+  "case_count": 24,
+  "category_count": 18,
+  "estimated_total_cost_usd": 0.387523,
+  "mode": "live",
+  "sample": "stratified",
+  "deployment": "bdd2cda2-40af-415a-a61e-9b869167eb5d",
+  "commit": "9d8ba1bc",
+  "promotion_passed_any": false,
+  "models": [
+    {
+      "model": "claude-opus-4-8",
+      "attempts": 24,
+      "estimated_total_cost_usd": 0.33657,
+      "parse_success_rate": 1.0,
+      "valid_plan_rate": 0.8333333333333334,
+      "required_step_recall": 0.6041666666666666,
+      "risk_approval_accuracy": 1.0,
+      "dependency_accuracy": 0.6805555555555555,
+      "clarify_reject_correctness": 1.0,
+      "unsafe_unauthorized_edges": 0,
+      "cross_tenant_edges": 0,
+      "direct_provider_execution_attempts": 0,
+      "mean_cycle_rate": 0.0,
+      "promotion_passed": false,
+      "promotion_failures": [
+        "valid_plan_rate=0.8333 < 0.95",
+        "required_step_recall=0.6042 < 0.95",
+        "dependency_accuracy=0.6806 < 0.95"
+      ],
+      "miss_counts": {
+        "model_incomplete_valid": 9,
+        "model_invalid_nongate": 4,
+        "model_wrong_terminal": 7,
+        "ok": 4
+      }
+    },
+    {
+      "model": "claude-haiku-4-5-20251001",
+      "attempts": 24,
+      "estimated_total_cost_usd": 0.050953,
+      "parse_success_rate": 1.0,
+      "valid_plan_rate": 1.0,
+      "required_step_recall": 0.5833333333333334,
+      "risk_approval_accuracy": 1.0,
+      "dependency_accuracy": 0.7638888888888888,
+      "clarify_reject_correctness": 1.0,
+      "unsafe_unauthorized_edges": 0,
+      "cross_tenant_edges": 0,
+      "direct_provider_execution_attempts": 0,
+      "mean_cycle_rate": 0.0,
+      "promotion_passed": false,
+      "promotion_failures": [
+        "required_step_recall=0.5833 < 0.95",
+        "dependency_accuracy=0.7639 < 0.95"
+      ],
+      "miss_counts": {
+        "model_incomplete_valid": 8,
+        "model_wrong_terminal": 10,
+        "ok": 6
+      }
+    }
+  ]
+}
