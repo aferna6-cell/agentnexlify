@@ -6,7 +6,7 @@ Every database schema change. Claude Code checks this when working with database
 
 ## 201_website_connections.sql (2026-09-03)
 
-**What:** New `website_connections` table — one row per tenant (`UNIQUE (tenant_id)`). Columns: `tenant_id`, `website_url`, `platform` / `detected_platform` (`wordpress|wix|squarespace|godaddy|custom|unknown`), `platform_override`, `status` (`needs_action|verifying|connected|failed`), verification timestamps/detail, `next_action_code`. RLS on + explicit `service_role` policy. Index `(tenant_id, status)`.
+**What:** New `website_connections` table — one row per tenant (`UNIQUE (tenant_id)`). Columns: `tenant_id` **FK → tenants(id) ON DELETE CASCADE**, `website_url`, `platform` / `detected_platform` (`wordpress|wix|squarespace|godaddy|custom|unknown`), `platform_override`, `status` (`needs_action|verifying|connected|failed`), verification timestamps/detail, `next_action_code`. RLS on + deny-public + explicit `service_role` policy. Index `(tenant_id, status)`.
 
 **Why:** Website/Chatbot Connect v1 (GH #767). "connected" is only written after a live HTML fetch finds `agentnexlify-widget.js` **and** this tenant's `data-api-key`. No CMS passwords. No fake self-report connected state.
 

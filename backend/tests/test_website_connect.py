@@ -19,15 +19,19 @@ import io
 import logging
 import uuid
 import zipfile
+from pathlib import Path
 from unittest.mock import patch
+from urllib.parse import urlparse
 
 import pytest
 
+from backend.services.url_validation import is_safe_url as real_is_safe_url
 from backend.services.website_connect import (
     FORBIDDEN_CREDENTIAL_FIELDS,
     PLATFORMS,
     PageFetch,
     detect_platform,
+    fetch_public_page,
     next_action,
     normalize_website_url,
     redact_secret,
@@ -185,6 +189,13 @@ class TestWidgetPresence:
         )
         assert widget_is_present(html, KEY_A) is False
 
+    def test_key_plaintext_without_data_api_key_is_not_connected(self):
+        html = (
+            '<script src="https://app.agentnexlify.com/widget/'
+            f'agentnexlify-widget.js"></script> key={KEY_A}'
+        )
+        assert widget_is_present(html, KEY_A) is False
+
     def test_empty_key_never_matches(self):
         assert widget_is_present(_wp_html(KEY_A), "") is False
         assert widget_is_present(_wp_html(KEY_A), None) is False
@@ -197,6 +208,28 @@ class TestNormalizeAndSecrets:
     def test_rejects_private_urls(self):
         with pytest.raises(ValueError):
             normalize_website_url("http://127.0.0.1/")
+
+    def test_rejects_loopback_link_local_and_ipv6_literals(self):
+        blocked = (
+            "http://localhost/",
+            "http://0.0.0.0/",
+            "http://[::1]/",
+            "http://[fe80::1]/",
+            "http://169.254.169.254/",
+            "http://10.0.0.5/",
+            "http://192.168.1.1/",
+            "http://[::ffff:127.0.0.1]/",
+            "http://[::ffff:169.254.169.254]/",
+        )
+        for raw in blocked:
+            with pytest.raises(ValueError):
+                normalize_website_url(raw)
+
+    def test_strips_userinfo_so_credentials_are_not_stored(self):
+        assert (
+            normalize_website_url("https://admin:cms-password@example.com/shop/")
+            == "https://example.com/shop"
+        )
 
     def test_rejects_credential_fields(self):
         with pytest.raises(ValueError, match="not accepted"):
@@ -212,6 +245,194 @@ class TestNormalizeAndSecrets:
         assert KEY_A not in redacted
         assert redacted.startswith("wk_t")
         assert "…" in redacted
+
+
+# ---------------------------------------------------------------------------
+# Live fetch SSRF (redirects / DNS rebind / private / loopback / IPv6)
+# ---------------------------------------------------------------------------
+
+
+class _FakeHTTPResponse:
+    def __init__(self, url, status=200, headers=None, content=b"<html></html>"):
+        self.url = url
+        self.status_code = status
+        self.headers = headers or {}
+        self.content = content
+        self.encoding = "utf-8"
+        self.is_redirect = 300 <= status < 400
+        self.is_success = 200 <= status < 300
+
+
+class _FakeHTTPClient:
+    def __init__(self, routes, seen):
+        self._routes = routes
+        self.seen = seen
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_exc):
+        return False
+
+    def get(self, url, headers=None):
+        self.seen.append(url)
+        if url not in self._routes:
+            raise AssertionError(f"fetch_public_page requested blocked URL {url}")
+        return self._routes[url]
+
+
+def _addrinfo(ip):
+    return [(2, 1, 6, "", (ip, 0))]
+
+
+def _allow_public_hosts(url: str) -> bool:
+    host = (urlparse(url).hostname or "").lower()
+    if host in {"example.com", "example.org", "safe.example"}:
+        return True
+    return real_is_safe_url(url)
+
+
+class TestFetchPublicPageSSRF:
+    def test_does_not_request_loopback_private_link_local_or_ipv6(self, monkeypatch):
+        seen = []
+        monkeypatch.setattr(
+            "backend.services.website_connect.httpx.Client",
+            lambda *a, **k: _FakeHTTPClient({}, seen),
+        )
+        blocked = (
+            "http://127.0.0.1/",
+            "http://10.1.2.3/",
+            "http://169.254.169.254/latest/meta-data/",
+            "http://[::1]/",
+            "http://[fe80::1]/",
+            "http://[::ffff:127.0.0.1]/",
+        )
+        for url in blocked:
+            page = fetch_public_page(url)
+            assert page.ok is False
+            assert page.error == "unsafe_url"
+        assert seen == []
+
+    def test_redirect_to_loopback_is_not_followed(self, monkeypatch):
+        seen = []
+        start = "https://example.com"
+        routes = {
+            start: _FakeHTTPResponse(
+                start, status=302, headers={"location": "http://127.0.0.1/admin"}
+            )
+        }
+        monkeypatch.setattr(
+            "backend.services.website_connect.httpx.Client",
+            lambda *a, **k: _FakeHTTPClient(routes, seen),
+        )
+        monkeypatch.setattr(
+            "backend.services.website_connect.is_safe_url", _allow_public_hosts
+        )
+        page = fetch_public_page(start)
+        assert page.ok is False
+        assert page.error == "unsafe_url"
+        assert seen == [start]
+        assert all("127.0.0.1" not in u for u in seen)
+
+    def test_redirect_to_metadata_and_ipv6_loopback_is_not_followed(self, monkeypatch):
+        seen = []
+        start = "https://example.com"
+        hops = [
+            "http://169.254.169.254/latest/meta-data/",
+            "http://[::1]/",
+            "http://[fe80::1]/",
+            "//169.254.169.254/",
+        ]
+        monkeypatch.setattr(
+            "backend.services.website_connect.is_safe_url", _allow_public_hosts
+        )
+        for location in hops:
+            seen.clear()
+            routes = {
+                start: _FakeHTTPResponse(
+                    start, status=302, headers={"location": location}
+                )
+            }
+            monkeypatch.setattr(
+                "backend.services.website_connect.httpx.Client",
+                lambda *a, **k: _FakeHTTPClient(routes, seen),
+            )
+            page = fetch_public_page(start)
+            assert page.ok is False
+            assert seen == [start]
+            joined = " ".join(seen)
+            assert "169.254" not in joined
+            assert "::1" not in joined
+            assert "fe80" not in joined
+
+    def test_dns_rebind_to_private_ip_is_not_requested(self, monkeypatch):
+        seen = []
+        monkeypatch.setattr(
+            "backend.services.website_connect.httpx.Client",
+            lambda *a, **k: _FakeHTTPClient({}, seen),
+        )
+        with patch(
+            "backend.services.url_validation.socket.getaddrinfo",
+            return_value=_addrinfo("10.0.0.5"),
+        ):
+            page = fetch_public_page("https://rebind.attacker.test/")
+        assert page.ok is False
+        assert page.error == "unsafe_url"
+        assert seen == []
+
+    def test_dns_rebind_to_ipv6_loopback_is_not_requested(self, monkeypatch):
+        seen = []
+        monkeypatch.setattr(
+            "backend.services.website_connect.httpx.Client",
+            lambda *a, **k: _FakeHTTPClient({}, seen),
+        )
+        with patch(
+            "backend.services.url_validation.socket.getaddrinfo",
+            return_value=[(10, 1, 6, "", ("::1", 0, 0, 0))],
+        ):
+            page = fetch_public_page("https://rebind6.attacker.test/")
+        assert page.ok is False
+        assert page.error == "unsafe_url"
+        assert seen == []
+
+    def test_too_many_redirects_never_marks_success(self, monkeypatch):
+        seen = []
+        start = "https://example.com"
+        routes = {
+            start: _FakeHTTPResponse(
+                start, status=302, headers={"location": "/next"}
+            ),
+            "https://example.com/next": _FakeHTTPResponse(
+                "https://example.com/next",
+                status=302,
+                headers={"location": "/next"},
+            ),
+        }
+        monkeypatch.setattr(
+            "backend.services.website_connect.httpx.Client",
+            lambda *a, **k: _FakeHTTPClient(routes, seen),
+        )
+        monkeypatch.setattr(
+            "backend.services.website_connect.is_safe_url", _allow_public_hosts
+        )
+        page = fetch_public_page(start)
+        assert page.ok is False
+        assert page.error == "too_many_redirects"
+
+
+class TestMigration201Shape:
+    def test_tenant_fk_rls_and_service_role_policy(self):
+        sql = (
+            Path(__file__).resolve().parents[2]
+            / "migrations"
+            / "201_website_connections.sql"
+        ).read_text()
+        assert "REFERENCES tenants(id) ON DELETE CASCADE" in sql
+        assert "ENABLE ROW LEVEL SECURITY" in sql
+        assert "TO public" in sql
+        assert "USING (false)" in sql
+        assert "TO service_role" in sql
+        assert "USING (true)" in sql
 
 
 # ---------------------------------------------------------------------------
@@ -287,6 +508,30 @@ class TestUpsertAndVerify:
             fetch_page=lambda url: _page(_wp_html(KEY_A), url=url),
         )
         assert again["status"] == "connected"
+        assert len(db.tables["website_connections"]) == 1
+
+    def test_reconnect_upsert_same_url_stays_connected(self):
+        db = FakeDB(
+            {
+                "website_connections": [],
+                "widget_configs": [{"tenant_id": TENANT_A, "api_key": KEY_A}],
+                "tenants": [],
+            }
+        )
+        first = upsert_connection(
+            db,
+            TENANT_A,
+            "https://example.com",
+            fetch_page=lambda url: _page(_wp_html(KEY_A), url=url),
+        )
+        second = upsert_connection(
+            db,
+            TENANT_A,
+            "https://example.com",
+            fetch_page=lambda url: _page(_wp_html(KEY_A), url=url),
+        )
+        assert first["id"] == second["id"]
+        assert second["status"] == "connected"
         assert len(db.tables["website_connections"]) == 1
 
     def test_url_change_resets_connected_until_reverified(self):
