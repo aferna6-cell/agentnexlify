@@ -181,23 +181,19 @@ def derive_workflow_status(steps: List[Dict[str, Any]]) -> str:
     # for aggregation. Without this, they would keep the workflow running
     # forever (deadlock class).
     def _is_cancelled_equivalent(step: Dict[str, Any], state: str) -> bool:
-        if state == "cancelled":
-            return True
-        if state != "planned":
-            return False
-        return _planned_blocked_by_terminal_unsuccessful_prerequisite(step, by_id) and not _retries_exhausted(
-            step
+        return state == "cancelled" or (
+            state == "planned"
+            and _planned_blocked_by_terminal_unsuccessful_prerequisite(step, by_id)
         )
 
     if all(_is_cancelled_equivalent(step, state) for step, state in zip(steps, states)):
         return "cancelled"
 
     def _is_succeeded_or_cancelled_equivalent(step: Dict[str, Any], state: str) -> bool:
-        if state in {"succeeded", "cancelled"}:
-            return True
-        if state != "planned":
-            return False
-        return _planned_blocked_by_terminal_unsuccessful_prerequisite(step, by_id) or state == "cancelled"
+        return state in {"succeeded", "cancelled"} or (
+            state == "planned"
+            and _planned_blocked_by_terminal_unsuccessful_prerequisite(step, by_id)
+        )
 
     if any(s == "succeeded" for s in states) and all(
         _is_succeeded_or_cancelled_equivalent(step, state)

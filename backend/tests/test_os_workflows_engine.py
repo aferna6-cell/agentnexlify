@@ -661,6 +661,66 @@ def test_cancelled_failure_does_not_fail_fast_independent_running_branch():
     )
 
 
+def test_blocked_terminal_prerequisite_helper_ignores_cycles():
+    from backend.services.os_workflows.engine import (
+        _planned_blocked_by_terminal_unsuccessful_prerequisite,
+    )
+
+    step = {"id": "loop", "state": "planned", "dependencies": ["loop"]}
+    by_id = {"loop": step}
+    assert (
+        _planned_blocked_by_terminal_unsuccessful_prerequisite(step, by_id)
+        is False
+    )
+
+
+def test_blocked_terminal_prerequisite_helper_ignores_missing_dependencies():
+    from backend.services.os_workflows.engine import (
+        _planned_blocked_by_terminal_unsuccessful_prerequisite,
+    )
+
+    step = {"id": "child", "state": "planned", "dependencies": ["missing"]}
+    assert (
+        _planned_blocked_by_terminal_unsuccessful_prerequisite(step, {})
+        is False
+    )
+
+
+def test_cancelled_blocked_planned_descendant_counts_as_succeeded_tail():
+    """Succeeded work plus cancelled-blocked tail should aggregate succeeded."""
+    from backend.services.os_workflows.engine import derive_workflow_status
+
+    assert (
+        derive_workflow_status(
+            [
+                {
+                    "id": "done",
+                    "state": "succeeded",
+                    "dependencies": [],
+                },
+                {
+                    "id": "cancelled_root",
+                    "state": "cancelled",
+                    "dependencies": [],
+                },
+                {
+                    "id": "tail",
+                    "state": "planned",
+                    "dependencies": ["cancelled_root"],
+                },
+            ]
+        )
+        == "succeeded"
+    )
+
+
+def test_unknown_non_active_state_falls_back_to_running():
+    """Unexpected states still fail open to running during aggregation."""
+    from backend.services.os_workflows.engine import derive_workflow_status
+
+    assert derive_workflow_status([{"id": "mystery", "state": "mystery"}]) == "running"
+
+
 def test_execution_success_without_verifier_stays_verifying():
     eng = _engine()
     wf = eng.create(
