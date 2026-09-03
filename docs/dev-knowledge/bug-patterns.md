@@ -18894,3 +18894,31 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(m9): terminalize exhausted-failure workflow dependency deadlocks (#763)
+
+* fix(m9): terminalize exhausted-failure workflow deadlocks
+
+derive_workflow_status() treated planned dependents as active work, so
+recover() left workflows running forever after a prerequisite exhausted
+retries. Ignore those unreachable planned steps during aggregation.
+Retryable failures and independent executable branches still keep the
+workflow running.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+* fix(m9): terminalize cancelled-prerequisite dependency deadlocks
+
+* fix(m9): cover terminal deadlock aggregation edge cases
+
+---------
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+**Date:** 2026-09-03
+**Commit:** 33eafe6
+**Author:** aferna6-cell
+**Files Changed:** backend/services/os_workflows/engine.py,backend/tests/test_os_workflows_engine.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
