@@ -159,6 +159,12 @@ Models: `claude-opus-4-8` (strong) vs `claude-haiku-4-5-20251001` (cheap).
 Promotion zeros (unsafe / cross-tenant / direct-provider / cycles) are
 non-negotiable. Passing M9.4 does not enable execution — next is M9.5 shadow.
 
+**2026-09-03 hold:** [PR #773](https://github.com/aferna6-cell/agentnexlify/pull/773)
+is merge-ready and frozen at the owner boundary. Do not run the paid bakeoff
+or start M9.5 until owner merge + the bounded stratified live run
+(~$0.52 cap) + promotion decision. See
+`audits/artifacts/m9-4-773-owner-boundary-hold-2026-09-03.md`.
+
 ## Acceptance (M9.1)
 
 - [x] Pydantic models for Workflow / WorkflowStep / ToolIntent

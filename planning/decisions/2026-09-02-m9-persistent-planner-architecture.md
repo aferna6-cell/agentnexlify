@@ -1,9 +1,9 @@
 # M9 — Persistent Planner / Workflow State Machine
 
 **Date:** 2026-09-02
-**Status:** Accepted — M9.1 contract · M9.2 COMPLETE · M9.3 frozen eval
+**Status:** Accepted — M9.1–M9.3 COMPLETE · M9.4 #773 frozen at owner boundary
 **Preceded by:** M8 COMPLETE · governance #750 · demo-role middleware #749
-**Updated:** 2026-09-03 — M9.2 merged (#752/#754); M9.3 harness starts.
+**Updated:** 2026-09-03 — M9.4 #773 merge-ready; hold for owner merge. No paid bakeoff. No M9.5.
 
 ## Context
 

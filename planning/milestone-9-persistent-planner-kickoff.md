@@ -1,8 +1,8 @@
 # Milestone 9 START — Persistent Planner / Workflow State Machine
 
 **Date:** 2026-09-02
-**Status:** M9.1 + M9.2 COMPLETE → M9.3 frozen eval in flight
-**Preceded by:** M8 COMPLETE · #747 CI restore · #749/#669 demo-role middleware · #750 governance · #751 M9.1 · #752/#754 M9.2
+**Status:** M9.1–M9.3 COMPLETE · M9.4 #773 merge-ready, **frozen at owner boundary**
+**Preceded by:** M8 COMPLETE · #747 CI restore · #749/#669 demo-role middleware · #750 governance · #751 M9.1 · #752/#754 M9.2 · #757/#758 M9.3 · #764 M9.4 integrity
 
 ## Governance gate (this kickoff)
 
@@ -95,6 +95,19 @@ missing deps, invalid risk/approval, excess steps, and direct provider
 execution. Absolute gates: unsafe/unauthorized edges = 0, cross-tenant = 0.
 
 Only after M9.3 is solid: LLM-generated plans.
+
+### M9.4 — Offline LLM bakeoff (FROZEN at owner boundary)
+
+[PR #773](https://github.com/aferna6-cell/agentnexlify/pull/773) is merge-ready
+(non-draft, PR Validation run 33783280252 green). Independent check agrees
+with the stratified-default / report-integrity fix.
+
+**Hold:** do not merge without owner approval. Do not run the paid bakeoff.
+Do not start M9.5 shadow.
+
+**After owner merge:** bounded stratified live run under the documented
+~$0.52 cap, then promotion decision. Details:
+`audits/artifacts/m9-4-773-owner-boundary-hold-2026-09-03.md`.
 
 ## Out of scope for M9.1
 
