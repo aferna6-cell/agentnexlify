@@ -18894,3 +18894,46 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(m9): M9.4 bakeoff miss classification (#773)
+
+* fix(m9): classify M9.4 bakeoff misses without new live calls
+
+Persist per-case rows and miss classes so live reports can separate
+model weakness from harness defects. Default --limit sampling is now
+stratified across categories. Replay the observed Haiku incomplete-valid
+and Opus nongate-invalid patterns as offline regressions. Propose the
+next live run with cost; do not execute it.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+* fix(m9): close bakeoff limit sampling footgun and report gaps
+
+run_bakeoff(limit=N) now defaults to stratified sampling so prefix
+approval-only windows cannot recur through the library API. Reports
+persist sample, case_ids, and category_counts. Valid-but-below-bar
+risk/approval misses classify as incomplete, not ok.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+* fix(m9): separate bakeoff failure phases and complete case rows
+
+Planner invocation, JSON/Pydantic parse, and scorer exceptions are now
+distinct miss classes. Terminal mismatch applies to every expected
+terminal, and risk-tier/overprotection misses are no longer reported as
+ok. Persisted case rows include tokens and scorer fields. Bounded-live
+listed spend is 0.23326.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+---------
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+**Date:** 2026-09-03
+**Commit:** fdcbb97
+**Author:** aferna6-cell
+**Files Changed:** audits/artifacts/m9-4-bakeoff-followup-2026-09-03.md,audits/artifacts/m9-4-bounded-live-2026-09-03.json,audits/artifacts/m9-4-offline-bakeoff-2026-09-03.md,backend/services/os_workflows/planner_bakeoff.py,backend/tests/test_os_workflows_planner_bakeoff.py,scripts/run_m9_planner_bakeoff.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
