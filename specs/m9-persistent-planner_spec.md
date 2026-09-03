@@ -107,7 +107,9 @@ before LLM plan generation.
 
 | Artifact | Path |
 |----------|------|
-| Tool catalog (static) | `backend/services/os_workflows/tool_catalog.py` |
+| Action manifest (generated) | `agent-service/src/agent-os/actions/action_manifest.json` |
+| Manifest generator | `scripts/generate_action_manifest.py` |
+| Tool catalog (manifest-backed) | `backend/services/os_workflows/tool_catalog.py` |
 | Plan schemas | `backend/services/os_workflows/plan_schema.py` |
 | Deterministic validator | `backend/services/os_workflows/plan_validator.py` |
 | Scorer + suite harness | `backend/services/os_workflows/plan_eval.py` |
@@ -125,14 +127,22 @@ cross-tenant plan edges = 0
 
 - cycles / missing dependencies
 - invalid risk/approval combinations (L2+ without approval)
-- risk underrate vs catalog
+- risk underrate vs catalog (hard gate); overrate = valid + quality penalty
 - excess step budgets
 - unknown / always-forbidden tools
 - planner `execute_directly` / `provider_call`
 - cross-tenant `client_id` mismatches
 
+### Hardening (post-merge)
+
+- CI parity: Action tool sources ↔ `action_manifest.json` ↔ planner `tool_catalog`
+- Scored: department accuracy, verification placement, risk-tier accuracy,
+  unnecessary approval/verification rates
+- Suite rollup: planner quality mean **excludes** attack catch scores
+  (`attacks_caught / attacks_total` reported separately)
+
 **Out of scope for M9.3:** LLM plan generation, Action Executor calls,
-provider I/O.
+provider I/O. Next: **M9.4 offline LLM bakeoff** (CandidatePlan JSON only).
 
 ## Acceptance (M9.1)
 
