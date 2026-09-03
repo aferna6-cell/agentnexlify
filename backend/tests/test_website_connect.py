@@ -231,6 +231,16 @@ class TestNormalizeAndSecrets:
             == "https://example.com/shop"
         )
 
+    def test_keeps_explicit_port_and_rejects_empty_host(self):
+        assert (
+            normalize_website_url("https://example.com:8443/shop/")
+            == "https://example.com:8443/shop"
+        )
+        with pytest.raises(ValueError):
+            normalize_website_url("https://")
+        with pytest.raises(ValueError):
+            normalize_website_url("   ")
+
     def test_rejects_credential_fields(self):
         with pytest.raises(ValueError, match="not accepted"):
             reject_credential_fields({"website_url": "https://x.com", "password": "secret"})
@@ -394,6 +404,61 @@ class TestFetchPublicPageSSRF:
         assert page.ok is False
         assert page.error == "unsafe_url"
         assert seen == []
+
+    def test_empty_redirect_location_is_not_success(self, monkeypatch):
+        seen = []
+        start = "https://example.com"
+        routes = {start: _FakeHTTPResponse(start, status=302, headers={"location": ""})}
+        monkeypatch.setattr(
+            "backend.services.website_connect.httpx.Client",
+            lambda *a, **k: _FakeHTTPClient(routes, seen),
+        )
+        monkeypatch.setattr(
+            "backend.services.website_connect.is_safe_url", _allow_public_hosts
+        )
+        page = fetch_public_page(start)
+        assert page.ok is False
+        assert page.error == "redirect"
+        assert seen == [start]
+
+    def test_redirect_query_on_public_host_is_followed(self, monkeypatch):
+        seen = []
+        start = "https://example.com"
+        dest = "https://example.com/page?x=1"
+        routes = {
+            start: _FakeHTTPResponse(
+                start, status=302, headers={"location": "/page?x=1"}
+            ),
+            dest: _FakeHTTPResponse(dest, status=200, content=b"<html>q</html>"),
+        }
+        monkeypatch.setattr(
+            "backend.services.website_connect.httpx.Client",
+            lambda *a, **k: _FakeHTTPClient(routes, seen),
+        )
+        monkeypatch.setattr(
+            "backend.services.website_connect.is_safe_url", _allow_public_hosts
+        )
+        page = fetch_public_page(start)
+        assert page.ok is True
+        assert "q" in page.html
+        assert seen == [start, dest]
+
+    def test_safe_host_html_is_returned(self, monkeypatch):
+        seen = []
+        start = "https://example.com"
+        html = b"<html><body>ok</body></html>"
+        routes = {start: _FakeHTTPResponse(start, status=200, content=html)}
+        monkeypatch.setattr(
+            "backend.services.website_connect.httpx.Client",
+            lambda *a, **k: _FakeHTTPClient(routes, seen),
+        )
+        monkeypatch.setattr(
+            "backend.services.website_connect.is_safe_url", _allow_public_hosts
+        )
+        page = fetch_public_page(start)
+        assert page.ok is True
+        assert "ok" in page.html
+        assert seen == [start]
 
     def test_too_many_redirects_never_marks_success(self, monkeypatch):
         seen = []
