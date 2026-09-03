@@ -564,11 +564,13 @@ def check_workflow_planner_import_boundary(failures: list[str]) -> None:
 
 
 def check_action_manifest_catalog_parity(failures: list[str]) -> None:
-    """M9.3+: Action manifest must match tool sources; planner catalog must match manifest.
+    """M9.3+: Action manifest must match registered tools; planner catalog must match manifest.
 
     Keeps the planner import-isolated (JSON only) while failing CI when
-    ``tool_catalog`` risk/approval/department semantics drift from Action tools.
+    ``tool_catalog`` risk/approval/department semantics drift from the
+    Action runtime registry (not merely every ``tools/*.ts`` definition).
     """
+    import importlib.util
     import json
     import subprocess
     import sys
@@ -593,7 +595,7 @@ def check_action_manifest_catalog_parity(failures: list[str]) -> None:
         text=True,
     )
     check(
-        "action_manifest.json matches Action tool sources",
+        "action_manifest.json matches registered Action tools",
         proc.returncode == 0,
         failures,
         [proc.stdout.strip() or proc.stderr.strip() or "manifest drift"],
@@ -648,6 +650,34 @@ def check_action_manifest_catalog_parity(failures: list[str]) -> None:
     except Exception as exc:  # noqa: BLE001 — surface parity errors in CI
         check(
             "planner tool_catalog matches Action manifest",
+            False,
+            failures,
+            [str(exc)],
+        )
+
+    try:
+        gen_spec = importlib.util.spec_from_file_location(
+            "_action_manifest_gen", str(gen)
+        )
+        if gen_spec is None or gen_spec.loader is None:
+            raise ImportError(f"cannot load {gen}")
+        gen_mod = importlib.util.module_from_spec(gen_spec)
+        gen_spec.loader.exec_module(gen_mod)
+        registered_ids = set(gen_mod.registered_tool_ids())
+        check(
+            "manifest IDs correspond exactly to registered Action tools",
+            registered_ids == set(tool_ids),
+            failures,
+            [
+                f"registered={sorted(registered_ids)}",
+                f"manifest={tool_ids}",
+            ]
+            if registered_ids != set(tool_ids)
+            else [],
+        )
+    except Exception as exc:  # noqa: BLE001 — surface registry parse errors in CI
+        check(
+            "manifest IDs correspond exactly to registered Action tools",
             False,
             failures,
             [str(exc)],
