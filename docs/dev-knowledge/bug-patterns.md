@@ -18894,3 +18894,14 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(m9): harden M9.4 bakeoff evaluation integrity (#764)
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+**Date:** 2026-09-03
+**Commit:** 27071b5
+**Author:** aferna6-cell
+**Files Changed:** backend/services/os_workflows/planner_bakeoff.py,backend/tests/test_os_workflows_planner_bakeoff.py,scripts/run_m9_planner_bakeoff.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
