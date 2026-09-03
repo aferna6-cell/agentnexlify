@@ -182,6 +182,21 @@ cannot be queued or treated as sent if the `os_tool_executions` row cannot be
 written. L0/L1 persist stays best-effort so a note-audit blip does not break
 the owner's turn.
 
+## Billing Automation v1 (typed invoice action bridge)
+
+Invoice tools live on the Action Executor, not the M9 planner:
+
+| Tool | Risk | Path |
+|---|---|---|
+| `list_overdue_invoices` / `get_invoice` | L0 | Engine read via `InvoicePort` |
+| `create_invoice_draft` | L1 | Collecting persist → `invoices` |
+| `send_invoice` / `send_invoice_reminder` | L2 | Owner approve → Python data plane only |
+
+`INVOICE_ACTIONS_ENABLED` defaults **off**. Payment confirmation is Stripe/webhook
+state only — agents cannot `mark_invoice_paid`. The planner catalog excludes
+these five IDs (`PLANNER_EXCLUDED_TOOLS`) until a later invoicing-agent PR.
+Department `resolveAction` is unchanged in this slice.
+
 ## Leftovers for Slice B (do not sneak Gmail into A)
 
 - L2 idempotency is required on persist (migration 197). List/get redact
@@ -236,6 +251,7 @@ executor, policy, registry or audit trail changing:
 | Agent → tool → executor → verification, end to end | `agent-service/src/agent-os/actions/agent-integration.test.ts` |
 | Request scoping, tenant isolation, approval round trip | `agent-service/src/agent-os-runtime/action-runtime.test.ts` |
 | Persistence, note application, approval API | `backend/tests/test_os_tool_executions.py` |
+| Invoice Action Executor data plane (flag, L1 apply, L2 send/reminder) | `backend/tests/test_os_invoice_actions.py` + `agent-service/src/agent-os/actions/invoice_actions.test.ts` |
 | Unknown send, email-claim parity, unclaimed run_tool | `backend/tests/test_gmail_send_message.py` |
 | Sales-only send_email flag (default off, no live send) | `backend/tests/test_send_email_flag.py` + `agent-service/src/agent-os/actions/send_email.test.ts` |
 

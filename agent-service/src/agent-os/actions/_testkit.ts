@@ -14,6 +14,7 @@ import {
   InMemoryCalendarPort,
   InMemoryCrmPort,
   InMemoryCustomerNotesPort,
+  InMemoryInvoicePort,
   setToolPorts,
   type ToolPorts,
 } from "./ports.ts";
@@ -31,6 +32,11 @@ import { searchCustomers } from "./tools/search_customers.ts";
 import { updateCustomer } from "./tools/update_customer.ts";
 import { createCustomer } from "./tools/create_customer.ts";
 import { updateLeadStage } from "./tools/update_lead_stage.ts";
+import { listOverdueInvoices } from "./tools/list_overdue_invoices.ts";
+import { getInvoice } from "./tools/get_invoice.ts";
+import { createInvoiceDraft } from "./tools/create_invoice_draft.ts";
+import { sendInvoice } from "./tools/send_invoice.ts";
+import { sendInvoiceReminder } from "./tools/send_invoice_reminder.ts";
 import type { SharedContext } from "../types/agent.ts";
 
 export interface Harness {
@@ -39,6 +45,7 @@ export interface Harness {
   notes: InMemoryCustomerNotesPort;
   calendar: InMemoryCalendarPort;
   crm: InMemoryCrmPort;
+  invoices: InMemoryInvoicePort;
   registry: ToolRegistry;
   context: SharedContext;
   /** How many times each fixture tool body actually ran. */
@@ -103,6 +110,7 @@ export function harness(): Harness {
   const notes = new InMemoryCustomerNotesPort();
   const calendar = new InMemoryCalendarPort();
   const crm = new InMemoryCrmPort();
+  const invoices = new InMemoryInvoicePort();
   // Seed CRM from sample pipeline so mutations have writable targets.
   for (const lead of sampleContext().pipelineLeads) {
     crm.seed({
@@ -117,7 +125,7 @@ export function harness(): Harness {
       updatedAt: new Date().toISOString(),
     });
   }
-  const ports: ToolPorts = { customerNotes: notes, calendar, crm };
+  const ports: ToolPorts = { customerNotes: notes, calendar, crm, invoices };
   setActionStore(store);
   setToolPorts(ports);
   resetToolPolicyProvider();
@@ -135,6 +143,11 @@ export function harness(): Harness {
   registry.register(updateCustomer);
   registry.register(createCustomer);
   registry.register(updateLeadStage);
+  registry.register(listOverdueInvoices);
+  registry.register(getInvoice);
+  registry.register(createInvoiceDraft);
+  registry.register(sendInvoice);
+  registry.register(sendInvoiceReminder);
   for (const tool of fixtureTools(calls)) registry.register(tool);
 
   return {
@@ -143,6 +156,7 @@ export function harness(): Harness {
     notes,
     calendar,
     crm,
+    invoices,
     registry,
     context: sampleContext(),
     calls,

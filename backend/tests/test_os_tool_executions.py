@@ -912,6 +912,154 @@ def test_calendar_l2_approve_refuses_when_flag_off_without_claim(monkeypatch):
     assert row["status"] == "pending_approval"
 
 
+def test_invoice_l2_approve_bypasses_engine_and_runs_data_plane(monkeypatch):
+    """Send/reminder must not go through the engine Collecting path."""
+    monkeypatch.setenv("INVOICE_ACTIONS_ENABLED", "1")
+    db = FakeSupabase(
+        {
+            "os_tool_executions": [
+                {
+                    "id": EXEC_ID,
+                    "client_id": CLIENT,
+                    "agent_id": "invoicing",
+                    "tool_id": "send_invoice",
+                    "status": "pending_approval",
+                    "approval_state": "pending",
+                    "risk_level": 2,
+                    "mutating": True,
+                    "requires_approval": True,
+                    "input": {"invoice_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"},
+                    "policy_reason": "level 2 requires approval",
+                    "attempts": 0,
+                    "created_at": "2026-09-03T12:00:00Z",
+                }
+            ],
+            "leads": [],
+        }
+    )
+    client = _client()
+    engine_calls = []
+
+    def _engine(*_a, **_k):
+        engine_calls.append(1)
+        raise AssertionError("invoice L2 must not call the engine Collecting path")
+
+    try:
+        with patch.object(router_mod, "get_service_supabase", return_value=db), patch.object(
+            router_mod.agent_sdk_client, "approve_action_sync", side_effect=_engine
+        ), patch.object(
+            router_mod.os_invoice_actions,
+            "run_invoice_l2",
+            return_value={
+                "executed": True,
+                "refused": False,
+                "unknown": False,
+                "verified": True,
+                "reason": "sent",
+                "result": {
+                    "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                    "invoice_number": "INV-1111-001",
+                    "payment_link": "https://pay.stripe.test/inv",
+                    "email_sent": True,
+                    "sms_sent": False,
+                },
+            },
+        ) as run_l2:
+            resp = client.post(f"/api/v1/os/tool-executions/{EXEC_ID}/approve")
+            second = client.post(f"/api/v1/os/tool-executions/{EXEC_ID}/approve")
+    finally:
+        _teardown()
+
+    assert resp.status_code == 200
+    assert resp.json()["already_decided"] is False
+    assert resp.json()["execution"]["status"] == "succeeded"
+    assert second.json()["already_decided"] is True
+    assert engine_calls == []
+    assert run_l2.call_count == 1
+
+
+def test_invoice_l2_approve_refuses_when_flag_off_without_claim(monkeypatch):
+    monkeypatch.setenv("INVOICE_ACTIONS_ENABLED", "0")
+    db = FakeSupabase(
+        {
+            "os_tool_executions": [
+                {
+                    "id": EXEC_ID,
+                    "client_id": CLIENT,
+                    "agent_id": "invoicing",
+                    "tool_id": "send_invoice_reminder",
+                    "status": "pending_approval",
+                    "approval_state": "pending",
+                    "risk_level": 2,
+                    "mutating": True,
+                    "requires_approval": True,
+                    "input": {"invoice_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"},
+                    "attempts": 0,
+                    "created_at": "2026-09-03T12:00:00Z",
+                }
+            ],
+            "leads": [],
+        }
+    )
+    client = _client()
+    try:
+        with patch.object(router_mod, "get_service_supabase", return_value=db), patch.object(
+            router_mod.os_invoice_actions,
+            "run_invoice_l2",
+            side_effect=AssertionError("must refuse before claim"),
+        ):
+            resp = client.post(f"/api/v1/os/tool-executions/{EXEC_ID}/approve")
+    finally:
+        _teardown()
+
+    assert resp.status_code == 403
+    row = db.rows("os_tool_executions")[0]
+    assert row["status"] == "pending_approval"
+
+
+def test_invoice_l2_approve_provider_failure_is_not_success(monkeypatch):
+    monkeypatch.setenv("INVOICE_ACTIONS_ENABLED", "1")
+    db = FakeSupabase(
+        {
+            "os_tool_executions": [
+                {
+                    "id": EXEC_ID,
+                    "client_id": CLIENT,
+                    "agent_id": "invoicing",
+                    "tool_id": "send_invoice",
+                    "status": "pending_approval",
+                    "approval_state": "pending",
+                    "risk_level": 2,
+                    "mutating": True,
+                    "requires_approval": True,
+                    "input": {"invoice_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"},
+                    "attempts": 0,
+                    "created_at": "2026-09-03T12:00:00Z",
+                }
+            ],
+            "leads": [],
+        }
+    )
+    client = _client()
+    try:
+        with patch.object(router_mod, "get_service_supabase", return_value=db), patch.object(
+            router_mod.os_invoice_actions,
+            "run_invoice_l2",
+            return_value={
+                "executed": True,
+                "verified": False,
+                "reason": "Email failed: provider down",
+                "code": "send_failed",
+            },
+        ):
+            resp = client.post(f"/api/v1/os/tool-executions/{EXEC_ID}/approve")
+    finally:
+        _teardown()
+
+    assert resp.status_code == 200
+    assert resp.json()["execution"]["status"] == "verification_failed"
+
+
 def test_an_owner_can_still_read_tool_execution_input_for_approval():
     db = _pending_db()
     client = _client(OWNER_CLAIMS)

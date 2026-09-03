@@ -1,14 +1,15 @@
-"""Calendar + CRM Action Executor flags. Defaults fail-closed.
+"""Calendar + CRM + Invoice Action Executor flags. Defaults fail-closed.
 
-CALENDAR_ACTIONS_ENABLED / CRM_ACTIONS_ENABLED must stay off in production
-until offline evals + controlled smoke pass. Mirrors SEND_EMAIL_ENABLED /
-RAG_ENABLED — unset is off.
+CALENDAR_ACTIONS_ENABLED / CRM_ACTIONS_ENABLED / INVOICE_ACTIONS_ENABLED
+must stay off in production until offline evals + controlled smoke pass.
+Mirrors SEND_EMAIL_ENABLED / RAG_ENABLED — unset is off.
 """
 
 import os
 
 CALENDAR_ACTIONS_FLAG = "CALENDAR_ACTIONS_ENABLED"
 CRM_ACTIONS_FLAG = "CRM_ACTIONS_ENABLED"
+INVOICE_ACTIONS_FLAG = "INVOICE_ACTIONS_ENABLED"
 _TRUTHY = frozenset({"1", "true", "yes", "on"})
 
 
@@ -24,3 +25,8 @@ def calendar_actions_enabled() -> bool:
 def crm_actions_enabled() -> bool:
     """Live CRM Action Executor gate. Unset / empty / non-truthy is off."""
     return _flag(CRM_ACTIONS_FLAG)
+
+
+def invoice_actions_enabled() -> bool:
+    """Live invoice Action Executor gate. Unset / empty / non-truthy is off."""
+    return _flag(INVOICE_ACTIONS_FLAG)

@@ -21,11 +21,14 @@ import type { RiskLevel } from "./types.ts";
 import {
   CALENDAR_ACTIONS_FLAG,
   CRM_ACTIONS_FLAG,
+  INVOICE_ACTIONS_FLAG,
   SEND_EMAIL_TOOL_ID,
   calendarActionsEnabled,
   crmActionsEnabled,
+  invoiceActionsEnabled,
   isCalendarToolId,
   isCrmToolId,
+  isInvoiceToolId,
   sendEmailEnabled,
 } from "./flags.ts";
 import { mayExecuteEmailSend } from "./communication_capabilities.ts";
@@ -171,6 +174,15 @@ export function evaluateActionPolicy(
       riskLevel,
       requiresApproval: tool.requiresApproval,
       reason: `CRM actions are disabled (${CRM_ACTIONS_FLAG} defaults off)`,
+    };
+  }
+
+  if (isInvoiceToolId(tool.id) && !invoiceActionsEnabled()) {
+    return {
+      decision: "deny",
+      riskLevel,
+      requiresApproval: tool.requiresApproval,
+      reason: `invoice actions are disabled (${INVOICE_ACTIONS_FLAG} defaults off)`,
     };
   }
 

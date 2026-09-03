@@ -229,11 +229,82 @@ export interface CrmPort {
   updateLeadStage(input: UpdateLeadStageInput): Promise<CustomerRecord>;
 }
 
+// --- Invoices (Billing Automation v1) ---------------------------------------
+
+export interface InvoiceLineItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface InvoiceRecord {
+  id: string;
+  accountId: string;
+  customerId: string;
+  customerName?: string;
+  invoiceNumber: string;
+  items: InvoiceLineItem[];
+  subtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  total: number;
+  status: "draft" | "sent" | "viewed" | "paid" | "overdue" | "cancelled";
+  dueDate?: string;
+  notes?: string;
+  paymentLink?: string;
+  paidAt?: string;
+  sentAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  idempotencyKey?: string;
+}
+
+export interface CreateInvoiceDraftInput {
+  accountId: string;
+  customerId: string;
+  customerName?: string;
+  items: InvoiceLineItem[];
+  taxRate?: number;
+  dueDate?: string;
+  notes?: string;
+  idempotencyKey?: string;
+}
+
+export interface InvoiceListQuery {
+  accountId: string;
+  overdueOnly?: boolean;
+  invoiceId?: string;
+}
+
+/**
+ * Invoice capability port. Tools never open Stripe or the invoices table.
+ * Payment status is stored provider/webhook state — never guessed.
+ */
+export interface InvoicePort {
+  readonly name: string;
+  readonly durable: boolean;
+  listInvoices(query: InvoiceListQuery): Promise<InvoiceRecord[]>;
+  getInvoice(input: {
+    accountId: string;
+    invoiceId: string;
+  }): Promise<InvoiceRecord | null>;
+  createDraft(input: CreateInvoiceDraftInput): Promise<InvoiceRecord>;
+  findByFingerprint(input: {
+    accountId: string;
+    customerId: string;
+    items: InvoiceLineItem[];
+    dueDate?: string;
+    total: number;
+    idempotencyKey?: string;
+  }): Promise<InvoiceRecord | null>;
+}
+
 /** The full port surface handed to tools. New capabilities extend this. */
 export interface ToolPorts {
   customerNotes: CustomerNotesPort;
   calendar: CalendarPort;
   crm: CrmPort;
+  invoices: InvoicePort;
 }
 
 /**
@@ -586,6 +657,160 @@ export class InMemoryCrmPort implements CrmPort {
   /** Test / collector helper. */
   allCustomers(): CustomerRecord[] {
     return [...this.customers.values()].map((c) => ({ ...c }));
+  }
+}
+
+function invoiceFingerprint(input: {
+  customerId: string;
+  items: InvoiceLineItem[];
+  dueDate?: string;
+  total: number;
+  idempotencyKey?: string;
+}): string {
+  if (input.idempotencyKey) return input.idempotencyKey;
+  const itemsKey = input.items
+    .map((i) => `${i.description}|${i.quantity}|${i.unitPrice}`)
+    .join(";");
+  return `${input.customerId}|${itemsKey}|${input.dueDate ?? ""}|${input.total}`;
+}
+
+function computeInvoiceTotals(
+  items: InvoiceLineItem[],
+  taxRate: number,
+): { subtotal: number; taxAmount: number; total: number } {
+  const subtotal =
+    Math.round(
+      items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0) *
+        100,
+    ) / 100;
+  const taxAmount = Math.round(subtotal * (taxRate / 100) * 100) / 100;
+  return {
+    subtotal,
+    taxAmount,
+    total: Math.round((subtotal + taxAmount) * 100) / 100,
+  };
+}
+
+function isOverdueInvoice(inv: InvoiceRecord, today: string): boolean {
+  if (
+    inv.status === "paid" ||
+    inv.status === "cancelled" ||
+    inv.status === "draft"
+  ) {
+    return false;
+  }
+  if (inv.status === "overdue") return true;
+  return Boolean(inv.dueDate && inv.dueDate < today);
+}
+
+/** In-memory invoices for tests. Payment status is stored, never invented. */
+export class InMemoryInvoicePort implements InvoicePort {
+  readonly name = "in_memory_invoices";
+  readonly durable = false;
+  private readonly invoices = new Map<string, InvoiceRecord>();
+  private seq = 0;
+
+  seed(invoice: InvoiceRecord): void {
+    this.invoices.set(invoice.id, {
+      ...invoice,
+      items: invoice.items.map((i) => ({ ...i })),
+    });
+  }
+
+  async listInvoices(query: InvoiceListQuery): Promise<InvoiceRecord[]> {
+    const today = new Date().toISOString().slice(0, 10);
+    return [...this.invoices.values()]
+      .filter((inv) => inv.accountId === query.accountId)
+      .filter((inv) => (query.invoiceId ? inv.id === query.invoiceId : true))
+      .filter((inv) =>
+        query.overdueOnly ? isOverdueInvoice(inv, today) : true,
+      )
+      .map((inv) => ({ ...inv, items: inv.items.map((i) => ({ ...i })) }));
+  }
+
+  async getInvoice(input: {
+    accountId: string;
+    invoiceId: string;
+  }): Promise<InvoiceRecord | null> {
+    const inv = this.invoices.get(input.invoiceId);
+    if (!inv || inv.accountId !== input.accountId) return null;
+    return { ...inv, items: inv.items.map((i) => ({ ...i })) };
+  }
+
+  async findByFingerprint(input: {
+    accountId: string;
+    customerId: string;
+    items: InvoiceLineItem[];
+    dueDate?: string;
+    total: number;
+    idempotencyKey?: string;
+  }): Promise<InvoiceRecord | null> {
+    const key = invoiceFingerprint(input);
+    for (const inv of this.invoices.values()) {
+      if (inv.accountId !== input.accountId) continue;
+      if (
+        inv.idempotencyKey &&
+        input.idempotencyKey &&
+        inv.idempotencyKey === input.idempotencyKey
+      ) {
+        return { ...inv, items: inv.items.map((i) => ({ ...i })) };
+      }
+      if (
+        invoiceFingerprint({
+          customerId: inv.customerId,
+          items: inv.items,
+          dueDate: inv.dueDate,
+          total: inv.total,
+          idempotencyKey: inv.idempotencyKey,
+        }) === key
+      ) {
+        return { ...inv, items: inv.items.map((i) => ({ ...i })) };
+      }
+    }
+    return null;
+  }
+
+  async createDraft(input: CreateInvoiceDraftInput): Promise<InvoiceRecord> {
+    const taxRate = input.taxRate ?? 0;
+    const totals = computeInvoiceTotals(input.items, taxRate);
+    const existing = await this.findByFingerprint({
+      accountId: input.accountId,
+      customerId: input.customerId,
+      items: input.items,
+      dueDate: input.dueDate,
+      total: totals.total,
+      idempotencyKey: input.idempotencyKey,
+    });
+    if (existing) return existing;
+    const now = new Date().toISOString();
+    const id = `inv_${++this.seq}`;
+    const record: InvoiceRecord = {
+      id,
+      accountId: input.accountId,
+      customerId: input.customerId,
+      customerName: input.customerName,
+      invoiceNumber: `INV-MEM-${String(this.seq).padStart(3, "0")}`,
+      items: input.items.map((i) => ({ ...i })),
+      subtotal: totals.subtotal,
+      taxRate,
+      taxAmount: totals.taxAmount,
+      total: totals.total,
+      status: "draft",
+      dueDate: input.dueDate,
+      notes: input.notes,
+      createdAt: now,
+      updatedAt: now,
+      idempotencyKey: input.idempotencyKey,
+    };
+    this.invoices.set(id, record);
+    return { ...record, items: record.items.map((i) => ({ ...i })) };
+  }
+
+  allInvoices(): InvoiceRecord[] {
+    return [...this.invoices.values()].map((inv) => ({
+      ...inv,
+      items: inv.items.map((i) => ({ ...i })),
+    }));
   }
 }
 

@@ -36,10 +36,15 @@ import type {
   CancelCalendarEventInput,
   CreateCalendarEventInput,
   CreateCustomerInput,
+  CreateInvoiceDraftInput,
   CrmPort,
   CustomerNoteRecord,
   CustomerNotesPort,
   CustomerRecord,
+  InvoiceLineItem,
+  InvoiceListQuery,
+  InvoicePort,
+  InvoiceRecord,
   RescheduleCalendarEventInput,
   ToolPorts,
   UpdateCustomerInput,
@@ -240,11 +245,43 @@ export class ScopedCrmPort implements CrmPort {
   }
 }
 
+export class ScopedInvoicePort implements InvoicePort {
+  get name(): string {
+    return currentScope().actions.invoices.name;
+  }
+  get durable(): boolean {
+    return currentScope().actions.invoices.durable;
+  }
+  listInvoices(query: InvoiceListQuery): Promise<InvoiceRecord[]> {
+    return currentScope().actions.invoices.listInvoices(query);
+  }
+  getInvoice(input: {
+    accountId: string;
+    invoiceId: string;
+  }): Promise<InvoiceRecord | null> {
+    return currentScope().actions.invoices.getInvoice(input);
+  }
+  createDraft(input: CreateInvoiceDraftInput): Promise<InvoiceRecord> {
+    return currentScope().actions.invoices.createDraft(input);
+  }
+  findByFingerprint(input: {
+    accountId: string;
+    customerId: string;
+    items: InvoiceLineItem[];
+    dueDate?: string;
+    total: number;
+    idempotencyKey?: string;
+  }): Promise<InvoiceRecord | null> {
+    return currentScope().actions.invoices.findByFingerprint(input);
+  }
+}
+
 /** The full port surface, all request-scoped. */
 export const scopedToolPorts: ToolPorts = {
   customerNotes: new ScopedCustomerNotesPort(),
   calendar: new ScopedCalendarPort(),
   crm: new ScopedCrmPort(),
+  invoices: new ScopedInvoicePort(),
 };
 
 /** The tenant's tool policy, as supplied by the data plane for this request. */

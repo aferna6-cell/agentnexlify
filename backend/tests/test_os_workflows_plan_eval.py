@@ -17,7 +17,11 @@ from backend.services.os_workflows.plan_schema import (
     PlanStepSpec,
 )
 from backend.services.os_workflows.plan_validator import validate_plan
-from backend.services.os_workflows.tool_catalog import ALWAYS_FORBIDDEN_TOOLS, TOOL_CATALOG
+from backend.services.os_workflows.tool_catalog import (
+    ALWAYS_FORBIDDEN_TOOLS,
+    PLANNER_EXCLUDED_TOOLS,
+    TOOL_CATALOG,
+)
 
 
 REQUIRED_CATEGORIES = {
@@ -246,7 +250,9 @@ def test_tool_catalog_covers_known_actions():
         "cancel_calendar_event",
     }
     assert required <= set(TOOL_CATALOG)
-    # Full parity with Action manifest (not just five smoke IDs).
+    # Billing tools are in the Action manifest but not planner-executable yet.
+    assert PLANNER_EXCLUDED_TOOLS.isdisjoint(TOOL_CATALOG)
+    # Full parity with Action manifest (catalog ∪ excluded == manifest).
     assert_catalog_matches_manifest()
     assert TOOL_CATALOG["send_email"]["risk_level"] == 2
     assert TOOL_CATALOG["send_email"]["requires_approval"] is True

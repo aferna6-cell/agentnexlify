@@ -625,12 +625,15 @@ def check_action_manifest_catalog_parity(failures: list[str]) -> None:
         if str(ROOT) not in sys.path:
             sys.path.insert(0, str(ROOT))
         from backend.services.os_workflows.tool_catalog import (
+            PLANNER_EXCLUDED_TOOLS,
             TOOL_CATALOG,
             assert_catalog_matches_manifest,
         )
 
         assert_catalog_matches_manifest()
-        catalog_ok = set(TOOL_CATALOG.keys()) == set(tool_ids)
+        catalog_ok = set(TOOL_CATALOG.keys()) | set(PLANNER_EXCLUDED_TOOLS) == set(
+            tool_ids
+        ) and not (set(TOOL_CATALOG.keys()) & set(PLANNER_EXCLUDED_TOOLS))
         check(
             "planner tool_catalog matches Action manifest",
             catalog_ok,

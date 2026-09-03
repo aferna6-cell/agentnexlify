@@ -26,6 +26,7 @@ import {
   CollectingCalendarPort,
   CollectingCrmPort,
   CollectingCustomerNotesPort,
+  CollectingInvoicePort,
 } from "./action-collector.ts";
 import type {
   ActionExecutionRecord,
@@ -37,7 +38,10 @@ import type {
 } from "../agent-os/actions/ports.ts";
 import type { TenantToolPolicy } from "../agent-os/actions/policy.ts";
 import type { SharedContext } from "../agent-os/types/agent.ts";
-import type { CrmMutationBundle } from "./action-collector.ts";
+import type {
+  CrmMutationBundle,
+  InvoiceMutationBundle,
+} from "./action-collector.ts";
 import { seedActionPortsFromContext } from "./seed-action-ports.ts";
 
 registerAgentOsProviders();
@@ -75,6 +79,7 @@ export interface ApproveActionOutput {
   customerNotes: CustomerNoteRecord[];
   calendarEvents: CalendarEventRecord[];
   customers: CrmMutationBundle[];
+  invoices: InvoiceMutationBundle[];
 }
 
 export async function runApprovedAction(
@@ -88,7 +93,14 @@ export async function runApprovedAction(
   const notes = new CollectingCustomerNotesPort(input.existingNotes ?? []);
   const calendar = new CollectingCalendarPort();
   const crm = new CollectingCrmPort();
-  seedActionPortsFromContext(input.accountId, input.context, calendar, crm);
+  const invoices = new CollectingInvoicePort();
+  seedActionPortsFromContext(
+    input.accountId,
+    input.context,
+    calendar,
+    crm,
+    invoices,
+  );
 
   // Rebuild the row the executor expects. Only the fields the data plane is
   // authoritative for are carried over; status is always `pending_approval`
@@ -118,7 +130,14 @@ export async function runApprovedAction(
     accountId: input.accountId,
     context: input.context,
     record: new RunRecordCollector(),
-    actions: { store, notes, calendar, crm, policy: input.toolPolicy ?? {} },
+    actions: {
+      store,
+      notes,
+      calendar,
+      crm,
+      invoices,
+      policy: input.toolPolicy ?? {},
+    },
   };
 
   return requestScope.run(scope, async () => {
@@ -133,6 +152,7 @@ export async function runApprovedAction(
       customerNotes: notes.toBundle(),
       calendarEvents: calendar.toBundle(),
       customers: crm.toBundle(),
+      invoices: invoices.toBundle(),
     };
   });
 }

@@ -25,6 +25,7 @@ from backend.services import (
     agent_os_bridge,
     agent_sdk_client,
     os_calendar_crm,
+    os_invoice_actions,
     os_tool_executions,
     os_tools,
 )
@@ -148,6 +149,13 @@ async def approve_tool_execution(
         if refused:
             raise HTTPException(status_code=403, detail=refused)
 
+    if (existing.get("tool_id") or "") in os_invoice_actions.INVOICE_L2_TOOL_IDS:
+        refused = os_invoice_actions.refuse_invoice_tool(
+            tool_id=existing.get("tool_id")
+        )
+        if refused:
+            raise HTTPException(status_code=403, detail=refused)
+
     claimed = await run_in_threadpool(
         os_tool_executions.claim_for_execution,
         db,
@@ -236,6 +244,77 @@ async def approve_tool_execution(
                     "status": "verification_failed",
                     "error": {
                         "code": "calendar_verify_failed",
+                        "message": outcome.get("reason") or "verification failed",
+                    },
+                    "verificationState": "failed",
+                },
+            )
+        return {
+            "execution": os_tool_executions.get_tool_execution(
+                db, client_id, execution_id
+            ),
+            "already_decided": False,
+            "outcome": outcome,
+        }
+
+    # Invoice L2: claim-gated data plane (email/SMS + Stripe link). Never engine.
+    if (claimed.get("tool_id") or "") in os_invoice_actions.INVOICE_L2_TOOL_IDS:
+        outcome = await run_in_threadpool(
+            os_invoice_actions.run_invoice_l2, db, client_id, claimed
+        )
+        if outcome.get("refused"):
+            os_tool_executions.record_execution_outcome(
+                db,
+                client_id,
+                {
+                    "id": execution_id,
+                    "status": "failed",
+                    "error": {
+                        "code": outcome.get("code") or "invoice_refused",
+                        "message": outcome.get("reason") or "refused",
+                    },
+                    "verificationState": "failed",
+                },
+            )
+        elif outcome.get("unknown"):
+            os_tool_executions.mark_engine_unavailable(
+                db,
+                client_id,
+                execution_id,
+                outcome.get("reason")
+                or "invoice provider outcome unknown; not retried",
+            )
+        elif (outcome.get("executed") or outcome.get("adopted")) and outcome.get(
+            "verified"
+        ):
+            result = outcome.get("result") or {}
+            os_tool_executions.record_execution_outcome(
+                db,
+                client_id,
+                {
+                    "id": execution_id,
+                    "status": "succeeded",
+                    "result": {
+                        "invoiceId": result.get("id"),
+                        "invoiceNumber": result.get("invoice_number"),
+                        "paymentLink": result.get("payment_link"),
+                        "emailSent": result.get("email_sent"),
+                        "smsSent": result.get("sms_sent"),
+                        "detail": outcome.get("reason"),
+                        "verified": True,
+                    },
+                    "verificationState": "passed",
+                },
+            )
+        else:
+            os_tool_executions.record_execution_outcome(
+                db,
+                client_id,
+                {
+                    "id": execution_id,
+                    "status": "verification_failed",
+                    "error": {
+                        "code": outcome.get("code") or "invoice_verify_failed",
                         "message": outcome.get("reason") or "verification failed",
                     },
                     "verificationState": "failed",
