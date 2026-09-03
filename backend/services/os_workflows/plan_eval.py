@@ -16,6 +16,7 @@ from backend.services.os_workflows.plan_validator import (
 )
 from backend.services.os_workflows.tool_catalog import (
     TOOL_CATALOG,
+    tool_department,
     tool_requires_approval,
     tool_risk,
     tool_verification_required,
@@ -45,21 +46,21 @@ def _rate(numerator: float, denominator: float) -> float:
     return max(0.0, min(1.0, numerator / denominator))
 
 
-def _department_accuracy(plan: CandidatePlan, expected: ExpectedPlan) -> float:
-    expected_depts = {d for d in expected.departments if d}
-    actual_depts = {s.department for s in plan.steps if s.department}
-    if expected_depts:
-        return _rate(len(expected_depts & actual_depts), len(expected_depts))
+def _department_accuracy(plan: CandidatePlan) -> float:
+    """Score each known tool step against TOOL_CATALOG / tool_department.
 
-    # No explicit expectation — score per-step match to catalog department.
+    Set-overlap of expected departments is not used: swapping
+    ``search_customers`` → sales and ``send_email`` → admin_records would
+    otherwise score 1.0. Unknown tools are skipped. Plans with no known
+    tool steps (tool-less terminals) score 1.0.
+    """
     checks = 0
     hits = 0
     for step in plan.steps:
         if not step.tool_name or step.tool_name not in TOOL_CATALOG:
             continue
         checks += 1
-        catalog_dept = TOOL_CATALOG[step.tool_name].get("department")
-        if step.department == catalog_dept:
+        if step.department == tool_department(step.tool_name):
             hits += 1
     return _rate(hits, checks)
 
@@ -186,7 +187,7 @@ def score_plan(
         step_intent = 1.0 if not tools else 0.0
 
     dep_acc = _rate(len(matched_edges), len(expected_edges) or 0)
-    dept_acc = _department_accuracy(plan, expected)
+    dept_acc = _department_accuracy(plan)
     verify_place_acc = _verification_placement_accuracy(plan, expected)
     risk_tier_acc, risk_acc, unnec_approval, unnec_verify = _risk_tier_and_overprotection(
         plan
