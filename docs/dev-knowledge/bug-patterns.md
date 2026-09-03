@@ -18894,3 +18894,29 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(m9): harden M9.3 planner eval before LLM bakeoff (#758)
+
+* fix(m9): harden M9.3 planner eval before LLM bakeoff
+
+Wire Action tool manifest → catalog CI parity, score department/verification
+expectations, penalize risk over-protection without weakening underrate gates,
+and keep attack catch rates out of planner quality averages.
+
+* docs(m9): note M9.3 hardening + M9.4 next step in planner spec
+
+* fix(m9): ensure repo root on sys.path for catalog parity CI
+
+CI runs check_project_invariants without PYTHONPATH; import backend for
+tool_catalog parity must insert ROOT first.
+
+---------
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+**Date:** 2026-09-03
+**Commit:** f669390
+**Author:** aferna6-cell
+**Files Changed:** agent-service/src/agent-os/actions/action_manifest.json,audits/artifacts/m9-3-hardening-2026-09-03.md,backend/services/os_workflows/eval_cases.py,backend/services/os_workflows/plan_eval.py,backend/services/os_workflows/plan_schema.py,backend/services/os_workflows/tool_catalog.py,backend/tests/test_os_workflows_plan_eval.py,scripts/check_project_invariants.py,scripts/generate_action_manifest.py,specs/m9-persistent-planner_spec.md
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
