@@ -568,6 +568,99 @@ def test_exhausted_failure_does_not_fail_fast_independent_running_branch():
     )
 
 
+def test_cancelled_prerequisite_terminalizes_unreachable_dependent():
+    """Cancelled prerequisite must not leave dependent planned steps active."""
+    eng = _engine()
+    wf = eng.create(
+        client_id=CLIENT,
+        owner_goal="x",
+        steps=[
+            {
+                "id": "root",
+                "description": "root",
+                "risk_level": 1,
+                "max_retries": 0,
+            },
+            {
+                "id": "child",
+                "description": "child",
+                "risk_level": 0,
+                "dependencies": ["root"],
+            },
+        ],
+    )
+    eng.queue_ready_for_execution(CLIENT, wf["id"])
+    eng.record_running_outcome(CLIENT, "root", outcome="cancelled", error="nope")
+    done = eng.recover(CLIENT, wf["id"])
+    assert done["status"] == "cancelled"
+    assert [(s["id"], s["state"]) for s in done["steps"]] == [
+        ("root", "cancelled"),
+        ("child", "planned"),
+    ]
+
+    from backend.services.os_workflows.engine import derive_workflow_status
+
+    assert derive_workflow_status(done["steps"]) == "cancelled"
+
+
+def test_cancelled_prerequisite_terminalizes_unreachable_transitive_dependents():
+    """A cancelled step must terminalize planned dependents transitively."""
+    eng = _engine()
+    wf = eng.create(
+        client_id=CLIENT,
+        owner_goal="x",
+        steps=[
+            {
+                "id": "a",
+                "description": "a",
+                "risk_level": 1,
+                "max_retries": 0,
+            },
+            {"id": "b", "description": "b", "risk_level": 0, "dependencies": ["a"]},
+            {"id": "c", "description": "c", "risk_level": 0, "dependencies": ["b"]},
+        ],
+    )
+    eng.queue_ready_for_execution(CLIENT, wf["id"])
+    eng.record_running_outcome(CLIENT, "a", outcome="cancelled", error="nope")
+    done = eng.recover(CLIENT, wf["id"])
+    assert done["status"] == "cancelled"
+    assert [(s["id"], s["state"]) for s in done["steps"]] == [
+        ("a", "cancelled"),
+        ("b", "planned"),
+        ("c", "planned"),
+    ]
+
+
+def test_cancelled_failure_does_not_fail_fast_independent_running_branch():
+    """A sibling that can still execute keeps the workflow running."""
+    from backend.services.os_workflows.engine import derive_workflow_status
+
+    assert (
+        derive_workflow_status(
+            [
+                {
+                    "id": "cancelled_branch",
+                    "state": "cancelled",
+                    "dependencies": [],
+                    "retry_count": 0,
+                    "max_retries": 0,
+                },
+                {
+                    "id": "blocked_child",
+                    "state": "planned",
+                    "dependencies": ["cancelled_branch"],
+                },
+                {
+                    "id": "independent",
+                    "state": "running",
+                    "dependencies": [],
+                },
+            ]
+        )
+        == "running"
+    )
+
+
 def test_execution_success_without_verifier_stays_verifying():
     eng = _engine()
     wf = eng.create(

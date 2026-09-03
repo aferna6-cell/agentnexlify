@@ -101,12 +101,21 @@ def _retries_exhausted(step: Dict[str, Any]) -> bool:
     return retry_count >= max_retries
 
 
-def _planned_blocked_by_exhausted_failure(
+def _planned_blocked_by_terminal_unsuccessful_prerequisite(
     step: Dict[str, Any],
     by_id: Dict[str, Dict[str, Any]],
     visiting: Optional[Set[str]] = None,
 ) -> bool:
-    """True when a planned step depends on an exhausted failure (directly or transitively)."""
+    """True when a planned step depends on a terminal unsuccessful prerequisite.
+
+    Covers both deadlock classes:
+    - exhausted failures (failed + retries exhausted)
+    - cancelled prerequisites (terminal cancellation)
+
+    For aggregation: planned steps effectively unreachable due to terminal
+    unsuccessful prerequisites must not keep the workflow artificially
+    "running".
+    """
     sid = str(step.get("id") or "")
     visiting = visiting if visiting is not None else set()
     if sid:
@@ -118,9 +127,11 @@ def _planned_blocked_by_exhausted_failure(
         if dep is None:
             continue
         dep_state = str(dep.get("state"))
+        if dep_state == "cancelled":
+            return True
         if dep_state == "failed" and _retries_exhausted(dep):
             return True
-        if dep_state == "planned" and _planned_blocked_by_exhausted_failure(
+        if dep_state == "planned" and _planned_blocked_by_terminal_unsuccessful_prerequisite(
             dep, by_id, visiting
         ):
             return True
@@ -153,7 +164,7 @@ def derive_workflow_status(steps: List[Dict[str, Any]]) -> str:
             state in {"ready", "running", "verifying", "blocked", "unknown"}
             or (
                 state == "planned"
-                and not _planned_blocked_by_exhausted_failure(step, by_id)
+                and not _planned_blocked_by_terminal_unsuccessful_prerequisite(step, by_id)
             )
         )
         for step, state in zip(steps, states)
@@ -165,10 +176,32 @@ def derive_workflow_status(steps: List[Dict[str, Any]]) -> str:
     # No active / retryable work left.
     if has_exhausted_failure:
         return "failed"
-    if all(s == "cancelled" for s in states):
+
+    # Planned dependents of cancelled prerequisites are terminal-equivalent
+    # for aggregation. Without this, they would keep the workflow running
+    # forever (deadlock class).
+    def _is_cancelled_equivalent(step: Dict[str, Any], state: str) -> bool:
+        if state == "cancelled":
+            return True
+        if state != "planned":
+            return False
+        return _planned_blocked_by_terminal_unsuccessful_prerequisite(step, by_id) and not _retries_exhausted(
+            step
+        )
+
+    if all(_is_cancelled_equivalent(step, state) for step, state in zip(steps, states)):
         return "cancelled"
-    if all(s in {"succeeded", "cancelled"} for s in states) and any(
-        s == "succeeded" for s in states
+
+    def _is_succeeded_or_cancelled_equivalent(step: Dict[str, Any], state: str) -> bool:
+        if state in {"succeeded", "cancelled"}:
+            return True
+        if state != "planned":
+            return False
+        return _planned_blocked_by_terminal_unsuccessful_prerequisite(step, by_id) or state == "cancelled"
+
+    if any(s == "succeeded" for s in states) and all(
+        _is_succeeded_or_cancelled_equivalent(step, state)
+        for step, state in zip(steps, states)
     ):
         return "succeeded"
     return "running"
