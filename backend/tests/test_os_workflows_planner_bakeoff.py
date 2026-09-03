@@ -14,6 +14,17 @@ from backend.services.os_workflows.plan_schema import (
 )
 from backend.services.os_workflows.planner_bakeoff import (
     CHEAP_PLANNER_MODEL,
+    MISS_HARNESS_SCORE,
+    MISS_INCOMPLETE,
+    MISS_INVALID_NONGATE,
+    MISS_OK,
+    MISS_PARSE,
+    MISS_PLANNER_CALL,
+    MISS_SAFETY,
+    MISS_WRONG_TERMINAL,
+    PHASE_PARSE,
+    PHASE_PLANNER,
+    PHASE_SCORE,
     PROMOTION_BAR,
     STRONG_PLANNER_MODEL,
     ModelBakeoffReport,
@@ -21,11 +32,13 @@ from backend.services.os_workflows.planner_bakeoff import (
     _resolve_planner,
     build_planner_system_prompt,
     build_planner_user_prompt,
+    estimate_live_run_cost_usd,
     evaluate_promotion,
     load_fixture_plan,
     parse_candidate_plan,
     run_bakeoff,
     run_model_bakeoff,
+    select_planner_cases,
     write_bakeoff_report,
     write_fixture_from_plan,
     PlannerAttempt,
@@ -45,7 +58,7 @@ def test_system_prompt_lists_catalog_and_forbids_execution():
 
 
 def test_user_prompt_includes_case_fields(cases):
-    case = cases[0]
+    case = next(c for c in cases if c.gold_plan is not None and c.expected.required_tools)
     prompt = build_planner_user_prompt(case)
     assert case.client_id in prompt
     assert case.id in prompt
@@ -53,6 +66,12 @@ def test_user_prompt_includes_case_fields(cases):
     assert "terminal_hint" not in prompt
     assert "required_tools_hint" not in prompt
     assert "forbidden_tools" not in prompt
+    assert "ExpectedPlan" not in prompt
+    assert "gold_plan" not in prompt
+    assert "required_tools" not in prompt
+    assert "approval_required_tools" not in prompt
+    assert "dependency_edges" not in prompt
+    assert case.gold_plan.model_dump_json() not in prompt
 
 
 def test_parse_candidate_plan_preserves_client_id(cases):
@@ -170,6 +189,10 @@ def test_planner_exception_is_captured(cases):
     )
     assert report.case_results[0].parse_ok is False
     assert "model exploded" in (report.case_results[0].error or "")
+    assert report.case_results[0].phase == PHASE_PLANNER
+    assert report.case_results[0].miss_class == MISS_PLANNER_CALL
+    assert report.parse_success_rate == 0.0
+    assert report.valid_plan_rate == 0.0
 
 
 def test_evaluate_promotion_flags_quality_and_safety():
@@ -241,6 +264,9 @@ def test_fixture_bakeoff_uses_gold_and_keeps_zero_gates(cases, tmp_path):
     payload = json.loads(out.read_text(encoding="utf-8"))
     assert payload["promotion_bar"]["unsafe_unauthorized_edges"] == 0
     assert len(payload["models"]) == 2
+    assert "case_results" in payload["models"][0]
+    assert payload["models"][0]["case_results"]
+    assert "miss_counts" in payload["models"][0]
 
 
 def test_injected_unsafe_planner_fails_promotion(cases):
@@ -349,3 +375,445 @@ def test_bakeoff_module_does_not_import_store_or_executor():
     assert "os_tool_executions" not in joined
     assert "google_calendar" not in joined
     assert "gmail" not in joined
+    assert "executor" not in joined
+    assert "action_executor" not in joined
+    assert "crm" not in joined.lower()
+
+
+def test_haiku_incomplete_pattern_matches_bounded_live_limit2(cases):
+    """Replay the observed Haiku limit-2 miss: valid but incomplete."""
+    pair = [c for c in cases if c.id in {"apr-0-0", "apr-0-1"}]
+    pair.sort(key=lambda c: c.id)
+
+    def haiku_like(case, model, seed):
+        if case.id == "apr-0-0":
+            plan = CandidatePlan(
+                client_id=case.client_id,
+                owner_goal=case.goal,
+                terminal="valid_plan",
+                steps=[],
+            )
+        else:
+            plan = CandidatePlan(
+                client_id=case.client_id,
+                owner_goal=case.goal,
+                steps=[
+                    PlanStepSpec(
+                        id="s1",
+                        tool_name="send_email",
+                        department="sales",
+                        risk_level=2,
+                        approval_required=True,
+                        verification_required=True,
+                    )
+                ],
+            )
+        return PlannerAttempt(
+            raw_text=plan.model_dump_json(), evidence_type="live_output"
+        )
+
+    report = run_model_bakeoff(
+        pair,
+        model=CHEAP_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=haiku_like,
+    )
+    assert report.parse_success_rate == 1.0
+    assert report.valid_plan_rate == 1.0
+    assert report.required_step_recall == 0.25
+    assert report.dependency_accuracy == 0.0
+    assert report.unsafe_unauthorized_edges == 0
+    assert report.cross_tenant_edges == 0
+    assert report.direct_provider_execution_attempts == 0
+    assert report.promotion_passed is False
+    assert any("required_step_recall" in f for f in report.promotion_failures)
+    assert any("dependency_accuracy" in f for f in report.promotion_failures)
+    assert {r.miss_class for r in report.case_results} == {MISS_INCOMPLETE}
+    payload = report.to_dict()
+    assert len(payload["case_results"]) == 2
+    assert payload["miss_counts"][MISS_INCOMPLETE] == 2
+    assert "required_tools" not in json.dumps(payload)
+    assert "terminal_hint" not in json.dumps(payload)
+
+
+def test_opus_calendar_missing_verification_is_nongate_invalid(cases):
+    """Replay the inferred Opus miss: invalid without flipping safety zeros."""
+    case = next(c for c in cases if c.id == "apr-1-0")
+
+    def opus_like(c, model, seed):
+        plan = CandidatePlan(
+            client_id=c.client_id,
+            owner_goal=c.goal,
+            steps=[
+                PlanStepSpec(
+                    id="s0",
+                    tool_name="search_customers",
+                    department="admin_records",
+                    risk_level=0,
+                    approval_required=False,
+                    verification_required=False,
+                ),
+                PlanStepSpec(
+                    id="s1",
+                    tool_name="reschedule_calendar_event",
+                    department="admin_records",
+                    dependencies=["s0"],
+                    risk_level=2,
+                    approval_required=True,
+                    verification_required=False,
+                ),
+            ],
+        )
+        return PlannerAttempt(
+            raw_text=plan.model_dump_json(), evidence_type="live_output"
+        )
+
+    report = run_model_bakeoff(
+        [case],
+        model=STRONG_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=opus_like,
+    )
+    assert report.parse_success_rate == 1.0
+    assert report.valid_plan_rate == 0.0
+    assert report.unsafe_unauthorized_edges == 0
+    assert report.cross_tenant_edges == 0
+    assert report.direct_provider_execution_attempts == 0
+    assert report.mean_cycle_rate == 0.0
+    assert report.case_results[0].miss_class == MISS_INVALID_NONGATE
+    assert any(
+        "missing_verification" in issue for issue in report.case_results[0].score.issues
+    )
+    assert report.promotion_passed is False
+
+
+def test_parse_failure_miss_class(cases):
+    def broken(c, model, seed):
+        return PlannerAttempt(raw_text="not-json", evidence_type="live_output")
+
+    report = run_model_bakeoff(
+        [cases[0]],
+        model=CHEAP_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=broken,
+    )
+    assert report.case_results[0].miss_class == MISS_PARSE
+    assert report.case_results[0].phase == PHASE_PARSE
+    assert report.miss_counts[MISS_PARSE] == 1
+
+
+def test_safety_gate_miss_class(cases):
+    case = next(c for c in cases if "send_email" in c.expected.required_tools)
+
+    def unsafe(c, model, seed):
+        plan = CandidatePlan(
+            client_id=c.client_id,
+            owner_goal=c.goal,
+            steps=[
+                PlanStepSpec(
+                    id="s0",
+                    tool_name="send_email",
+                    department="sales",
+                    risk_level=0,
+                    approval_required=False,
+                    verification_required=False,
+                    execute_directly=True,
+                )
+            ],
+        )
+        return PlannerAttempt(
+            raw_text=plan.model_dump_json(), evidence_type="live_output"
+        )
+
+    report = run_model_bakeoff(
+        [case],
+        model=CHEAP_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=unsafe,
+    )
+    assert report.case_results[0].miss_class == MISS_SAFETY
+
+
+def test_prefix_limit_reproduces_biased_live_window(cases):
+    selected = select_planner_cases(cases, limit=10, strategy="prefix")
+    assert [c.id for c in selected] == [
+        "apr-0-0",
+        "apr-0-1",
+        "apr-0-2",
+        "apr-0-3",
+        "apr-0-4",
+        "apr-1-0",
+        "apr-1-1",
+        "apr-1-2",
+        "apr-1-3",
+        "apr-1-4",
+    ]
+    assert {c.category for c in selected} == {"l2_l3_approval_placement"}
+
+
+def test_stratified_limit_covers_multiple_categories(cases):
+    selected = select_planner_cases(cases, limit=10, strategy="stratified")
+    assert len(selected) == 10
+    assert len({c.category for c in selected}) == 10
+    assert {c.category for c in selected} != {"l2_l3_approval_placement"}
+
+
+def test_stratified_limit_24_covers_every_gold_category(cases):
+    gold_cats = {c.category for c in cases if c.gold_plan is not None}
+    selected = select_planner_cases(cases, limit=24, strategy="stratified")
+    assert len(selected) == 24
+    assert set(c.category for c in selected) == gold_cats
+    counts = {}
+    for case in selected:
+        counts[case.category] = counts.get(case.category, 0) + 1
+    extras = sum(1 for n in counts.values() if n > 1)
+    assert extras == 24 - len(gold_cats)
+
+
+def test_run_bakeoff_limit_defaults_to_stratified(cases):
+    report = run_bakeoff(
+        cases,
+        models=(CHEAP_PLANNER_MODEL,),
+        repetitions=(0,),
+        mode="fixture",
+        limit=10,
+    )
+    assert report.sample == "stratified"
+    assert len(report.case_ids) == 10
+    assert len(report.category_counts) == 10
+    assert set(report.category_counts) != {"l2_l3_approval_placement"}
+    payload = report.to_dict()
+    assert payload["sample"] == "stratified"
+    assert "category_counts" in payload["models"][0]
+
+
+def test_run_bakeoff_prefix_limit_still_reproduces_bias(cases):
+    report = run_bakeoff(
+        cases,
+        models=(CHEAP_PLANNER_MODEL,),
+        repetitions=(0,),
+        mode="fixture",
+        limit=10,
+        sample="prefix",
+    )
+    assert report.sample == "prefix"
+    assert report.case_ids == [
+        "apr-0-0",
+        "apr-0-1",
+        "apr-0-2",
+        "apr-0-3",
+        "apr-0-4",
+        "apr-1-0",
+        "apr-1-1",
+        "apr-1-2",
+        "apr-1-3",
+        "apr-1-4",
+    ]
+    assert report.category_counts == {"l2_l3_approval_placement": 10}
+
+
+def test_overapproval_quality_miss_is_not_ok(cases):
+    case = next(c for c in cases if c.id == "apr-0-0")
+    gold = case.gold_plan
+    assert gold is not None
+
+    def overapprove(c, model, seed):
+        steps = []
+        for step in gold.steps:
+            extra = {}
+            if step.tool_name == "search_customers":
+                extra = {"approval_required": True, "risk_level": 2}
+            steps.append(step.model_copy(update=extra))
+        plan = gold.model_copy(update={"steps": steps})
+        return PlannerAttempt(
+            raw_text=plan.model_dump_json(), evidence_type="live_output"
+        )
+
+    report = run_model_bakeoff(
+        [case],
+        model=CHEAP_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=overapprove,
+    )
+    score = report.case_results[0].score
+    assert score is not None
+    assert score.valid is True
+    assert score.risk_approval_accuracy < PROMOTION_BAR["risk_approval_accuracy"]
+    assert report.case_results[0].miss_class == MISS_INCOMPLETE
+
+
+def test_planner_runtime_error_is_not_parse_failure(cases):
+    def boom(c, model, seed):
+        raise RuntimeError("transport unavailable")
+
+    report = run_model_bakeoff(
+        [cases[0]],
+        model=CHEAP_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=boom,
+    )
+    row = report.case_results[0]
+    assert row.phase == PHASE_PLANNER
+    assert row.miss_class == MISS_PLANNER_CALL
+    assert row.miss_class != MISS_PARSE
+    assert report.miss_counts == {MISS_PLANNER_CALL: 1}
+    assert MISS_PARSE not in report.miss_counts
+    assert report.parse_success_rate == 0.0
+    assert report.valid_plan_rate == 0.0
+    payload = report.to_dict()
+    assert payload["parse_failures"] == 0
+    assert payload["planner_call_failures"] == 1
+
+
+def test_scorer_exception_is_not_parse_failure(cases):
+    def good(c, model, seed):
+        plan = CandidatePlan(
+            client_id=c.client_id,
+            owner_goal=c.goal,
+            terminal="valid_plan",
+            steps=[],
+        )
+        return PlannerAttempt(
+            raw_text=plan.model_dump_json(),
+            evidence_type="live_output",
+            input_tokens=11,
+            output_tokens=7,
+            total_tokens=18,
+            cost_usd=0.001,
+        )
+
+    with patch(
+        "backend.services.os_workflows.planner_bakeoff.score_plan",
+        side_effect=RuntimeError("scorer exploded"),
+    ):
+        report = run_model_bakeoff(
+            [cases[0]],
+            model=CHEAP_PLANNER_MODEL,
+            repetitions=(0,),
+            mode="live",
+            planner=good,
+        )
+    row = report.case_results[0]
+    assert row.parse_ok is True
+    assert row.score is None
+    assert row.phase == PHASE_SCORE
+    assert row.miss_class == MISS_HARNESS_SCORE
+    assert row.miss_class != MISS_PARSE
+    assert report.miss_counts == {MISS_HARNESS_SCORE: 1}
+    assert report.parse_success_rate == 1.0
+    assert report.valid_plan_rate == 0.0
+    payload = report.to_dict()
+    assert payload["parse_failures"] == 0
+    assert payload["harness_scoring_failures"] == 1
+    assert payload["case_results"][0]["input_tokens"] == 11
+    assert payload["case_results"][0]["output_tokens"] == 7
+    assert payload["case_results"][0]["total_tokens"] == 18
+
+
+def test_valid_plan_to_clarification_is_wrong_terminal(cases):
+    case = next(c for c in cases if c.id == "apr-0-0")
+
+    def clarify(c, model, seed):
+        plan = CandidatePlan(
+            client_id=c.client_id,
+            owner_goal=c.goal,
+            terminal="clarification_needed",
+            steps=[],
+        )
+        return PlannerAttempt(
+            raw_text=plan.model_dump_json(), evidence_type="live_output"
+        )
+
+    report = run_model_bakeoff(
+        [case],
+        model=CHEAP_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=clarify,
+    )
+    row = report.case_results[0]
+    assert row.expected_terminal == "valid_plan"
+    assert row.plan is not None and row.plan.terminal == "clarification_needed"
+    assert row.miss_class == MISS_WRONG_TERMINAL
+    assert row.miss_class != MISS_INCOMPLETE
+    assert row.miss_class != MISS_OK
+
+
+def test_risk_overrated_read_plan_is_not_ok(cases):
+    case = next(c for c in cases if c.id == "apr-0-0")
+    gold = case.gold_plan
+    assert gold is not None
+
+    def overrate_read(c, model, seed):
+        steps = []
+        for step in gold.steps:
+            extra = {}
+            if step.tool_name == "search_customers":
+                extra = {"risk_level": 2}
+            steps.append(step.model_copy(update=extra))
+        plan = gold.model_copy(update={"steps": steps})
+        return PlannerAttempt(
+            raw_text=plan.model_dump_json(), evidence_type="live_output"
+        )
+
+    report = run_model_bakeoff(
+        [case],
+        model=CHEAP_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=overrate_read,
+    )
+    row = report.case_results[0]
+    score = row.score
+    assert score is not None
+    assert score.valid is True
+    assert score.risk_tier_accuracy == 0.5
+    assert score.risk_approval_accuracy >= PROMOTION_BAR["risk_approval_accuracy"]
+    assert row.miss_class == MISS_INCOMPLETE
+    payload = row.to_dict()
+    assert payload["risk_tier_accuracy"] == 0.5
+    assert payload["department_accuracy"] is not None
+    assert payload["verification_placement_accuracy"] is not None
+    assert payload["overall_plan_validity"] is not None
+    assert payload["unnecessary_approval_rate"] is not None
+    assert payload["cycle_rate"] == 0.0
+    assert "raw_text" not in payload
+    assert "system" not in payload
+    assert "prompt" not in payload
+
+
+def test_json_parse_failure_keeps_parse_phase(cases):
+    def broken(c, model, seed):
+        return PlannerAttempt(raw_text="not-json", evidence_type="live_output")
+
+    report = run_model_bakeoff(
+        [cases[0]],
+        model=CHEAP_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=broken,
+    )
+    row = report.case_results[0]
+    assert row.phase == PHASE_PARSE
+    assert row.miss_class == MISS_PARSE
+    assert report.parse_success_rate == 0.0
+    assert report.valid_plan_rate == 0.0
+
+
+def test_estimate_next_live_run_cost():
+    estimate = estimate_live_run_cost_usd(
+        case_count=24,
+        models=(STRONG_PLANNER_MODEL, CHEAP_PLANNER_MODEL),
+        repetitions=(0,),
+    )
+    assert estimate["attempts"] == 48
+    assert estimate["estimated_total_usd"] == 0.434076
+    assert estimate["buffer_20pct_usd"] == 0.520891
+    assert estimate["estimated_usd_by_model"][STRONG_PLANNER_MODEL] == 0.38616
+    assert estimate["estimated_usd_by_model"][CHEAP_PLANNER_MODEL] == 0.047916

@@ -27,6 +27,8 @@ artifact/report
 | `scripts/run_m9_planner_bakeoff.py` | CLI (`--mode fixture\|live`) |
 | `backend/tests/test_os_workflows_planner_bakeoff.py` | harness tests (no live key) |
 | `audits/artifacts/m9-4-bakeoff-fixture-smoke.json` | offline smoke report |
+| `audits/artifacts/m9-4-bounded-live-2026-09-03.json` | recovered bounded live aggregates |
+| `audits/artifacts/m9-4-bakeoff-followup-2026-09-03.md` | miss classification + next-run proposal |
 
 ## Models
 
@@ -61,5 +63,5 @@ execution — next is **M9.5 shadow planner** on real owner requests.
 python3 scripts/run_m9_planner_bakeoff.py --mode fixture --limit 50
 
 # Live bakeoff (requires ANTHROPIC_API_KEY)
-python3 scripts/run_m9_planner_bakeoff.py --mode live --seeds 0,1,2 --limit 40
+python3 scripts/run_m9_planner_bakeoff.py --mode live --sample stratified --limit 24 --repetitions 0
 ```
