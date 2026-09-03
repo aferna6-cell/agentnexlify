@@ -126,7 +126,11 @@ def _create_token(
 
 
 # _get_current_tenant and require_role live in backend.dependencies - import for own use.
-from backend.dependencies import _get_current_tenant, require_role  # noqa: E402
+from backend.dependencies import (  # noqa: E402
+    _get_current_tenant,
+    block_demo_role,
+    require_role,
+)
 from backend.services.agent_os_gate import require_agent_os_access  # noqa: E402
 
 
@@ -749,7 +753,7 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
 async def update_widget_config(
     tenant_id: str,
     req: WidgetConfigUpdateRequest,
-    claims: dict = Depends(_get_current_tenant),
+    claims: dict = Depends(block_demo_role),
 ):
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
