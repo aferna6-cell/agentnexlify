@@ -5,7 +5,7 @@
     "dockerfilePath": "Dockerfile.m9-bakeoff"
   },
   "deploy": {
-    "startCommand": "python scripts/run_m9_planner_bakeoff.py --mode live --sample stratified --limit 24 --repetitions 0 --models claude-opus-4-8,claude-haiku-4-5-20251001 --out /tmp/m9-4-bakeoff-live-stratified-24.json",
+    "startCommand": "python -m backend.services.os_workflows.run_live_bakeoff",
     "restartPolicyType": "NEVER",
     "restartPolicyMaxRetries": 0
   }
