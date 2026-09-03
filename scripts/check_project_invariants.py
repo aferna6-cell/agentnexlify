@@ -622,6 +622,8 @@ def check_action_manifest_catalog_parity(failures: list[str]) -> None:
 
     # Import catalog only after confirming manifest exists (avoids noisy ImportError).
     try:
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
         from backend.services.os_workflows.tool_catalog import (
             TOOL_CATALOG,
             assert_catalog_matches_manifest,
