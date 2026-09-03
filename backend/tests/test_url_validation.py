@@ -18,7 +18,7 @@ from unittest.mock import patch
 
 import pytest
 
-from backend.services.url_validation import assert_safe_url, is_safe_url
+from backend.services.url_validation import assert_safe_url, is_safe_url, pin_safe_url
 
 
 def _addrinfo(ip):
@@ -47,6 +47,14 @@ def test_rejects_private_literal_ips():
 
 def test_rejects_cloud_metadata_link_local():
     assert is_safe_url("http://169.254.169.254/latest/meta-data/") is False
+
+
+def test_rejects_ipv6_loopback_link_local_and_mapped_private():
+    assert is_safe_url("http://[::1]/") is False
+    assert is_safe_url("http://[fe80::1]/") is False
+    assert is_safe_url("http://[::ffff:127.0.0.1]/") is False
+    assert is_safe_url("http://[::ffff:169.254.169.254]/") is False
+    assert is_safe_url("http://[fc00::1]/") is False
 
 
 def test_rejects_internal_suffixes():
@@ -88,3 +96,55 @@ def test_assert_safe_url_raises_on_unsafe():
 
 def test_assert_safe_url_silent_on_safe():
     assert assert_safe_url("http://8.8.8.8/") is None
+
+
+def test_pin_safe_url_rewrites_host_to_resolved_ip():
+    with patch(
+        "backend.services.url_validation.socket.getaddrinfo",
+        return_value=_addrinfo("93.184.216.34"),
+    ):
+        pinned = pin_safe_url("https://example.com/shop")
+    assert pinned is not None
+    assert pinned.connect_url == "https://93.184.216.34/shop"
+    assert pinned.host_header == "example.com"
+    assert pinned.sni_hostname == "example.com"
+    assert pinned.ip == "93.184.216.34"
+
+
+def test_pin_safe_url_keeps_explicit_port_on_connect_and_host():
+    with patch(
+        "backend.services.url_validation.socket.getaddrinfo",
+        return_value=_addrinfo("93.184.216.34"),
+    ):
+        pinned = pin_safe_url("https://example.com:8443/shop")
+    assert pinned is not None
+    assert pinned.connect_url == "https://93.184.216.34:8443/shop"
+    assert pinned.host_header == "example.com:8443"
+    assert pinned.sni_hostname == "example.com"
+
+
+def test_pin_safe_url_brackets_ipv6_connect_url():
+    with patch(
+        "backend.services.url_validation.socket.getaddrinfo",
+        return_value=[(10, 1, 6, "", ("2001:4860:4860::8888", 0, 0, 0))],
+    ):
+        pinned = pin_safe_url("https://dns.google/")
+    assert pinned is not None
+    assert pinned.connect_url == "https://[2001:4860:4860::8888]/"
+    assert pinned.host_header == "dns.google"
+    assert pinned.sni_hostname == "dns.google"
+
+
+def test_pin_safe_url_rejects_private_resolution():
+    with patch(
+        "backend.services.url_validation.socket.getaddrinfo",
+        return_value=_addrinfo("10.0.0.5"),
+    ):
+        assert pin_safe_url("https://evil.example.com/") is None
+
+
+def test_pin_safe_url_rejects_mapped_private_ipv6():
+    """IPv4-mapped IPv6 (:ffff:x.x.x.x) must not bypass the private-IP pin."""
+    assert pin_safe_url("http://[::ffff:127.0.0.1]/") is None
+    assert pin_safe_url("http://[::ffff:169.254.169.254]/") is None
+    assert pin_safe_url("http://[::ffff:10.0.0.5]/") is None
