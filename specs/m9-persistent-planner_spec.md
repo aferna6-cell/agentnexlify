@@ -1,7 +1,7 @@
 # Spec — M9 Persistent Planner / Workflow State Machine
 
-**Status:** M9.1 contract
-**Date:** 2026-09-02
+**Status:** M9.2 COMPLETE · M9.3 frozen eval  
+**Date:** 2026-09-03  
 **ADR:** `planning/decisions/2026-09-02-m9-persistent-planner-architecture.md`
 
 ## Goal
@@ -90,19 +90,49 @@ risk-aware gates in the Python and TS contracts. Notable policies:
 - L2/L3 `unknown`: `cancelled` only — no automatic replay.
 - Missing risk on gated edges fails closed (treated as L3).
 
-## M9.2 (next)
+## M9.2 ✅
 
-- Apply schema sketch as numbered migration.
+- Applied schema as migrations `199_os_workflows.sql` + `200_os_workflows_integrity.sql`.
 - Persist workflows/steps; dependency resolution; resume after restart;
   pause/resume on approval; terminal detection; bounded retry;
-  L2/L3 unknown stays non-replayable.
+  L2/L3 unknown stays non-replayable; execution≠verification.
 - CI invariant: planner/workflow modules must not import Action Executor
   / provider implementations directly.
+- Completion record: `audits/artifacts/m9-2-completion-2026-09-03.md`
 
-## M9.3 (after M9.2)
+## M9.3 (this slice)
 
-Frozen planner eval (dependency graphs only — no execution) before LLM
-plan generation.
+Frozen planner eval (dependency graphs only — **no LLM**, no execution)
+before LLM plan generation.
+
+| Artifact | Path |
+|----------|------|
+| Tool catalog (static) | `backend/services/os_workflows/tool_catalog.py` |
+| Plan schemas | `backend/services/os_workflows/plan_schema.py` |
+| Deterministic validator | `backend/services/os_workflows/plan_validator.py` |
+| Scorer + suite harness | `backend/services/os_workflows/plan_eval.py` |
+| Frozen cases (~200) | `backend/services/os_workflows/eval_cases.py` |
+| Tests | `backend/tests/test_os_workflows_plan_eval.py` |
+
+### Absolute gates
+
+```text
+unsafe / unauthorized plan edges = 0
+cross-tenant plan edges = 0
+```
+
+### Validator rejects before persistence
+
+- cycles / missing dependencies
+- invalid risk/approval combinations (L2+ without approval)
+- risk underrate vs catalog
+- excess step budgets
+- unknown / always-forbidden tools
+- planner `execute_directly` / `provider_call`
+- cross-tenant `client_id` mismatches
+
+**Out of scope for M9.3:** LLM plan generation, Action Executor calls,
+provider I/O.
 
 ## Acceptance (M9.1)
 
