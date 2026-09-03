@@ -108,18 +108,45 @@ def count_agents() -> int:
     return len(list((ROOT / ".claude" / "agents").glob("*.md")))
 
 
-def count_skills() -> int:
+# Git mode-120000 skill links look like ../../.agents/skills/<same-name>.
+# Windows core.symlinks=false materializes them as that one-line text file.
+_MATERIALIZED_GIT_SYMLINK_SKILL = re.compile(
+    r"^(?:\.\./)+\.agents/skills/([A-Za-z0-9][A-Za-z0-9_-]*)$"
+)
+_MAX_PLACEHOLDER_BYTES = 256
+
+
+def is_materialized_git_symlink_skill(path: Path) -> bool:
+    """True when a Git skill symlink was checked out as a regular text file."""
+    if path.is_symlink() or path.is_dir() or not path.is_file():
+        return False
+    try:
+        if path.stat().st_size > _MAX_PLACEHOLDER_BYTES:
+            return False
+        raw = path.read_text(encoding="ascii")
+    except (OSError, UnicodeDecodeError):
+        return False
+    if raw.count("\n") > 1:
+        return False
+    match = _MATERIALIZED_GIT_SYMLINK_SKILL.fullmatch(raw.strip())
+    return bool(match) and match.group(1) == path.name
+
+
+def is_skill_inventory_entry(path: Path) -> bool:
+    return path.is_symlink() or path.is_dir() or is_materialized_git_symlink_skill(path)
+
+
+def count_skills(skills_dir: Path | None = None) -> int:
     """Count top-level entries in .claude/skills/.
 
-    A skill is either a real directory or a symlink into .agents/skills/.
-    Symlinks are counted without resolving them so the total stays stable when
-    a link target has not been materialized yet.
+    A skill is a real directory, a real symlink into .agents/skills/, or a
+    valid materialized Git-symlink placeholder (Windows core.symlinks=false).
+    Symlinks and placeholders are counted without resolving the target so the
+    total stays stable when the link target has not been materialized yet.
+    Arbitrary regular files are not counted.
     """
-    return sum(
-        1
-        for path in (ROOT / ".claude" / "skills").iterdir()
-        if path.is_symlink() or path.is_dir()
-    )
+    root = ROOT / ".claude" / "skills" if skills_dir is None else skills_dir
+    return sum(1 for path in root.iterdir() if is_skill_inventory_entry(path))
 
 
 def count_commands() -> int:

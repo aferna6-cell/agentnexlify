@@ -92,7 +92,7 @@ Study → Apply → Systemize.
 | Memory | CLAUDE.md, `memory/`, `PROMPTLIBRARY.md`, `docs/dev-knowledge/` |
 | Workflow | 85 skills, 25 commands, 31 hooks, 60 agents, `issue-to-pr-loop` |
 
-Inventory source: `npm run agent-system:check`. The 85 skills are 79 first-party directories plus 6 Everything Claude Code plugin symlinks in `.claude/skills/`.
+Inventory source: `npm run agent-system:check`. The 85 skills are 79 first-party directories plus 6 Everything Claude Code plugin symlinks in `.claude/skills/` (still counted when `core.symlinks=false` materializes them as one-line path files).
 
 ## Cross-refs
 - `.claude/rules/claude-usage-patterns.md` — 12 operating modes
