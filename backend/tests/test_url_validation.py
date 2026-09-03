@@ -141,3 +141,10 @@ def test_pin_safe_url_rejects_private_resolution():
         return_value=_addrinfo("10.0.0.5"),
     ):
         assert pin_safe_url("https://evil.example.com/") is None
+
+
+def test_pin_safe_url_rejects_mapped_private_ipv6():
+    """IPv4-mapped IPv6 (:ffff:x.x.x.x) must not bypass the private-IP pin."""
+    assert pin_safe_url("http://[::ffff:127.0.0.1]/") is None
+    assert pin_safe_url("http://[::ffff:169.254.169.254]/") is None
+    assert pin_safe_url("http://[::ffff:10.0.0.5]/") is None

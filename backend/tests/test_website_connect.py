@@ -219,6 +219,29 @@ class TestWidgetPresence:
         assert widget_is_present(_wp_html(KEY_A), "") is False
         assert widget_is_present(_wp_html(KEY_A), None) is False
 
+    def test_comment_with_loader_and_key_is_not_connected(self):
+        html = (
+            f'<!-- <script src="https://app.agentnexlify.com/widget/'
+            f'agentnexlify-widget.js" data-api-key="{KEY_A}"></script> -->'
+        )
+        assert "agentnexlify-widget.js" in html
+        assert KEY_A in html
+        assert widget_is_present(html, KEY_A) is False
+
+    def test_substrings_in_text_are_not_connected(self):
+        html = (
+            f"<p>agentnexlify-widget.js</p>"
+            f'<p>data-api-key="{KEY_A}"</p>'
+        )
+        assert widget_is_present(html, KEY_A) is False
+
+    def test_single_quoted_script_attributes_still_match(self):
+        html = (
+            "<script async src='https://app.agentnexlify.com/widget/"
+            f"agentnexlify-widget.js' data-api-key='{KEY_A}'></script>"
+        )
+        assert widget_is_present(html, KEY_A) is True
+
 
 class TestNormalizeAndSecrets:
     def test_adds_https_and_strips_slash(self):
