@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-08-31-pm",
-  "total_runs": 114,
+  "last_run": "2026-09-04",
+  "total_runs": 115,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -1978,5 +1978,24 @@
     "implementation_sketch": "subconscious/runs/2026-08-28/winning-concept.md",
     "escalation_condition": "Autonomous-executable if not approved by run 111 (1st carry-forward mandate)",
     "note": "Compounds run 109's Step 9J. Without this fix: Step 9J permanent 0% merge rate. With fix: 20+ security dep bumps unblock within 24-48h, CVE window 2-3 weeks -> <48h."
-  }
+  },
+  "run_115_winner": {
+    "title": "Fix Step 9J — implement merge eligibility loop (cap 10/run, squash-merge clean PRs)",
+    "date": "2026-09-04",
+    "confidence": "HIGH",
+    "status": "recommendation",
+    "implemented": false,
+    "autonomous_executable": true,
+    "requires_human": false,
+    "category": "workflow",
+    "moratorium_override": false,
+    "source_run": 115,
+    "effort": "S",
+    "evidence": "nightly-2026-09-04 Step 9J: '19 Dependabot PRs open. Merge eligibility check deferred — requires mergeable_state per-PR read; no merges executed this run.' Step 9J in SKILL.md since run 108 (2026-08-20, 15 days) — NEVER merged a PR. Detection works (search_pull_requests confirmed run 114). Merge loop provably absent: SKILL.md ends at detection without merge call. 19 PRs aging. Rate concern is false alarm: 19 sequential API calls = 0.38% of GitHub hourly limit.",
+    "action": "Edit Step 9J block in .claude/skills/nightly-commit-review/SKILL.md: after detection, add per-PR loop (cap 10/run). For each PR: call pull_request_read to get mergeable_state + labels. If unknown: post @dependabot rebase (already implemented). If dirty or blocking label: skip + log. If clean: call mcp__github__merge_pull_request (squash). Log merged_count, rebase_count, skipped_count.",
+    "implementation_sketch": "subconscious/runs/2026-09-04/winning-concept.md",
+    "escalation_condition": "Autonomous-executable if not approved by run 116 (1st carry-forward mandate)",
+    "note": "Step 9J detection working since run 114. Merge execution never implemented. This adds the missing merge loop. 19 PRs aging. CVE window closes from 2-3 weeks to <24h permanently."
+  },
+  "run_116_mandate": "1. Verify Step 9J merges PRs in nightly-2026-09-05: grep 'Step 9J.*MERGED' ops/routines/logs/nightly-commit-review-2026-09-05.md. 2. How many of the 19 Dependabot PRs were clean vs unknown vs dirty? 3. os_tool_executions.py stable (0 commits 4d+)? If yes: run 116 god-class split candidate (783L, last commit 2026-09-02). 4. GH #684 SUPABASE_ACCESS_TOKEN: set in Railway? (43 days stale, brain connector down). 5. AUTOPILOT_GH_TOKEN: 62 days old (14 days from 76d threshold) — rotate before run 117. 6. Step 9E early warning: add 60-day threshold alongside 76-day critical threshold."
 }

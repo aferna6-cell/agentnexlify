@@ -1,0 +1,37 @@
+{
+  "run": 115,
+  "date": "2026-09-04",
+  "winner": {
+    "title": "Fix Step 9J — implement merge eligibility loop (cap 10/run, squash-merge clean PRs)",
+    "category": "workflow",
+    "effort": "S",
+    "confidence": "HIGH",
+    "autonomous_executable": true,
+    "carry_forward_threshold": "run 116 (1st carry-forward mandate)"
+  },
+  "mandate_check_from_run_114": {
+    "step_9k_fires": "PASS — 1 PR (#782, 1d old), 0 stale (under threshold)",
+    "step_9j_detection_fix": "PASS — 19 PRs detected",
+    "supabase_access_token": "FAIL — 43 days stale in Railway (GH #684 open)",
+    "os_tool_executions_stable": "FAIL — 2d since last commit (mandate requires 4d+)",
+    "m8_oauth_hold": "ONGOING — m9-bakeoff commits continuing"
+  },
+  "ideas_generated": 5,
+  "debate_contestants": [
+    { "idea": 1, "verdict": "SURVIVES → WINNER" },
+    { "idea": 3, "verdict": "WEAKENED → bonus monitor" },
+    { "idea": 5, "verdict": "WEAKENED → parking lot" }
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-09-04/ideas/ideas.md",
+    "subconscious/runs/2026-09-04/debate/debate-log.md",
+    "subconscious/runs/2026-09-04/winning-concept.md",
+    "subconscious/runs/2026-09-04/improvement-backlog.md",
+    "subconscious/runs/2026-09-04/run-summary.json"
+  ],
+  "operational_alerts": [
+    "SUPABASE_ACCESS_TOKEN: 43 days stale — brain connector down (GH #684)",
+    "AUTOPILOT_GH_TOKEN: 62 days old, 14 days from 76d expiry threshold — rotate before run 117",
+    "KB: 9 days stale (Step 9F alerted)"
+  ]
+}
