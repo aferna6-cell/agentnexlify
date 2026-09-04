@@ -12,6 +12,7 @@ from backend.main import app
 from backend.routers import appointment_briefs as briefs_mod
 from backend.routers import billing_usage as billing_mod
 from backend.routers import insights as insights_mod
+from backend.services.agent_os_gate import require_agent_os_access
 from backend.services.appointment_brief import AppointmentBriefError
 from backend.tests.conftest import SyncASGITestClient
 from backend.tests.fake_supabase import db
@@ -22,11 +23,15 @@ CLAIMS = {"tenant_id": TENANT}
 
 def _client(claims=CLAIMS):
     app.dependency_overrides[_get_current_tenant] = lambda: claims
+    # Brief endpoints now carry the Agent OS plan gate; these tests cover
+    # auth/error mapping, not plan gating (see test_appointment_briefs_gating).
+    app.dependency_overrides[require_agent_os_access] = lambda: claims
     return SyncASGITestClient(app)
 
 
 def _teardown():
     app.dependency_overrides.pop(_get_current_tenant, None)
+    app.dependency_overrides.pop(require_agent_os_access, None)
 
 
 # --- /api/v1/insights ------------------------------------------------------
