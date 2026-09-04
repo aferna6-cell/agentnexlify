@@ -197,12 +197,77 @@ def _extract_tags_from_conversation(messages: list[dict[str, str]]) -> list[str]
     return []
 
 
+CATEGORIZE_MAX_TOKENS = 100
+
+
+def _load_categorize_budget_tenant(db: Any, tenant_id: str) -> dict[str, Any] | None:
+    """Load the tenant row needed for a pack-aware reservation.
+
+    Returns None when the row is missing or the lookup throws. Callers must
+    fail closed before the provider — do not invent a free-plan cap (that
+    would falsely block a paying tenant or ignore purchased packs) and do
+    not call Claude unmetered.
+
+    Tag-definition fetch is a separate path: that failure still falls back
+    to SYSTEM_TAGS and must not be treated as a budget-tenant miss.
+    """
+    try:
+        rows = (
+            db.table("tenants")
+            .select(
+                "id, plan, ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit"
+            )
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        ).data or []
+    except Exception:
+        # Do not attach the lookup exception: it may contain connection or
+        # customer context. Tenant id is enough to find the row.
+        logger.warning(
+            "conversation_categorize: tenant load failed tenant=%s",
+            tenant_id,
+        )
+        return None
+    if not rows:
+        logger.warning(
+            "conversation_categorize: tenant missing tenant=%s — failing closed before provider",
+            tenant_id,
+        )
+        return None
+    return {**rows[0], "id": tenant_id}
+
+
 def _categorize_conversation(tenant_id: str, session_id: str, messages: list[dict]) -> None:
-    """Background task: AI auto-categorize conversation into preset business tags."""
+    """Background task: AI auto-categorize conversation into preset business tags.
+
+    Metered like widget chat / extract_action_items: reserve → provider →
+    record, or release on provider / record-persist failure. Tenant/policy
+    load failure fails closed here (no provider call). A later reserve RPC
+    outage is different: reserve_ai_tokens returns allowed=True / reason=
+    guard_unavailable and this helper may still call the provider without
+    persisting usage.
+
+    Tag-definition lookup is independent of budget identity. Fetch failure
+    or an empty enabled list still uses SYSTEM_TAGS (existing contract).
+    That fallback is not a budget miss and must not skip Claude.
+
+    This runs after the visitor reply is already saved. Hard-cap, missing
+    tenant, provider errors, and persist failures must not raise to the
+    widget chat response.
+    """
     if not messages or len(messages) < 3:
         return
 
-    db = get_service_supabase()
+    try:
+        db = get_service_supabase()
+    except Exception:
+        logger.warning(
+            "conversation_categorize: tenant load failed tenant=%s",
+            tenant_id,
+        )
+        return
+
     try:
         tag_defs = (
             tenant_select(db, "tenant_tag_definitions", tenant_id, "tag_name")
@@ -221,24 +286,75 @@ def _categorize_conversation(tenant_id: str, session_id: str, messages: list[dic
         role = "Visitor" if msg["role"] == "user" else "Agent"
         transcript_lines.append(f"{role}: {msg['content']}")
     transcript = "\n".join(transcript_lines)
+    system = (
+        "Categorize this chat conversation into 1-3 tags from this list ONLY:\n"
+        + ", ".join(available_tags)
+        + "\n\nReturn ONLY a JSON array of matching tag names. "
+        "If none match, return []. Use exact tag names from the list."
+    )
+    provider_messages = [{"role": "user", "content": transcript}]
+
+    tenant = _load_categorize_budget_tenant(db, tenant_id)
+    if tenant is None:
+        logger.warning(
+            "conversation_categorize: budget tenant unavailable tenant=%s — "
+            "failing closed before provider",
+            tenant_id,
+        )
+        return
+
+    reservation = reserve_ai_tokens(
+        tenant=tenant,
+        estimated_tokens=estimate_widget_chat_tokens(
+            system_prompt=system,
+            messages=provider_messages,
+            max_tokens=CATEGORIZE_MAX_TOKENS,
+        ),
+        operation="widget.categorize_conversation",
+        session_id=session_id,
+    )
+    if not reservation.allowed:
+        logger.warning(
+            "conversation_categorize: hard cap blocked tenant=%s session=%s",
+            tenant_id,
+            session_id,
+        )
+        return
 
     try:
         resp = call_claude_messages_sync(
             operation="widget.categorize_conversation",
             model=MODEL,
-            max_tokens=100,
+            max_tokens=CATEGORIZE_MAX_TOKENS,
             temperature=0,
-            system=(
-                "Categorize this chat conversation into 1-3 tags from this list ONLY:\n"
-                + ", ".join(available_tags)
-                + "\n\nReturn ONLY a JSON array of matching tag names. "
-                "If none match, return []. Use exact tag names from the list."
-            ),
-            messages=[{"role": "user", "content": transcript}],
+            system=system,
+            messages=provider_messages,
             timeout=30.0,
-            metadata={"tenant_id": tenant_id, "session_id": session_id, "tag_count": len(available_tags)},
+            metadata={
+                "tenant_id": tenant_id,
+                "session_id": session_id,
+                "tag_count": len(available_tags),
+            },
         )
-        raw = resp.text.strip()
+    except Exception:
+        release_ai_token_reservation(reservation)
+        logger.warning(
+            "conversation_categorize: provider error tenant=%s session=%s",
+            tenant_id,
+            session_id,
+        )
+        return
+
+    record_ai_usage(
+        reservation=reservation,
+        result=resp,
+        operation="widget.categorize_conversation",
+        session_id=session_id,
+        model=MODEL,
+    )
+
+    try:
+        raw = (resp.text or "").strip()
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
         tags = json.loads(raw)
@@ -265,11 +381,13 @@ def _categorize_conversation(tenant_id: str, session_id: str, messages: list[dic
         ).execute()
 
     except json.JSONDecodeError:
-        logger.warning("conversation_categorize: non-JSON response")
-    except anthropic.APIError as e:
-        logger.warning("conversation_categorize: API error — %s", e)
+        logger.warning("conversation_categorize: non-JSON response tenant=%s", tenant_id)
     except Exception:
-        logger.warning("conversation_categorize: unexpected failure", exc_info=True)
+        logger.warning(
+            "conversation_categorize: persist skipped tenant=%s session=%s",
+            tenant_id,
+            session_id,
+        )
 
 
 ACTION_ITEM_MAX_TOKENS = 300
