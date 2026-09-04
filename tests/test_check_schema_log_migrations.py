@@ -13,12 +13,14 @@ from pathlib import Path
 import pytest
 
 from scripts.check_schema_log_migrations import (
+    AllowlistUnavailable,
     DEFAULT_DEFERRED,
     DEFAULT_WATCH_FROM,
     LiveStateUnavailable,
     compare,
     load_deferred_allowlist,
     load_live_rows,
+    main,
     parse_schema_log,
     redact_secrets,
     run_check,
@@ -292,3 +294,136 @@ def test_compare_output_never_includes_customer_fields():
     blob = " ".join(f"{item.kind} {item.number} {item.name} {item.detail}" for item in findings)
     assert "customer@example.com" not in blob
     assert "leads" not in blob
+
+
+def _write_allowlist(path: Path, payload) -> Path:
+    if isinstance(payload, str):
+        path.write_text(payload, encoding="utf-8")
+    else:
+        path.write_text(json.dumps(payload), encoding="utf-8")
+    return path
+
+
+def _cli_argv(tmp_path: Path, *, allowlist, live=None, schema=DEFERRED_201, extra=None):
+    schema_log = tmp_path / "schema-log.md"
+    schema_log.write_text(schema, encoding="utf-8")
+    live_json = tmp_path / "live.json"
+    live_json.write_text(json.dumps([] if live is None else live), encoding="utf-8")
+    deferred_json = tmp_path / "deferred-migrations.json"
+    argv = [
+        "--schema-log",
+        str(schema_log),
+        "--live-json",
+        str(live_json),
+        "--deferred-json",
+        str(deferred_json),
+    ]
+    if allowlist is not None:
+        _write_allowlist(deferred_json, allowlist)
+    if extra:
+        argv.extend(extra)
+    return argv
+
+
+def test_empty_allowlist_file_stays_empty_and_does_not_restore_default(tmp_path: Path):
+    path = _write_allowlist(tmp_path / "deferred.json", {"deferred_unapplied": []})
+    assert load_deferred_allowlist(path) == frozenset()
+    assert load_deferred_allowlist(path) != DEFAULT_DEFERRED
+
+
+def test_load_missing_allowlist_raises(tmp_path: Path):
+    missing = tmp_path / "missing-deferred.json"
+    with pytest.raises(AllowlistUnavailable, match="missing"):
+        load_deferred_allowlist(missing)
+
+
+def test_load_malformed_allowlist_raises(tmp_path: Path):
+    path = _write_allowlist(tmp_path / "deferred.json", "{not json")
+    with pytest.raises(AllowlistUnavailable, match="not valid JSON"):
+        load_deferred_allowlist(path)
+
+
+def test_load_wrong_shape_allowlist_raises(tmp_path: Path):
+    array_path = _write_allowlist(tmp_path / "as-array.json", [201])
+    with pytest.raises(AllowlistUnavailable, match="JSON object"):
+        load_deferred_allowlist(array_path)
+    missing_key = _write_allowlist(tmp_path / "no-key.json", {"note": "no list"})
+    with pytest.raises(AllowlistUnavailable, match="missing deferred_unapplied"):
+        load_deferred_allowlist(missing_key)
+    bad_type = _write_allowlist(tmp_path / "string-list.json", {"deferred_unapplied": "201"})
+    with pytest.raises(AllowlistUnavailable, match="JSON array"):
+        load_deferred_allowlist(bad_type)
+
+
+def test_load_non_integer_and_duplicate_entries_raise(tmp_path: Path):
+    non_int = _write_allowlist(
+        tmp_path / "non-int.json", {"deferred_unapplied": [201, "two"]}
+    )
+    with pytest.raises(AllowlistUnavailable, match="positive integers; invalid entry at index 1"):
+        load_deferred_allowlist(non_int)
+    boolean_entry = _write_allowlist(
+        tmp_path / "bool.json", {"deferred_unapplied": [True]}
+    )
+    with pytest.raises(AllowlistUnavailable, match="invalid entry at index 0"):
+        load_deferred_allowlist(boolean_entry)
+    duplicates = _write_allowlist(
+        tmp_path / "dupes.json", {"deferred_unapplied": [201, 201]}
+    )
+    with pytest.raises(AllowlistUnavailable, match="duplicate entry 201 at index 1"):
+        load_deferred_allowlist(duplicates)
+
+
+def test_cli_explicit_201_exits_0(tmp_path: Path, capsys):
+    argv = _cli_argv(tmp_path, allowlist={"deferred_unapplied": [201]})
+    assert main(argv) == 0
+    assert "OK:" in capsys.readouterr().out
+
+
+def test_cli_empty_allowlist_flags_201_exits_1(tmp_path: Path, capsys):
+    argv = _cli_argv(tmp_path, allowlist={"deferred_unapplied": []})
+    assert main(argv) == 1
+    out = capsys.readouterr().out
+    assert "docs_unapplied_live_missing" in out
+    assert "201" in out
+
+
+def test_cli_missing_allowlist_fail_closed(tmp_path: Path, capsys):
+    argv = _cli_argv(tmp_path, allowlist=None)
+    assert main(argv) == 2
+    out = capsys.readouterr().out
+    assert "allowlist_unreadable" in out
+    assert "missing" in out
+
+
+def test_cli_malformed_json_fail_closed(tmp_path: Path, capsys):
+    argv = _cli_argv(tmp_path, allowlist="{not json")
+    assert main(argv) == 2
+    out = capsys.readouterr().out
+    assert "allowlist_unreadable" in out
+    assert "not valid JSON" in out
+
+
+def test_cli_non_integer_entries_fail_closed(tmp_path: Path, capsys):
+    argv = _cli_argv(tmp_path, allowlist={"deferred_unapplied": [201, "two"]})
+    assert main(argv) == 2
+    out = capsys.readouterr().out
+    assert "allowlist_unreadable" in out
+    assert "invalid entry at index 1" in out
+
+
+def test_cli_duplicate_entries_fail_closed(tmp_path: Path, capsys):
+    argv = _cli_argv(tmp_path, allowlist={"deferred_unapplied": [201, 201]})
+    assert main(argv) == 2
+    out = capsys.readouterr().out
+    assert "allowlist_unreadable" in out
+    assert "duplicate entry 201 at index 1" in out
+
+
+def test_cli_allowlist_errors_do_not_echo_secrets(tmp_path: Path, capsys):
+    secret = "postgres://user:supersecret@db.example.supabase.co:5432/postgres"
+    argv = _cli_argv(tmp_path, allowlist=secret)
+    assert main(argv) == 2
+    out = capsys.readouterr().out
+    assert "supersecret" not in out
+    assert "postgres://user:" not in out
+    assert "allowlist_unreadable" in out

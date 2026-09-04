@@ -18,7 +18,7 @@ the result of:
 Exit codes:
     0 — no drift in the watch window
     1 — drift findings
-    2 — live state could not be read (fail-closed)
+    2 — live state or deferred allowlist could not be read (fail-closed)
 """
 
 from __future__ import annotations
@@ -61,6 +61,10 @@ SECRET_RE = re.compile(
 
 class LiveStateUnavailable(Exception):
     """Live schema_migrations rows could not be read."""
+
+
+class AllowlistUnavailable(Exception):
+    """Deferred allowlist could not be loaded; fail closed."""
 
 
 @dataclass(frozen=True)
@@ -129,21 +133,44 @@ def parse_schema_log(text: str) -> list[DocEntry]:
 
 
 def load_deferred_allowlist(path: Path | None = None) -> frozenset[int]:
-    target = path or DEFERRED_PATH
-    if target is None or not target.exists():
-        return DEFAULT_DEFERRED
+    """Load the explicit deferred-unapplied allowlist.
+
+    Fail closed on a missing, unreadable, malformed, wrong-shape, or invalid
+    allowlist. An intentionally empty ``deferred_unapplied: []`` stays empty
+    and is never replaced with DEFAULT_DEFERRED.
+    """
+    target = DEFERRED_PATH if path is None else path
+    if not target.exists():
+        raise AllowlistUnavailable("deferred allowlist file is missing")
     try:
-        payload = json.loads(target.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return DEFAULT_DEFERRED
-    raw = payload.get("deferred_unapplied", [])
-    numbers = []
-    for item in raw:
-        try:
-            numbers.append(int(item))
-        except (TypeError, ValueError):
-            continue
-    return frozenset(numbers) or DEFAULT_DEFERRED
+        text = target.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise AllowlistUnavailable("deferred allowlist file could not be read") from exc
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise AllowlistUnavailable("deferred allowlist is not valid JSON") from exc
+    if not isinstance(payload, dict):
+        raise AllowlistUnavailable("deferred allowlist must be a JSON object")
+    if "deferred_unapplied" not in payload:
+        raise AllowlistUnavailable("deferred allowlist missing deferred_unapplied")
+    raw = payload["deferred_unapplied"]
+    if not isinstance(raw, list):
+        raise AllowlistUnavailable("deferred_unapplied must be a JSON array")
+    numbers: list[int] = []
+    seen: set[int] = set()
+    for index, item in enumerate(raw):
+        if isinstance(item, bool) or not isinstance(item, int) or item < 1:
+            raise AllowlistUnavailable(
+                f"deferred_unapplied entries must be positive integers; invalid entry at index {index}"
+            )
+        if item in seen:
+            raise AllowlistUnavailable(
+                f"deferred_unapplied has duplicate entry {item} at index {index}"
+            )
+        seen.add(item)
+        numbers.append(item)
+    return frozenset(numbers)
 
 
 def _as_live_rows(raw: object) -> list[dict[str, str]]:
@@ -350,8 +377,23 @@ def run_check(
     live_json: Path | None,
     deferred: Iterable[int] | None = None,
     watch_from: int = DEFAULT_WATCH_FROM,
+    *,
+    deferred_path: Path | None = None,
 ) -> tuple[int, list[str]]:
-    allowlist = frozenset(deferred) if deferred is not None else load_deferred_allowlist()
+    try:
+        allowlist = (
+            frozenset(deferred)
+            if deferred is not None
+            else load_deferred_allowlist(deferred_path)
+        )
+    except AllowlistUnavailable as exc:
+        finding = Finding(
+            kind="allowlist_unreadable",
+            number=None,
+            name="deferred-migrations",
+            detail=redact_secrets(str(exc)),
+        )
+        return 2, [finding.render()]
     try:
         text = schema_log.read_text(encoding="utf-8")
     except OSError as exc:
@@ -402,6 +444,12 @@ def main(argv: list[str] | None = None) -> int:
         help="override deferred-unapplied allowlist (default: ops/schema/deferred-migrations.json)",
     )
     parser.add_argument(
+        "--deferred-json",
+        type=Path,
+        default=None,
+        help="JSON object with deferred_unapplied array (default: ops/schema/deferred-migrations.json)",
+    )
+    parser.add_argument(
         "--watch-from",
         type=int,
         default=DEFAULT_WATCH_FROM,
@@ -413,6 +461,7 @@ def main(argv: list[str] | None = None) -> int:
         live_json=args.live_json,
         deferred=args.deferred,
         watch_from=args.watch_from,
+        deferred_path=args.deferred_json,
     )
     for line in lines:
         print(redact_secrets(line))
