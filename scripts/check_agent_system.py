@@ -112,7 +112,7 @@ def count_agents() -> int:
 # Windows core.symlinks=false materializes them as that one-line text file.
 # Extra ../, absolute paths, whitespace padding, and other path tricks do not count.
 _MATERIALIZED_GIT_SYMLINK_SKILL = re.compile(
-    r"^../../\.agents/skills/([A-Za-z0-9][A-Za-z0-9_-]*)(?:\r\n|\n)?$"
+    r"^\.\./\.\./\.agents/skills/([A-Za-z0-9][A-Za-z0-9_-]*)(?:\r\n|\n)?$"
 )
 _MAX_PLACEHOLDER_BYTES = 256
 

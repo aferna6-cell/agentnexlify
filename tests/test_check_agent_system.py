@@ -84,10 +84,31 @@ class CountSkillsTests(unittest.TestCase):
             _write(skills / "multiline", "../../.agents/skills/multiline\nextra")
             _write(skills / "backslashes", "..\\..\\.agents\\skills\\backslashes\n")
             _write(skills / "nested", "../../.agents/skills/../skills/nested\n")
+            _write(
+                skills / "substituted-dot-segments",
+                "xx/yy/.agents/skills/substituted-dot-segments\n",
+            )
+            _write(
+                skills / "punctuation-dot-segments",
+                "!!/@@/.agents/skills/punctuation-dot-segments\n",
+            )
             (skills / "oversize").write_bytes(b"x" * (agent_system._MAX_PLACEHOLDER_BYTES + 1))
             (skills / "non-ascii").write_bytes(b"../../.agents/skills/non-ascii\n\xc3\xa9")
 
             self.assertEqual(agent_system.count_skills(skills), 1)
+
+    def test_rejects_substituted_two_character_dot_segments(self) -> None:
+        """Unescaped ^../../ must not treat xx/yy/ or !!/@@/ as literal ../."""
+        with tempfile.TemporaryDirectory() as raw:
+            skills = Path(raw)
+            substituted = skills / "substituted-dot-segments"
+            punctuation = skills / "punctuation-dot-segments"
+            _write(substituted, "xx/yy/.agents/skills/substituted-dot-segments\n")
+            _write(punctuation, "!!/@@/.agents/skills/punctuation-dot-segments\n")
+
+            self.assertFalse(agent_system.is_materialized_git_symlink_skill(substituted))
+            self.assertFalse(agent_system.is_materialized_git_symlink_skill(punctuation))
+            self.assertEqual(agent_system.count_skills(skills), 0)
 
     def test_count_skills_mixed_posix_and_windows_entries(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
