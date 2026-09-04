@@ -26,9 +26,12 @@ from pathlib import Path
 from typing import Dict, FrozenSet, Optional, TypedDict
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
+# Canonical generated manifest. The backend sidecar exists because some
+# Railway images copy only backend/ (the 2026-09-03 bakeoff runner crash).
 _MANIFEST_PATH = (
     _REPO_ROOT / "agent-service" / "src" / "agent-os" / "actions" / "action_manifest.json"
 )
+_BACKEND_MANIFEST_PATH = Path(__file__).resolve().parent / "action_manifest.json"
 
 # Risk mirrors agent-service/src/agent-os/actions/types.ts
 RISK_READ_ONLY = 0
@@ -46,13 +49,20 @@ class ToolMeta(TypedDict):
     verifiable: bool
 
 
+def _manifest_path() -> Path:
+    if _MANIFEST_PATH.is_file():
+        return _MANIFEST_PATH
+    if _BACKEND_MANIFEST_PATH.is_file():
+        return _BACKEND_MANIFEST_PATH
+    raise FileNotFoundError(
+        f"Action manifest missing: {_MANIFEST_PATH} "
+        f"(sidecar {_BACKEND_MANIFEST_PATH} also missing). "
+        "Run: python3 scripts/generate_action_manifest.py"
+    )
+
+
 def _load_manifest() -> dict:
-    if not _MANIFEST_PATH.is_file():
-        raise FileNotFoundError(
-            f"Action manifest missing: {_MANIFEST_PATH}. "
-            "Run: python3 scripts/generate_action_manifest.py"
-        )
-    return json.loads(_MANIFEST_PATH.read_text(encoding="utf-8"))
+    return json.loads(_manifest_path().read_text(encoding="utf-8"))
 
 
 def _tool_from_manifest_entry(entry: dict) -> ToolMeta:
