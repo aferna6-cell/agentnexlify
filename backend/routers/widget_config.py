@@ -26,7 +26,10 @@ from backend.routers.widget_chat_helpers import (
     _get_widget_config,
 )
 from backend.services.branding_helpers import _filter_branding_for_plan
-from backend.dependencies import _get_current_tenant as _auth_get_tenant
+from backend.dependencies import (
+    _get_current_tenant as _auth_get_tenant,
+    block_demo_role,
+)
 
 from datetime import datetime, timezone
 
@@ -200,6 +203,7 @@ async def toggle_online_status(
     tenant_id: str,
     body: OnlineStatusRequest,
     claims: dict = Depends(_get_jwt_claims),
+    _: dict = Depends(block_demo_role),
 ):
     """Toggle widget online/offline status. Dashboard-only (JWT required)."""
     if claims.get("tenant_id") != tenant_id:
@@ -238,6 +242,7 @@ async def update_allowed_domains(
     tenant_id: str,
     body: AllowedDomainsRequest,
     claims: dict = Depends(_get_jwt_claims),
+    _: dict = Depends(block_demo_role),
 ):
     """Replace the allowed-domains list for a tenant's widget config."""
     if claims.get("tenant_id") != tenant_id:
@@ -480,7 +485,7 @@ async def get_ai_feedback(
 async def delete_ai_feedback(
     tenant_id: str,
     feedback_id: str,
-    claims: dict = Depends(_auth_get_tenant),
+    claims: dict = Depends(block_demo_role),
 ):
     """Delete a feedback entry."""
     if claims["tenant_id"] != tenant_id:

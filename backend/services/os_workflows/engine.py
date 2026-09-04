@@ -101,12 +101,50 @@ def _retries_exhausted(step: Dict[str, Any]) -> bool:
     return retry_count >= max_retries
 
 
+def _planned_blocked_by_terminal_unsuccessful_prerequisite(
+    step: Dict[str, Any],
+    by_id: Dict[str, Dict[str, Any]],
+    visiting: Optional[Set[str]] = None,
+) -> bool:
+    """True when a planned step depends on a terminal unsuccessful prerequisite.
+
+    Covers both deadlock classes:
+    - exhausted failures (failed + retries exhausted)
+    - cancelled prerequisites (terminal cancellation)
+
+    For aggregation: planned steps effectively unreachable due to terminal
+    unsuccessful prerequisites must not keep the workflow artificially
+    "running".
+    """
+    sid = str(step.get("id") or "")
+    visiting = visiting if visiting is not None else set()
+    if sid:
+        if sid in visiting:
+            return False
+        visiting = visiting | {sid}
+    for dep_id in step.get("dependencies") or []:
+        dep = by_id.get(str(dep_id))
+        if dep is None:
+            continue
+        dep_state = str(dep.get("state"))
+        if dep_state == "cancelled":
+            return True
+        if dep_state == "failed" and _retries_exhausted(dep):
+            return True
+        if dep_state == "planned" and _planned_blocked_by_terminal_unsuccessful_prerequisite(
+            dep, by_id, visiting
+        ):
+            return True
+    return False
+
+
 def derive_workflow_status(steps: List[Dict[str, Any]]) -> str:
     """Aggregate step states into a workflow status recommendation.
 
     A ``failed`` step keeps the workflow ``running`` while retries remain.
     Workflow ``failed`` only when every failed step has exhausted max_retries
-    (and no other active work remains).
+    (and no other active work remains). Unreachable ``planned`` dependents of
+    exhausted failures do not count as active work.
     """
     if not steps:
         return "planned"
@@ -114,16 +152,23 @@ def derive_workflow_status(steps: List[Dict[str, Any]]) -> str:
     if any(s == "pending_approval" for s in states):
         return "paused"
 
+    by_id = {str(s["id"]): s for s in steps if s.get("id") is not None}
     has_retryable_failure = any(
         str(s.get("state")) == "failed" and not _retries_exhausted(s) for s in steps
     )
     has_exhausted_failure = any(
         str(s.get("state")) == "failed" and _retries_exhausted(s) for s in steps
     )
-    has_active = any(
-        s in {"planned", "ready", "running", "verifying", "blocked", "unknown"}
-        for s in states
-    ) or has_retryable_failure
+    has_active = has_retryable_failure or any(
+        (
+            state in {"ready", "running", "verifying", "blocked", "unknown"}
+            or (
+                state == "planned"
+                and not _planned_blocked_by_terminal_unsuccessful_prerequisite(step, by_id)
+            )
+        )
+        for step, state in zip(steps, states)
+    )
 
     if has_active:
         return "running"
@@ -131,10 +176,28 @@ def derive_workflow_status(steps: List[Dict[str, Any]]) -> str:
     # No active / retryable work left.
     if has_exhausted_failure:
         return "failed"
-    if all(s == "cancelled" for s in states):
+
+    # Planned dependents of cancelled prerequisites are terminal-equivalent
+    # for aggregation. Without this, they would keep the workflow running
+    # forever (deadlock class).
+    def _is_cancelled_equivalent(step: Dict[str, Any], state: str) -> bool:
+        return state == "cancelled" or (
+            state == "planned"
+            and _planned_blocked_by_terminal_unsuccessful_prerequisite(step, by_id)
+        )
+
+    if all(_is_cancelled_equivalent(step, state) for step, state in zip(steps, states)):
         return "cancelled"
-    if all(s in {"succeeded", "cancelled"} for s in states) and any(
-        s == "succeeded" for s in states
+
+    def _is_succeeded_or_cancelled_equivalent(step: Dict[str, Any], state: str) -> bool:
+        return state in {"succeeded", "cancelled"} or (
+            state == "planned"
+            and _planned_blocked_by_terminal_unsuccessful_prerequisite(step, by_id)
+        )
+
+    if any(s == "succeeded" for s in states) and all(
+        _is_succeeded_or_cancelled_equivalent(step, state)
+        for step, state in zip(steps, states)
     ):
         return "succeeded"
     return "running"

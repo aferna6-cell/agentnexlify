@@ -563,6 +563,127 @@ def check_workflow_planner_import_boundary(failures: list[str]) -> None:
     )
 
 
+def check_action_manifest_catalog_parity(failures: list[str]) -> None:
+    """M9.3+: Action manifest must match registered tools; planner catalog must match manifest.
+
+    Keeps the planner import-isolated (JSON only) while failing CI when
+    ``tool_catalog`` risk/approval/department semantics drift from the
+    Action runtime registry (not merely every ``tools/*.ts`` definition).
+    """
+    import importlib.util
+    import json
+    import subprocess
+    import sys
+
+    gen = ROOT / "scripts" / "generate_action_manifest.py"
+    manifest = (
+        ROOT / "agent-service" / "src" / "agent-os" / "actions" / "action_manifest.json"
+    )
+    if not gen.is_file():
+        check(
+            "action manifest generator present",
+            False,
+            failures,
+            [f"missing {rel(gen)}"],
+        )
+        return
+
+    proc = subprocess.run(
+        [sys.executable, str(gen), "--check"],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+    )
+    check(
+        "action_manifest.json matches registered Action tools",
+        proc.returncode == 0,
+        failures,
+        [proc.stdout.strip() or proc.stderr.strip() or "manifest drift"],
+    )
+
+    if not manifest.is_file():
+        check(
+            "action_manifest.json committed",
+            False,
+            failures,
+            [f"missing {rel(manifest)}"],
+        )
+        return
+
+    try:
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        tool_ids = sorted((data.get("tools") or {}).keys())
+    except (OSError, json.JSONDecodeError) as exc:
+        check(
+            "action_manifest.json parseable",
+            False,
+            failures,
+            [str(exc)],
+        )
+        return
+
+    # Import catalog only after confirming manifest exists (avoids noisy ImportError).
+    try:
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
+        from backend.services.os_workflows.tool_catalog import (
+            PLANNER_EXCLUDED_TOOLS,
+            TOOL_CATALOG,
+            assert_catalog_matches_manifest,
+        )
+
+        assert_catalog_matches_manifest()
+        catalog_ok = set(TOOL_CATALOG.keys()) | set(PLANNER_EXCLUDED_TOOLS) == set(
+            tool_ids
+        ) and not (set(TOOL_CATALOG.keys()) & set(PLANNER_EXCLUDED_TOOLS))
+        check(
+            "planner tool_catalog matches Action manifest",
+            catalog_ok,
+            failures,
+            [
+                f"catalog={sorted(TOOL_CATALOG.keys())}",
+                f"manifest={tool_ids}",
+            ]
+            if not catalog_ok
+            else [],
+        )
+    except Exception as exc:  # noqa: BLE001 — surface parity errors in CI
+        check(
+            "planner tool_catalog matches Action manifest",
+            False,
+            failures,
+            [str(exc)],
+        )
+
+    try:
+        gen_spec = importlib.util.spec_from_file_location(
+            "_action_manifest_gen", str(gen)
+        )
+        if gen_spec is None or gen_spec.loader is None:
+            raise ImportError(f"cannot load {gen}")
+        gen_mod = importlib.util.module_from_spec(gen_spec)
+        gen_spec.loader.exec_module(gen_mod)
+        registered_ids = set(gen_mod.registered_tool_ids())
+        check(
+            "manifest IDs correspond exactly to registered Action tools",
+            registered_ids == set(tool_ids),
+            failures,
+            [
+                f"registered={sorted(registered_ids)}",
+                f"manifest={tool_ids}",
+            ]
+            if registered_ids != set(tool_ids)
+            else [],
+        )
+    except Exception as exc:  # noqa: BLE001 — surface registry parse errors in CI
+        check(
+            "manifest IDs correspond exactly to registered Action tools",
+            False,
+            failures,
+            [str(exc)],
+        )
+
+
 def main() -> int:
     failures: list[str] = []
     check_router_future_imports(failures)
@@ -574,6 +695,7 @@ def main() -> int:
     check_anthropic_sdk_usage(failures)
     check_demo_role_middleware(failures)
     check_workflow_planner_import_boundary(failures)
+    check_action_manifest_catalog_parity(failures)
 
     if failures:
         print(f"{len(failures)} invariant(s) failed.")

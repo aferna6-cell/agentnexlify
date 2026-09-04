@@ -504,6 +504,223 @@ def test_exhausted_failure_marks_workflow_failed():
         eng.retry_failed_step(CLIENT, "s1")
 
 
+def test_exhausted_failed_prerequisite_terminalizes_unreachable_dependent():
+    """Exhausted failure must not leave a dependent planned step running forever."""
+    eng = _engine()
+    wf = eng.create(
+        client_id=CLIENT,
+        owner_goal="x",
+        steps=[
+            {
+                "id": "root",
+                "description": "root",
+                "risk_level": 1,
+                "max_retries": 0,
+            },
+            {
+                "id": "child",
+                "description": "child",
+                "risk_level": 0,
+                "dependencies": ["root"],
+            },
+        ],
+    )
+    eng.queue_ready_for_execution(CLIENT, wf["id"])
+    eng.record_running_outcome(CLIENT, "root", outcome="failed", error="boom")
+    done = eng.recover(CLIENT, wf["id"])
+    assert done["status"] == "failed"
+    assert [(s["id"], s["state"]) for s in done["steps"]] == [
+        ("root", "failed"),
+        ("child", "planned"),
+    ]
+    from backend.services.os_workflows.engine import derive_workflow_status
+
+    assert derive_workflow_status(done["steps"]) == "failed"
+
+
+def test_exhausted_failure_does_not_fail_fast_independent_running_branch():
+    """A sibling that can still execute keeps the workflow running."""
+    from backend.services.os_workflows.engine import derive_workflow_status
+
+    assert (
+        derive_workflow_status(
+            [
+                {
+                    "id": "failed_branch",
+                    "state": "failed",
+                    "max_retries": 0,
+                    "retry_count": 0,
+                    "dependencies": [],
+                },
+                {
+                    "id": "blocked_child",
+                    "state": "planned",
+                    "dependencies": ["failed_branch"],
+                },
+                {
+                    "id": "independent",
+                    "state": "running",
+                    "dependencies": [],
+                },
+            ]
+        )
+        == "running"
+    )
+
+
+def test_cancelled_prerequisite_terminalizes_unreachable_dependent():
+    """Cancelled prerequisite must not leave dependent planned steps active."""
+    eng = _engine()
+    wf = eng.create(
+        client_id=CLIENT,
+        owner_goal="x",
+        steps=[
+            {
+                "id": "root",
+                "description": "root",
+                "risk_level": 1,
+                "max_retries": 0,
+            },
+            {
+                "id": "child",
+                "description": "child",
+                "risk_level": 0,
+                "dependencies": ["root"],
+            },
+        ],
+    )
+    eng.queue_ready_for_execution(CLIENT, wf["id"])
+    eng.record_running_outcome(CLIENT, "root", outcome="cancelled", error="nope")
+    done = eng.recover(CLIENT, wf["id"])
+    assert done["status"] == "cancelled"
+    assert [(s["id"], s["state"]) for s in done["steps"]] == [
+        ("root", "cancelled"),
+        ("child", "planned"),
+    ]
+
+    from backend.services.os_workflows.engine import derive_workflow_status
+
+    assert derive_workflow_status(done["steps"]) == "cancelled"
+
+
+def test_cancelled_prerequisite_terminalizes_unreachable_transitive_dependents():
+    """A cancelled step must terminalize planned dependents transitively."""
+    eng = _engine()
+    wf = eng.create(
+        client_id=CLIENT,
+        owner_goal="x",
+        steps=[
+            {
+                "id": "a",
+                "description": "a",
+                "risk_level": 1,
+                "max_retries": 0,
+            },
+            {"id": "b", "description": "b", "risk_level": 0, "dependencies": ["a"]},
+            {"id": "c", "description": "c", "risk_level": 0, "dependencies": ["b"]},
+        ],
+    )
+    eng.queue_ready_for_execution(CLIENT, wf["id"])
+    eng.record_running_outcome(CLIENT, "a", outcome="cancelled", error="nope")
+    done = eng.recover(CLIENT, wf["id"])
+    assert done["status"] == "cancelled"
+    assert [(s["id"], s["state"]) for s in done["steps"]] == [
+        ("a", "cancelled"),
+        ("b", "planned"),
+        ("c", "planned"),
+    ]
+
+
+def test_cancelled_failure_does_not_fail_fast_independent_running_branch():
+    """A sibling that can still execute keeps the workflow running."""
+    from backend.services.os_workflows.engine import derive_workflow_status
+
+    assert (
+        derive_workflow_status(
+            [
+                {
+                    "id": "cancelled_branch",
+                    "state": "cancelled",
+                    "dependencies": [],
+                    "retry_count": 0,
+                    "max_retries": 0,
+                },
+                {
+                    "id": "blocked_child",
+                    "state": "planned",
+                    "dependencies": ["cancelled_branch"],
+                },
+                {
+                    "id": "independent",
+                    "state": "running",
+                    "dependencies": [],
+                },
+            ]
+        )
+        == "running"
+    )
+
+
+def test_blocked_terminal_prerequisite_helper_ignores_cycles():
+    from backend.services.os_workflows.engine import (
+        _planned_blocked_by_terminal_unsuccessful_prerequisite,
+    )
+
+    step = {"id": "loop", "state": "planned", "dependencies": ["loop"]}
+    by_id = {"loop": step}
+    assert (
+        _planned_blocked_by_terminal_unsuccessful_prerequisite(step, by_id)
+        is False
+    )
+
+
+def test_blocked_terminal_prerequisite_helper_ignores_missing_dependencies():
+    from backend.services.os_workflows.engine import (
+        _planned_blocked_by_terminal_unsuccessful_prerequisite,
+    )
+
+    step = {"id": "child", "state": "planned", "dependencies": ["missing"]}
+    assert (
+        _planned_blocked_by_terminal_unsuccessful_prerequisite(step, {})
+        is False
+    )
+
+
+def test_cancelled_blocked_planned_descendant_counts_as_succeeded_tail():
+    """Succeeded work plus cancelled-blocked tail should aggregate succeeded."""
+    from backend.services.os_workflows.engine import derive_workflow_status
+
+    assert (
+        derive_workflow_status(
+            [
+                {
+                    "id": "done",
+                    "state": "succeeded",
+                    "dependencies": [],
+                },
+                {
+                    "id": "cancelled_root",
+                    "state": "cancelled",
+                    "dependencies": [],
+                },
+                {
+                    "id": "tail",
+                    "state": "planned",
+                    "dependencies": ["cancelled_root"],
+                },
+            ]
+        )
+        == "succeeded"
+    )
+
+
+def test_unknown_non_active_state_falls_back_to_running():
+    """Unexpected states still fail open to running during aggregation."""
+    from backend.services.os_workflows.engine import derive_workflow_status
+
+    assert derive_workflow_status([{"id": "mystery", "state": "mystery"}]) == "running"
+
+
 def test_execution_success_without_verifier_stays_verifying():
     eng = _engine()
     wf = eng.create(

@@ -159,6 +159,7 @@ from backend.routers import (
     connectors as connectors_router,
     gmail_integration,
     prospecting as prospecting_router,
+    website_connect,
 )
 
 # --- JSON logging ---
@@ -1082,6 +1083,7 @@ app.include_router(escalations_router.router)
 app.include_router(connectors_router.router)
 app.include_router(gmail_integration.router)
 app.include_router(prospecting_router.router)
+app.include_router(website_connect.router)
 
 
 # --- Static files (widget) ---

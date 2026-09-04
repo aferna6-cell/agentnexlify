@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.models.schemas import FaqCreateRequest, FaqEntryResponse
-from backend.dependencies import require_role
+from backend.dependencies import block_demo_role, require_role
 from backend.services.auth_service import get_current_tenant as _get_current_tenant
 from backend.services import faq_service as _faq_svc
 
@@ -25,7 +25,7 @@ async def list_faq(tenant_id: str, claims: dict = Depends(_get_current_tenant)):
 async def create_faq(
     tenant_id: str,
     req: FaqCreateRequest,
-    claims: dict = Depends(_get_current_tenant),
+    claims: dict = Depends(block_demo_role),
 ):
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -58,7 +58,7 @@ async def update_faq(
 async def delete_faq(
     tenant_id: str,
     faq_id: str,
-    claims: dict = Depends(_get_current_tenant),
+    claims: dict = Depends(block_demo_role),
 ):
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")

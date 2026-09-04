@@ -4,6 +4,16 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 201_website_connections.sql (2026-09-03)
+
+**What:** New `website_connections` table — one row per tenant (`UNIQUE (tenant_id)`). Columns: `tenant_id` **FK → tenants(id) ON DELETE CASCADE**, `website_url`, `platform` / `detected_platform` (`wordpress|wix|squarespace|godaddy|custom|unknown`), `platform_override`, `status` (`needs_action|verifying|connected|failed`), verification timestamps/detail, `next_action_code`. RLS on + deny-public + explicit `service_role` policy. Index `(tenant_id, status)`.
+
+**Why:** Website/Chatbot Connect v1 (GH #767). "connected" is only written after a live HTML fetch finds `agentnexlify-widget.js` **and** this tenant's `data-api-key`. No CMS passwords. No fake self-report connected state.
+
+**Applied:** NOT applied (this PR is code-only; no prod/schema deploy).
+
+---
+
 ## 200_os_workflows_integrity.sql (2026-09-02)
 
 **What:** Forward hardening on top of 199 (199 not edited). Adds `UNIQUE (id, client_id)` on `os_workflows`, replaces step `workflow_id` FK with composite `FOREIGN KEY (workflow_id, client_id) REFERENCES os_workflows (id, client_id)`, and adds `create_os_workflow(p_client_id, p_owner_goal, p_steps, p_workflow_id)` SECURITY DEFINER RPC for atomic workflow+steps insert.
@@ -1810,7 +1820,7 @@ kb_articles salon-spa-faqs + plumber-hvac-faqs content roughly doubled (+10
 depth Q&As each, appended via UPDATE; content_tsv is a generated column so
 FTS reindexed automatically — verified with live tsquery probes).
 
-## Migration 195_os_tool_executions — os_tool_executions (NOT YET APPLIED)
+## Migration 195_os_tool_executions — os_tool_executions (APPLIED 2026-08-28 prod / 2026-08-30 staging)
 The Agent OS action layer's audit trail: one row per agent tool-execution
 attempt. Columns: client_id (NOT tenant_id, matching the os_* surface),
 agent_run_id FK->os_agent_runs (nullable — an execution can also be driven from
@@ -1838,7 +1848,14 @@ result. Writers: backend/services/os_tool_executions.py (from the engine's
 reject). Engine side: agent-service/src/agent-os/actions/. Design doc:
 docs/agent-os-action-layer.md.
 
-## Migration 196_os_tool_executions_status_no_approved — tighten status CHECK (NOT YET APPLIED)
+**Applied (live versions, not this hour):** prod (`pxserpybmajixqrmzaly`)
+recorded as `os_tool_executions` (20260828175205); staging
+(`nohanoiugcbaxtxinttp`) recorded as `195_os_tool_executions` (20260830195249).
+Read-only rechecked 2026-09-04 (docs-only; not applied this hour): table exists
+on both; `os_tool_executions_idempotency_idx` present. Live status CHECK is the
+196 shape (no `approved`).
+
+## Migration 196_os_tool_executions_status_no_approved — tighten status CHECK (APPLIED 2026-08-30)
 Follow-on to 195. Status must not include `approved` — that value lives only on
 `approval_state` (not_required|pending|approved|rejected). 196 remaps any
 existing `status='approved'` rows (`approval_state=pending` → `pending_approval`,
@@ -1851,7 +1868,17 @@ failed | verification_failed | denied | cancelled. Approvals queue keys off
 195 and not a table drop. Dual tables stay: os_action_runs (126) vs
 os_tool_executions (195).
 
-## Migration 197_os_tool_executions_l2_idempotency_required — L2 must have a key (NOT YET APPLIED)
+**Applied (live versions, not this hour):** prod
+(`196_os_tool_executions_status_no_approved`, 20260830024338) and staging
+(20260830195256). Read-only rechecked 2026-09-04 (docs-only; not applied this
+hour): `os_tool_executions_status_check` is pending_approval|running|succeeded|
+failed|verification_failed|denied|cancelled (no `approved`).
+`pg_get_constraintdef` matches the 196 CHECK on both DBs; a `status='approved'`
+insert would raise check_violation. Rows 196 would remap (`status='approved'`):
+staging 0, prod 0. Already present since 2026-08-30; a second `apply_migration`
+would duplicate the version row.
+
+## Migration 197_os_tool_executions_l2_idempotency_required — L2 must have a key (APPLIED 2026-08-30)
 Follow-on to 195/196. The 195 unique index is partial (`WHERE idempotency_key IS
 NOT NULL`), so two keyless L2 proposals could both reach `pending_approval` and
 later double-send. 197 cancels any already-parked/running keyless L2 or
@@ -1863,3 +1890,13 @@ still apply on a database that already has audit rows. Does not rewrite 195/196
 and does not drop the table. Application persist
 (`backend/services/os_tool_executions.py`) rejects keyless L2 on create and
 treats a second create with the same key as a no-op / 409.
+
+**Applied (live versions, not this hour):** prod
+(`197_os_tool_executions_l2_idempotency_required`, 20260830024346) and staging
+(20260830195304). Read-only rechecked 2026-09-04 (docs-only; not applied this
+hour): constraint present and matches the migration CHECK via
+`pg_get_constraintdef`. A keyless L2 `pending_approval` insert would raise
+check_violation. Rows 197 would cancel (L2 / approval-gated, keyless,
+pending_approval|running): staging 0, prod 0. Staging total rows: 39. Staging
+parked/running L2 rows: 7, all keyed. Prod total rows: 0. Already present since
+2026-08-30.

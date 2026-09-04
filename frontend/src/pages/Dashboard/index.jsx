@@ -483,6 +483,7 @@ export default function Dashboard({ onNavigate, onPlanLoaded }) {
             <WidgetEmbed
               apiKey={dashData?.widget_api_key}
               tenantId={user.tenantId}
+              token={token}
               widgetConfig={dashData?.widget_config}
               onNavigate={onNavigate}
             />

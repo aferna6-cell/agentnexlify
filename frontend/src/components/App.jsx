@@ -74,6 +74,7 @@ const ConversationsPage = lazy(() => import("../pages/ConversationsPage"));
 const EscalationsPage = lazy(() => import("../pages/EscalationsPage"));
 const ProspectingPage = lazy(() => import("../pages/ProspectingPage"));
 const WidgetPage = lazy(() => import("../pages/WidgetPage"));
+const WebsiteConnectPage = lazy(() => import("../pages/WebsiteConnectPage"));
 const FaqManagerPage = lazy(() => import("../pages/FaqManagerPage"));
 const BillingPage = lazy(() => import("../pages/BillingPage"));
 const SettingsPage = lazy(() => import("../pages/SettingsPage"));
@@ -118,7 +119,9 @@ const IntegrationsKeysPage = lazy(
 const ReferralPage = lazy(() => import("../pages/ReferralPage"));
 const CallsPage = lazy(() => import("../pages/CallsPage"));
 const SmsCompliancePage = lazy(() => import("../pages/SmsCompliance"));
-const KnowledgeSourcesPage = lazy(() => import("../pages/KnowledgeSourcesPage"));
+const KnowledgeSourcesPage = lazy(
+  () => import("../pages/KnowledgeSourcesPage"),
+);
 const AgentControlsPage = lazy(() => import("../pages/AgentControlsPage"));
 const QuoteRequestsPage = lazy(() => import("../pages/QuoteRequests"));
 const IntegrationsZapierPage = lazy(
@@ -139,6 +142,7 @@ const pages = {
   prospecting: ProspectingPage,
   calls: CallsPage,
   widget: WidgetPage,
+  website_connect: WebsiteConnectPage,
   faq: FaqManagerPage,
   team: TeamPage,
   billing: BillingPage,
@@ -192,6 +196,7 @@ const PAGE_TO_PATH = {
   prospecting: "/dashboard/prospecting",
   calls: "/dashboard/calls",
   widget: "/dashboard/widget",
+  website_connect: "/dashboard/website-connect",
   faq: "/dashboard/faq",
   team: "/dashboard/team",
   billing: "/dashboard/billing",
@@ -422,7 +427,10 @@ export default function App() {
           {loading ? (
             <SkeletonLoader />
           ) : marketingGated ? (
-            <MarketingUpsell pageKey={currentPage} onNavigate={handleNavigate} />
+            <MarketingUpsell
+              pageKey={currentPage}
+              onNavigate={handleNavigate}
+            />
           ) : (
             <PageErrorBoundary pageKey={currentPage}>
               <Suspense fallback={<SkeletonLoader />}>

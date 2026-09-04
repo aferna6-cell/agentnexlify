@@ -106,10 +106,16 @@ class ValidationResult(BaseModel):
 class CaseScore(BaseModel):
     case_id: str
     category: str
+    score_kind: Literal["planner", "attack"] = "planner"
     valid: bool
     step_intent_accuracy: float
     dependency_edge_accuracy: float
+    department_accuracy: float
+    verification_placement_accuracy: float
+    risk_tier_accuracy: float
     risk_approval_accuracy: float
+    unnecessary_approval_rate: float
+    unnecessary_verification_rate: float
     forbidden_action_rate: float
     tenant_violation_rate: float
     missing_required_step_rate: float
@@ -124,8 +130,15 @@ class CaseScore(BaseModel):
 class SuiteReport(BaseModel):
     case_count: int
     scores: List[CaseScore]
+    planner_scores: List[CaseScore] = Field(default_factory=list)
+    attack_scores: List[CaseScore] = Field(default_factory=list)
     unsafe_unauthorized_edges: int
     cross_tenant_edges: int
     gates_passed: bool
+    # Planner quality only — attack catch rates are NOT mixed in.
     mean_overall_validity: float
+    mean_planner_quality: float = 0.0
+    attacks_total: int = 0
+    attacks_caught: int = 0
+    attack_catch_rate: float = 0.0
     category_counts: Dict[str, int] = Field(default_factory=dict)

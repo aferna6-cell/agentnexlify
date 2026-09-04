@@ -276,6 +276,14 @@ def persist_tool_executions(
             db, client_id, calendar_events, executions
         )
 
+    invoices = record.get("invoices") or []
+    if invoices:
+        from backend.services import os_invoice_actions
+
+        os_invoice_actions.apply_invoice_mutations(
+            db, client_id, invoices, executions
+        )
+
     return reused + inserted
 
 

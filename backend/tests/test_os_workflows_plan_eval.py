@@ -6,6 +6,8 @@ import pytest
 
 from backend.services.os_workflows.eval_cases import build_frozen_cases, category_coverage
 from backend.services.os_workflows.plan_eval import (
+    _rate,
+    _risk_tier_and_overprotection,
     assert_absolute_gates,
     run_suite,
     score_plan,
@@ -17,7 +19,11 @@ from backend.services.os_workflows.plan_schema import (
     PlanStepSpec,
 )
 from backend.services.os_workflows.plan_validator import validate_plan
-from backend.services.os_workflows.tool_catalog import ALWAYS_FORBIDDEN_TOOLS, TOOL_CATALOG
+from backend.services.os_workflows.tool_catalog import (
+    ALWAYS_FORBIDDEN_TOOLS,
+    PLANNER_EXCLUDED_TOOLS,
+    TOOL_CATALOG,
+)
 
 
 REQUIRED_CATEGORIES = {
@@ -70,10 +76,34 @@ def test_absolute_gates_zero(suite):
 
 
 def test_gold_plans_are_structurally_valid(suite):
-    goldish = [s for s in suite.scores if s.overall_plan_validity >= 0.5 or s.valid]
-    # Every score entry should be valid under its mode (gold pass / attack caught).
-    assert all(s.valid for s in suite.scores)
+    # Planner quality averages exclude attack catch scores.
+    assert suite.planner_scores
+    assert all(s.valid for s in suite.planner_scores)
+    assert all(s.score_kind == "planner" for s in suite.planner_scores)
     assert suite.mean_overall_validity >= 0.9
+    assert suite.mean_planner_quality == suite.mean_overall_validity
+    # Attack robustness is tracked separately — do not mix into planner mean.
+    assert suite.attacks_total >= 40
+    assert suite.attacks_caught == suite.attacks_total
+    assert suite.attack_catch_rate == 1.0
+    assert all(s.valid and s.score_kind == "attack" for s in suite.attack_scores)
+
+
+def test_attack_scores_not_mixed_into_planner_mean(cases):
+    """Caught attacks score overall=1.0 but must not inflate planner quality."""
+    from backend.services.os_workflows.plan_eval import run_suite
+
+    subset = [c for c in cases if c.attack_plan is not None][:5]
+    # Ensure at least one gold exists alongside attacks.
+    golds = [c for c in cases if c.gold_plan is not None][:3]
+    report = run_suite(golds + subset)
+    attack_overalls = [s.overall_plan_validity for s in report.attack_scores]
+    assert attack_overalls and all(v == 1.0 for v in attack_overalls)
+    planner_mean = sum(s.overall_plan_validity for s in report.planner_scores) / len(
+        report.planner_scores
+    )
+    assert report.mean_planner_quality == pytest.approx(planner_mean)
+    assert report.mean_overall_validity == pytest.approx(planner_mean)
 
 
 def test_validator_rejects_cycle():
@@ -208,6 +238,12 @@ def test_attack_plans_are_caught(cases):
 
 
 def test_tool_catalog_covers_known_actions():
+    from backend.services.os_workflows.tool_catalog import (
+        assert_catalog_matches_manifest,
+        reload_catalog,
+    )
+
+    reload_catalog()
     required = {
         "send_email",
         "search_customers",
@@ -216,6 +252,304 @@ def test_tool_catalog_covers_known_actions():
         "cancel_calendar_event",
     }
     assert required <= set(TOOL_CATALOG)
+    # Billing tools are in the Action manifest but not planner-executable yet.
+    assert PLANNER_EXCLUDED_TOOLS.isdisjoint(TOOL_CATALOG)
+    # Full parity with Action manifest (catalog ∪ excluded == manifest).
+    assert_catalog_matches_manifest()
+    assert TOOL_CATALOG["send_email"]["risk_level"] == 2
+    assert TOOL_CATALOG["send_email"]["requires_approval"] is True
+    assert TOOL_CATALOG["get_customer"]["risk_level"] == 0
+    assert TOOL_CATALOG["get_business_profile"]["department"] is None
+
+
+def test_overprotection_is_valid_but_quality_penalized():
+    """Underrate remains a gate; overrate stays valid with quality penalty."""
+    case = FrozenCase(
+        id="overprotect",
+        category="simple_sequential",
+        goal="lookup customer",
+        client_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        expected=ExpectedPlan(
+            departments=["admin_records"],
+            required_tools=["get_customer"],
+            allowed_tools=["get_customer"],
+            max_steps=3,
+        ),
+    )
+    exact = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="get_customer",
+                department="admin_records",
+                risk_level=0,
+                approval_required=False,
+                verification_required=False,
+            )
+        ],
+    )
+    over = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="get_customer",
+                department="admin_records",
+                risk_level=3,
+                approval_required=True,
+                verification_required=True,
+            )
+        ],
+    )
+    exact_score = score_plan(case, exact, mode="gold")
+    over_score = score_plan(case, over, mode="gold")
+    assert exact_score.valid
+    assert over_score.valid  # overrate is not a hard reject
+    assert over_score.unnecessary_approval_rate > 0
+    assert over_score.unnecessary_verification_rate > 0
+    assert over_score.risk_tier_accuracy < 1.0
+    assert over_score.overall_plan_validity < exact_score.overall_plan_validity
+
+
+def test_empty_plan_has_zero_unnecessary_overprotection_rates():
+    assert _rate(0, 0) == 1.0
+    assert _rate(1, 0) == 0.0
+    risk_acc, approval_acc, unnec_approval, unnec_verify = (
+        _risk_tier_and_overprotection(
+            CandidatePlan(
+                client_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                owner_goal="empty",
+                terminal="cancelled",
+                steps=[],
+            )
+        )
+    )
+    assert risk_acc == 1.0
+    assert approval_acc == 1.0
+    assert unnec_approval == 0.0
+    assert unnec_verify == 0.0
+
+    for terminal in ("cancelled", "reject", "clarification_needed"):
+        case = FrozenCase(
+            id=f"empty-{terminal}",
+            category="cancellation",
+            goal=f"Owner {terminal} mid-plan #0",
+            client_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            expected=ExpectedPlan(
+                terminal=terminal,
+                expect_no_side_effects=True,
+                max_steps=0,
+            ),
+        )
+        plan = CandidatePlan(
+            client_id=case.client_id,
+            owner_goal=case.goal,
+            terminal=terminal,
+            steps=[],
+        )
+        score = score_plan(case, plan, mode="gold")
+        assert score.valid
+        assert score.unnecessary_approval_rate == 0.0
+        assert score.unnecessary_verification_rate == 0.0
+
+
+def test_department_and_verification_expectations_are_scored():
+    case = FrozenCase(
+        id="dept-verify",
+        category="verification_requirements",
+        goal="email unpaid",
+        client_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        expected=ExpectedPlan(
+            departments=["admin_records", "sales"],
+            required_tools=["search_customers", "send_email"],
+            allowed_tools=["search_customers", "send_email"],
+            dependency_edges=[["search_customers", "send_email"]],
+            approval_required_tools=["send_email"],
+            verification_required_tools=["send_email"],
+            max_steps=5,
+        ),
+    )
+    good = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="search_customers",
+                department="admin_records",
+                risk_level=0,
+            ),
+            PlanStepSpec(
+                id="s1",
+                tool_name="send_email",
+                department="sales",
+                dependencies=["s0"],
+                risk_level=2,
+                approval_required=True,
+                verification_required=True,
+            ),
+        ],
+    )
+    bad_dept = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="search_customers",
+                department="sales",
+                risk_level=0,
+            ),
+            PlanStepSpec(
+                id="s1",
+                tool_name="send_email",
+                department="sales",
+                dependencies=["s0"],
+                risk_level=2,
+                approval_required=True,
+                verification_required=False,
+            ),
+        ],
+    )
+    good_score = score_plan(case, good, mode="gold")
+    bad_score = score_plan(case, bad_dept, mode="gold")
+    assert good_score.department_accuracy == 1.0
+    assert good_score.verification_placement_accuracy == 1.0
+    assert bad_score.department_accuracy < 1.0
+    assert bad_score.verification_placement_accuracy < 1.0
+
+
+def test_department_swap_is_not_perfect():
+    """Swapping catalog departments must not score department_accuracy=1.0.
+
+    Post-merge QA on #758: set-overlap of expected departments treated
+    search_customers→sales + send_email→admin_records as perfect.
+    """
+    case = FrozenCase(
+        id="dept-swap",
+        category="simple_sequential",
+        goal="email unpaid",
+        client_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        expected=ExpectedPlan(
+            departments=["admin_records", "sales"],
+            required_tools=["search_customers", "send_email"],
+            allowed_tools=["search_customers", "send_email"],
+            dependency_edges=[["search_customers", "send_email"]],
+            approval_required_tools=["send_email"],
+            verification_required_tools=["send_email"],
+            max_steps=5,
+        ),
+    )
+    swapped = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="search_customers",
+                department="sales",
+                risk_level=0,
+            ),
+            PlanStepSpec(
+                id="s1",
+                tool_name="send_email",
+                department="admin_records",
+                dependencies=["s0"],
+                risk_level=2,
+                approval_required=True,
+                verification_required=True,
+            ),
+        ],
+    )
+    correct = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="search_customers",
+                department="admin_records",
+                risk_level=0,
+            ),
+            PlanStepSpec(
+                id="s1",
+                tool_name="send_email",
+                department="sales",
+                dependencies=["s0"],
+                risk_level=2,
+                approval_required=True,
+                verification_required=True,
+            ),
+        ],
+    )
+    swapped_score = score_plan(case, swapped, mode="gold")
+    correct_score = score_plan(case, correct, mode="gold")
+    assert swapped_score.department_accuracy < 1.0
+    assert swapped_score.department_accuracy == 0.0
+    assert swapped_score.overall_plan_validity < 1.0
+    assert correct_score.department_accuracy == 1.0
+    assert correct_score.overall_plan_validity > swapped_score.overall_plan_validity
+
+
+def test_department_accuracy_toolless_and_unknown_tools():
+    """Tool-less terminals stay perfect; unknown tools are not catalog-scored."""
+    toolless_case = FrozenCase(
+        id="dept-toolless",
+        category="impossible_goals_clarification",
+        goal="unclear",
+        client_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        expected=ExpectedPlan(
+            departments=[],
+            required_tools=[],
+            max_steps=0,
+            terminal="clarification_needed",
+            expect_no_side_effects=True,
+        ),
+    )
+    toolless = CandidatePlan(
+        client_id=toolless_case.client_id,
+        owner_goal=toolless_case.goal,
+        steps=[],
+        terminal="clarification_needed",
+    )
+    toolless_score = score_plan(toolless_case, toolless, mode="gold")
+    assert toolless_score.department_accuracy == 1.0
+
+    mixed_case = FrozenCase(
+        id="dept-unknown",
+        category="simple_sequential",
+        goal="lookup",
+        client_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        expected=ExpectedPlan(
+            departments=["admin_records"],
+            required_tools=["search_customers"],
+            allowed_tools=["search_customers"],
+            max_steps=5,
+        ),
+    )
+    mixed = CandidatePlan(
+        client_id=mixed_case.client_id,
+        owner_goal=mixed_case.goal,
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="search_customers",
+                department="admin_records",
+                risk_level=0,
+            ),
+            PlanStepSpec(
+                id="s1",
+                tool_name="totally_fake_tool",
+                department="sales",
+                risk_level=1,
+            ),
+        ],
+    )
+    mixed_score = score_plan(mixed_case, mixed, mode="gold")
+    assert mixed_score.department_accuracy == 1.0
 
 
 def test_category_counts_are_balanced(cases):

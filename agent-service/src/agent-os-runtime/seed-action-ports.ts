@@ -7,6 +7,7 @@ import type { SharedContext } from "../agent-os/types/agent.ts";
 import type {
   CollectingCalendarPort,
   CollectingCrmPort,
+  CollectingInvoicePort,
 } from "./action-collector.ts";
 
 export function seedActionPortsFromContext(
@@ -14,6 +15,7 @@ export function seedActionPortsFromContext(
   context: SharedContext,
   calendar: CollectingCalendarPort,
   crm: CollectingCrmPort,
+  invoices?: CollectingInvoicePort,
 ): void {
   const busy = [...(context.calendarBusy ?? [])];
   for (const a of context.appointments ?? []) {
@@ -58,6 +60,37 @@ export function seedActionPortsFromContext(
       subject: lead.subject,
       createdAt: lead.lastContactDate || now,
       updatedAt: lead.lastContactDate || now,
+    });
+  }
+
+  if (!invoices) return;
+  const leadByName = new Map(
+    (context.pipelineLeads ?? []).map((l) => [l.name.trim().toLowerCase(), l]),
+  );
+  for (const inv of context.invoices ?? []) {
+    const lead = leadByName.get((inv.customerName || "").trim().toLowerCase());
+    invoices.seedInvoice({
+      id: inv.id,
+      accountId,
+      customerId: lead?.id || "",
+      customerName: inv.customerName,
+      invoiceNumber: inv.number,
+      items: [
+        {
+          description: inv.customerName ? `Invoice ${inv.number}` : "Invoice",
+          quantity: 1,
+          unitPrice: inv.amount,
+        },
+      ],
+      subtotal: inv.amount,
+      taxRate: 0,
+      taxAmount: 0,
+      total: inv.amount,
+      status: (inv.status || "draft") as
+        "draft" | "sent" | "viewed" | "paid" | "overdue" | "cancelled",
+      dueDate: inv.dueAt,
+      createdAt: inv.issuedAt || now,
+      updatedAt: inv.issuedAt || now,
     });
   }
 }
