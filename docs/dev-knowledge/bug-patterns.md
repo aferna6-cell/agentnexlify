@@ -18894,3 +18894,24 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(nightly): block_demo_role on website_connect POSTs + log parse errors [auto-nightly-2026-09-04]
+
+Guard POST /api/v1/website-connect and POST /api/v1/website-connect/verify
+with Depends(block_demo_role) so demo tenants cannot persist website
+connections or trigger live HTTP verification fetches from the server.
+
+Also add debug logging to the bare except in widget_is_present() so
+HTML parse errors are traceable instead of silently swallowed.
+
+Closes #787.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01UcFhcojjyMHwGXCg1DZa9z
+**Date:** 2026-09-04
+**Commit:** 966acb4
+**Author:** Claude
+**Files Changed:** backend/routers/website_connect.py,backend/services/website_connect.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
