@@ -6,6 +6,8 @@ import pytest
 
 from backend.services.os_workflows.eval_cases import build_frozen_cases, category_coverage
 from backend.services.os_workflows.plan_eval import (
+    _rate,
+    _risk_tier_and_overprotection,
     assert_absolute_gates,
     run_suite,
     score_plan,
@@ -310,6 +312,48 @@ def test_overprotection_is_valid_but_quality_penalized():
     assert over_score.unnecessary_verification_rate > 0
     assert over_score.risk_tier_accuracy < 1.0
     assert over_score.overall_plan_validity < exact_score.overall_plan_validity
+
+
+def test_empty_plan_has_zero_unnecessary_overprotection_rates():
+    assert _rate(0, 0) == 1.0
+    assert _rate(1, 0) == 0.0
+    risk_acc, approval_acc, unnec_approval, unnec_verify = (
+        _risk_tier_and_overprotection(
+            CandidatePlan(
+                client_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                owner_goal="empty",
+                terminal="cancelled",
+                steps=[],
+            )
+        )
+    )
+    assert risk_acc == 1.0
+    assert approval_acc == 1.0
+    assert unnec_approval == 0.0
+    assert unnec_verify == 0.0
+
+    for terminal in ("cancelled", "reject", "clarification_needed"):
+        case = FrozenCase(
+            id=f"empty-{terminal}",
+            category="cancellation",
+            goal=f"Owner {terminal} mid-plan #0",
+            client_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            expected=ExpectedPlan(
+                terminal=terminal,
+                expect_no_side_effects=True,
+                max_steps=0,
+            ),
+        )
+        plan = CandidatePlan(
+            client_id=case.client_id,
+            owner_goal=case.goal,
+            terminal=terminal,
+            steps=[],
+        )
+        score = score_plan(case, plan, mode="gold")
+        assert score.valid
+        assert score.unnecessary_approval_rate == 0.0
+        assert score.unnecessary_verification_rate == 0.0
 
 
 def test_department_and_verification_expectations_are_scored():
