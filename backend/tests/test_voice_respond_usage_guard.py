@@ -314,7 +314,7 @@ def test_tenant_lookup_error_fails_closed_before_provider(caplog):
         def table(self, name):
             if name == "tenants":
                 raise RuntimeError(
-                    "db down secret=sk-ant-test customer=cara@example.com "
+                    "db down secret=anthropic_api_key customer=cara@example.com "
                     "phone=+15555550100"
                 )
             return db({}).table(name)
