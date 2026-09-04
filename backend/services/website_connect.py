@@ -190,9 +190,9 @@ def detect_platform(
         for token in (
             "wp-content/",
             "wp-includes/",
-            "name=\"generator\" content=\"wordpress",
+            'name="generator" content="wordpress',
             "/wp-json",
-            "href=\"https://api.w.org/",
+            'href="https://api.w.org/',
         )
         if token in blob
     )
@@ -261,6 +261,9 @@ def widget_is_present(html: str, api_key: str | None) -> bool:
         parser.feed(html)
         parser.close()
     except Exception:
+        logger.debug(
+            "widget_is_present html parse error; treating as not found", exc_info=True
+        )
         return False
     return parser.found
 
@@ -302,7 +305,9 @@ def fetch_public_page(url: str) -> PageFetch:
                 if resp.is_redirect:
                     location = resp.headers.get("location")
                     if not location:
-                        return PageFetch(current, "", dict(resp.headers), False, "redirect")
+                        return PageFetch(
+                            current, "", dict(resp.headers), False, "redirect"
+                        )
                     current = _drop_url_userinfo(urljoin(current, location))
                     continue
                 raw = resp.content[:MAX_HTML_BYTES]
@@ -315,7 +320,11 @@ def fetch_public_page(url: str) -> PageFetch:
                     error=None if resp.is_success else f"http_{resp.status_code}",
                 )
     except httpx.HTTPError as exc:
-        logger.info("website_connect fetch failed url_host=%s err=%s", urlparse(url).hostname, type(exc).__name__)
+        logger.info(
+            "website_connect fetch failed url_host=%s err=%s",
+            urlparse(url).hostname,
+            type(exc).__name__,
+        )
         return PageFetch(url, "", {}, False, "fetch_error")
     return PageFetch(current, "", {}, False, "too_many_redirects")
 
@@ -409,7 +418,9 @@ def upsert_connection(
     else:
         status = "needs_action"
         method = None
-        detail = "Could not fetch the site yet. Choose a platform and install, then verify."
+        detail = (
+            "Could not fetch the site yet. Choose a platform and install, then verify."
+        )
         verified_at = None
 
     payload = {
@@ -490,7 +501,9 @@ def verify_connection(
         "verification_detail": detail,
         "last_checked_at": now,
         "last_verified_at": verified_at,
-        "next_action_code": next_action(row.get("platform") or "unknown", connected=present)["code"],
+        "next_action_code": next_action(
+            row.get("platform") or "unknown", connected=present
+        )["code"],
         "updated_at": now,
     }
     if page.ok:
@@ -519,4 +532,6 @@ def _maybe_store_tenant_url(db, tenant_id: str, url: str) -> None:
     try:
         db.table("tenants").update({"website_url": url}).eq("id", tenant_id).execute()
     except Exception:
-        logger.info("website_connect tenant website_url update skipped tenant=%s", tenant_id)
+        logger.info(
+            "website_connect tenant website_url update skipped tenant=%s", tenant_id
+        )

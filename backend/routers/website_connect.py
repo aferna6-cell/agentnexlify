@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from backend.dependencies import _get_current_tenant
+from backend.dependencies import _get_current_tenant, block_demo_role
 from backend.models.database import get_service_supabase
 from backend.services import website_connect as connect_svc
 
@@ -21,9 +21,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/website-connect", tags=["website-connect"])
 
-_PLUGIN_DIR = (
-    Path(__file__).resolve().parents[2] / "wordpress-plugin" / "agentnexlify"
-)
+_PLUGIN_DIR = Path(__file__).resolve().parents[2] / "wordpress-plugin" / "agentnexlify"
 
 
 class ConnectWebsiteRequest(BaseModel):
@@ -68,7 +66,7 @@ def get_website_connection(claims: dict = Depends(_get_current_tenant)):
 @router.post("")
 async def connect_website(
     request: Request,
-    claims: dict = Depends(_get_current_tenant),
+    claims: dict = Depends(block_demo_role),
 ):
     raw = await request.json()
     if not isinstance(raw, dict):
@@ -93,7 +91,7 @@ async def connect_website(
 
 
 @router.post("/verify")
-def verify_website_connection(claims: dict = Depends(_get_current_tenant)):
+def verify_website_connection(claims: dict = Depends(block_demo_role)):
     tenant_id = claims["tenant_id"]
     db = get_service_supabase()
     try:
