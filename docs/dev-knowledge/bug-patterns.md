@@ -18894,3 +18894,20 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(widget): meter categorize_conversation with reserve/record/release (#794)
+
+Background widget categorization was an unmetered Claude path. Reserve
+before the provider, record on success, and release on provider or
+record-persist failure. Missing budget tenant/policy fails closed.
+Tag-definition fetch failure still falls back to SYSTEM_TAGS.
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+**Date:** 2026-09-04
+**Commit:** 3e1a023
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/pr-check.yml,backend/routers/widget_lead_helpers.py,backend/tests/test_widget_categorize_conversation_usage_guard.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
