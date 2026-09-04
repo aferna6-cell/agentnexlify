@@ -499,23 +499,26 @@ def test_provider_and_budget_logs_do_not_leak_secrets(caplog):
 # --- lead-capture callers: frequency, persistence, visitor chat -------------
 
 
-def test_no_contact_capture_does_not_call_extract_tags():
+def test_no_contact_capture_does_not_call_extract_tags(caplog):
     """Metering must not invent extract_tags calls for conversations without email/phone."""
     extract_spy = MagicMock(return_value=["should not run"])
-    with (
-        patch(
-            "backend.routers.widget_chat_helpers._load_chat_history",
-            return_value=_NO_CONTACT_MESSAGES,
-        ),
-        patch.object(extract, "_extract_tags_from_conversation", extract_spy),
-        patch.object(extract, "get_service_supabase", return_value=MagicMock()),
-        patch.object(extract, "call_claude_messages_sync", side_effect=_ok_claude) as provider,
-    ):
-        run(
-            extract._capture_leads_from_session(
-                _TENANT_ID, _SESSION_ID, "conv-no-contact"
+    with caplog.at_level(logging.INFO):
+        with (
+            patch(
+                "backend.routers.widget_chat_helpers._load_chat_history",
+                return_value=_NO_CONTACT_MESSAGES,
+            ),
+            patch.object(extract, "_extract_tags_from_conversation", extract_spy),
+            patch.object(extract, "get_service_supabase", return_value=MagicMock()),
+            patch.object(extract, "call_claude_messages_sync", side_effect=_ok_claude) as provider,
+        ):
+            result = run(
+                extract._capture_leads_from_session(
+                    _TENANT_ID, _SESSION_ID, "conv-no-contact"
+                )
             )
-        )
+    assert result is None
+    assert "no email or phone found" in caplog.text
     extract_spy.assert_not_called()
     provider.assert_not_called()
 
