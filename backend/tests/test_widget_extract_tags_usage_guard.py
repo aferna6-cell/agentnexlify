@@ -630,5 +630,5 @@ def test_blocked_extract_does_not_raise_into_lead_capture_or_visitor_effects():
         patch.object(extract, "reserve_ai_tokens", side_effect=_blocked),
         patch.object(extract, "call_claude_messages_sync", side_effect=provider),
     ):
-        capture_tasks[0].func(*capture_tasks[0].args, **capture_tasks[0].kwargs)
+        run(capture_tasks[0].func(*capture_tasks[0].args, **capture_tasks[0].kwargs))
     provider.assert_not_called()
