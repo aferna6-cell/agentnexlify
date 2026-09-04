@@ -18,8 +18,10 @@ WINDOWS_PLACEHOLDERS = (
 
 
 def _write(path: Path, text: str) -> None:
+    """Write exact bytes. Default text mode on Windows turns ``\\r\\n`` into ``\\r\\r\\n``."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        handle.write(text)
 
 
 class CountSkillsTests(unittest.TestCase):
@@ -46,6 +48,10 @@ class CountSkillsTests(unittest.TestCase):
                     newline = "\n"
                 _write(skills / name, f"../../.agents/skills/{name}{newline}")
 
+            self.assertEqual(
+                (skills / "seo").read_bytes(),
+                b"../../.agents/skills/seo\r\n",
+            )
             self.assertEqual(agent_system.count_skills(skills), len(WINDOWS_PLACEHOLDERS))
 
     def test_count_skills_rejects_arbitrary_regular_files(self) -> None:
