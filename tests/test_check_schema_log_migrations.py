@@ -14,7 +14,6 @@ import pytest
 
 from scripts.check_schema_log_migrations import (
     AllowlistUnavailable,
-    DEFAULT_DEFERRED,
     DEFAULT_WATCH_FROM,
     LiveStateUnavailable,
     compare,
@@ -25,6 +24,10 @@ from scripts.check_schema_log_migrations import (
     redact_secrets,
     run_check,
 )
+import scripts.check_schema_log_migrations as checker
+
+# Explicit 201 allowlist for compare() fixtures. Not a load-time fallback.
+EXPLICIT_201 = frozenset({201})
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -62,7 +65,7 @@ def _kinds(findings):
 
 def test_live_applied_docs_unapplied_is_196_197_regression():
     docs = parse_schema_log(NOT_YET_196_197)
-    findings = compare(docs, LIVE_196_197, deferred=DEFAULT_DEFERRED, watch_from=195)
+    findings = compare(docs, LIVE_196_197, deferred=EXPLICIT_201, watch_from=195)
     kinds = _kinds(findings)
     assert kinds.count("live_applied_docs_unapplied") == 2
     numbers = {item.number for item in findings if item.kind == "live_applied_docs_unapplied"}
@@ -111,7 +114,7 @@ def test_deferred_201_still_fails_if_live_has_it_and_docs_say_unapplied():
 
 def test_docs_applied_live_missing_mismatch():
     docs = parse_schema_log(APPLIED_196)
-    findings = compare(docs, [], deferred=DEFAULT_DEFERRED, watch_from=195)
+    findings = compare(docs, [], deferred=EXPLICIT_201, watch_from=195)
     assert _kinds(findings) == ["docs_applied_live_missing"]
     assert findings[0].number == 196
 
@@ -121,7 +124,7 @@ def test_prod_195_name_without_number_prefix_matches():
         "## Migration 195_os_tool_executions — os_tool_executions (APPLIED 2026-08-28)\n"
     )
     live = [{"version": "20260828175205", "name": "os_tool_executions"}]
-    findings = compare(docs, live, deferred=DEFAULT_DEFERRED, watch_from=195)
+    findings = compare(docs, live, deferred=EXPLICIT_201, watch_from=195)
     assert findings == []
 
 
@@ -137,7 +140,7 @@ def test_canonical_schema_log_accepts_prod_195_unprefixed_name():
         {"version": "20260902000000", "name": "199_os_workflows"},
         {"version": "20260902010000", "name": "200_os_workflows_integrity"},
     ]
-    findings = compare(docs, live, deferred=DEFAULT_DEFERRED, watch_from=195)
+    findings = compare(docs, live, deferred=EXPLICIT_201, watch_from=195)
     assert findings == []
 
 
@@ -163,7 +166,7 @@ def test_run_check_unexpected_unapplied_exits_1_while_deferred_201_is_ok(tmp_pat
 def test_duplicate_doc_numbers_are_findings():
     text = NOT_YET_196_197 + "\n## Migration 196_os_tool_executions_status_no_approved (APPLIED)\n"
     docs = parse_schema_log(text)
-    findings = compare(docs, LIVE_196_197, deferred=DEFAULT_DEFERRED, watch_from=195)
+    findings = compare(docs, LIVE_196_197, deferred=EXPLICIT_201, watch_from=195)
     assert "duplicate_doc" in _kinds(findings)
     assert any(item.number == 196 for item in findings if item.kind == "duplicate_doc")
 
@@ -174,7 +177,7 @@ def test_duplicate_live_name_and_version_are_findings():
         {"version": "20260830024338", "name": "196_os_tool_executions_status_no_approved"},
         {"version": "20260830024338", "name": "196_os_tool_executions_status_no_approved"},
     ]
-    findings = compare(docs, live, deferred=DEFAULT_DEFERRED, watch_from=195)
+    findings = compare(docs, live, deferred=EXPLICIT_201, watch_from=195)
     kinds = set(_kinds(findings))
     assert "duplicate_live_name" in kinds
     assert "duplicate_live_version" in kinds
@@ -183,7 +186,7 @@ def test_duplicate_live_name_and_version_are_findings():
 def test_version_name_mismatch_same_number_different_slug():
     docs = parse_schema_log(APPLIED_196)
     live = [{"version": "20260830024338", "name": "196_wrong_slug"}]
-    findings = compare(docs, live, deferred=DEFAULT_DEFERRED, watch_from=195)
+    findings = compare(docs, live, deferred=EXPLICIT_201, watch_from=195)
     assert "name_mismatch" in _kinds(findings)
     assert findings[0].number == 196
 
@@ -191,13 +194,13 @@ def test_version_name_mismatch_same_number_different_slug():
 def test_empty_live_name_or_version_is_edge_finding():
     docs = parse_schema_log(APPLIED_196)
     live = [{"version": "", "name": "196_os_tool_executions_status_no_approved"}]
-    findings = compare(docs, live, deferred=DEFAULT_DEFERRED, watch_from=195)
+    findings = compare(docs, live, deferred=EXPLICIT_201, watch_from=195)
     assert "unparseable_live_row" in _kinds(findings)
 
 
 def test_fail_closed_when_live_state_unavailable():
     docs = parse_schema_log(APPLIED_196)
-    findings = compare(docs, None, deferred=DEFAULT_DEFERRED, watch_from=195)
+    findings = compare(docs, None, deferred=EXPLICIT_201, watch_from=195)
     assert _kinds(findings) == ["live_unreadable"]
 
 
@@ -255,7 +258,7 @@ def test_redact_secrets_strips_urls_and_keys():
 
 
 def test_default_allowlist_is_201_only():
-    assert DEFAULT_DEFERRED == frozenset({201})
+    assert not hasattr(checker, "DEFAULT_DEFERRED")
     assert DEFAULT_WATCH_FROM == 195
     loaded = load_deferred_allowlist(REPO_ROOT / "ops" / "schema" / "deferred-migrations.json")
     assert loaded == frozenset({201})
@@ -290,7 +293,7 @@ def test_compare_output_never_includes_customer_fields():
             "statements": ["SELECT * FROM leads"],
         }
     ]
-    findings = compare(docs, live, deferred=DEFAULT_DEFERRED, watch_from=195)
+    findings = compare(docs, live, deferred=EXPLICIT_201, watch_from=195)
     blob = " ".join(f"{item.kind} {item.number} {item.name} {item.detail}" for item in findings)
     assert "customer@example.com" not in blob
     assert "leads" not in blob
@@ -328,7 +331,7 @@ def _cli_argv(tmp_path: Path, *, allowlist, live=None, schema=DEFERRED_201, extr
 def test_empty_allowlist_file_stays_empty_and_does_not_restore_default(tmp_path: Path):
     path = _write_allowlist(tmp_path / "deferred.json", {"deferred_unapplied": []})
     assert load_deferred_allowlist(path) == frozenset()
-    assert load_deferred_allowlist(path) != DEFAULT_DEFERRED
+    assert load_deferred_allowlist(path) != EXPLICIT_201
 
 
 def test_load_missing_allowlist_raises(tmp_path: Path):

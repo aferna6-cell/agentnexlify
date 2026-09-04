@@ -35,7 +35,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_LOG = REPO_ROOT / "docs" / "dev-knowledge" / "schema-log.md"
 DEFERRED_PATH = REPO_ROOT / "ops" / "schema" / "deferred-migrations.json"
 
-DEFAULT_DEFERRED = frozenset({201})
 DEFAULT_WATCH_FROM = 195
 
 HEADING_RE = re.compile(
@@ -137,7 +136,7 @@ def load_deferred_allowlist(path: Path | None = None) -> frozenset[int]:
 
     Fail closed on a missing, unreadable, malformed, wrong-shape, or invalid
     allowlist. An intentionally empty ``deferred_unapplied: []`` stays empty
-    and is never replaced with DEFAULT_DEFERRED.
+    and is never replaced with a hardcoded {201} fallback.
     """
     target = DEFERRED_PATH if path is None else path
     if not target.exists():
