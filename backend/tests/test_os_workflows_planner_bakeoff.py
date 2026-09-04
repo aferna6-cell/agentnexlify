@@ -12,6 +12,7 @@ from backend.services.os_workflows.plan_schema import (
     FrozenCase,
     PlanStepSpec,
 )
+from backend.services.os_workflows.tool_catalog import TOOL_CATALOG
 from backend.services.os_workflows.planner_bakeoff import (
     CHEAP_PLANNER_MODEL,
     MISS_HARNESS_SCORE,
@@ -75,6 +76,27 @@ def test_system_prompt_lists_catalog_and_forbids_execution():
     assert "reject: forbidden, injection, cross-tenant, or destructive" in prompt
     for token in _GOLD_LEAK_TOKENS:
         assert token not in prompt
+    for tid, meta in TOOL_CATALOG.items():
+        catalog_line = (
+            f"- {tid}: dept={meta.get('department')!r} risk={meta['risk_level']} "
+            f"approval={meta['requires_approval']} "
+            f"verify={meta['verification_required']} mutating={meta['mutating']}"
+        )
+        assert catalog_line in prompt
+
+
+def test_prompt_builders_do_not_read_expected_or_gold():
+    import inspect
+
+    from backend.services.os_workflows import planner_bakeoff as mod
+
+    system_src = inspect.getsource(mod.build_planner_system_prompt)
+    user_src = inspect.getsource(mod.build_planner_user_prompt)
+    for src in (system_src, user_src):
+        for token in _GOLD_LEAK_TOKENS:
+            assert token not in src
+        assert "gold_plan" not in src
+        assert "expected." not in src
 
 
 def test_user_prompt_includes_case_fields(cases):
@@ -888,6 +910,126 @@ def test_empty_terminal_gold_is_ok_not_incomplete(cases):
         assert row.miss_class == MISS_OK, (
             f"{case_id} gold empty terminal classified {row.miss_class}"
         )
+
+
+@pytest.mark.parametrize("terminal", ["cancelled", "reject", "clarification_needed"])
+def test_empty_step_terminals_are_ok_not_false_incomplete(terminal):
+    case = FrozenCase(
+        id=f"empty-{terminal}",
+        category="terminal",
+        goal=f"owner {terminal}",
+        client_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        expected=ExpectedPlan(
+            terminal=terminal,
+            expect_no_side_effects=True,
+            max_steps=0,
+        ),
+    )
+    plan = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        terminal=terminal,
+        steps=[],
+    )
+
+    def replay(c, model, seed, _plan=plan):
+        return _attempt_from_plan(_plan)
+
+    report = run_model_bakeoff(
+        [case],
+        model=CHEAP_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=replay,
+    )
+    row = report.case_results[0]
+    assert row.score is not None
+    assert row.score.valid is True
+    assert row.score.unnecessary_approval_rate == 0.0
+    assert row.score.unnecessary_verification_rate == 0.0
+    assert row.miss_class == MISS_OK
+    assert row.miss_class != MISS_INCOMPLETE
+    assert PROMOTION_BAR["valid_plan_rate"] == 0.95
+    assert PROMOTION_BAR["risk_approval_accuracy"] == 0.98
+
+
+def test_nonempty_unnecessary_overprotection_still_incomplete():
+    case = FrozenCase(
+        id="overprotect-classify",
+        category="simple_sequential",
+        goal="lookup customer",
+        client_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        expected=ExpectedPlan(
+            terminal="valid_plan",
+            departments=["admin_records"],
+            required_tools=["get_customer"],
+            allowed_tools=["get_customer"],
+            max_steps=3,
+        ),
+    )
+    exact = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        terminal="valid_plan",
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="get_customer",
+                department="admin_records",
+                risk_level=0,
+                approval_required=False,
+                verification_required=False,
+            )
+        ],
+    )
+    over = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        terminal="valid_plan",
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="get_customer",
+                department="admin_records",
+                risk_level=0,
+                approval_required=True,
+                verification_required=True,
+            )
+        ],
+    )
+
+    def replay_exact(c, model, seed, _plan=exact):
+        return _attempt_from_plan(_plan)
+
+    def replay_over(c, model, seed, _plan=over):
+        return _attempt_from_plan(_plan)
+
+    exact_report = run_model_bakeoff(
+        [case],
+        model=CHEAP_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=replay_exact,
+    )
+    over_report = run_model_bakeoff(
+        [case],
+        model=CHEAP_PLANNER_MODEL,
+        repetitions=(0,),
+        mode="live",
+        planner=replay_over,
+    )
+    exact_row = exact_report.case_results[0]
+    over_row = over_report.case_results[0]
+    assert exact_row.score is not None and over_row.score is not None
+    assert exact_row.score.unnecessary_approval_rate == 0.0
+    assert exact_row.score.unnecessary_verification_rate == 0.0
+    assert exact_row.miss_class == MISS_OK
+    assert over_row.score.valid is True
+    assert over_row.score.unnecessary_approval_rate > 0.0
+    assert over_row.score.unnecessary_verification_rate > 0.0
+    assert over_row.miss_class == MISS_INCOMPLETE
+    assert PROMOTION_BAR["valid_plan_rate"] == 0.95
+    assert PROMOTION_BAR["risk_approval_accuracy"] == 0.98
 
 
 def test_promotion_bar_is_unchanged():

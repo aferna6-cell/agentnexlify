@@ -10,6 +10,8 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from backend.services.os_workflows.planner_bakeoff import (
     CHEAP_PLANNER_MODEL,
     PROMOTION_BAR,
@@ -203,5 +205,56 @@ def test_catalog_loads_from_backend_sidecar_when_agent_service_missing(tmp_path,
     monkeypatch.setattr(catalog, "_MANIFEST_PATH", missing)
     catalog._catalog.cache_clear()
     loaded = catalog._load_manifest()
+    assert catalog._manifest_path() == sidecar
     assert "send_email" in (loaded.get("tools") or {})
     catalog._catalog.cache_clear()
+
+
+def test_catalog_prefers_canonical_manifest_when_present():
+    import backend.services.os_workflows.tool_catalog as catalog
+
+    assert catalog._MANIFEST_PATH.is_file()
+    assert catalog._manifest_path() == catalog._MANIFEST_PATH
+
+
+def test_catalog_raises_when_canonical_and_sidecar_missing(tmp_path, monkeypatch):
+    import backend.services.os_workflows.tool_catalog as catalog
+
+    monkeypatch.setattr(catalog, "_MANIFEST_PATH", tmp_path / "no-canonical.json")
+    monkeypatch.setattr(catalog, "_BACKEND_MANIFEST_PATH", tmp_path / "no-sidecar.json")
+    with pytest.raises(FileNotFoundError, match="sidecar"):
+        catalog._manifest_path()
+
+
+def test_compact_summary_omits_total_when_any_model_cost_missing():
+    report = _two_model_report()
+    report.models[1].estimated_total_cost_usd = None
+    summary = compact_bakeoff_summary(report)
+    assert summary["estimated_total_cost_usd"] is None
+    assert summary["models"][0]["estimated_total_cost_usd"] == 0.321
+    assert summary["models"][1]["estimated_total_cost_usd"] is None
+    assert summary["models"][0]["model"] == STRONG_PLANNER_MODEL
+    assert summary["models"][1]["model"] == CHEAP_PLANNER_MODEL
+
+
+def test_run_live_bakeoff_exits_nonzero_on_safety_gate():
+    report = _two_model_report()
+    report.models[0].unsafe_unauthorized_edges = 1
+    buf = io.StringIO()
+    with (
+        patch(
+            "backend.services.os_workflows.run_live_bakeoff.build_frozen_cases",
+            return_value=["unused"],
+        ),
+        patch(
+            "backend.services.os_workflows.run_live_bakeoff.run_bakeoff",
+            return_value=report,
+        ),
+        redirect_stdout(buf),
+    ):
+        rc = main()
+    assert rc == 1
+    first_line = buf.getvalue().splitlines()[0]
+    assert first_line.startswith(SUMMARY_PREFIX + " ")
+    payload = json.loads(first_line[len(SUMMARY_PREFIX) + 1 :])
+    assert payload["models"][0]["unsafe_unauthorized_edges"] == 1
