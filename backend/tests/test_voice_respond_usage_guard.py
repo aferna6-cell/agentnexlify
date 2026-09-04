@@ -13,6 +13,10 @@ Contract:
 - After a valid tenant is loaded, a transient reserve RPC outage keeps the
   shared widget-chat contract: allowed=True, reason=guard_unavailable;
   provider may run; record is invoked and persist is skipped.
+- Signed /voice/respond is not a paid-Claude bypass of incoming: voicemail-mode
+  tenants fail closed before reserve/provider. Voice minutes are not rechecked
+  on each Gather (start-of-call gate only).
+- Repeated Gather rounds reserve and record independently.
 
 Run: pytest backend/tests/test_voice_respond_usage_guard.py -q
 """
@@ -47,6 +51,13 @@ _PHONE_TENANT = {
     "business_type": "plumber",
     "plan": "agent_os",
     "voice_ai_enabled": True,
+}
+_VOICEMAIL_TENANT = {
+    "id": _TENANT_ID,
+    "business_name": "Test Plumbing",
+    "business_type": "plumber",
+    "plan": "chatbot",
+    "voice_ai_enabled": False,
 }
 
 
@@ -149,6 +160,28 @@ def test_hard_cap_blocks_before_provider():
     assert reserve.call_args.kwargs["tenant"]["id"] == _TENANT_ID
     assert reserve.call_args.kwargs["operation"] == "calls.voice_respond"
     assert reserve.call_args.kwargs["session_id"] == _CALL_SID
+
+
+def test_repeated_gather_rounds_reserve_and_record_independently():
+    """Each Gather round is its own reserve/record; one result is not double-counted."""
+    with (
+        patch.object(voice, "reserve_ai_tokens", side_effect=_allowed) as reserve,
+        patch.object(voice, "call_claude_messages", side_effect=_ok_claude) as provider,
+        patch.object(voice, "record_ai_usage") as record,
+        patch.object(voice, "release_ai_token_reservation") as release,
+    ):
+        first = run(_call(round_num=1, call_sid="CA-round-1"))
+        second = run(_call(round_num=2, call_sid="CA-round-2"))
+    assert first.text.startswith("We are open")
+    assert second.text.startswith("We are open")
+    assert reserve.call_count == 2
+    assert provider.call_count == 2
+    assert record.call_count == 2
+    release.assert_not_called()
+    sessions = [c.kwargs["session_id"] for c in reserve.call_args_list]
+    assert sessions == ["CA-round-1", "CA-round-2"]
+    recorded_sessions = [c.kwargs["session_id"] for c in record.call_args_list]
+    assert recorded_sessions == ["CA-round-1", "CA-round-2"]
 
 
 def test_success_records_usage_once():
@@ -447,6 +480,90 @@ def test_hard_cap_returns_200_twiml_goodbye_without_provider(respond_client):
     assert "temporarily paused" in resp.text
     provider.assert_not_called()
     record.assert_not_called()
+    _assert_no_secrets(resp.text)
+
+
+def test_voicemail_mode_signed_callback_does_not_call_provider(respond_client, caplog):
+    """Signed /voice/respond must not bypass incoming's live-AI gate."""
+    provider = AsyncMock(return_value=_claude_result())
+    reserve = MagicMock(side_effect=_allowed)
+    with caplog.at_level(logging.WARNING):
+        with (
+            patch.object(voice, "_find_tenant_by_phone", return_value=_VOICEMAIL_TENANT),
+            patch.object(voice, "reserve_ai_tokens", side_effect=reserve),
+            patch.object(voice, "call_claude_messages", new=provider),
+            patch.object(voice, "record_ai_usage") as record,
+            patch.object(voice, "_finalize_ai_call", new=AsyncMock()),
+        ):
+            resp = _post(respond_client)
+    assert resp.status_code == 200
+    assert "<Gather" not in resp.text
+    assert "unable to assist" in resp.text
+    provider.assert_not_called()
+    reserve.assert_not_called()
+    record.assert_not_called()
+    _assert_no_secrets(resp.text)
+    _assert_no_secrets(caplog.text)
+    assert "cara@example.com" not in caplog.text
+    assert "SpeechResult" not in caplog.text
+
+
+def test_exhausted_minutes_are_not_rechecked_on_gather(respond_client):
+    """Minutes are a start-of-call gate. An in-progress Gather must not drop."""
+    provider = AsyncMock(return_value=_claude_result())
+    with (
+        patch.object(voice, "_find_tenant_by_phone", return_value=_PHONE_TENANT),
+        patch.object(voice, "reserve_ai_tokens", side_effect=_allowed),
+        patch.object(voice, "call_claude_messages", new=provider),
+        patch.object(voice, "record_ai_usage"),
+        patch.object(voice, "_finalize_ai_call", new=AsyncMock()),
+        patch("backend.services.voice_booking.booking_prompt_context", return_value=None),
+        patch(
+            "backend.routers.widget_chat_helpers._query_kb_articles",
+            new=AsyncMock(return_value=[]),
+        ),
+        patch("backend.services.os_kb_feed.vertical_guidance", return_value=[]),
+        patch(
+            "backend.services.voice_usage.voice_minutes_exhausted",
+            return_value=True,
+        ),
+    ):
+        resp = _post(respond_client)
+    assert resp.status_code == 200
+    assert "We are open" in resp.text
+    provider.assert_called_once()
+
+
+def test_record_persist_failure_returns_200_with_completed_reply(respond_client):
+    """Persist failure releases; the already-completed Claude reply is not a 5xx."""
+    reservation = _allowed()
+    provider = AsyncMock(return_value=_claude_result())
+
+    def fail_record(**kwargs):
+        return record_ai_usage(**kwargs)
+
+    with (
+        patch.object(voice, "_find_tenant_by_phone", return_value=_PHONE_TENANT),
+        patch.object(voice, "reserve_ai_tokens", return_value=reservation),
+        patch.object(voice, "call_claude_messages", new=provider),
+        patch.object(voice, "record_ai_usage", side_effect=fail_record),
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+        patch("backend.services.ai_usage_guard.release_ai_token_reservation") as release,
+        patch.object(voice, "_finalize_ai_call", new=AsyncMock()),
+        patch("backend.services.voice_booking.booking_prompt_context", return_value=None),
+        patch(
+            "backend.routers.widget_chat_helpers._query_kb_articles",
+            new=AsyncMock(return_value=[]),
+        ),
+        patch("backend.services.os_kb_feed.vertical_guidance", return_value=[]),
+    ):
+        mock_supa.return_value.rpc.side_effect = RuntimeError("record rpc down")
+        resp = _post(respond_client)
+    assert resp.status_code == 200
+    assert "We are open" in resp.text
+    assert "having a little trouble" not in resp.text
+    provider.assert_called_once()
+    release.assert_called_once_with(reservation)
     _assert_no_secrets(resp.text)
 
 

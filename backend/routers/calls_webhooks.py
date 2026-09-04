@@ -419,8 +419,8 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
         round_num = 1
 
     logger.info(
-        "Voice respond: SID=%s, round=%d, speech='%s'",
-        call_sid, round_num, speech_result[:100],
+        "Voice respond: SID=%s, round=%d, speech_chars=%d",
+        call_sid, round_num, len(speech_result),
     )
 
     if not speech_result:
@@ -443,6 +443,31 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
         )
 
     tenant_id = tenant["id"]
+    # Respond is an independently reachable Twilio webhook. Incoming's live-AI
+    # gate is not inherited from the Gather action URL, so a signed but
+    # out-of-flow callback (Voice URL pointed at /voice/respond, or a Gather
+    # that never went through incoming AI mode) must not become a paid-Claude
+    # bypass for voicemail-mode tenants. Re-check _ai_voice_mode here.
+    #
+    # Do NOT re-check voice_minutes_exhausted on each Gather: incoming already
+    # committed to the live loop when minutes remained ("over-cap degrades to
+    # voicemail — never a dropped call"). Mid-call minute burn is expected;
+    # the token hard-cap is the per-round spend control. Minutes are a
+    # start-of-call gate, not a Gather-round gate.
+    if not _ai_voice_mode(tenant):
+        logger.warning(
+            "voice_respond: tenant not live-AI entitled tenant=%s call_sid=%s — "
+            "refusing provider",
+            tenant_id,
+            call_sid,
+        )
+        return Response(
+            content=_build_twiml_goodbye(
+                "Sorry, I'm unable to assist right now. Goodbye!"
+            ),
+            media_type="application/xml",
+        )
+
     business_name = tenant.get("business_name") or "our business"
     session_id = f"call_{call_sid}"
     db = get_service_supabase()
