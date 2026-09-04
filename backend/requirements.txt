@@ -43,7 +43,7 @@ mcp>=1.0.0,<2  # 2.0.0 removed mcp.server.fastmcp (backend/mcp_server.py imports
 youtube-transcript-api>=1.2.4,<2
 # Web Push for pending-approval browser notifications (os_push_notify).
 # Import-guarded — backend boots fine without it; push just stays disabled.
-pywebpush>=2.0.0,<3
+pywebpush>=2.3.0,<3
 # PyYAML — module-level `import yaml` in services/attribution_service.py, which is
 # pulled onto the boot path by auth/leads/billing/many routers via services/activity.py.
 # Unguarded → a clean deploy missing it crashes at startup. Found 2026-06-23 untracked-deps audit.
