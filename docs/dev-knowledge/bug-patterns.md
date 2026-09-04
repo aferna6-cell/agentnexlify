@@ -18894,3 +18894,48 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(m9): durable bakeoff harness + planner completeness rules
+
+* fix(m9): extract durable bakeoff harness and add planner completeness rules
+
+Keep #783 run artifacts off main. Land the sidecar catalog fallback, idle
+Railway image, and compact summary runner. Add one generalizable prompt
+block for terminal policy, lookup-before-mutate, and exact catalog flags,
+plus frozen traces for wrong_terminal and incomplete_valid. Promotion bar
+unchanged. No live model calls.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+* fix(m9): do not mark empty-terminal gold as incomplete
+
+Zero-step cancel/reject/clarify plans were getting unnecessary_* rates of
+1.0 from _rate(0, 0), so correct gold classified as model_incomplete_valid.
+Empty plans now report 0.0. Promotion bar unchanged. Offline stratified-24
+gold is 24/24 ok.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+* test(m9): cover bakeoff runner in CI changed-lines gate
+
+PR Validation 33818081744 failed Enforce changed-lines coverage because
+test_os_workflows_run_live_bakeoff.py was omitted from the CI pytest list,
+so run_live_bakeoff.py and the catalog sidecar path were uncovered.
+
+Add that file to pr-check.yml and add behavioral tests for empty-terminal
+scoring, exact catalog flag copy, missing costs, and safety-gate exit.
+Promotion bar unchanged. No live model calls.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+---------
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+**Date:** 2026-09-04
+**Commit:** 105a3c0
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/pr-check.yml,Dockerfile.m9-bakeoff,audits/artifacts/m9-4-bakeoff-improvement-plan-2026-09-03.md,backend/services/os_workflows/action_manifest.json,backend/services/os_workflows/plan_eval.py,backend/services/os_workflows/planner_bakeoff.py,backend/services/os_workflows/run_live_bakeoff.py,backend/services/os_workflows/tool_catalog.py,backend/tests/test_os_workflows_plan_eval.py,backend/tests/test_os_workflows_planner_bakeoff.py,backend/tests/test_os_workflows_run_live_bakeoff.py,railway.m9-bakeoff.json,scripts/generate_action_manifest.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
