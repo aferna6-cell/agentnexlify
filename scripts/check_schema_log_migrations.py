@@ -326,10 +326,21 @@ def compare(
                     detail="schema-log says applied; live schema_migrations has no matching row",
                 )
             )
-        elif status == "unapplied" and not live_hits and number not in deferred:
-            # Intentionally silent: unapplied + missing is consistent.
-            # Deferred 201 is the documented exception that must stay silent too.
-            continue
+        elif status == "unapplied" and not live_hits:
+            if number in deferred:
+                # Intentionally deferred (201): docs-unapplied + live-missing is expected.
+                continue
+            findings.append(
+                Finding(
+                    kind="docs_unapplied_live_missing",
+                    number=number,
+                    name=name,
+                    detail=(
+                        "schema-log says unapplied and live schema_migrations has no matching row; "
+                        "migration is not on the deferred allowlist"
+                    ),
+                )
+            )
 
     return findings
 
