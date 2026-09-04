@@ -220,7 +220,7 @@ def test_success_records_usage_once():
 
 def test_provider_error_releases_reservation_without_raising(caplog):
     def boom(**kwargs):
-        raise RuntimeError("claude down secret=sk-ant-test customer=cara@example.com")
+        raise RuntimeError("claude down secret=anthropic_api_key customer=cara@example.com")
 
     with caplog.at_level(logging.WARNING):
         with (
@@ -363,7 +363,7 @@ def test_supabase_client_error_fails_closed_before_provider(caplog):
                 extract,
                 "get_service_supabase",
                 side_effect=RuntimeError(
-                    "supabase down secret=sk-ant-test customer=cara@example.com"
+                    "supabase down secret=anthropic_api_key customer=cara@example.com"
                 ),
             ),
             patch.object(extract, "reserve_ai_tokens") as reserve,
@@ -439,7 +439,7 @@ def test_extract_path_releases_when_record_rpc_fails():
 
 def test_provider_and_budget_logs_do_not_leak_secrets(caplog):
     def boom(**kwargs):
-        raise RuntimeError("provider boom cara@example.com sk-ant-test +15555550100")
+        raise RuntimeError("provider boom cara@example.com anthropic_api_key +15555550100")
 
     with caplog.at_level(logging.WARNING):
         with (
