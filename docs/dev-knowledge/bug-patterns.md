@@ -18894,3 +18894,33 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(widget): meter extract_action_items with reserve/record/release (#793)
+
+* fix(widget): meter extract_action_items with reserve/record/release
+
+Background action-item extraction now uses the same pack-aware budget
+contract as widget chat and live-AI voice. Missing tenant/policy fails
+closed before Claude. Visitor chat stays intact when extraction is
+blocked or fails.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+* test(widget): drop dummy sk-ant- strings from extraction budget tests
+
+PR Validation's secret-pattern grep treats sk-ant- as a leaked key.
+Use the same anthropic_api_key placeholder as the voice metering suite.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+---------
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+**Date:** 2026-09-04
+**Commit:** 1d056f3
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/pr-check.yml,backend/routers/widget_lead_helpers.py,backend/tests/test_widget_extract_action_items_usage_guard.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
