@@ -328,6 +328,37 @@ class TestAIUsageMeterShape:
         assert status["used_units"] == 0
         assert status["pct_used"] == 0.0
 
+    def test_meter_honors_purchased_usage_packs_via_tenant_id(self):
+        """Select-list used to omit tenants.id, so pack bonus never applied."""
+        from backend.services.ai_usage_guard import get_ai_usage_status
+
+        db = MagicMock()
+        results = [
+            MagicMock(data=[{
+                "plan": "chatbot",
+                "ai_monthly_token_alert_threshold": None,
+                "ai_monthly_token_hard_limit": None,
+            }]),
+            MagicMock(data=[{
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "cache_creation_input_tokens": 0,
+                "cache_read_input_tokens": 0,
+            }]),
+        ]
+        execute_mock = MagicMock(side_effect=results)
+        db.table.return_value.select.return_value.eq.return_value.eq.return_value.limit.return_value.execute = execute_mock
+        db.table.return_value.select.return_value.eq.return_value.limit.return_value.execute = execute_mock
+
+        with patch("backend.services.ai_usage_guard._sum_usage_packs", return_value=1_000_000) as packs:
+            status = get_ai_usage_status(db, "pack-tenant")
+
+        packs.assert_called_once()
+        assert packs.call_args.args[0] == "pack-tenant"
+        # chatbot 800k + 1M pack = 1800 units
+        assert status["limit_units"] == 1800
+        assert status["hard_limit_reached"] is False
+
 
 # ---- overage / usage packs ----
 

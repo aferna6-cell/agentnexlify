@@ -12,6 +12,13 @@ Schema notes: appointments use tenant_id; leads/conversations use client_id
 import logging
 from typing import Any
 
+from backend.services.ai_usage_guard import (
+    AIUsageReservation,
+    estimate_widget_chat_tokens,
+    record_ai_usage,
+    release_ai_token_reservation,
+    reserve_ai_tokens,
+)
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.tenant_scope import tenant_select
 
@@ -24,6 +31,111 @@ _TRANSCRIPT_CHARS = 4000
 
 class AppointmentBriefError(Exception):
     """Raised when the brief context cannot be assembled (maps to 4xx)."""
+
+
+class AppointmentBudgetExceeded(Exception):
+    """Raised when the monthly AI hard cap blocks the Claude call (maps to 429)."""
+
+
+def _load_budget_tenant(db: Any, tenant_id: str) -> dict[str, Any] | None:
+    """Load the tenant row needed for a pack-aware reservation.
+
+    Returns None when the row is missing or the lookup throws. Callers must
+    not invent a free-plan cap in that case — that would falsely block a
+    paying tenant (or ignore purchased packs).
+    """
+    try:
+        rows = (
+            db.table("tenants")
+            .select(
+                "id, plan, ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit"
+            )
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        ).data or []
+    except Exception:
+        logger.warning(
+            "appointment brief tenant load failed tenant=%s",
+            tenant_id,
+            exc_info=True,
+        )
+        return None
+    if not rows:
+        logger.warning(
+            "appointment brief tenant missing tenant=%s — calling without reservation",
+            tenant_id,
+        )
+        return None
+    return {**rows[0], "id": tenant_id}
+
+
+async def _call_claude_with_budget(
+    *,
+    db: Any,
+    tenant_id: str,
+    appointment_id: str,
+    operation: str,
+    system: str,
+    user_content: str,
+    max_tokens: int,
+):
+    """Reserve → Claude → record, or release on provider/error.
+
+    llm_runtime only times/logs the provider call. Reservation + recording
+    live here so appointment spend uses the same contract as widget chat.
+    """
+    messages = [{"role": "user", "content": user_content}]
+    tenant = _load_budget_tenant(db, tenant_id)
+    reservation: AIUsageReservation | None = None
+    if tenant is None:
+        logger.warning(
+            "appointment brief budget tenant unavailable tenant=%s op=%s — "
+            "calling without reservation",
+            tenant_id,
+            operation,
+        )
+    else:
+        reservation = reserve_ai_tokens(
+            tenant=tenant,
+            estimated_tokens=estimate_widget_chat_tokens(
+                system_prompt=system,
+                messages=messages,
+                max_tokens=max_tokens,
+            ),
+            operation=operation,
+            session_id=appointment_id,
+        )
+        if not reservation.allowed:
+            raise AppointmentBudgetExceeded(
+                "Monthly AI usage limit reached — add a usage pack or wait for the next cycle"
+            )
+
+    try:
+        resp = await call_claude_messages(
+            operation=operation,
+            model=BRIEF_MODEL,
+            max_tokens=max_tokens,
+            temperature=0,
+            timeout=20.0,
+            system=system,
+            messages=messages,
+            metadata={"tenant_id": tenant_id, "appointment_id": appointment_id},
+        )
+    except Exception:
+        if reservation is not None:
+            release_ai_token_reservation(reservation)
+        raise
+
+    if reservation is not None:
+        record_ai_usage(
+            reservation=reservation,
+            result=resp,
+            operation=operation,
+            session_id=appointment_id,
+            model=BRIEF_MODEL,
+        )
+    return resp
 
 
 def gather_context(db: Any, tenant_id: str, appointment_id: str) -> dict[str, Any]:
@@ -116,23 +228,23 @@ async def generate_brief(
     Returns {brief, has_history} — brief is markdown the dashboard renders.
     """
     context = gather_context(db, tenant_id, appointment_id)
-    resp = await call_claude_messages(
+    system = (
+        "You brief a small-business owner before a customer appointment. "
+        "From the context, write a compact markdown brief with exactly "
+        "three sections: '## Who they are' (1-2 sentences), "
+        "'## What they want' (what they asked about, decisions made), "
+        "'## Talking points' (3 short bullets — questions to ask or "
+        "things to confirm). Only use facts from the context; if history "
+        "is thin, say so and keep it short. No preamble."
+    )
+    resp = await _call_claude_with_budget(
+        db=db,
+        tenant_id=tenant_id,
+        appointment_id=appointment_id,
         operation="appointments.brief",
-        model=BRIEF_MODEL,
+        system=system,
+        user_content=_context_block(context, business_name),
         max_tokens=500,
-        temperature=0,
-        timeout=20.0,
-        system=(
-            "You brief a small-business owner before a customer appointment. "
-            "From the context, write a compact markdown brief with exactly "
-            "three sections: '## Who they are' (1-2 sentences), "
-            "'## What they want' (what they asked about, decisions made), "
-            "'## Talking points' (3 short bullets — questions to ask or "
-            "things to confirm). Only use facts from the context; if history "
-            "is thin, say so and keep it short. No preamble."
-        ),
-        messages=[{"role": "user", "content": _context_block(context, business_name)}],
-        metadata={"tenant_id": tenant_id, "appointment_id": appointment_id},
     )
     return {"brief": resp.text.strip(), "has_history": bool(context["transcript"])}
 
@@ -147,22 +259,22 @@ async def draft_followup(
     """
     context = gather_context(db, tenant_id, appointment_id)
     appt = context["appointment"]
-    resp = await call_claude_messages(
+    system = (
+        "Draft a short, warm follow-up email from a small business to a "
+        "customer after their appointment. Reference what they came in "
+        "for when the context shows it. Invite questions and a next "
+        "step. Plain text, under 120 words, no placeholders like "
+        "[NAME] — use the real names from the context. First line must "
+        "be 'Subject: <subject>' followed by a blank line, then the body."
+    )
+    resp = await _call_claude_with_budget(
+        db=db,
+        tenant_id=tenant_id,
+        appointment_id=appointment_id,
         operation="appointments.followup_draft",
-        model=BRIEF_MODEL,
+        system=system,
+        user_content=_context_block(context, business_name),
         max_tokens=400,
-        temperature=0,
-        timeout=20.0,
-        system=(
-            "Draft a short, warm follow-up email from a small business to a "
-            "customer after their appointment. Reference what they came in "
-            "for when the context shows it. Invite questions and a next "
-            "step. Plain text, under 120 words, no placeholders like "
-            "[NAME] — use the real names from the context. First line must "
-            "be 'Subject: <subject>' followed by a blank line, then the body."
-        ),
-        messages=[{"role": "user", "content": _context_block(context, business_name)}],
-        metadata={"tenant_id": tenant_id, "appointment_id": appointment_id},
     )
     subject, body = _split_subject(resp.text.strip())
     return {

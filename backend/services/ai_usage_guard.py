@@ -362,12 +362,15 @@ def get_ai_usage_status(db: Any, tenant_id: str) -> dict[str, Any]:
     try:
         tenant_rows = (
             db.table("tenants")
-            .select("plan, ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit")
+            .select("id, plan, ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit")
             .eq("id", tenant_id)
             .limit(1)
             .execute()
         ).data or []
-        tenant_row = tenant_rows[0] if tenant_rows else {}
+        # Always attach the known tenant_id. resolve_ai_usage_policy only
+        # sums purchased usage packs when tenant["id"] is present; omitting
+        # id from the select previously dropped pack bonus on this meter.
+        tenant_row = {**(tenant_rows[0] if tenant_rows else {}), "id": tenant_id}
         policy = resolve_ai_usage_policy(tenant_row)
 
         usage_rows = (
