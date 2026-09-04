@@ -752,6 +752,8 @@ class TestVoiceRespond:
         mock_find.return_value = {
             "id": "tenant-001",
             "business_name": "Acme Plumbing",
+            "plan": "agent_os",
+            "voice_ai_enabled": True,
         }
 
         mock_client = MagicMock()
