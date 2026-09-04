@@ -126,11 +126,14 @@ def _risk_tier_and_overprotection(
         if not needs_verify and step.verification_required:
             unnec_verify += 1
 
+    # Empty plans have no overprotection. `_rate(0, 0)` is 1.0 (vacuous
+    # accuracy), which must not be reused as an unnecessary-* rate or
+    # correct cancel/reject/clarify gold classifies as incomplete.
     return (
         _rate(risk_hits, risk_checks),
         _rate(approval_hits, approval_checks),
-        _rate(unnec_approval, known_steps),
-        _rate(unnec_verify, known_steps),
+        0.0 if known_steps == 0 else _rate(unnec_approval, known_steps),
+        0.0 if known_steps == 0 else _rate(unnec_verify, known_steps),
     )
 
 
