@@ -61,7 +61,7 @@ def test_live_shadow_hard_fails_before_provider_when_key_absent(monkeypatch):
 
 
 def test_live_shadow_skeleton_refuses_provider_even_when_key_present(monkeypatch):
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test-not-a-real-key")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "fake-anthropic-key")
     request = ShadowRequest(client_id="t_shadow", owner_goal="Bill a customer")
     with pytest.raises(RuntimeError, match="no provider wiring"):
         run_shadow(request, mode="live")
