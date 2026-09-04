@@ -38,7 +38,12 @@ class CountSkillsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             skills = Path(raw)
             for name in WINDOWS_PLACEHOLDERS:
-                newline = "\r\n" if name == "seo" else "\n"
+                if name == "seo":
+                    newline = "\r\n"
+                elif name == "accessibility":
+                    newline = ""
+                else:
+                    newline = "\n"
                 _write(skills / name, f"../../.agents/skills/{name}{newline}")
 
             self.assertEqual(agent_system.count_skills(skills), len(WINDOWS_PLACEHOLDERS))
@@ -55,6 +60,26 @@ class CountSkillsTests(unittest.TestCase):
                 skills / "deploy-to-vercel",
                 "../../.agents/skills/deploy-to-vercel\nextra line\n",
             )
+
+            self.assertEqual(agent_system.count_skills(skills), 1)
+
+    def test_count_skills_rejects_placeholder_path_tricks(self) -> None:
+        """Only same-name relative ../../.agents/skills/<name> one-liners count."""
+        with tempfile.TemporaryDirectory() as raw:
+            skills = Path(raw)
+            (skills / "schema-guard").mkdir()
+            _write(skills / "extra-up", "../../../.agents/skills/extra-up\n")
+            _write(skills / "one-up", "../.agents/skills/one-up\n")
+            _write(skills / "abs-unix", "/abs/.agents/skills/abs-unix\n")
+            _write(skills / "abs-win", "C:/.agents/skills/abs-win\n")
+            _write(skills / "mismatch", "../../.agents/skills/seo\n")
+            _write(skills / "padded", "  ../../.agents/skills/padded\n")
+            _write(skills / "trail-space", "../../.agents/skills/trail-space \n")
+            _write(skills / "multiline", "../../.agents/skills/multiline\nextra")
+            _write(skills / "backslashes", "..\\..\\.agents\\skills\\backslashes\n")
+            _write(skills / "nested", "../../.agents/skills/../skills/nested\n")
+            (skills / "oversize").write_bytes(b"x" * (agent_system._MAX_PLACEHOLDER_BYTES + 1))
+            (skills / "non-ascii").write_bytes(b"../../.agents/skills/non-ascii\n\xc3\xa9")
 
             self.assertEqual(agent_system.count_skills(skills), 1)
 

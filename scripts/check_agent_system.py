@@ -108,10 +108,11 @@ def count_agents() -> int:
     return len(list((ROOT / ".claude" / "agents").glob("*.md")))
 
 
-# Git mode-120000 skill links look like ../../.agents/skills/<same-name>.
+# Git mode-120000 skill links are exactly ../../.agents/skills/<same-name>.
 # Windows core.symlinks=false materializes them as that one-line text file.
+# Extra ../, absolute paths, whitespace padding, and other path tricks do not count.
 _MATERIALIZED_GIT_SYMLINK_SKILL = re.compile(
-    r"^(?:\.\./)+\.agents/skills/([A-Za-z0-9][A-Za-z0-9_-]*)$"
+    r"^../../\.agents/skills/([A-Za-z0-9][A-Za-z0-9_-]*)(?:\r\n|\n)?$"
 )
 _MAX_PLACEHOLDER_BYTES = 256
 
@@ -128,7 +129,7 @@ def is_materialized_git_symlink_skill(path: Path) -> bool:
         return False
     if raw.count("\n") > 1:
         return False
-    match = _MATERIALIZED_GIT_SYMLINK_SKILL.fullmatch(raw.strip())
+    match = _MATERIALIZED_GIT_SYMLINK_SKILL.fullmatch(raw)
     return bool(match) and match.group(1) == path.name
 
 
