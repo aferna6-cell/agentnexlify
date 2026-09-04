@@ -198,4 +198,3 @@ def test_appointment_briefs_router_carries_full_guard_stack():
     deps = [d.dependency for d in router.dependencies]
     assert block_demo_role in deps
     assert require_agent_os_access in deps
-
