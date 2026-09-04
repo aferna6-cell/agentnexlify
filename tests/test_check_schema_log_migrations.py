@@ -197,6 +197,16 @@ def test_default_allowlist_is_201_only():
     assert loaded == frozenset({201})
 
 
+def test_year_date_headings_are_not_migration_202():
+    text = (
+        "## 2026-06-12 — migration 144: tenants.is_demo\n\n"
+        "## 201_website_connections.sql (2026-09-03)\n\n"
+        "**Applied:** NOT applied (code-only).\n"
+    )
+    docs = parse_schema_log(text)
+    assert [entry.number for entry in docs] == [201]
+
+
 def test_parser_reads_applied_field_and_heading_status():
     docs = parse_schema_log(DEFERRED_201 + APPLIED_196)
     by_number = {entry.number: entry for entry in docs}
