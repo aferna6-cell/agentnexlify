@@ -51,7 +51,7 @@
     "check:codex-orchestration": "node scripts/run_python.cjs scripts/check_codex_orchestration_adoption.py"
   },
   "devDependencies": {
-    "@playwright/test": "^1.61.1",
+    "@playwright/test": "^1.62.1",
     "@typescript-eslint/parser": "^8.64.0",
     "cross-env": "^7.0.3",
     "eslint": "^10.7.0"
