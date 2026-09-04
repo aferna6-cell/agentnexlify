@@ -3,16 +3,21 @@
 Contract:
 - Router Depends: block_demo_role + require_agent_os_access (chatbot/free 402).
 - Claude spend uses reserve_ai_tokens → call_claude_messages → record_ai_usage
-  (release on provider error). llm_runtime does not record usage.
-- Hard cap blocks before the provider. Purchased usage packs are honored
-  because the tenant row passed to reserve includes id.
-- Tenant/guard unavailable is explicit fail-open on this surface only
-  (matches reserve_ai_tokens.reason == "guard_unavailable"); no invented
+  (release on provider error or record failure). llm_runtime does not record.
+- Hard cap blocks before the provider (HTTP 429). Purchased usage packs are
+  honored because the tenant row passed to reserve includes id.
+- Tenant/policy cannot be loaded (missing row or lookup exception): fail
+  closed before the provider. HTTP 503 budget-guard, not 429. No invented
   free-plan cap.
+- After a valid tenant is loaded, a transient reserve RPC outage keeps the
+  shared widget-chat contract: allowed=True, reason=guard_unavailable;
+  provider may run; record is invoked and persist is skipped. That is not
+  a claim that usage was stored.
 
 Run: pytest backend/tests/test_appointment_briefs_gating.py --noconftest -v
 """
 
+import logging
 import os
 import sys
 from unittest.mock import MagicMock, patch
@@ -25,8 +30,11 @@ os.environ.setdefault("TESTING", "1")
 
 from backend.routers import appointment_briefs as ab
 from backend.services import appointment_brief
-from backend.services.ai_usage_guard import AIUsageReservation
-from backend.services.appointment_brief import AppointmentBudgetExceeded
+from backend.services.ai_usage_guard import AIUsageReservation, record_ai_usage
+from backend.services.appointment_brief import (
+    AppointmentBudgetExceeded,
+    AppointmentBudgetGuardUnavailable,
+)
 from backend.tests.fake_supabase import db, run
 
 _TENANT_ID = "t-budget"
@@ -129,6 +137,15 @@ def test_router_has_no_inert_status_fail_open_wrapper():
     assert not hasattr(ab, "get_ai_usage_status")
 
 
+def _assert_no_secrets(text: str) -> None:
+    blob = text.lower()
+    assert "cara@example.com" not in blob
+    assert "cara diaz" not in blob
+    assert "sk-ant" not in blob
+    assert "anthropic_api_key" not in blob
+    assert "anx_" not in blob
+
+
 def test_router_maps_budget_exceeded_to_429():
     async def blocked(*_a, **_k):
         raise AppointmentBudgetExceeded(
@@ -140,10 +157,32 @@ def test_router_maps_budget_exceeded_to_429():
             with pytest.raises(HTTPException) as exc:
                 run(ab.get_appointment_brief(_TENANT_ID, _APPT_ID, {"tenant_id": _TENANT_ID}))
         assert exc.value.status_code == 429
+        _assert_no_secrets(str(exc.value.detail))
         with patch.object(ab.appointment_brief, "draft_followup", blocked):
             with pytest.raises(HTTPException) as exc:
                 run(ab.get_followup_draft(_TENANT_ID, _APPT_ID, {"tenant_id": _TENANT_ID}))
         assert exc.value.status_code == 429
+        _assert_no_secrets(str(exc.value.detail))
+
+
+def test_router_maps_budget_guard_unavailable_to_503():
+    async def unavailable(*_a, **_k):
+        raise AppointmentBudgetGuardUnavailable(
+            "AI usage guard unavailable — tenant policy could not be loaded"
+        )
+
+    with patch.object(ab, "get_service_supabase", return_value=db({})):
+        with patch.object(ab.appointment_brief, "generate_brief", unavailable):
+            with pytest.raises(HTTPException) as exc:
+                run(ab.get_appointment_brief(_TENANT_ID, _APPT_ID, {"tenant_id": _TENANT_ID}))
+        assert exc.value.status_code == 503
+        assert exc.value.status_code != 429
+        _assert_no_secrets(str(exc.value.detail))
+        with patch.object(ab.appointment_brief, "draft_followup", unavailable):
+            with pytest.raises(HTTPException) as exc:
+                run(ab.get_followup_draft(_TENANT_ID, _APPT_ID, {"tenant_id": _TENANT_ID}))
+        assert exc.value.status_code == 503
+        _assert_no_secrets(str(exc.value.detail))
 
 
 # --- reserve / record / release ---------------------------------------------
@@ -261,15 +300,22 @@ def test_provider_error_releases_reservation():
     ):
         with pytest.raises(RuntimeError, match="claude down"):
             run(appointment_brief.generate_brief(_fixture(), _TENANT_ID, _APPT_ID, "Acme"))
-    reserve.assert_called_once()
+        with pytest.raises(RuntimeError, match="claude down"):
+            run(appointment_brief.draft_followup(_fixture(), _TENANT_ID, _APPT_ID, "Acme"))
+    assert reserve.call_count == 2
     record.assert_not_called()
-    release.assert_called_once()
+    assert release.call_count == 2
     assert release.call_args.args[0].allowed is True
     assert release.call_args.args[0].reason != "guard_unavailable"
 
 
-def test_guard_unavailable_allows_call_without_recording():
-    """Shared reserve fail-open: reason=guard_unavailable. Do not invent a cap."""
+def test_guard_unavailable_allows_call_without_persisting():
+    """Valid tenant loaded, reserve RPC down: shared widget-chat fail-open.
+
+    Distinct from missing/failed tenant lookup: policy was resolved, so the
+    call may proceed. record_ai_usage is invoked and no-ops persist. This is
+    not a claim that usage was stored.
+    """
     with (
         patch.object(
             appointment_brief, "reserve_ai_tokens", side_effect=_unavailable
@@ -282,27 +328,80 @@ def test_guard_unavailable_allows_call_without_recording():
     assert out["has_history"] is False
     reserve.assert_called_once()
     provider.assert_called_once()
-    # record_ai_usage itself no-ops on guard_unavailable; we still invoke it
-    # so the shared helper owns that contract.
+    record.assert_called_once()
+    assert record.call_args.kwargs["reservation"].reason == "guard_unavailable"
+    assert record.call_args.kwargs["reservation"].allowed is True
+    release.assert_not_called()
+
+
+def test_followup_guard_unavailable_allows_call_without_persisting():
+    async def followup_claude(**kwargs):
+        return _claude_result("Subject: Thanks\n\nSee you soon.")
+
+    with (
+        patch.object(appointment_brief, "reserve_ai_tokens", side_effect=_unavailable) as reserve,
+        patch.object(appointment_brief, "call_claude_messages", side_effect=followup_claude) as provider,
+        patch.object(appointment_brief, "record_ai_usage") as record,
+        patch.object(appointment_brief, "release_ai_token_reservation") as release,
+    ):
+        out = run(appointment_brief.draft_followup(_fixture(), _TENANT_ID, _APPT_ID, "Acme"))
+    assert out["subject"] == "Thanks"
+    reserve.assert_called_once()
+    provider.assert_called_once()
     record.assert_called_once()
     assert record.call_args.kwargs["reservation"].reason == "guard_unavailable"
     release.assert_not_called()
 
 
-def test_missing_tenant_row_skips_reservation_and_does_not_invent_free_cap():
+def test_missing_tenant_row_fails_closed_before_provider(caplog):
+    """No tenant row: do not invent a free-plan cap and do not call Claude."""
     fixture = db({"appointments": [_APPT]})  # no tenants row
-    with (
-        patch.object(appointment_brief, "reserve_ai_tokens") as reserve,
-        patch.object(appointment_brief, "call_claude_messages", side_effect=_ok_claude) as provider,
-        patch.object(appointment_brief, "record_ai_usage") as record,
-        patch.object(appointment_brief, "release_ai_token_reservation") as release,
-    ):
-        out = run(appointment_brief.generate_brief(fixture, _TENANT_ID, _APPT_ID, "Acme"))
-    assert out["brief"]
+    with caplog.at_level(logging.WARNING):
+        with (
+            patch.object(appointment_brief, "reserve_ai_tokens") as reserve,
+            patch.object(appointment_brief, "call_claude_messages", side_effect=_ok_claude) as provider,
+            patch.object(appointment_brief, "record_ai_usage") as record,
+            patch.object(appointment_brief, "release_ai_token_reservation") as release,
+        ):
+            with pytest.raises(AppointmentBudgetGuardUnavailable) as brief_exc:
+                run(appointment_brief.generate_brief(fixture, _TENANT_ID, _APPT_ID, "Acme"))
+            with pytest.raises(AppointmentBudgetGuardUnavailable) as followup_exc:
+                run(appointment_brief.draft_followup(fixture, _TENANT_ID, _APPT_ID, "Acme"))
     reserve.assert_not_called()
-    provider.assert_called_once()
+    provider.assert_not_called()
     record.assert_not_called()
     release.assert_not_called()
+    _assert_no_secrets(str(brief_exc.value))
+    _assert_no_secrets(str(followup_exc.value))
+    _assert_no_secrets(caplog.text)
+    assert "429" not in str(brief_exc.value)
+
+
+def test_tenant_lookup_error_fails_closed_before_provider(caplog):
+    class BoomDb:
+        def table(self, name):
+            if name == "tenants":
+                raise RuntimeError("db down secret=sk-ant-test customer=cara@example.com")
+            return db({"appointments": [_APPT]}).table(name)
+
+    with caplog.at_level(logging.WARNING):
+        with (
+            patch.object(appointment_brief, "reserve_ai_tokens") as reserve,
+            patch.object(appointment_brief, "call_claude_messages", side_effect=_ok_claude) as provider,
+            patch.object(appointment_brief, "record_ai_usage") as record,
+            patch.object(appointment_brief, "release_ai_token_reservation") as release,
+        ):
+            with pytest.raises(AppointmentBudgetGuardUnavailable) as brief_exc:
+                run(appointment_brief.generate_brief(BoomDb(), _TENANT_ID, _APPT_ID, "Acme"))
+            with pytest.raises(AppointmentBudgetGuardUnavailable) as followup_exc:
+                run(appointment_brief.draft_followup(BoomDb(), _TENANT_ID, _APPT_ID, "Acme"))
+    reserve.assert_not_called()
+    provider.assert_not_called()
+    record.assert_not_called()
+    release.assert_not_called()
+    _assert_no_secrets(str(brief_exc.value))
+    _assert_no_secrets(str(followup_exc.value))
+    _assert_no_secrets(caplog.text)
 
 
 def test_metered_call_metadata_is_ids_only():
@@ -324,20 +423,41 @@ def test_metered_call_metadata_is_ids_only():
     assert meta["appointment_id"] == _APPT_ID
 
 
-def test_tenant_lookup_error_skips_reservation():
-    class BoomDb:
-        def table(self, name):
-            if name == "tenants":
-                raise RuntimeError("db down")
-            return db({"appointments": [_APPT]}).table(name)
+def test_record_ai_usage_releases_reservation_on_persist_failure():
+    """Shared record_ai_usage releases the reservation when persist throws."""
+    reservation = _allowed()
+    with (
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+        patch("backend.services.ai_usage_guard.release_ai_token_reservation") as release,
+    ):
+        mock_supa.return_value.rpc.side_effect = RuntimeError("record rpc down")
+        recorded = record_ai_usage(
+            reservation=reservation,
+            result=_claude_result(),
+            operation="appointments.brief",
+            session_id=_APPT_ID,
+            model="claude-sonnet-5",
+        )
+    assert recorded is None
+    release.assert_called_once_with(reservation)
+
+
+def test_brief_path_releases_when_record_rpc_fails():
+    """#791 path: successful provider + record RPC failure still releases."""
+    reservation = _allowed()
+
+    def fail_record(**kwargs):
+        return record_ai_usage(**kwargs)
 
     with (
-        patch.object(appointment_brief, "reserve_ai_tokens") as reserve,
+        patch.object(appointment_brief, "reserve_ai_tokens", return_value=reservation),
         patch.object(appointment_brief, "call_claude_messages", side_effect=_ok_claude) as provider,
-        patch.object(appointment_brief, "record_ai_usage") as record,
+        patch.object(appointment_brief, "record_ai_usage", side_effect=fail_record),
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+        patch("backend.services.ai_usage_guard.release_ai_token_reservation") as release,
     ):
-        out = run(appointment_brief.generate_brief(BoomDb(), _TENANT_ID, _APPT_ID, "Acme"))
-    assert out["brief"]
-    reserve.assert_not_called()
+        mock_supa.return_value.rpc.side_effect = RuntimeError("record rpc down")
+        out = run(appointment_brief.generate_brief(_fixture(), _TENANT_ID, _APPT_ID, "Acme"))
+    assert out["brief"].startswith("## Who they are")
     provider.assert_called_once()
-    record.assert_not_called()
+    release.assert_called_once_with(reservation)

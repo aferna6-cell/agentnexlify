@@ -13,7 +13,6 @@ import logging
 from typing import Any
 
 from backend.services.ai_usage_guard import (
-    AIUsageReservation,
     estimate_widget_chat_tokens,
     record_ai_usage,
     release_ai_token_reservation,
@@ -37,12 +36,17 @@ class AppointmentBudgetExceeded(Exception):
     """Raised when the monthly AI hard cap blocks the Claude call (maps to 429)."""
 
 
+class AppointmentBudgetGuardUnavailable(Exception):
+    """Raised when tenant/policy cannot be loaded (maps to 503, not 429)."""
+
+
 def _load_budget_tenant(db: Any, tenant_id: str) -> dict[str, Any] | None:
     """Load the tenant row needed for a pack-aware reservation.
 
     Returns None when the row is missing or the lookup throws. Callers must
-    not invent a free-plan cap in that case — that would falsely block a
-    paying tenant (or ignore purchased packs).
+    fail closed before the provider — do not invent a free-plan cap (that
+    would falsely block a paying tenant or ignore purchased packs) and do
+    not call Claude unmetered.
     """
     try:
         rows = (
@@ -55,15 +59,16 @@ def _load_budget_tenant(db: Any, tenant_id: str) -> dict[str, Any] | None:
             .execute()
         ).data or []
     except Exception:
+        # Do not attach the lookup exception: it may contain connection or
+        # customer context. Tenant id is enough to find the row.
         logger.warning(
             "appointment brief tenant load failed tenant=%s",
             tenant_id,
-            exc_info=True,
         )
         return None
     if not rows:
         logger.warning(
-            "appointment brief tenant missing tenant=%s — calling without reservation",
+            "appointment brief tenant missing tenant=%s — failing closed before provider",
             tenant_id,
         )
         return None
@@ -84,32 +89,38 @@ async def _call_claude_with_budget(
 
     llm_runtime only times/logs the provider call. Reservation + recording
     live here so appointment spend uses the same contract as widget chat.
+
+    Tenant/policy load failure fails closed here (no provider call). A
+    later reserve RPC outage is different: reserve_ai_tokens returns
+    allowed=True / reason=guard_unavailable and the shared helper may
+    still call the provider without persisting usage.
     """
     messages = [{"role": "user", "content": user_content}]
     tenant = _load_budget_tenant(db, tenant_id)
-    reservation: AIUsageReservation | None = None
     if tenant is None:
         logger.warning(
             "appointment brief budget tenant unavailable tenant=%s op=%s — "
-            "calling without reservation",
+            "failing closed before provider",
             tenant_id,
             operation,
         )
-    else:
-        reservation = reserve_ai_tokens(
-            tenant=tenant,
-            estimated_tokens=estimate_widget_chat_tokens(
-                system_prompt=system,
-                messages=messages,
-                max_tokens=max_tokens,
-            ),
-            operation=operation,
-            session_id=appointment_id,
+        raise AppointmentBudgetGuardUnavailable(
+            "AI usage guard unavailable — tenant policy could not be loaded"
         )
-        if not reservation.allowed:
-            raise AppointmentBudgetExceeded(
-                "Monthly AI usage limit reached — add a usage pack or wait for the next cycle"
-            )
+    reservation = reserve_ai_tokens(
+        tenant=tenant,
+        estimated_tokens=estimate_widget_chat_tokens(
+            system_prompt=system,
+            messages=messages,
+            max_tokens=max_tokens,
+        ),
+        operation=operation,
+        session_id=appointment_id,
+    )
+    if not reservation.allowed:
+        raise AppointmentBudgetExceeded(
+            "Monthly AI usage limit reached — add a usage pack or wait for the next cycle"
+        )
 
     try:
         resp = await call_claude_messages(

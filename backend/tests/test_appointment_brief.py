@@ -18,11 +18,19 @@ if str(REPO_ROOT) not in sys.path:
 from backend.tests.fake_supabase import db, run
 
 from backend.services import appointment_brief
+from backend.services.ai_usage_guard import AIUsageReservation
 from backend.services.appointment_brief import (
     AppointmentBriefError,
     _split_subject,
     gather_context,
 )
+
+_TENANT = {
+    "id": "t1",
+    "plan": "agent_os",
+    "ai_monthly_token_alert_threshold": None,
+    "ai_monthly_token_hard_limit": None,
+}
 
 _APPT = {
     "id": "a1",
@@ -95,11 +103,29 @@ def _stub_claude(monkeypatch, text):
         return result
 
     monkeypatch.setattr(appointment_brief, "call_claude_messages", fake_call)
+    monkeypatch.setattr(
+        appointment_brief,
+        "reserve_ai_tokens",
+        lambda **_k: AIUsageReservation(
+            allowed=True,
+            tenant_id="t1",
+            period_month="2026-09-01",
+            estimated_tokens=900,
+            alert_threshold_tokens=4_000_000,
+            hard_limit_tokens=5_000_000,
+        ),
+    )
+    monkeypatch.setattr(appointment_brief, "record_ai_usage", lambda **_k: None)
 
 
 def test_generate_brief_reports_history_flag(monkeypatch):
     _stub_claude(monkeypatch, "## Who they are\nCara.")
-    fixture = db({"appointments": [_APPT], "leads": [_LEAD], "conversations": [_CONV]})
+    fixture = db({
+        "appointments": [_APPT],
+        "leads": [_LEAD],
+        "conversations": [_CONV],
+        "tenants": [_TENANT],
+    })
     out = run(appointment_brief.generate_brief(fixture, "t1", "a1", "Acme"))
     assert out["brief"].startswith("## Who they are")
     assert out["has_history"] is True
@@ -109,7 +135,13 @@ def test_draft_followup_returns_draft_never_sends(monkeypatch):
     _stub_claude(monkeypatch, "Subject: Great seeing you\n\nThanks for stopping by!")
     sink = []
     fixture = db(
-        {"appointments": [_APPT], "leads": [_LEAD], "conversations": [_CONV]}, sink
+        {
+            "appointments": [_APPT],
+            "leads": [_LEAD],
+            "conversations": [_CONV],
+            "tenants": [_TENANT],
+        },
+        sink,
     )
     out = run(appointment_brief.draft_followup(fixture, "t1", "a1", "Acme"))
     assert out["subject"] == "Great seeing you"

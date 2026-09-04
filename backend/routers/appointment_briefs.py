@@ -59,6 +59,8 @@ async def get_appointment_brief(
         )
     except appointment_brief.AppointmentBudgetExceeded as exc:
         raise HTTPException(status_code=429, detail=str(exc))
+    except appointment_brief.AppointmentBudgetGuardUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
     except appointment_brief.AppointmentBriefError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception:
@@ -84,6 +86,8 @@ async def get_followup_draft(
         )
     except appointment_brief.AppointmentBudgetExceeded as exc:
         raise HTTPException(status_code=429, detail=str(exc))
+    except appointment_brief.AppointmentBudgetGuardUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
     except appointment_brief.AppointmentBriefError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception:
