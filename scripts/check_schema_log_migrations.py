@@ -39,7 +39,7 @@ DEFAULT_DEFERRED = frozenset({201})
 DEFAULT_WATCH_FROM = 195
 
 HEADING_RE = re.compile(
-    r"^##[ \t]+(?:Migration[ \t]+)?(\d{3})(?:_([A-Za-z0-9_]+))?",
+    r"^##[ \t]+(?:Migration[ \t]+(\d{3})(?:_([A-Za-z0-9_]+))?|(\d{3})_([A-Za-z0-9_]+))",
     re.MULTILINE,
 )
 HEADING_STATUS_RE = re.compile(
@@ -47,7 +47,7 @@ HEADING_STATUS_RE = re.compile(
     re.IGNORECASE,
 )
 APPLIED_FIELD_RE = re.compile(
-    r"\*\*Applied\*\*[^:\n]*:\s*(.+)",
+    r"\*\*Applied[^*]*\*\*:?\s*(.+)",
     re.IGNORECASE,
 )
 SECRET_RE = re.compile(
@@ -104,8 +104,8 @@ def parse_schema_log(text: str) -> list[DocEntry]:
     matches = list(HEADING_RE.finditer(text))
     entries: list[DocEntry] = []
     for index, match in enumerate(matches):
-        number = int(match.group(1))
-        slug = (match.group(2) or "").strip()
+        number = int(match.group(1) or match.group(3))
+        slug = (match.group(2) or match.group(4) or "").strip()
         heading = text[match.start() : text.find("\n", match.start())]
         if heading == text[match.start() :]:
             heading = heading.strip()
