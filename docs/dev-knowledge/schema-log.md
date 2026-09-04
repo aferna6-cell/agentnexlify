@@ -1848,11 +1848,12 @@ result. Writers: backend/services/os_tool_executions.py (from the engine's
 reject). Engine side: agent-service/src/agent-os/actions/. Design doc:
 docs/agent-os-action-layer.md.
 
-**Applied:** prod (`pxserpybmajixqrmzaly`) recorded as `os_tool_executions`
-(20260828175205); staging (`nohanoiugcbaxtxinttp`) recorded as
-`195_os_tool_executions` (20260830195249). Verified 2026-09-04: table exists on
-both; `os_tool_executions_idempotency_idx` present. Live status CHECK is the 196
-shape (no `approved`).
+**Applied (live versions, not this hour):** prod (`pxserpybmajixqrmzaly`)
+recorded as `os_tool_executions` (20260828175205); staging
+(`nohanoiugcbaxtxinttp`) recorded as `195_os_tool_executions` (20260830195249).
+Read-only rechecked 2026-09-04 (docs-only; not applied this hour): table exists
+on both; `os_tool_executions_idempotency_idx` present. Live status CHECK is the
+196 shape (no `approved`).
 
 ## Migration 196_os_tool_executions_status_no_approved — tighten status CHECK (APPLIED 2026-08-30)
 Follow-on to 195. Status must not include `approved` — that value lives only on
@@ -1867,13 +1868,15 @@ failed | verification_failed | denied | cancelled. Approvals queue keys off
 195 and not a table drop. Dual tables stay: os_action_runs (126) vs
 os_tool_executions (195).
 
-**Applied:** prod (`196_os_tool_executions_status_no_approved`, 20260830024338)
-and staging (20260830195256). Verified 2026-09-04:
-`os_tool_executions_status_check` is pending_approval|running|succeeded|failed|
-verification_failed|denied|cancelled (no `approved`). Live insert with
-`status='approved'` raises check_violation on both DBs. Rows 196 would remap
-(`status='approved'`): staging 0, prod 0. Not re-applied — already present; a
-second `apply_migration` would duplicate the version row.
+**Applied (live versions, not this hour):** prod
+(`196_os_tool_executions_status_no_approved`, 20260830024338) and staging
+(20260830195256). Read-only rechecked 2026-09-04 (docs-only; not applied this
+hour): `os_tool_executions_status_check` is pending_approval|running|succeeded|
+failed|verification_failed|denied|cancelled (no `approved`).
+`pg_get_constraintdef` matches the 196 CHECK on both DBs; a `status='approved'`
+insert would raise check_violation. Rows 196 would remap (`status='approved'`):
+staging 0, prod 0. Already present since 2026-08-30; a second `apply_migration`
+would duplicate the version row.
 
 ## Migration 197_os_tool_executions_l2_idempotency_required — L2 must have a key (APPLIED 2026-08-30)
 Follow-on to 195/196. The 195 unique index is partial (`WHERE idempotency_key IS
@@ -1888,9 +1891,12 @@ and does not drop the table. Application persist
 (`backend/services/os_tool_executions.py`) rejects keyless L2 on create and
 treats a second create with the same key as a no-op / 409.
 
-**Applied:** prod (`197_os_tool_executions_l2_idempotency_required`,
-20260830024346) and staging (20260830195304). Verified 2026-09-04: constraint
-present and matches the migration CHECK. Live keyless L2 `pending_approval`
-insert raises check_violation on both DBs. Rows 197 would cancel (L2 /
-approval-gated, keyless, pending_approval|running): staging 0, prod 0. Staging
-parked/running L2 rows: 7, all keyed. Prod total rows: 0. Not re-applied.
+**Applied (live versions, not this hour):** prod
+(`197_os_tool_executions_l2_idempotency_required`, 20260830024346) and staging
+(20260830195304). Read-only rechecked 2026-09-04 (docs-only; not applied this
+hour): constraint present and matches the migration CHECK via
+`pg_get_constraintdef`. A keyless L2 `pending_approval` insert would raise
+check_violation. Rows 197 would cancel (L2 / approval-gated, keyless,
+pending_approval|running): staging 0, prod 0. Staging total rows: 39. Staging
+parked/running L2 rows: 7, all keyed. Prod total rows: 0. Already present since
+2026-08-30.
