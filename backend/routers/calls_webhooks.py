@@ -20,6 +20,12 @@ from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.services.activity import log_activity
+from backend.services.ai_usage_guard import (
+    estimate_widget_chat_tokens,
+    record_ai_usage,
+    release_ai_token_reservation,
+    reserve_ai_tokens,
+)
 from backend.services.llm_runtime import (
     call_claude_messages,
     resolve_int_setting,
@@ -49,6 +55,147 @@ logger = logging.getLogger(__name__)
 
 # Max AI conversation rounds before ending the call
 _MAX_VOICE_ROUNDS = 3
+
+# Spoken when Claude itself fails. Keep this exact string — callers and tests
+# treat it as the live-AI recovery line.
+_VOICE_CLAUDE_FALLBACK = (
+    "I'm sorry, I'm having a little trouble right now. "
+    "Let me have someone call you back as soon as possible."
+)
+# Spoken when the monthly token hard cap blocks the provider. Twilio still
+# gets HTTP 200 TwiML; more Gather rounds cannot unblock a monthly cap.
+_VOICE_USAGE_PAUSED = (
+    "Thanks for calling. This assistant is temporarily paused "
+    "because monthly usage is unusually high. Someone from the team "
+    "will follow up with you shortly."
+)
+
+
+class VoiceBudgetExceeded(Exception):
+    """Monthly AI hard cap blocked the live-AI Claude call."""
+
+
+class VoiceBudgetGuardUnavailable(Exception):
+    """Tenant/policy could not be loaded — fail closed before the provider."""
+
+
+def _load_voice_budget_tenant(db: Any, tenant_id: str) -> dict[str, Any] | None:
+    """Load the tenant row needed for a pack-aware reservation.
+
+    Returns None when the row is missing or the lookup throws. Callers must
+    fail closed before the provider — do not invent a free-plan cap (that
+    would falsely block a paying tenant or ignore purchased packs) and do
+    not call Claude unmetered.
+    """
+    try:
+        rows = (
+            db.table("tenants")
+            .select(
+                "id, plan, ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit"
+            )
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        ).data or []
+    except Exception:
+        # Do not attach the lookup exception: it may contain connection or
+        # customer context. Tenant id is enough to find the row.
+        logger.warning(
+            "voice respond tenant load failed tenant=%s",
+            tenant_id,
+        )
+        return None
+    if not rows:
+        logger.warning(
+            "voice respond tenant missing tenant=%s — failing closed before provider",
+            tenant_id,
+        )
+        return None
+    return {**rows[0], "id": tenant_id}
+
+
+async def _call_voice_claude_with_budget(
+    *,
+    db: Any,
+    tenant_id: str,
+    call_sid: str,
+    system: str,
+    messages: list[dict[str, str]],
+    model: str,
+    max_tokens: int,
+    round_num: int,
+    faq_chars: int,
+):
+    """Reserve → Claude → record, or release on provider/error.
+
+    llm_runtime only times/logs the provider call. Reservation + recording
+    live here so live-AI voice spend uses the same contract as widget chat.
+
+    Tenant/policy load failure fails closed here (no provider call). A
+    later reserve RPC outage is different: reserve_ai_tokens returns
+    allowed=True / reason=guard_unavailable and the shared helper may
+    still call the provider without persisting usage.
+    """
+    tenant = _load_voice_budget_tenant(db, tenant_id)
+    if tenant is None:
+        logger.warning(
+            "voice respond budget tenant unavailable tenant=%s — "
+            "failing closed before provider",
+            tenant_id,
+        )
+        raise VoiceBudgetGuardUnavailable(
+            "AI usage guard unavailable — tenant policy could not be loaded"
+        )
+    reservation = reserve_ai_tokens(
+        tenant=tenant,
+        estimated_tokens=estimate_widget_chat_tokens(
+            system_prompt=system,
+            messages=messages,
+            max_tokens=max_tokens,
+        ),
+        operation="calls.voice_respond",
+        session_id=call_sid,
+    )
+    if not reservation.allowed:
+        raise VoiceBudgetExceeded(
+            "Monthly AI usage limit reached — add a usage pack or wait for the next cycle"
+        )
+
+    try:
+        resp = await call_claude_messages(
+            operation="calls.voice_respond",
+            model=model,
+            max_tokens=max_tokens,
+            system=system,
+            messages=messages,
+            temperature=0.0,
+            timeout=30.0,
+            # Opt-in prompt caching (cost lever F4) — same tenant KB/persona
+            # prefix repeats across the 3-round Gather/Say loop for one call.
+            # Anthropic caches on exact text hash: per-tenant isolation, no
+            # shared key. Default 5-min TTL comfortably covers a live call.
+            cache_system=True,
+            metadata={
+                "tenant_id": tenant_id,
+                "call_sid": call_sid,
+                "round": round_num,
+                "history_count": len(messages),
+                "faq_chars": faq_chars,
+            },
+        )
+    except Exception:
+        release_ai_token_reservation(reservation)
+        raise
+
+    record_ai_usage(
+        reservation=reservation,
+        result=resp,
+        operation="calls.voice_respond",
+        session_id=call_sid,
+        model=model,
+    )
+    return resp
+
 
 # Mounted by calls.py under its /api/v1/calls prefix.
 router = APIRouter()
@@ -449,31 +596,25 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
     if faq_text:
         system_prompt += f"\n\n{faq_text}"
 
-    # Call Claude for AI response
+    # Call Claude for AI response — reserve first so live-AI voice is metered
+    # the same way as widget chat. Twilio still always gets HTTP 200 TwiML.
+    voice_model = resolve_string_setting("voice_chat_model", "claude-sonnet-4-6")
+    voice_max_tokens = resolve_int_setting("voice_chat_max_tokens", 160)
     ai_response = ""
+    end_call_now = False
     try:
-        llm_result = await call_claude_messages(
-            operation="calls.voice_respond",
-            model=resolve_string_setting("voice_chat_model", "claude-sonnet-4-6"),
-            max_tokens=resolve_int_setting("voice_chat_max_tokens", 160),
+        llm_result = await _call_voice_claude_with_budget(
+            db=db,
+            tenant_id=tenant_id,
+            call_sid=call_sid,
             system=system_prompt,
             messages=conversation_messages,
-            temperature=0.0,
-            timeout=30.0,
-            # Opt-in prompt caching (cost lever F4) — same tenant KB/persona
-            # prefix repeats across the 3-round Gather/Say loop for one call.
-            # Anthropic caches on exact text hash: per-tenant isolation, no
-            # shared key. Default 5-min TTL comfortably covers a live call.
-            cache_system=True,
-            metadata={
-                "tenant_id": tenant_id,
-                "call_sid": call_sid,
-                "round": round_num,
-                "history_count": len(conversation_messages),
-                "faq_chars": len(faq_text),
-            },
+            model=voice_model,
+            max_tokens=voice_max_tokens,
+            round_num=round_num,
+            faq_chars=len(faq_text),
         )
-        ai_response = llm_result.text.strip()
+        ai_response = (llm_result.text or "").strip()
         logger.info(
             "voice_respond: llm_result call_sid=%s round=%d llm_ms=%d response_chars=%d",
             call_sid,
@@ -481,12 +622,26 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
             llm_result.duration_ms,
             len(ai_response),
         )
+    except VoiceBudgetExceeded:
+        logger.warning(
+            "voice_respond: AI usage hard limit blocked tenant=%s call_sid=%s",
+            tenant_id,
+            call_sid,
+        )
+        ai_response = _VOICE_USAGE_PAUSED
+        end_call_now = True
+    except VoiceBudgetGuardUnavailable:
+        logger.warning(
+            "voice_respond: budget tenant unavailable tenant=%s call_sid=%s — "
+            "failing closed before provider",
+            tenant_id,
+            call_sid,
+        )
+        ai_response = _VOICE_CLAUDE_FALLBACK
+        end_call_now = True
     except Exception:
         logger.exception("Claude API call failed for voice respond, call %s", call_sid)
-        ai_response = (
-            "I'm sorry, I'm having a little trouble right now. "
-            "Let me have someone call you back as soon as possible."
-        )
+        ai_response = _VOICE_CLAUDE_FALLBACK
 
     # Booking (G3 Phase 1): strip the BOOK_JSON marker (caller must never hear
     # it) and create the appointment it describes. Never raises.
@@ -524,7 +679,7 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
     max_rounds = resolve_int_setting("voice_max_rounds", _MAX_VOICE_ROUNDS)
     if booking_context and max_rounds < 5:
         max_rounds = 5
-    if round_num >= max_rounds:
+    if end_call_now or round_num >= max_rounds:
         goodbye_text = (
             f"{ai_response} "
             f"Thank you for calling {_xml_escape(business_name)}! "
