@@ -124,18 +124,26 @@ def test_agent_os_plan_set_excludes_chatbot_and_free():
     assert "agent_os" in AGENT_OS_PLANS
 
 
+def test_router_has_no_inert_status_fail_open_wrapper():
+    assert not hasattr(ab, "_check_ai_budget")
+    assert not hasattr(ab, "get_ai_usage_status")
+
+
 def test_router_maps_budget_exceeded_to_429():
     async def blocked(*_a, **_k):
         raise AppointmentBudgetExceeded(
             "Monthly AI usage limit reached — add a usage pack or wait for the next cycle"
         )
 
-    with patch.object(ab, "get_service_supabase", return_value=db({})), patch.object(
-        ab.appointment_brief, "generate_brief", blocked
-    ):
-        with pytest.raises(HTTPException) as exc:
-            run(ab.get_appointment_brief(_TENANT_ID, _APPT_ID, {"tenant_id": _TENANT_ID}))
-    assert exc.value.status_code == 429
+    with patch.object(ab, "get_service_supabase", return_value=db({})):
+        with patch.object(ab.appointment_brief, "generate_brief", blocked):
+            with pytest.raises(HTTPException) as exc:
+                run(ab.get_appointment_brief(_TENANT_ID, _APPT_ID, {"tenant_id": _TENANT_ID}))
+        assert exc.value.status_code == 429
+        with patch.object(ab.appointment_brief, "draft_followup", blocked):
+            with pytest.raises(HTTPException) as exc:
+                run(ab.get_followup_draft(_TENANT_ID, _APPT_ID, {"tenant_id": _TENANT_ID}))
+        assert exc.value.status_code == 429
 
 
 # --- reserve / record / release ---------------------------------------------
@@ -151,7 +159,9 @@ def test_hard_cap_blocks_before_provider():
     ):
         with pytest.raises(AppointmentBudgetExceeded):
             run(appointment_brief.generate_brief(_fixture(), _TENANT_ID, _APPT_ID, "Acme"))
-    reserve.assert_called_once()
+        with pytest.raises(AppointmentBudgetExceeded):
+            run(appointment_brief.draft_followup(_fixture(), _TENANT_ID, _APPT_ID, "Acme"))
+    assert reserve.call_count == 2
     provider.assert_not_called()
     record.assert_not_called()
     release.assert_not_called()
@@ -293,6 +303,25 @@ def test_missing_tenant_row_skips_reservation_and_does_not_invent_free_cap():
     provider.assert_called_once()
     record.assert_not_called()
     release.assert_not_called()
+
+
+def test_metered_call_metadata_is_ids_only():
+    seen = []
+
+    async def capture_claude(**kwargs):
+        seen.append(kwargs)
+        return _claude_result()
+
+    with (
+        patch.object(appointment_brief, "reserve_ai_tokens", side_effect=_allowed),
+        patch.object(appointment_brief, "call_claude_messages", side_effect=capture_claude),
+        patch.object(appointment_brief, "record_ai_usage"),
+    ):
+        run(appointment_brief.generate_brief(_fixture(), _TENANT_ID, _APPT_ID, "Acme"))
+    meta = seen[0]["metadata"]
+    assert set(meta) == {"tenant_id", "appointment_id"}
+    assert meta["tenant_id"] == _TENANT_ID
+    assert meta["appointment_id"] == _APPT_ID
 
 
 def test_tenant_lookup_error_skips_reservation():
