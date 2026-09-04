@@ -1,7 +1,8 @@
 """Tests for the read-only schema-log vs live schema_migrations checker.
 
-Covers the 196/197 stale-docs regression, deferred 201, live-missing docs,
-duplicate/version-name edges, and fail-closed live-read errors. No live DB.
+Covers the 196/197 stale-docs regression, deferred 201 vs unexpected unapplied,
+live-missing docs, duplicate/version-name edges, and fail-closed live-read
+errors. No live DB.
 """
 
 from __future__ import annotations
@@ -72,6 +73,32 @@ def test_intentionally_deferred_201_is_ok_when_live_missing():
     assert findings == []
 
 
+def test_non_deferred_unapplied_live_missing_is_drift():
+    docs = parse_schema_log(
+        "## Migration 202_unexpected_unapplied — leftover (NOT YET APPLIED)\n"
+    )
+    findings = compare(docs, [], deferred=frozenset({201}), watch_from=195)
+    assert _kinds(findings) == ["docs_unapplied_live_missing"]
+    assert findings[0].number == 202
+    assert "not on the deferred allowlist" in findings[0].detail
+
+
+def test_deferred_201_silent_while_unexpected_unapplied_is_finding():
+    docs = parse_schema_log(
+        DEFERRED_201 + "\n## Migration 202_unexpected_unapplied (NOT YET APPLIED)\n"
+    )
+    findings = compare(docs, [], deferred=frozenset({201}), watch_from=195)
+    assert _kinds(findings) == ["docs_unapplied_live_missing"]
+    assert [item.number for item in findings] == [202]
+
+
+def test_201_is_flagged_when_allowlist_is_empty():
+    docs = parse_schema_log(DEFERRED_201)
+    findings = compare(docs, [], deferred=frozenset(), watch_from=195)
+    assert _kinds(findings) == ["docs_unapplied_live_missing"]
+    assert findings[0].number == 201
+
+
 def test_deferred_201_still_fails_if_live_has_it_and_docs_say_unapplied():
     docs = parse_schema_log(DEFERRED_201)
     live = [{"version": "20260903120000", "name": "201_website_connections"}]
@@ -94,6 +121,41 @@ def test_prod_195_name_without_number_prefix_matches():
     live = [{"version": "20260828175205", "name": "os_tool_executions"}]
     findings = compare(docs, live, deferred=DEFAULT_DEFERRED, watch_from=195)
     assert findings == []
+
+
+def test_canonical_schema_log_accepts_prod_195_unprefixed_name():
+    docs = parse_schema_log(
+        (REPO_ROOT / "docs" / "dev-knowledge" / "schema-log.md").read_text(encoding="utf-8")
+    )
+    live = [
+        {"version": "20260828175205", "name": "os_tool_executions"},
+        {"version": "20260830024338", "name": "196_os_tool_executions_status_no_approved"},
+        {"version": "20260830024346", "name": "197_os_tool_executions_l2_idempotency_required"},
+        {"version": "20260830030000", "name": "198_tenant_kb_chunks"},
+        {"version": "20260902000000", "name": "199_os_workflows"},
+        {"version": "20260902010000", "name": "200_os_workflows_integrity"},
+    ]
+    findings = compare(docs, live, deferred=DEFAULT_DEFERRED, watch_from=195)
+    assert findings == []
+
+
+def test_run_check_unexpected_unapplied_exits_1_while_deferred_201_is_ok(tmp_path: Path):
+    schema_log = tmp_path / "schema-log.md"
+    schema_log.write_text(
+        DEFERRED_201 + "\n## Migration 202_unexpected_unapplied (NOT YET APPLIED)\n",
+        encoding="utf-8",
+    )
+    live_json = tmp_path / "live.json"
+    live_json.write_text("[]", encoding="utf-8")
+    code, lines = run_check(schema_log=schema_log, live_json=live_json, deferred=[201])
+    assert code == 1
+    assert any("docs_unapplied_live_missing" in line and "202" in line for line in lines)
+    assert not any("201" in line and "docs_unapplied_live_missing" in line for line in lines)
+
+    schema_log.write_text(DEFERRED_201, encoding="utf-8")
+    code_ok, lines_ok = run_check(schema_log=schema_log, live_json=live_json, deferred=[201])
+    assert code_ok == 0
+    assert any(line.startswith("OK:") for line in lines_ok)
 
 
 def test_duplicate_doc_numbers_are_findings():
