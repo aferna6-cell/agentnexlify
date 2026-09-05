@@ -23,6 +23,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from backend.services import sms_agent
+from backend.services.ai_usage_guard import AIUsageReservation
 
 
 # ---------------------------------------------------------------------------
@@ -96,6 +97,16 @@ def _base_tables(**overrides) -> dict:
         "faq_entries": {"select_data": []},
         "business_hours": {"select_data": []},
         "chat_messages": {"select_data": [], "insert_return": [{"id": "msg-1"}]},
+        "tenants": {
+            "select_data": [
+                {
+                    "id": "tenant-1",
+                    "plan": "chatbot",
+                    "ai_monthly_token_alert_threshold": None,
+                    "ai_monthly_token_hard_limit": None,
+                }
+            ]
+        },
     }
     tables.update(overrides)
     return tables
@@ -121,6 +132,31 @@ def _patch_common(monkeypatch, *, claude_text: str = "Sure, we're open 9-5.", ra
             return SimpleNamespace(text=claude_text)
 
     monkeypatch.setattr(sms_agent, "call_claude_messages", _fake_claude)
+    monkeypatch.setattr(
+        sms_agent,
+        "reserve_ai_tokens",
+        lambda **_k: AIUsageReservation(
+            allowed=True,
+            tenant_id=TENANT["id"],
+            period_month="2026-09-01",
+            estimated_tokens=500,
+            alert_threshold_tokens=640_000,
+            hard_limit_tokens=800_000,
+            reason="",
+        ),
+    )
+    monkeypatch.setattr(sms_agent, "record_ai_usage", lambda **_k: None)
+    monkeypatch.setattr(sms_agent, "release_ai_token_reservation", lambda *_a, **_k: None)
+
+    async def _new_delivery(*_a, **_k):
+        return True, None
+
+    async def _noop_idempotency(*_a, **_k):
+        return None
+
+    monkeypatch.setattr(sms_agent, "check_and_record", _new_delivery)
+    monkeypatch.setattr(sms_agent, "record_response", _noop_idempotency)
+    monkeypatch.setattr(sms_agent, "delete_key", _noop_idempotency)
 
 
 def _install_fake_escalations(monkeypatch):
