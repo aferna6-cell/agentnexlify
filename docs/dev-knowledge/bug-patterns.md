@@ -18894,3 +18894,44 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(voice): meter call summaries and dedupe dual triggers (#797)
+
+* fix(voice): meter calls.generate_summary and dedupe dual triggers
+
+Add pack-aware reserve/record/release around the existing Claude
+summary call. Claim calls.summary before the provider so live-AI
+finalize and transcription-complete cannot create two paid summaries.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+* fix(voice): release owned summary claim on pre-persist exits
+
+Hard-cap and provider-exception paths left SUMMARY_CLAIM in calls.summary,
+so later retries treated the slot as in-flight forever. Restore the
+pre-claim value only when the row still holds this attempt's unique
+token. Persist a real summary after a successful provider even if usage
+record fails; a summary-row persist failure stays retryable.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+* fix(voice): reclaim stale summary claims after a 15-minute lease
+
+Crash after claim-win left AI summary generating...#<uuid> forever.
+calls has no updated_at, and created_at is call age, so the issued-at
+unix timestamp now lives in the claim token. Fresh claims still dedupe;
+parseable stale tokens are CAS-reclaimable; unparseable tokens stay skipped.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+---------
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+**Date:** 2026-09-05
+**Commit:** 3b93367
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/pr-check.yml,backend/routers/calls_webhooks.py,backend/services/voice_call_summary.py,backend/tests/test_suite_round6.py,backend/tests/test_voice_call_summary_usage_guard.py,tests/test_calls.py,tests/test_voice_call_summary.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
