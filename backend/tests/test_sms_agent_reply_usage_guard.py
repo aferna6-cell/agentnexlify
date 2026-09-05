@@ -17,16 +17,20 @@ Contract:
 - Two distinct inbound MessageSids reserve and record independently.
 - Same MessageSid retry claims idempotency_keys
   (twilio:sms_agent:<MessageSid>) after silent compliance and before
-  increment/reserve/provider. A duplicate returns None (webhook does not
-  send). Empty MessageSid cannot be claimed.
+  increment/reserve/provider. response_body holds pending_send / sending /
+  sent so a failed send can retry the stored reply without a second
+  Claude call. A completed (sent/processed) or in-flight/sending replay
+  returns None. Empty MessageSid cannot be claimed.
 - New logs/errors are tenant id + session id only. No SMS body, phone,
   email, credentials, provider exception text, or generated reply.
 
 Run: pytest backend/tests/test_sms_agent_reply_usage_guard.py -q
 """
 
+import asyncio
 import inspect
 import logging
+import threading
 from contextlib import ExitStack, contextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -34,6 +38,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from backend.routers import twilio_webhooks
 from backend.services import sms_agent
 from backend.services.ai_usage_guard import AIUsageReservation, record_ai_usage
+from backend.services.idempotency import (
+    check_and_record,
+    compare_and_set_response,
+    delete_key,
+    fetch_response,
+    record_response,
+)
 from backend.services.sms_agent import REPLY_OPERATION, SMS_MAX_TOKENS
 from backend.tests.fake_supabase import run
 from backend.tests.test_sms_agent import (
@@ -173,6 +184,18 @@ def _patches(*, reserve=_allowed, provider=None, record=None, release=None, clai
         stack.enter_context(
             patch.object(
                 sms_agent, "delete_key", new=AsyncMock(side_effect=_noop_idempotency)
+            )
+        )
+        stack.enter_context(
+            patch.object(
+                sms_agent,
+                "compare_and_set_response",
+                new=AsyncMock(return_value=True),
+            )
+        )
+        stack.enter_context(
+            patch.object(
+                sms_agent, "fetch_response", new=AsyncMock(return_value=None)
             )
         )
         reserve_mock = stack.enter_context(
@@ -588,3 +611,378 @@ def test_reserve_uses_reloaded_tenant_id_and_estimate():
     assert captured["operation"] == REPLY_OPERATION
     assert captured["session_id"] == _SESSION_ID
     assert captured["estimated_tokens"] >= SMS_MAX_TOKENS
+
+
+# --- send-boundary lifecycle (real idempotency_keys helper + in-memory ledger)
+
+
+class _IdempotencyLedger:
+    """Thread-safe stand-in for idempotency_keys with PostgREST-shaped chains."""
+
+    def __init__(self):
+        self.rows: dict[str, dict] = {}
+        self._lock = threading.Lock()
+
+    def table(self, name):
+        assert name == "idempotency_keys"
+        return _IdempotencyQuery(self)
+
+
+class _IdempotencyQuery:
+    def __init__(self, ledger: _IdempotencyLedger):
+        self._ledger = ledger
+        self._op = None
+        self._row = None
+        self._filters: dict = {}
+
+    def upsert(self, row, on_conflict=None, ignore_duplicates=False):
+        self._op = "upsert"
+        self._row = row
+        return self
+
+    def update(self, values):
+        self._op = "update"
+        self._row = values
+        return self
+
+    def select(self, *_a, **_k):
+        if self._op is None:
+            self._op = "select"
+        return self
+
+    def delete(self):
+        self._op = "delete"
+        return self
+
+    def eq(self, col, val):
+        self._filters[col] = val
+        return self
+
+    def limit(self, *_a, **_k):
+        return self
+
+    def execute(self):
+        with self._ledger._lock:
+            if self._op == "upsert":
+                key = self._row["key"]
+                if key in self._ledger.rows:
+                    return SimpleNamespace(data=[])
+                stored = {
+                    "key": key,
+                    "provider": self._row.get("provider"),
+                    "response_status": None,
+                    "response_body": None,
+                }
+                self._ledger.rows[key] = stored
+                return SimpleNamespace(data=[dict(stored)])
+            if self._op == "select":
+                key = self._filters.get("key")
+                row = self._ledger.rows.get(key)
+                return SimpleNamespace(data=[dict(row)] if row else [])
+            if self._op == "update":
+                key = self._filters.get("key")
+                row = self._ledger.rows.get(key)
+                if not row:
+                    return SimpleNamespace(data=[])
+                for col, val in self._filters.items():
+                    if col == "key":
+                        continue
+                    if row.get(col) != val:
+                        return SimpleNamespace(data=[])
+                row.update(self._row)
+                return SimpleNamespace(data=[dict(row)])
+            if self._op == "delete":
+                key = self._filters.get("key")
+                self._ledger.rows.pop(key, None)
+                return SimpleNamespace(data=[])
+            return SimpleNamespace(data=[])
+
+
+class _ComboDB:
+    def __init__(self, tables, ledger: _IdempotencyLedger):
+        self._fake = FakeDB(tables)
+        self._ledger = ledger
+
+    def table(self, name):
+        if name == "idempotency_keys":
+            return self._ledger.table(name)
+        return self._fake.table(name)
+
+
+@contextmanager
+def _bind_real_idempotency():
+    """Use the production helpers against the combo DB ledger."""
+    with ExitStack() as stack:
+        stack.enter_context(patch.object(sms_agent, "check_and_record", check_and_record))
+        stack.enter_context(patch.object(sms_agent, "record_response", record_response))
+        stack.enter_context(patch.object(sms_agent, "delete_key", delete_key))
+        stack.enter_context(
+            patch.object(
+                sms_agent, "compare_and_set_response", compare_and_set_response
+            )
+        )
+        stack.enter_context(patch.object(sms_agent, "fetch_response", fetch_response))
+        yield
+
+
+async def _webhook_like_turn(db, *, sid, body=_BODY, send):
+    reply = await sms_agent.handle_inbound_sms(
+        db,
+        tenant=TENANT,
+        from_number=FROM_NUMBER,
+        to_number=TO_NUMBER,
+        body=body,
+        provider_message_id=sid,
+    )
+    if not reply:
+        return None, None
+    sent = False
+    try:
+        sent = await send(TENANT["id"], FROM_NUMBER, reply)
+    finally:
+        await sms_agent.finalize_sms_agent_send(
+            db,
+            tenant_id=_TENANT_ID,
+            provider_message_id=sid,
+            reply_text=reply,
+            sent=bool(sent),
+        )
+    return reply, sent
+
+
+def test_provider_success_send_failure_same_sid_retries_without_second_claude(caplog):
+    ledger = _IdempotencyLedger()
+    db = _ComboDB(_base_tables(), ledger)
+    sends: list[str] = []
+
+    async def send_fail_then_ok(_tenant_id, _to, reply):
+        sends.append(reply)
+        return len(sends) > 1
+
+    provider = AsyncMock(side_effect=_ok_claude)
+    with caplog.at_level(logging.INFO):
+        with _patches(provider=provider):
+            with _bind_real_idempotency():
+                first_reply, first_sent = run(
+                    _webhook_like_turn(db, sid="SM-send-retry", send=send_fail_then_ok)
+                )
+                second_reply, second_sent = run(
+                    _webhook_like_turn(db, sid="SM-send-retry", send=send_fail_then_ok)
+                )
+                third_reply, third_sent = run(
+                    _webhook_like_turn(db, sid="SM-send-retry", send=send_fail_then_ok)
+                )
+    _assert_no_secrets(caplog.text)
+
+    assert first_reply == _REPLY
+    assert first_sent is False
+    assert second_reply == _REPLY
+    assert second_sent is True
+    assert third_reply is None
+    assert third_sent is None
+    assert provider.await_count == 1
+    assert sends == [_REPLY, _REPLY]
+
+
+def test_concurrent_duplicate_while_processing_at_most_one_provider_and_send():
+    ledger = _IdempotencyLedger()
+    db = _ComboDB(_base_tables(), ledger)
+    started = asyncio.Event()
+    release = asyncio.Event()
+    sends: list[str] = []
+
+    async def slow_claude(**_k):
+        started.set()
+        await release.wait()
+        return _claude_result()
+
+    async def send_ok(_tenant_id, _to, reply):
+        sends.append(reply)
+        return True
+
+    provider = AsyncMock(side_effect=slow_claude)
+    with _patches(provider=provider):
+        with _bind_real_idempotency():
+
+            async def scenario():
+                first = asyncio.create_task(
+                    _webhook_like_turn(db, sid="SM-concurrent", send=send_ok)
+                )
+                await started.wait()
+                second = await _webhook_like_turn(
+                    db, sid="SM-concurrent", send=send_ok
+                )
+                release.set()
+                first_result = await first
+                return first_result, second
+
+            first_result, second_result = run(scenario())
+
+    assert first_result == (_REPLY, True)
+    assert second_result == (None, None)
+    assert provider.await_count == 1
+    assert sends == [_REPLY]
+
+
+def test_completed_delivery_replay_is_silent():
+    ledger = _IdempotencyLedger()
+    db = _ComboDB(_base_tables(), ledger)
+    sends: list[str] = []
+
+    async def send_ok(_tenant_id, _to, reply):
+        sends.append(reply)
+        return True
+
+    provider = AsyncMock(side_effect=_ok_claude)
+    with _patches(provider=provider):
+        with _bind_real_idempotency():
+            first_reply, first_sent = run(
+                _webhook_like_turn(db, sid="SM-done", send=send_ok)
+            )
+            replay_reply, replay_sent = run(
+                _webhook_like_turn(db, sid="SM-done", send=send_ok)
+            )
+
+    assert first_reply == _REPLY
+    assert first_sent is True
+    assert replay_reply is None
+    assert replay_sent is None
+    assert provider.await_count == 1
+    assert sends == [_REPLY]
+
+
+def test_hard_cap_and_missing_tenant_still_skip_provider_on_send_boundary():
+    ledger = _IdempotencyLedger()
+    provider = AsyncMock(side_effect=_ok_claude)
+
+    async def send_ok(_tenant_id, _to, reply):
+        return True
+
+    with _patches(reserve=_blocked, provider=provider):
+        with _bind_real_idempotency():
+            db = _ComboDB(_base_tables(), ledger)
+            reply, sent = run(_webhook_like_turn(db, sid="SM-hardcap", send=send_ok))
+    assert reply == _FALLBACK
+    assert sent is True
+    provider.assert_not_awaited()
+
+    missing = _ComboDB(_base_tables(tenants={"select_data": []}), _IdempotencyLedger())
+    provider_missing = AsyncMock(side_effect=_ok_claude)
+    with _patches(provider=provider_missing):
+        with _bind_real_idempotency():
+            reply, sent = run(
+                _webhook_like_turn(missing, sid="SM-missing-tenant", send=send_ok)
+            )
+    assert reply == _FALLBACK
+    assert sent is True
+    provider_missing.assert_not_awaited()
+
+
+def test_provider_exception_releases_and_leaves_fallback_retryable(caplog):
+    ledger = _IdempotencyLedger()
+    db = _ComboDB(_base_tables(), ledger)
+    sends: list[str] = []
+
+    def boom(**_k):
+        raise RuntimeError("claude down")
+
+    async def send_fail_then_ok(_tenant_id, _to, reply):
+        sends.append(reply)
+        return len(sends) > 1
+
+    release = MagicMock()
+    with caplog.at_level(logging.WARNING):
+        with _patches(
+            provider=AsyncMock(side_effect=boom),
+            release=release,
+        ):
+            with _bind_real_idempotency():
+                first_reply, first_sent = run(
+                    _webhook_like_turn(db, sid="SM-prov-fail", send=send_fail_then_ok)
+                )
+                second_reply, second_sent = run(
+                    _webhook_like_turn(db, sid="SM-prov-fail", send=send_fail_then_ok)
+                )
+
+    assert first_reply == _FALLBACK
+    assert first_sent is False
+    assert second_reply == _FALLBACK
+    assert second_sent is True
+    release.assert_called_once()
+    _assert_no_secrets(caplog.text)
+    assert sends == [_FALLBACK, _FALLBACK]
+
+
+def test_record_persist_failure_still_sends_once_and_cleans_reservation():
+    ledger = _IdempotencyLedger()
+    db = _ComboDB(_base_tables(), ledger)
+    reservation = _allowed()
+    sends: list[str] = []
+
+    def fail_record(**kwargs):
+        return record_ai_usage(**kwargs)
+
+    async def send_ok(_tenant_id, _to, reply):
+        sends.append(reply)
+        return True
+
+    with _patches(reserve=lambda **_k: reservation, record=fail_record):
+        with _bind_real_idempotency():
+            with (
+                patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+                patch(
+                    "backend.services.ai_usage_guard.release_ai_token_reservation"
+                ) as release,
+            ):
+                mock_supa.return_value.rpc.side_effect = RuntimeError("record rpc down")
+                reply, sent = run(
+                    _webhook_like_turn(db, sid="SM-record-fail", send=send_ok)
+                )
+                replay, replay_sent = run(
+                    _webhook_like_turn(db, sid="SM-record-fail", send=send_ok)
+                )
+    assert reply == _REPLY
+    assert sent is True
+    assert replay is None
+    assert replay_sent is None
+    release.assert_called_once_with(reservation)
+    assert sends == [_REPLY]
+
+
+def test_empty_messagesid_residual_still_uncached():
+    ledger = _IdempotencyLedger()
+    db = _ComboDB(_base_tables(), ledger)
+    sends: list[str] = []
+
+    async def send_ok(_tenant_id, _to, reply):
+        sends.append(reply)
+        return True
+
+    provider = AsyncMock(side_effect=_ok_claude)
+    with _patches(provider=provider):
+        with _bind_real_idempotency():
+            first, first_sent = run(
+                _webhook_like_turn(db, sid="  ", send=send_ok)
+            )
+            second, second_sent = run(
+                _webhook_like_turn(db, sid="  ", send=send_ok)
+            )
+
+    assert first == _REPLY
+    assert second == _REPLY
+    assert first_sent is True
+    assert second_sent is True
+    assert provider.await_count == 2
+    assert sends == [_REPLY, _REPLY]
+    assert ledger.rows == {}
+
+
+def test_webhook_finalizes_after_send_and_does_not_log_reply():
+    src = inspect.getsource(twilio_webhooks.handle_inbound_sms)
+    assert src.count("await sms_agent.send_sms_agent_reply") == 1
+    assert src.count("await sms_agent.finalize_sms_agent_send") == 1
+    assert src.index("send_sms_agent_reply") < src.index("finalize_sms_agent_send")
+    finalize_src = inspect.getsource(sms_agent.finalize_sms_agent_send)
+    assert "reply_text" in finalize_src
+    assert "logger" in finalize_src
+    assert "reply_text" not in finalize_src.split("logger.warning")[1]

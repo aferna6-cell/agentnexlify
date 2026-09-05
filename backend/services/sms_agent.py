@@ -30,11 +30,27 @@ persisting usage.
 
 Same Twilio MessageSid redelivery is claimed on ``idempotency_keys``
 (key ``twilio:sms_agent:<MessageSid>``) after the silent compliance
-gates and before increment/reserve/provider/send. A duplicate or
-in-flight claim returns None so the webhook does not send again.
-Empty MessageSid cannot be claimed (residual). A crash after claim-win
-and before ``record_response`` leaves an in-flight row; the existing
-helper then skips later deliveries (same residual as Stripe).
+gates and before increment/reserve/provider. ``response_body`` carries
+the send-boundary state:
+
+- NULL body: in-flight generate (concurrent retry is silent)
+- ``pending_send`` + reply: generate finished, send not confirmed
+- ``sending`` + reply + claim token: one worker owns the send attempt
+- ``sent`` / legacy ``processed``: delivery finished; later replay is silent
+
+A same-SID retry after a recorded send failure must not call Claude
+again; it CAS-claims ``pending_send`` and returns the stored reply so
+the webhook can send. Empty MessageSid cannot be claimed (residual).
+
+Crash windows (exactly-once send is not provable — no outbound SID is
+tied to the inbound MessageSid):
+
+- Claim-win then crash before ``pending_send``: later deliveries see
+  in-flight NULL and skip (at-most-once; same residual as Stripe).
+- ``pending_send`` persisted, crash before send-claim: retry can send.
+- Crash after send-claim (``sending``) before finalize: later
+  deliveries skip (at-most-once). Twilio may have accepted or not.
+- ``check_and_record`` upsert fail-open can still double-process.
 
 Session mapping reuses the existing 'sms_<digits>' session_id convention
 established in backend/routers/sms.py (outbound "text this lead" flow) and
@@ -48,6 +64,7 @@ FastAPI app adds ``from __future__ import annotations``.
 
 import logging
 import re
+from uuid import uuid4
 from typing import Any
 
 from backend.routers.widget_chat_helpers import (
@@ -65,7 +82,13 @@ from backend.services.ai_usage_guard import (
     release_ai_token_reservation,
     reserve_ai_tokens,
 )
-from backend.services.idempotency import check_and_record, delete_key, record_response
+from backend.services.idempotency import (
+    check_and_record,
+    compare_and_set_response,
+    delete_key,
+    fetch_response,
+    record_response,
+)
 from backend.services.llm_runtime import call_claude_messages, resolve_string_setting
 from backend.services.twilio_service import send_sms
 
@@ -86,6 +109,13 @@ _ESCALATION_REASON = "Visitor requested a human via SMS"
 _ESCALATION_PRIORITY = "normal"
 REPLY_OPERATION = "sms_agent.reply"
 _IDEMPOTENCY_PROVIDER = "twilio"
+_DELIVERY_PENDING = "pending_send"
+_DELIVERY_SENDING = "sending"
+_DELIVERY_SENT = "sent"
+_DELIVERY_PROCESSED = "processed"
+_DELIVERY_PENDING_STATUS = 202
+_DELIVERY_SENDING_STATUS = 102
+_DELIVERY_SENT_STATUS = 200
 
 
 # ---------------------------------------------------------------------------
@@ -323,7 +353,7 @@ def _create_sms_escalation(
 # ---------------------------------------------------------------------------
 
 
-async def send_sms_agent_reply(tenant_id: str, to: str, body: str) -> None:
+async def send_sms_agent_reply(tenant_id: str, to: str, body: str) -> bool:
     """Send an sms_agent reply via the tenant's own Twilio (BYO) when
     connected, else the shared platform pool.
 
@@ -334,6 +364,8 @@ async def send_sms_agent_reply(tenant_id: str, to: str, body: str) -> None:
     a standalone success/failure the caller can act on directly. Called from
     backend/routers/twilio_webhooks.py after ``handle_inbound_sms`` returns a
     reply. Never raises — logs and swallows send failures on both paths.
+    Returns True only when BYO or the platform pool accepted the send.
+    Does not log ``body``.
     """
     try:
         if twilio_tenant.is_connected(tenant_id):
@@ -341,7 +373,7 @@ async def send_sms_agent_reply(tenant_id: str, to: str, body: str) -> None:
                 tenant_id=tenant_id, to=to, body=body
             )
             if result.get("success"):
-                return
+                return True
             logger.warning(
                 "sms_agent: twilio_byo send failed tenant=%s detail=%s",
                 tenant_id,
@@ -355,6 +387,8 @@ async def send_sms_agent_reply(tenant_id: str, to: str, body: str) -> None:
     sent = await send_sms(to=to, body=body, tenant_id=tenant_id)
     if not sent:
         logger.warning("sms_agent: platform send_sms failed tenant=%s", tenant_id)
+        return False
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -415,6 +449,118 @@ def _persist_claude_fallback(tenant_id: str, session_id: str, body: str) -> str:
     return reply_text
 
 
+def _delivery_body_status(body: Any) -> str:
+    if not isinstance(body, dict):
+        return "unknown"
+    status = body.get("status")
+    if status in (
+        _DELIVERY_PENDING,
+        _DELIVERY_SENDING,
+        _DELIVERY_SENT,
+        _DELIVERY_PROCESSED,
+    ):
+        return status
+    return "unknown"
+
+
+def _pending_reply_from_cached(cached: dict | None) -> str | None:
+    """Return a stored unsent reply, or None when the retry must stay silent.
+
+    Does not log the reply.
+    """
+    if not cached or cached.get("in_flight"):
+        return None
+    body = cached.get("response_body")
+    if _delivery_body_status(body) != _DELIVERY_PENDING:
+        return None
+    reply = body.get("reply") if isinstance(body, dict) else None
+    if isinstance(reply, str) and reply:
+        return reply
+    return None
+
+
+def _pending_payload(reply: str) -> dict[str, str]:
+    return {"status": _DELIVERY_PENDING, "reply": reply}
+
+
+def _sending_payload(reply: str, claim_token: str) -> dict[str, str]:
+    return {"status": _DELIVERY_SENDING, "reply": reply, "claim": claim_token}
+
+
+def _sent_payload() -> dict[str, str]:
+    return {"status": _DELIVERY_SENT}
+
+
+async def _claim_pending_send(db: Any, delivery_key: str, reply: str) -> bool:
+    token = uuid4().hex
+    return await compare_and_set_response(
+        db,
+        delivery_key,
+        expected_status=_DELIVERY_PENDING_STATUS,
+        status=_DELIVERY_SENDING_STATUS,
+        body=_sending_payload(reply, token),
+        claim_token=token,
+    )
+
+
+async def _load_delivery_status(db: Any, delivery_key: str) -> str:
+    cached = await fetch_response(db, delivery_key)
+    if cached is None:
+        return "missing"
+    if cached.get("response_body") is None:
+        return "in_flight"
+    return _delivery_body_status(cached.get("response_body"))
+
+
+async def _prepare_send_slot(
+    db: Any, delivery_key: str, reply: str, *, is_new: bool
+) -> bool:
+    """Claim the send slot for this reply. True means the caller may send."""
+    await record_response(
+        db, delivery_key, _DELIVERY_PENDING_STATUS, _pending_payload(reply)
+    )
+    if await _claim_pending_send(db, delivery_key, reply):
+        return True
+    state = await _load_delivery_status(db, delivery_key)
+    if state in (_DELIVERY_SENDING, _DELIVERY_SENT, _DELIVERY_PROCESSED):
+        return False
+    if not is_new:
+        return False
+    # Original claim-winner: pending persist may have failed (NULL/missing).
+    # Mark sending best-effort so a concurrent retry stays silent.
+    token = uuid4().hex
+    await record_response(
+        db, delivery_key, _DELIVERY_SENDING_STATUS, _sending_payload(reply, token)
+    )
+    return True
+
+
+async def finalize_sms_agent_send(
+    db: Any,
+    *,
+    tenant_id: str,
+    provider_message_id: str,
+    reply_text: str,
+    sent: bool,
+) -> None:
+    """Record send success or restore pending_send so the same SID can retry.
+
+    Does not log ``reply_text``. Empty MessageSid is a no-op (uncached residual).
+    """
+    delivery_key = _sms_agent_delivery_key(provider_message_id)
+    if not delivery_key:
+        return
+    if sent:
+        await record_response(db, delivery_key, _DELIVERY_SENT_STATUS, _sent_payload())
+        return
+    await record_response(
+        db, delivery_key, _DELIVERY_PENDING_STATUS, _pending_payload(reply_text)
+    )
+    logger.warning(
+        "sms_agent: send failed; delivery left pending tenant=%s", tenant_id
+    )
+
+
 # ---------------------------------------------------------------------------
 # Public entrypoint
 # ---------------------------------------------------------------------------
@@ -433,7 +579,9 @@ async def handle_inbound_sms(
 
     Returns the reply text to send back to ``from_number``, or ``None`` when
     the turn must stay silent — opted out, rate-limited, already in human
-    handoff, or a duplicate Twilio MessageSid delivery. Budget misses and
+    handoff, an in-flight/sending/sent MessageSid, or a lost send-claim.
+    A ``pending_send`` replay returns the stored reply so the webhook can
+    retry the send without a second Claude call. Budget misses and
     provider errors use the existing Claude-error fallback SMS.
     """
     tenant_id = tenant["id"]
@@ -489,13 +637,24 @@ async def handle_inbound_sms(
     _find_or_create_lead(db, tenant_id, from_number)
 
     # 6. Durable MessageSid claim — after silent compliance, before increment
-    # or Claude. Same inbound redelivery must not reserve, call, or send twice.
+    # or Claude. Same inbound redelivery must not reserve or call twice.
+    # pending_send replays return the stored reply so the webhook can send.
     delivery_key = _sms_agent_delivery_key(provider_message_id)
+    is_new = True
     if delivery_key:
-        is_new, _cached = await check_and_record(
+        is_new, cached = await check_and_record(
             db, _IDEMPOTENCY_PROVIDER, _sms_agent_event_id(provider_message_id)
         )
         if not is_new:
+            pending_reply = _pending_reply_from_cached(cached)
+            if pending_reply and await _claim_pending_send(
+                db, delivery_key, pending_reply
+            ):
+                logger.info(
+                    "sms_agent: retrying unsent inbound delivery tenant=%s",
+                    tenant_id,
+                )
+                return pending_reply
             logger.info(
                 "sms_agent: duplicate inbound delivery tenant=%s", tenant_id
             )
@@ -634,7 +793,12 @@ async def handle_inbound_sms(
         raise
 
     if delivery_key:
-        await record_response(
-            db, delivery_key, 200, {"status": "processed"}
+        may_send = await _prepare_send_slot(
+            db, delivery_key, reply_text, is_new=is_new
         )
+        if not may_send:
+            logger.info(
+                "sms_agent: lost send claim tenant=%s", tenant_id
+            )
+            return None
     return reply_text

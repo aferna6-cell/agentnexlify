@@ -661,8 +661,9 @@ class TestSendSmsAgentReply:
         platform_send = AsyncMock(return_value=True)
         monkeypatch.setattr(sms_agent, "send_sms", platform_send)
 
-        _run(sms_agent.send_sms_agent_reply(TENANT["id"], FROM_NUMBER, "hi there"))
+        result = _run(sms_agent.send_sms_agent_reply(TENANT["id"], FROM_NUMBER, "hi there"))
 
+        assert result is True
         byo_send.assert_awaited_once_with(
             tenant_id=TENANT["id"], to=FROM_NUMBER, body="hi there"
         )
@@ -675,8 +676,9 @@ class TestSendSmsAgentReply:
         platform_send = AsyncMock(return_value=True)
         monkeypatch.setattr(sms_agent, "send_sms", platform_send)
 
-        _run(sms_agent.send_sms_agent_reply(TENANT["id"], FROM_NUMBER, "hi there"))
+        result = _run(sms_agent.send_sms_agent_reply(TENANT["id"], FROM_NUMBER, "hi there"))
 
+        assert result is True
         byo_send.assert_awaited_once()
         platform_send.assert_awaited_once_with(
             to=FROM_NUMBER, body="hi there", tenant_id=TENANT["id"]
@@ -712,8 +714,8 @@ class TestSendSmsAgentReply:
 
     def test_platform_send_failure_does_not_raise(self, monkeypatch):
         """A False from the platform send_sms fallback (both providers
-        exhausted) must be logged, never raised -- caller never awaits a
-        return value from this function."""
+        exhausted) must be logged, never raised -- the webhook uses the
+        bool to leave the MessageSid pending for retry."""
         monkeypatch.setattr(sms_agent.twilio_tenant, "is_connected", lambda *_a: False)
         platform_send = AsyncMock(return_value=False)
         monkeypatch.setattr(sms_agent, "send_sms", platform_send)
@@ -722,7 +724,7 @@ class TestSendSmsAgentReply:
             sms_agent.send_sms_agent_reply(TENANT["id"], FROM_NUMBER, "hi there")
         )
 
-        assert result is None
+        assert result is False
         platform_send.assert_awaited_once()
 
 

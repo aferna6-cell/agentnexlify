@@ -89,7 +89,7 @@ async def check_and_record(
         cached["in_flight"] = True
         logger.info("idempotency: in-flight duplicate key=%s", key)
     else:
-        logger.info("idempotency: completed duplicate key=%s — returning cached", key)
+        logger.info("idempotency: existing duplicate key=%s — returning cached", key)
     return False, cached
 
 
@@ -127,3 +127,54 @@ async def record_response(
         ).eq("key", key).execute()
     except Exception:
         logger.exception("idempotency record_response failed for key=%s", key)
+
+
+async def fetch_response(supabase, key: str) -> dict | None:
+    """Load the current cached status/body for a key. Never logs the body."""
+    try:
+        existing = (
+            supabase.table("idempotency_keys")
+            .select("response_status, response_body")
+            .eq("key", key)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.exception("idempotency fetch_response failed for key=%s", key)
+        return None
+    rows = getattr(existing, "data", None) or []
+    if not rows:
+        return None
+    row = rows[0]
+    return {
+        "response_status": row.get("response_status"),
+        "response_body": row.get("response_body"),
+    }
+
+
+async def compare_and_set_response(
+    supabase,
+    key: str,
+    expected_status: int,
+    status: int,
+    body: dict,
+    claim_token: str,
+) -> bool:
+    """Move a row from expected_status to status only if this caller wins.
+
+    Confirms the win by re-reading ``response_body.claim`` so a
+    return=minimal update cannot be mistaken for success or failure.
+    Does not log ``body``. Fail-closed on error.
+    """
+    try:
+        supabase.table("idempotency_keys").update(
+            {"response_status": status, "response_body": body}
+        ).eq("key", key).eq("response_status", expected_status).execute()
+    except Exception:
+        logger.exception("idempotency compare_and_set failed for key=%s", key)
+        return False
+    cached = await fetch_response(supabase, key)
+    cached_body = (cached or {}).get("response_body")
+    if not isinstance(cached_body, dict):
+        return False
+    return cached_body.get("claim") == claim_token
