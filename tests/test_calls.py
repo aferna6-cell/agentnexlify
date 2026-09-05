@@ -811,12 +811,25 @@ class TestGenerateCallSummary:
 
     @pytest.mark.asyncio
     @patch("backend.services.voice_call_summary.log_activity")
+    @patch("backend.services.voice_call_summary.record_ai_usage")
+    @patch("backend.services.voice_call_summary.reserve_ai_tokens")
     @patch("backend.services.voice_call_summary.get_service_supabase")
     @patch("backend.services.voice_call_summary.call_claude_messages", new_callable=AsyncMock)
-    async def test_summary_parses_json_response(self, mock_call_claude, mock_db, mock_activity):
+    async def test_summary_parses_json_response(
+        self, mock_call_claude, mock_db, mock_reserve, mock_record, mock_activity
+    ):
         """Summary should parse Claude's JSON response and update the call."""
+        from backend.services.ai_usage_guard import AIUsageReservation
         from backend.services.voice_call_summary import _generate_call_summary
 
+        mock_reserve.return_value = AIUsageReservation(
+            allowed=True,
+            tenant_id="tenant-001",
+            period_month="2026-09-01",
+            estimated_tokens=800,
+            alert_threshold_tokens=4_000_000,
+            hard_limit_tokens=5_000_000,
+        )
         mock_call_claude.return_value = MagicMock(
             text='{"summary": "Caller asked about pricing.", "action_items": ["Send quote by Friday"], "sentiment": "positive", "follow_up": "Email pricing sheet"}',
             duration_ms=175,
@@ -824,7 +837,8 @@ class TestGenerateCallSummary:
 
         calls_table = MagicMock()
         action_items_table = MagicMock()
-        for table in (calls_table, action_items_table):
+        tenants_table = MagicMock()
+        for table in (calls_table, action_items_table, tenants_table):
             for method in [
                 "select", "insert", "update", "delete",
                 "eq", "neq", "gte", "lte", "gt", "lt",
@@ -843,6 +857,10 @@ class TestGenerateCallSummary:
         action_result.count = 1
         action_items_table.execute.return_value = action_result
 
+        tenants_result = MagicMock()
+        tenants_result.data = [{"id": "tenant-001", "plan": "agent_os"}]
+        tenants_table.execute.return_value = tenants_result
+
         mock_client = MagicMock()
         mock_db.return_value = mock_client
 
@@ -851,6 +869,8 @@ class TestGenerateCallSummary:
                 return calls_table
             if name == "action_items":
                 return action_items_table
+            if name == "tenants":
+                return tenants_table
             raise AssertionError(f"Unexpected table requested: {name}")
 
         mock_client.table.side_effect = table_lookup
@@ -863,14 +883,19 @@ class TestGenerateCallSummary:
         )
 
         mock_call_claude.assert_awaited_once()
-        calls_table.update.assert_called_once()
-        update_payload = calls_table.update.call_args.args[0]
+        persist_updates = [
+            call.args[0]
+            for call in calls_table.update.call_args_list
+            if "sentiment" in call.args[0]
+        ]
+        assert len(persist_updates) == 1
+        update_payload = persist_updates[0]
         assert update_payload["summary"] == "Caller asked about pricing."
         assert update_payload["sentiment"] == "positive"
         assert update_payload["action_taken"] == (
             "Follow-up: Email pricing sheet | Action items: Send quote by Friday"
         )
-        assert calls_table.eq.call_args_list[0].args == ("id", "call-001")
+        assert any(c.args == ("id", "call-001") for c in calls_table.eq.call_args_list)
 
         action_items_table.insert.assert_called_once()
         insert_payload = action_items_table.insert.call_args.args[0]

@@ -44,6 +44,8 @@ from backend.services.voice_twiml import (
 from backend.services.voice_call_summary import (
     _finalize_ai_call,
     _generate_call_summary,
+    should_skip_summary_generation,
+    should_write_generating_placeholder,
 )
 from backend.services.voice_phone_routing import (
     _ai_voice_mode,
@@ -980,7 +982,7 @@ async def handle_transcription_complete(
     try:
         result = (
             db.table("calls")
-            .select("id, tenant_id, lead_id, transcript")
+            .select("id, tenant_id, lead_id, transcript, summary")
             .eq("twilio_call_sid", call_sid)
             .limit(1)
             .execute()
@@ -1019,15 +1021,33 @@ async def handle_transcription_complete(
         # Append the new transcription entry
         transcript_entry = existing_transcript + transcript_entry
 
+    current_summary = call_record.get("summary")
+    already_summarized = should_skip_summary_generation(current_summary)
+    update_payload: dict[str, Any] = {"transcript": transcript_entry}
+    if should_write_generating_placeholder(current_summary):
+        update_payload["summary"] = "Transcription received. AI summary generating..."
+
     # Update the call record with the transcript
     try:
-        db.table("calls").update({
-            "transcript": transcript_entry,
-            "summary": "Transcription received. AI summary generating...",
-        }).eq("id", call_id).eq("tenant_id", tenant_id).execute()
+        db.table("calls").update(update_payload).eq("id", call_id).eq(
+            "tenant_id", tenant_id
+        ).execute()
         logger.info("Stored transcript for call %s (tenant %s)", call_id, tenant_id)
     except Exception:
-        logger.exception("Failed to update call %s with transcript", call_id)
+        logger.warning(
+            "transcription-complete: transcript persist skipped tenant=%s call=%s",
+            tenant_id,
+            call_id,
+        )
+
+    if already_summarized:
+        logger.info(
+            "transcription-complete: summary already claimed or persisted "
+            "tenant=%s call=%s — skipping provider",
+            tenant_id,
+            call_id,
+        )
+        return Response(content="OK", media_type="text/plain")
 
     # Trigger AI summary generation as a background task (Feature 2)
     # Build the full transcript text for the AI
