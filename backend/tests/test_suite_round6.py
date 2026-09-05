@@ -373,8 +373,8 @@ class TestVoiceBridge:
 
         db = _db(
             {
-                "calls": [{"caller_phone": "+15550001111"}],
-                "tenants": [{"business_name": "Biz"}],
+                "calls": [{"id": "call_1", "tenant_id": "t1", "caller_phone": "+15550001111", "summary": "AI conversation completed. Summary generating..."}],
+                "tenants": [{"id": "t1", "plan": "agent_os", "business_name": "Biz"}],
                 "action_items": [],
             }
         )
@@ -391,6 +391,11 @@ class TestVoiceBridge:
         ), patch(
             "backend.services.voice_call_summary.get_service_supabase",
             return_value=db,
+        ), patch(
+            "backend.services.voice_call_summary.reserve_ai_tokens",
+            return_value=MagicMock(allowed=True, reason=""),
+        ), patch(
+            "backend.services.voice_call_summary.record_ai_usage",
         ), patch(
             "backend.services.voice_recovery.create_missed_call_followup",
             new=AsyncMock(),

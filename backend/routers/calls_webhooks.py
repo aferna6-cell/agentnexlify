@@ -20,6 +20,12 @@ from backend.config import settings
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.services.activity import log_activity
+from backend.services.ai_usage_guard import (
+    estimate_widget_chat_tokens,
+    record_ai_usage,
+    release_ai_token_reservation,
+    reserve_ai_tokens,
+)
 from backend.services.llm_runtime import (
     call_claude_messages,
     resolve_int_setting,
@@ -38,6 +44,8 @@ from backend.services.voice_twiml import (
 from backend.services.voice_call_summary import (
     _finalize_ai_call,
     _generate_call_summary,
+    should_skip_summary_generation,
+    should_write_generating_placeholder,
 )
 from backend.services.voice_phone_routing import (
     _ai_voice_mode,
@@ -49,6 +57,147 @@ logger = logging.getLogger(__name__)
 
 # Max AI conversation rounds before ending the call
 _MAX_VOICE_ROUNDS = 3
+
+# Spoken when Claude itself fails. Keep this exact string — callers and tests
+# treat it as the live-AI recovery line.
+_VOICE_CLAUDE_FALLBACK = (
+    "I'm sorry, I'm having a little trouble right now. "
+    "Let me have someone call you back as soon as possible."
+)
+# Spoken when the monthly token hard cap blocks the provider. Twilio still
+# gets HTTP 200 TwiML; more Gather rounds cannot unblock a monthly cap.
+_VOICE_USAGE_PAUSED = (
+    "Thanks for calling. This assistant is temporarily paused "
+    "because monthly usage is unusually high. Someone from the team "
+    "will follow up with you shortly."
+)
+
+
+class VoiceBudgetExceeded(Exception):
+    """Monthly AI hard cap blocked the live-AI Claude call."""
+
+
+class VoiceBudgetGuardUnavailable(Exception):
+    """Tenant/policy could not be loaded — fail closed before the provider."""
+
+
+def _load_voice_budget_tenant(db: Any, tenant_id: str) -> dict[str, Any] | None:
+    """Load the tenant row needed for a pack-aware reservation.
+
+    Returns None when the row is missing or the lookup throws. Callers must
+    fail closed before the provider — do not invent a free-plan cap (that
+    would falsely block a paying tenant or ignore purchased packs) and do
+    not call Claude unmetered.
+    """
+    try:
+        rows = (
+            db.table("tenants")
+            .select(
+                "id, plan, ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit"
+            )
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        ).data or []
+    except Exception:
+        # Do not attach the lookup exception: it may contain connection or
+        # customer context. Tenant id is enough to find the row.
+        logger.warning(
+            "voice respond tenant load failed tenant=%s",
+            tenant_id,
+        )
+        return None
+    if not rows:
+        logger.warning(
+            "voice respond tenant missing tenant=%s — failing closed before provider",
+            tenant_id,
+        )
+        return None
+    return {**rows[0], "id": tenant_id}
+
+
+async def _call_voice_claude_with_budget(
+    *,
+    db: Any,
+    tenant_id: str,
+    call_sid: str,
+    system: str,
+    messages: list[dict[str, str]],
+    model: str,
+    max_tokens: int,
+    round_num: int,
+    faq_chars: int,
+):
+    """Reserve → Claude → record, or release on provider/error.
+
+    llm_runtime only times/logs the provider call. Reservation + recording
+    live here so live-AI voice spend uses the same contract as widget chat.
+
+    Tenant/policy load failure fails closed here (no provider call). A
+    later reserve RPC outage is different: reserve_ai_tokens returns
+    allowed=True / reason=guard_unavailable and the shared helper may
+    still call the provider without persisting usage.
+    """
+    tenant = _load_voice_budget_tenant(db, tenant_id)
+    if tenant is None:
+        logger.warning(
+            "voice respond budget tenant unavailable tenant=%s — "
+            "failing closed before provider",
+            tenant_id,
+        )
+        raise VoiceBudgetGuardUnavailable(
+            "AI usage guard unavailable — tenant policy could not be loaded"
+        )
+    reservation = reserve_ai_tokens(
+        tenant=tenant,
+        estimated_tokens=estimate_widget_chat_tokens(
+            system_prompt=system,
+            messages=messages,
+            max_tokens=max_tokens,
+        ),
+        operation="calls.voice_respond",
+        session_id=call_sid,
+    )
+    if not reservation.allowed:
+        raise VoiceBudgetExceeded(
+            "Monthly AI usage limit reached — add a usage pack or wait for the next cycle"
+        )
+
+    try:
+        resp = await call_claude_messages(
+            operation="calls.voice_respond",
+            model=model,
+            max_tokens=max_tokens,
+            system=system,
+            messages=messages,
+            temperature=0.0,
+            timeout=30.0,
+            # Opt-in prompt caching (cost lever F4) — same tenant KB/persona
+            # prefix repeats across the 3-round Gather/Say loop for one call.
+            # Anthropic caches on exact text hash: per-tenant isolation, no
+            # shared key. Default 5-min TTL comfortably covers a live call.
+            cache_system=True,
+            metadata={
+                "tenant_id": tenant_id,
+                "call_sid": call_sid,
+                "round": round_num,
+                "history_count": len(messages),
+                "faq_chars": faq_chars,
+            },
+        )
+    except Exception:
+        release_ai_token_reservation(reservation)
+        raise
+
+    record_ai_usage(
+        reservation=reservation,
+        result=resp,
+        operation="calls.voice_respond",
+        session_id=call_sid,
+        model=model,
+    )
+    return resp
+
 
 # Mounted by calls.py under its /api/v1/calls prefix.
 router = APIRouter()
@@ -272,8 +421,8 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
         round_num = 1
 
     logger.info(
-        "Voice respond: SID=%s, round=%d, speech='%s'",
-        call_sid, round_num, speech_result[:100],
+        "Voice respond: SID=%s, round=%d, speech_chars=%d",
+        call_sid, round_num, len(speech_result),
     )
 
     if not speech_result:
@@ -296,6 +445,31 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
         )
 
     tenant_id = tenant["id"]
+    # Respond is an independently reachable Twilio webhook. Incoming's live-AI
+    # gate is not inherited from the Gather action URL, so a signed but
+    # out-of-flow callback (Voice URL pointed at /voice/respond, or a Gather
+    # that never went through incoming AI mode) must not become a paid-Claude
+    # bypass for voicemail-mode tenants. Re-check _ai_voice_mode here.
+    #
+    # Do NOT re-check voice_minutes_exhausted on each Gather: incoming already
+    # committed to the live loop when minutes remained ("over-cap degrades to
+    # voicemail — never a dropped call"). Mid-call minute burn is expected;
+    # the token hard-cap is the per-round spend control. Minutes are a
+    # start-of-call gate, not a Gather-round gate.
+    if not _ai_voice_mode(tenant):
+        logger.warning(
+            "voice_respond: tenant not live-AI entitled tenant=%s call_sid=%s — "
+            "refusing provider",
+            tenant_id,
+            call_sid,
+        )
+        return Response(
+            content=_build_twiml_goodbye(
+                "Sorry, I'm unable to assist right now. Goodbye!"
+            ),
+            media_type="application/xml",
+        )
+
     business_name = tenant.get("business_name") or "our business"
     session_id = f"call_{call_sid}"
     db = get_service_supabase()
@@ -449,31 +623,25 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
     if faq_text:
         system_prompt += f"\n\n{faq_text}"
 
-    # Call Claude for AI response
+    # Call Claude for AI response — reserve first so live-AI voice is metered
+    # the same way as widget chat. Twilio still always gets HTTP 200 TwiML.
+    voice_model = resolve_string_setting("voice_chat_model", "claude-sonnet-4-6")
+    voice_max_tokens = resolve_int_setting("voice_chat_max_tokens", 160)
     ai_response = ""
+    end_call_now = False
     try:
-        llm_result = await call_claude_messages(
-            operation="calls.voice_respond",
-            model=resolve_string_setting("voice_chat_model", "claude-sonnet-4-6"),
-            max_tokens=resolve_int_setting("voice_chat_max_tokens", 160),
+        llm_result = await _call_voice_claude_with_budget(
+            db=db,
+            tenant_id=tenant_id,
+            call_sid=call_sid,
             system=system_prompt,
             messages=conversation_messages,
-            temperature=0.0,
-            timeout=30.0,
-            # Opt-in prompt caching (cost lever F4) — same tenant KB/persona
-            # prefix repeats across the 3-round Gather/Say loop for one call.
-            # Anthropic caches on exact text hash: per-tenant isolation, no
-            # shared key. Default 5-min TTL comfortably covers a live call.
-            cache_system=True,
-            metadata={
-                "tenant_id": tenant_id,
-                "call_sid": call_sid,
-                "round": round_num,
-                "history_count": len(conversation_messages),
-                "faq_chars": len(faq_text),
-            },
+            model=voice_model,
+            max_tokens=voice_max_tokens,
+            round_num=round_num,
+            faq_chars=len(faq_text),
         )
-        ai_response = llm_result.text.strip()
+        ai_response = (llm_result.text or "").strip()
         logger.info(
             "voice_respond: llm_result call_sid=%s round=%d llm_ms=%d response_chars=%d",
             call_sid,
@@ -481,12 +649,26 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
             llm_result.duration_ms,
             len(ai_response),
         )
+    except VoiceBudgetExceeded:
+        logger.warning(
+            "voice_respond: AI usage hard limit blocked tenant=%s call_sid=%s",
+            tenant_id,
+            call_sid,
+        )
+        ai_response = _VOICE_USAGE_PAUSED
+        end_call_now = True
+    except VoiceBudgetGuardUnavailable:
+        logger.warning(
+            "voice_respond: budget tenant unavailable tenant=%s call_sid=%s — "
+            "failing closed before provider",
+            tenant_id,
+            call_sid,
+        )
+        ai_response = _VOICE_CLAUDE_FALLBACK
+        end_call_now = True
     except Exception:
         logger.exception("Claude API call failed for voice respond, call %s", call_sid)
-        ai_response = (
-            "I'm sorry, I'm having a little trouble right now. "
-            "Let me have someone call you back as soon as possible."
-        )
+        ai_response = _VOICE_CLAUDE_FALLBACK
 
     # Booking (G3 Phase 1): strip the BOOK_JSON marker (caller must never hear
     # it) and create the appointment it describes. Never raises.
@@ -524,7 +706,7 @@ async def handle_voice_respond(request: Request, _sig: None = Depends(verify_twi
     max_rounds = resolve_int_setting("voice_max_rounds", _MAX_VOICE_ROUNDS)
     if booking_context and max_rounds < 5:
         max_rounds = 5
-    if round_num >= max_rounds:
+    if end_call_now or round_num >= max_rounds:
         goodbye_text = (
             f"{ai_response} "
             f"Thank you for calling {_xml_escape(business_name)}! "
@@ -800,7 +982,7 @@ async def handle_transcription_complete(
     try:
         result = (
             db.table("calls")
-            .select("id, tenant_id, lead_id, transcript")
+            .select("id, tenant_id, lead_id, transcript, summary")
             .eq("twilio_call_sid", call_sid)
             .limit(1)
             .execute()
@@ -839,15 +1021,33 @@ async def handle_transcription_complete(
         # Append the new transcription entry
         transcript_entry = existing_transcript + transcript_entry
 
+    current_summary = call_record.get("summary")
+    already_summarized = should_skip_summary_generation(current_summary)
+    update_payload: dict[str, Any] = {"transcript": transcript_entry}
+    if should_write_generating_placeholder(current_summary):
+        update_payload["summary"] = "Transcription received. AI summary generating..."
+
     # Update the call record with the transcript
     try:
-        db.table("calls").update({
-            "transcript": transcript_entry,
-            "summary": "Transcription received. AI summary generating...",
-        }).eq("id", call_id).eq("tenant_id", tenant_id).execute()
+        db.table("calls").update(update_payload).eq("id", call_id).eq(
+            "tenant_id", tenant_id
+        ).execute()
         logger.info("Stored transcript for call %s (tenant %s)", call_id, tenant_id)
     except Exception:
-        logger.exception("Failed to update call %s with transcript", call_id)
+        logger.warning(
+            "transcription-complete: transcript persist skipped tenant=%s call=%s",
+            tenant_id,
+            call_id,
+        )
+
+    if already_summarized:
+        logger.info(
+            "transcription-complete: summary already claimed or persisted "
+            "tenant=%s call=%s — skipping provider",
+            tenant_id,
+            call_id,
+        )
+        return Response(content="OK", media_type="text/plain")
 
     # Trigger AI summary generation as a background task (Feature 2)
     # Build the full transcript text for the AI

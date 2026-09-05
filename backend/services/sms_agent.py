@@ -20,6 +20,38 @@ Compliance is checked BEFORE any Claude call, in this order:
      Claude again; the inbound message is saved and the owner replies
      manually via the inbox.
 
+Claude spend is metered like widget extract_tags: reserve → provider →
+record, or release on provider / record-persist failure. Tenant/policy
+load failure and a hard cap fail closed here (no provider call) and
+return the existing Claude-error fallback SMS. A later reserve RPC
+outage is different: reserve_ai_tokens returns allowed=True / reason=
+guard_unavailable and this helper may still call the provider without
+persisting usage.
+
+Same Twilio MessageSid redelivery is claimed on ``idempotency_keys``
+(key ``twilio:sms_agent:<MessageSid>``) after the silent compliance
+gates and before increment/reserve/provider. ``response_body`` carries
+the send-boundary state:
+
+- NULL body: in-flight generate (concurrent retry is silent)
+- ``pending_send`` + reply: generate finished, send not confirmed
+- ``sending`` + reply + claim token: one worker owns the send attempt
+- ``sent`` / legacy ``processed``: delivery finished; later replay is silent
+
+A same-SID retry after a recorded send failure must not call Claude
+again; it CAS-claims ``pending_send`` and returns the stored reply so
+the webhook can send. Empty MessageSid cannot be claimed (residual).
+
+Crash windows (exactly-once send is not provable — no outbound SID is
+tied to the inbound MessageSid):
+
+- Claim-win then crash before ``pending_send``: later deliveries see
+  in-flight NULL and skip (at-most-once; same residual as Stripe).
+- ``pending_send`` persisted, crash before send-claim: retry can send.
+- Crash after send-claim (``sending``) before finalize: later
+  deliveries skip (at-most-once). Twilio may have accepted or not.
+- ``check_and_record`` upsert fail-open can still double-process.
+
 Session mapping reuses the existing 'sms_<digits>' session_id convention
 established in backend/routers/sms.py (outbound "text this lead" flow) and
 the conversations.channel column (migration 057) — no new migration needed
@@ -32,6 +64,7 @@ FastAPI app adds ``from __future__ import annotations``.
 
 import logging
 import re
+from uuid import uuid4
 from typing import Any
 
 from backend.routers.widget_chat_helpers import (
@@ -43,6 +76,19 @@ from backend.routers.widget_chat_helpers import (
     _save_chat_messages,
 )
 from backend.services import sms_compliance, sms_rate_limiter, twilio_tenant
+from backend.services.ai_usage_guard import (
+    estimate_widget_chat_tokens,
+    record_ai_usage,
+    release_ai_token_reservation,
+    reserve_ai_tokens,
+)
+from backend.services.idempotency import (
+    check_and_record,
+    compare_and_set_response,
+    delete_key,
+    fetch_response,
+    record_response,
+)
 from backend.services.llm_runtime import call_claude_messages, resolve_string_setting
 from backend.services.twilio_service import send_sms
 
@@ -61,6 +107,15 @@ _EMPTY_REPLY_FALLBACK = "Thanks for the message — we'll follow up shortly."
 
 _ESCALATION_REASON = "Visitor requested a human via SMS"
 _ESCALATION_PRIORITY = "normal"
+REPLY_OPERATION = "sms_agent.reply"
+_IDEMPOTENCY_PROVIDER = "twilio"
+_DELIVERY_PENDING = "pending_send"
+_DELIVERY_SENDING = "sending"
+_DELIVERY_SENT = "sent"
+_DELIVERY_PROCESSED = "processed"
+_DELIVERY_PENDING_STATUS = 202
+_DELIVERY_SENDING_STATUS = 102
+_DELIVERY_SENT_STATUS = 200
 
 
 # ---------------------------------------------------------------------------
@@ -298,7 +353,7 @@ def _create_sms_escalation(
 # ---------------------------------------------------------------------------
 
 
-async def send_sms_agent_reply(tenant_id: str, to: str, body: str) -> None:
+async def send_sms_agent_reply(tenant_id: str, to: str, body: str) -> bool:
     """Send an sms_agent reply via the tenant's own Twilio (BYO) when
     connected, else the shared platform pool.
 
@@ -309,6 +364,8 @@ async def send_sms_agent_reply(tenant_id: str, to: str, body: str) -> None:
     a standalone success/failure the caller can act on directly. Called from
     backend/routers/twilio_webhooks.py after ``handle_inbound_sms`` returns a
     reply. Never raises — logs and swallows send failures on both paths.
+    Returns True only when BYO or the platform pool accepted the send.
+    Does not log ``body``.
     """
     try:
         if twilio_tenant.is_connected(tenant_id):
@@ -316,7 +373,7 @@ async def send_sms_agent_reply(tenant_id: str, to: str, body: str) -> None:
                 tenant_id=tenant_id, to=to, body=body
             )
             if result.get("success"):
-                return
+                return True
             logger.warning(
                 "sms_agent: twilio_byo send failed tenant=%s detail=%s",
                 tenant_id,
@@ -330,6 +387,178 @@ async def send_sms_agent_reply(tenant_id: str, to: str, body: str) -> None:
     sent = await send_sms(to=to, body=body, tenant_id=tenant_id)
     if not sent:
         logger.warning("sms_agent: platform send_sms failed tenant=%s", tenant_id)
+        return False
+    return True
+
+
+# ---------------------------------------------------------------------------
+# Budget + inbound-delivery claim
+# ---------------------------------------------------------------------------
+
+
+def _load_reply_budget_tenant(db: Any, tenant_id: str) -> dict[str, Any] | None:
+    """Load the tenant row needed for a pack-aware reservation.
+
+    Returns None when the row is missing or the lookup throws. Callers must
+    fail closed before the provider — do not invent a free-plan cap (that
+    would falsely block a paying tenant or ignore purchased packs) and do
+    not call Claude unmetered.
+    """
+    try:
+        rows = (
+            db.table("tenants")
+            .select(
+                "id, plan, ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit"
+            )
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        ).data or []
+    except Exception:
+        # Do not attach the lookup exception: it may contain connection or
+        # customer context. Tenant id is enough to find the row.
+        logger.warning(
+            "sms_agent: tenant load failed tenant=%s",
+            tenant_id,
+        )
+        return None
+    if not rows:
+        logger.warning(
+            "sms_agent: tenant missing tenant=%s — failing closed before provider",
+            tenant_id,
+        )
+        return None
+    return {**rows[0], "id": tenant_id}
+
+
+def _sms_agent_event_id(provider_message_id: str) -> str:
+    return f"sms_agent:{provider_message_id.strip()}"
+
+
+def _sms_agent_delivery_key(provider_message_id: str) -> str:
+    sid = (provider_message_id or "").strip()
+    if not sid:
+        return ""
+    return f"{_IDEMPOTENCY_PROVIDER}:{_sms_agent_event_id(sid)}"
+
+
+def _persist_claude_fallback(tenant_id: str, session_id: str, body: str) -> str:
+    """Existing customer-facing Claude-error SMS. Does not invent a new body."""
+    reply_text = _CLAUDE_ERROR_FALLBACK
+    _save_chat_messages(tenant_id, session_id, body, reply_text)
+    return reply_text
+
+
+def _delivery_body_status(body: Any) -> str:
+    if not isinstance(body, dict):
+        return "unknown"
+    status = body.get("status")
+    if status in (
+        _DELIVERY_PENDING,
+        _DELIVERY_SENDING,
+        _DELIVERY_SENT,
+        _DELIVERY_PROCESSED,
+    ):
+        return status
+    return "unknown"
+
+
+def _pending_reply_from_cached(cached: dict | None) -> str | None:
+    """Return a stored unsent reply, or None when the retry must stay silent.
+
+    Does not log the reply.
+    """
+    if not cached or cached.get("in_flight"):
+        return None
+    body = cached.get("response_body")
+    if _delivery_body_status(body) != _DELIVERY_PENDING:
+        return None
+    reply = body.get("reply") if isinstance(body, dict) else None
+    if isinstance(reply, str) and reply:
+        return reply
+    return None
+
+
+def _pending_payload(reply: str) -> dict[str, str]:
+    return {"status": _DELIVERY_PENDING, "reply": reply}
+
+
+def _sending_payload(reply: str, claim_token: str) -> dict[str, str]:
+    return {"status": _DELIVERY_SENDING, "reply": reply, "claim": claim_token}
+
+
+def _sent_payload() -> dict[str, str]:
+    return {"status": _DELIVERY_SENT}
+
+
+async def _claim_pending_send(db: Any, delivery_key: str, reply: str) -> bool:
+    token = uuid4().hex
+    return await compare_and_set_response(
+        db,
+        delivery_key,
+        expected_status=_DELIVERY_PENDING_STATUS,
+        status=_DELIVERY_SENDING_STATUS,
+        body=_sending_payload(reply, token),
+        claim_token=token,
+    )
+
+
+async def _load_delivery_status(db: Any, delivery_key: str) -> str:
+    cached = await fetch_response(db, delivery_key)
+    if cached is None:
+        return "missing"
+    if cached.get("response_body") is None:
+        return "in_flight"
+    return _delivery_body_status(cached.get("response_body"))
+
+
+async def _prepare_send_slot(
+    db: Any, delivery_key: str, reply: str, *, is_new: bool
+) -> bool:
+    """Claim the send slot for this reply. True means the caller may send."""
+    await record_response(
+        db, delivery_key, _DELIVERY_PENDING_STATUS, _pending_payload(reply)
+    )
+    if await _claim_pending_send(db, delivery_key, reply):
+        return True
+    state = await _load_delivery_status(db, delivery_key)
+    if state in (_DELIVERY_SENDING, _DELIVERY_SENT, _DELIVERY_PROCESSED):
+        return False
+    if not is_new:
+        return False
+    # Original claim-winner: pending persist may have failed (NULL/missing).
+    # Mark sending best-effort so a concurrent retry stays silent.
+    token = uuid4().hex
+    await record_response(
+        db, delivery_key, _DELIVERY_SENDING_STATUS, _sending_payload(reply, token)
+    )
+    return True
+
+
+async def finalize_sms_agent_send(
+    db: Any,
+    *,
+    tenant_id: str,
+    provider_message_id: str,
+    reply_text: str,
+    sent: bool,
+) -> None:
+    """Record send success or restore pending_send so the same SID can retry.
+
+    Does not log ``reply_text``. Empty MessageSid is a no-op (uncached residual).
+    """
+    delivery_key = _sms_agent_delivery_key(provider_message_id)
+    if not delivery_key:
+        return
+    if sent:
+        await record_response(db, delivery_key, _DELIVERY_SENT_STATUS, _sent_payload())
+        return
+    await record_response(
+        db, delivery_key, _DELIVERY_PENDING_STATUS, _pending_payload(reply_text)
+    )
+    logger.warning(
+        "sms_agent: send failed; delivery left pending tenant=%s", tenant_id
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -349,8 +578,11 @@ async def handle_inbound_sms(
     """Multi-turn SMS conversational reply.
 
     Returns the reply text to send back to ``from_number``, or ``None`` when
-    the turn must stay silent — opted out, rate-limited, or already in human
-    handoff (owner replies manually via the inbox).
+    the turn must stay silent — opted out, rate-limited, already in human
+    handoff, an in-flight/sending/sent MessageSid, or a lost send-claim.
+    A ``pending_send`` replay returns the stored reply so the webhook can
+    retry the send without a second Claude call. Budget misses and
+    provider errors use the existing Claude-error fallback SMS.
     """
     tenant_id = tenant["id"]
     session_id = sms_session_id(from_number)
@@ -404,86 +636,169 @@ async def handle_inbound_sms(
     # 5. Lead mapping by phone — best-effort, never blocks the conversation.
     _find_or_create_lead(db, tenant_id, from_number)
 
-    # From here on a reply WILL be attempted (normal answer, handoff ack, or
-    # the Claude-failure fallback) — count it against the daily SMS budget.
-    sms_rate_limiter.increment_sms_count(tenant_id)
-
-    # 6. Build multi-turn context, reusing the widget pipeline's grounding +
-    # system-prompt builder.
-    history = _load_chat_history(tenant_id, session_id, limit=20)
-    history_for_model = _compact_messages_for_llm(history)
-
-    widget_config = _load_widget_config(db, tenant_id)
-    faq_entries = _load_faq_entries(db, tenant_id)
-    business_hours = _load_business_hours(db, tenant_id)
-
-    kb_article_refs: list = []
-    try:
-        kb_article_refs = await _query_kb_articles(body)
-    except Exception:
-        logger.warning(
-            "sms_agent: kb article retrieval failed tenant=%s", tenant_id, exc_info=True
+    # 6. Durable MessageSid claim — after silent compliance, before increment
+    # or Claude. Same inbound redelivery must not reserve or call twice.
+    # pending_send replays return the stored reply so the webhook can send.
+    delivery_key = _sms_agent_delivery_key(provider_message_id)
+    is_new = True
+    if delivery_key:
+        is_new, cached = await check_and_record(
+            db, _IDEMPOTENCY_PROVIDER, _sms_agent_event_id(provider_message_id)
         )
-
-    system_prompt = _build_system_prompt(
-        tenant,
-        faq_entries,
-        business_hours,
-        custom_instructions=(widget_config or {}).get("custom_instructions"),
-        knowledge_base=(widget_config or {}).get("knowledge_base"),
-        kb_article_refs=kb_article_refs or None,
-    )
-    system_prompt += (
-        "\n\nCHANNEL: This conversation is over SMS text message, not the "
-        "website chat widget.\n"
-        "- Reply in plain text only — no markdown, no bullet lists, no links "
-        "unless it is a real URL.\n"
-        f"- Keep the reply under {SMS_MAX_CHARS} characters — SMS is billed per "
-        "segment.\n"
-        "- If the visitor explicitly asks to speak with a human, a real "
-        "person, or a team member, include the exact marker HANDOFF_REQUESTED "
-        "at the end of your reply."
-    )
-
-    llm_messages = history_for_model + [{"role": "user", "content": body}]
+        if not is_new:
+            pending_reply = _pending_reply_from_cached(cached)
+            if pending_reply and await _claim_pending_send(
+                db, delivery_key, pending_reply
+            ):
+                logger.info(
+                    "sms_agent: retrying unsent inbound delivery tenant=%s",
+                    tenant_id,
+                )
+                return pending_reply
+            logger.info(
+                "sms_agent: duplicate inbound delivery tenant=%s", tenant_id
+            )
+            return None
 
     try:
-        result = await call_claude_messages(
-            operation="sms_agent.reply",
-            model=resolve_string_setting("widget_chat_model", MODEL),
-            max_tokens=SMS_MAX_TOKENS,
-            temperature=SMS_TEMPERATURE,
-            system=system_prompt,
-            messages=llm_messages,
-            timeout=30.0,
-            max_retries=1,
-            metadata={
-                "tenant_id": tenant_id,
-                "session_id": session_id,
-                "channel": "sms",
-            },
+        # From here on a reply WILL be attempted (normal answer, handoff ack,
+        # or the Claude-failure fallback) — count it against the daily SMS
+        # budget.
+        sms_rate_limiter.increment_sms_count(tenant_id)
+
+        # 7. Build multi-turn context, reusing the widget pipeline's grounding +
+        # system-prompt builder.
+        history = _load_chat_history(tenant_id, session_id, limit=20)
+        history_for_model = _compact_messages_for_llm(history)
+
+        widget_config = _load_widget_config(db, tenant_id)
+        faq_entries = _load_faq_entries(db, tenant_id)
+        business_hours = _load_business_hours(db, tenant_id)
+
+        kb_article_refs: list = []
+        try:
+            kb_article_refs = await _query_kb_articles(body)
+        except Exception:
+            logger.warning(
+                "sms_agent: kb article retrieval failed tenant=%s", tenant_id
+            )
+
+        system_prompt = _build_system_prompt(
+            tenant,
+            faq_entries,
+            business_hours,
+            custom_instructions=(widget_config or {}).get("custom_instructions"),
+            knowledge_base=(widget_config or {}).get("knowledge_base"),
+            kb_article_refs=kb_article_refs or None,
         )
-        assistant_text = result.text or ""
+        system_prompt += (
+            "\n\nCHANNEL: This conversation is over SMS text message, not the "
+            "website chat widget.\n"
+            "- Reply in plain text only — no markdown, no bullet lists, no links "
+            "unless it is a real URL.\n"
+            f"- Keep the reply under {SMS_MAX_CHARS} characters — SMS is billed per "
+            "segment.\n"
+            "- If the visitor explicitly asks to speak with a human, a real "
+            "person, or a team member, include the exact marker HANDOFF_REQUESTED "
+            "at the end of your reply."
+        )
+
+        llm_messages = history_for_model + [{"role": "user", "content": body}]
+
+        budget_tenant = _load_reply_budget_tenant(db, tenant_id)
+        if budget_tenant is None:
+            logger.warning(
+                "sms_agent: budget tenant unavailable tenant=%s — "
+                "failing closed before provider",
+                tenant_id,
+            )
+            reply_text = _persist_claude_fallback(tenant_id, session_id, body)
+        else:
+            reservation = reserve_ai_tokens(
+                tenant=budget_tenant,
+                estimated_tokens=estimate_widget_chat_tokens(
+                    system_prompt=system_prompt,
+                    messages=llm_messages,
+                    max_tokens=SMS_MAX_TOKENS,
+                ),
+                operation=REPLY_OPERATION,
+                session_id=session_id,
+            )
+            if not reservation.allowed:
+                logger.warning(
+                    "sms_agent: hard cap blocked tenant=%s session=%s",
+                    tenant_id,
+                    session_id,
+                )
+                reply_text = _persist_claude_fallback(tenant_id, session_id, body)
+            else:
+                try:
+                    result = await call_claude_messages(
+                        operation=REPLY_OPERATION,
+                        model=resolve_string_setting("widget_chat_model", MODEL),
+                        max_tokens=SMS_MAX_TOKENS,
+                        temperature=SMS_TEMPERATURE,
+                        system=system_prompt,
+                        messages=llm_messages,
+                        timeout=30.0,
+                        max_retries=1,
+                        metadata={
+                            "tenant_id": tenant_id,
+                            "session_id": session_id,
+                            "channel": "sms",
+                        },
+                    )
+                except Exception:
+                    release_ai_token_reservation(reservation)
+                    logger.warning(
+                        "sms_agent: provider error tenant=%s session=%s",
+                        tenant_id,
+                        session_id,
+                    )
+                    reply_text = _persist_claude_fallback(tenant_id, session_id, body)
+                else:
+                    record_ai_usage(
+                        reservation=reservation,
+                        result=result,
+                        operation=REPLY_OPERATION,
+                        session_id=session_id,
+                        model=resolve_string_setting("widget_chat_model", MODEL),
+                    )
+                    assistant_text = result.text or ""
+                    if HANDOFF_MARKER in assistant_text:
+                        _tag_conversation_handoff(
+                            db, tenant_id, conversation_id, existing_tags
+                        )
+                        _create_sms_escalation(
+                            db,
+                            tenant_id=tenant_id,
+                            session_id=session_id,
+                            conversation_id=conversation_id,
+                        )
+                        reply_text = _HANDOFF_ACK
+                        _save_chat_messages(
+                            tenant_id, session_id, body, reply_text
+                        )
+                    else:
+                        reply_text = (
+                            _clean_for_sms(_strip_handoff_marker(assistant_text))
+                            or _EMPTY_REPLY_FALLBACK
+                        )
+                        _save_chat_messages(
+                            tenant_id, session_id, body, reply_text
+                        )
     except Exception:
-        logger.exception(
-            "sms_agent: Claude call failed tenant=%s session=%s", tenant_id, session_id
-        )
-        reply_text = _CLAUDE_ERROR_FALLBACK
-        _save_chat_messages(tenant_id, session_id, body, reply_text)
-        return reply_text
+        if delivery_key:
+            await delete_key(db, delivery_key)
+        raise
 
-    if HANDOFF_MARKER in assistant_text:
-        _tag_conversation_handoff(db, tenant_id, conversation_id, existing_tags)
-        _create_sms_escalation(
-            db,
-            tenant_id=tenant_id,
-            session_id=session_id,
-            conversation_id=conversation_id,
+    if delivery_key:
+        may_send = await _prepare_send_slot(
+            db, delivery_key, reply_text, is_new=is_new
         )
-        reply_text = _HANDOFF_ACK
-        _save_chat_messages(tenant_id, session_id, body, reply_text)
-        return reply_text
-
-    reply_text = _clean_for_sms(_strip_handoff_marker(assistant_text)) or _EMPTY_REPLY_FALLBACK
-    _save_chat_messages(tenant_id, session_id, body, reply_text)
+        if not may_send:
+            logger.info(
+                "sms_agent: lost send claim tenant=%s", tenant_id
+            )
+            return None
     return reply_text

@@ -16,6 +16,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from backend.services.ai_usage_guard import AIUsageReservation
 from backend.services.voice_call_summary import (
     _finalize_ai_call,
     _generate_call_summary,
@@ -24,13 +25,50 @@ from backend.services.voice_call_summary import (
 
 def _chain_table(rows=None, raise_on_execute=False):
     table = MagicMock()
-    for m in ["select", "insert", "update", "eq", "order", "limit", "gte"]:
+    for m in ["select", "insert", "update", "eq", "order", "limit", "gte", "is_"]:
         getattr(table, m).return_value = table
     if raise_on_execute:
         table.execute.side_effect = RuntimeError("db down")
     else:
         table.execute.return_value = MagicMock(data=rows or [])
     return table
+
+
+def _allowed(**kwargs):
+    return AIUsageReservation(
+        allowed=True,
+        tenant_id="t1",
+        period_month="2026-09-01",
+        estimated_tokens=kwargs.get("estimated_tokens", 800),
+        alert_threshold_tokens=4_000_000,
+        hard_limit_tokens=5_000_000,
+    )
+
+
+def _budget_db(raise_on_persist=False):
+    tenant_table = _chain_table(rows=[{"id": "t1", "plan": "agent_os"}])
+    calls_table = _chain_table(
+        rows=[
+            {
+                "id": "c1",
+                "tenant_id": "t1",
+                "summary": "AI conversation completed. Summary generating...",
+            }
+        ]
+    )
+    if raise_on_persist:
+        persist_n = {"n": 0}
+
+        def update(payload):
+            persist_n["n"] += 1
+            if persist_n["n"] > 1:
+                calls_table.execute.side_effect = RuntimeError("db down")
+            return calls_table
+
+        calls_table.update.side_effect = update
+    db = MagicMock()
+    db.table.side_effect = lambda name: tenant_table if name == "tenants" else calls_table
+    return db
 
 
 class TestGenerateCallSummaryDegradation:
@@ -40,6 +78,14 @@ class TestGenerateCallSummaryDegradation:
             "backend.services.voice_call_summary.call_claude_messages",
             new_callable=AsyncMock,
             side_effect=RuntimeError("api down"),
+        ), patch(
+            "backend.services.voice_call_summary.get_service_supabase",
+            return_value=_budget_db(),
+        ), patch(
+            "backend.services.voice_call_summary.reserve_ai_tokens",
+            side_effect=_allowed,
+        ), patch(
+            "backend.services.voice_call_summary.release_ai_token_reservation",
         ):
             # Must swallow and return — a raise here would bubble into
             # the transcription webhook's background task.
@@ -48,8 +94,7 @@ class TestGenerateCallSummaryDegradation:
 
     @pytest.mark.asyncio
     async def test_db_update_failure_never_raises(self):
-        db = MagicMock()
-        db.table.return_value = _chain_table(raise_on_execute=True)
+        db = _budget_db(raise_on_persist=True)
         with patch(
             "backend.services.voice_call_summary.call_claude_messages",
             new_callable=AsyncMock,
@@ -57,14 +102,18 @@ class TestGenerateCallSummaryDegradation:
         ), patch(
             "backend.services.voice_call_summary.get_service_supabase",
             return_value=db,
+        ), patch(
+            "backend.services.voice_call_summary.reserve_ai_tokens",
+            side_effect=_allowed,
+        ), patch(
+            "backend.services.voice_call_summary.record_ai_usage",
         ):
             result = await _generate_call_summary("c1", "t1", None, "caller said hi")
         assert result is None
 
     @pytest.mark.asyncio
     async def test_garbage_model_output_never_raises(self):
-        db = MagicMock()
-        db.table.return_value = _chain_table()
+        db = _budget_db()
         with patch(
             "backend.services.voice_call_summary.call_claude_messages",
             new_callable=AsyncMock,
@@ -72,6 +121,11 @@ class TestGenerateCallSummaryDegradation:
         ), patch(
             "backend.services.voice_call_summary.get_service_supabase",
             return_value=db,
+        ), patch(
+            "backend.services.voice_call_summary.reserve_ai_tokens",
+            side_effect=_allowed,
+        ), patch(
+            "backend.services.voice_call_summary.record_ai_usage",
         ):
             result = await _generate_call_summary("c1", "t1", None, "caller said hi")
         assert result is None
