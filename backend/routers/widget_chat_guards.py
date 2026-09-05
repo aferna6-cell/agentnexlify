@@ -389,7 +389,11 @@ async def input_screen_guard(
 ) -> WidgetChatResponse | None:
     """Stage 5d (part 2) — prompt-injection/abuse screen. Fails open on error."""
     try:
-        guard_result = await screen_widget_input(req.message)
+        guard_result = await screen_widget_input(
+            req.message,
+            tenant_id=tenant["id"],
+            session_id=req.session_id,
+        )
     except Exception:
         logger.warning(
             "widget_chat: input guard raised unexpectedly session=%s — "
