@@ -18894,3 +18894,19 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(widget): meter widget_guard.screen with reserve/record/release (#798)
+
+Apply the purchased-pack-aware reserve → provider → record/release
+contract to the pre-reply Haiku input screen. Missing tenant or hard cap
+skips Claude and keeps the existing fail-open safety fallback.
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+**Date:** 2026-09-05
+**Commit:** 0b41f4d
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/pr-check.yml,backend/routers/widget_chat.py,backend/routers/widget_chat_guards.py,backend/services/widget_guard.py,backend/tests/test_widget_guard_screen_usage_guard.py,tests/test_widget_guard.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
