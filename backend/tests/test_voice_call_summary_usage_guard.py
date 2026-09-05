@@ -15,6 +15,13 @@ Contract:
 - Live-AI finalize and /voice/transcription-complete can both target the
   same calls.id. A compare-and-swap on calls.summary means two delivery
   paths create at most one provider/accounting/persisted summary.
+- After a claim win, hard-cap / provider / other pre-persist exits
+  CAS-restore the pre-claim value only when the row still holds that
+  exact claim token. A later allowed or successful run can summarize.
+- Record-RPC failure still persists the provider summary. Summary-row
+  persist failure releases the claim so a retry is possible; a second
+  paid provider call is possible because there is no durable
+  paid-but-not-persisted marker.
 - Genuinely separate call ids still reserve and record independently.
 - New logs/errors are tenant id + call id + counts only. No transcript,
   customer PII, credentials, provider exception text, or summary payload.
@@ -23,6 +30,7 @@ Run: pytest backend/tests/test_voice_call_summary_usage_guard.py -q
 """
 
 import logging
+import threading
 import urllib.parse
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -38,8 +46,12 @@ from backend.services.voice_call_summary import (
     SUMMARY_OPERATION,
     _finalize_ai_call,
     _generate_call_summary,
+    _is_in_flight_summary_claim,
+    _release_owned_summary_claim,
     _summary_max_tokens,
 )
+
+_PREVIOUS_PLACEHOLDER = "AI conversation completed. Summary generating..."
 from backend.tests.conftest import SyncASGITestClient
 from backend.tests.fake_supabase import db, run
 
@@ -191,6 +203,10 @@ class _StoreTable:
         return True
 
     def execute(self):
+        with self.store._lock:
+            return self._execute_locked()
+
+    def _execute_locked(self):
         if self.name == "tenants":
             tid = self._filters.get("id", (None, None))[1]
             if self.store.tenant and (tid is None or self.store.tenant.get("id") == tid):
@@ -199,6 +215,12 @@ class _StoreTable:
         if self.name == "calls":
             rows = [dict(c) for c in self.store.calls.values() if self._match(c)]
             if self._op == "update":
+                if (
+                    self.store.fail_real_summary_write
+                    and self._payload
+                    and "sentiment" in self._payload
+                ):
+                    raise RuntimeError("summary persist down")
                 updated = []
                 for row in rows:
                     row.update(self._payload)
@@ -222,6 +244,8 @@ class _SummaryStore:
         self.chat_messages = list(chat_messages or [])
         self.action_items = []
         self.updates = []
+        self._lock = threading.Lock()
+        self.fail_real_summary_write = False
 
     def table(self, name):
         return _StoreTable(self, name)
@@ -297,7 +321,52 @@ def test_hard_cap_blocks_before_provider():
     assert reserve.call_args.kwargs["operation"] == SUMMARY_OPERATION
     assert reserve.call_args.kwargs["session_id"] == _SESSION_ID
     assert reserve.call_args.kwargs["estimated_tokens"] >= _summary_max_tokens()
-    assert store.calls[_CALL_ID]["summary"] == SUMMARY_CLAIM
+    assert store.calls[_CALL_ID]["summary"] == _PREVIOUS_PLACEHOLDER
+    assert not _is_in_flight_summary_claim(store.calls[_CALL_ID]["summary"])
+
+
+def test_hard_cap_then_later_allowed_summarizes_once():
+    store = _store()
+    reserves = [_blocked(), _allowed()]
+    provider = AsyncMock(side_effect=_ok_claude)
+
+    def next_reserve(**kwargs):
+        return reserves.pop(0)
+
+    with (
+        patch(
+            "backend.services.voice_call_summary.get_service_supabase",
+            return_value=store,
+        ),
+        patch(
+            "backend.services.voice_call_summary.reserve_ai_tokens",
+            side_effect=next_reserve,
+        ) as reserve,
+        patch(
+            "backend.services.voice_call_summary.call_claude_messages",
+            new=provider,
+        ),
+        patch("backend.services.voice_call_summary.record_ai_usage") as record,
+        patch(
+            "backend.services.voice_recovery.create_missed_call_followup",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "backend.services.os_inbound_bridge.bridge_voice",
+            new_callable=AsyncMock,
+        ),
+        patch("backend.services.voice_call_summary.log_activity"),
+    ):
+        _run_summary()
+        assert store.calls[_CALL_ID]["summary"] == _PREVIOUS_PLACEHOLDER
+        provider.assert_not_called()
+        _run_summary()
+    assert provider.await_count == 1
+    assert reserve.call_count == 2
+    record.assert_called_once()
+    assert store.calls[_CALL_ID]["summary"] == (
+        "Caller asked about a kitchen remodel quote."
+    )
 
 
 def test_success_records_usage_once():
@@ -353,11 +422,12 @@ def test_provider_error_releases_reservation_without_raising(caplog):
             "claude down secret=anthropic_api_key customer=cara@example.com"
         )
 
+    store = _store()
     with caplog.at_level(logging.WARNING):
         with (
             patch(
                 "backend.services.voice_call_summary.get_service_supabase",
-                return_value=_store(),
+                return_value=store,
             ),
             patch(
                 "backend.services.voice_call_summary.reserve_ai_tokens",
@@ -382,6 +452,56 @@ def test_provider_error_releases_reservation_without_raising(caplog):
     release.assert_called_once()
     assert release.call_args.args[0].allowed is True
     assert release.call_args.args[0].reason != "guard_unavailable"
+    assert store.calls[_CALL_ID]["summary"] == _PREVIOUS_PLACEHOLDER
+    assert not _is_in_flight_summary_claim(store.calls[_CALL_ID]["summary"])
+
+
+def test_provider_failure_then_later_success_summarizes_once():
+    store = _store()
+    provider = AsyncMock(
+        side_effect=[
+            RuntimeError("claude down secret=anthropic_api_key"),
+            _ok_claude(),
+        ]
+    )
+    with (
+        patch(
+            "backend.services.voice_call_summary.get_service_supabase",
+            return_value=store,
+        ),
+        patch(
+            "backend.services.voice_call_summary.reserve_ai_tokens",
+            side_effect=_allowed,
+        ) as reserve,
+        patch(
+            "backend.services.voice_call_summary.call_claude_messages",
+            new=provider,
+        ),
+        patch("backend.services.voice_call_summary.record_ai_usage") as record,
+        patch(
+            "backend.services.voice_call_summary.release_ai_token_reservation"
+        ) as release,
+        patch(
+            "backend.services.voice_recovery.create_missed_call_followup",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "backend.services.os_inbound_bridge.bridge_voice",
+            new_callable=AsyncMock,
+        ),
+        patch("backend.services.voice_call_summary.log_activity"),
+    ):
+        _run_summary()
+        assert store.calls[_CALL_ID]["summary"] == _PREVIOUS_PLACEHOLDER
+        record.assert_not_called()
+        release.assert_called_once()
+        _run_summary()
+    assert provider.await_count == 2
+    assert reserve.call_count == 2
+    record.assert_called_once()
+    assert store.calls[_CALL_ID]["summary"] == (
+        "Caller asked about a kitchen remodel quote."
+    )
 
 
 def test_purchased_usage_pack_is_honored_on_reserve():
@@ -644,6 +764,11 @@ def test_summary_path_releases_when_record_rpc_fails():
     assert result is None
     provider.assert_awaited_once()
     release.assert_called_once_with(reservation)
+    # Provider already succeeded: persist the summary even though usage
+    # record failed and the reservation was released. Retry would skip.
+    assert store.calls[_CALL_ID]["summary"] == (
+        "Caller asked about a kitchen remodel quote."
+    )
 
 
 def test_parse_failure_records_and_does_not_raise(caplog):
@@ -907,6 +1032,176 @@ def test_in_flight_claim_skips_second_provider():
     provider.assert_not_called()
 
 
+def test_claim_cleanup_does_not_overwrite_real_summary():
+    store = _store(summary="Caller already summarized.")
+    _release_owned_summary_claim(
+        store,
+        _CALL_ID,
+        _TENANT_ID,
+        f"{SUMMARY_CLAIM}#stale-worker",
+        _PREVIOUS_PLACEHOLDER,
+    )
+    assert store.calls[_CALL_ID]["summary"] == "Caller already summarized."
+
+
+def test_stale_cleanup_does_not_clobber_concurrent_persist():
+    """A losing worker's finally must not clear another writer's summary."""
+    store = _store()
+
+    def sneak_real_summary_then_blocked(**kwargs):
+        store.calls[_CALL_ID]["summary"] = "Caller asked about a kitchen remodel quote."
+        return _blocked()
+
+    with (
+        patch(
+            "backend.services.voice_call_summary.get_service_supabase",
+            return_value=store,
+        ),
+        patch(
+            "backend.services.voice_call_summary.reserve_ai_tokens",
+            side_effect=sneak_real_summary_then_blocked,
+        ),
+        patch(
+            "backend.services.voice_call_summary.call_claude_messages",
+            new_callable=AsyncMock,
+            side_effect=_ok_claude,
+        ) as provider,
+        patch("backend.services.voice_call_summary.record_ai_usage") as record,
+    ):
+        _run_summary()
+    provider.assert_not_called()
+    record.assert_not_called()
+    assert store.calls[_CALL_ID]["summary"] == (
+        "Caller asked about a kitchen remodel quote."
+    )
+
+
+def test_stale_cleanup_does_not_clear_other_workers_claim():
+    store = _store(summary=f"{SUMMARY_CLAIM}#other-worker")
+    _release_owned_summary_claim(
+        store,
+        _CALL_ID,
+        _TENANT_ID,
+        f"{SUMMARY_CLAIM}#stale-worker",
+        _PREVIOUS_PLACEHOLDER,
+    )
+    assert store.calls[_CALL_ID]["summary"] == f"{SUMMARY_CLAIM}#other-worker"
+
+
+def test_two_concurrent_triggers_at_most_one_provider():
+    store = _store()
+    counts = {"provider": 0, "reserve": 0, "record": 0}
+    lock = threading.Lock()
+
+    def reserve(**kwargs):
+        with lock:
+            counts["reserve"] += 1
+        return _allowed()
+
+    async def provider(**kwargs):
+        with lock:
+            counts["provider"] += 1
+        return _ok_claude()
+
+    def record(**kwargs):
+        with lock:
+            counts["record"] += 1
+
+    barrier = threading.Barrier(2)
+    errors = []
+
+    def target():
+        try:
+            barrier.wait()
+            _run_summary()
+        except Exception as exc:
+            errors.append(exc)
+
+    with (
+        patch(
+            "backend.services.voice_call_summary.get_service_supabase",
+            return_value=store,
+        ),
+        patch(
+            "backend.services.voice_call_summary.reserve_ai_tokens",
+            side_effect=reserve,
+        ),
+        patch(
+            "backend.services.voice_call_summary.call_claude_messages",
+            side_effect=provider,
+        ),
+        patch("backend.services.voice_call_summary.record_ai_usage", side_effect=record),
+        patch(
+            "backend.services.voice_recovery.create_missed_call_followup",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "backend.services.os_inbound_bridge.bridge_voice",
+            new_callable=AsyncMock,
+        ),
+        patch("backend.services.voice_call_summary.log_activity"),
+    ):
+        threads = [threading.Thread(target=target) for _ in range(2)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+    assert errors == []
+    assert counts["provider"] == 1
+    assert counts["reserve"] == 1
+    assert counts["record"] == 1
+    assert store.calls[_CALL_ID]["summary"] == (
+        "Caller asked about a kitchen remodel quote."
+    )
+
+
+def test_summary_persist_failure_releases_claim_for_retry():
+    """Summary-row persist failure must not tombstone the claim.
+
+    Exactly-once spend cannot be guaranteed here: record may have already
+    succeeded, and a later retry will call the provider again. Retryability
+    is preferred over a permanent skip.
+    """
+    store = _store()
+    store.fail_real_summary_write = True
+    provider = AsyncMock(side_effect=_ok_claude)
+    with (
+        patch(
+            "backend.services.voice_call_summary.get_service_supabase",
+            return_value=store,
+        ),
+        patch(
+            "backend.services.voice_call_summary.reserve_ai_tokens",
+            side_effect=_allowed,
+        ) as reserve,
+        patch(
+            "backend.services.voice_call_summary.call_claude_messages",
+            new=provider,
+        ),
+        patch("backend.services.voice_call_summary.record_ai_usage") as record,
+        patch(
+            "backend.services.voice_recovery.create_missed_call_followup",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "backend.services.os_inbound_bridge.bridge_voice",
+            new_callable=AsyncMock,
+        ),
+        patch("backend.services.voice_call_summary.log_activity"),
+    ):
+        _run_summary()
+        assert store.calls[_CALL_ID]["summary"] == _PREVIOUS_PLACEHOLDER
+        assert not _is_in_flight_summary_claim(store.calls[_CALL_ID]["summary"])
+        store.fail_real_summary_write = False
+        _run_summary()
+    assert provider.await_count == 2
+    assert reserve.call_count == 2
+    assert record.call_count == 2
+    assert store.calls[_CALL_ID]["summary"] == (
+        "Caller asked about a kitchen remodel quote."
+    )
+
+
 def test_finalize_only_summarizes_once():
     store = _SummaryStore(
         tenant=_TENANT,
@@ -1137,3 +1432,7 @@ def test_blocked_summary_does_not_raise_into_transcription_webhook(
     ):
         run(fn(**kwargs))
     provider.assert_not_called()
+    assert store.calls[_CALL_ID]["summary"] == (
+        "Transcription received. AI summary generating..."
+    )
+    assert not _is_in_flight_summary_claim(store.calls[_CALL_ID]["summary"])
