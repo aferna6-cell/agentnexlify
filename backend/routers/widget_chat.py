@@ -192,7 +192,8 @@ async def widget_chat(
 
     # 5d. Turn budget + prompt-injection/abuse guard — runs right before the
     # expensive context build + Sonnet call so short-circuited turns above
-    # never pay for it. Both fail open on error (widget_guard.py).
+    # never pay for the screen or the reply. Screen spend is metered in
+    # widget_guard.screen; both stages fail open on error (widget_guard.py).
     guard_response = widget_chat_guards.turn_budget_guard(tenant, req, _watermark)
     if guard_response is not None:
         return guard_response

@@ -1,7 +1,7 @@
 """Widget chat input guard — prompt-injection / abuse screen + turn budget.
 
-Two independent, cheap, fail-open guards that sit in front of the expensive
-Sonnet reply call in `backend/routers/widget_chat.py`:
+Two independent, cheap guards that sit in front of the expensive Sonnet
+reply call in `backend/routers/widget_chat.py`:
 
   1. `screen_widget_input()` — one Haiku classification call that flags
      prompt-injection/jailbreak attempts, cross-tenant data exfiltration
@@ -10,13 +10,22 @@ Sonnet reply call in `backend/routers/widget_chat.py`:
   2. `check_turn_budget()` — a tiny in-process per-session turn counter so a
      single session can't loop the widget forever.
 
-Both are FAIL-OPEN by design (per `.claude/rules/propose-only-records.md`
-spirit — this project never lets an internal safety mechanism block a real
-paying customer): any LLM error, timeout, or parse failure on the screen
-allows the message through and logs a warning. The turn budget is
-per-worker/in-memory only (mirrors the widget config TTL cache note in
-`.claude/rules/python-fastapi.md` — production runs 4 Uvicorn workers, so
-this is a soft, best-effort ceiling, not a hard global limit).
+The screen is metered like widget.extract_tags: reserve → provider →
+record, or release on provider / record-persist failure. Tenant/policy
+load failure fails closed here (no provider call). A later reserve RPC
+outage is different: reserve_ai_tokens returns allowed=True / reason=
+guard_unavailable and this helper may still call the provider without
+persisting usage.
+
+Safety fallback is unchanged from the pre-metering path: any screen
+failure (missing tenant, hard cap, provider error, timeout, parse
+failure) returns allow=True / reason=screen_unavailable so a broken
+or unbudgeted guard never blocks a real customer and never flips a
+successful allow=false classification into an allow. The turn budget
+is per-worker/in-memory only (mirrors the widget config TTL cache
+note in `.claude/rules/python-fastapi.md` — production runs 4 Uvicorn
+workers, so this is a soft, best-effort ceiling, not a hard global
+limit).
 """
 
 import json
@@ -24,6 +33,13 @@ import logging
 from collections import OrderedDict
 from typing import Any
 
+from backend.models.database import get_service_supabase
+from backend.services.ai_usage_guard import (
+    estimate_widget_chat_tokens,
+    record_ai_usage,
+    release_ai_token_reservation,
+    reserve_ai_tokens,
+)
 from backend.services.llm_runtime import call_claude_messages
 
 logger = logging.getLogger(__name__)
@@ -31,6 +47,7 @@ logger = logging.getLogger(__name__)
 _GUARD_MODEL = "claude-haiku-4-5-20251001"
 _GUARD_MAX_TOKENS = 100
 _GUARD_TIMEOUT_SECONDS = 8.0
+SCREEN_OPERATION = "widget_guard.screen"
 
 _ALLOW_OPEN: dict[str, Any] = {"allow": True, "reason": "screen_unavailable"}
 
@@ -66,39 +83,43 @@ def _strip_json_fences(text: str) -> str:
     return stripped.strip()
 
 
-async def screen_widget_input(text: str) -> dict[str, Any]:
-    """Classify a single visitor message for injection/exfil/abuse.
+def _load_screen_budget_tenant(db: Any, tenant_id: str) -> dict[str, Any] | None:
+    """Load the tenant row needed for a pack-aware reservation.
 
-    Returns `{"allow": bool, "reason": str}`. Never raises — any failure
-    (LLM error, timeout, malformed JSON) fails open (`allow=True`) and logs
-    a warning so a broken guard never blocks a real customer.
+    Returns None when the row is missing or the lookup throws. Callers must
+    fail closed before the provider — do not invent a free-plan cap (that
+    would falsely block a paying tenant or ignore purchased packs) and do
+    not call Claude unmetered.
     """
-    stripped = (text or "").strip()
-    if not stripped:
-        return {"allow": True, "reason": "empty_input"}
-
     try:
-        result = await call_claude_messages(
-            operation="widget_guard.screen",
-            model=_GUARD_MODEL,
-            max_tokens=_GUARD_MAX_TOKENS,
-            temperature=0.0,
-            timeout=_GUARD_TIMEOUT_SECONDS,
-            system=_SYSTEM_PROMPT,
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"Visitor message:\n\n{stripped}",
-                }
-            ],
-        )
+        rows = (
+            db.table("tenants")
+            .select(
+                "id, plan, ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit"
+            )
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        ).data or []
     except Exception:
+        # Do not attach the lookup exception: it may contain connection or
+        # customer context. Tenant id is enough to find the row.
         logger.warning(
-            "widget_guard: screen LLM call failed — failing open", exc_info=True
+            "widget_guard: tenant load failed tenant=%s",
+            tenant_id,
         )
-        return dict(_ALLOW_OPEN)
+        return None
+    if not rows:
+        logger.warning(
+            "widget_guard: tenant missing tenant=%s — failing closed before provider",
+            tenant_id,
+        )
+        return None
+    return {**rows[0], "id": tenant_id}
 
-    raw = (result.text or "").strip()
+
+def _parse_screen_result(raw: str) -> dict[str, Any]:
+    """Parse a provider screen payload. Never raises; fails open."""
     if not raw:
         logger.warning("widget_guard: empty screen response — failing open")
         return dict(_ALLOW_OPEN)
@@ -106,22 +127,17 @@ async def screen_widget_input(text: str) -> dict[str, Any]:
     try:
         parsed = json.loads(_strip_json_fences(raw))
     except (json.JSONDecodeError, ValueError):
-        logger.warning(
-            "widget_guard: unparseable screen response=%r — failing open", raw[:200]
-        )
+        logger.warning("widget_guard: unparseable screen response — failing open")
         return dict(_ALLOW_OPEN)
 
     if not isinstance(parsed, dict) or "allow" not in parsed:
-        logger.warning(
-            "widget_guard: malformed screen response=%r — failing open", raw[:200]
-        )
+        logger.warning("widget_guard: malformed screen response — failing open")
         return dict(_ALLOW_OPEN)
 
     allow = parsed.get("allow")
     if not isinstance(allow, bool):
         logger.warning(
-            "widget_guard: non-bool 'allow' in screen response=%r — failing open",
-            raw[:200],
+            "widget_guard: non-bool 'allow' in screen response — failing open"
         )
         return dict(_ALLOW_OPEN)
 
@@ -132,6 +148,99 @@ async def screen_widget_input(text: str) -> dict[str, Any]:
         logger.info("widget_guard: blocked input reason=%s", reason or "unspecified")
 
     return {"allow": allow, "reason": reason}
+
+
+async def screen_widget_input(
+    text: str,
+    *,
+    tenant_id: str,
+    session_id: str,
+) -> dict[str, Any]:
+    """Classify a single visitor message for injection/exfil/abuse.
+
+    Returns `{"allow": bool, "reason": str}`. Never raises — budget misses
+    and provider/parse failures fail open (`allow=True`) so a broken guard
+    never blocks a real customer. A successful `allow=false` classification
+    is returned as-is; later record-persist failure cannot flip it to allow.
+    """
+    stripped = (text or "").strip()
+    if not stripped:
+        return {"allow": True, "reason": "empty_input"}
+
+    try:
+        db = get_service_supabase()
+    except Exception:
+        logger.warning(
+            "widget_guard: tenant load failed tenant=%s",
+            tenant_id,
+        )
+        return dict(_ALLOW_OPEN)
+
+    tenant = _load_screen_budget_tenant(db, tenant_id)
+    if tenant is None:
+        logger.warning(
+            "widget_guard: budget tenant unavailable tenant=%s — "
+            "failing closed before provider",
+            tenant_id,
+        )
+        return dict(_ALLOW_OPEN)
+
+    provider_messages = [
+        {
+            "role": "user",
+            "content": f"Visitor message:\n\n{stripped}",
+        }
+    ]
+    reservation = reserve_ai_tokens(
+        tenant=tenant,
+        estimated_tokens=estimate_widget_chat_tokens(
+            system_prompt=_SYSTEM_PROMPT,
+            messages=provider_messages,
+            max_tokens=_GUARD_MAX_TOKENS,
+        ),
+        operation=SCREEN_OPERATION,
+        session_id=session_id,
+    )
+    if not reservation.allowed:
+        logger.warning(
+            "widget_guard: hard cap blocked tenant=%s session=%s",
+            tenant_id,
+            session_id,
+        )
+        return dict(_ALLOW_OPEN)
+
+    try:
+        result = await call_claude_messages(
+            operation=SCREEN_OPERATION,
+            model=_GUARD_MODEL,
+            max_tokens=_GUARD_MAX_TOKENS,
+            temperature=0.0,
+            timeout=_GUARD_TIMEOUT_SECONDS,
+            system=_SYSTEM_PROMPT,
+            messages=provider_messages,
+            metadata={
+                "tenant_id": tenant_id,
+                "session_id": session_id,
+            },
+        )
+    except Exception:
+        release_ai_token_reservation(reservation)
+        logger.warning(
+            "widget_guard: provider error tenant=%s session=%s — failing open",
+            tenant_id,
+            session_id,
+        )
+        return dict(_ALLOW_OPEN)
+
+    record_ai_usage(
+        reservation=reservation,
+        result=result,
+        operation=SCREEN_OPERATION,
+        session_id=session_id,
+        model=_GUARD_MODEL,
+    )
+
+    return _parse_screen_result((result.text or "").strip())
 
 
 # Per-worker, in-memory turn counter. NOT shared across the 4 production
