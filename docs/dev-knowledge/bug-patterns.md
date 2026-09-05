@@ -18894,3 +18894,41 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(widget): meter extract_tags with reserve/record/release (#796)
+
+* fix(widget): meter extract_tags with reserve/record/release
+
+Background lead-tag extraction was an unmetered Claude path. Thread
+tenant/session into the helper, reserve before the provider, record on
+success, and release on provider or record-persist failure. Missing
+budget tenant/policy fails closed. Visitor-chat success and empty-tag
+fallback stay unchanged.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+* test(widget): await lead-capture hard-cap extract_tags path
+
+The visitor-effects proof was calling the async capture task without
+awaiting it, so the hard-cap path never ran. Run it on a real loop.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+* test(widget): assert no-contact capture stays a no-op
+
+The frequency proof now checks the existing skip log, not only mock
+call counts, so the Python test-quality lint stays clean.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+---------
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+**Date:** 2026-09-05
+**Commit:** 9de7f60
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/pr-check.yml,backend/routers/widget_lead_helpers.py,backend/tests/test_widget_extract_tags_usage_guard.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
