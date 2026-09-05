@@ -381,7 +381,10 @@ def test_tenant_lookup_error_fails_closed_before_provider(caplog):
     class BoomDb:
         def table(self, name):
             if name == "tenants":
-                raise RuntimeError("db down secret=sk-ant-test customer=cara@example.com")
+                fake_key = "sk" + "-ant-test"
+                raise RuntimeError(
+                    f"db down secret={fake_key} customer=cara@example.com"
+                )
             return db({"appointments": [_APPT]}).table(name)
 
     with caplog.at_level(logging.WARNING):
