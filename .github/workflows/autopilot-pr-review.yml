@@ -35,7 +35,7 @@ jobs:
             echo "::warning::AUTOPILOT_GH_TOKEN missing or expired — falling back to github.token. Rotate the PAT to restore CI triggering (#399)."
           fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
