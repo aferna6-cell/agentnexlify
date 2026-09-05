@@ -18894,3 +18894,35 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(sms): meter sms_agent.reply with send-boundary idempotency (#799)
+
+* fix(sms): meter sms_agent.reply with reserve/record/release
+
+Apply purchased-pack-aware token reservation to the inbound SMS Claude
+path, fail closed before the provider on missing tenant or hard cap, and
+claim Twilio MessageSid retries on the existing idempotency_keys table
+so the same delivery cannot spend or send twice.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+* fix(sms): retry unsent SMS agent replies without a second Claude call
+
+Move the MessageSid idempotency complete mark past the actual Twilio send.
+Store pending/sending/sent state in idempotency_keys.response_body so a
+failed send can retry the saved reply, while concurrent and completed
+replays stay silent.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+---------
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+**Date:** 2026-09-05
+**Commit:** 9b1381b
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/pr-check.yml,backend/routers/twilio_webhooks.py,backend/services/idempotency.py,backend/services/sms_agent.py,backend/tests/test_sms_agent.py,backend/tests/test_sms_agent_reply_usage_guard.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
