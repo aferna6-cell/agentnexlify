@@ -17,8 +17,6 @@ import logging
 import re
 from typing import Any
 
-import anthropic
-
 from backend.models.database import get_service_supabase
 from backend.services.activity import log_activity
 from backend.services.ai_usage_guard import (
@@ -148,11 +146,74 @@ def _build_conversation_summary(messages: list[dict[str, str]]) -> str | None:
     return first if len(first) > 20 else None
 
 
-def _extract_tags_from_conversation(messages: list[dict[str, str]]) -> list[str]:
+EXTRACT_TAGS_MAX_TOKENS = 200
+
+EXTRACT_TAGS_SYSTEM = (
+    "Extract business-relevant tags from this chat conversation between a visitor and a business AI assistant. "
+    "Return ONLY a JSON array of short tag strings. Tags should capture: "
+    "service interests (e.g. 'interested in: kitchen remodel'), "
+    "budget level (e.g. 'budget: high'), "
+    "timeline urgency (e.g. 'timeline: urgent', 'timeline: 3 months'), "
+    "and any other business-relevant signals (e.g. 'returning customer', 'referred by friend'). "
+    "If no meaningful tags can be extracted, return []. Max 5 tags. Keep each tag under 40 chars."
+)
+
+
+def _load_extract_tags_budget_tenant(db: Any, tenant_id: str) -> dict[str, Any] | None:
+    """Load the tenant row needed for a pack-aware reservation.
+
+    Returns None when the row is missing or the lookup throws. Callers must
+    fail closed before the provider — do not invent a free-plan cap (that
+    would falsely block a paying tenant or ignore purchased packs) and do
+    not call Claude unmetered.
+    """
+    try:
+        rows = (
+            db.table("tenants")
+            .select(
+                "id, plan, ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit"
+            )
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        ).data or []
+    except Exception:
+        # Do not attach the lookup exception: it may contain connection or
+        # customer context. Tenant id is enough to find the row.
+        logger.warning(
+            "tag_extraction: tenant load failed tenant=%s",
+            tenant_id,
+        )
+        return None
+    if not rows:
+        logger.warning(
+            "tag_extraction: tenant missing tenant=%s — failing closed before provider",
+            tenant_id,
+        )
+        return None
+    return {**rows[0], "id": tenant_id}
+
+
+def _extract_tags_from_conversation(
+    tenant_id: str, session_id: str, messages: list[dict[str, str]]
+) -> list[str]:
     """Use Claude to extract auto-tags from conversation messages.
 
+    Metered like widget.categorize_conversation: reserve → provider →
+    record, or release on provider / record-persist failure. Tenant/policy
+    load failure fails closed here (no provider call). A later reserve RPC
+    outage is different: reserve_ai_tokens returns allowed=True / reason=
+    guard_unavailable and this helper may still call the provider without
+    persisting usage.
+
+    Lead-capture callers already swallow errors. Hard-cap, missing tenant,
+    provider errors, and persist failures must not raise to the visitor
+    chat response.
+
     Returns a list of short tags like "interested in: kitchen remodel",
-    "budget: high", "timeline: urgent", "service: plumbing".
+    "budget: high", "timeline: urgent", "service: plumbing". Empty list
+    when the transcript is too short, budget blocks the call, the
+    provider fails, or Claude returns no usable tags.
     """
     if not messages or len(messages) < 2:
         return []
@@ -162,38 +223,91 @@ def _extract_tags_from_conversation(messages: list[dict[str, str]]) -> list[str]
         role = "Visitor" if msg["role"] == "user" else "Agent"
         transcript_lines.append(f"{role}: {msg['content']}")
     transcript = "\n".join(transcript_lines)
+    provider_messages = [{"role": "user", "content": transcript}]
+
+    try:
+        db = get_service_supabase()
+    except Exception:
+        logger.warning(
+            "tag_extraction: tenant load failed tenant=%s",
+            tenant_id,
+        )
+        return []
+
+    tenant = _load_extract_tags_budget_tenant(db, tenant_id)
+    if tenant is None:
+        logger.warning(
+            "tag_extraction: budget tenant unavailable tenant=%s — "
+            "failing closed before provider",
+            tenant_id,
+        )
+        return []
+
+    reservation = reserve_ai_tokens(
+        tenant=tenant,
+        estimated_tokens=estimate_widget_chat_tokens(
+            system_prompt=EXTRACT_TAGS_SYSTEM,
+            messages=provider_messages,
+            max_tokens=EXTRACT_TAGS_MAX_TOKENS,
+        ),
+        operation="widget.extract_tags",
+        session_id=session_id,
+    )
+    if not reservation.allowed:
+        logger.warning(
+            "tag_extraction: hard cap blocked tenant=%s session=%s",
+            tenant_id,
+            session_id,
+        )
+        return []
 
     try:
         resp = call_claude_messages_sync(
             operation="widget.extract_tags",
             model=MODEL,
-            max_tokens=200,
+            max_tokens=EXTRACT_TAGS_MAX_TOKENS,
             temperature=0,
-            system=(
-                "Extract business-relevant tags from this chat conversation between a visitor and a business AI assistant. "
-                "Return ONLY a JSON array of short tag strings. Tags should capture: "
-                "service interests (e.g. 'interested in: kitchen remodel'), "
-                "budget level (e.g. 'budget: high'), "
-                "timeline urgency (e.g. 'timeline: urgent', 'timeline: 3 months'), "
-                "and any other business-relevant signals (e.g. 'returning customer', 'referred by friend'). "
-                "If no meaningful tags can be extracted, return []. Max 5 tags. Keep each tag under 40 chars."
-            ),
-            messages=[{"role": "user", "content": transcript}],
+            system=EXTRACT_TAGS_SYSTEM,
+            messages=provider_messages,
             timeout=30.0,
-            metadata={"message_count": len(messages)},
+            metadata={
+                "tenant_id": tenant_id,
+                "session_id": session_id,
+                "message_count": len(messages),
+            },
         )
-        raw = resp.text.strip()
+    except Exception:
+        release_ai_token_reservation(reservation)
+        logger.warning(
+            "tag_extraction: provider error tenant=%s session=%s",
+            tenant_id,
+            session_id,
+        )
+        return []
+
+    record_ai_usage(
+        reservation=reservation,
+        result=resp,
+        operation="widget.extract_tags",
+        session_id=session_id,
+        model=MODEL,
+    )
+
+    try:
+        raw = (resp.text or "").strip()
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
         tags = json.loads(raw)
         if isinstance(tags, list):
             return [str(t)[:40] for t in tags if isinstance(t, str)][:5]
     except json.JSONDecodeError:
-        logger.warning("tag_extraction: Claude returned non-JSON response")
-    except anthropic.APIError as e:
-        logger.error("tag_extraction: Claude API error — %s", e)
+        logger.warning("tag_extraction: non-JSON response tenant=%s", tenant_id)
     except Exception:
-        logger.warning("tag_extraction: unexpected failure", exc_info=True)
+        logger.warning(
+            "tag_extraction: parse skipped tenant=%s session=%s",
+            tenant_id,
+            session_id,
+        )
     return []
 
 
@@ -686,7 +800,9 @@ async def _capture_leads_from_session(
                         "source": "widget",
                     })
                 try:
-                    tags = await asyncio.to_thread(_extract_tags_from_conversation, messages)
+                    tags = await asyncio.to_thread(
+                        _extract_tags_from_conversation, tenant_id, session_id, messages
+                    )
                     if tags:
                         tenant_update(db, "leads", tenant_id, {"tags": tags}).eq("id", lead["id"]).execute()
                         logger.info("lead_capture: tagged existing lead %s with %s", lead["id"], tags)
@@ -869,7 +985,9 @@ async def _capture_leads_from_session(
                 logger.error("LEAD_ALERT: EMAIL FAILED for lead %s", lead_id, exc_info=True)
 
             try:
-                tags = await asyncio.to_thread(_extract_tags_from_conversation, messages)
+                tags = await asyncio.to_thread(
+                    _extract_tags_from_conversation, tenant_id, session_id, messages
+                )
                 if tags:
                     tenant_update(db, "leads", tenant_id, {"tags": tags}).eq("id", lead_id).execute()
                     logger.info("lead_capture: tagged new lead %s with %s", lead_id, tags)
