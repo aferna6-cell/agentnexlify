@@ -18894,3 +18894,14 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Merge pull request #791 from aferna6-cell/cursor/appointment-brief-guards-79ba
+
+fix(security): appointment-brief demo, plan, and usage guards
+**Date:** 2026-09-05
+**Commit:** 3a9a9e1
+**Author:** aferna6-cell
+**Files Changed:** 
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
