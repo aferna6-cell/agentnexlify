@@ -27,12 +27,21 @@ later trigger can retry. Exactly-once spend is not guaranteed across
 provider-success / summary-persist-failure: there is no durable
 paid-but-not-persisted marker distinct from the claim, and retryability
 is preferred over a permanent tombstone.
+
+A process crash after claim-win leaves the unique token in calls.summary.
+calls has no updated_at (prod + staging + migration 044) and created_at
+is call-create time, not claim time, so neither can prove lease age.
+The issued-at unix timestamp is therefore stored in the claim token
+itself (AI summary generating...#<unix>#<uuid>) and a later trigger
+may CAS-reclaim after SUMMARY_CLAIM_LEASE_SECONDS. Tokens without a
+parseable issued-at cannot prove age and stay unreclaimable.
 """
 
 import json
 import logging
 import re
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 from backend.models.database import get_service_supabase
@@ -53,11 +62,16 @@ logger = logging.getLogger(__name__)
 
 SUMMARY_OPERATION = "calls.generate_summary"
 # In-flight marker prefix written before the provider so a second trigger
-# cannot also pay. Each winning attempt appends a unique token so cleanup
-# and persist can CAS only the row they own.
+# cannot also pay. Each winning attempt appends issued-at unix seconds and
+# a unique token so cleanup, persist, and stale reclaim can CAS only the
+# row they own. 15 minutes is well above the 30s provider timeout plus
+# reserve/record/persist; short enough that a crash recovers on the next
+# finalize/transcription trigger.
 SUMMARY_CLAIM = "AI summary generating..."
+SUMMARY_CLAIM_LEASE_SECONDS = 15 * 60
 # Pre-summary strings written by incoming / finalize / transcription /
-# recording-complete. These are claimable. An in-flight claim is not.
+# recording-complete. These are claimable. A fresh in-flight claim is not.
+# A stale in-flight claim (parseable issued-at older than the lease) is.
 _PRE_SUMMARY_PLACEHOLDERS = frozenset(
     {
         "AI conversation in progress.",
@@ -77,17 +91,70 @@ def _is_pre_summary_placeholder(value: Any) -> bool:
     return text == "" or text in _PRE_SUMMARY_PLACEHOLDERS
 
 
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 def _is_in_flight_summary_claim(value: Any) -> bool:
     text = "" if value is None else str(value).strip()
     return text == SUMMARY_CLAIM or text.startswith(f"{SUMMARY_CLAIM}#")
 
 
+def _parse_claim_issued_at(value: Any) -> datetime | None:
+    """Return issued-at only for tokens with a parseable lease clock.
+
+    Expected form: ``AI summary generating...#<unix>#<opaque>``.
+    Bare claims and ``#<uuid>``-only tokens return None — age cannot be
+    proved, so they stay unreclaimable.
+    """
+    text = "" if value is None else str(value).strip()
+    prefix = f"{SUMMARY_CLAIM}#"
+    if not text.startswith(prefix):
+        return None
+    rest = text[len(prefix) :]
+    parts = rest.split("#", 1)
+    if len(parts) != 2 or not parts[0] or not parts[1]:
+        return None
+    try:
+        unix = int(parts[0])
+    except ValueError:
+        return None
+    if unix <= 0:
+        return None
+    return datetime.fromtimestamp(unix, tz=timezone.utc)
+
+
+def _is_stale_summary_claim(value: Any, now: datetime | None = None) -> bool:
+    issued = _parse_claim_issued_at(value)
+    if issued is None:
+        return False
+    clock = now if now is not None else _utc_now()
+    return (clock - issued).total_seconds() >= SUMMARY_CLAIM_LEASE_SECONDS
+
+
 def should_skip_summary_generation(value: Any) -> bool:
-    """True when a real summary exists or another path already claimed."""
+    """True when a real summary exists or a fresh in-flight claim is live.
+
+    A stale claim (parseable issued-at older than the lease) is reclaimable
+    so a crash after claim-win does not permanently suppress later triggers.
+    Tokens without a parseable issued-at cannot prove age and stay skipped.
+    """
     text = "" if value is None else str(value).strip()
     if _is_pre_summary_placeholder(text):
         return False
+    if _is_stale_summary_claim(text):
+        return False
     return bool(text)
+
+
+def should_write_generating_placeholder(value: Any) -> bool:
+    """True when it is safe to replace summary with a pre-summary placeholder.
+
+    Fresh and stale in-flight tokens must stay in place so a webhook or
+    finalize write cannot wipe a just-won reclaim. Stale reclaim happens
+    only via compare-and-swap in ``_claim_call_summary_slot``.
+    """
+    return _is_pre_summary_placeholder(value)
 
 
 def _load_summary_budget_tenant(db: Any, tenant_id: str) -> dict[str, Any] | None:
@@ -125,8 +192,11 @@ def _load_summary_budget_tenant(db: Any, tenant_id: str) -> dict[str, Any] | Non
     return {**rows[0], "id": tenant_id}
 
 
-def _new_summary_claim() -> str:
-    return f"{SUMMARY_CLAIM}#{uuid.uuid4()}"
+def _new_summary_claim(now: datetime | None = None) -> str:
+    issued = now if now is not None else _utc_now()
+    if issued.tzinfo is None:
+        issued = issued.replace(tzinfo=timezone.utc)
+    return f"{SUMMARY_CLAIM}#{int(issued.timestamp())}#{uuid.uuid4()}"
 
 
 def _claimable_restore_value(previous: Any) -> str:
@@ -180,6 +250,12 @@ def _claim_call_summary_slot(
             call_id,
         )
         return None
+    if _is_stale_summary_claim(current):
+        logger.info(
+            "call summary: reclaiming stale claim tenant=%s call=%s",
+            tenant_id,
+            call_id,
+        )
     claim = _new_summary_claim()
     try:
         query = (
@@ -610,7 +686,8 @@ async def _finalize_ai_call(
     if call.get("status") == "completed":
         return
 
-    already_summarized = should_skip_summary_generation(call.get("summary"))
+    current_summary = call.get("summary")
+    already_summarized = should_skip_summary_generation(current_summary)
     session_id = f"call_{call_sid}"
     transcript: list[dict[str, Any]] = []
     transcript_text = ""
@@ -644,7 +721,7 @@ async def _finalize_ai_call(
         update["duration_seconds"] = duration_seconds
     if transcript:
         update["transcript"] = transcript
-        if not already_summarized:
+        if should_write_generating_placeholder(current_summary):
             update["summary"] = "AI conversation completed. Summary generating..."
     db.table("calls").update(update).eq("id", call["id"]).eq(
         "tenant_id", tenant_id

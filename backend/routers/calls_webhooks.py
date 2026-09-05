@@ -45,6 +45,7 @@ from backend.services.voice_call_summary import (
     _finalize_ai_call,
     _generate_call_summary,
     should_skip_summary_generation,
+    should_write_generating_placeholder,
 )
 from backend.services.voice_phone_routing import (
     _ai_voice_mode,
@@ -1020,9 +1021,10 @@ async def handle_transcription_complete(
         # Append the new transcription entry
         transcript_entry = existing_transcript + transcript_entry
 
-    already_summarized = should_skip_summary_generation(call_record.get("summary"))
+    current_summary = call_record.get("summary")
+    already_summarized = should_skip_summary_generation(current_summary)
     update_payload: dict[str, Any] = {"transcript": transcript_entry}
-    if not already_summarized:
+    if should_write_generating_placeholder(current_summary):
         update_payload["summary"] = "Transcription received. AI summary generating..."
 
     # Update the call record with the transcript

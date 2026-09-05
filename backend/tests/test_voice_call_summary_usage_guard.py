@@ -18,6 +18,9 @@ Contract:
 - After a claim win, hard-cap / provider / other pre-persist exits
   CAS-restore the pre-claim value only when the row still holds that
   exact claim token. A later allowed or successful run can summarize.
+- A process crash after claim-win leaves ``AI summary generating...#<unix>#<uuid>``.
+  A later trigger may CAS-reclaim after SUMMARY_CLAIM_LEASE_SECONDS.
+  Fresh claims still skip. Tokens without a parseable issued-at stay skipped.
 - Record-RPC failure still persists the provider summary. Summary-row
   persist failure releases the claim so a retry is possible; a second
   paid provider call is possible because there is no durable
@@ -32,6 +35,8 @@ Run: pytest backend/tests/test_voice_call_summary_usage_guard.py -q
 import logging
 import threading
 import urllib.parse
+import uuid
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -43,12 +48,15 @@ from backend.routers.automations import verify_twilio_request
 from backend.services.ai_usage_guard import AIUsageReservation, record_ai_usage
 from backend.services.voice_call_summary import (
     SUMMARY_CLAIM,
+    SUMMARY_CLAIM_LEASE_SECONDS,
     SUMMARY_OPERATION,
     _finalize_ai_call,
     _generate_call_summary,
     _is_in_flight_summary_claim,
     _release_owned_summary_claim,
     _summary_max_tokens,
+    should_skip_summary_generation,
+    should_write_generating_placeholder,
 )
 
 _PREVIOUS_PLACEHOLDER = "AI conversation completed. Summary generating..."
@@ -263,6 +271,21 @@ def _run_summary(store=None, **kwargs):
             kwargs.get("lead_id", "lead-summary-1"),
             kwargs.get("transcript_text", _TRANSCRIPT),
         )
+    )
+
+
+def _claim_at(when: datetime) -> str:
+    return f"{SUMMARY_CLAIM}#{int(when.timestamp())}#{uuid.uuid4()}"
+
+
+def _fresh_claim() -> str:
+    return _claim_at(datetime.now(timezone.utc))
+
+
+def _stale_claim() -> str:
+    return _claim_at(
+        datetime.now(timezone.utc)
+        - timedelta(seconds=SUMMARY_CLAIM_LEASE_SECONDS + 1)
     )
 
 
@@ -1032,6 +1055,163 @@ def test_in_flight_claim_skips_second_provider():
     provider.assert_not_called()
 
 
+def test_fresh_timestamped_claim_skips_provider():
+    store = _store(summary=_fresh_claim())
+    provider = AsyncMock(side_effect=_ok_claude)
+    with (
+        patch(
+            "backend.services.voice_call_summary.get_service_supabase",
+            return_value=store,
+        ),
+        patch("backend.services.voice_call_summary.reserve_ai_tokens") as reserve,
+        patch(
+            "backend.services.voice_call_summary.call_claude_messages",
+            new=provider,
+        ),
+    ):
+        _run_summary()
+    reserve.assert_not_called()
+    provider.assert_not_called()
+    assert _is_in_flight_summary_claim(store.calls[_CALL_ID]["summary"])
+
+
+def test_unparseable_claim_is_not_reclaimed():
+    """Legacy #<uuid> tokens cannot prove age — do not treat them as stale."""
+    store = _store(summary=f"{SUMMARY_CLAIM}#{uuid.uuid4()}")
+    provider = AsyncMock(side_effect=_ok_claude)
+    with (
+        patch(
+            "backend.services.voice_call_summary.get_service_supabase",
+            return_value=store,
+        ),
+        patch("backend.services.voice_call_summary.reserve_ai_tokens") as reserve,
+        patch(
+            "backend.services.voice_call_summary.call_claude_messages",
+            new=provider,
+        ),
+    ):
+        _run_summary()
+    reserve.assert_not_called()
+    provider.assert_not_called()
+
+
+def test_stale_claim_retries_once():
+    store = _store(summary=_stale_claim())
+    provider = AsyncMock(side_effect=_ok_claude)
+    with (
+        patch(
+            "backend.services.voice_call_summary.get_service_supabase",
+            return_value=store,
+        ),
+        patch(
+            "backend.services.voice_call_summary.reserve_ai_tokens",
+            side_effect=_allowed,
+        ) as reserve,
+        patch(
+            "backend.services.voice_call_summary.call_claude_messages",
+            new=provider,
+        ),
+        patch("backend.services.voice_call_summary.record_ai_usage") as record,
+        patch(
+            "backend.services.voice_recovery.create_missed_call_followup",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "backend.services.os_inbound_bridge.bridge_voice",
+            new_callable=AsyncMock,
+        ),
+        patch("backend.services.voice_call_summary.log_activity"),
+    ):
+        _run_summary()
+    provider.assert_awaited_once()
+    reserve.assert_called_once()
+    record.assert_called_once()
+    assert store.calls[_CALL_ID]["summary"] == (
+        "Caller asked about a kitchen remodel quote."
+    )
+
+
+def test_two_workers_reclaiming_stale_claim_at_most_one_provider():
+    store = _store(summary=_stale_claim())
+    counts = {"provider": 0, "reserve": 0, "record": 0}
+    lock = threading.Lock()
+
+    def reserve(**kwargs):
+        with lock:
+            counts["reserve"] += 1
+        return _allowed()
+
+    async def provider(**kwargs):
+        with lock:
+            counts["provider"] += 1
+        return _ok_claude()
+
+    def record(**kwargs):
+        with lock:
+            counts["record"] += 1
+
+    barrier = threading.Barrier(2)
+    errors = []
+
+    def target():
+        try:
+            barrier.wait()
+            _run_summary()
+        except Exception as exc:
+            errors.append(exc)
+
+    with (
+        patch(
+            "backend.services.voice_call_summary.get_service_supabase",
+            return_value=store,
+        ),
+        patch(
+            "backend.services.voice_call_summary.reserve_ai_tokens",
+            side_effect=reserve,
+        ),
+        patch(
+            "backend.services.voice_call_summary.call_claude_messages",
+            side_effect=provider,
+        ),
+        patch("backend.services.voice_call_summary.record_ai_usage", side_effect=record),
+        patch(
+            "backend.services.voice_recovery.create_missed_call_followup",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "backend.services.os_inbound_bridge.bridge_voice",
+            new_callable=AsyncMock,
+        ),
+        patch("backend.services.voice_call_summary.log_activity"),
+    ):
+        threads = [threading.Thread(target=target) for _ in range(2)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+    assert errors == []
+    assert counts["provider"] == 1
+    assert counts["reserve"] == 1
+    assert counts["record"] == 1
+    assert store.calls[_CALL_ID]["summary"] == (
+        "Caller asked about a kitchen remodel quote."
+    )
+
+
+def test_lease_helpers_distinguish_fresh_stale_and_real_summary():
+    fresh = _fresh_claim()
+    stale = _stale_claim()
+    real = "Caller asked about a kitchen remodel quote."
+    assert should_skip_summary_generation(fresh) is True
+    assert should_skip_summary_generation(stale) is False
+    assert should_skip_summary_generation(real) is True
+    assert should_skip_summary_generation(SUMMARY_CLAIM) is True
+    assert should_write_generating_placeholder(fresh) is False
+    assert should_write_generating_placeholder(stale) is False
+    assert should_write_generating_placeholder(real) is False
+    assert should_write_generating_placeholder(_PREVIOUS_PLACEHOLDER) is True
+
+
 def test_claim_cleanup_does_not_overwrite_real_summary():
     store = _store(summary="Caller already summarized.")
     _release_owned_summary_claim(
@@ -1244,6 +1424,51 @@ def test_finalize_only_summarizes_once():
     assert store.calls[_CALL_ID]["summary"] == "Caller asked about a kitchen remodel quote."
 
 
+def test_finalize_reclaims_stale_claim_without_wiping_token():
+    stale = _stale_claim()
+    store = _SummaryStore(
+        tenant=_TENANT,
+        calls=[_call_row(summary=stale)],
+        chat_messages=[
+            {"role": "assistant", "content": "Thanks for calling"},
+            {"role": "user", "content": "Need a plumber"},
+        ],
+    )
+    with (
+        patch(
+            "backend.services.voice_call_summary.get_service_supabase",
+            return_value=store,
+        ),
+        patch(
+            "backend.services.voice_call_summary.reserve_ai_tokens",
+            side_effect=_allowed,
+        ) as reserve,
+        patch(
+            "backend.services.voice_call_summary.call_claude_messages",
+            new_callable=AsyncMock,
+            side_effect=_ok_claude,
+        ) as provider,
+        patch("backend.services.voice_call_summary.record_ai_usage") as record,
+        patch(
+            "backend.services.voice_recovery.create_missed_call_followup",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "backend.services.os_inbound_bridge.bridge_voice",
+            new_callable=AsyncMock,
+        ),
+        patch("backend.services.voice_call_summary.log_activity"),
+    ):
+        run(_finalize_ai_call(store, _TENANT_ID, _CALL_SID, 45))
+    provider.assert_awaited_once()
+    reserve.assert_called_once()
+    record.assert_called_once()
+    assert store.calls[_CALL_ID]["status"] == "completed"
+    assert store.calls[_CALL_ID]["summary"] == (
+        "Caller asked about a kitchen remodel quote."
+    )
+
+
 def test_finalize_skips_generate_when_summary_already_persisted():
     store = _SummaryStore(
         tenant=_TENANT,
@@ -1340,6 +1565,69 @@ def test_transcription_complete_skips_queue_when_summary_persisted(
     )
     texts = [e["text"] for e in store.calls[_CALL_ID]["transcript"]]
     assert "Please send the quote." in texts
+
+
+def test_transcription_complete_queues_stale_claim_without_wiping_token(
+    _bypass_twilio_sig,
+):
+    stale = _stale_claim()
+    store = _SummaryStore(
+        tenant=_TENANT,
+        calls=[
+            _call_row(
+                summary=stale,
+                status="completed",
+                transcript=[{"timestamp": 0, "speaker": "caller", "text": "prior"}],
+            )
+        ],
+    )
+    with (
+        patch.object(calls_webhooks, "get_service_supabase", return_value=store),
+        patch.object(BackgroundTasks, "add_task", autospec=True) as add_task,
+    ):
+        resp = _client().post(
+            "/api/v1/calls/voice/transcription-complete",
+            content=_form(
+                TranscriptionText="Need a plumber tomorrow",
+                CallSid=_CALL_SID,
+                TranscriptionStatus="completed",
+            ),
+        )
+    assert resp.status_code == 200
+    assert add_task.call_count == 1
+    assert add_task.call_args.args[1] is calls_webhooks._generate_call_summary
+    assert store.calls[_CALL_ID]["summary"] == stale
+
+
+def test_transcription_complete_skips_queue_when_fresh_claim(
+    _bypass_twilio_sig,
+):
+    fresh = _fresh_claim()
+    store = _SummaryStore(
+        tenant=_TENANT,
+        calls=[
+            _call_row(
+                summary=fresh,
+                status="completed",
+                transcript=[],
+            )
+        ],
+    )
+    with (
+        patch.object(calls_webhooks, "get_service_supabase", return_value=store),
+        patch.object(BackgroundTasks, "add_task", autospec=True) as add_task,
+    ):
+        resp = _client().post(
+            "/api/v1/calls/voice/transcription-complete",
+            content=_form(
+                TranscriptionText="Need a plumber tomorrow",
+                CallSid=_CALL_SID,
+                TranscriptionStatus="completed",
+            ),
+        )
+    assert resp.status_code == 200
+    add_task.assert_not_called()
+    assert store.calls[_CALL_ID]["summary"] == fresh
 
 
 def test_finalize_then_transcription_same_call_one_provider(_bypass_twilio_sig):
