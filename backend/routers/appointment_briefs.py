@@ -8,13 +8,24 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.dependencies import _get_current_tenant
+from backend.dependencies import _get_current_tenant, block_demo_role
 from backend.models.database import get_service_supabase
 from backend.services import appointment_brief
+from backend.services.agent_os_gate import require_agent_os_access
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/appointments", tags=["appointment-briefs"])
+# GH #643 / PR #575 salvage: both endpoints drive Claude calls, so they carry
+# the demo block + agent_os plan gate at the router. Usage is reserved and
+# recorded inside appointment_brief (same contract as widget chat) — a
+# snapshot of get_ai_usage_status is not enforceable.
+# DemoRoleBlockMiddleware already 403s demo POSTs here; the Depends pins
+# the invariant. chatbot/free still need the 402 plan gate.
+router = APIRouter(
+    prefix="/api/v1/appointments",
+    tags=["appointment-briefs"],
+    dependencies=[Depends(block_demo_role), Depends(require_agent_os_access)],
+)
 
 
 def _business_name(db, tenant_id: str) -> str:
@@ -46,6 +57,10 @@ async def get_appointment_brief(
         return await appointment_brief.generate_brief(
             db, tenant_id, appointment_id, _business_name(db, tenant_id)
         )
+    except appointment_brief.AppointmentBudgetExceeded as exc:
+        raise HTTPException(status_code=429, detail=str(exc))
+    except appointment_brief.AppointmentBudgetGuardUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
     except appointment_brief.AppointmentBriefError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception:
@@ -69,6 +84,10 @@ async def get_followup_draft(
         return await appointment_brief.draft_followup(
             db, tenant_id, appointment_id, _business_name(db, tenant_id)
         )
+    except appointment_brief.AppointmentBudgetExceeded as exc:
+        raise HTTPException(status_code=429, detail=str(exc))
+    except appointment_brief.AppointmentBudgetGuardUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
     except appointment_brief.AppointmentBriefError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception:

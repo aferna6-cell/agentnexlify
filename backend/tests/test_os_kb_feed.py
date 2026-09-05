@@ -139,6 +139,50 @@ def test_ai_usage_status_shapes_and_thresholds(monkeypatch):
     assert safe["hard_limit_reached"] is False and safe["used_units"] == 0
 
 
+def test_ai_usage_status_includes_purchased_pack_bonus(monkeypatch):
+    """The customer-facing meter must include purchased packs for the known tenant."""
+    from backend.services import ai_usage_guard as guard
+
+    class _Q:
+        def __init__(self, rows):
+            self._rows = rows
+
+        def select(self, *_a, **_k):
+            return self
+
+        def eq(self, *_a, **_k):
+            return self
+
+        def limit(self, *_a, **_k):
+            return self
+
+        def execute(self):
+            return _Result(self._rows)
+
+    class _DB:
+        def table(self, name):
+            if name == "tenants":
+                # Deliberately omit id from the returned row: get_ai_usage_status
+                # already knows tenant_id and must attach it before policy resolution.
+                return _Q([{"plan": "chatbot"}])
+            return _Q([])
+
+    seen = {}
+
+    def fake_sum_usage_packs(tenant_id):
+        seen["tenant_id"] = tenant_id
+        return 1_000_000
+
+    monkeypatch.setattr(guard, "_sum_usage_packs", fake_sum_usage_packs)
+    out = guard.get_ai_usage_status(_DB(), "t-pack")
+
+    assert seen["tenant_id"] == "t-pack"
+    # chatbot baseline 800k + 1M purchased pack => 1.8M tokens / 1000.
+    assert out["limit_units"] == 1800
+    assert out["remaining_units"] == 1800
+    assert out["hard_limit_reached"] is False
+
+
 def test_thin_knowledge_emits_gap_nudge():
     """Express-path self-healing: empty crawl + no FAQs -> staff is told
     which basics to gather from the owner, conversationally."""
