@@ -13,9 +13,9 @@ Run 115 mandate checks (from run_114):
 
 ---
 
-### Idea 1: Add Step 9L — Unapplied Migration Alerter to nightly SKILL.md
-**Evidence:** feat(schema) PR #788 added scripts/check_schema_log_migrations.py (schema-log vs live migration drift guard). PR #782 (draft subconscious PR, 2026-09-03) explicitly names "Step 9L unapplied migration alerter" — confirms prior automated run identified this. Migration drift causes silent prod failures. Schema-log updated manually (f72a274, 2026-09-04). No automated daily check exists.
-**Action:** Add Step 9L block to .claude/skills/nightly-commit-review/SKILL.md — run check_schema_log_migrations.py, report result, file GH issue if drift found.
+### Idea 1: Add nightly migration alerter — Unapplied Migration Alerter to nightly SKILL.md
+**Evidence:** feat(schema) PR #788 added scripts/check_schema_log_migrations.py (schema-log vs live migration drift guard). PR #782 (draft subconscious PR, 2026-09-03) explicitly names "unapplied migration alerter" — confirms prior automated run identified this. Migration drift causes silent prod failures. Schema-log updated manually (f72a274, 2026-09-04). No automated daily check exists.
+**Action:** Add a migration alerter block to .claude/skills/nightly-commit-review/SKILL.md — run check_schema_log_migrations.py, report result, file GH issue if drift found.
 **Impact:** Catches unapplied migrations before they cause prod failures. Same autonomous-executable SKILL.md channel as Steps 9F-9K. Zero code risk.
 **Category:** code_health
 
@@ -37,9 +37,9 @@ Run 115 mandate checks (from run_114):
 
 ---
 
-### Idea 4: Add Step 9M — Nightly AI usage metering coverage check
+### Idea 4: Add Step 9L — Nightly AI usage metering coverage check
 **Evidence:** #793 (fix(widget): meter extract_action_items) + #792 (fix(voice): meter live-AI respond) both landed in last 3 days — same class of bug: new AI endpoint shipped without reserve/record/release metering. This is identical to the block_demo_role recurrence pattern that spawned Step 9I. Each unmetered endpoint is silent revenue leakage. No systematic nightly sweep exists.
-**Action:** Add Step 9M to SKILL.md — grep backend/routers/ for AI calls (call_claude_messages, claude_client.messages) that lack ai_usage_guard or reserve_tokens calls. File ai-ready issue if found.
+**Action:** Add Step 9L to SKILL.md — grep backend/routers/ for AI calls (call_claude_messages, claude_client.messages) that lack ai_usage_guard or reserve_tokens calls. File ai-ready issue if found.
 **Impact:** Prevents silent revenue leakage. Same SKILL.md-edit channel as Steps 9I-9K (autonomous-executable). Closes a whole class of recurring misses permanently.
 **Category:** code_health / operational
 

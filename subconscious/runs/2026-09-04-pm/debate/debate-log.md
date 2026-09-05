@@ -1,10 +1,10 @@
 # Debate Log — Run 115 (2026-09-04-pm)
 
-Top 3 by impact: Idea 4 (Step 9M metering check) > Idea 1 (Step 9L migration alerter) > Idea 3 (Step 9J eligibility fix)
+Top 3 by impact: Idea 4 (Step 9L metering check) > Idea 1 (migration alerter) > Idea 3 (Step 9J eligibility fix)
 
 ---
 
-## Idea 4: Add Step 9M — Nightly AI Usage Metering Coverage Check
+## Idea 4: Add Step 9L — Nightly AI Usage Metering Coverage Check
 
 ### Challenge
 **C1: Is the evidence strong enough?** Two metering fixes in 3 days is a thin sample. Both might be from the same M9 sprint cleanup rather than a systemic pattern. extract_action_items and voice respond are niche endpoints — how many unmetered routes realistically exist today?
@@ -22,13 +22,13 @@ Top 3 by impact: Idea 4 (Step 9M metering check) > Idea 1 (Step 9L migration ale
 
 **D3 (C3):** False-positive risk is real but mitigated by scoping the grep to files with explicit claude_client or call_claude_messages imports (not all files). Admin endpoints are identifiable by route prefix (/admin/, /internal/). Dedup guard prevents re-filing for the same file. Same safeguards as Step 9I.
 
-**D4 (C4):** Step 9I precedent directly validates this approach — both address the "new feature route misses a security/billing dependency" class. Steps 9I→9J→9K→9L all follow this exact autonomous-executable SKILL.md pattern. Confidence from prior implementations is HIGH.
+**D4 (C4):** Step 9I precedent directly validates this approach — both address the "new feature route misses a security/billing dependency" class. Steps 9I→9J→9K all follow this exact autonomous-executable SKILL.md pattern. Confidence from prior implementations is HIGH.
 
 ### Verdict: **SURVIVES** — strong evidence, proven mechanism, revenue-protecting, identical pattern to Step 9I which succeeded.
 
 ---
 
-## Idea 1: Add Step 9L — Unapplied Migration Alerter to nightly SKILL.md
+## Idea 1: Add nightly migration alerter — Unapplied Migration Alerter to nightly SKILL.md
 
 ### Challenge
 **C1: Is this new?** PR #782 already references "Step 9L unapplied migration alerter." If a prior subconscious run already recommended and possibly partially implemented this, proposing it again might be a duplicate.
@@ -40,7 +40,7 @@ Top 3 by impact: Idea 4 (Step 9M metering check) > Idea 1 (Step 9L migration ale
 **C4: How often does migration drift actually occur?** schema-log.md was last updated today (f72a274). The human is actively maintaining it. This may be a low-frequency problem.
 
 ### Defend
-**D1 (C1):** PR #782 is a draft subconscious PR that was never merged. The governance.json shows total_runs=114 with last_run=2026-08-31-pm. PR #782 represents orphaned work — not an implemented recommendation. Step 9L is not in SKILL.md (no grep hit expected). This run should complete what PR #782 started.
+**D1 (C1):** PR #782 is a draft subconscious PR that was never merged. The governance.json shows total_runs=114 with last_run=2026-08-31-pm. PR #782 represents orphaned work — not an implemented recommendation. The migration alerter step is not in SKILL.md (no grep hit expected). This run should complete what PR #782 started.
 
 **D2 (C2):** CI catches drift at PR time; nightly catches drift that accumulates between PRs — e.g., manual SQL applied on prod without a migration file. These are complementary, not redundant. Nightly has caught "applied on prod but not committed" cases before (schema-log.md is manually updated, not CI-validated on every push).
 
@@ -80,8 +80,8 @@ Top 3 by impact: Idea 4 (Step 9M metering check) > Idea 1 (Step 9L migration ale
 
 | Idea | Verdict | Reason |
 |------|---------|--------|
-| Idea 4 (Step 9M metering) | SURVIVES → WINNER | Proven pattern (Step 9I analog), revenue impact, 2 incidents in 3 days |
-| Idea 1 (Step 9L migration alerter) | SURVIVES (weakened) → Parking lot | Valid, autonomous-executable, but lower urgency than metering |
+| Idea 4 (Step 9L metering) | SURVIVES → WINNER | Proven pattern (Step 9I analog), revenue impact, 2 incidents in 3 days |
+| Idea 1 (migration alerter) | SURVIVES (weakened) → Parking lot | Valid, autonomous-executable, but lower urgency than metering |
 | Idea 3 (Step 9J eligibility fix) | KILLED | CI dark (GH #500) makes auto-merge risky; rebase trigger is safer current posture |
 
-**Winner: Idea 4 — Add Step 9M (nightly AI usage metering coverage check) to nightly-commit-review SKILL.md.**
+**Winner: Idea 4 — Add Step 9L (nightly AI usage metering coverage check) to nightly-commit-review SKILL.md.**
