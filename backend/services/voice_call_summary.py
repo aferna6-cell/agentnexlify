@@ -3,6 +3,18 @@
 Extracted from backend/routers/calls.py (god-file split, 2026-06). These run
 as background tasks after voice webhooks respond, so nothing here may block
 or raise into a webhook path — every external step degrades gracefully.
+
+Claude spend is metered like widget extract_tags: reserve → provider →
+record, or release on provider / record-persist failure. Tenant/policy
+load failure fails closed here (no provider call). A later reserve RPC
+outage is different: reserve_ai_tokens returns allowed=True / reason=
+guard_unavailable and this helper may still call the provider without
+persisting usage.
+
+Live-AI finalize and /voice/transcription-complete can both target the
+same calls.id. A compare-and-swap on calls.summary claims the slot
+before reserve/provider so two delivery paths cannot create two paid
+summaries. Separate call ids still account independently.
 """
 
 import json
@@ -12,6 +24,12 @@ from typing import Any
 
 from backend.models.database import get_service_supabase
 from backend.services.activity import log_activity
+from backend.services.ai_usage_guard import (
+    estimate_widget_chat_tokens,
+    record_ai_usage,
+    release_ai_token_reservation,
+    reserve_ai_tokens,
+)
 from backend.services.llm_runtime import (
     call_claude_messages,
     resolve_int_setting,
@@ -20,24 +38,142 @@ from backend.services.llm_runtime import (
 
 logger = logging.getLogger(__name__)
 
+SUMMARY_OPERATION = "calls.generate_summary"
+# Claim written before the provider so a second trigger cannot also pay.
+SUMMARY_CLAIM = "AI summary generating..."
+# Pre-summary strings written by incoming / finalize / transcription /
+# recording-complete. These are claimable. The claim marker itself is not.
+_PRE_SUMMARY_PLACEHOLDERS = frozenset(
+    {
+        "AI conversation in progress.",
+        "AI conversation completed. Summary generating...",
+        "Transcription received. AI summary generating...",
+        "Voicemail recorded. Transcription pending.",
+    }
+)
 
-async def _generate_call_summary(call_id: str, tenant_id: str, lead_id: str | None, transcript_text: str) -> None:
-    """Generate an AI summary of a call transcript and store it.
 
-    Calls Claude to produce:
-    - A one-paragraph summary
-    - Action items (list)
-    - Caller sentiment (positive/neutral/negative)
-    - Suggested follow-up
+def _summary_max_tokens() -> int:
+    return max(600, resolve_int_setting("voice_chat_max_tokens", 160) * 3)
 
-    Then updates the call record and inserts action items into action_items table.
-    This runs as a background task so it does not block the webhook response.
+
+def _is_pre_summary_placeholder(value: Any) -> bool:
+    text = "" if value is None else str(value).strip()
+    return text == "" or text in _PRE_SUMMARY_PLACEHOLDERS
+
+
+def should_skip_summary_generation(value: Any) -> bool:
+    """True when a real summary exists or another path already claimed."""
+    text = "" if value is None else str(value).strip()
+    if _is_pre_summary_placeholder(text):
+        return False
+    return bool(text)
+
+
+def _load_summary_budget_tenant(db: Any, tenant_id: str) -> dict[str, Any] | None:
+    """Load the tenant row needed for a pack-aware reservation.
+
+    Returns None when the row is missing or the lookup throws. Callers must
+    fail closed before the provider — do not invent a free-plan cap (that
+    would falsely block a paying tenant or ignore purchased packs) and do
+    not call Claude unmetered.
     """
-    if not transcript_text or not transcript_text.strip():
-        logger.warning("Skipping summary generation for call %s: empty transcript", call_id)
-        return
+    try:
+        rows = (
+            db.table("tenants")
+            .select(
+                "id, plan, ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit"
+            )
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        ).data or []
+    except Exception:
+        # Do not attach the lookup exception: it may contain connection or
+        # customer context. Tenant id is enough to find the row.
+        logger.warning(
+            "call summary: tenant load failed tenant=%s",
+            tenant_id,
+        )
+        return None
+    if not rows:
+        logger.warning(
+            "call summary: tenant missing tenant=%s — failing closed before provider",
+            tenant_id,
+        )
+        return None
+    return {**rows[0], "id": tenant_id}
 
-    prompt = (
+
+def _claim_call_summary_slot(db: Any, call_id: str, tenant_id: str) -> bool:
+    """Atomically claim calls.summary before a paid Claude call.
+
+    Returns True only for the winning writer. A persisted summary or an
+    in-flight claim causes the loser to skip reserve and provider.
+    """
+    try:
+        result = (
+            db.table("calls")
+            .select("summary")
+            .eq("id", call_id)
+            .eq("tenant_id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.warning(
+            "call summary: claim load failed tenant=%s call=%s",
+            tenant_id,
+            call_id,
+        )
+        return False
+    rows = result.data or []
+    if not rows:
+        logger.warning(
+            "call summary: call missing tenant=%s call=%s — failing closed before provider",
+            tenant_id,
+            call_id,
+        )
+        return False
+    current = rows[0].get("summary")
+    if should_skip_summary_generation(current):
+        logger.info(
+            "call summary: already claimed or persisted tenant=%s call=%s — skipping provider",
+            tenant_id,
+            call_id,
+        )
+        return False
+    try:
+        query = (
+            db.table("calls")
+            .update({"summary": SUMMARY_CLAIM})
+            .eq("id", call_id)
+            .eq("tenant_id", tenant_id)
+        )
+        if current is None:
+            query = query.is_("summary", "null")
+        else:
+            query = query.eq("summary", current)
+        updated = query.execute()
+    except Exception:
+        logger.warning(
+            "call summary: claim update failed tenant=%s call=%s",
+            tenant_id,
+            call_id,
+        )
+        return False
+    if not (updated.data or []):
+        logger.info(
+            "call summary: lost claim tenant=%s call=%s — skipping provider",
+            tenant_id,
+            call_id,
+        )
+        return False
+    return True
+
+
+def _summary_prompt(transcript_text: str) -> str:
+    return (
         "Analyze this phone call transcript and provide:\n"
         "1. A one-paragraph summary\n"
         "2. Action items (list)\n"
@@ -53,11 +189,75 @@ async def _generate_call_summary(call_id: str, tenant_id: str, lead_id: str | No
         f"Transcript:\n{transcript_text}"
     )
 
+
+async def _generate_call_summary(call_id: str, tenant_id: str, lead_id: str | None, transcript_text: str) -> None:
+    """Generate an AI summary of a call transcript and store it.
+
+    Calls Claude to produce:
+    - A one-paragraph summary
+    - Action items (list)
+    - Caller sentiment (positive/neutral/negative)
+    - Suggested follow-up
+
+    Then updates the call record and inserts action items into action_items table.
+    This runs as a background task so it does not block the webhook response.
+
+    Hard-cap, missing tenant, provider errors, persist failures, and a lost
+    summary claim must not raise into the already-completed call or
+    transcription webhook.
+    """
+    if not transcript_text or not transcript_text.strip():
+        logger.warning("Skipping summary generation for call %s: empty transcript", call_id)
+        return
+
+    prompt = _summary_prompt(transcript_text)
+    max_tokens = _summary_max_tokens()
+    model = resolve_string_setting("voice_chat_model", "claude-sonnet-4-6")
+
+    try:
+        db = get_service_supabase()
+    except Exception:
+        logger.warning(
+            "call summary: tenant load failed tenant=%s",
+            tenant_id,
+        )
+        return
+
+    tenant = _load_summary_budget_tenant(db, tenant_id)
+    if tenant is None:
+        logger.warning(
+            "call summary: budget tenant unavailable tenant=%s — "
+            "failing closed before provider",
+            tenant_id,
+        )
+        return
+
+    if not _claim_call_summary_slot(db, call_id, tenant_id):
+        return
+
+    reservation = reserve_ai_tokens(
+        tenant=tenant,
+        estimated_tokens=estimate_widget_chat_tokens(
+            system_prompt="",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_tokens,
+        ),
+        operation=SUMMARY_OPERATION,
+        session_id=call_id,
+    )
+    if not reservation.allowed:
+        logger.warning(
+            "call summary: hard cap blocked tenant=%s call=%s",
+            tenant_id,
+            call_id,
+        )
+        return
+
     try:
         llm_result = await call_claude_messages(
-            operation="calls.generate_summary",
-            model=resolve_string_setting("voice_chat_model", "claude-sonnet-4-6"),
-            max_tokens=max(600, resolve_int_setting("voice_chat_max_tokens", 160) * 3),
+            operation=SUMMARY_OPERATION,
+            model=model,
+            max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,
             timeout=30.0,
@@ -67,10 +267,23 @@ async def _generate_call_summary(call_id: str, tenant_id: str, lead_id: str | No
                 "transcript_chars": len(transcript_text),
             },
         )
-        raw_text = llm_result.text.strip()
+        raw_text = (llm_result.text or "").strip()
     except Exception:
-        logger.exception("Claude API call failed for call summary, call %s", call_id)
+        release_ai_token_reservation(reservation)
+        logger.warning(
+            "call summary: provider error tenant=%s call=%s",
+            tenant_id,
+            call_id,
+        )
         return
+
+    record_ai_usage(
+        reservation=reservation,
+        result=llm_result,
+        operation=SUMMARY_OPERATION,
+        session_id=call_id,
+        model=model,
+    )
 
     # Parse the JSON response from Claude
     summary = ""
@@ -92,10 +305,18 @@ async def _generate_call_summary(call_id: str, tenant_id: str, lead_id: str | No
                 sentiment = "neutral"
             follow_up = parsed.get("follow_up", "")
         else:
-            logger.warning("No JSON found in Claude response for call %s, using raw text", call_id)
+            logger.warning(
+                "call summary: no JSON in provider response tenant=%s call=%s",
+                tenant_id,
+                call_id,
+            )
             summary = raw_text[:500]
-    except (json.JSONDecodeError, AttributeError) as exc:
-        logger.warning("Failed to parse Claude summary JSON for call %s: %s", call_id, exc)
+    except (json.JSONDecodeError, AttributeError):
+        logger.warning(
+            "call summary: parse skipped tenant=%s call=%s",
+            tenant_id,
+            call_id,
+        )
         summary = raw_text[:500]
 
     # Build action_taken from follow-up and action items
@@ -107,7 +328,6 @@ async def _generate_call_summary(call_id: str, tenant_id: str, lead_id: str | No
     action_taken = " | ".join(action_taken_parts) if action_taken_parts else None
 
     # Update the call record with summary, sentiment, and action_taken
-    db = get_service_supabase()
     try:
         update_data: dict[str, Any] = {
             "summary": summary,
@@ -122,7 +342,11 @@ async def _generate_call_summary(call_id: str, tenant_id: str, lead_id: str | No
             call_id, sentiment, len(action_items),
         )
     except Exception:
-        logger.exception("Failed to update call %s with AI summary", call_id)
+        logger.warning(
+            "call summary: persist skipped tenant=%s call=%s",
+            tenant_id,
+            call_id,
+        )
 
     # Feature 3: Insert action items into action_items table
     if action_items:
@@ -173,8 +397,9 @@ async def _generate_call_summary(call_id: str, tenant_id: str, lead_id: str | No
                 transcript_excerpt=transcript_text,
             )
     except Exception:
-        logger.exception(
-            "Missed-call recovery draft failed for call %s (summary still saved)",
+        logger.warning(
+            "call summary: missed-call recovery skipped tenant=%s call=%s",
+            tenant_id,
             call_id,
         )
 
@@ -201,8 +426,10 @@ async def _generate_call_summary(call_id: str, tenant_id: str, lead_id: str | No
             sender_metadata={"caller_phone": caller_phone, "call_id": call_id},
         )
     except Exception:
-        logger.exception(
-            "Voice bridge failed for call %s (summary still saved)", call_id
+        logger.warning(
+            "call summary: voice bridge skipped tenant=%s call=%s",
+            tenant_id,
+            call_id,
         )
 
 
@@ -237,9 +464,10 @@ async def _insert_call_action_items(
             db.table("action_items").insert(row).execute()
             inserted += 1
         except Exception:
-            logger.exception(
-                "Failed to insert action item for call %s: %s",
-                call_id, item_text[:80],
+            logger.warning(
+                "call summary: action item insert skipped tenant=%s call=%s",
+                tenant_id,
+                call_id,
             )
     if inserted:
         logger.info("Inserted %d action items from call %s for tenant %s", inserted, call_id, tenant_id)
@@ -262,12 +490,14 @@ async def _finalize_ai_call(
 
     Idempotent — a call already marked completed is skipped, so the inline
     max-rounds finalize and the Twilio status callback can both fire.
+    A persisted or in-flight summary is not overwritten and does not
+    start a second paid Claude call.
     """
     if not call_sid:
         return
     result = (
         db.table("calls")
-        .select("id, tenant_id, lead_id, status")
+        .select("id, tenant_id, lead_id, status, summary")
         .eq("twilio_call_sid", call_sid)
         .eq("tenant_id", tenant_id)
         .limit(1)
@@ -279,6 +509,7 @@ async def _finalize_ai_call(
     if call.get("status") == "completed":
         return
 
+    already_summarized = should_skip_summary_generation(call.get("summary"))
     session_id = f"call_{call_sid}"
     transcript: list[dict[str, Any]] = []
     transcript_text = ""
@@ -301,19 +532,24 @@ async def _finalize_ai_call(
             f"[{t['speaker']}]: {t['text']}" for t in transcript if t["text"]
         )
     except Exception:
-        logger.exception("Failed to build transcript for call %s", call_sid)
+        logger.warning(
+            "call summary: transcript build skipped tenant=%s call_sid=%s",
+            tenant_id,
+            call_sid,
+        )
 
     update: dict[str, Any] = {"status": "completed"}
     if duration_seconds:
         update["duration_seconds"] = duration_seconds
     if transcript:
         update["transcript"] = transcript
-        update["summary"] = "AI conversation completed. Summary generating..."
+        if not already_summarized:
+            update["summary"] = "AI conversation completed. Summary generating..."
     db.table("calls").update(update).eq("id", call["id"]).eq(
         "tenant_id", tenant_id
     ).execute()
 
-    if transcript_text:
+    if transcript_text and not already_summarized:
         await _generate_call_summary(
             call_id=call["id"],
             tenant_id=tenant_id,
