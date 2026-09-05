@@ -561,9 +561,10 @@ async def handle_inbound_sms(request: Request):
     tenant = _find_tenant_by_phone(to_number) if to_number else None
 
     if tenant and tenant.get("sms_agent_enabled"):
+        db = get_service_supabase()
         try:
             reply_text = await sms_agent.handle_inbound_sms(
-                get_service_supabase(),
+                db,
                 tenant=tenant,
                 from_number=from_number,
                 to_number=to_number,
@@ -577,7 +578,19 @@ async def handle_inbound_sms(request: Request):
             reply_text = None
 
         if reply_text:
-            await sms_agent.send_sms_agent_reply(tenant["id"], from_number, reply_text)
+            sent = False
+            try:
+                sent = await sms_agent.send_sms_agent_reply(
+                    tenant["id"], from_number, reply_text
+                )
+            finally:
+                await sms_agent.finalize_sms_agent_send(
+                    db,
+                    tenant_id=tenant["id"],
+                    provider_message_id=message_sid,
+                    reply_text=reply_text,
+                    sent=bool(sent),
+                )
 
         return PlainTextResponse("OK")
 
