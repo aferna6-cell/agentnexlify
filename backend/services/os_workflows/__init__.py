@@ -4,6 +4,7 @@ M9.1: types and transition rules.
 M9.2: durable store + deterministic engine (no LLM, no tool execution).
 M9.3: frozen planner eval + deterministic plan validator (still no LLM).
 M9.4: offline LLM planner bakeoff (CandidatePlan JSON only — no persist/execute).
+M9.5: shadow-path skeleton (in-memory observe only — no store/executor/provider).
 """
 
 from backend.services.os_workflows.contract import (
