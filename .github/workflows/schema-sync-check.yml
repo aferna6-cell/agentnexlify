@@ -44,7 +44,7 @@ jobs:
     name: Pending Migrations Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Count pending migrations
         id: count
@@ -178,7 +178,7 @@ jobs:
     name: Live Column Drift
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Diff live schema vs manifest
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
