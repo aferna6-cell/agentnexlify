@@ -125,6 +125,23 @@ def test_nested_function_inside_method_does_not_mask_method(tmp_path: Path) -> N
     assert _functions(meter.scan_file(path, is_router=False)) == {"send_message"}
 
 
+def test_raw_provider_entrypoint_is_exempt_only_in_llm_runtime(tmp_path: Path) -> None:
+    runtime = _write(
+        tmp_path,
+        "backend/services/llm_runtime.py",
+        "def _call_single_model(client):\n"
+        "    return client.messages.create(model='test', messages=[])\n",
+    )
+    other = _write(
+        tmp_path,
+        "backend/services/other_runtime.py",
+        "def _call_single_model(client):\n"
+        "    return client.messages.create(model='test', messages=[])\n",
+    )
+    assert meter.scan_file(runtime, is_router=False) == []
+    assert _functions(meter.scan_file(other, is_router=False)) == {"_call_single_model"}
+
+
 @pytest.mark.parametrize(
     ("body", "function_name"),
     [
