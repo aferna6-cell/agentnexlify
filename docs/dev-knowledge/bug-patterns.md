@@ -18894,3 +18894,30 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(billing): meter tenant graph AI calls (#803)
+
+* fix(billing): meter tenant graph AI calls
+
+* test(billing): cover graph AI metering lifecycle
+
+* test: fix graph metering import ordering
+
+* test: expect graph adapter metering remediation
+
+* test: run graph AI metering coverage in hosted suite
+
+* test: keep graph metering coverage in hosted root suite
+
+* fix(graph): release AI reservation when usage recording fails
+
+* test(graph): cover metering record failure cleanup
+
+* test: cover graph tenant policy loader
+**Date:** 2026-09-06
+**Commit:** 47f14d3
+**Author:** aferna6-cell
+**Files Changed:** backend/graph/adapters/llm.py,tests/test_check_ai_metering_nested_scope.py,tests/test_graph_ai_metering.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
