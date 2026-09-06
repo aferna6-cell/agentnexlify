@@ -4,7 +4,7 @@ category: integrations
 tags: [zapier, crm-export, api-keys, new-lead, polling, jobber, servicetitan, housecall-pro, tier-gated]
 sources: ["specs/zapier-crm-export_spec.md"]
 created: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-27
 summary: "Zapier CRM Export lets a tenant push every new AgentNexLiFy lead into Jobber, ServiceTitan, Housecall Pro, and 6,000+ other apps through a tier-gated, API-key-authenticated polling endpoint that returns flat lead rows Zapier reads once a minute and de-duplicates on the lead id."
 ---
 
@@ -21,6 +21,8 @@ The response schema is deliberately flat and versioned. Each lead row is `{id, c
 Rate limiting is per-key, in-memory, and fail-open. Each API key gets a per-minute request budget; the limiter counts requests per prefix in a per-process bucket and returns 429 with a `Retry-After` header past the budget. Because the counter is per-worker and in-memory, it is a coarse guardrail against a runaway Zap, not a billing meter — and it fails open: if the limiter itself errors, the request is allowed rather than blocked, because a limiter outage must never take down a paying tenant's lead flow. Typical Zapier polling (once a minute per Zap) sits far under any reasonable budget, so the limit only bites on misconfiguration or abuse.
 
 The featured CRMs are the three that matter most to the home-services base: Jobber, ServiceTitan, and Housecall Pro. Each has its own tenant-facing setup guide ([[zapier-jobber]], [[zapier-servicetitan]], [[zapier-housecall-pro]]) walking the owner from "generate a key" to "leads appear in my CRM." OAuth-based auth and dynamic per-tenant custom fields are explicitly post-GA (v1.1, issue #63): they require Zapier partner-tier app status and production usage data, so v1 ships with the simpler, robust API-key model and a fixed flat schema that already covers the fields a CRM needs.
+
+The Zapier app definition lives in the `zapier/` directory at the repo root. `zapier/index.js` declares the app with custom API-key auth and the `new_lead` trigger; `zapier/authentication.js` sets the `X-Api-Key` header and tests it against `GET /api/zapier/leads/new`; `zapier/triggers/new_lead.js` performs the polling fetch with a 30-day lookback and a page limit of 50; `zapier/constants.js` supplies `BASE_URL` (defaulting to the production Railway URL) and the lookback/limit constants. The directory also contains a `zapier/README.md` that cross-references this article and documents the remaining publication steps — `zapier validate`, `zapier push`, and `zapier promote` — which require a Zapier developer account and are tracked in issue #61. Until promotion, tenants connect via the current API-key flow rather than through the Zapier marketplace.
 
 ## Key Concepts
 
@@ -41,3 +43,6 @@ Zapier CRM Export is the outbound complement to the platform's lead-capture moat
 - [[zapier-servicetitan]] — tenant setup guide: send leads to ServiceTitan.
 - [[zapier-housecall-pro]] — tenant setup guide: send leads to Housecall Pro.
 - [[photo-quote]] — the inbound lead-capture feature this delivers outbound, and the same `client_id` schema discipline.
+- `zapier/index.js`, `zapier/triggers/new_lead.js` — the Zapier CLI app definition committed to repo
+
+Updated 2026-07-27 due to #555
