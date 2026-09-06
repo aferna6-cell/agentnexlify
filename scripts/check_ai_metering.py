@@ -168,6 +168,18 @@ def fn_is_exempt(fn: ast.FunctionDef | ast.AsyncFunctionDef, source_lines: list[
     return False
 
 
+def _iter_scannable_functions(tree: ast.Module) -> Iterable[ast.FunctionDef | ast.AsyncFunctionDef]:
+    """Yield module functions and class methods, but not nested local functions."""
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            yield node
+            continue
+        if isinstance(node, ast.ClassDef):
+            for member in node.body:
+                if isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    yield member
+
+
 def scan_file(path: Path, is_router: bool) -> list[str]:
     try:
         source = path.read_text(encoding="utf-8")
@@ -182,9 +194,7 @@ def scan_file(path: Path, is_router: bool) -> list[str]:
     aliases = resolve_aliases(tree)
     source_lines = source.splitlines()
     violations: list[str] = []
-    for node in tree.body:
-        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            continue
+    for node in _iter_scannable_functions(tree):
         if node.name in METERED_WRAPPERS:
             continue
         if fn_is_exempt(node, source_lines):
