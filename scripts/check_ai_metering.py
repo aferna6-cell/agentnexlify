@@ -171,15 +171,16 @@ def fn_is_exempt(fn: ast.FunctionDef | ast.AsyncFunctionDef, source_lines: list[
 
 
 def _iter_scannable_functions(tree: ast.Module) -> Iterable[ast.FunctionDef | ast.AsyncFunctionDef]:
-    """Yield module functions and class methods, but not nested local functions."""
-    for node in tree.body:
+    """Yield every named function/method independently, including nested call functions.
+
+    Each yielded function is analyzed with ``_FunctionBodyCalls``, which deliberately
+    does not traverse into nested function bodies. This keeps guards scoped to the
+    function that actually owns the provider call while still detecting factory-style
+    nested callables such as graph node closures.
+    """
+    for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             yield node
-            continue
-        if isinstance(node, ast.ClassDef):
-            for member in node.body:
-                if isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    yield member
 
 
 def _is_raw_provider_entrypoint(path: Path, node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
