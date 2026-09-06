@@ -5,7 +5,6 @@ from types import SimpleNamespace
 import pytest
 
 from backend.graph.adapters import llm as llm_adapter
-from backend.graph.adapters.llm import agent_node
 from backend.graph.errors import BudgetExhausted
 from backend.graph.nodes import NodeContext
 from backend.services.llm_runtime import ClaudeCallResult
@@ -64,7 +63,9 @@ async def test_tenant_graph_call_reserves_then_records(monkeypatch):
         return _result()
 
     monkeypatch.setattr(llm_adapter, "call_claude_messages", fake_provider)
-    node = agent_node(operation="graph.draft", model="claude-sonnet-5", prompt="hello")
+    node = llm_adapter.agent_node(
+        operation="graph.draft", model="claude-sonnet-5", prompt="hello"
+    )
 
     result = await node(_ctx())
 
@@ -84,7 +85,9 @@ async def test_tenant_graph_provider_failure_releases_reservation(monkeypatch):
         raise RuntimeError("provider failed")
 
     monkeypatch.setattr(llm_adapter, "call_claude_messages", fake_provider)
-    node = agent_node(operation="graph.draft", model="claude-sonnet-5", prompt="hello")
+    node = llm_adapter.agent_node(
+        operation="graph.draft", model="claude-sonnet-5", prompt="hello"
+    )
 
     with pytest.raises(RuntimeError, match="provider failed"):
         await node(_ctx())
@@ -102,7 +105,9 @@ async def test_tenant_graph_hard_limit_blocks_provider(monkeypatch):
         return _result()
 
     monkeypatch.setattr(llm_adapter, "call_claude_messages", fake_provider)
-    node = agent_node(operation="graph.draft", model="claude-sonnet-5", prompt="hello")
+    node = llm_adapter.agent_node(
+        operation="graph.draft", model="claude-sonnet-5", prompt="hello"
+    )
 
     with pytest.raises(BudgetExhausted, match="monthly AI usage limit"):
         await node(_ctx())
@@ -122,7 +127,9 @@ async def test_tenant_lookup_failure_blocks_provider(monkeypatch):
         return _result()
 
     monkeypatch.setattr(llm_adapter, "call_claude_messages", fake_provider)
-    node = agent_node(operation="graph.draft", model="claude-sonnet-5", prompt="hello")
+    node = llm_adapter.agent_node(
+        operation="graph.draft", model="claude-sonnet-5", prompt="hello"
+    )
 
     with pytest.raises(RuntimeError, match="tenant policy could not be loaded"):
         await node(_ctx())
