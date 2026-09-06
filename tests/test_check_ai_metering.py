@@ -228,3 +228,20 @@ def test_parse_error_fails_closed(tmp_path: Path) -> None:
     path = _write(tmp_path, "backend/services/broken.py", "def broken(:\n")
     with pytest.raises(meter.ScanError):
         meter.scan_file(path, is_router=False)
+
+
+def test_main_returns_nonzero_for_metering_violations(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    finding = "backend/services/unmetered.py:generate:7"
+    monkeypatch.setattr(meter, "collect_violations", lambda _root: [finding])
+    assert meter.main([]) == 2
+    assert capsys.readouterr().out.strip() == finding
+
+
+def test_main_returns_zero_when_scan_is_clean(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(meter, "collect_violations", lambda _root: [])
+    assert meter.main([]) == 0
+    assert capsys.readouterr().out == ""
