@@ -170,13 +170,17 @@ def agent_node(
             raise
 
         if reservation is not None:
-            record_ai_usage(
-                reservation=reservation,
-                result=result,
-                operation=operation,
-                session_id=ctx.run_id,
-                model=model,
-            )
+            try:
+                record_ai_usage(
+                    reservation=reservation,
+                    result=result,
+                    operation=operation,
+                    session_id=ctx.run_id,
+                    model=model,
+                )
+            except Exception:
+                release_ai_token_reservation(reservation)
+                raise
 
         value: Any = result.text
         if parse_json:
