@@ -1,0 +1,74 @@
+{
+  "run": 115,
+  "date": "2026-09-05-pm",
+  "winner": "Step 9L: Nightly AI usage guard coverage sweep (AST/function-level — see winning-concept.md)",
+  "category": "billing_safety",
+  "confidence": "HIGH",
+  "ideas_count": 5,
+  "winner_idea": "ideas/idea-1-step-9l-ai-usage-guard-sweep.md",
+  "debate_log": "debate/debate-log.md",
+  "implementation_sketch": "winning-concept.md",
+  "backlog": "improvement-backlog.md",
+  "status": "recommendation",
+  "escalation_condition": "autonomous_executable if not approved by run 116 (1st carry-forward)",
+  "evidence": {
+    "unguarded_routers_count": 13,
+    "unguarded_files": [
+      "menu.py",
+      "widget_photo_quote.py",
+      "platform_support.py",
+      "content.py",
+      "jobs.py",
+      "snippets.py",
+      "reviews.py",
+      "os_files.py",
+      "onboarding.py",
+      "insights.py",
+      "bids.py",
+      "marketing_campaigns.py",
+      "social_media.py"
+    ],
+    "confirmed_guarded": [
+      "widget_chat.py",
+      "widget_lead_helpers.py",
+      "calls_webhooks.py",
+      "leads.py"
+    ],
+    "known_exempt": [
+      "auth.py",
+      "auth_google.py",
+      "stripe_webhooks.py",
+      "twilio_webhooks.py",
+      "resend_webhooks.py"
+    ],
+    "step_9g_status": "BROKEN — gh CLI unavailable in cloud sessions",
+    "step_9j_coverage": "2 of 19 Dependabot PRs checked (17 skipped, token budget)",
+    "brain_connector_staleness_days": 44,
+    "gh_800_filed": true,
+    "os_tool_executions_lines": 783,
+    "os_tool_executions_last_commit": "2026-08-30",
+    "os_tool_executions_stability_days": 6
+  },
+  "mandate_check": {
+    "step_9k_fired": "PASS",
+    "step_9j_found_prs": "PASS (19 found, 17 skipped token budget)",
+    "step_9g_status": "FAIL (gh CLI unavailable)",
+    "gh_684_token": "NOT SET",
+    "gh_800_filed": "PASS",
+    "os_tool_stability": "PASS (6d stable)"
+  },
+  "parking_lot": [
+    "Fix Step 9G: replace gh CLI with mcp__github__actions_run_trigger",
+    "Fix Step 9J: check all 19 Dependabot PRs per run (cap 5 rebase triggers)",
+    "Wire check_schema_log_drift.py into CI",
+    "os_tool_executions.py god class split (783L, 6d stable)"
+  ],
+  "mandate_for_run_116": [
+    "Verify Step 9L present in .claude/skills/nightly-commit-review/SKILL.md (grep 'Step 9L') — SHOULD PASS if human approves winner",
+    "First nightly after Step 9L implementation: does log contain 'Step 9L:' line? How many unguarded routes found? Issues filed?",
+    "GH #684 SUPABASE_ACCESS_TOKEN: set in Railway? Brain connector health (GH #800 just opened)",
+    "os_tool_executions.py: still stable (last commit 2026-08-30)? If yes: god class split candidate for run 116",
+    "Step 9G MCP fix: is mcp__github__actions_run_trigger available in nightly sessions? Verify before proposing fix",
+    "Step 9J: did all 19 Dependabot PRs get checked on next nightly, or still 17 skipped? If still skipping: run 116 winner"
+  ]
+}

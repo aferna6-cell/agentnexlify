@@ -1,0 +1,47 @@
+{
+  "_superseded": "AM draft (2026-09-05). Canonical Step 9L spec upgraded to AST-based function-level detector in subconscious/runs/2026-09-05-pm/winning-concept.md. 'AI-calling files' count replaced by 'AI-calling functions' count per HOLD 4 mandate.",
+  "run": 115,
+  "date": "2026-09-05",
+  "evidence_summary": "PRs #792-#799 retroactively metered 6 AI endpoints in 3 days. nightly-2026-09-05 confirmed Steps 9J and 9K firing; Step 9J budget issue (17/19 Dependabot PRs skipped). os_tool_executions.py at 783L (stable ~4-5d). GH #800 filed for brain connector staleness. SUPABASE_ACCESS_TOKEN still unconfirmed.",
+  "ideas_count": 5,
+  "ideas": [
+    "Add AI usage guard checklist to compound-engineering SKILL.md",
+    "Fix Step 9J token budget — batch Dependabot PR checks",
+    "Invoke /god-class-splitter on os_tool_executions.py",
+    "Add Step 9L — AI metering coverage nightly check",
+    "Trial-to-member conversion tracking (Fitness vertical)"
+  ],
+  "debated": ["Idea 4", "Idea 1", "Idea 3"],
+  "debate_verdicts": {
+    "Idea 4 (Step 9L)": "SURVIVES → WINNER",
+    "Idea 1 (compound-engineering checklist)": "WEAKENED → parking lot",
+    "Idea 3 (os_tool_executions split)": "SURVIVES → run 116 candidate"
+  },
+  "winner": "Step 9L — AI metering coverage nightly check in nightly-commit-review SKILL.md",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "autonomous_executable_run": 116,
+  "mandate_check": {
+    "step_9k_in_skill": "PASS — 5 grep hits confirmed",
+    "step_9k_in_nightly": "PASS — fired 2026-09-05 (1 subconscious PR, 0 stale)",
+    "step_9j_detection_fix": "PARTIAL — search_pull_requests works (19 found), but 17/19 skipped due to token budget",
+    "supabase_access_token": "FAIL — still unknown, GH #800 filed",
+    "os_tool_stability": "BORDERLINE — ~4-5d since last commit",
+    "m8_oauth": "NOT_CHECKED"
+  },
+  "rejected": [],
+  "parking_lot": [
+    "compound-engineering AI metering checklist (weakened — superseded by Step 9L)",
+    "os_tool_executions.py god class split (run 116 candidate)",
+    "Fitness trial-to-member conversion tracking (customer_value, future)"
+  ],
+  "run_116_mandate": [
+    "Verify Step 9L fires in nightly-2026-09-06",
+    "Count AI-calling files found and violations",
+    "Step 9J token budget: progress?",
+    "os_tool_executions.py: still stable? If yes, split candidate",
+    "GH #684 SUPABASE_ACCESS_TOKEN: set in Railway?",
+    "GH #800 brain connector: resolved?"
+  ]
+}

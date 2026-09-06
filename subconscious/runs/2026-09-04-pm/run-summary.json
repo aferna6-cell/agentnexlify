@@ -1,0 +1,40 @@
+{
+  "run": 115,
+  "date": "2026-09-04-pm",
+  "evidence_summary": "3-day window: M9 bakeoff (10+ commits), Billing Automation v1, Website/Chatbot Connect v1 (migration 201). Two AI metering fixes (#793 extract_action_items, #792 voice respond) — same miss class, different subsystems. Nightly-2026-09-04: Step 9K PASS (1 PR open, under threshold), Step 9J detected 19 Dependabot PRs but deferred merge eligibility (rate concern). KB 9 days stale (Step 9G blocked — gh CLI unavailable in CCR). Brain connector 43d stale. os_tool_executions.py 783L (3d stable).",
+  "mandate_checks": {
+    "step_9k_fires_nightly_09_01": "PASS — 9K fired, 3 stale PRs found (30-35d), below comment threshold",
+    "step_9j_detection_fix": "PASS — triggered rebases on #721 and #722 in nightly-2026-09-01",
+    "gh_684_supabase_token": "NOT RESOLVED — brain connector 43d stale",
+    "os_tool_executions_stability": "BORDERLINE — 783L, 3 days stable (run_114 mandate: needs 3d+)",
+    "m8_oauth_hold": "RESOLVED by transition — M9 bakeoff now active"
+  },
+  "ideas_count": 5,
+  "top_3_debated": [
+    "Step 9L — AI usage metering sweep",
+    "migration alerter (nightly schema-log drift check)",
+    "Step 9J eligibility fix"
+  ],
+  "winner": "Step 9L: Add nightly AI usage metering coverage sweep to nightly-commit-review SKILL.md",
+  "winner_category": "code_health",
+  "winner_effort": "S",
+  "confidence": "HIGH",
+  "rejected": [
+    "Step 9J eligibility fix — KILLED (CI dark since 2026-07-20, auto-merge unsafe without CI confirmation)"
+  ],
+  "parking_lot": [
+    "migration alerter (blocked until PR #788 merged)",
+    "os_tool_executions.py split (4d+ stable needed)",
+    "PR #782 migration alerter overlap absorbed into parking lot"
+  ],
+  "autonomous_executable": true,
+  "requires_human": false,
+  "run_116_mandate": [
+    "Step 9L in SKILL.md? grep 'Step 9L' .claude/skills/nightly-commit-review/SKILL.md",
+    "First nightly with Step 9L: how many unguarded AI router files found?",
+    "PR #788 merged? If yes: migration alerter step unblocked for run 116",
+    "os_tool_executions.py stable (4+ days)? If yes: god class split candidate",
+    "GH #684 SUPABASE_ACCESS_TOKEN resolved?",
+    "GH #669 (block_demo_role middleware): any PR from loop?"
+  ]
+}
