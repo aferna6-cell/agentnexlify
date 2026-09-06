@@ -44,8 +44,9 @@ AI_CALL_NAMES = {"call_claude_messages"}
 # Guard patterns — router (Depends arg) OR service (call in body)
 ROUTER_GUARD = "ai_usage_guard"          # appears in function signature via Depends()
 SERVICE_GUARDS = {"ai_usage_guard"}        # standalone sufficient (no lifecycle required)
-LIFECYCLE_RESERVE = {"reserve_tokens"}     # lifecycle start — must pair with LIFECYCLE_RECORD
-LIFECYCLE_RECORD = {"record_tokens", "release_tokens"}  # lifecycle end — completes reserve
+LIFECYCLE_RESERVE = {"reserve_tokens"}     # lifecycle start — must pair with RECORD + RELEASE
+LIFECYCLE_RECORD = {"record_tokens"}       # success path — required; reserve+release-only FAILS
+LIFECYCLE_RELEASE = {"release_tokens"}     # failure path — required; reserve+record-only FAILS
 
 # Recognized metered wrappers: calling one of these satisfies the guard requirement in the caller.
 # A function listed here is exempt from the check (it IS the guard layer).
@@ -100,8 +101,8 @@ def fn_has_ai_call(fn_node, ai_names):
 
 def fn_has_guard(fn_node, is_router):
     """True if function has a complete guard. Router: Depends(ai_usage_guard) in defaults;
-    Service: ai_usage_guard call OR METERED_WRAPPERS call OR full reserve→record/release lifecycle.
-    A lone reserve_tokens without record_tokens/release_tokens is a partial guard — FAILS."""
+    Service: ai_usage_guard call OR METERED_WRAPPERS call OR full reserve→record→release lifecycle.
+    Partial lifecycle (missing record or release) FAILS — all three must be present."""
     if is_router:
         for default in fn_node.args.defaults + fn_node.args.kw_defaults:
             if default and isinstance(default, ast.Call):
@@ -122,17 +123,24 @@ def fn_has_guard(fn_node, is_router):
         return True
     if calls_in_body & METERED_WRAPPERS:      # recognized canonical wrapper
         return True
-    # Full lifecycle required: reserve_tokens AND (record_tokens OR release_tokens)
-    if (calls_in_body & LIFECYCLE_RESERVE) and (calls_in_body & LIFECYCLE_RECORD):
+    # Full lifecycle: reserve + record (success path) + release (failure path) all required
+    if (calls_in_body & LIFECYCLE_RESERVE) and (calls_in_body & LIFECYCLE_RECORD) and (calls_in_body & LIFECYCLE_RELEASE):
         return True
     return False
 
 def fn_is_exempt(fn_node, src_lines):
-    """Check 3 lines from function def for per-function exemption marker.
-    Marker must include owner+reason: '# ai-metering-exempt: <owner>: <reason>'."""
+    """Check 3 lines from function def for a valid per-function exemption marker.
+    Valid format: '# ai-metering-exempt: <owner>: <reason>' — both owner and reason required.
+    A bare '# ai-metering-exempt:' with no owner+reason is invalid and does NOT exempt."""
     start = fn_node.lineno - 1  # 0-indexed
     window = src_lines[start : min(start + 3, len(src_lines))]
-    return any(EXEMPTION_MARKER in line for line in window)
+    for line in window:
+        if EXEMPTION_MARKER in line:
+            after = line[line.index(EXEMPTION_MARKER) + len(EXEMPTION_MARKER):].strip()
+            parts = [p.strip() for p in after.split(":", 1)]
+            if len(parts) == 2 and parts[0] and parts[1]:
+                return True
+    return False
 
 def scan_file(path: Path, is_router: bool):
     src = path.read_text(errors="replace")
@@ -176,7 +184,7 @@ if __name__ == "__main__":
 - Service functions (any of):
   - `ai_usage_guard` call in body — standalone sufficient.
   - Call to a recognized `METERED_WRAPPERS` member — caller is exempt (it IS the guard layer).
-  - **Full lifecycle**: `reserve_tokens` AND (`record_tokens` OR `release_tokens`) both present in body — partial guards (lone `reserve_tokens`) are **not** sufficient and are flagged.
+  - **Full lifecycle**: `reserve_tokens` AND `record_tokens` AND `release_tokens` all present in body — partial guards (missing any of the three) are **not** sufficient and are flagged.
 - `client.messages.create` detected via AST attribute chain (`*.messages.create`), not string matching in `AI_CALL_NAMES`.
 
 **Exclusion mechanism:**
@@ -217,18 +225,21 @@ Insert after Step 9K log line and before "10. Commit report":
 
 ### Regression Fixtures
 
-Eight cases that must pass before Step 9L ships to SKILL.md:
+Eleven cases that must pass before Step 9L ships to SKILL.md:
 
 | # | Fixture | Expected |
 |---|---------|----------|
 | 1 | `services/unmetered_svc.py::generate_response()` — calls `call_claude_messages`, no guard in body | **FLAGGED** |
-| 2 | `backend/routers/appointment_briefs.py::get_appointment_brief` — `Depends(ai_usage_guard)` in signature, calls AI service (PR #791, merged 2026-09-03) | **PASSES** |
+| 2 | `backend/services/appointment_brief.py::_call_claude_with_budget` — calls AI with full `reserve_tokens` + `record_tokens` + `release_tokens` lifecycle (PR #791, merged 2026-09-03) | **PASSES** (proves service lifecycle detection) |
 | 3 | `services/guarded_wrapper.py::call_guarded_claude()` — listed in `METERED_WRAPPERS`, calls AI directly | **PASSES** (it is the wrapper) |
 | 4 | `routers/mixed.py` — `guarded_fn()` has Depends guard; `unguarded_fn()` has no guard, both call AI | `unguarded_fn` **FLAGGED**, `guarded_fn` **PASSES** (no masking across functions) |
 | 5 | `services/alias_user.py` — `from backend.services.llm_runtime import call_claude_messages as call_llm`; uses `call_llm()` without guard | **FLAGGED** (alias resolved) |
 | 6 | `tests/test_ai.py`, `docs/sample.py`, `scripts/offline/process.py` | **EXCLUDED** (not scanned) |
 | 7 | `services/direct_sdk.py::send_message()` — calls `client.messages.create(...)` directly without guard | **FLAGGED** (AST chain `*.messages.create` detected, not string match) |
 | 8 | `services/partial_guard.py::partially_guarded()` — calls `reserve_tokens()` but never `record_tokens` or `release_tokens` | **FLAGGED** (partial lifecycle: lone `reserve_tokens` is not sufficient) |
+| 9 | `services/record_only.py::record_and_reserve()` — calls `reserve_tokens()` and `record_tokens()` but never `release_tokens()` | **FLAGGED** (missing failure-path release) |
+| 10 | `services/release_only.py::reserve_and_release()` — calls `reserve_tokens()` and `release_tokens()` but never `record_tokens()` | **FLAGGED** (missing success-path record) |
+| 11 | `services/bare_exempt.py::bare_exempt_fn()` — has `# ai-metering-exempt:` with no owner or reason; calls AI without guard | **FLAGGED** (bare exemption marker invalid — owner+reason required) |
 
 ---
 
