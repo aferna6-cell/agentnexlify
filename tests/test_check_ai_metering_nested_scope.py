@@ -37,7 +37,7 @@ def test_nested_guard_does_not_mask_outer_provider_call(tmp_path: Path) -> None:
     assert _functions(meter.scan_file(path, is_router=False)) == {"outer"}
 
 
-def test_real_graph_adapter_nested_node_is_visible_to_detector() -> None:
+def test_real_graph_adapter_nested_node_is_metered() -> None:
     path = Path("backend/graph/adapters/llm.py")
 
-    assert "_node" in _functions(meter.scan_file(path, is_router=False))
+    assert "_node" not in _functions(meter.scan_file(path, is_router=False))
