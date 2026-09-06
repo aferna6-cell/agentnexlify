@@ -44,9 +44,9 @@ AI_CALL_NAMES = {"call_claude_messages"}
 # Guard patterns — router (Depends arg) OR service (call in body)
 ROUTER_GUARD = "ai_usage_guard"          # appears in function signature via Depends()
 SERVICE_GUARDS = {"ai_usage_guard"}        # standalone sufficient (no lifecycle required)
-LIFECYCLE_RESERVE = {"reserve_tokens"}     # lifecycle start — must pair with RECORD + RELEASE
-LIFECYCLE_RECORD = {"record_tokens"}       # success path — required; reserve+release-only FAILS
-LIFECYCLE_RELEASE = {"release_tokens"}     # failure path — required; reserve+record-only FAILS
+LIFECYCLE_RESERVE = {"reserve_ai_tokens"}              # lifecycle start — must pair with RECORD + RELEASE
+LIFECYCLE_RECORD = {"record_ai_usage"}                 # success path — required; reserve+release-only FAILS
+LIFECYCLE_RELEASE = {"release_ai_token_reservation"}   # failure path — required; reserve+record-only FAILS
 
 # Recognized metered wrappers: calling one of these satisfies the guard requirement in the caller.
 # A function listed here is exempt from the check (it IS the guard layer).
@@ -184,7 +184,7 @@ if __name__ == "__main__":
 - Service functions (any of):
   - `ai_usage_guard` call in body — standalone sufficient.
   - Call to a recognized `METERED_WRAPPERS` member — caller is exempt (it IS the guard layer).
-  - **Full lifecycle**: `reserve_tokens` AND `record_tokens` AND `release_tokens` all present in body — partial guards (missing any of the three) are **not** sufficient and are flagged.
+  - **Full lifecycle**: `reserve_ai_tokens` AND `record_ai_usage` AND `release_ai_token_reservation` all present in body — partial guards (missing any of the three) are **not** sufficient and are flagged.
 - `client.messages.create` detected via AST attribute chain (`*.messages.create`), not string matching in `AI_CALL_NAMES`.
 
 **Exclusion mechanism:**
@@ -230,15 +230,15 @@ Eleven cases that must pass before Step 9L ships to SKILL.md:
 | # | Fixture | Expected |
 |---|---------|----------|
 | 1 | `services/unmetered_svc.py::generate_response()` — calls `call_claude_messages`, no guard in body | **FLAGGED** |
-| 2 | `backend/services/appointment_brief.py::_call_claude_with_budget` — calls AI with full `reserve_tokens` + `record_tokens` + `release_tokens` lifecycle (PR #791, merged 2026-09-03) | **PASSES** (proves service lifecycle detection) |
+| 2 | `backend/services/appointment_brief.py::_call_claude_with_budget` — calls AI with full `reserve_ai_tokens` + `record_ai_usage` + `release_ai_token_reservation` lifecycle (PR #791, merged 2026-09-03) | **PASSES** (proves service lifecycle detection) |
 | 3 | `services/guarded_wrapper.py::call_guarded_claude()` — listed in `METERED_WRAPPERS`, calls AI directly | **PASSES** (it is the wrapper) |
 | 4 | `routers/mixed.py` — `guarded_fn()` has Depends guard; `unguarded_fn()` has no guard, both call AI | `unguarded_fn` **FLAGGED**, `guarded_fn` **PASSES** (no masking across functions) |
 | 5 | `services/alias_user.py` — `from backend.services.llm_runtime import call_claude_messages as call_llm`; uses `call_llm()` without guard | **FLAGGED** (alias resolved) |
 | 6 | `tests/test_ai.py`, `docs/sample.py`, `scripts/offline/process.py` | **EXCLUDED** (not scanned) |
 | 7 | `services/direct_sdk.py::send_message()` — calls `client.messages.create(...)` directly without guard | **FLAGGED** (AST chain `*.messages.create` detected, not string match) |
-| 8 | `services/partial_guard.py::partially_guarded()` — calls `reserve_tokens()` but never `record_tokens` or `release_tokens` | **FLAGGED** (partial lifecycle: lone `reserve_tokens` is not sufficient) |
-| 9 | `services/record_only.py::record_and_reserve()` — calls `reserve_tokens()` and `record_tokens()` but never `release_tokens()` | **FLAGGED** (missing failure-path release) |
-| 10 | `services/release_only.py::reserve_and_release()` — calls `reserve_tokens()` and `release_tokens()` but never `record_tokens()` | **FLAGGED** (missing success-path record) |
+| 8 | `services/partial_guard.py::partially_guarded()` — calls `reserve_ai_tokens()` but never `record_ai_usage` or `release_ai_token_reservation` | **FLAGGED** (partial lifecycle: lone `reserve_ai_tokens` is not sufficient) |
+| 9 | `services/record_only.py::record_and_reserve()` — calls `reserve_ai_tokens()` and `record_ai_usage()` but never `release_ai_token_reservation()` | **FLAGGED** (missing failure-path release) |
+| 10 | `services/release_only.py::reserve_and_release()` — calls `reserve_ai_tokens()` and `release_ai_token_reservation()` but never `record_ai_usage()` | **FLAGGED** (missing success-path record) |
 | 11 | `services/bare_exempt.py::bare_exempt_fn()` — has `# ai-metering-exempt:` with no owner or reason; calls AI without guard | **FLAGGED** (bare exemption marker invalid — owner+reason required) |
 
 ---

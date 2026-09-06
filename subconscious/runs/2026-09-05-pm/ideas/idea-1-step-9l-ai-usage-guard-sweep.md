@@ -1,3 +1,15 @@
+<!--
+SUPERSEDED — 2026-09-06
+This file prescribes router-level grep / same-file presence checks, which is the original
+approach from the idea brainstorm. The winning concept adopted AST-based enclosing-function
+analysis (function-granularity, not file-granularity) with import alias resolution, proper
+lifecycle discrimination (reserve_ai_tokens + record_ai_usage + release_ai_token_reservation
+all required), and `client.messages.create` AST chain detection.
+
+Canonical design: `subconscious/runs/2026-09-05-pm/winning-concept.md`
+Do NOT use the grep / same-file approach described below for any implementation.
+-->
+
 ### Idea 1: Add Step 9L — Nightly AI Usage Guard Coverage Sweep
 
 **Evidence:**
