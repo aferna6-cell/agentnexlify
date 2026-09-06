@@ -2,7 +2,7 @@
 """Detect backend functions that call AI without metering guards.
 
 Violations are emitted as identifier-only lines in ``path:function:line`` format.
-A clean scan and a scan with violations both exit 0; parse/read failures exit 1.
+A clean scan exits 0, metering violations exit 2, and parse/read failures exit 1.
 """
 
 from __future__ import annotations
@@ -241,7 +241,7 @@ def main(argv: Iterable[str] | None = None) -> int:
 
     for violation in violations:
         print(violation)
-    return 0
+    return 2 if violations else 0
 
 
 if __name__ == "__main__":
