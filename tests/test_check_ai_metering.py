@@ -100,6 +100,31 @@ def test_direct_messages_create_is_flagged(tmp_path: Path) -> None:
     assert _functions(meter.scan_file(path, is_router=False)) == {"send_message"}
 
 
+def test_class_method_messages_create_is_flagged(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        "backend/services/class_service.py",
+        "class Service:\n"
+        "    def send_message(self, client):\n"
+        "        return client.messages.create(model='test', messages=[])\n",
+    )
+    assert _functions(meter.scan_file(path, is_router=False)) == {"send_message"}
+
+
+def test_nested_function_inside_method_does_not_mask_method(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        "backend/services/class_nested.py",
+        "from backend.services.llm_runtime import call_claude_messages\n"
+        "class Service:\n"
+        "    def send_message(self):\n"
+        "        def nested():\n"
+        "            reserve_ai_tokens(); record_ai_usage(); release_ai_token_reservation()\n"
+        "        return call_claude_messages()\n",
+    )
+    assert _functions(meter.scan_file(path, is_router=False)) == {"send_message"}
+
+
 @pytest.mark.parametrize(
     ("body", "function_name"),
     [
