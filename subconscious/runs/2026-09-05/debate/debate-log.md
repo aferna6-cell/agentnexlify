@@ -1,4 +1,5 @@
 # Debate Log — Run 115 (2026-09-05)
+<!-- SUPERSEDED (2026-09-05-pm): AM draft; references file-level grep approach. Canonical spec: subconscious/runs/2026-09-05-pm/winning-concept.md -->
 
 ## Top 3 Ideas Debated (ranked by impact)
 

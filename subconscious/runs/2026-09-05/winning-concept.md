@@ -1,5 +1,11 @@
 # Winning Concept — Run 115 (2026-09-05)
 
+> **SUPERSEDED (2026-09-05-pm)**: This is the initial AM draft. It prescribes file-level grep
+> detection, which has known false-positive and false-negative modes (file-level masking, partial
+> guards, attribute chain mismatches). The canonical spec — AST-based, function-level,
+> lifecycle-discriminated — is at `subconscious/runs/2026-09-05-pm/winning-concept.md`.
+> Retained as historical record only. Do not use as implementation reference.
+
 ## Recommendation
 Add Step 9L to `.claude/skills/nightly-commit-review/SKILL.md` — a nightly AI metering coverage check that greps for AI-calling endpoints missing reserve/record/release metering, and auto-files GH issues when violations are found.
 

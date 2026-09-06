@@ -1,4 +1,5 @@
 # Candidate Ideas — Run 115 (2026-09-05)
+<!-- SUPERSEDED (2026-09-05-pm): AM draft; file-level grep detection. Canonical spec: subconscious/runs/2026-09-05-pm/winning-concept.md -->
 
 ## Idea 1: Add AI Usage Guard Checklist to compound-engineering SKILL.md
 **Evidence:** PRs #792-#799 retroactively metered 6 AI endpoints in 3 days — widget_guard.screen, categorize_conversation, extract_action_items, extract_tags, voice call summaries, sms_agent.reply. Each required substantial new test files (498-1726 tests each). The compound-engineering skill has no explicit reminder to check for reserve/record/release metering before merging AI-calling code.

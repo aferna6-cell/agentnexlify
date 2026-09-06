@@ -38,11 +38,14 @@ import ast, sys
 from pathlib import Path
 
 # AI call names. Aliases resolved via import tracking per file.
-AI_CALL_NAMES = {"call_claude_messages", "client.messages.create"}
+# Note: client.messages.create detected via AST chain matching (_is_messages_create), not string.
+AI_CALL_NAMES = {"call_claude_messages"}
 
 # Guard patterns — router (Depends arg) OR service (call in body)
 ROUTER_GUARD = "ai_usage_guard"          # appears in function signature via Depends()
-SERVICE_GUARDS = {"reserve_tokens", "record_tokens", "ai_usage_guard"}
+SERVICE_GUARDS = {"ai_usage_guard"}        # standalone sufficient (no lifecycle required)
+LIFECYCLE_RESERVE = {"reserve_tokens"}     # lifecycle start — must pair with LIFECYCLE_RECORD
+LIFECYCLE_RECORD = {"record_tokens", "release_tokens"}  # lifecycle end — completes reserve
 
 # Recognized metered wrappers: calling one of these satisfies the guard requirement in the caller.
 # A function listed here is exempt from the check (it IS the guard layer).
@@ -51,7 +54,8 @@ METERED_WRAPPERS = set()  # extend as project adds canonical wrappers
 # Paths to skip entirely (relative to repo root)
 EXCLUDE_DIRS = {"tests", "test", "docs", "scripts/offline", "knowledge-base", "_archive"}
 
-# Per-file opt-out: first 5 lines contain "# ai-metering-exempt: <owner>: <reason>"
+# Per-function opt-out: within 3 lines of function def contains "# ai-metering-exempt: <owner>: <reason>"
+# Owner and reason are required — a bare marker is rejected by the nightly check.
 EXEMPTION_MARKER = "# ai-metering-exempt:"
 
 def resolve_aliases(tree):
@@ -71,9 +75,20 @@ def resolve_aliases(tree):
                     aliases[local] = alias.name
     return aliases
 
+def _is_messages_create(call_node):
+    """Detect client.messages.create(...) — matches *.messages.create AST chain."""
+    return (
+        isinstance(call_node.func, ast.Attribute)
+        and call_node.func.attr == "create"
+        and isinstance(call_node.func.value, ast.Attribute)
+        and call_node.func.value.attr == "messages"
+    )
+
 def fn_has_ai_call(fn_node, ai_names):
     for node in ast.walk(fn_node):
         if isinstance(node, ast.Call):
+            if _is_messages_create(node):
+                return True
             name = ""
             if isinstance(node.func, ast.Name):
                 name = node.func.id
@@ -84,18 +99,17 @@ def fn_has_ai_call(fn_node, ai_names):
     return False
 
 def fn_has_guard(fn_node, is_router):
-    """True if function has a guard. Router: Depends arg; Service: guard call in body."""
+    """True if function has a complete guard. Router: Depends(ai_usage_guard) in defaults;
+    Service: ai_usage_guard call OR METERED_WRAPPERS call OR full reserve→record/release lifecycle.
+    A lone reserve_tokens without record_tokens/release_tokens is a partial guard — FAILS."""
     if is_router:
-        for arg in fn_node.args.args + fn_node.args.kwonlyargs:
-            # Depends(ai_usage_guard) shows up as annotation or default
-            pass
-        # Check defaults for Depends(ai_usage_guard)
         for default in fn_node.args.defaults + fn_node.args.kw_defaults:
             if default and isinstance(default, ast.Call):
                 if isinstance(default.func, ast.Name) and default.func.id == "Depends":
                     for darg in default.args:
                         if isinstance(darg, ast.Name) and darg.id == ROUTER_GUARD:
                             return True
+    calls_in_body = set()
     for node in ast.walk(fn_node):
         if isinstance(node, ast.Call):
             name = ""
@@ -103,15 +117,26 @@ def fn_has_guard(fn_node, is_router):
                 name = node.func.id
             elif isinstance(node.func, ast.Attribute):
                 name = node.func.attr
-            if name in SERVICE_GUARDS or name in METERED_WRAPPERS:
-                return True
+            calls_in_body.add(name)
+    if calls_in_body & SERVICE_GUARDS:        # ai_usage_guard standalone
+        return True
+    if calls_in_body & METERED_WRAPPERS:      # recognized canonical wrapper
+        return True
+    # Full lifecycle required: reserve_tokens AND (record_tokens OR release_tokens)
+    if (calls_in_body & LIFECYCLE_RESERVE) and (calls_in_body & LIFECYCLE_RECORD):
+        return True
     return False
+
+def fn_is_exempt(fn_node, src_lines):
+    """Check 3 lines from function def for per-function exemption marker.
+    Marker must include owner+reason: '# ai-metering-exempt: <owner>: <reason>'."""
+    start = fn_node.lineno - 1  # 0-indexed
+    window = src_lines[start : min(start + 3, len(src_lines))]
+    return any(EXEMPTION_MARKER in line for line in window)
 
 def scan_file(path: Path, is_router: bool):
     src = path.read_text(errors="replace")
-    # Exemption check
-    if any(EXEMPTION_MARKER in line for line in src.splitlines()[:5]):
-        return []
+    src_lines = src.splitlines()
     try:
         tree = ast.parse(src, filename=str(path))
     except SyntaxError:
@@ -123,6 +148,8 @@ def scan_file(path: Path, is_router: bool):
             continue
         if node.name in METERED_WRAPPERS:
             continue  # wrapper itself is exempt
+        if fn_is_exempt(node, src_lines):
+            continue  # per-function exemption: owner+reason required in marker
         if fn_has_ai_call(node, ai_names) and not fn_has_guard(node, is_router):
             violations.append(f"{path}:{node.name}:{node.lineno}")
     return violations
@@ -145,13 +172,16 @@ if __name__ == "__main__":
 **Alias handling:** `resolve_aliases()` maps every `import ... as alias` and `from ... import fn as alias` for AI call names, then passes the expanded set to `fn_has_ai_call`. An aliased call is detected identically to a direct call.
 
 **Guard discrimination:**
-- Router functions: `Depends(ai_usage_guard)` in default values of any parameter.
-- Service functions: any call to `reserve_tokens`, `record_tokens`, or `ai_usage_guard` in the function body.
-- Both scopes: calling a recognized metered wrapper satisfies the check.
+- Router functions: `Depends(ai_usage_guard)` in default values of any parameter — standalone sufficient.
+- Service functions (any of):
+  - `ai_usage_guard` call in body — standalone sufficient.
+  - Call to a recognized `METERED_WRAPPERS` member — caller is exempt (it IS the guard layer).
+  - **Full lifecycle**: `reserve_tokens` AND (`record_tokens` OR `release_tokens`) both present in body — partial guards (lone `reserve_tokens`) are **not** sufficient and are flagged.
+- `client.messages.create` detected via AST attribute chain (`*.messages.create`), not string matching in `AI_CALL_NAMES`.
 
 **Exclusion mechanism:**
 - Directory-level: `EXCLUDE_DIRS` set — paths containing `tests/`, `test/`, `docs/`, `scripts/offline/`, etc. are skipped.
-- Per-file: first 5 lines containing `# ai-metering-exempt: <owner>: <reason>` — file skipped, marker is human-auditable.
+- Per-function: within 3 lines of the function definition containing `# ai-metering-exempt: <owner>: <reason>` — that function only is skipped. Owner and reason are required; a bare `# ai-metering-exempt:` marker is flagged. One exempt function cannot hide another unmetered function in the same file.
 
 **Output format:** one line per violation: `backend/services/foo.py:generate_content:42`. Identifiers only — no prompt content, customer data, or secrets.
 
@@ -187,20 +217,18 @@ Insert after Step 9K log line and before "10. Commit report":
 
 ### Regression Fixtures
 
-Six cases that must pass before Step 9L ships to SKILL.md:
+Eight cases that must pass before Step 9L ships to SKILL.md:
 
 | # | Fixture | Expected |
 |---|---------|----------|
 | 1 | `services/unmetered_svc.py::generate_response()` — calls `call_claude_messages`, no guard in body | **FLAGGED** |
-| 2 | `routers/widget_chat.py::chat_endpoint()` — `Depends(ai_usage_guard)` in signature, calls AI | **PASSES** |
+| 2 | `backend/routers/appointment_briefs.py::get_appointment_brief` — `Depends(ai_usage_guard)` in signature, calls AI service (PR #791, merged 2026-09-03) | **PASSES** |
 | 3 | `services/guarded_wrapper.py::call_guarded_claude()` — listed in `METERED_WRAPPERS`, calls AI directly | **PASSES** (it is the wrapper) |
 | 4 | `routers/mixed.py` — `guarded_fn()` has Depends guard; `unguarded_fn()` has no guard, both call AI | `unguarded_fn` **FLAGGED**, `guarded_fn` **PASSES** (no masking across functions) |
 | 5 | `services/alias_user.py` — `from backend.services.llm_runtime import call_claude_messages as call_llm`; uses `call_llm()` without guard | **FLAGGED** (alias resolved) |
 | 6 | `tests/test_ai.py`, `docs/sample.py`, `scripts/offline/process.py` | **EXCLUDED** (not scanned) |
-
-**Inventory note:** PR #791 (merged 2026-09-03, `appointment_brief`) added metering to the
-appointment router. It should appear in the PASSES inventory for fixture 2-class cases, not as an
-outstanding violation. The detector must not re-flag it.
+| 7 | `services/direct_sdk.py::send_message()` — calls `client.messages.create(...)` directly without guard | **FLAGGED** (AST chain `*.messages.create` detected, not string match) |
+| 8 | `services/partial_guard.py::partially_guarded()` — calls `reserve_tokens()` but never `record_tokens` or `release_tokens` | **FLAGGED** (partial lifecycle: lone `reserve_tokens` is not sufficient) |
 
 ---
 

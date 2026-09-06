@@ -1,4 +1,5 @@
 # Improvement Backlog — Run 115 (2026-09-05)
+<!-- SUPERSEDED (2026-09-05-pm): AM draft; references file-level detection counts. Canonical spec: subconscious/runs/2026-09-05-pm/winning-concept.md -->
 
 ## Active
 - Add Step 9L — AI metering coverage nightly check to `.claude/skills/nightly-commit-review/SKILL.md` (grep AI-calling files for reserve/record/release pattern; file GH issues on violations with labels `ai-ready + code_health`)

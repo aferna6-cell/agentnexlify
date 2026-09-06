@@ -1,4 +1,5 @@
 {
+  "_superseded": "AM draft (2026-09-05). Canonical Step 9L spec upgraded to AST-based function-level detector in subconscious/runs/2026-09-05-pm/winning-concept.md. 'AI-calling files' count replaced by 'AI-calling functions' count per HOLD 4 mandate.",
   "run": 115,
   "date": "2026-09-05",
   "evidence_summary": "PRs #792-#799 retroactively metered 6 AI endpoints in 3 days. nightly-2026-09-05 confirmed Steps 9J and 9K firing; Step 9J budget issue (17/19 Dependabot PRs skipped). os_tool_executions.py at 783L (stable ~4-5d). GH #800 filed for brain connector staleness. SUPABASE_ACCESS_TOKEN still unconfirmed.",
