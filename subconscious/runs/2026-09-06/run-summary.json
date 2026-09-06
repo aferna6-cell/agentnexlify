@@ -1,0 +1,38 @@
+{
+  "run": 116,
+  "date": "2026-09-06",
+  "phase": "recommendation",
+  "winner": "Step 9L: AI metering coverage nightly check in nightly-commit-review SKILL.md (1st carry-forward from run 115)",
+  "winner_category": "code_health",
+  "winner_confidence": "HIGH",
+  "evidence_digest": {
+    "step_9l_in_skill": "ABSENT — grep -c 'Step 9L' returns 0",
+    "step_9l_governance_mandate": "autonomous_executable_run: 116 fires (1st carry-forward)",
+    "nightly_2026_09_06": "CLEAN — 9 commits, 0 violations, 1 fix (EOF newline)",
+    "emergency_metering_prs": "7 PRs (#792-#799) in 7 days — 13 unguarded routers confirmed",
+    "step_9j_token_budget": "17/19 Dependabot PRs still skipped (unchanged from run 115)",
+    "os_tool_executions": "783L service + 411L router, 7d stable — run 117 god class split candidate",
+    "gh_800": "brain connector 44d stale, SUPABASE_ACCESS_TOKEN NOT set in Railway",
+    "implementation": "NOT executed — task prompt: 'Do NOT implement. Only recommend.'"
+  },
+  "debate_results": {
+    "idea_1_step_9l": "SURVIVES — WINNER (governance mandate, proven mechanism, active billing exposure)",
+    "idea_2_os_god_class": "WEAKENED — parking lot, run 117 candidate",
+    "idea_3_step_9j_fix": "KILLED — insufficient diagnostic data",
+    "idea_4_claude_md_marker": "KILLED — premature, subordinate to idea 1",
+    "idea_5_tenant_api_keys_sweep": "WEAKENED — parking lot, low ROI relative to step 9L"
+  },
+  "escalation": {
+    "condition": "autonomous_executable_run: 117 if Step 9L still absent from SKILL.md",
+    "precedent": "Steps 9C/9E/9F/9G/9I/9J/9K all implemented at 1st or 3rd carry-forward",
+    "note": "Run 116 task prompt overrode governance escalation (recommend-only instruction)"
+  },
+  "artifacts": [
+    "subconscious/runs/2026-09-06/ideas/ideas.md",
+    "subconscious/runs/2026-09-06/debate/debate-log.md",
+    "subconscious/runs/2026-09-06/winning-concept.md",
+    "subconscious/runs/2026-09-06/improvement-backlog.md",
+    "subconscious/runs/2026-09-06/run-summary.json"
+  ],
+  "implementation_source": "subconscious/runs/2026-09-05-pm/winning-concept.md"
+}
