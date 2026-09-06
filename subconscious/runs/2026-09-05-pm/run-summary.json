@@ -1,7 +1,7 @@
 {
   "run": 115,
   "date": "2026-09-05-pm",
-  "winner": "Step 9L: Nightly AI usage guard coverage sweep",
+  "winner": "Step 9L: Nightly AI usage guard coverage sweep (AST/function-level — see winning-concept.md)",
   "category": "billing_safety",
   "confidence": "HIGH",
   "ideas_count": 5,

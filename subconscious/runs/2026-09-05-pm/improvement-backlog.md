@@ -1,8 +1,13 @@
 # Improvement Backlog — 2026-09-05-pm
 
 ## Active
-- **Step 9L: Nightly AI usage guard coverage sweep** — grep routers for `call_claude_messages`
-  without `ai_usage_guard`, file `billing+ai-ready` GH issues for each unguarded route.
+- **Step 9L: Nightly AI usage guard coverage sweep** — AST-based enclosing-function analysis of
+  `backend/routers/` (router guard: `Depends(ai_usage_guard)`) and `backend/services/` (service
+  guard: `ai_usage_guard` call OR full lifecycle `reserve_ai_tokens` + `record_ai_usage` +
+  `release_ai_token_reservation` — all three required). Also detects `client.messages.create` via
+  AST attribute chain. Function-level granularity; per-function exemptions require
+  `# ai-metering-exempt: <owner>: <reason>`. Files `billing+ai-ready` GH issues per unguarded
+  function (dedup by path:function search). Canonical design: `winning-concept.md`.
   Autonomous-executable if not approved by run 116.
 
 ## Parking Lot (survived debate but not chosen)

@@ -1,3 +1,15 @@
+<!--
+SUPERSEDED DETECTION MECHANISM — 2026-09-06
+This debate was conducted against the original idea (idea-1) which prescribes file-level grep
+of backend/routers/ and same-file presence checks for ai_usage_guard/reserve. The Step 9L
+recommendation survives (strong evidence, proven mechanism, billing leak closure). Only the
+detection implementation changed: upgraded from file-level grep to AST-based enclosing-function
+analysis covering both backend/routers/ (router guard pattern) and backend/services/ (lifecycle
+pattern). Lifecycle guard requires all three canonical names: reserve_ai_tokens + record_ai_usage +
+release_ai_token_reservation. Granularity is per-function, not per-file.
+Canonical design: subconscious/runs/2026-09-05-pm/winning-concept.md
+-->
+
 # Debate Log — 2026-09-05-pm
 
 Top 3 ideas by impact: Idea 1 (Step 9L), Idea 2 (Fix Step 9G), Idea 4 (Step 9J all PRs).
