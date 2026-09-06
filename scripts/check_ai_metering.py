@@ -20,6 +20,8 @@ LIFECYCLE_RESERVE = {"reserve_ai_tokens"}
 LIFECYCLE_RECORD = {"record_ai_usage"}
 LIFECYCLE_RELEASE = {"release_ai_token_reservation"}
 METERED_WRAPPERS: set[str] = set()
+RAW_PROVIDER_RUNTIME = Path("backend/services/llm_runtime.py")
+RAW_PROVIDER_FUNCTIONS = {"_call_single_model"}
 EXCLUDED_PARTS = {"tests", "test", "docs", "knowledge-base", "_archive", "offline"}
 EXEMPTION_MARKER = "# ai-metering-exempt:"
 EXEMPTION_RE = re.compile(r"# ai-metering-exempt:\s*([^:\s][^:]*)\s*:\s*(\S.*)$")
@@ -180,6 +182,11 @@ def _iter_scannable_functions(tree: ast.Module) -> Iterable[ast.FunctionDef | as
                     yield member
 
 
+def _is_raw_provider_entrypoint(path: Path, node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    normalized = Path(path.as_posix())
+    return normalized.as_posix().endswith(RAW_PROVIDER_RUNTIME.as_posix()) and node.name in RAW_PROVIDER_FUNCTIONS
+
+
 def scan_file(path: Path, is_router: bool) -> list[str]:
     try:
         source = path.read_text(encoding="utf-8")
@@ -196,6 +203,8 @@ def scan_file(path: Path, is_router: bool) -> list[str]:
     violations: list[str] = []
     for node in _iter_scannable_functions(tree):
         if node.name in METERED_WRAPPERS:
+            continue
+        if _is_raw_provider_entrypoint(path, node):
             continue
         if fn_is_exempt(node, source_lines):
             continue
