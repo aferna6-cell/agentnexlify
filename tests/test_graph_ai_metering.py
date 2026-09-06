@@ -96,6 +96,29 @@ async def test_tenant_graph_provider_failure_releases_reservation(monkeypatch):
     assert calls["release"] == [reservation]
 
 
+async def test_tenant_graph_record_failure_releases_reservation(monkeypatch):
+    reservation, calls = _install_meter(monkeypatch)
+
+    async def fake_provider(**kwargs):
+        return _result()
+
+    def fail_record(**kwargs):
+        calls["record"].append(kwargs)
+        raise RuntimeError("record failed")
+
+    monkeypatch.setattr(llm_adapter, "call_claude_messages", fake_provider)
+    monkeypatch.setattr(llm_adapter, "record_ai_usage", fail_record)
+    node = llm_adapter.agent_node(
+        operation="graph.draft", model="claude-sonnet-5", prompt="hello"
+    )
+
+    with pytest.raises(RuntimeError, match="record failed"):
+        await node(_ctx())
+
+    assert len(calls["record"]) == 1
+    assert calls["release"] == [reservation]
+
+
 async def test_tenant_graph_hard_limit_blocks_provider(monkeypatch):
     _, calls = _install_meter(monkeypatch, allowed=False)
     provider_calls = []
