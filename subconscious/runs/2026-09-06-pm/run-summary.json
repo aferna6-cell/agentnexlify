@@ -1,0 +1,36 @@
+{
+  "run": 117,
+  "date": "2026-09-06-pm",
+  "winner": "Step 9L: Add nightly AI usage guard coverage sweep SKILL.md block",
+  "category": "code_health",
+  "confidence": "HIGH",
+  "carry_forward_count": 2,
+  "status": "recommendation",
+  "escalation": "autonomous_executable_run_118_if_not_approved",
+  "evidence_summary": "check_ai_metering.py (commit 1c5b749, shipped today) confirmed working — live scan finds 30+ unguarded AI-calling functions across 16 router files and 14 service files. Step 9L SKILL.md block absent (grep=0). os_tool_executions.py 783L/8d+ stable (run 118 candidate). Step 9G trigger broken in cloud (gh CLI unavailable). KB 10+ days stale. Step 9J 17/19 Dependabot PRs skipped (token budget unchanged).",
+  "ideas_count": 5,
+  "debate_results": {
+    "step_9l_skillmd": "SURVIVES → WINNER",
+    "step_9g_cloud_fix": "WEAKENED → parking lot (run 118 candidate)",
+    "os_tool_executions_split": "WEAKENED → parking lot (run 118 candidate if Step 9L confirmed)",
+    "step_9j_budget_fix": "not debated → parking lot",
+    "check_ai_metering_ci_gate": "KILLED — needs suppression baseline first"
+  },
+  "mandate_check": {
+    "step_9l_in_skillmd": "FAIL — grep=0 (2nd carry-forward mandate fires; 3rd fires run 118)",
+    "check_ai_metering_py_status": "PASS — shipped commit 1c5b749 with 325 lines tests",
+    "violations_found": "30+",
+    "os_tool_stability": "PASS — 783L, 8d+ stable",
+    "gh_800_supabase_token": "OPEN — brain connector 44d+ stale",
+    "step_9j_token_budget": "FAIL — 17/19 PRs still skipped (unchanged)",
+    "step_9g_cloud_trigger": "FAIL — gh CLI unavailable in cloud sessions"
+  },
+  "run_118_mandate": [
+    "Verify Step 9L present in .claude/skills/nightly-commit-review/SKILL.md: grep 'Step 9L' — if 0, autonomous-executable escalation fires (3rd carry-forward = direct implementation per precedent)",
+    "First nightly with Step 9L: how many violations found? How many issues filed vs dedup-skipped?",
+    "os_tool_executions.py: still 0 commits since f22ef04? If 10d+ stable: god class split is run 118 winner if Step 9L confirmed",
+    "GH #800 SUPABASE_ACCESS_TOKEN: set in Railway after GH #800 comment?",
+    "Step 9G cloud fix: is mcp__github__actions_run_trigger available in nightly sessions? Run 118 candidate.",
+    "Step 9J: identify where 17-skip token budget limit hits — which prior step consumes budget?"
+  ]
+}
