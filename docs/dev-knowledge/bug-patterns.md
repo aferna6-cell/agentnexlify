@@ -18894,3 +18894,26 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### subconscious: run 2026-09-06-pm — Step 9L AI metering SKILL.md block (2nd carry-forward)
+
+Run 117 recommendation: add Step 9L block to .claude/skills/nightly-commit-review/SKILL.md.
+Detector (check_ai_metering.py, commit 1c5b749) confirmed working — 30+ unguarded
+AI-calling functions found across 16 router files and 14 service files.
+
+Mandate: autonomous-executable escalation fires at run 118 (3rd carry-forward, same
+precedent as Steps 9F/9G/9I/9J/9K). Task prompt override prevented implementation
+this run.
+
+Parking lot: os_tool_executions.py god class split (783L, 8d+ stable), Step 9G cloud
+fix (gh CLI → mcp__github__actions_run_trigger), Step 9J token-budget fix.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01UBHi6bDsQcKy85ZyERYcTW
+**Date:** 2026-09-06
+**Commit:** 7d61bc8
+**Author:** Claude
+**Files Changed:** subconscious/runs/2026-09-06-pm/debate/debate-log.md,subconscious/runs/2026-09-06-pm/ideas/ideas.md,subconscious/runs/2026-09-06-pm/improvement-backlog.md,subconscious/runs/2026-09-06-pm/run-summary.json,subconscious/runs/2026-09-06-pm/winning-concept.md,subconscious/state/governance.json,subconscious/state/memory.jsonl
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
