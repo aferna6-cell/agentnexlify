@@ -54,6 +54,61 @@ def _install_meter(monkeypatch, *, allowed=True):
     return reservation, calls
 
 
+class _TenantQuery:
+    def __init__(self, rows):
+        self.rows = rows
+
+    def table(self, name):
+        assert name == "tenants"
+        return self
+
+    def select(self, fields):
+        assert "ai_monthly_token_hard_limit" in fields
+        return self
+
+    def eq(self, field, value):
+        assert (field, value) == ("id", "tenant-1")
+        return self
+
+    def limit(self, value):
+        assert value == 1
+        return self
+
+    def execute(self):
+        return SimpleNamespace(data=self.rows)
+
+
+def test_load_budget_tenant_returns_policy(monkeypatch):
+    monkeypatch.setattr(
+        llm_adapter,
+        "get_service_supabase",
+        lambda: _TenantQuery([{"id": "stale-id", "plan": "agent_os"}]),
+    )
+
+    tenant = llm_adapter._load_budget_tenant("tenant-1")
+
+    assert tenant == {"id": "tenant-1", "plan": "agent_os"}
+
+
+def test_load_budget_tenant_missing_returns_none(monkeypatch):
+    monkeypatch.setattr(
+        llm_adapter,
+        "get_service_supabase",
+        lambda: _TenantQuery([]),
+    )
+
+    assert llm_adapter._load_budget_tenant("tenant-1") is None
+
+
+def test_load_budget_tenant_query_failure_returns_none(monkeypatch):
+    def fail_client():
+        raise RuntimeError("db unavailable")
+
+    monkeypatch.setattr(llm_adapter, "get_service_supabase", fail_client)
+
+    assert llm_adapter._load_budget_tenant("tenant-1") is None
+
+
 async def test_tenant_graph_call_reserves_then_records(monkeypatch):
     reservation, calls = _install_meter(monkeypatch)
     provider_calls = []
