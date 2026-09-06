@@ -18894,3 +18894,268 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### subconscious: run 115 — Step 9L AI metering coverage design (#795)
+
+* subconscious: run 2026-09-04-pm (#115) — Step 9M AI usage metering coverage sweep
+
+Winner: Step 9M — add nightly AI usage metering coverage sweep to
+.claude/skills/nightly-commit-review/SKILL.md.
+
+Evidence: fix(widget) #793 + fix(voice) #792 both landed within 3 days —
+same miss class (AI endpoint lacking reserve/record/release metering) in
+different subsystems. Identical recurrence pattern to block_demo_role
+(which spawned Step 9I). No automated check enforces metering coverage.
+
+Step 9M: grep backend/routers/ for claude API calls lacking usage guard,
+dedup against open ai-ready issues, file security+ai-ready GH issue per
+unguarded file. Skip admin/* routes. Autonomous-executable in run 116 if
+not approved.
+
+Mandate checks:
+- Step 9K: PASS (1 PR open, under threshold)
+- Step 9J detection: PASS (19 Dependabot PRs found)
+- GH #684 SUPABASE_ACCESS_TOKEN: NOT RESOLVED (43d stale)
+- os_tool_executions.py: BORDERLINE (783L, 3d stable)
+
+Killed: Step 9J eligibility fix (CI dark GH #500 — auto-merge unsafe)
+Parking lot: Step 9L (blocked on PR #788), os_tool_executions.py split (4d+ needed)
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_0167cq8oUrze2pov7egw2knk
+
+* subconscious: run 2026-09-05 — Step 9L AI metering coverage nightly check
+
+Run 115. Winner: Add Step 9L to nightly-commit-review SKILL.md — grep
+backend/ for AI-calling files missing reserve/record/release metering,
+file GH issues on violations (labels: ai-ready + code_health).
+
+Evidence: PRs #792-#799 retroactively metered 6 AI endpoints in 3 days
+(498-1726 new test lines each). Same class as demo-role gaps (Step 9I).
+Proven grep-and-file mechanism. 0 token budget impact (grep-only).
+
+Mandate check: Step 9K PASS (5 grep hits, fired 2026-09-05);
+Step 9J PARTIAL (17/19 Dependabot PRs skipped — token budget);
+SUPABASE_ACCESS_TOKEN still NOT SET (GH #800 filed).
+
+Parking lot: compound-engineering checklist (weakened);
+os_tool_executions.py split (783L, run 116 candidate);
+Fitness trial-to-member tracking (future).
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_016wqyGbeSaVZKd8BWV1M8i1
+
+* fix(subconscious): revise Step 9M detector to call-site/function granularity
+
+Address EM review on PR #795:
+- Naming note: clarify Step 9M vs Step 9L cross-session collision; run 116 to resolve
+- Detector upgraded from file-level grep to call-site/function scope: guard in
+  function A no longer masks unguarded AI call in function B
+- Explicit path exclusions moved to .claude/state/step9m_exclusions.json with
+  owner+reason+expires — no hard-coded paths in SKILL
+- Alias/import handling: builds per-file alias map before scanning
+- Regression fixture table added (test_step9m_detector.py): 6 cases including
+  unrelated-same-file guard false-positive, admin exclusion, alias resolution,
+  module-scope call, delegated service call
+- Issue title now includes function name: fix(metering): ... {filename}::{function_name}()
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_0167cq8oUrze2pov7egw2knk
+
+* fix(subconscious): revise Step 9L detector v3 — EM second review
+
+Renames Step 9M → Step 9L throughout (EM-designated canonical identifier).
+Additional changes per second EM review:
+
+- Scope: backend/ broadly (routers + services + tasks), not routers-only
+- Canonical metered wrapper recognition: callers of recognized wrappers pass
+  without own guard; wrappers listed in step9l_metered_wrappers.json
+- Emit identifiers only: GH issue bodies contain file/function/line/pattern
+  only — no prompt text, customer data, or secret content
+- Exclusions: test/docs/scripts/offline added alongside admin/internal;
+  stored in step9l_exclusions.json with owner+reason+expires
+- appointment_brief (#791 merged) added to positive inventory in
+  step9l_metered_wrappers.json — not an outstanding violation
+- All 6 required design fixtures present in test_step9l_detector.py spec:
+  delegated unmetered service flagged; direct metered call passes;
+  recognized metered wrapper passes; unrelated same-file metering no mask;
+  alias detected; test/docs/offline exclusions explicit
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_0167cq8oUrze2pov7egw2knk
+
+* subconscious: run 115-pm complete — artifacts + memory entry
+
+Add 2026-09-05-pm run directory: 5 ideas, debate log, winning-concept,
+improvement-backlog, run-summary. Append run 115-pm memory.jsonl entry.
+
+Winner: Step 9L (nightly AI usage guard sweep). 13 unguarded routers.
+Escalation: autonomous-executable if not approved by run 116.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XF68drhbbfC5yFD2V2wdfp
+
+* fix: normalize Step 9M→Step 9L in 2026-09-04-pm run artifacts
+
+Per owner Engineering HOLD on PR #795:
+- run-summary.json: winner, top_3_debated, run_116_mandate all updated
+- ideas/ideas.md: Idea 4 title/action now "Step 9L"; migration alerter relabeled
+- debate/debate-log.md: header, synthesis table, winner line all updated
+- improvement-backlog.md: active item, parking lot entries, questions updated
+
+governance.json was already clean (no 9M references).
+winning-concept.md retains its explicit historical-label note (compliant).
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XF68drhbbfC5yFD2V2wdfp
+
+* fix: revise Step 9L detector to call-site/function granularity
+
+Per owner review 5123258423 + 5121585977 + 5123094104:
+
+- Replace file-level grep with AST-based analysis at enclosing-function
+  granularity (one violation per function, not per file)
+- Add alias resolution: from ... import call_claude_messages as alias
+  is detected identically to a direct call
+- Discriminate router guards (Depends(ai_usage_guard) in signature) from
+  service guards (reserve_tokens/record_tokens call in body)
+- Add METERED_WRAPPERS registry for recognized canonical guard wrappers
+  (callers exempt; wrapper itself also exempt as it IS the guard layer)
+- Add explicit EXCLUDE_DIRS (tests/, test/, docs/, scripts/offline/,
+  knowledge-base/, _archive/) + per-file exemption marker
+- Issue body: identifiers only (path:function:line) — no prompt/customer/
+  secret content
+- Dedup search: now queries by path:function label, not filename only
+- Add six regression fixtures covering: delegated unmetered service flagged;
+  direct metered call passes; recognized wrapper passes; unrelated same-file
+  guard does not mask violation; alias detected; exclusions explicit
+- Note PR #791 (appointment_brief, merged 2026-09-03) in PASSES inventory
+- Deliverable 2 updated: two-file commit (script + SKILL.md) replacing
+  prior SKILL.md-only plan
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XF68drhbbfC5yFD2V2wdfp
+
+* fix(subconscious): align governance.json active_directions to AST-based Step 9L
+
+Addresses HOLD 3 on PR #795: governance.json active_directions[0] still
+encoded the old file-level grep approach after winning-concept.md was
+upgraded to AST-based function-level detection.
+
+Four fields updated:
+- run_115_mandate item 2: "AI-calling files" → "AI-calling functions flagged",
+  adds "issues filed vs dedup-skipped" to mandate metrics
+- active_directions[0].action: replaces grep-by-filename approach with full
+  AST-based spec (scripts/check_ai_metering.py + SKILL.md block; violations
+  as path:function:line; dedup by path:function not filename; labels billing
+  + ai-ready not ai-ready + code_health)
+- active_directions[0].implementation_sketch: fixes path from
+  subconscious/runs/2026-09-05/ to subconscious/runs/2026-09-05-pm/
+- active_directions[0].note: removes "grep-only", replaces with
+  "AST-based detector at function granularity (alias-resolved, guard-discriminated)"
+
+All authoritative machine-readable fields now consistently describe the
+function-level AST detector. No production code changes.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XF68drhbbfC5yFD2V2wdfp
+
+* fix(subconscious): HOLD 4 — five detector-semantics fixes for Step 9L spec
+
+1. Non-pm AM run artifacts: add SUPERSEDED markers so autonomous runs
+   cannot use file-level grep spec as implementation reference.
+
+2. Fix client.messages.create detection: add _is_messages_create() helper
+   that matches *.messages.create AST chain rather than attr=='create',
+   which matched any .create() call. Add fixture 7.
+
+3. Fix partial guard false-pass: split SERVICE_GUARDS into ai_usage_guard
+   (standalone), LIFECYCLE_RESERVE (reserve_tokens), LIFECYCLE_RECORD
+   (record_tokens|release_tokens). fn_has_guard() now requires full
+   lifecycle or standalone guard; lone reserve_tokens fails. Add fixture 8.
+
+4. Function-level exemption: replace file-level first-5-lines exemption
+   check with fn_is_exempt() that inspects 3 lines from function def.
+   One exempt function can no longer hide other unmetered functions
+   in the same file.
+
+5. Appointment fixture: replace placeholder with actual PR #791 path+fn:
+   backend/routers/appointment_briefs.py::get_appointment_brief.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XF68drhbbfC5yFD2V2wdfp
+
+* fix(subconscious): resolve HOLD 5 — three-way lifecycle, exempt validation, fixture corrections
+
+Three correctness gaps from owner HOLD 5 review on commit bdfe84f:
+
+1. Lifecycle false-pass: fn_has_guard() now requires all three of
+   LIFECYCLE_RESERVE + LIFECYCLE_RECORD + LIFECYCLE_RELEASE. The prior
+   two-set check (reserve AND record) accepted reserve+release-only,
+   letting no-record functions pass silently. Docstring updated to match.
+
+2. Exemption not validated: fn_is_exempt() now parses the marker text after
+   EXEMPTION_MARKER, splits on first colon, and requires both owner and
+   reason to be non-empty. A bare '# ai-metering-exempt:' with no
+   owner+reason returns False and does not exempt the function.
+
+3. Wrong fixture layer: Fixture 2 corrected from
+   backend/routers/appointment_briefs.py::get_appointment_brief (router
+   delegate, does not prove lifecycle detection) to
+   backend/services/appointment_brief.py::_call_claude_with_budget (service
+   function with full reserve+record+release lifecycle, PR #791).
+
+Added fixtures 9/10/11: reserve+record-only FLAGGED, reserve+release-only
+FLAGGED, bare exempt marker FLAGGED. Fixture count: 8 → 11.
+Guard discrimination note updated to reflect three-way requirement.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XF68drhbbfC5yFD2V2wdfp
+
+* fix(subconscious/run-115): HOLD 6 — canonical lifecycle symbol names + ideas SUPERSEDED marker
+
+- winning-concept.md: replace `reserve_tokens`/`record_tokens`/`release_tokens` with
+  canonical production names `reserve_ai_tokens`/`record_ai_usage`/`release_ai_token_reservation`
+  in fixture 2 (positive lifecycle fixture), fixtures 8/9/10 (partial lifecycle fixtures),
+  and guard discrimination note in Implementation Sketch
+- ideas/idea-1-step-9l-ai-usage-guard-sweep.md: add HTML comment SUPERSEDED block at top
+  explaining the original file-level grep/same-file presence approach is superseded by
+  AST/enclosing-function analysis; points to winning-concept.md as canonical design
+
+Fixes HOLD 6 raised by aferna6-cell on PR #795. All six HOLDs now resolved.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XF68drhbbfC5yFD2V2wdfp
+
+* fix(subconscious/run-115): HOLD 7 — normalize remaining artifacts to AST/function-level spec
+
+Three artifacts still referenced the original grep/file-level detection approach:
+
+- debate/debate-log.md: add SUPERSEDED block at top noting detection mechanism changed
+  (file-level grep → AST/enclosing-function, routers+services scope, canonical lifecycle
+  symbols reserve_ai_tokens/record_ai_usage/release_ai_token_reservation). Debate reasoning
+  about Step 9L value still valid; only implementation approach changed.
+- improvement-backlog.md: rewrite Active Step 9L description to AST/function-level spec
+  including router guard pattern, service lifecycle three-way check with canonical names,
+  client.messages.create AST chain detection, function-level exemption marker format,
+  and pointer to winning-concept.md as canonical design.
+- run-summary.json: annotate winner field to indicate AST/function-level approach and
+  point to winning-concept.md.
+
+Note: PR body on GitHub also references old approach but cannot be updated — GitHub MCP
+is returning 400 (bad auth). Owner must reconnect at claude.ai Settings → Connectors
+and update PR body manually, or lift HOLD acknowledging this limitation.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XF68drhbbfC5yFD2V2wdfp
+
+---------
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-09-06
+**Commit:** a242c6e
+**Author:** aferna6-cell
+**Files Changed:** subconscious/runs/2026-09-04-pm/debate/debate-log.md,subconscious/runs/2026-09-04-pm/ideas/ideas.md,subconscious/runs/2026-09-04-pm/improvement-backlog.md,subconscious/runs/2026-09-04-pm/run-summary.json,subconscious/runs/2026-09-04-pm/winning-concept.md,subconscious/runs/2026-09-05-pm/debate/debate-log.md,subconscious/runs/2026-09-05-pm/ideas/idea-1-step-9l-ai-usage-guard-sweep.md,subconscious/runs/2026-09-05-pm/ideas/idea-2-fix-step-9g-gh-cli-to-mcp.md,subconscious/runs/2026-09-05-pm/ideas/idea-3-os-tool-executions-god-class-split.md,subconscious/runs/2026-09-05-pm/ideas/idea-4-step-9j-check-all-prs.md,subconscious/runs/2026-09-05-pm/ideas/idea-5-schema-drift-guard-ci.md,subconscious/runs/2026-09-05-pm/improvement-backlog.md,subconscious/runs/2026-09-05-pm/run-summary.json,subconscious/runs/2026-09-05-pm/winning-concept.md,subconscious/runs/2026-09-05/debate/debate-log.md,subconscious/runs/2026-09-05/ideas/ideas.md,subconscious/runs/2026-09-05/improvement-backlog.md,subconscious/runs/2026-09-05/run-summary.json,subconscious/runs/2026-09-05/winning-concept.md,subconscious/state/governance.json,subconscious/state/memory.jsonl
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
