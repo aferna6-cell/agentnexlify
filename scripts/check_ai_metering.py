@@ -218,15 +218,18 @@ def _is_excluded(path: Path) -> bool:
 
 
 def collect_violations(root: Path = Path(".")) -> list[str]:
+    """Scan all shipped backend Python, excluding explicit non-production paths."""
     violations: list[str] = []
-    for relative, is_router in ((Path("backend/routers"), True), (Path("backend/services"), False)):
-        target = root / relative
-        if not target.exists():
+    target = root / "backend"
+    if not target.exists():
+        return violations
+
+    for path in sorted(target.rglob("*.py")):
+        relative = path.relative_to(root)
+        if _is_excluded(relative):
             continue
-        for path in sorted(target.rglob("*.py")):
-            if _is_excluded(path.relative_to(root)):
-                continue
-            violations.extend(scan_file(path, is_router))
+        is_router = len(relative.parts) > 1 and relative.parts[1] == "routers"
+        violations.extend(scan_file(path, is_router))
     return violations
 
 
