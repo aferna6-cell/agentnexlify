@@ -18,8 +18,6 @@ exactly. ``scripts/check_project_invariants.py`` and
 ``generate_action_manifest.py --check`` enforce parity in CI.
 """
 
-from __future__ import annotations
-
 import json
 from functools import lru_cache
 from pathlib import Path
