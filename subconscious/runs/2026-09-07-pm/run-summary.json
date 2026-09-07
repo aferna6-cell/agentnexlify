@@ -1,0 +1,33 @@
+{
+  "run": 118,
+  "date": "2026-09-07-pm",
+  "winner": "Create meter-ai-endpoint skill — reserve/record/release metering checklist",
+  "category": "workflow_efficiency",
+  "confidence": "HIGH",
+  "status": "recommendation",
+  "escalation": "autonomous_executable_run_119_if_not_approved",
+  "evidence_summary": "9 metering commits (#792-#803) in 7 days per skill discovery 2026-09-07 (HIGH priority). Step 9L live (PR #804, commit 88dac49) detects violations but gives no remediation guidance. meter-ai-endpoint skill closes the gap: exact 6-step checklist (imports, helper, 3-phase lifecycle, 4 test cases, CI append). Bonus: cross-reference in ai-feature-pattern/SKILL.md.",
+  "mandate_check": {
+    "step_9l_in_skill": "PASS — grep=2 (PR #804 merged)",
+    "step_9l_first_fire": "PENDING — nightly-2026-09-07 ran BEFORE Step 9L was added; first fire will be nightly-2026-09-08",
+    "os_tool_executions_stability": "FAIL — 4d stable (f22ef04 2026-09-03), mandate condition 10d+ NOT met",
+    "gh_800_supabase_token": "NOT SET — brain connector 44d+ stale",
+    "step_9g_cloud_fix": "NOT CHECKED",
+    "step_9j_budget": "FAIL — 17/19 Dependabot PRs still skipped; root cause not yet diagnosed"
+  },
+  "debate": {
+    "meter_ai_endpoint_skill": "SURVIVES → WINNER",
+    "ai_feature_pattern_update": "WEAKENED → bonus action inside winner",
+    "os_tool_executions_split": "WEAKENED → parking lot (stability condition 4d < 10d)",
+    "step_9j_budget_fix": "WEAKENED → parking lot (needs diagnostic data)",
+    "staging_preflight_skill": "SURVIVES → parking lot (MEDIUM priority, no mandate)"
+  },
+  "run_119_mandate": [
+    "Verify .claude/skills/meter-ai-endpoint/SKILL.md exists (1st carry-forward check)",
+    "Verify ai-feature-pattern/SKILL.md has metering cross-reference",
+    "Step 9L: first nightly execution result — violations found? Issues filed vs dedup-skipped?",
+    "os_tool_executions.py: still 0 commits since f22ef04 (2026-09-03)? If 10d+ (>=2026-09-13): god class split is run 119 winner",
+    "Step 9J: which nightly step eats the budget before Step 9J processes all 19 Dependabot PRs?",
+    "KB staleness: last compile 2026-08-26 (12 days). Did Step 9G trigger kb-autopopulate.yml?"
+  ]
+}
