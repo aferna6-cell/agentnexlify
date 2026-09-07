@@ -18894,3 +18894,14 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(os-workflows): remove postponed annotations (#806)
+
+Incremental issue #805 cleanup: remove postponed annotations from shadow_planner.py and tool_catalog.py after exact-head PR Validation passed.
+**Date:** 2026-09-07
+**Commit:** 2c604eb
+**Author:** aferna6-cell
+**Files Changed:** backend/services/os_workflows/shadow_planner.py,backend/services/os_workflows/tool_catalog.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
