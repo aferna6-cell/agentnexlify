@@ -444,6 +444,31 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
             Body: "Subconscious PR audit (Step 9K): This PR is {age_days} days old. There are {stale_count} stale subconscious draft PRs (>30 days). Please review, merge, or close to prevent backlog accumulation."
     6. **Log result:**
        Add to nightly report summary line: "Step 9K: {total_count} subconscious PRs open ({stale_count} stale, {critical_count} critical)"
+9L. (AI Usage Guard Coverage Sweep) Run the executable AST detector and triage identifier-only violations:
+    1. **Run detector and capture its contract explicitly:**
+       ```bash
+       set +e
+       python3 scripts/check_ai_metering.py > /tmp/step9l-violations.txt 2>&1
+       STEP9L_RC=$?
+       set -e
+       ```
+       - `STEP9L_RC == 0`: clean scan; log PASS and continue.
+       - `STEP9L_RC == 2`: metering violations found; continue with deduplicated issue filing below.
+       - Any other exit code (including `1`): detector error. Log `Step 9L ERROR — detector could not complete safely`, do **not** file violation issues from unreliable output, and continue to step 10.
+    2. **Parse identifier-only violations:**
+       Read only lines matching `path:function:line`. Do not include prompt content, customer data, stack traces, or secrets in issues.
+       Deduplicate by unique `path:function` pair.
+    3. **For each unique violation, dedup against open issues:**
+       Search open GH issues for the exact identifier pair plus billing context, e.g.:
+       `mcp__github__search_issues(query="repo:aferna6-cell/agentnexlify is:open label:billing {path}:{function}")`.
+       If an open issue already tracks the same `path:function`, log dedup-skip and do not create another.
+    4. **File only untracked violations:**
+       Create one GH issue per untracked function:
+       - Title: `fix(billing): {path}:{function} calls AI without metering guard`
+       - Labels: `["billing", "ai-ready"]`
+       - Body: detector date, `path:function:line`, and required lifecycle only (`reserve_ai_tokens` → provider call → `record_ai_usage`, with `release_ai_token_reservation` on failure). Keep the body identifier-only and free of prompt/customer/secret data.
+    5. **Log result:**
+       Add to nightly report: `Step 9L: detector rc={RC}, {M} unique violations, {K} issues filed, {D} dedup-skipped.`
 10. Commit report: `docs(nightly): review YYYY-MM-DD [auto-nightly]`
 11. Push to main
 12. If any guardrail tripped (forbidden path, >5 files, >50 LOC, test-check failed) — abort fixes, file issue only, still write report
