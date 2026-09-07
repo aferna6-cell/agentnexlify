@@ -12,8 +12,6 @@ invocation when ``ANTHROPIC_API_KEY`` is absent. This skeleton still
 refuses to wire a provider even when the key is present.
 """
 
-from __future__ import annotations
-
 import os
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
