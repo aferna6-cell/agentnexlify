@@ -44,6 +44,11 @@ updates:
       time: "09:45"
       timezone: "America/New_York"
     open-pull-requests-limit: 5
+    groups:
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
     labels:
       - "dependencies"
       - "demo-platform"
