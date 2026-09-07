@@ -1,0 +1,45 @@
+{
+  "run": "2026-09-07",
+  "date": "2026-09-07",
+  "run_number": 118,
+  "evidence_summary": "Step 9L now IMPLEMENTED (commit 88dac49, SKILL.md wired, 20+ violations found). Nightly-2026-09-07 filed MEDIUM issue for from __future__ import annotations in 3 os_workflows files (shadow_planner.py:15, planner_bakeoff.py:13, tool_catalog.py:21). os_tool_executions.py at 783L, 8d stable (<10d mandate threshold). KB 12d stale. 4 Dependabot PRs merged via Step 9J.",
+  "ideas_count": 5,
+  "ideas": [
+    "Fix from __future__ import annotations in os_workflows/ (3 files)",
+    "Fix Step 9G cloud trigger to use mcp__github__actions_run_trigger",
+    "Split os_tool_executions.py god class (10d stability gate)",
+    "Batch-file 20 check_ai_metering violations as GitHub issues",
+    "Remove Step 9J per-run Dependabot cap"
+  ],
+  "debate_verdicts": {
+    "Fix from __future__ import annotations in os_workflows/": "SURVIVES - chosen as winner",
+    "Fix Step 9G cloud trigger": "WEAKENED - patches dispatch but not underlying secret blockers",
+    "Split os_tool_executions.py": "DEFERRED - 8d < 10d mandate threshold"
+  },
+  "winner": "Fix from __future__ import annotations in backend/services/os_workflows/ (shadow_planner.py:15, planner_bakeoff.py:13, tool_catalog.py:21)",
+  "winner_category": "code_health",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "previous_active_direction": "Step 9L AI metering coverage (COMPLETED)",
+  "rejected": [
+    "Batch-file 20 check_ai_metering violations - Step 9L auto-files tonight",
+    "Remove Step 9J per-run cap - insufficient evidence of harm"
+  ],
+  "parking_lot": [
+    "Fix Step 9G cloud trigger - revisit after secret blockers resolved",
+    "Split os_tool_executions.py - eligible 2026-09-10+"
+  ],
+  "mandate_checks": {
+    "step_9L_implemented": true,
+    "os_tool_executions_god_class_split": "DEFERRED (8d < 10d)",
+    "supabase_access_token_set": false,
+    "step_9g_mcp_fix_available": true,
+    "step_9j_17_skip_diagnosis": "cap exists, insufficient evidence to change"
+  },
+  "next_run_questions": [
+    "Has the from __future__ annotations fix been implemented?",
+    "Has os_tool_executions.py reached 10d+ stability (eligible 2026-09-10)?",
+    "What is the first Step 9L violation report from tonight's nightly?",
+    "Is SUPABASE_ACCESS_TOKEN set in GH Actions (GH #800)?"
+  ]
+}
