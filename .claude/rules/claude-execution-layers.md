@@ -90,9 +90,9 @@ Study → Apply → Systemize.
 | Code | `/new-feature`, `/fix-bug`, backend-dev + frontend-dev agents |
 | Tool | Supabase MCP, Playwright MCP, Chrome DevTools MCP, GitHub plugin |
 | Memory | CLAUDE.md, `memory/`, `PROMPTLIBRARY.md`, `docs/dev-knowledge/` |
-| Workflow | 85 skills, 25 commands, 31 hooks, 60 agents, `issue-to-pr-loop` |
+| Workflow | 86 skills, 25 commands, 31 hooks, 60 agents, `issue-to-pr-loop` |
 
-Inventory source: `npm run agent-system:check`. The 85 skills are 79 first-party directories plus 6 Everything Claude Code plugin symlinks in `.claude/skills/` (still counted when `core.symlinks=false` materializes them as one-line path files).
+Inventory source: `npm run agent-system:check`. The 86 skills are 80 first-party directories plus 6 Everything Claude Code plugin symlinks in `.claude/skills/` (still counted when `core.symlinks=false` materializes them as one-line path files).
 
 ## Cross-refs
 - `.claude/rules/claude-usage-patterns.md` — 12 operating modes
