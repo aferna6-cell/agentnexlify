@@ -5,8 +5,6 @@ together with the AgentNexLiFy loader. A widget_configs row, a self-report
 checkbox, or another tenant's key is never enough.
 """
 
-from __future__ import annotations
-
 import logging
 import re
 from dataclasses import dataclass

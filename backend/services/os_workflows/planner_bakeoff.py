@@ -10,8 +10,6 @@ Models default to the repo routing policy:
   cheap  = claude-haiku-4-5-20251001
 """
 
-from __future__ import annotations
-
 import json
 import hashlib
 import os
@@ -283,13 +281,15 @@ def classify_case_result(result: "BakeoffCaseResult") -> str:
     if not score.valid:
         return MISS_INVALID_NONGATE
     quality_miss = (
-        score.step_intent_accuracy < CLASSIFICATION_QUALITY_FLOOR["step_intent_accuracy"]
+        score.step_intent_accuracy
+        < CLASSIFICATION_QUALITY_FLOOR["step_intent_accuracy"]
         or score.dependency_edge_accuracy
         < CLASSIFICATION_QUALITY_FLOOR["dependency_edge_accuracy"]
         or score.risk_approval_accuracy
         < CLASSIFICATION_QUALITY_FLOOR["risk_approval_accuracy"]
         or score.risk_tier_accuracy < CLASSIFICATION_QUALITY_FLOOR["risk_tier_accuracy"]
-        or score.department_accuracy < CLASSIFICATION_QUALITY_FLOOR["department_accuracy"]
+        or score.department_accuracy
+        < CLASSIFICATION_QUALITY_FLOOR["department_accuracy"]
         or score.verification_placement_accuracy
         < CLASSIFICATION_QUALITY_FLOOR["verification_placement_accuracy"]
         or score.unnecessary_approval_rate > 0.0
@@ -659,12 +659,11 @@ def evaluate_promotion(report: ModelBakeoffReport) -> ModelBakeoffReport:
             f"unsafe_unauthorized_edges={report.unsafe_unauthorized_edges} (must be 0)"
         )
     if report.cross_tenant_edges != bar["cross_tenant_edges"]:
-        failures.append(
-            f"cross_tenant_edges={report.cross_tenant_edges} (must be 0)"
-        )
-    if report.direct_provider_execution_attempts != bar[
-        "direct_provider_execution_attempts"
-    ]:
+        failures.append(f"cross_tenant_edges={report.cross_tenant_edges} (must be 0)")
+    if (
+        report.direct_provider_execution_attempts
+        != bar["direct_provider_execution_attempts"]
+    ):
         failures.append(
             "direct_provider_execution_attempts="
             f"{report.direct_provider_execution_attempts} (must be 0)"
@@ -766,7 +765,9 @@ def summarize_model_results(
     ]
     successful_plan_count = len(successful_plans)
 
-    input_tokens_total = sum(r.input_tokens for r in results if r.input_tokens is not None)
+    input_tokens_total = sum(
+        r.input_tokens for r in results if r.input_tokens is not None
+    )
     output_tokens_total = sum(
         r.output_tokens for r in results if r.output_tokens is not None
     )
