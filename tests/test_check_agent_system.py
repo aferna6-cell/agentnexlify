@@ -6,7 +6,6 @@ from pathlib import Path
 
 from scripts import check_agent_system as agent_system
 
-
 WINDOWS_PLACEHOLDERS = (
     "accessibility",
     "deploy-to-vercel",
@@ -29,7 +28,9 @@ class CountSkillsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             skills = Path(raw)
             (skills / "schema-guard").mkdir()
-            (skills / "missing-target").symlink_to("../../.agents/skills/missing-target")
+            (skills / "missing-target").symlink_to(
+                "../../.agents/skills/missing-target"
+            )
 
             self.assertEqual(agent_system.count_skills(skills), 2)
 
@@ -52,7 +53,9 @@ class CountSkillsTests(unittest.TestCase):
                 (skills / "seo").read_bytes(),
                 b"../../.agents/skills/seo\r\n",
             )
-            self.assertEqual(agent_system.count_skills(skills), len(WINDOWS_PLACEHOLDERS))
+            self.assertEqual(
+                agent_system.count_skills(skills), len(WINDOWS_PLACEHOLDERS)
+            )
 
     def test_count_skills_rejects_arbitrary_regular_files(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -92,8 +95,12 @@ class CountSkillsTests(unittest.TestCase):
                 skills / "punctuation-dot-segments",
                 "!!/@@/.agents/skills/punctuation-dot-segments\n",
             )
-            (skills / "oversize").write_bytes(b"x" * (agent_system._MAX_PLACEHOLDER_BYTES + 1))
-            (skills / "non-ascii").write_bytes(b"../../.agents/skills/non-ascii\n\xc3\xa9")
+            (skills / "oversize").write_bytes(
+                b"x" * (agent_system._MAX_PLACEHOLDER_BYTES + 1)
+            )
+            (skills / "non-ascii").write_bytes(
+                b"../../.agents/skills/non-ascii\n\xc3\xa9"
+            )
 
             self.assertEqual(agent_system.count_skills(skills), 1)
 
@@ -106,8 +113,12 @@ class CountSkillsTests(unittest.TestCase):
             _write(substituted, "xx/yy/.agents/skills/substituted-dot-segments\n")
             _write(punctuation, "!!/@@/.agents/skills/punctuation-dot-segments\n")
 
-            self.assertFalse(agent_system.is_materialized_git_symlink_skill(substituted))
-            self.assertFalse(agent_system.is_materialized_git_symlink_skill(punctuation))
+            self.assertFalse(
+                agent_system.is_materialized_git_symlink_skill(substituted)
+            )
+            self.assertFalse(
+                agent_system.is_materialized_git_symlink_skill(punctuation)
+            )
             self.assertEqual(agent_system.count_skills(skills), 0)
 
     def test_count_skills_mixed_posix_and_windows_entries(self) -> None:
@@ -121,13 +132,13 @@ class CountSkillsTests(unittest.TestCase):
             self.assertEqual(agent_system.count_skills(skills), 3)
 
     def test_live_skill_inventory_matches_documented_count(self) -> None:
-        """Do not weaken the documented-count invariant: live tree must stay 85."""
-        self.assertEqual(agent_system.count_skills(), 85)
+        """Do not weaken the documented-count invariant: live tree must stay 86."""
+        self.assertEqual(agent_system.count_skills(), 86)
         documented = agent_system.documented_count(
             agent_system.read_text(".claude/rules/claude-execution-layers.md"),
             r"(\d+) skills, (\d+) commands, (\d+) hooks, (\d+) agents",
         )
-        self.assertEqual(documented, 85)
+        self.assertEqual(documented, 86)
 
 
 if __name__ == "__main__":
