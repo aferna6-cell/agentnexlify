@@ -18894,3 +18894,28 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(os-workflows): remove __future__ annotations from 2 service files; add nightly review log 2026-09-08
+
+Continuation of issue #805 cleanup. Two backend service files still carried
+`from __future__ import annotations` in violation of CLAUDE.md Critical Invariant #5.
+
+- backend/services/website_connect.py: imported by FastAPI router; uses @dataclass
+  only (no Pydantic models). All annotations defined before use. Safe to remove.
+- backend/services/os_workflows/planner_bakeoff.py: not imported by any router;
+  one forward ref already explicitly quoted. Safe to remove. Formatter also ran.
+
+Both files pass `python3 -m py_compile` after fix.
+
+Nightly commit review logged to ops/routines/logs/nightly-commit-review-2026-09-08.md.
+GitHub issue #823 opened for 5 remaining test files (MEDIUM).
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_016RNZaDj3CbZpD2y2jLuqRk
+**Date:** 2026-09-08
+**Commit:** 6219d4a
+**Author:** Claude
+**Files Changed:** backend/services/os_workflows/planner_bakeoff.py,backend/services/website_connect.py,ops/routines/logs/nightly-commit-review-2026-09-08.md
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
