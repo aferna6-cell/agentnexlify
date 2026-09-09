@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-09-06-pm",
-  "total_runs": 117,
+  "last_run": "2026-09-09",
+  "total_runs": 118,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -226,15 +226,17 @@
   "run_116_mandate_executed": "EXECUTED 2026-09-06-pm (run 117). All mandate items checked: (1) Step 9L in SKILL.md: ABSENT - grep returns 0; 2nd carry-forward fires; autonomous-executable escalation at run 118 (3rd carry-forward per precedent). (2) AI metering violations: 30+ unguarded functions found by check_ai_metering.py (commit 1c5b749) across 16 router files and 14 service files - detector confirmed working with 325 lines of tests. (3) Step 9J token budget: UNCHANGED - 17/19 Dependabot PRs still skipped. (4) os_tool_executions.py: CONFIRMED STABLE - 8d+ since f22ef04, 783L (run 118 god class split candidate if Step 9L confirmed). (5) GH #800 SUPABASE_ACCESS_TOKEN: NOT SET - brain connector 44d+ stale. (6) Step 9G cloud trigger: CONFIRMED BROKEN - gh CLI unavailable in cloud sessions; fix in parking lot for run 118.",
   "active_directions": [
     {
-      "title": "Step 9L: AI metering coverage nightly check in nightly-commit-review SKILL.md (run 115 winner)",
+      "title": "Step 9L: AI metering coverage nightly check in nightly-commit-review SKILL.md (run 115 winner — IMPLEMENTED via PR #804)",
       "date": "2026-09-05",
       "confidence": "HIGH",
-      "status": "pending_approval",
-      "implemented": false,
+      "status": "implemented",
+      "implemented": true,
+      "implemented_date": "2026-09-07",
+      "implemented_by": "PR #804 (ci(nightly): wire Step 9L AI metering sweep) — merged between run 117 and run 118. Confirmed: grep 'Step 9L' nightly-commit-review/SKILL.md returns 2 hits.",
       "autonomous_executable": true,
       "autonomous_executable_run": 118,
       "carry_forward_count": 2,
-      "carry_forward_note": "Run 116 task prompt overrode governance escalation (recommend-only instruction). Run 117 task prompt same override. Escalation now fires at run 118 (3rd carry-forward = direct implementation per Steps 9F/9G/9I/9J/9K precedent).",
+      "carry_forward_note": "Run 116 task prompt overrode governance escalation (recommend-only instruction). Run 117 task prompt same override. PR #804 implemented directly before run 118 fired.",
       "requires_human": false,
       "category": "code_health",
       "moratorium_override": false,
@@ -2004,5 +2006,25 @@
     "implementation_sketch": "subconscious/runs/2026-08-28/winning-concept.md",
     "escalation_condition": "Autonomous-executable if not approved by run 111 (1st carry-forward mandate)",
     "note": "Compounds run 109's Step 9J. Without this fix: Step 9J permanent 0% merge rate. With fix: 20+ security dep bumps unblock within 24-48h, CVE window 2-3 weeks -> <48h."
-  }
+  },
+  "run_117_mandate_executed": "EXECUTED 2026-09-09 (run 118). All mandate items checked: (1) Step 9L in SKILL.md: PASS — PR #804 (ci(nightly): wire Step 9L AI metering sweep) merged between run 117 and run 118; grep returns 2 hits. Autonomous-executable escalation superseded by implementation. (2) First nightly with Step 9L: nightly-2026-09-09 ran CLEAN (0 autonomous fixes, 0 GH issues created) — Step 9L either fired with 0 violations (post-billing-sprint cleanup) or ran before PR merged. (3) os_tool_executions.py: CONFIRMED STABLE — 10d+ since ae81e5f, 783L — god class split IS run 118 winner per run_116_mandate condition. (4) GH #403 ANTHROPIC_API_KEY: NOT CHECKED. (5) Step 9G cloud fix: CONFIRMED BROKEN — gh CLI unavailable in cloud sessions; Step 9M (MCP alternative) in parking lot pending GH #403. (6) Step 9J token budget: NOT IMPROVED — 17/19 Dependabot PRs still skipped.",
+  "run_118_active_direction": {
+    "title": "Split backend/services/os_tool_executions.py god class into 3 focused modules (run 118 winner)",
+    "date": "2026-09-09",
+    "confidence": "HIGH",
+    "status": "recommendation",
+    "implemented": false,
+    "autonomous_executable": false,
+    "requires_human": true,
+    "category": "code_health",
+    "moratorium_override": false,
+    "source_run": 118,
+    "effort": "M",
+    "evidence": "os_tool_executions.py at 783L, last commit ae81e5f (10d+ stable). Run 116 governance mandate: 'run 118 god class split candidate if Step 9L confirmed.' Step 9L confirmed (PR #804). CLAUDE.md Rule 9: 'Don't extend god classes — factor them out.' OS workflow features growing (PRs #771, #803 both touched os-workflows in past 7 days).",
+    "action": "Split backend/services/os_tool_executions.py (783L) into: (1) os_tool_dispatch.py — intent routing, tool selection, orchestration (~260L); (2) os_tool_handlers.py — per-tool execution functions (~260L); (3) os_tool_context.py — shared context helpers, error wrapping, logging (~260L). Keep thin shim in os_tool_executions.py re-exporting old public API. Update all import sites. Run pytest backend/tests/ -x -q --tb=short. Update backend/CONTEXT.md.",
+    "implementation_sketch": "subconscious/runs/2026-09-09/winning-concept.md",
+    "escalation_condition": "Autonomous-executable if not approved by run 119 (1st carry-forward mandate — code splits require human review first cycle)",
+    "note": "Governance-mandated at run 116. Conditions met. Pure refactor with identical behavior. Safest split window (stable 10d+, no in-flight changes). Next OS feature will hit 784L+ if not split now."
+  },
+  "run_119_mandate": "1. Has os_tool_executions.py split been implemented? Check if os_tool_dispatch.py, os_tool_handlers.py, os_tool_context.py exist in backend/services/. 2. Step 9L results: did nightly fire Step 9L post-PR #804? How many violations found vs filed? Count trending down after billing sprint? 3. GH #403 (ANTHROPIC_API_KEY in GH Actions): resolved? If yes, Step 9M (KB MCP trigger) is next parking-lot winner. 4. os_tool_executions.py: any new commits since ae81e5f? If yes, split window may have closed — reassess. 5. Step 9J: all 19 Dependabot PRs checked per nightly, or still hitting token budget? Identify which step consumes budget before Step 9J reaches all 19."
 }

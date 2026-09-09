@@ -1,0 +1,50 @@
+{
+  "run": 118,
+  "date": "2026-09-09",
+  "winner": "Split backend/services/os_tool_executions.py god class into 3 focused modules",
+  "winner_category": "code_health",
+  "winner_confidence": "HIGH",
+  "winner_effort": "M",
+  "status": "recommendation",
+  "carry_forward_resolved": "Step 9L (AI metering coverage nightly check) — implemented via PR #804",
+  "active_direction_closed": "Step 9L — status changed to implemented",
+  "new_active_direction": "Split os_tool_executions.py god class (governance-mandated at run 116)",
+  "mandate_items_checked": {
+    "step_9l_confirmed": "PASS — PR #804 merged, 2 grep hits in nightly-commit-review/SKILL.md",
+    "nightly_2026_09_09": "CLEAN — 4 commits reviewed, 0 autonomous fixes, 0 GH issues",
+    "os_tool_stability": "PASS — 783L, 10d+ stable since ae81e5f",
+    "step_9j_token_budget": "FAIL — 17/19 Dependabot PRs still skipped",
+    "step_9g_cloud_trigger": "FAIL — gh CLI unavailable in cloud sessions",
+    "kb_freshness": "FAIL — 14 days stale (last compile: 2026-08-26)"
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "parking_lot_additions": [
+    "Step 9M: KB autopopulate via MCP trigger (depends on GH #403)",
+    "Step 9N: Auto-fix test __future__ annotations",
+    "AI metering violation trend tracker",
+    "Step 9J token budget investigation"
+  ],
+  "rejected": [],
+  "artifacts": [
+    "subconscious/runs/2026-09-09/ideas/ideas.md",
+    "subconscious/runs/2026-09-09/debate/debate-log.md",
+    "subconscious/runs/2026-09-09/winning-concept.md",
+    "subconscious/runs/2026-09-09/improvement-backlog.md"
+  ],
+  "governance_updates": [
+    "last_run: 2026-09-09",
+    "total_runs: 118",
+    "Step 9L status -> implemented (PR #804)",
+    "run_117_mandate_executed added",
+    "run_118_active_direction added",
+    "run_119_mandate added"
+  ],
+  "next_run_questions": [
+    "Has os_tool_executions.py split been implemented?",
+    "Step 9L violation count from first nightly post-PR #804",
+    "GH #403 (ANTHROPIC_API_KEY) resolved? — gates Step 9M",
+    "os_tool_executions.py: any new commits since ae81e5f?",
+    "Step 9J: all 19 Dependabot PRs processed per nightly?"
+  ]
+}
