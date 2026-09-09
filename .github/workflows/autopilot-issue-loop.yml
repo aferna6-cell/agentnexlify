@@ -50,7 +50,7 @@ jobs:
             echo "::warning::AUTOPILOT_GH_TOKEN missing or expired — falling back to github.token (autopilot PRs will not trigger CI). Rotate the PAT to restore CI triggering (#399)."
           fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           token: ${{ env.EFFECTIVE_GH_TOKEN }}

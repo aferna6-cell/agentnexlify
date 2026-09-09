@@ -38,7 +38,7 @@ jobs:
     name: Lead Funnel Digest
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Analyse lead funnel
         env:
@@ -163,7 +163,7 @@ jobs:
     name: Churn Signal Scanner
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Scan for churn signals
         env:
@@ -276,7 +276,7 @@ jobs:
     name: Claude Cost-Per-Tenant
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check AI usage per tenant
         env:
@@ -404,7 +404,7 @@ jobs:
     name: Prod Error Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Scan error_events (last 24h)
         env:
@@ -497,7 +497,7 @@ jobs:
     name: Loop Health Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Scan automation-loop vitals
         env:
@@ -543,7 +543,7 @@ jobs:
     name: Booking Readiness Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Scan booking-enabled tenants for config gaps
         env:
