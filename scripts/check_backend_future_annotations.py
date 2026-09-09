@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Block new backend ``from __future__ import annotations`` violations.
 
-Issue #823 tracks the five known test-file violations that predate this guard.
+Issue #823 tracks the known test-file violations that predate this guard.
 The allowlist is intentionally exact and self-pruning: if a known violation is
 removed, this check fails until that path is removed from ``KNOWN_VIOLATIONS``.
 That prevents the baseline from silently becoming permanent while ensuring no
@@ -22,7 +22,6 @@ KNOWN_VIOLATIONS = {
     Path("backend/tests/test_website_connect.py"),
     Path("backend/tests/test_local_seo_handlers.py"),
     Path("backend/tests/test_os_invoice_actions.py"),
-    Path("backend/tests/test_os_calendar_crm.py"),
     Path("backend/tests/test_os_invoice_e2e.py"),
 }
 
