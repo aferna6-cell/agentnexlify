@@ -229,7 +229,7 @@
       "title": "os_tool_executions.py god class split — 783L → 4 focused modules <250L each (run 118 winner)",
       "date": "2026-09-09-pm",
       "confidence": "HIGH",
-      "status": "pending_approval",
+      "status": "deferred",
       "implemented": false,
       "autonomous_executable": false,
       "requires_human": true,
@@ -240,7 +240,9 @@
       "evidence": "783L file, 30+ functions, 4 clearly distinct concern groups. Last commit 9589c26 (10+ days stable, pre-2026-08-30). Mandate condition met: Step 9L confirmed (grep=2) + 10d+ stable per run_116_mandate_executed. CLAUDE.md Rule 9: factor god classes at 600L+.",
       "action": "Split backend/services/os_tool_executions.py into: (1) os_tool_lifecycle.py ~250L (persist/claim/find/record/mark lifecycle functions); (2) os_tool_lead_actions.py ~80L (apply_customer_notes, _append_lead_note, _mark_note_execution_unverified); (3) os_tool_email.py ~120L (validate_before_claim, email_recipient_from_input, _normalize_email, input_passes_python_email_gate, requires_preclaim_email_check); (4) os_tool_data_plane.py ~200L (propose_tool_execution, list_tool_executions, get_tool_execution, present_tool_execution, _run_data_plane_tool). Keep os_tool_executions.py as re-export shim. Update all callers (from gitnexus blast-radius scan) in same PR.",
       "implementation_sketch": "subconscious/runs/2026-09-09-pm/winning-concept.md",
-      "note": "Mandate-required per run_116_mandate_executed. First carry-forward fires at run 119 if not implemented. Standard god-class-splitter agent invocation recommended."
+      "deferral_reason": "PR #835 closed without merging by owner (2026-09-09). os_tool_executions.py is on the P0 #801 Gmail send/idempotency hot path. Splitting before that known-failure-vs-unknown-send contract is repaired increases blast radius and import/migration churn around an unresolved production-correctness issue. Revisit only after #801 is fixed with focused idempotency/failure-state evidence and exact-head full validation.",
+      "deferral_unblock": "GH #801 (Gmail send/idempotency) fixed and validated",
+      "note": "Deferred by human review 2026-09-09. Promote to active when GH #801 is resolved. Run 119 should note deferral reason and check #801 status instead of carry-forward escalation."
     },
     {
       "title": "Step 9L: AI metering coverage nightly check in nightly-commit-review SKILL.md (run 115 winner — CONFIRMED IMPLEMENTED)",
