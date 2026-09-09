@@ -18,7 +18,7 @@ WINDOWS_PLACEHOLDERS = (
 
 
 def _write(path: Path, text: str) -> None:
-    """Write exact bytes. Default text mode on Windows turns ``\\r\\n`` into ``\\r\\r\\n``."""
+    """Write exact bytes. Default text mode on Windows turns ``\r\n`` into ``\r\r\n``."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:
         handle.write(text)
@@ -121,13 +121,13 @@ class CountSkillsTests(unittest.TestCase):
             self.assertEqual(agent_system.count_skills(skills), 3)
 
     def test_live_skill_inventory_matches_documented_count(self) -> None:
-        """Do not weaken the documented-count invariant: live tree must stay 85."""
-        self.assertEqual(agent_system.count_skills(), 85)
+        """Do not weaken the documented-count invariant: live tree must stay 86."""
+        self.assertEqual(agent_system.count_skills(), 86)
         documented = agent_system.documented_count(
             agent_system.read_text(".claude/rules/claude-execution-layers.md"),
             r"(\d+) skills, (\d+) commands, (\d+) hooks, (\d+) agents",
         )
-        self.assertEqual(documented, 85)
+        self.assertEqual(documented, 86)
 
 
 if __name__ == "__main__":
