@@ -1,0 +1,26 @@
+name: Backend Future Annotations Guard
+
+on:
+  pull_request:
+    paths:
+      - "backend/**/*.py"
+      - "scripts/check_backend_future_annotations.py"
+      - ".github/workflows/backend-future-annotations.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/**/*.py"
+      - "scripts/check_backend_future_annotations.py"
+      - ".github/workflows/backend-future-annotations.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify no new backend future-annotations imports
+        run: python3 scripts/check_backend_future_annotations.py
