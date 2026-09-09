@@ -1,0 +1,33 @@
+{
+  "run": 118,
+  "date": "2026-09-09-pm",
+  "winner": "os_tool_executions.py god class split (783L → 4 modules <250L each)",
+  "winner_category": "code_health",
+  "winner_confidence": "HIGH",
+  "winner_effort": "M",
+  "winner_autonomous_executable": false,
+  "winner_requires_human": true,
+  "mandate_check": {
+    "step_9l_in_skill_md": "PASS — grep=2 (added post run 117, pre nightly-2026-09-09)",
+    "step_9l_first_nightly_execution": "PENDING — nightly-2026-09-09 ran before Step 9L addition; first fire expected nightly-2026-09-10",
+    "os_tool_executions_stability": "PASS — last commit 9589c26 (10+ days, pre-2026-08-30), 783L",
+    "mandate_condition_met": "BOTH — Step 9L confirmed + 10d stable = god class split is run 118 winner per run_116_mandate_executed",
+    "gh_800_supabase_token": "NOT SET — brain connector 44d+ stale",
+    "step_9j_token_budget": "FAIL — 17/19 Dependabot PRs still skipped",
+    "step_9g_cloud_trigger": "BROKEN — gh CLI unavailable in cloud sessions; root blocker is ANTHROPIC_API_KEY missing from GH Actions (GH #403)"
+  },
+  "evidence_summary": "Step 9L confirmed in nightly SKILL.md (grep=2); first nightly execution pending (nightly-2026-09-09 ran before addition). os_tool_executions.py at 783L, 10+ days stable — mandate conditions both met. New CI gate (PR #834) blocks future __future__ annotations. 5 Dependabot PRs merged this week via Step 9J. KB 14 days stale, Step 9G cloud trigger broken, ANTHROPIC_API_KEY missing from GH Actions (#403). meter-ai-endpoint SKILL.md added (b20ece0) codifying metering pattern.",
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "ideas_survived": 1,
+  "ideas_weakened_to_parking_lot": 4,
+  "ideas_killed": 0,
+  "run_119_mandate": [
+    "Verify Step 9L fired in nightly-2026-09-10: grep 'Step 9L' ops/routines/logs/nightly-commit-review-2026-09-10.md. How many violations? How many GH issues filed vs dedup-skipped?",
+    "os_tool_executions.py split: approved and implemented? If yes, mark implemented. If no, carry forward (1st carry-forward).",
+    "GH #403 ANTHROPIC_API_KEY in GH Actions: resolved? If yes, promote Step 9G cloud fix from parking lot.",
+    "Step 9J token budget: did any of 19 Dependabot PRs get fully processed (0 skipped)? If still 17/19 skipped: promote Step 9J token budget fix as run 119 winner.",
+    "GH #823 test-file future-annotations: resolved? If open: promote Step 9M as run 119 candidate.",
+    "GH #800 SUPABASE_ACCESS_TOKEN: set in Railway? Brain connector health?"
+  ]
+}
