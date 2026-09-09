@@ -1,7 +1,5 @@
 """Unit tests for Milestone 8 Calendar/CRM data-plane apply + L2."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock, patch
 
 import pytest
