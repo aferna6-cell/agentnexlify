@@ -22,7 +22,6 @@ KNOWN_VIOLATIONS = {
     Path("backend/tests/test_website_connect.py"),
     Path("backend/tests/test_local_seo_handlers.py"),
     Path("backend/tests/test_os_invoice_actions.py"),
-    Path("backend/tests/test_os_calendar_crm.py"),
     Path("backend/tests/test_os_invoice_e2e.py"),
 }
 
