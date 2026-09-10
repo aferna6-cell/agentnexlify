@@ -5,8 +5,6 @@ L2 send/reminder (approval claim path, no false success, no paid reminders,
 no spam), and the persist bridge. Payment status is stored state only.
 """
 
-from __future__ import annotations
-
 from datetime import date, datetime, timezone
 from unittest.mock import patch
 
