@@ -18894,3 +18894,38 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### subconscious: run 2026-09-10-pm artifacts + governance
+
+* subconscious: run 2026-09-10-pm — Fix Step 9J token budget: cursor state + batch 5 Dependabot PRs per nightly
+
+Run 118 winner: cursor-aware batch processing for Step 9J Dependabot auto-merge.
+Root cause: Step 9J iterates all 19 PRs but token budget exhausts after PR 2,
+leaving 17/19 skipped every nightly (3-run evidence chain: runs 115/116/117).
+
+Fix (recommendation — not yet implemented): add subconscious/state/step9j-cursor.json
+to track batch position; process 5 PRs/nightly; full sweep in 4 cycles.
+Security impact: CVE window on 17 unprocessed Dependabot PRs closes within a week.
+
+Governance corrections this run:
+- Step 9L already implemented in SKILL.md at lines 457/471 (was stale: false)
+- check_ai_metering.py exits RC=2 correctly on violations (bash pipe gotcha)
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01CzhUS8n3suMXY4t2W27urg
+
+* fix: trailing whitespace in winning-concept.md (CI: git diff --check)
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01CzhUS8n3suMXY4t2W27urg
+
+---------
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-09-10
+**Commit:** d7c37c9
+**Author:** aferna6-cell
+**Files Changed:** subconscious/runs/2026-09-10-pm/debate/debate-log.md,subconscious/runs/2026-09-10-pm/ideas/ideas.md,subconscious/runs/2026-09-10-pm/improvement-backlog.md,subconscious/runs/2026-09-10-pm/run-summary.json,subconscious/runs/2026-09-10-pm/winning-concept.md,subconscious/state/governance.json,subconscious/state/memory.jsonl
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
