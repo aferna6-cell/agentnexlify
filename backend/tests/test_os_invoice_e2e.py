@@ -13,8 +13,6 @@ Stitches the persist + owner-approve data plane that PR1/PR2 wired:
 Provider I/O is stubbed. Invoice rows, audit rows, and the claim gate are real.
 """
 
-from __future__ import annotations
-
 import asyncio
 from datetime import datetime, timezone
 from unittest.mock import patch
