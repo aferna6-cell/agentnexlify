@@ -1,0 +1,80 @@
+{
+  "run": 118,
+  "date": "2026-09-10-pm",
+  "winner": {
+    "title": "Fix Step 9J token budget: cursor state + batch 5 Dependabot PRs per nightly",
+    "category": "workflow_efficiency",
+    "confidence": "HIGH",
+    "autonomous_executable": true,
+    "effort": "S",
+    "impact": "All 19 Dependabot PRs processed within 4 nightly cycles. CVE window closes within a week."
+  },
+  "governance_corrections": [
+    {
+      "item": "Step 9L implemented status",
+      "old": "implemented: false",
+      "new": "implemented: true",
+      "evidence": "grep of .claude/skills/nightly-commit-review/SKILL.md returned 2 hits at lines 457/471 (functional block present). Carry-forward chain (runs 115/116/117) was stale."
+    },
+    {
+      "item": "check_ai_metering.py exit code",
+      "finding": "Script correctly exits RC=2 on violations. RC=0 misread was a bash pipe gotcha (head captured exit code, not Python script). Direct run: 45 violations, exit code 2."
+    },
+    {
+      "item": "total_runs",
+      "old": 117,
+      "new": 118
+    },
+    {
+      "item": "last_run",
+      "old": "2026-09-06-pm",
+      "new": "2026-09-10-pm"
+    }
+  ],
+  "ideas_count": 5,
+  "ideas_evaluated": [
+    {
+      "id": 1,
+      "title": "Fix check_ai_metering.py exit code",
+      "verdict": "ELIMINATED — false premise. Script already exits RC=2."
+    },
+    {
+      "id": 2,
+      "title": "Split os_tool_executions.py god class (783L)",
+      "verdict": "WEAKENED → parking lot"
+    },
+    {
+      "id": 3,
+      "title": "Fix Step 9J token budget via cursor state",
+      "verdict": "SURVIVES → WINNER"
+    },
+    {
+      "id": 4,
+      "title": "Diagnose P0 GH #801 (approve_send_once)",
+      "verdict": "WEAKENED → parking lot"
+    },
+    {
+      "id": 5,
+      "title": "Step 9M auto-cleanup __future__ annotations",
+      "verdict": "WEAKENED → parking lot (human actively cleaning)"
+    }
+  ],
+  "evidence_sources": [
+    "ops/routines/logs/nightly-commit-review-2026-09-10.md",
+    "ops/routines/logs/morning-digest-2026-09-10.md",
+    "subconscious/state/memory.jsonl (runs 115/116/117)",
+    "scripts/check_ai_metering.py (direct execution)"
+  ],
+  "key_findings": [
+    "Step 9J has skipped 17/19 Dependabot PRs for 3 consecutive runs (115/116/117). Root cause: processes all 19 PRs per nightly but token budget exhausts after PR 2. Cursor + batch of 5 fixes this.",
+    "Step 9L already implemented in SKILL.md (governance was stale). Autonomous-executable escalation condition voided.",
+    "45 AI billing violations confirmed by check_ai_metering.py (GH #827 P1 tracked). Step 9L will file individual issues when next nightly runs.",
+    "GH #823 __future__ annotation cleanup: 3 files remain. Human actively cleaning (2 done today via nightly).",
+    "GH #801 P0 approve_send_once: still open, no PR. Human sprint priority."
+  ],
+  "parking_lot": [
+    "os_tool_executions.py god class split (783L) — run 119 candidate after Step 9J confirmed",
+    "Step 9M __future__ cleanup — hold 3 days, trigger if GH #823 still open 2026-09-13",
+    "P0 GH #801 diagnosis — human sprint item"
+  ]
+}
