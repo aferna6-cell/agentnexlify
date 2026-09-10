@@ -58,7 +58,7 @@ Initial content (create if missing):
 
 ### Impact
 - Night 1: PRs 1-5 processed
-- Night 2: PRs 6-10 processed  
+- Night 2: PRs 6-10 processed
 - Night 3: PRs 11-15 processed
 - Night 4: PRs 16-19 processed
 - Full sweep in 4 nights. CVE window closes within a week.
