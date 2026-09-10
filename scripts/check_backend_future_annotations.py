@@ -21,7 +21,6 @@ PATTERN = re.compile(
 KNOWN_VIOLATIONS = {
     Path("backend/tests/test_website_connect.py"),
     Path("backend/tests/test_local_seo_handlers.py"),
-    Path("backend/tests/test_os_invoice_e2e.py"),
 }
 
 
