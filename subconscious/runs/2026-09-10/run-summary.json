@@ -1,0 +1,55 @@
+{
+  "date": "2026-09-10",
+  "run": 118,
+  "winner": "os_tool_executions.py god class split (783L → store/executor/approval_handler)",
+  "category": "code_health",
+  "confidence": "HIGH",
+  "effort": "M",
+  "autonomous_executable": false,
+  "requires_human": true,
+  "status": "recommendation",
+  "evidence_summary": "Step 9L confirmed in SKILL.md (grep=2, lines 457+471). check_ai_metering.py finds 30 violations. os_tool_executions.py at 783L, 10d stable. PR #834 proved allowlist-CI pattern (check_backend_future_annotations.py). 3-day commits: __future__ annotations cleanup (PRs #836-838) + CI guard (#834). Step 9J still skipping 17/19 Dependabot PRs. KB 15d stale. Governance mandate from runs 116+117 binding.",
+  "mandate_check": {
+    "step_9l_in_skill": "PASS — grep=2 (lines 457+471)",
+    "first_nightly_step_9l": "PENDING — nightly-2026-09-10 ran before Step 9L added (or same day); next nightly will confirm first firing",
+    "os_tool_stability": "PASS — 783L, 10d+ stable since f72a274",
+    "gh_800_supabase_token": "UNKNOWN — not checked this run",
+    "step_9g_cloud_trigger": "STILL FAILING — gh CLI unavailable in cloud (parking lot)",
+    "step_9j_token_budget": "STILL FAILING — 17/19 PRs skipped (parking lot)"
+  },
+  "ideas": [
+    {
+      "title": "os_tool_executions.py god class split",
+      "verdict": "SURVIVES → WINNER",
+      "category": "code_health"
+    },
+    {
+      "title": "CI gate for unmetered AI calls",
+      "verdict": "SURVIVES → parking lot (run 117 kill revived with PR #834 evidence)",
+      "category": "code_health"
+    },
+    {
+      "title": "Step 9J token budget reorder",
+      "verdict": "SURVIVES → parking lot",
+      "category": "workflow"
+    },
+    {
+      "title": "Step 9G cloud trigger fix",
+      "verdict": "Not debated → parking lot",
+      "category": "operational"
+    },
+    {
+      "title": "AI-to-human handoff customer gap",
+      "verdict": "Not debated → parking lot (M effort, insufficient implementation path)",
+      "category": "customer_value"
+    }
+  ],
+  "run_119_mandate": [
+    "1. os_tool_executions.py split: implemented? (wc -l backend/services/os_tool_executions.py — expect dramatically lower, or confirm split by ls backend/services/os_tool_executions_*.py)",
+    "2. Step 9L first nightly: does nightly-2026-09-11 log contain 'Step 9L:' line? How many violations? How many issues filed vs dedup-skipped?",
+    "3. CI gate for AI metering: is check_ai_metering.py KNOWN_VIOLATIONS list added? GitHub Actions workflow .github/workflows/backend-ai-metering.yml exists?",
+    "4. Step 9J reorder: is Step 9J now earlier in SKILL.md? How many Dependabot PRs processed next nightly vs. 17/19 skip rate?",
+    "5. GH #800 SUPABASE_ACCESS_TOKEN: set in Railway? Brain connector staleness: >15d still?",
+    "6. KB freshness: did Step 9G trigger fire on next nightly? kb-autopopulate success?"
+  ]
+}
