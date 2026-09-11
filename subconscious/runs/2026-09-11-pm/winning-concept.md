@@ -54,7 +54,7 @@ if days_remaining <= 10:  # fires at 66+ days since rotation
 
 **Credentials to check:**
 1. AUTOPILOT_GH_TOKEN — last_rotated: 2026-07-04, interval: 90d, threshold: 76d
-2. Brain PAT — last_rotated: 2026-07-04, interval: 90d, threshold: 76d  
+2. Brain PAT — last_rotated: 2026-07-04, interval: 90d, threshold: 76d
 3. SUPABASE_ACCESS_TOKEN — last_rotated: unknown (human must fill in)
 
 **Dedup guard (critical):** Search by label "credential-rotation" + credential name slug. GH #399 is the existing AUTOPILOT_GH_TOKEN rotation issue — comment on it rather than creating duplicate.
