@@ -17,6 +17,7 @@ import html
 import logging
 import os
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from backend.services import os_tool_executions as svc
@@ -132,6 +133,7 @@ def _run_data_plane_tool(
                     "message": exc.detail[:500],
                     "statusCode": exc.status_code,
                 },
+                "finishedAt": datetime.now(timezone.utc).isoformat(),
             },
         )
         return {
