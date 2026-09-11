@@ -18894,3 +18894,76 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### subconscious: run 2026-09-11 — Step 9E credential expiry escalation
+
+* subconscious: run 2026-09-11 — Step 9E credential expiry escalation
+
+Run 119 winner: extend Step 9E in nightly-commit-review SKILL.md to
+auto-file a GH issue (labels: human-action-required, ops, P0) when any
+credential in ops/credential-rotation-schedule.md is within 10 days of
+its rotation threshold.
+
+Evidence:
+- AUTOPILOT_GH_TOKEN at 69d (threshold 76d) — expires ~2026-09-18
+- Brain connector PAT same age/deadline
+- 3 consecutive nightlies logged warning; zero human action; no GH issue
+- Expired token = silent autonomous loop death
+
+Mandate check (run 118):
+- Step 9J cursor: not implemented; MOOT (0 Dependabot PRs today)
+- os_tool_executions.py: 783L 12d+ stable (4th consecutive mention)
+- GH #823 __future__ annotations: CI gate added (PR #834)
+- Step 9L: confirmed live at SKILL.md lines 457/471
+
+governance.json: total_runs 118→119, last_run 2026-09-10-pm→2026-09-11
+memory.jsonl: run 119 entry appended
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01UMa2oBFicX8NzSvfjbAeBe
+
+* fix(subconscious/run-119): correct Step 9E dedup logic in winning-concept.md
+
+Owner review on PR #842 identified dedup bug: exact-title search would
+miss GH #399 which already tracks AUTOPILOT_GH_TOKEN rotation under a
+different title, causing a duplicate operational issue.
+
+Fix:
+- Dedup now searches by credential name across open human-action-required
+  and ops issues (two-pass: label:human-action-required, then label:ops)
+- When existing issue found: add_issue_comment with updated deadline,
+  NOT create duplicate
+- AUTOPILOT_GH_TOKEN explicitly noted as already tracked by GH #399
+- Impact section corrected (Step 9E comments on #399, not new issue)
+- Verification checks updated to match corrected behavior
+- Run 120 mandate updated to check #399 status, not search for new issue
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01UMa2oBFicX8NzSvfjbAeBe
+
+* docs(subconscious): fix Step 9E credential dedup contract
+
+* fix(governance): align run_119 dedup spec to credential-name search
+
+Owner review on PR #842 (commit 89ffaf7) identified stale dedup
+description in run_119_active_direction.action: 'search open issues
+by title prefix' conflicts with corrected winning-concept.md approach.
+
+Fix: specify credential-name search across label:human-action-required
+and label:ops issues; reference existing trackers #399 (AUTOPILOT_GH_TOKEN)
+and #394 (Brain connector); add_issue_comment when found, not new issue.
+Update mandate_run_120 to check #399/#394 directly.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01UMa2oBFicX8NzSvfjbAeBe
+
+---------
+
+Co-authored-by: Claude <noreply@anthropic.com>
+**Date:** 2026-09-11
+**Commit:** 3326f45
+**Author:** aferna6-cell
+**Files Changed:** subconscious/runs/2026-09-11/debate/debate-log.md,subconscious/runs/2026-09-11/ideas/idea-1-step9e-credential-escalation.md,subconscious/runs/2026-09-11/ideas/idea-2-step9g-mcp-fix.md,subconscious/runs/2026-09-11/ideas/idea-3-governance-stale-flag-fix.md,subconscious/runs/2026-09-11/ideas/idea-4-ostool-split-step9m.md,subconscious/runs/2026-09-11/ideas/idea-5-stalled-issues-nudge.md,subconscious/runs/2026-09-11/improvement-backlog.md,subconscious/runs/2026-09-11/run-summary.json,subconscious/runs/2026-09-11/winning-concept.md,subconscious/state/governance.json,subconscious/state/memory.jsonl
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
