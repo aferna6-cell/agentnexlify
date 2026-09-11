@@ -17,6 +17,7 @@ import html
 import logging
 import os
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from backend.services import os_tool_executions as svc
@@ -34,6 +35,15 @@ class MailboxPort(Protocol):
     def find_by_rfc822_msgid(self, msgid: str) -> str | None: ...
 
     def send(self, **kwargs) -> dict | None: ...
+
+
+class KnownGmailSendFailure(RuntimeError):
+    """Deterministic Gmail API rejection where the provider did not accept the send."""
+
+    def __init__(self, status_code: int, detail: str):
+        self.status_code = int(status_code)
+        self.detail = detail
+        super().__init__(detail)
 
 
 @dataclass
@@ -96,14 +106,43 @@ class GmailMailboxPort:
         )
         if result.get("success"):
             return {"success": True, "message_id": result.get("message_id", "")}
+        status_code = result.get("status_code")
+        if status_code is not None:
+            raise KnownGmailSendFailure(
+                int(status_code),
+                str(result.get("detail") or f"gmail api error {status_code}"),
+            )
         return None
 
 
 def _run_data_plane_tool(
     db: Any, client_id: str, execution_id: str, port: Any
 ) -> dict:
-    """Delegate to the data-plane runner. Unknown send stays non-terminal."""
-    return svc._run_data_plane_tool(db, client_id, execution_id, port)
+    """Delegate to the data-plane runner while terminalizing known Gmail rejects."""
+    try:
+        return svc._run_data_plane_tool(db, client_id, execution_id, port)
+    except KnownGmailSendFailure as exc:
+        svc.record_execution_outcome(
+            db,
+            client_id,
+            {
+                "id": execution_id,
+                "status": "failed",
+                "error": {
+                    "code": "gmail_api_error",
+                    "message": exc.detail[:500],
+                    "statusCode": exc.status_code,
+                },
+                "finishedAt": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+        return {
+            "executed": True,
+            "adopted": False,
+            "unknown": False,
+            "failed": True,
+            "status_code": exc.status_code,
+        }
 
 
 def production_send_email_port(client_id: str, db: Any) -> GmailMailboxPort:
