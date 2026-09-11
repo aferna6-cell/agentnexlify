@@ -1,0 +1,43 @@
+{
+  "run": "2026-09-11",
+  "run_number": 119,
+  "winner": "Step 9E credential escalation: auto-file GH issue when token within 10 days of rotation threshold",
+  "category": "workflow_efficiency",
+  "autonomous_executable": true,
+  "implementation_channel": "SKILL.md edit (.claude/skills/nightly-commit-review/SKILL.md)",
+  "urgency": "HIGH — AUTOPILOT_GH_TOKEN expires 2026-09-18 (7 days)",
+  "key_evidence": [
+    "AUTOPILOT_GH_TOKEN at 69d (threshold 76d, expires ~2026-09-18)",
+    "Brain connector GitHub PAT same age",
+    "3 consecutive nightlies flagged warning; zero human action",
+    "Step 9E detects but does not escalate to GH issue",
+    "Expired token = autonomous loop death"
+  ],
+  "mandate_checks_run_118": {
+    "step9j_cursor_implemented": false,
+    "step9j_moot": "0 open Dependabot PRs found — cursor approach moot",
+    "ostool_executions_status": "783 lines, 12d+ stable, 4th consecutive run noting god class",
+    "gh_823_future_annotations": "PR #834 adds CI gate; test files cleaned via #836/#837/#838",
+    "step9l_stale_flag": "governance.json had implemented=false; Step 9L confirmed live at SKILL.md lines 457/471"
+  },
+  "bonus_actions": [
+    "Fix governance.json Step 9L stale flag (implemented false → true, status → verified_implemented)",
+    "Note step9j-cursor approach as moot in governance.json"
+  ],
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "parking_lot_additions": [
+    "Step 9G MCP fix (gh CLI → mcp__github__actions_run_trigger)",
+    "Step 9M os_tool_executions.py god class monitoring",
+    "Step 9D stalled issues nudge (14d threshold)",
+    "Governance.json verified_implemented status field"
+  ],
+  "frozen_ideas": ["ai_human_handoff", "widget_drift"],
+  "mandate_for_run_120": [
+    "Verify AUTOPILOT_GH_TOKEN rotation GH issue filed (search: 'AUTOPILOT_GH_TOKEN rotation due')",
+    "Confirm human actioned rotation (issue closed or comment)",
+    "Verify Brain PAT rotation GH issue status",
+    "Report SUPABASE_ACCESS_TOKEN status",
+    "Secondary: verify Step 9G mcp fix viable (check kb-autopopulate.yml workflow_dispatch trigger)"
+  ]
+}
