@@ -181,6 +181,31 @@ async def approve_tool_execution(
             port=os_tools.production_send_email_port(client_id, db),
         )
         outcome = await os_tools.run_tool(ctx)
+        if outcome.get("unknown"):
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "code": "send_outcome_unknown",
+                    "message": (
+                        "The Gmail send outcome is unknown. The action was not "
+                        "retried automatically to avoid a duplicate email."
+                    ),
+                },
+            )
+        if outcome.get("failed"):
+            provider_status = outcome.get("status_code")
+            status_code = (
+                int(provider_status)
+                if isinstance(provider_status, int) and 400 <= provider_status <= 599
+                else 502
+            )
+            raise HTTPException(
+                status_code=status_code,
+                detail={
+                    "code": "gmail_api_error",
+                    "provider_status_code": provider_status,
+                },
+            )
         return {
             "execution": os_tool_executions.get_tool_execution(
                 db, client_id, execution_id
