@@ -2059,13 +2059,13 @@
     "source_run": 119,
     "effort": "S",
     "evidence": "AUTOPILOT_GH_TOKEN at 69d (threshold 76d, expires ~2026-09-18 — 7 days). Brain connector GitHub PAT same. 3 consecutive nightlies (Sep 9-11) logged warning; zero human action. Step 9E detects but does not escalate to GH issue. Expired token = autonomous loop death (nightly reviews + issue-to-PR automation stops).",
-    "action": "Edit Step 9E block in .claude/skills/nightly-commit-review/SKILL.md: add dedup-guarded GH issue auto-filing when any credential in ops/credential-rotation-schedule.md is within 10 days of threshold. Issue: title='ops(credentials): {NAME} rotation due by {DATE} — human action required', labels=['human-action-required','ops','P0']. Dedup: search open issues by title prefix before filing.",
+    "action": "Edit Step 9E block in .claude/skills/nightly-commit-review/SKILL.md: add dedup-guarded GH issue auto-filing when any credential in ops/credential-rotation-schedule.md is within 10 days of threshold. Issue: title='ops(credentials): {NAME} rotation due by {DATE} — human action required', labels=['human-action-required','ops','P0']. Dedup: search open issues by CREDENTIAL NAME (not title prefix) across label:human-action-required and label:ops issues; when existing tracker found (e.g. #399 for AUTOPILOT_GH_TOKEN, #394 for Brain connector), add_issue_comment with updated deadline rather than creating a duplicate issue.",
     "implementation_sketch": "subconscious/runs/2026-09-11/winning-concept.md",
     "escalation_condition": "Autonomous-executable if not approved by run 120 (1st carry-forward mandate)",
     "mandate_run_120": [
-      "Verify AUTOPILOT_GH_TOKEN rotation GH issue was filed",
-      "Confirm human actioned rotation (issue closed or comment added)",
-      "Verify Brain PAT rotation GH issue status",
+      "Check GH #399 — is AUTOPILOT_GH_TOKEN rotation resolved? (look for close or rotation confirmation comment)",
+      "Verify Step 9E SKILL.md implementation approved and present (grep 'add_issue_comment' in nightly-commit-review SKILL.md)",
+      "Check GH #394 or open ops issues — Brain connector GitHub PAT rotation status",
       "Report SUPABASE_ACCESS_TOKEN status from ops/credential-rotation-schedule.md",
       "Secondary: verify kb-autopopulate.yml has workflow_dispatch trigger (for Step 9G fix viability)"
     ],
