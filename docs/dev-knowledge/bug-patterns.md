@@ -18894,3 +18894,14 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(agent-os): terminalize deterministic Gmail send failures (#841)
+
+Closes the executable P0 #801 slice: deterministic Gmail API rejections become terminal failed executions with preserved status code and finished timestamp; status-less credential/transport outcomes remain unknown and non-terminal. Exact-head PR Validation and Backend Future Annotations Guard passed.
+**Date:** 2026-09-11
+**Commit:** 0605d0f
+**Author:** aferna6-cell
+**Files Changed:** backend/services/os_tools.py,tests/test_gmail_known_failure_terminalization.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
