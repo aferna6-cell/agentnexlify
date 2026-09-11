@@ -18894,3 +18894,14 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(agent-os): surface send_email approval failure outcomes (#844)
+
+Refs #801. Preserve unknown Gmail sends as non-terminal/no-redrive while returning HTTP 502; surface deterministic Gmail API failures as structured non-2xx; keep successful send responses unchanged.
+**Date:** 2026-09-11
+**Commit:** adb31f9
+**Author:** aferna6-cell
+**Files Changed:** backend/routers/os_tool_executions.py,tests/test_send_email_approval_http_contract.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
