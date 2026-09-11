@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-09-10-pm",
-  "total_runs": 118,
+  "last_run": "2026-09-11",
+  "total_runs": 119,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -2036,5 +2036,39 @@
     "implementation_sketch": "subconscious/runs/2026-09-10-pm/winning-concept.md",
     "escalation_condition": "Autonomous-executable if not approved by run 119 (1st carry-forward mandate)",
     "note": "Compounds run 114's search_pull_requests fix and run 112's rebase trigger. Without cursor fix: 17/19 PRs permanently skipped, CVE window open indefinitely. With fix: full 19-PR sweep in 4 nights, CVE window closes within a week."
+  },
+  "run_119_governance_correction": {
+    "run_118_step9j_cursor": "MOOT — nightly 2026-09-11 Step 9J found 0 open Dependabot PRs. Cursor approach not needed while PR count is 0. Concept remains valid if Dependabot PRs reappear. step9j-cursor.json not created.",
+    "step9l_status": "CONFIRMED IMPLEMENTED — Step 9L live at SKILL.md lines 457/471. governance.json run_118 correction stands.",
+    "ostool_executions_status": "783 lines, 12+ days stable (last commit bc0332b ~2026-09-04). 4th consecutive run noting god class. Added to parking lot.",
+    "gh_823_future_annotations": "PR #834 adds CI gate. Multiple test files cleaned (#836/#837/#838). Active remediation ongoing.",
+    "credential_warning": "AUTOPILOT_GH_TOKEN at 69d (threshold 76d). Brain PAT same. Expiry ~2026-09-18. No GH issue filed yet. Run 119 winner addresses this.",
+    "total_runs": "118 → 119",
+    "last_run": "2026-09-10-pm → 2026-09-11"
+  },
+  "run_119_active_direction": {
+    "title": "Step 9E credential expiry escalation: auto-file GH issue when token within 10 days of rotation threshold",
+    "date": "2026-09-11",
+    "confidence": "HIGH",
+    "status": "recommendation",
+    "implemented": false,
+    "autonomous_executable": true,
+    "requires_human": false,
+    "category": "workflow_efficiency",
+    "moratorium_override": false,
+    "source_run": 119,
+    "effort": "S",
+    "evidence": "AUTOPILOT_GH_TOKEN at 69d (threshold 76d, expires ~2026-09-18 — 7 days). Brain connector GitHub PAT same. 3 consecutive nightlies (Sep 9-11) logged warning; zero human action. Step 9E detects but does not escalate to GH issue. Expired token = autonomous loop death (nightly reviews + issue-to-PR automation stops).",
+    "action": "Edit Step 9E block in .claude/skills/nightly-commit-review/SKILL.md: add dedup-guarded GH issue auto-filing when any credential in ops/credential-rotation-schedule.md is within 10 days of threshold. Issue: title='ops(credentials): {NAME} rotation due by {DATE} — human action required', labels=['human-action-required','ops','P0']. Dedup: search open issues by title prefix before filing.",
+    "implementation_sketch": "subconscious/runs/2026-09-11/winning-concept.md",
+    "escalation_condition": "Autonomous-executable if not approved by run 120 (1st carry-forward mandate)",
+    "mandate_run_120": [
+      "Verify AUTOPILOT_GH_TOKEN rotation GH issue was filed",
+      "Confirm human actioned rotation (issue closed or comment added)",
+      "Verify Brain PAT rotation GH issue status",
+      "Report SUPABASE_ACCESS_TOKEN status from ops/credential-rotation-schedule.md",
+      "Secondary: verify kb-autopopulate.yml has workflow_dispatch trigger (for Step 9G fix viability)"
+    ],
+    "note": "Most urgent finding from run 119. AUTOPILOT_GH_TOKEN powers the autonomous engineering loop. Expiry is silent — no error until the first nightly that uses the token. Adding GH issue escalation turns a log warning into a trackable P0 action item before outage."
   }
 }
