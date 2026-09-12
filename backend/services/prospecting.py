@@ -26,6 +26,7 @@ import logging
 import re
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urljoin
 
 import httpx
 
@@ -170,11 +171,18 @@ _ENRICH_USER_AGENT = (
 )
 _ENRICH_TIMEOUT = 8.0
 _ENRICH_MAX_BYTES = 200_000
+_ENRICH_MAX_REDIRECTS = 3
+_REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
 
 
 async def _fetch_page_text(url: str) -> str:
-    """Fetch a single page's HTML text. Returns '' on any failure — enrichment
-    degrades gracefully, it never raises into the pipeline."""
+    """Fetch one public page, validating every redirect destination.
+
+    Returns '' on any failure so enrichment degrades gracefully and never
+    raises into the pipeline. Redirects are bounded and followed manually so
+    an attacker-controlled public URL cannot redirect the fetcher into a
+    private, loopback, or link-local target.
+    """
     if not url:
         return ""
     if not url.startswith(("http://", "https://")):
@@ -182,12 +190,30 @@ async def _fetch_page_text(url: str) -> str:
     if not is_safe_url(url):
         logger.debug("Enrichment skipped unsafe url: %s", url)
         return ""
+
+    current_url = url
     try:
-        async with httpx.AsyncClient(timeout=_ENRICH_TIMEOUT, follow_redirects=True) as client:
-            resp = await client.get(url, headers={"User-Agent": _ENRICH_USER_AGENT})
-        if resp.status_code != 200:
-            return ""
-        return resp.text[:_ENRICH_MAX_BYTES]
+        async with httpx.AsyncClient(timeout=_ENRICH_TIMEOUT, follow_redirects=False) as client:
+            for hop in range(_ENRICH_MAX_REDIRECTS + 1):
+                resp = await client.get(current_url, headers={"User-Agent": _ENRICH_USER_AGENT})
+                if resp.status_code not in _REDIRECT_STATUS_CODES:
+                    if resp.status_code != 200:
+                        return ""
+                    return resp.text[:_ENRICH_MAX_BYTES]
+
+                if hop >= _ENRICH_MAX_REDIRECTS:
+                    logger.debug("Enrichment stopped after redirect limit: %s", current_url)
+                    return ""
+
+                location = resp.headers.get("location", "").strip()
+                if not location:
+                    return ""
+                next_url = urljoin(current_url, location)
+                if not is_safe_url(next_url):
+                    logger.debug("Enrichment skipped unsafe redirect: %s", next_url)
+                    return ""
+                current_url = next_url
+        return ""
     except httpx.HTTPError:
         logger.warning("Enrichment fetch failed for %s", url, exc_info=True)
         return ""
