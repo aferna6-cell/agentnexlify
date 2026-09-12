@@ -4,22 +4,22 @@ Top 3 ideas: 1 (Step 9G MCP fix), 4 (SUPABASE_ACCESS_TOKEN unknown-date issue), 
 
 ---
 
-## Idea 1: Fix Step 9G — Replace gh CLI with `mcp__github__actions_run_trigger`
+## Idea 1: Fix Step 9G — replace gh CLI only after verifying a GitHub Actions MCP path
 
 ### Challenge
 - Is the evidence strong enough? KB is 17d stale — this is real but might have other causes. Did Step 9G fail silently every nightly?
-- Is `mcp__github__actions_run_trigger` actually available in CCR sessions? Tool list shows it as a deferred tool but that doesn't prove it works.
+- Are the proposed GitHub Actions MCP trigger/list capabilities actually available in the **nightly CCR execution surface**? Seeing a candidate tool name elsewhere is not end-to-end proof.
 - Step 9G was already "implemented" in run 101 using gh CLI. Fixing the implementation method is effectively reimplementing the same idea — does that count as a new direction?
-- What if the KB is stale for reasons OTHER than Step 9G failing (e.g. ANTHROPIC_API_KEY expiry, workflow permissions)?
+- What if the KB is stale for reasons OTHER than Step 9G failing (for example missing `ANTHROPIC_API_KEY`, workflow permissions, or another workflow-level failure)?
 
 ### Defend
-- Evidence is strong: SKILL.md line 323 explicitly uses `gh workflow run` — grep confirms. `gh` is not installed in cloud CCR sessions (confirmed in summary: "gh CLI unavailable in cloud CCR sessions"). Causal chain is clear.
-- `mcp__github__actions_run_trigger` is listed in the available MCP tools (system-reminder). Tool schema needs ToolSearch to load but availability is confirmed. CCR sessions have MCP access by design.
-- This IS a new direction from run 101: run 101 implemented Step 9G using the wrong tool (gh CLI); this run proposes fixing the tooling. Precedent: Step 9J was also a "fix" to an already-implemented step (Dependabot rebase trigger) and was accepted as a valid winner in run 112.
-- Even if KB staleness has additional causes, fixing Step 9G removes one confirmed blocker. Other causes can be addressed in subsequent runs.
+- Evidence is strong that the **current mechanism is invalid**: SKILL.md uses `gh workflow run`, while gh CLI is unavailable in the cloud nightly environment. That proves the existing Step 9G trigger path needs replacement.
+- A GitHub Actions MCP trigger/list path is a plausible replacement, but availability and exact schemas must be verified in the actual nightly CCR session before implementation. No artifact should call the candidate MCP actions confirmed until that end-to-end proof exists.
+- This IS a new direction from run 101: run 101 implemented Step 9G using a mechanism that cannot execute in the target environment; this run recommends a verification-gated replacement mechanism.
+- Even if KB staleness has additional causes, replacing the invalid trigger mechanism removes one blocker. GH #403 remains a separate workflow-execution prerequisite and must not be represented as solved by trigger migration.
 
-### Verdict: **SURVIVES**
-Causal chain is tight. Run 120 mandate explicitly requests evaluation. Implementation is XS effort (single block edit). High leverage: restores KB health which feeds nightly KB-first rule.
+### Verdict: **SURVIVES, VERIFICATION-GATED**
+The need to replace `gh` is well supported. The specific MCP implementation is not yet proven. Winner status means "verify capability, then implement only if proven," not "MCP availability confirmed."
 
 ---
 
@@ -27,17 +27,17 @@ Causal chain is tight. Run 120 mandate explicitly requests evaluation. Implement
 
 ### Challenge
 - Filing a GH issue from the subconscious run directly is outside normal scope (subconscious recommends; nightly acts). This mixes recommendation with action.
-- The alternative interpretation — mandate Step 9E to handle unknown-date credentials — is a SKILL.md change, same category as Idea 1 but for a different problem. Are both needed this run?
-- SUPABASE_ACCESS_TOKEN may actually be expired already (unknown date = could be years old or months old). Filing a GH issue doesn't fix the problem.
-- Is this lower leverage than Idea 1? Idea 1 restores a broken automated system; Idea 4 alerts about a manual action needed. Automated fixes > manual alerts.
+- The alternative interpretation — extend Step 9E to handle unknown-date credentials — depends on a Step 9E escalation implementation that is itself still pending.
+- SUPABASE_ACCESS_TOKEN may already have an existing ops/human-action tracker under a broader title. Filing a new issue without credential-identity dedup could create duplicate operational work.
+- Filing an issue does not itself rotate or verify the credential.
 
 ### Defend
-- SUPABASE_ACCESS_TOKEN is required by kb-autopopulate.yml. If expired, even a fixed Step 9G won't restore KB health. The two are linked.
-- However: the subconscious should NOT directly file GH issues (no MCP calls in artifacts phase). The recommendation should be to extend Step 9E to handle unknown-date credentials.
-- This is a valid XS SKILL.md edit: in Step 9E, when `last_rotated = "unknown"`, always fire an issue (don't wait for days_remaining threshold). Evidence: one credential already in this state.
+- Unknown rotation date is still a real observability gap: age-based logic cannot calculate a warning or due date when `last_rotated` is unknown.
+- The safer contract is to route this through the pending Step 9E implementation using credential-identity dedup, reuse an existing tracker when present, and request verification of the actual rotation date.
+- That keeps recommendation and execution boundaries clean while preserving the signal.
 
 ### Verdict: **WEAKENED → PARKING LOT**
-Valid concern but narrower than Idea 1. If Step 9G is fixed and KB is restored, SUPABASE_ACCESS_TOKEN becomes more critical (any expiry there would break a fixed 9G). But Idea 1 has higher immediate leverage. Park this as Step 9E unknown-date handling for run 122.
+Valid concern, but it should be incorporated into the actual Step 9E implementation rather than create an un-deduplicated issue from this run. Park as unknown-date handling for the Step 9E lane.
 
 ---
 
@@ -52,7 +52,7 @@ Valid concern but narrower than Idea 1. If Step 9G is fixed and KB is restored, 
 ### Defend
 - os_tool_executions.py is the Agent OS tool router — it handles ALL tool execution in the product. When it becomes a god-class, the refactor blast radius is enormous (many callers). Early warning at 500L gives 3+ commit window before threshold.
 - Two commits in 3 days adding Gmail failure handling AND email approval surface signal a pattern: Agent OS is expanding to handle more edge cases. This is a directional signal, not a one-time spike.
-- The monitor is literally `wc -l` — it's not a new test suite, just an arithmetic check. Runtime cost is ~0ms.
+- The monitor is literally `wc -l` — it's not a new test suite, just an arithmetic check. Runtime cost is negligible.
 
 ### Verdict: **WEAKENED — deferred**
 Evidence for immediate risk is insufficient (436L with non-linear commit cadence). Valid concern but lower urgency than Idea 1. Park for run 122 if file hits 480L+.
@@ -63,8 +63,8 @@ Evidence for immediate risk is insufficient (436L with non-linear commit cadence
 
 | Idea | Verdict | Outcome |
 |------|---------|---------|
-| 1: Fix Step 9G (gh CLI → MCP) | SURVIVES | **WINNER** |
-| 4: SUPABASE_ACCESS_TOKEN unknown-date | WEAKENED | Parking lot |
+| 1: Fix Step 9G (`gh` → verified MCP path) | SURVIVES, verification-gated | **WINNER** |
+| 4: SUPABASE_ACCESS_TOKEN unknown-date | WEAKENED | Parking lot / Step 9E contract |
 | 3: Step 9M god-class monitor | WEAKENED | Parking lot |
-| 2: Governance entry for Step 9E | Not debated (administrative) | Implement as part of Phase 6 housekeeping |
+| 2: Step 9E governance status | Administrative correction | Keep pending until implementation exists |
 | 5: Step 9N countdown log | Not debated | Parking lot (low urgency) |
