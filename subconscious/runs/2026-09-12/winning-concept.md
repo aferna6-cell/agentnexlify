@@ -1,9 +1,9 @@
 # Winning Concept — Run 121 (2026-09-12)
 
-**Winner:** Step 9G MCP Fix — Replace gh CLI with `mcp__github__actions_run_trigger`
+**Winner:** Step 9G MCP Migration Evaluation — replace gh CLI only after MCP action verification
 **Category:** operational
-**Effort:** XS (single block edit in SKILL.md)
-**Confidence:** HIGH
+**Effort:** XS after prerequisite verification
+**Confidence:** MEDIUM
 **Source:** Run 120 mandate item 6 + KB staleness evidence (17d stale)
 **Carry-forward count:** 0 (new winner this run — NOT a carry-forward)
 
@@ -11,21 +11,23 @@
 
 ## Recommendation
 
-Replace `gh workflow run` / `gh run list` in Step 9G of `.claude/skills/nightly-commit-review/SKILL.md` with `mcp__github__actions_run_trigger` and `mcp__github__actions_list` so the KB autopopulate self-healing trigger works in cloud CCR sessions where gh CLI is unavailable.
+The current Step 9G `gh workflow run` / `gh run list` mechanism is not viable in the cloud-hosted nightly environment. Evaluate `mcp__github__actions_run_trigger` and a corresponding run-list action as the replacement, but **do not edit Step 9G until those actions are verified to exist and work in the actual nightly CCR execution surface**.
 
 ---
 
 ## Why This, Why Now
 
-Step 9G was implemented in run 101 using `gh workflow run kb-autopopulate.yml` — but the gh CLI is not installed in cloud-hosted CCR sessions (the environment where the nightly runs). Every nightly since run 101 has silently failed at Step 9G. The result: knowledge-base/log.md shows last run 2026-08-26 — 17 days stale against a 7-day staleness threshold. The KB feeds the `kb-first` rule, so stale KB means agents are operating without their knowledge substrate. The fix is XS effort: `mcp__github__actions_run_trigger` is available in CCR sessions (confirmed in MCP tool list) and is the correct tool for triggering GitHub Actions workflows from within this environment.
+Step 9G was implemented in run 101 using `gh workflow run kb-autopopulate.yml`, but the gh CLI is not available in the cloud-hosted CCR environment used by the nightly routine. That leaves the current self-healing trigger path ineffective. Meanwhile `knowledge-base/log.md` shows the KB has been stale beyond its 7-day threshold.
 
-Run 120 mandate item 6 explicitly calls for this evaluation. The debate produced SURVIVES verdict with a tight causal chain and clear precedent (Step 9J was also a "fix" to an already-implemented step, accepted as run 112 winner).
+The proposed MCP replacement is plausible and appropriately scoped, but its availability in the **specific nightly CCR session** has not yet been demonstrated end-to-end. A deferred/subconscious tool listing is not sufficient evidence to call the action confirmed or available for nightly execution.
+
+Run 120 mandate item 6 explicitly calls for this evaluation. The correct output of run 121 is therefore a recommendation plus a verification prerequisite, not an implementation claim.
 
 ---
 
 ## Implementation Sketch
 
-Edit `.claude/skills/nightly-commit-review/SKILL.md`, Step 9G block (lines ~318–342):
+**Only after the MCP actions are verified in the nightly CCR execution surface**, edit `.claude/skills/nightly-commit-review/SKILL.md`, Step 9G block (lines ~318–342).
 
 **Replace:**
 ```
@@ -33,10 +35,14 @@ Edit `.claude/skills/nightly-commit-review/SKILL.md`, Step 9G block (lines ~318�
        If command fails (exit non-zero): log "Step 9G: gh workflow run failed — check GH token or workflow name" and continue to step 10.
 ```
 
-**With:**
+**With the verified trigger action, conceptually:**
 ```
-       Call: `mcp__github__actions_run_trigger(owner="aferna6-cell", repo="agentnexlify", workflow_id="kb-autopopulate.yml", ref="main")`
-       If call raises error: log "Step 9G: mcp__github__actions_run_trigger failed — check ANTHROPIC_API_KEY in GH Secrets or workflow file name" and continue to step 10.
+       Call the verified GitHub Actions workflow-trigger MCP action for:
+         owner="aferna6-cell"
+         repo="agentnexlify"
+         workflow_id="kb-autopopulate.yml"
+         ref="main"
+       If the trigger call itself fails: log the trigger/tool error and continue to step 10.
 ```
 
 **Replace:**
@@ -44,11 +50,13 @@ Edit `.claude/skills/nightly-commit-review/SKILL.md`, Step 9G block (lines ~318�
        Run: `gh run list --workflow=kb-autopopulate.yml -R aferna6-cell/agentnexlify --limit=1 --json conclusion,url`
 ```
 
-**With:**
+**With the verified run-list action, conceptually:**
 ```
-       Call: `mcp__github__actions_list(owner="aferna6-cell", repo="agentnexlify", workflow_id="kb-autopopulate.yml", per_page=1)`
-       Read latest run: `conclusion` field (success/failure/cancelled) and `html_url` for GH issue body
+       Call the verified GitHub Actions run-list MCP action for kb-autopopulate.yml.
+       Read the latest run's conclusion and URL using the actual returned schema.
 ```
+
+Do not hard-code speculative action names or argument schemas into the production skill until they have been observed in the nightly CCR tool surface.
 
 **Dedup guard:** Step 9G should only trigger if Step 9F confirmed staleness > 7 days (this logic is already in the SKILL.md — preserve it).
 
@@ -56,28 +64,34 @@ Edit `.claude/skills/nightly-commit-review/SKILL.md`, Step 9G block (lines ~318�
 
 ## Prerequisites / Open Blockers
 
-**This is a RECOMMENDATION ONLY.** Per subconscious SKILL.md design: "The subconscious RECOMMENDS but does NOT implement." Human approval and execution in a separate nightly session required.
+**This is a RECOMMENDATION ONLY.** Per subconscious SKILL.md design: "The subconscious RECOMMENDS but does NOT implement." Human approval and execution in a separate nightly session are required.
 
-Before implementing, two prerequisites must be resolved:
+Before implementing, two prerequisites must be addressed:
 
-1. **Verify `mcp__github__actions_run_trigger` availability in nightly CCR sessions.** The tool appears in the deferred tool list during subconscious runs but its presence in the specific CCR environment used by nightly-commit-review has not been confirmed end-to-end. Verify before editing SKILL.md.
+1. **Verify the proposed GitHub Actions MCP trigger and run-list capabilities in nightly CCR sessions.** Confirm the exact action names, argument schemas, and returned fields with a real end-to-end invocation before editing SKILL.md.
 
-2. **GH #403 (ANTHROPIC_API_KEY missing from GitHub Actions secrets) must be resolved.** The `kb-autopopulate.yml` workflow calls the Anthropic API — it will fail even after Step 9G is fixed if the `ANTHROPIC_API_KEY` secret is absent from the repository Actions secrets. Step 9G fix is **necessary but not sufficient** for KB health restoration. Both this fix and #403 must be resolved together.
+2. **GH #403 (ANTHROPIC_API_KEY missing from GitHub Actions secrets) remains a separate KB execution blocker.** Even a successful Step 9G workflow trigger will not restore KB health if the triggered workflow cannot execute its Anthropic-dependent work. Trigger-path remediation and workflow-secret remediation are separate conditions and should be verified independently.
 
-The Step 9G MCP fix is the right recommendation — the gh CLI root cause is real and confirmed. But the end-to-end chain includes #403 as a second required fix. Run 122 mandate items 1-3 explicitly verify both.
+The gh CLI root cause is supported. The MCP replacement remains a candidate pending environment verification. Run 122 should verify the execution surface before any implementation is described as complete.
 
 ---
 
 ## Verification After Implementation
 
+After the exact MCP actions are verified and Step 9G is actually implemented:
+
 ```bash
-grep 'mcp__github__actions_run_trigger' .claude/skills/nightly-commit-review/SKILL.md
-grep 'mcp__github__actions_list' .claude/skills/nightly-commit-review/SKILL.md
-# Both must return results in Step 9G block
-# Also confirm gh workflow run is NO LONGER in Step 9G:
+# Confirm the verified MCP trigger/list mechanism is present in Step 9G.
+# Confirm the old gh CLI mechanism is absent from Step 9G.
 grep 'gh workflow run' .claude/skills/nightly-commit-review/SKILL.md
-# Must return 0 results
+# Must return 0 results for the Step 9G block.
 ```
+
+Then require runtime evidence from the next nightly execution:
+- Step 9G invokes the verified trigger action successfully.
+- The triggered `kb-autopopulate.yml` run is observable through the verified run-list/read surface.
+- If the workflow fails because #403 remains unresolved, report that as a separate workflow prerequisite rather than a Step 9G trigger failure.
+- `knowledge-base/log.md` receives a fresh entry only after the workflow itself completes successfully.
 
 ---
 
@@ -89,18 +103,18 @@ Previous active direction: Step 9E credential expiry escalation (run 119/120 win
 
 ## Run 122 Mandate
 
-1. Verify grep: `mcp__github__actions_run_trigger` present, `gh workflow run` absent from Step 9G
-2. Did Step 9G fire in next nightly after implementation? Check nightly log for "Step 9G: kb-autopopulate triggered — SUCCESS"
-3. Has knowledge-base/log.md received a new entry? (confirms end-to-end flow)
-4. AUTOPILOT_GH_TOKEN: check days_since_rotation — at ~76d threshold expects Step 9E to fire and GH #399 comment added
-5. SUPABASE_ACCESS_TOKEN: has human filled in rotation date? If not → file GH issue directly (parking lot Idea 4)
-6. os_tool_executions.py line count: if ≥480L → consider Step 9M (parking lot Idea 3)
+1. Verify whether the proposed GitHub Actions MCP trigger and run-list capabilities are actually present in the nightly CCR execution surface; record the exact action names and schemas.
+2. If verified, implement Step 9G with those observed actions and remove the `gh workflow run` path; otherwise leave production SKILL.md unchanged and record the blocker.
+3. After implementation, confirm Step 9G fires in a nightly run and separately inspect the triggered workflow result.
+4. Confirm whether #403 still blocks `kb-autopopulate.yml`; do not conflate workflow-secret failure with trigger failure.
+5. Has `knowledge-base/log.md` received a new entry? This is the final end-to-end KB-health signal.
+6. AUTOPILOT_GH_TOKEN: check days_since_rotation and reuse GH #399 for credential-identity escalation if needed.
+7. SUPABASE_ACCESS_TOKEN: if the rotation date remains unknown, keep it on the human-action path rather than inventing an expiry date.
 
 ---
 
 ## Escalation Path
 
-- Run 121 (this run): recommend
-- Run 122: if not implemented → 1st carry-forward → recommend with escalation flag
-- Run 123: if not implemented → 2nd carry-forward
-- Run 124: if not implemented → autonomous-executable (precedent: Steps 9F/9G/9I/9J/9K/9L)
+- Run 121 (this run): recommend verification + candidate migration
+- Run 122: verify execution surface; implement only if proven
+- Later carry-forward/escalation must preserve that verification gate and must not autonomously hard-code unverified tool names or schemas
