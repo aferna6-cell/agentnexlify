@@ -1,39 +1,41 @@
 {
   "run": 121,
   "date": "2026-09-12",
-  "winner": "Step 9G MCP fix — replace gh CLI with mcp__github__actions_run_trigger",
-  "confidence": "HIGH",
+  "winner": "Step 9G MCP migration evaluation — replace gh CLI only after nightly-CCR verification",
+  "confidence": "MEDIUM",
   "category": "operational",
-  "effort": "XS",
+  "effort": "XS after prerequisite verification",
   "carry_forward": 0,
-  "autonomous_executable_run": 124,
+  "autonomous_executable_run": null,
   "debate_verdicts": {
-    "idea_1_step9g_mcp_fix": "SURVIVES → WINNER",
+    "idea_1_step9g_mcp_fix": "SURVIVES → WINNER, gated on nightly-CCR MCP verification",
     "idea_4_supabase_token": "WEAKENED → parking lot",
     "idea_3_step9m_godclass": "WEAKENED → parking lot"
   },
   "mandate_items_checked": {
     "step9e_threshold_in_skillmd": "PASS",
-    "step9e_fired_nightly": "PENDING (token at ~70d, threshold 76d)",
-    "autopilot_token_rotated": "NOT YET — expires 2026-10-02",
+    "step9e_fired_nightly": "PENDING (token below 76d warning threshold at run time)",
+    "autopilot_token_rotated": "NOT YET — 90d due date recorded as 2026-10-02",
     "supabase_token_date": "NOT SET",
-    "step9g_mcp_fix": "THIS RUN WINNER",
+    "step9g_mcp_fix": "THIS RUN WINNER AS A VERIFICATION-GATED RECOMMENDATION",
     "step9l_stale_flag": "PASS (corrected run 120)"
   },
   "prerequisites": {
-    "mcp_tool_availability": "mcp__github__actions_run_trigger presence in nightly CCR sessions unverified — confirm before implementing",
-    "gh_issue_403": "ANTHROPIC_API_KEY missing from GH Actions secrets — kb-autopopulate.yml will fail even after Step 9G fix; #403 must be resolved concurrently",
+    "mcp_tool_availability": "Exact GitHub Actions trigger/list actions, argument schemas, and returned fields in nightly CCR sessions are unverified — confirm with an end-to-end call before implementing",
+    "gh_issue_403": "ANTHROPIC_API_KEY missing from GH Actions secrets is a separate workflow-execution blocker — a successful Step 9G trigger does not imply kb-autopopulate.yml can complete",
     "recommendation_only": "This PR contains subconscious recommendation artifacts only — no SKILL.md changes per subconscious design (RECOMMENDS, does not implement)"
   },
   "evidence_digest": [
-    "KB 17d stale; Step 9G silently fails in cloud CCR (gh CLI unavailable)",
-    "Step 9E escalation implemented (mandate item 1 PASS)",
-    "AUTOPILOT_GH_TOKEN ~70d; Step 9E fires in ~6 days"
+    "KB is beyond the 7d staleness threshold and the existing gh CLI Step 9G path is not viable in the cloud nightly environment",
+    "Proposed MCP replacement is not yet proven in the nightly CCR execution surface",
+    "Step 9E escalation implementation is present; operational tracking must distinguish the 76d warning threshold from the recorded 90d due date 2026-10-02"
   ],
   "next_run_questions": [
-    "Did Step 9G trigger kb-autopopulate.yml successfully after fix?",
-    "Did Step 9E fire for AUTOPILOT_GH_TOKEN (now at threshold)?",
-    "SUPABASE_ACCESS_TOKEN still unknown date? Escalate if yes."
+    "Are the proposed GitHub Actions MCP trigger/list capabilities actually available in the nightly CCR session, and what are their exact schemas?",
+    "If verified and implemented, did Step 9G trigger kb-autopopulate.yml successfully?",
+    "Did the triggered workflow itself complete, or is #403 still blocking Anthropic-dependent execution?",
+    "Did Step 9E reuse the existing AUTOPILOT_GH_TOKEN tracker when the warning threshold was reached?",
+    "Is the SUPABASE_ACCESS_TOKEN rotation date still unknown? Keep it on the human-action path if so."
   ],
   "files_written": [
     "subconscious/runs/2026-09-12/winning-concept.md",
@@ -43,7 +45,7 @@
     "subconscious/runs/2026-09-12/run-summary.json"
   ],
   "state_updated": [
-    "subconscious/state/governance.json (total_runs: 121, last_run: 2026-09-12, 2 active_directions entries, run_121_mandate)",
+    "subconscious/state/governance.json (total_runs: 121, last_run: 2026-09-12, active directions and run_121_mandate require verification-gated wording)",
     "subconscious/state/memory.jsonl (run 121 entry appended)"
   ]
 }
