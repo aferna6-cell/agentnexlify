@@ -31,13 +31,8 @@ from urllib.parse import urljoin
 import httpx
 
 from backend.config import settings
-from backend.services.url_validation import pin_safe_url
-from backend.services.tenant_scope import (
-    tenant_insert,
-    tenant_select,
-    tenant_update,
-    tenant_upsert,
-)
+from backend.services.tenant_scope import tenant_insert, tenant_select, tenant_update, tenant_upsert
+from backend.services.url_validation import is_safe_url
 
 logger = logging.getLogger(__name__)
 
@@ -69,9 +64,7 @@ _MAX_DISCOVER_LIMIT = 25
 _PLACES_PAGE_SIZE_CAP = 20
 
 
-async def _search_places_text(
-    text_query: str, api_key: str, page_size: int
-) -> list[dict]:
+async def _search_places_text(text_query: str, api_key: str, page_size: int) -> list[dict]:
     """Isolated HTTP call so tests can monkeypatch this one function.
 
     Returns the raw `places` list from the Places API v1 response. Raises
@@ -101,11 +94,7 @@ def _parse_location(location: str) -> tuple[str, str]:
 def _normalize_place(place: dict, location: str) -> dict[str, Any]:
     """Normalize one Places API v1 result into a prospects row (sans client_id)."""
     display_name = place.get("displayName") or {}
-    name = (
-        display_name.get("text")
-        if isinstance(display_name, dict)
-        else str(display_name or "")
-    )
+    name = display_name.get("text") if isinstance(display_name, dict) else str(display_name or "")
     city, region = _parse_location(location)
     return {
         "source": "places_api",
@@ -158,11 +147,7 @@ async def discover(
 
     try:
         result = tenant_upsert(
-            db,
-            "prospects",
-            client_id,
-            rows,
-            on_conflict="client_id,source,external_ref",
+            db, "prospects", client_id, rows, on_conflict="client_id,source,external_ref"
         ).execute()
     except Exception:
         logger.exception("Prospect upsert failed client_id=%s", client_id)
@@ -178,14 +163,7 @@ _EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 _PHONE_RE = re.compile(r"(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}")
 
 _JUNK_EMAIL_SUFFIXES = (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".css", ".js")
-_JUNK_EMAIL_SUBSTRINGS = (
-    "@sentry",
-    "@example.",
-    "noreply",
-    "no-reply",
-    "wixpress",
-    "@godaddy",
-)
+_JUNK_EMAIL_SUBSTRINGS = ("@sentry", "@example.", "noreply", "no-reply", "wixpress", "@godaddy")
 
 _ENRICH_USER_AGENT = (
     "Mozilla/5.0 (compatible; AgentNexLiFy-Prospecting/1.0; "
@@ -209,60 +187,32 @@ async def _fetch_page_text(url: str) -> str:
         return ""
     if not url.startswith(("http://", "https://")):
         url = f"https://{url}"
-    pinned = pin_safe_url(url)
-    if not pinned:
+    if not is_safe_url(url):
         logger.debug("Enrichment skipped unsafe url: %s", url)
         return ""
 
-    current_url = pinned.connect_url
-    current_host = pinned.host_header
+    current_url = url
     try:
-        async with httpx.AsyncClient(
-            timeout=_ENRICH_TIMEOUT, follow_redirects=False
-        ) as client:
+        async with httpx.AsyncClient(timeout=_ENRICH_TIMEOUT, follow_redirects=False) as client:
             for hop in range(_ENRICH_MAX_REDIRECTS + 1):
-                resp = await client.get(
-                    current_url,
-                    headers={"User-Agent": _ENRICH_USER_AGENT, "Host": current_host},
-                )
+                resp = await client.get(current_url, headers={"User-Agent": _ENRICH_USER_AGENT})
                 if resp.status_code not in _REDIRECT_STATUS_CODES:
                     if resp.status_code != 200:
                         return ""
                     return resp.text[:_ENRICH_MAX_BYTES]
 
                 if hop >= _ENRICH_MAX_REDIRECTS:
-                    logger.debug(
-                        "Enrichment stopped after redirect limit: %s", current_url
-                    )
+                    logger.debug("Enrichment stopped after redirect limit: %s", current_url)
                     return ""
 
                 location = resp.headers.get("location", "").strip()
                 if not location:
                     return ""
-                # Reject protocol-relative and non-HTTP/S schemes before urljoin
-                # to prevent Location: //evil.com/ from silently inheriting scheme.
-                if location.startswith(("http://", "https://")):
-                    next_url = location
-                elif location.startswith("//"):
-                    logger.debug(
-                        "Enrichment rejected protocol-relative redirect location: %s",
-                        location,
-                    )
-                    return ""
-                elif location.startswith("/"):
-                    next_url = urljoin(pinned.url, location)
-                else:
-                    logger.debug(
-                        "Enrichment rejected non-http redirect location: %s", location
-                    )
-                    return ""
-                next_pinned = pin_safe_url(next_url)
-                if not next_pinned:
+                next_url = urljoin(current_url, location)
+                if not is_safe_url(next_url):
                     logger.debug("Enrichment skipped unsafe redirect: %s", next_url)
                     return ""
-                current_url = next_pinned.connect_url
-                current_host = next_pinned.host_header
-                pinned = next_pinned
+                current_url = next_url
         return ""
     except httpx.HTTPError:
         logger.warning("Enrichment fetch failed for %s", url, exc_info=True)
@@ -301,10 +251,7 @@ async def enrich_prospect(db: Any, *, client_id: str, prospect_id: str) -> dict 
     (or belongs to another tenant — tenant_select already scopes the query).
     """
     result = (
-        tenant_select(db, "prospects", client_id, "*")
-        .eq("id", prospect_id)
-        .limit(1)
-        .execute()
+        tenant_select(db, "prospects", client_id, "*").eq("id", prospect_id).limit(1).execute()
     )
     if not result.data:
         return None
@@ -333,9 +280,7 @@ async def enrich_prospect(db: Any, *, client_id: str, prospect_id: str) -> dict 
 
     try:
         updated = (
-            tenant_update(db, "prospects", client_id, updates)
-            .eq("id", prospect_id)
-            .execute()
+            tenant_update(db, "prospects", client_id, updates).eq("id", prospect_id).execute()
         )
     except Exception:
         logger.exception(
@@ -368,9 +313,7 @@ def verify_email(email: str) -> bool:
     if provider == "zerobounce":
         api_key = settings.email_verify_api_key
         if not api_key:
-            logger.warning(
-                "EMAIL_VERIFY_PROVIDER=zerobounce but no API key set — fail-open"
-            )
+            logger.warning("EMAIL_VERIFY_PROVIDER=zerobounce but no API key set — fail-open")
             return _verify_email_syntax_only(email)
         try:
             resp = httpx.get(
@@ -382,11 +325,7 @@ def verify_email(email: str) -> bool:
             data = resp.json()
             return str(data.get("status", "")).lower() == "valid"
         except Exception:
-            logger.warning(
-                "ZeroBounce verification failed for %s — fail-open",
-                email,
-                exc_info=True,
-            )
+            logger.warning("ZeroBounce verification failed for %s — fail-open", email, exc_info=True)
             return False
 
     return _verify_email_syntax_only(email)
@@ -402,9 +341,7 @@ def _verify_email_syntax_only(email: str) -> bool:
     except EmailNotValidError:
         return False
     except Exception:
-        logger.warning(
-            "Email syntax check errored for %s — fail-open", email, exc_info=True
-        )
+        logger.warning("Email syntax check errored for %s — fail-open", email, exc_info=True)
         return False
 
 
@@ -439,11 +376,7 @@ def score_prospect(row: dict) -> float:
         score += _SCORE_PHONE
 
     if row.get("email"):
-        score += (
-            _SCORE_EMAIL_VERIFIED
-            if row.get("email_verified")
-            else _SCORE_EMAIL_UNVERIFIED
-        )
+        score += _SCORE_EMAIL_VERIFIED if row.get("email_verified") else _SCORE_EMAIL_UNVERIFIED
 
     if row.get("category"):
         score += _SCORE_CATEGORY
@@ -473,10 +406,7 @@ async def promote_to_lead(db: Any, *, client_id: str, prospect_id: str) -> dict 
     without inserting a duplicate.
     """
     result = (
-        tenant_select(db, "prospects", client_id, "*")
-        .eq("id", prospect_id)
-        .limit(1)
-        .execute()
+        tenant_select(db, "prospects", client_id, "*").eq("id", prospect_id).limit(1).execute()
     )
     if not result.data:
         return None
@@ -536,10 +466,7 @@ async def promote_to_lead(db: Any, *, client_id: str, prospect_id: str) -> dict 
 
     try:
         tenant_update(
-            db,
-            "prospects",
-            client_id,
-            {"status": "promoted", "promoted_lead_id": lead_id},
+            db, "prospects", client_id, {"status": "promoted", "promoted_lead_id": lead_id}
         ).eq("id", prospect_id).execute()
     except Exception:
         logger.exception(
@@ -549,9 +476,7 @@ async def promote_to_lead(db: Any, *, client_id: str, prospect_id: str) -> dict 
         )
         raise
 
-    lead_result = (
-        tenant_select(db, "leads", client_id, "*").eq("id", lead_id).limit(1).execute()
-    )
+    lead_result = tenant_select(db, "leads", client_id, "*").eq("id", lead_id).limit(1).execute()
     return lead_result.data[0] if lead_result.data else {"id": lead_id, **lead_data}
 
 
@@ -571,16 +496,12 @@ async def run_pipeline(
 ) -> dict:
     """discover -> enrich -> verify -> score, then optionally auto-promote
     rows scoring at or above `auto_promote_threshold`. Returns a summary."""
-    discovered = await discover(
-        db, client_id=client_id, query=query, location=location, limit=limit
-    )
+    discovered = await discover(db, client_id=client_id, query=query, location=location, limit=limit)
 
     enriched_rows: list[dict] = []
     for row in discovered:
         try:
-            updated = await enrich_prospect(
-                db, client_id=client_id, prospect_id=row["id"]
-            )
+            updated = await enrich_prospect(db, client_id=client_id, prospect_id=row["id"])
         except Exception:
             logger.warning(
                 "Enrichment step failed for prospect_id=%s — continuing pipeline",
@@ -613,18 +534,14 @@ async def run_pipeline(
                 exc_info=True,
             )
             persisted = None
-        scored_rows.append(
-            persisted.data[0] if persisted and persisted.data else {**row, **updates}
-        )
+        scored_rows.append(persisted.data[0] if persisted and persisted.data else {**row, **updates})
 
     promoted_ids: list[str] = []
     if auto_promote_threshold is not None:
         for row in scored_rows:
             if row.get("score", 0) >= auto_promote_threshold:
                 try:
-                    lead = await promote_to_lead(
-                        db, client_id=client_id, prospect_id=row["id"]
-                    )
+                    lead = await promote_to_lead(db, client_id=client_id, prospect_id=row["id"])
                 except Exception:
                     logger.warning(
                         "Auto-promote failed for prospect_id=%s — continuing pipeline",
