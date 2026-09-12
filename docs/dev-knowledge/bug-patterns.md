@@ -18894,3 +18894,16 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(security): validate prospecting redirect hops (#847)
+
+* test(security): cover prospecting redirect SSRF
+
+* fix(security): validate prospecting redirect hops
+**Date:** 2026-09-12
+**Commit:** a74b0c4
+**Author:** aferna6-cell
+**Files Changed:** backend/services/prospecting.py,tests/test_prospecting_ssrf_redirects.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
