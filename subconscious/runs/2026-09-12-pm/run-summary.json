@@ -1,0 +1,48 @@
+{
+  "run_id": "2026-09-12-pm",
+  "run_number": 122,
+  "date": "2026-09-12",
+  "winner": {
+    "id": "step9e-threshold-fix",
+    "title": "Step 9E — Threshold Consistency Fix + days_remaining Display",
+    "category": "workflow_efficiency",
+    "effort": "XS",
+    "confidence": "HIGH",
+    "carry_forward": 0,
+    "source": "run_121_mandate_item_4",
+    "urgency": "HIGH",
+    "file": ".claude/skills/nightly-commit-review/SKILL.md",
+    "lines": "~289, ~298, ~300"
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "mandate_check": {
+    "run_121_item_1_step9g_in_skillmd": "UNKNOWN_not_verified_this_run",
+    "run_121_item_4_step9e_fired_gh399_commented": "UNKNOWN_threshold_76d_not_yet_reached_at_70d",
+    "step9e_inconsistency_found": "CONFIRMED_line289_uses_days_since_rotation_gte_76_no_days_remaining_var"
+  },
+  "parking_lot": [
+    "step9j-limit-5-oldest-prs",
+    "step9g-mcp-verification",
+    "tool-outcome-coverage-gh-issue"
+  ],
+  "deferred": [
+    "os-tool-executions-split",
+    "ssrf-redirect-audit",
+    "skill-freshness-check"
+  ],
+  "key_evidence": [
+    "SKILL.md line 289: days_since_rotation >= 76 (trigger)",
+    "SKILL.md line 294: title says 'Credential rotation due in ≤14 days' (inconsistent)",
+    "No days_remaining variable in Step 9E block",
+    "AUTOPILOT_GH_TOKEN: ~70d elapsed, expires 2026-10-02",
+    "Run 121 mandate item 4: Step 9E threshold status unresolved"
+  ],
+  "next_run_mandate": [
+    "Grep: days_remaining and <= 14 in Step 9E SKILL.md — PASS/FAIL",
+    "GH #399 has countdown comment after next nightly",
+    "AUTOPILOT_GH_TOKEN rotation status (expires 2026-10-02)",
+    "Promote Step 9J to winner if Step 9E confirmed",
+    "os_tool_executions.py line count check (≥480L → Step 9M)"
+  ]
+}

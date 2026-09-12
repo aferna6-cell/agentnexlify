@@ -1,13 +1,11 @@
 {
   "version": 1,
-  "last_run": "2026-09-12",
-  "total_runs": 121,
+  "last_run": "2026-09-12-pm",
+  "total_runs": 122,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
-  "frozen_ideas": [
-    "ai_human_handoff"
-  ],
+  "frozen_ideas": ["ai_human_handoff"],
   "moratorium_config": {
     "moratorium_active": false,
     "triggered_run": 15,
@@ -2119,9 +2117,7 @@
       "Step 9G MCP trigger fix (run 121)",
       "governance verified_date schema (run 122)"
     ],
-    "killed": [
-      "Step 9D stalled nudge \u2014 proven ineffective mechanism"
-    ],
+    "killed": ["Step 9D stalled nudge \u2014 proven ineffective mechanism"],
     "deferred": [
       "os_tool_executions.py split \u2014 stability window broken (modified 2026-09-11)"
     ],
@@ -2138,6 +2134,37 @@
       "AUTOPILOT_GH_TOKEN: at ~76d threshold \u2014 did Step 9E fire and GH #399 get a comment?",
       "SUPABASE_ACCESS_TOKEN: still unknown date? If yes \u2192 file GH issue (parking lot Idea 4)",
       "os_tool_executions.py line count: if >=480L \u2192 consider Step 9M (parking lot Idea 3)"
+    ]
+  },
+  "run_122_governance_correction": {
+    "step9e_inconsistency": "CONFIRMED \u2014 SKILL.md line 289 fires at days_since_rotation >= 76 but line 294 title says \u226414 days. No days_remaining variable. GH issue filing/dedup present (run 120/121 addition). Fix: replace >= 76 check with days_remaining <= 14, add countdown to log + comment.",
+    "step9g_status": "PENDING VERIFICATION \u2014 run 121 recommended MCP replacement, not yet verified in nightly CCR. Remains parking lot.",
+    "step9j_status": "PARKING LOT \u2014 19 PRs confirmed, limit=5 fix ready for run 123.",
+    "autopilot_gh_token": "~70d elapsed, expires 2026-10-02 (20 days). Step 9E should fire at ~76d (~2026-09-18).",
+    "ideas_generated": 5,
+    "winner": "Step 9E threshold fix + days_remaining display",
+    "parking_lot": [
+      "Step 9J limit=5 oldest PRs (run 123)",
+      "Step 9G MCP trigger (verify in nightly CCR first)",
+      "Tool outcome coverage GH issue (file opportunistically)"
+    ],
+    "deferred": [
+      "os_tool_executions.py split \u2014 unstable",
+      "SSRF redirect audit \u2014 low evidence",
+      "Skill freshness check \u2014 low urgency"
+    ],
+    "total_runs": "121 \u2192 122",
+    "last_run": "2026-09-12 \u2192 2026-09-12-pm"
+  },
+  "run_122_mandate": {
+    "source": "run_122_winner",
+    "winner": "Step 9E threshold fix + days_remaining display",
+    "items": [
+      "Grep: days_remaining and <= 14 in Step 9E block \u2014 PASS required",
+      "Verify GH #399 has countdown comment from next nightly after implementation",
+      "AUTOPILOT_GH_TOKEN rotation status \u2014 expires 2026-10-02",
+      "Promote Step 9J (limit=5) to winner if Step 9E confirmed",
+      "os_tool_executions.py line count: \u2265480L \u2192 consider Step 9M"
     ]
   }
 }
