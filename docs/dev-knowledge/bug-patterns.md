@@ -18894,3 +18894,12 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(skill): account for centralized demo-role middleware
+**Date:** 2026-09-12
+**Commit:** 45d41c2
+**Author:** aferna6-cell
+**Files Changed:** .claude/skills/route-security-guard-audit/SKILL.md
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
