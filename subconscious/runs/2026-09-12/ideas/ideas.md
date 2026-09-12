@@ -2,29 +2,29 @@
 
 ## Evidence Summary
 
-- **Step 9G broken in cloud CCR**: `gh workflow run kb-autopopulate.yml` requires gh CLI which is unavailable in cloud-hosted CCR sessions. KB 17d stale (last run 2026-08-26, threshold 7d). Step 9G fires but silently fails every nightly.
-- **Step 9E escalation implemented**: run 119/120 winner (early warning + GH issue filing) IS in SKILL.md (days_remaining, <= 10, add_issue_comment — 9 grep hits). AUTOPILOT_GH_TOKEN at ~70d (threshold 76d), fires in ~6 days. No governance.json active_directions entry yet for this enhancement.
+- **Step 9G broken in cloud CCR**: `gh workflow run kb-autopopulate.yml` requires gh CLI which is unavailable in cloud-hosted CCR sessions. KB 17d stale (last run 2026-08-26, threshold 7d). Step 9G fires but its current trigger mechanism cannot execute in the cloud nightly environment.
+- **Step 9E escalation is recommended, not implemented**: run 119/120 proposed earlier warning + GH issue filing, but current governance evidence records `step9e_status` as NOT YET IMPLEMENTED. AUTOPILOT_GH_TOKEN is approaching its warning threshold; the recorded 90-day due date is 2026-10-02.
 - **os_tool_executions.py active**: 2 fixes landed in 3 days (Gmail termination 0605d0f + email approval surface adb31f9), currently 436L. Rule 9 god-class threshold: 600L.
-- **SUPABASE_ACCESS_TOKEN date unknown**: credential-rotation-schedule.md shows "unknown" for last_rotated. Human has not set it. No GH issue filed.
+- **SUPABASE_ACCESS_TOKEN date unknown**: credential-rotation-schedule.md shows "unknown" for last_rotated. Human has not set it. No new duplicate issue should be filed without identity-based dedup against existing ops trackers.
 - **Run 120 mandate item 6**: explicitly requests "Step 9G MCP fix (Idea 2 from this run): evaluate for run 121 implementation."
 
 ---
 
-### Idea 1: Fix Step 9G — Replace gh CLI with `mcp__github__actions_run_trigger`
-**Evidence:** KB is 17d stale (threshold 7d). `gh workflow run` requires gh CLI unavailable in cloud CCR sessions. Step 9G fires but silently fails. Run 120 mandate item 6 explicitly requests this evaluation. `mcp__github__actions_run_trigger` IS available (confirmed in MCP tool list).
-**Action:** Edit Step 9G block in `.claude/skills/nightly-commit-review/SKILL.md`. Replace `gh workflow run kb-autopopulate.yml -R aferna6-cell/agentnexlify` with `mcp__github__actions_run_trigger(owner="aferna6-cell", repo="agentnexlify", workflow_id="kb-autopopulate.yml")`. Replace `gh run list` status check with `mcp__github__actions_list(owner, repo, workflow_id)` to read latest run result.
-**Impact:** KB autopopulate workflow gets triggered correctly in cloud environment. KB staleness drops from 17d+ to <7d within one nightly cycle. Step 9G becomes functional.
+### Idea 1: Fix Step 9G — evaluate replacing gh CLI with a verified GitHub Actions MCP trigger
+**Evidence:** KB is 17d stale (threshold 7d). `gh workflow run` requires gh CLI unavailable in cloud CCR sessions, so the present Step 9G trigger path is not viable there. Run 120 mandate item 6 explicitly requests this evaluation. A GitHub Actions MCP trigger/list path is a candidate, but the exact actions and schemas have **not** been verified in the actual nightly CCR execution surface.
+**Action:** First verify, inside the nightly CCR surface, that the required GitHub Actions MCP trigger and run-list capabilities exist and work end to end. Only after that proof, edit Step 9G in `.claude/skills/nightly-commit-review/SKILL.md` to replace the `gh workflow run` / `gh run list` path with the verified MCP actions and their actual schemas. Keep GH #403 separate: triggering the workflow does not repair a missing `ANTHROPIC_API_KEY` prerequisite.
+**Impact:** If verification succeeds, Step 9G gains an execution mechanism that can operate in the cloud nightly environment. KB freshness improves only after the trigger path and the workflow's own prerequisites both succeed.
 **Category:** operational
-**Effort:** XS (single block edit in SKILL.md)
+**Effort:** XS after capability verification
 
 ---
 
-### Idea 2: Add governance.json active_directions entry for Step 9E escalation (run 119 winner)
-**Evidence:** Run 119 winner "Step 9E Credential Expiry Escalation — Earlier Warning + GH Issue Filing" was implemented in SKILL.md (verified run 121 mandate item 1 — 9 grep hits). No governance.json entry exists for this enhancement (separate from the original Step 9E add from run 84). Governance.json accuracy is critical for preventing re-proposal of already-done work.
-**Action:** Add active_directions entry `{"title": "Step 9E credential expiry escalation — early warning + GH issue filing (run 119 winner)", "status": "implemented", "date": "2026-09-08", "implemented_date": "2026-09-10", ...}` to governance.json.
-**Impact:** Governance hygiene. Prevents future runs from re-proposing run 119/120 winner. Establishes accurate state for Step 9E carry-forward count tracking.
+### Idea 2: Track Step 9E escalation as pending implementation, not implemented
+**Evidence:** Run 119 winner "Step 9E Credential Expiry Escalation — Earlier Warning + GH Issue Filing" remains a recommendation. Current governance on `main` explicitly records `step9e_status` as NOT YET IMPLEMENTED. Marking it implemented would cause future runs to skip real work.
+**Action:** Keep governance status for the run 119 Step 9E escalation as pending/recommended until `.claude/skills/nightly-commit-review/SKILL.md` actually contains the identity-deduplicated escalation behavior and that implementation is verified. Do not add an `implemented` active_directions entry prematurely.
+**Impact:** Governance accuracy. Prevents a false-complete state and preserves the real Step 9E implementation lane.
 **Category:** operational (governance)
-**Effort:** XS (single JSON entry)
+**Effort:** XS
 
 ---
 
@@ -37,18 +37,18 @@
 
 ---
 
-### Idea 4: SUPABASE_ACCESS_TOKEN rotation GH issue — file now, don't wait for Step 9E to fire
-**Evidence:** credential-rotation-schedule.md shows SUPABASE_ACCESS_TOKEN last_rotated = "unknown". Step 9E will NOT fire for this credential until it has a last_rotated date. Run 120 mandate item 5 asks about this. SUPABASE_ACCESS_TOKEN is required by the KB autopopulate workflow — if expired, KB goes dark permanently.
-**Action:** File GH issue directly from this subconscious run (or mandate Step 9E to file issue for unknown-date credentials regardless of rotation age). Include: "SUPABASE_ACCESS_TOKEN rotation date unknown. Check Supabase dashboard → Access Tokens → find token named AUTOPILOT or similar. Record date in ops/credential-rotation-schedule.md. Token may already be expired."
-**Impact:** Surfaces a credential with completely unknown expiry. Prevents silent KB autopopulate failure if token expires undetected.
+### Idea 4: SUPABASE_ACCESS_TOKEN unknown rotation date — route through identity-deduplicated Step 9E handling
+**Evidence:** credential-rotation-schedule.md shows SUPABASE_ACCESS_TOKEN last_rotated = "unknown". Age-based Step 9E logic cannot calculate a warning date from an unknown rotation date. Existing ops/human-action trackers must be searched by credential identity before any new issue is created.
+**Action:** Extend the pending Step 9E implementation contract so unknown-date credentials are surfaced for human verification, using credential-identity dedup to reuse an existing tracker when one already covers the credential. Record the verified rotation date before applying normal age thresholds.
+**Impact:** Surfaces a credential with unknown expiry while avoiding duplicate ops issues.
 **Category:** operational
-**Effort:** XS (SKILL.md edit to handle unknown-date credentials in Step 9E)
+**Effort:** XS after Step 9E implementation surface is available
 
 ---
 
-### Idea 5: Step 9N — nightly credential expiry countdown log (all credentials each run)
-**Evidence:** Current Step 9E only fires when days_remaining <= 10 (≥66d threshold). For the remaining 65 days there is no visibility into credential health. AUTOPILOT_GH_TOKEN is at ~70d and will expire 2026-10-02 — the first time Step 9E would flag it is at 76d (6 days from now). No daily countdown visible in nightly log.
-**Action:** Add to Step 9E: always log all credentials' days_since_rotation and days_remaining regardless of threshold. Format: `Step 9E: {name} — {days_since}d since rotation, {days_remaining}d until threshold, expires {expiry}`.
-**Impact:** Operators can see credential health trend in every nightly log, not just when threshold fires. Zero overhead; improves observability.
+### Idea 5: Step 9N — nightly credential countdown observability after Step 9E implementation
+**Evidence:** The proposed Step 9E escalation is not yet implemented. The current system therefore does not provide the intended identity-deduplicated pre-threshold escalation contract. A daily countdown would be useful observability, but it should build on the corrected Step 9E implementation rather than assume that implementation already exists.
+**Action:** After Step 9E is implemented, consider logging each known credential's days_since_rotation, warning-threshold distance, and recorded due date every nightly run. Unknown-date credentials should be reported as unknown, not assigned fabricated countdowns.
+**Impact:** Improves credential-health visibility without conflating warning thresholds with expiry/due dates.
 **Category:** operational
-**Effort:** XS (single line addition to Step 9E log output)
+**Effort:** XS
