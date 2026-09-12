@@ -1,9 +1,9 @@
 # Winning Concept — Run 2026-09-12-pm (Run 122)
 
-**Winner:** Step 9E — Threshold Consistency Fix + days_remaining Display  
-**Category:** workflow_efficiency / operational  
-**Effort:** XS  
-**Confidence:** HIGH  
+**Winner:** Step 9E — Threshold Consistency Fix + days_remaining Display
+**Category:** workflow_efficiency / operational
+**Effort:** XS
+**Confidence:** HIGH
 **Source:** Run 121 mandate item 4 + SKILL.md inconsistency (line 289 vs line 294)
 
 ---
@@ -18,7 +18,7 @@
 The title claims "≤14 days" but the trigger doesn't compute `days_remaining` at all. There is no `days_remaining` variable anywhere in the Step 9E block. The GH issue filing and dedup logic (lines 290-299) were added in a prior run — that part works.
 
 **Current state (2026-09-12):**
-- AUTOPILOT_GH_TOKEN: ~70d elapsed, expires ~2026-10-02 (20 days)  
+- AUTOPILOT_GH_TOKEN: ~70d elapsed, expires ~2026-10-02 (20 days)
 - Current trigger fires at 76d → ~2026-09-18 (6 days from now)
 - At firing, `days_remaining ≈ 14` — buffer is fine but undisplayed
 - Without `days_remaining` in the comment, humans don't see the countdown

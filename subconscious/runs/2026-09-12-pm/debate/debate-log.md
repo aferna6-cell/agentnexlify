@@ -6,8 +6,8 @@
 
 ## Idea 1: Step 9E — Threshold Fix + days_remaining Display
 
-**Category:** workflow_efficiency / operational  
-**Effort:** XS  
+**Category:** workflow_efficiency / operational
+**Effort:** XS
 **Confidence entering debate:** HIGH
 
 ### Context from run 121 mandate check
@@ -27,8 +27,8 @@ Partial implementation exists; the remaining XS fix closes the inconsistency and
 
 ## Idea 2: Step 9J — Cap search_pull_requests to limit=5
 
-**Category:** workflow_efficiency  
-**Effort:** XS  
+**Category:** workflow_efficiency
+**Effort:** XS
 **Confidence entering debate:** HIGH
 
 ### Challenge
@@ -43,8 +43,8 @@ Evidence remains strong (runs 115-117 confirmed pattern). limit=5 is pragmatic �
 
 ## Idea 3: File GH Issue — Tool Outcome Coverage Audit
 
-**Category:** code_health  
-**Effort:** XS (issue filing only)  
+**Category:** code_health
+**Effort:** XS (issue filing only)
 **Confidence entering debate:** MEDIUM
 
 ### Challenge
