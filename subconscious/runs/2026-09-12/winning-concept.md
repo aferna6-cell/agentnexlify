@@ -54,6 +54,20 @@ Edit `.claude/skills/nightly-commit-review/SKILL.md`, Step 9G block (lines ~318�
 
 ---
 
+## Prerequisites / Open Blockers
+
+**This is a RECOMMENDATION ONLY.** Per subconscious SKILL.md design: "The subconscious RECOMMENDS but does NOT implement." Human approval and execution in a separate nightly session required.
+
+Before implementing, two prerequisites must be resolved:
+
+1. **Verify `mcp__github__actions_run_trigger` availability in nightly CCR sessions.** The tool appears in the deferred tool list during subconscious runs but its presence in the specific CCR environment used by nightly-commit-review has not been confirmed end-to-end. Verify before editing SKILL.md.
+
+2. **GH #403 (ANTHROPIC_API_KEY missing from GitHub Actions secrets) must be resolved.** The `kb-autopopulate.yml` workflow calls the Anthropic API — it will fail even after Step 9G is fixed if the `ANTHROPIC_API_KEY` secret is absent from the repository Actions secrets. Step 9G fix is **necessary but not sufficient** for KB health restoration. Both this fix and #403 must be resolved together.
+
+The Step 9G MCP fix is the right recommendation — the gh CLI root cause is real and confirmed. But the end-to-end chain includes #403 as a second required fix. Run 122 mandate items 1-3 explicitly verify both.
+
+---
+
 ## Verification After Implementation
 
 ```bash

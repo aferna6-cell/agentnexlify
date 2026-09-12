@@ -20,6 +20,11 @@
     "step9g_mcp_fix": "THIS RUN WINNER",
     "step9l_stale_flag": "PASS (corrected run 120)"
   },
+  "prerequisites": {
+    "mcp_tool_availability": "mcp__github__actions_run_trigger presence in nightly CCR sessions unverified — confirm before implementing",
+    "gh_issue_403": "ANTHROPIC_API_KEY missing from GH Actions secrets — kb-autopopulate.yml will fail even after Step 9G fix; #403 must be resolved concurrently",
+    "recommendation_only": "This PR contains subconscious recommendation artifacts only — no SKILL.md changes per subconscious design (RECOMMENDS, does not implement)"
+  },
   "evidence_digest": [
     "KB 17d stale; Step 9G silently fails in cloud CCR (gh CLI unavailable)",
     "Step 9E escalation implemented (mandate item 1 PASS)",
