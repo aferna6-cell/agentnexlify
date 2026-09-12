@@ -243,6 +243,12 @@ async def _fetch_page_text(url: str) -> str:
                 # to prevent Location: //evil.com/ from silently inheriting scheme.
                 if location.startswith(("http://", "https://")):
                     next_url = location
+                elif location.startswith("//"):
+                    logger.debug(
+                        "Enrichment rejected protocol-relative redirect location: %s",
+                        location,
+                    )
+                    return ""
                 elif location.startswith("/"):
                     next_url = urljoin(pinned.url, location)
                 else:
