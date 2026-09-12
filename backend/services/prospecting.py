@@ -31,6 +31,7 @@ from urllib.parse import urljoin
 import httpx
 
 from backend.config import settings
+from backend.services.url_validation import pin_safe_url
 from backend.services.tenant_scope import (
     tenant_insert,
     tenant_select,
