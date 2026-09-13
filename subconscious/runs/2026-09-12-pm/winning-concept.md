@@ -1,71 +1,52 @@
 # Winning Concept — Run 2026-09-12-pm (Run 122)
 
-**Winner:** Step 9E — Threshold Consistency Fix + days_remaining Display
+**Winner:** Step 9E — Countdown + credential-identity dedup fix
 **Category:** workflow_efficiency / operational
 **Effort:** XS
 **Confidence:** HIGH
-**Source:** Run 121 mandate item 4 + SKILL.md inconsistency (line 289 vs line 294)
+**Source:** Run 121 mandate item 4 + direct read of current Step 9E
 
 ---
 
 ## Problem
 
-`.claude/skills/nightly-commit-review/SKILL.md` Step 9E block has inconsistent threshold logic:
+`.claude/skills/nightly-commit-review/SKILL.md` Step 9E currently uses the right 14-day warning threshold numerically but expresses it indirectly and has unsafe global dedup:
 
-- **Line 289:** `if any credential approaching expiry (days_since_rotation >= 76)` — fires at 76 days elapsed
-- **Line 294 (issue title):** `"Credential rotation due in ≤14 days: [credential name(s)]"` — says ≤14 days
-
-The title claims "≤14 days" but the trigger doesn't compute `days_remaining` at all. There is no `days_remaining` variable anywhere in the Step 9E block. The GH issue filing and dedup logic (lines 290-299) were added in a prior run — that part works.
+- `days_since_rotation >= 76` is equivalent to `90 - days_since_rotation <= 14` for the current 90-day interval. This is not an earlier-warning behavior change; it is a clarity/countdown change.
+- The issue title says `≤14 days`, but the block never computes or displays `days_remaining`.
+- Dedup searches only for any open issue with label `credential-rotation`, not for the specific credential identity. With multiple credentials, that can comment on the wrong tracker or suppress creation of a needed tracker.
 
 **Current state (2026-09-12):**
-- AUTOPILOT_GH_TOKEN: ~70d elapsed, expires ~2026-10-02 (20 days)
-- Current trigger fires at 76d → ~2026-09-18 (6 days from now)
-- At firing, `days_remaining ≈ 14` — buffer is fine but undisplayed
-- Without `days_remaining` in the comment, humans don't see the countdown
+- AUTOPILOT_GH_TOKEN: ~70d elapsed, next due ~2026-10-02 (20 days)
+- Current warning threshold fires at 76d, around 2026-09-18, leaving ~14 days
+- Existing tracker #399 should be reused for AUTOPILOT_GH_TOKEN rather than creating or commenting on an unrelated credential issue
 
 ---
 
 ## Proposed Change
 
-Edit `.claude/skills/nightly-commit-review/SKILL.md` Step 9E block, line ~289:
+Edit `.claude/skills/nightly-commit-review/SKILL.md` Step 9E:
 
-### Change 1: Add days_remaining calculation
-```
-CURRENT (line 289):
-  If any credential approaching expiry (days_since_rotation >= 76):
-
-PROPOSED:
-  days_remaining = interval_days - days_since_rotation
-  If days_remaining <= 14:
-```
-
-### Change 2: Add days_remaining to log line (line ~300)
-```
-CURRENT log line:
-  "Step 9E: {N} credentials checked, {M} approaching expiry (>=76 days), {K} unknown state"
-
-PROPOSED log line:
-  "Step 9E: {N} credentials checked, {M} approaching threshold ({days_remaining}d remaining), {K} unknown state"
-```
-
-### Change 3: Add days_remaining to GH comment body (line ~298)
-In the `add_issue_comment` body, include: `"Days remaining: {days_remaining} (threshold: {interval_days - 76}d before {interval_days}d rotation interval)"`
+1. Compute `days_remaining = interval_days - days_since_rotation` and use `days_remaining <= 14` as the readable equivalent of the current 76-day warning threshold.
+2. Include credential name plus `days_remaining` in the nightly log and GitHub comment.
+3. Deduplicate by credential identity across open human-action/ops/credential-rotation trackers, reusing an existing matching tracker such as #399 for AUTOPILOT_GH_TOKEN. Do not treat any arbitrary open `credential-rotation` issue as a match.
+4. Unknown or unset rotation dates remain a separate `unknown_state` path and must not be assigned a fabricated countdown.
 
 ---
 
 ## Impact
 
-- Removes threshold inconsistency (trigger fires `days_remaining <= 14`, matches issue title "≤14 days")
-- Humans see countdown in every GH comment and nightly log
-- AUTOPILOT_GH_TOKEN expiry tracked visibly until rotated
-- XS edit — 3 targeted changes within existing block
+- Preserves the existing 14-day warning window while making the countdown explicit and auditable
+- Prevents cross-credential issue dedup mistakes
+- Reuses existing credential-specific trackers instead of creating duplicates
+- Keeps unknown-date credentials honest rather than inventing expiry math
 
 ---
 
 ## Run 123 Mandate
 
 1. Grep confirms `days_remaining` and `<= 14` in Step 9E block — PASS/FAIL
-2. Verify AUTOPILOT_GH_TOKEN: GH #399 has a countdown comment from the nightly after implementation
-3. Promote Step 9J (limit=5) to winner if Step 9E confirmed implemented
-4. Check if tool outcome coverage GH issue was filed opportunistically
-5. os_tool_executions.py line count: if ≥480L, consider Step 9M
+2. Verify Step 9E searches/reuses trackers by credential identity, not globally by `credential-rotation` label
+3. Verify AUTOPILOT_GH_TOKEN reuses GH #399 and posts a countdown after implementation
+4. Promote Step 9J (limit=5) to winner if Step 9E confirmed implemented
+5. Check if tool outcome coverage GH issue was filed opportunistically
