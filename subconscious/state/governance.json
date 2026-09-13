@@ -235,25 +235,24 @@
       "source_run": 121,
       "effort": "XS",
       "carry_forward_count": 0,
-      "autonomous_executable_run": 124,
-      "escalation_path": "Run 122: 1st carry-forward. Run 123: 2nd. Run 124: autonomous-executable.",
-      "evidence": "KB 17d stale; gh CLI unavailable in cloud CCR sessions; mcp__github__actions_run_trigger confirmed available."
+      "autonomous_executable_run": null,
+      "escalation_path": "Run 122: 1st carry-forward. Run 123: 2nd. Autonomous-executable BLOCKED pending verification that mcp__github__actions_run_trigger is available in nightly CCR sessions — do not schedule autonomous execution until confirmed.",
+      "evidence": "KB stale; gh CLI unavailable in cloud CCR sessions; mcp__github__actions_run_trigger availability in nightly CCR UNVERIFIED — must confirm before implementation."
     },
     {
-      "title": "Step 9E credential expiry escalation — early warning (days_remaining <= 10) + GH issue filing (run 119 winner)",
-      "date": "2026-09-08",
+      "title": "Step 9E countdown display + credential-identity dedup (run 122 winner; run 119 early-warning superseded by correction)",
+      "date": "2026-09-12",
       "confidence": "HIGH",
-      "status": "implemented",
-      "implemented": true,
-      "implemented_date": "2026-09-10",
-      "implemented_by": "subconscious run 120 autonomous-executable (2nd carry-forward escalation). days_remaining, <= 10, add_issue_comment all present in SKILL.md — confirmed run 121 grep (9 hits).",
-      "carry_forward_count": 2,
-      "autonomous_executable": true,
+      "status": "recommendation",
+      "implemented": false,
+      "carry_forward_count": 0,
+      "autonomous_executable": false,
       "requires_human": false,
       "category": "operational",
-      "source_run": 119,
+      "source_run": 122,
       "effort": "XS",
-      "evidence": "AUTOPILOT_GH_TOKEN 69d since rotation (threshold 76d). 3 consecutive nightlies logged credential warning with zero human action."
+      "run_122_correction": "The existing days_since_rotation >= 76 check IS already the 14-day warning for a 90-day interval (76 = 90 - 14). The run 119/120 'early warning (days_remaining <= 10)' variant is superseded. Two actual remaining improvements: (1) compute days_remaining = interval_days - days_since_rotation and use days_remaining <= 14 as the human-readable display metric (same firing point, clearer output); (2) dedup existing-issue search by credential identity (search for open issue whose title contains specific token name, e.g. AUTOPILOT_GH_TOKEN), not globally by credential-rotation label (which can update/suppress wrong tracker when multiple credentials near rotation).",
+      "evidence": "AUTOPILOT_GH_TOKEN ~70d since rotation as of 2026-09-12; due 2026-10-02 (~20 days). Step 9E fires at ~2026-09-18 (76d threshold). GH issue filing works; days_remaining display and credential-identity dedup not yet implemented."
     },
     {
       "title": "Step 9L: AI metering coverage nightly check in nightly-commit-review SKILL.md (run 115 winner)",
