@@ -5,8 +5,6 @@ invoking Claude. Confirms error semantics are preserved across the
 local_seo_handlers god-class split.
 """
 
-from __future__ import annotations
-
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
