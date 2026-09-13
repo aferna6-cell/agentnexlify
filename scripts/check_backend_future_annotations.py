@@ -18,9 +18,7 @@ PATTERN = re.compile(
     re.MULTILINE,
 )
 
-KNOWN_VIOLATIONS = {
-    Path("backend/tests/test_website_connect.py"),
-}
+KNOWN_VIOLATIONS = set()
 
 
 def find_violations() -> set[Path]:
