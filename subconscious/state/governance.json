@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-09-11-pm",
-  "total_runs": 120,
+  "last_run": "2026-09-12-pm",
+  "total_runs": 122,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -225,6 +225,35 @@
   "run_116_mandate": "1. Verify Step 9L present in .claude/skills/nightly-commit-review/SKILL.md: grep 'Step 9L' — if 0, autonomous-executable escalation FIRES (2nd carry-forward = run 117 mandate). 2. First nightly with Step 9L: does nightly log contain 'Step 9L:' line? How many violations? How many GH issues filed? 3. os_tool_executions.py: still 0 commits since f22ef04 (last: ~2026-08-30)? If 8d+ stable: god class split (783L service + 411L router) is run 117 winner if Step 9L implemented. 4. GH #800 SUPABASE_ACCESS_TOKEN: set in Railway after GH #800 comment? Brain connector health check. 5. Step 9J: read nightly session transcript to identify where the 17-skip token budget limit hits — which step consumes the budget before Step 9J processes all 19 PRs?",
   "run_116_mandate_executed": "EXECUTED 2026-09-06-pm (run 117). All mandate items checked: (1) Step 9L in SKILL.md: ABSENT - grep returns 0; 2nd carry-forward fires; autonomous-executable escalation at run 118 (3rd carry-forward per precedent). (2) AI metering violations: 30+ unguarded functions found by check_ai_metering.py (commit 1c5b749) across 16 router files and 14 service files - detector confirmed working with 325 lines of tests. (3) Step 9J token budget: UNCHANGED - 17/19 Dependabot PRs still skipped. (4) os_tool_executions.py: CONFIRMED STABLE - 8d+ since f22ef04, 783L (run 118 god class split candidate if Step 9L confirmed). (5) GH #800 SUPABASE_ACCESS_TOKEN: NOT SET - brain connector 44d+ stale. (6) Step 9G cloud trigger: CONFIRMED BROKEN - gh CLI unavailable in cloud sessions; fix in parking lot for run 118.",
   "active_directions": [
+    {
+      "title": "Step 9G MCP fix — replace gh CLI with mcp__github__actions_run_trigger (run 121 winner)",
+      "date": "2026-09-12",
+      "confidence": "HIGH",
+      "status": "recommendation",
+      "implemented": false,
+      "category": "operational",
+      "source_run": 121,
+      "effort": "XS",
+      "carry_forward_count": 0,
+      "autonomous_executable_run": null,
+      "escalation_path": "Run 122: 1st carry-forward. Run 123: 2nd. Autonomous-executable BLOCKED pending verification that mcp__github__actions_run_trigger is available in nightly CCR sessions — do not schedule autonomous execution until confirmed.",
+      "evidence": "KB stale; gh CLI unavailable in cloud CCR sessions; mcp__github__actions_run_trigger availability in nightly CCR UNVERIFIED — must confirm before implementation."
+    },
+    {
+      "title": "Step 9E countdown display + credential-identity dedup (run 122 winner; run 119 early-warning superseded by correction)",
+      "date": "2026-09-12",
+      "confidence": "HIGH",
+      "status": "recommendation",
+      "implemented": false,
+      "carry_forward_count": 0,
+      "autonomous_executable": false,
+      "requires_human": false,
+      "category": "operational",
+      "source_run": 122,
+      "effort": "XS",
+      "run_122_correction": "The existing days_since_rotation >= 76 check IS already the 14-day warning for a 90-day interval (76 = 90 - 14). The run 119/120 'early warning (days_remaining <= 10)' variant is superseded. Two actual remaining improvements: (1) compute days_remaining = interval_days - days_since_rotation and use days_remaining <= 14 as the human-readable display metric (same firing point, clearer output); (2) dedup existing-issue search by credential identity (search for open issue whose title contains specific token name, e.g. AUTOPILOT_GH_TOKEN), not globally by credential-rotation label (which can update/suppress wrong tracker when multiple credentials near rotation).",
+      "evidence": "AUTOPILOT_GH_TOKEN ~70d since rotation as of 2026-09-12; due 2026-10-02 (~20 days). Step 9E fires at ~2026-09-18 (76d threshold). GH issue filing works; days_remaining display and credential-identity dedup not yet implemented."
+    },
     {
       "title": "Step 9L: AI metering coverage nightly check in nightly-commit-review SKILL.md (run 115 winner)",
       "date": "2026-09-05",
@@ -2093,5 +2122,48 @@
     ],
     "total_runs": "119 → 120",
     "last_run": "2026-09-11 → 2026-09-11-pm"
+  },
+  "run_121_mandate": {
+    "source": "run_121_winner",
+    "winner": "Step 9G MCP fix — replace gh CLI with mcp__github__actions_run_trigger",
+    "items": [
+      "Verify grep: mcp__github__actions_run_trigger present, gh workflow run absent from Step 9G",
+      "Did Step 9G fire in next nightly? Check nightly log for 'Step 9G: kb-autopopulate triggered — SUCCESS'",
+      "knowledge-base/log.md received new entry after implementation?",
+      "AUTOPILOT_GH_TOKEN: at ~76d threshold — did Step 9E fire and GH #399 get a comment?",
+      "SUPABASE_ACCESS_TOKEN: still unknown date? If yes → file GH issue (parking lot Idea 4)",
+      "os_tool_executions.py line count: if >=480L → consider Step 9M (parking lot Idea 3)"
+    ]
+  },
+  "run_122_governance_correction": {
+    "step9e_gaps": "TWO GAPS — (1) No days_remaining display: days_since_rotation >= 76 is the correct 14-day warning (76 = 90 − 14), but log/comment show rotation-day count, not days-left. Fix: compute days_remaining = interval_days - days_since_rotation; surface as days_remaining <= 14 (same firing point, human-readable). (2) Dedup by label only: searching globally by credential-rotation label can update/suppress the wrong tracker when multiple credentials near rotation. Fix: search for open issue whose title contains the token name (e.g. AUTOPILOT_GH_TOKEN).",
+    "step9g_status": "PENDING VERIFICATION — run 121 recommended MCP replacement, not yet verified in nightly CCR. Remains parking lot.",
+    "step9j_status": "PARKING LOT — 19 PRs confirmed, limit=5 fix ready for run 123.",
+    "autopilot_gh_token": "~70d elapsed, expires 2026-10-02 (20 days). Step 9E should fire at ~76d (~2026-09-18).",
+    "ideas_generated": 5,
+    "winner": "Step 9E countdown display + credential-identity dedup",
+    "parking_lot": [
+      "Step 9J limit=5 oldest PRs (run 123)",
+      "Step 9G MCP trigger (verify in nightly CCR first)",
+      "Tool outcome coverage GH issue (file opportunistically)"
+    ],
+    "deferred": [
+      "os_tool_executions.py split — unstable",
+      "SSRF redirect audit — low evidence",
+      "Skill freshness check — low urgency"
+    ],
+    "total_runs": "121 → 122",
+    "last_run": "2026-09-12 → 2026-09-12-pm"
+  },
+  "run_122_mandate": {
+    "source": "run_122_winner",
+    "winner": "Step 9E countdown display + credential-identity dedup",
+    "items": [
+      "Grep: days_remaining and <= 14 in Step 9E block — PASS required; also verify dedup searches by token name in issue title",
+      "Verify GH #399 has countdown comment from next nightly after implementation",
+      "AUTOPILOT_GH_TOKEN rotation status — expires 2026-10-02",
+      "Promote Step 9J (limit=5) to winner if Step 9E confirmed",
+      "os_tool_executions.py line count: ≥480L → consider Step 9M"
+    ]
   }
 }
