@@ -1,23 +1,23 @@
 # Debate Log — Run 2026-09-12-pm (Run 122)
 
-**Top 3 ideas debated:** Idea 1 (Step 9E threshold fix), Idea 2 (Step 9J limit=5), Idea 3 (GH issue tool outcome audit)
+**Top 3 ideas debated:** Idea 1 (Step 9E countdown display + credential-identity dedup), Idea 2 (Step 9J limit=5), Idea 3 (GH issue tool outcome audit)
 
 ---
 
-## Idea 1: Step 9E — Threshold Fix + days_remaining Display
+## Idea 1: Step 9E — Countdown Display + Credential-Identity Dedup
 
 **Category:** workflow_efficiency / operational
 **Effort:** XS
 **Confidence entering debate:** HIGH
 
 ### Context from run 121 mandate check
-Run 121 mandate item 4 asked: "AUTOPILOT_GH_TOKEN: at ~76d threshold — did Step 9E fire and GH #399 get a comment?" — status unknown. The SKILL.md Step 9E block (line 289) still fires at `days_since_rotation >= 76`, while the issue title on line 294 says "≤14 days" — inconsistent threshold logic. `days_remaining` variable is absent from the block.
+Run 121 mandate item 4 asked: "AUTOPILOT_GH_TOKEN: at ~76d threshold — did Step 9E fire and GH #399 get a comment?" — status unknown. The SKILL.md Step 9E block (line 289) fires at `days_since_rotation >= 76`, which IS already the 14-day warning equivalent for a 90-day interval (76 = 90 − 14). Two gaps remain: (1) `days_remaining` variable is absent — humans reading the log see the rotation-day count, not how many days are left; (2) existing-issue dedup searches globally by the `credential-rotation` label, not by credential identity, so it can update/suppress the wrong tracker when multiple credentials are near rotation.
 
 ### Challenge
 > "A previous session (run 121) marked this as PASS in its mandate check. If it's PASS, why is this still a winner? And the GH issue filing and dedup logic was added — doesn't that solve the urgent problem?"
 
 ### Defend
-The GH issue filing and dedup (lines 290-299) were added — that part works. The remaining gap: (1) the trigger threshold `days_since_rotation >= 76` fires AT 76 days, giving ~14 days of warning before the 90-day rotation interval. The issue title claims "≤14 days" but the trigger logic doesn't compute days_remaining at all. (2) No days_remaining countdown in the log line or comment body. AUTOPILOT_GH_TOKEN is at ~70d as of 2026-09-12, expires 2026-10-02. With the current threshold firing at 76d (~2026-09-18), and expiry at ~2026-10-02, there's only 14 days buffer. If Step 9E fires correctly on 2026-09-18 nightly, that gives 14 days to rotate. The fix makes the title and trigger consistent (`days_remaining = interval - days_since_rotation`, fire when `days_remaining <= 14`) and adds the countdown to GH comments so humans see urgency.
+The GH issue filing was added — that part works. Two gaps remain. First, no `days_remaining` countdown: the existing `days_since_rotation >= 76` check is the correct 14-day warning (76 = 90 − 14), but humans reading the log line and GH comment see the rotation-day count, not a clear "14 days left" number. Computing `days_remaining = interval_days - days_since_rotation` and surfacing it as the display metric (`days_remaining <= 14`) is equivalent at the same firing point, but immediately legible. Second, dedup searches by `credential-rotation` label globally — if AUTOPILOT_GH_TOKEN and SUPABASE_KEY both hit the warning threshold in the same window, the dedup can match and update the wrong issue. Fix: search for an open issue whose title contains the specific token name (e.g., "AUTOPILOT_GH_TOKEN") to ensure each tracker is credential-specific. AUTOPILOT_GH_TOKEN is at ~70d as of 2026-09-12, expires 2026-10-02 — 20-day window to rotate once Step 9E fires on ~2026-09-18.
 
 ### Verdict: **SURVIVES** — Winner
 
@@ -61,10 +61,10 @@ Evidence from #841 + #844 is a signal but not proof. Filing the issue is XS and 
 
 | Idea | Verdict | Disposition |
 |------|---------|-------------|
-| Step 9E threshold + days_remaining | WINS | Run 122 winner — XS fix, closes inconsistency |
+| Step 9E countdown display + credential-identity dedup | WINS | Run 122 winner — XS fix, adds clarity + closes dedup gap |
 | Step 9J limit=5 | PARKING LOT | Run 123 candidate |
 | GH issue tool outcome audit | WEAKENED | File opportunistically |
 | SSRF redirect audit | Not debated | S effort, MEDIUM-LOW — defer |
 | Skill freshness check | Not debated | M effort, LOW urgency — defer |
 
-**Winner: Step 9E threshold fix + days_remaining display**
+**Winner: Step 9E countdown display + credential-identity dedup**

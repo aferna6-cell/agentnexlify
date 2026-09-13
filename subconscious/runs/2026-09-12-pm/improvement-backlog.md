@@ -2,11 +2,11 @@
 
 ## Active (current winner + parking lot)
 
-### [WINNER] Step 9E: Threshold Fix + days_remaining Display
+### [WINNER] Step 9E: Countdown Display + Credential-Identity Dedup
 - **Effort:** XS
 - **File:** `.claude/skills/nightly-commit-review/SKILL.md` lines ~289, ~298, ~300
 - **Urgency:** HIGH — AUTOPILOT_GH_TOKEN expires 2026-10-02
-- **Change:** Replace `days_since_rotation >= 76` with `days_remaining = interval_days - days_since_rotation; if days_remaining <= 14`. Add countdown to log line and GH comment.
+- **Change:** Compute `days_remaining = interval_days - days_since_rotation` and use `days_remaining <= 14` as the readable equivalent of the existing `>= 76` check (same firing point for a 90-day interval — clarity change, not an earlier-warning change). Add countdown to log line and GH comment body. Dedup existing-issue search by credential identity (search for open issue whose title contains the specific token name, e.g. "AUTOPILOT_GH_TOKEN"), not globally by the `credential-rotation` label (which can update/suppress the wrong tracker).
 
 ### [PARKING LOT] Step 9J: Cap search_pull_requests to limit=5
 - **Effort:** XS
@@ -51,6 +51,6 @@
 ## Governance notes
 
 - Run 122 total_runs: 122
-- Active direction: Step 9E threshold fix (from mandate item 4 of run 121)
-- Next winner candidate: Step 9J (limit=5) once Step 9E threshold fix lands
+- Active direction: Step 9E countdown display + credential-identity dedup (from mandate item 4 of run 121)
+- Next winner candidate: Step 9J (limit=5) once Step 9E countdown display + dedup lands
 - AUTOPILOT_GH_TOKEN expiry: ~2026-10-02 — rotate soon
