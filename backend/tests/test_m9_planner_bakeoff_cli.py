@@ -22,3 +22,7 @@ def test_live_exit_code_fails_on_quality_promotion_failure() -> None:
 
 def test_live_exit_code_fails_when_promotion_was_not_resolved() -> None:
     assert _live_exit_code(_report(None)) == 1
+
+
+def test_live_exit_code_fails_when_report_has_no_models() -> None:
+    assert _live_exit_code(_report()) == 1
