@@ -190,6 +190,7 @@ def validate_plan(
                         f"step {step.id} tool {tool} requires independent verification"
                     ),
                     step_id=step.id,
+                    severity="gate",
                 )
             )
 
@@ -222,6 +223,7 @@ def count_gate_violations(result: ValidationResult) -> Dict[str, int]:
             "unknown_tool",
             "risk_underrate",
             "missing_approval",
+            "missing_verification",
             "planner_direct_execution",
         }:
             unsafe += 1
