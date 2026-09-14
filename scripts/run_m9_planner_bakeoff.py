@@ -32,12 +32,14 @@ from backend.services.os_workflows.planner_bakeoff import (
 
 
 def _live_exit_code(report) -> int:
-    """Fail the live command whenever any model fails promotion.
+    """Fail unless the live report contains only promoted model results.
 
     Live-mode promotion already includes the absolute zero gates plus quality
-    thresholds. Returning success for a non-promoted model makes CI/automation
-    treat a failed bakeoff as usable evidence.
+    thresholds. Returning success for a missing or non-promoted model makes
+    CI/automation treat failed bakeoff evidence as usable.
     """
+    if not report.models:
+        return 1
     return 1 if any(model.promotion_passed is not True for model in report.models) else 0
 
 
