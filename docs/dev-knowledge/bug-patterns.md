@@ -18894,3 +18894,20 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(m9): fail live bakeoff CLI on promotion failure (#853)
+
+* fix(m9): fail live bakeoff CLI on promotion failure (#769)
+
+* test(m9): guard live bakeoff promotion exit status (#769)
+
+* fix(m9): fail closed when live bakeoff has no model results (#769)
+
+* test(m9): cover empty live bakeoff report (#769)
+**Date:** 2026-09-14
+**Commit:** 580fe0a
+**Author:** aferna6-cell
+**Files Changed:** backend/tests/test_m9_planner_bakeoff_cli.py,scripts/run_m9_planner_bakeoff.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
