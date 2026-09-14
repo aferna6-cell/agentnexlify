@@ -47,7 +47,7 @@ pywebpush>=2.0.0,<3
 # PyYAML — module-level `import yaml` in services/attribution_service.py, which is
 # pulled onto the boot path by auth/leads/billing/many routers via services/activity.py.
 # Unguarded → a clean deploy missing it crashes at startup. Found 2026-06-23 untracked-deps audit.
-PyYAML>=6.0,<7
+PyYAML>=6.0.3,<7
 # qrcode[pil] — used in routers/widget_config.py QR endpoint (lazy import inside the route).
 # Pulls Pillow as its image backend. Missing it 500s the QR-code endpoint. Audit 2026-06-23.
 qrcode[pil]>=8.2,<9
