@@ -13,8 +13,6 @@ Service tests import only backend.services.website_connect.
 Router tests use SyncASGITestClient + JWT isolation.
 """
 
-from __future__ import annotations
-
 import io
 import logging
 import uuid
