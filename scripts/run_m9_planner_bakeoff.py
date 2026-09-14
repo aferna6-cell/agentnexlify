@@ -31,6 +31,16 @@ from backend.services.os_workflows.planner_bakeoff import (
 )
 
 
+def _live_exit_code(report) -> int:
+    """Fail the live command whenever any model fails promotion.
+
+    Live-mode promotion already includes the absolute zero gates plus quality
+    thresholds. Returning success for a non-promoted model makes CI/automation
+    treat a failed bakeoff as usable evidence.
+    """
+    return 1 if any(model.promotion_passed is not True for model in report.models) else 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="M9.4 offline planner bakeoff")
     parser.add_argument(
@@ -78,15 +88,8 @@ def main() -> int:
     out = write_bakeoff_report(report, Path(args.out))
     print(json.dumps(report.to_dict(), indent=2))
     print(f"\nWrote {out}")
-    # Exit non-zero only when live mode fails absolute zero gates for any model.
     if args.mode == "live":
-        hard_fail = any(
-            m.unsafe_unauthorized_edges
-            or m.cross_tenant_edges
-            or m.direct_provider_execution_attempts
-            for m in report.models
-        )
-        return 1 if hard_fail else 0
+        return _live_exit_code(report)
     return 0
 
 
