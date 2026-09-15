@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-09-11-pm",
-  "total_runs": 120,
+  "last_run": "2026-09-15",
+  "total_runs": 121,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -2093,5 +2093,36 @@
     ],
     "total_runs": "119 → 120",
     "last_run": "2026-09-11 → 2026-09-11-pm"
+  },
+  "run_121_governance_correction": {
+    "step9e_status": "NOT YET IMPLEMENTED — nightly-2026-09-15 Step 9E reports '0 approaching expiry' under old days_since_rotation >= 76 logic. AUTOPILOT_GH_TOKEN at 73d (3 days from firing at 76d). New days_remaining <= 10 threshold would have fired 7 days ago. 2nd carry-forward. Autonomous-executable fires at run 122 (3rd consecutive carry per precedent).",
+    "step9g_status": "BROKEN — nightly-2026-09-15 Step 9G: 'gh CLI not available in this environment. Cannot trigger workflow run.' Two unverified prerequisites: (1) mcp__github__actions_run_trigger availability in headless CCR sessions; (2) workflow_dispatch trigger in kb-autopopulate.yml. Parked for run 122 after verification.",
+    "step9l_status": "OPERATIONAL — nightly-2026-09-15 Step 9L filed GH #871 for 44 violations across 20 unique router functions. Dedup gap identified: per-function search won't find systemic summary next nightly. Fix parked for run 122.",
+    "step9i_status": "OPERATIONAL — nightly-2026-09-15 Step 9I found 90+ violations, filed GH #870 as systemic summary.",
+    "step9j_status": "PARTIAL — nightly-2026-09-15 merged #868 (pydantic-settings), 5 skipped appropriately.",
+    "step9k_status": "PASS — nightly-2026-09-15: 0 open subconscious PRs.",
+    "autopilot_gh_token": "73d since rotation (threshold 76d, interval 90d). Expires 2026-10-02. 17 days. days_remaining=3 under new threshold. GH #399 open 73d, 0 comments.",
+    "brain_pat": "73d since rotation. Same state as AUTOPILOT_GH_TOKEN.",
+    "supabase_access_token": "unknown — last_rotated not filled in by human. GH issue for unknown state not yet filed.",
+    "kb_staleness": "20 days stale (last: 2026-08-26). Step 9G broken. GH #403 open.",
+    "brain_connector_staleness": "54 days stale. GH #800 open.",
+    "ideas_generated": 5,
+    "winner": "Step 9E credential expiry escalation — 2nd carry-forward",
+    "parking_lot": [
+      "Step 9G MCP fix (verify prerequisites in run 122: mcp__github__actions_run_trigger availability + workflow_dispatch in kb-autopopulate.yml)",
+      "Step 9L dedup fix (run 122 candidate: systemic-label search before filing duplicate summary issue)",
+      "Step 9E auto-close (run 123 candidate: close credential GH issues when rotation confirmed)",
+      "os_tool_executions.py god class split (stability window: need 7+ days with 0 commits, re-evaluate run 123)"
+    ],
+    "killed": [],
+    "total_runs": "120 → 121",
+    "last_run": "2026-09-11-pm → 2026-09-15",
+    "questions_for_run_122": [
+      "Was Step 9E updated with new threshold? If not: 3rd carry-forward = autonomous implementation.",
+      "Did AUTOPILOT_GH_TOKEN get rotated after GH #399 comment? Expires 2026-10-02.",
+      "Does kb-autopopulate.yml have workflow_dispatch trigger? (verify before Step 9G fix)",
+      "Is mcp__github__actions_run_trigger available in headless CCR nightly sessions?",
+      "Did Step 9L file a duplicate GH issue on 2026-09-16 nightly?"
+    ]
   }
 }

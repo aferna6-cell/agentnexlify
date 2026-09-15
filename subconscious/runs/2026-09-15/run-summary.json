@@ -1,0 +1,52 @@
+{
+  "run": 121,
+  "date": "2026-09-15",
+  "winner": "Step 9E credential expiry escalation: days_remaining <= 10 threshold + GH comment filing",
+  "category": "workflow_efficiency",
+  "effort": "XS",
+  "confidence": "HIGH",
+  "carry_forward_count": 2,
+  "autonomous_executable_at_run": 122,
+  "mandate_check": {
+    "step9e_implemented": false,
+    "step9e_evidence": "nightly-2026-09-15 Step 9E: 'AUTOPILOT_GH_TOKEN: 73 days — under 76-day threshold. 0 approaching expiry.' Old logic still active. New days_remaining <= 10 threshold not present.",
+    "autopilot_gh_token": "73d since rotation, expires 2026-10-02 (17 days)",
+    "brain_pat": "73d since rotation, same state",
+    "supabase_access_token": "unknown — human has not filled in date",
+    "step9g_broken": "gh CLI unavailable in CCR. Two prerequisites unverified.",
+    "step9l_operational": "GH #871 filed (44 violations, 20 functions). Dedup gap identified.",
+    "step9i_operational": "GH #870 filed (90+ violations, systemic)",
+    "step9j_partial": "#868 merged (pydantic-settings), 5 skipped",
+    "step9k_pass": "0 open subconscious PRs",
+    "kb_staleness": "20 days stale (last: 2026-08-26)",
+    "brain_connector_staleness": "54 days stale, GH #800 open"
+  },
+  "ideas_count": 5,
+  "debate_verdicts": {
+    "idea_1_step9e": "SURVIVES → WINNER (dedup handled, 17d urgency, 2nd carry-forward)",
+    "idea_2_step9g_mcp_fix": "WEAKENED → parking lot (unverified prerequisites: MCP tool in CCR + workflow_dispatch in kb-autopopulate.yml)",
+    "idea_3_step9l_dedup": "WEAKENED → parking lot (real problem, not time-bound, run 122 candidate)"
+  },
+  "parking_lot": [
+    "Step 9G MCP fix — verify prerequisites in run 122",
+    "Step 9L dedup fix — run 122 candidate",
+    "Step 9E auto-close — run 123 candidate",
+    "os_tool_executions.py god class split — re-evaluate run 123"
+  ],
+  "run_122_mandate": [
+    "Verify days_remaining and <= 10 threshold present in Step 9E — if absent: autonomous implementation (3rd carry-forward)",
+    "Did Step 9E fire on next nightly? GH #399 new comment?",
+    "AUTOPILOT_GH_TOKEN rotated before 2026-10-02?",
+    "Brain PAT rotated?",
+    "SUPABASE_ACCESS_TOKEN GH issue filed for unknown state?",
+    "Step 9G: verify kb-autopopulate.yml workflow_dispatch + mcp__github__actions_run_trigger in headless CCR",
+    "Step 9L: did nightly-2026-09-16 file duplicate systemic issue?"
+  ],
+  "implementation_sketch": "subconscious/runs/2026-09-15/winning-concept.md",
+  "escalation_path": {
+    "run_119": "1st recommendation",
+    "run_120": "1st carry-forward → RECOMMEND",
+    "run_121": "2nd carry-forward → RECOMMEND with escalation flag",
+    "run_122": "3rd carry-forward = autonomous-executable (same channel as Steps 9F/9G/9I/9J/9K/9L)"
+  }
+}
