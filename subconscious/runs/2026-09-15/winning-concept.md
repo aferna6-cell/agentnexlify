@@ -82,7 +82,7 @@ elif last_rotated == "unknown":
 **5. Verification after implementation:**
 ```bash
 grep 'days_remaining' .claude/skills/nightly-commit-review/SKILL.md
-grep '<= 10' .claude/skills/nightly-commit-review/SKILL.md  
+grep '<= 10' .claude/skills/nightly-commit-review/SKILL.md
 grep 'add_issue_comment' .claude/skills/nightly-commit-review/SKILL.md
 ```
 All three must return results in the Step 9E block.
