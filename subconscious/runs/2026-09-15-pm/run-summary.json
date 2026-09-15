@@ -1,0 +1,60 @@
+{
+  "run_id": "2026-09-15-pm",
+  "run_number": 121,
+  "date": "2026-09-15",
+  "period": "pm",
+  "winner": {
+    "title": "Step 9E Credential Expiry Escalation — Earlier Warning + GH Issue Filing",
+    "category": "workflow_efficiency",
+    "subcategory": "operational",
+    "effort": "XS",
+    "confidence": "HIGH",
+    "carry_forward_count": 2,
+    "autonomous_executable_at_run": 122
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "ideas_killed": 2,
+  "ideas_parked": 2,
+  "ideas_weakened": 2,
+  "killed_ideas": ["Step 9J major version PR escalation"],
+  "weakened_ideas": [
+    "Step 9G MCP trigger fix (prerequisite unverified)",
+    "AI metering violations ai-ready promotion (loop status unverified)"
+  ],
+  "evidence_sources": [
+    "docs/dev-knowledge/nightly-reviews/2026-09-15.md",
+    "subconscious/runs/2026-09-11-pm/winning-concept.md",
+    "subconscious/state/memory.jsonl (runs 116-120)",
+    "subconscious/state/governance.json"
+  ],
+  "mandate_check": {
+    "step_9e_days_remaining_implemented": false,
+    "step_9e_nightly_fired": false,
+    "autopilot_gh_token_rotated": false,
+    "brain_pat_issue_filed": false,
+    "supabase_token_date_known": false,
+    "step_9g_mcp_fix_evaluated": "weakened - prerequisites unverified",
+    "governance_step_9l_stale_flag": "corrected in run 120"
+  },
+  "key_observations": [
+    "AUTOPILOT_GH_TOKEN at 73d (expires 2026-10-02) — 10-day early warning window missed 7 days running",
+    "Step 9D: 0 ai-ready issues (major state change from 30-40 stalled issues in prior months)",
+    "GH #870: 90+ files missing Depends(block_demo_role) filed",
+    "GH #871: 44 AI metering violations filed (20 router + 24 service)",
+    "Step 9G: gh CLI unavailable in cloud sessions — KB remains stale 20 days",
+    "Brain connector: 54 days stale, comment added to GH #800",
+    "Step 9K: 0 open subconscious PRs (clean state)"
+  ],
+  "next_run_mandate": [
+    "1. Verify Step 9E days_remaining <= 10 implemented",
+    "2. Did Step 9E fire? GH #399 comment added?",
+    "3. AUTOPILOT_GH_TOKEN rotated before 2026-10-02?",
+    "4. Brain PAT GH issue filed?",
+    "5. SUPABASE_ACCESS_TOKEN rotation date known?",
+    "6. AUTONOMOUS EXECUTE Step 9E if still not implemented",
+    "7. Verify os_tool_executions.py stable 7+ days — elevate if so",
+    "8. Verify issue-to-pr loop operational — then promote ai-ready metering issues",
+    "9. Step 9G: check workflow_dispatch in kb-autopopulate.yml"
+  ]
+}
