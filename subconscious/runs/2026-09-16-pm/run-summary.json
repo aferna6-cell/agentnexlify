@@ -1,0 +1,57 @@
+{
+  "run_id": "2026-09-16-pm",
+  "run_number": 121,
+  "timestamp": "2026-09-16T00:00:00Z",
+  "winner": {
+    "id": "step_9e_credential_expiry_escalation",
+    "title": "Step 9E Credential Expiry Escalation — 2nd Carry-Forward",
+    "category": "workflow_efficiency",
+    "effort": "XS",
+    "confidence": "HIGH",
+    "carry_forward_count": 2,
+    "autonomous_executable_at_run": 122
+  },
+  "mandate_check": {
+    "step_9e_implemented": false,
+    "step_9e_fired_with_gh_issue": false,
+    "autopilot_gh_token_rotated": false,
+    "autopilot_gh_token_days_since_rotation": 74,
+    "autopilot_gh_token_expires": "2026-10-02",
+    "brain_pat_gh_issue_filed": false,
+    "supabase_access_token_state": "unknown",
+    "step_9g_mcp_fix_status": "parking_lot_unverified",
+    "governance_step_9l_stale_flag": "fixed_in_run_120"
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "ideas_eliminated": [
+    "ai_metering_redundant",
+    "react19_gate_low_priority",
+    "os_tool_executions_unstable"
+  ],
+  "parking_lot": ["step_9g_mcp_trigger_fix"],
+  "evidence_summary": {
+    "commits_reviewed": 2,
+    "nightly_log": "2026-09-16",
+    "open_subconscious_pr": "#874",
+    "critical_expiry_days": 16,
+    "step_9e_grep_matches": 0,
+    "ai_metering_violations": 40,
+    "brain_connector_staleness_days": 55,
+    "kb_staleness_days": 21
+  },
+  "next_run": {
+    "run_number": 122,
+    "autonomous_executable": true,
+    "autonomous_target": "step_9e_credential_expiry_escalation",
+    "mandate": [
+      "Verify days_remaining and <= 10 threshold present in Step 9E (grep check)",
+      "Did Step 9E fire on next nightly with GH issue? GH #399 comment added?",
+      "AUTOPILOT_GH_TOKEN rotated before 2026-09-20?",
+      "Brain PAT rotation: GH issue filed?",
+      "SUPABASE_ACCESS_TOKEN: human filled in rotation date?",
+      "Step 9G: run pre-verification checklist (mcp__github__actions_run_trigger availability + kb-autopopulate.yml workflow_dispatch)",
+      "GH #875: issue-to-pr-loop picked it up within 24h?"
+    ]
+  }
+}
