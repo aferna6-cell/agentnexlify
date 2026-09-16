@@ -1,0 +1,68 @@
+{
+  "run": 121,
+  "date": "2026-09-16",
+  "winner": {
+    "title": "Step 9E Credential Expiry Escalation — Earlier Warning + GH Issue Filing",
+    "category": "workflow_efficiency",
+    "effort": "XS",
+    "confidence": "HIGH",
+    "carry_forward_count": 2,
+    "autonomous_executable_at_run": 122
+  },
+  "mandate_check": {
+    "step9e_implemented": false,
+    "days_remaining_grep": 0,
+    "autopilot_gh_token_days": 74,
+    "autopilot_gh_token_expires": "2026-10-02",
+    "days_to_expiry": 16,
+    "brain_pat_days": 74,
+    "step9l_status": "WORKING",
+    "step9g_status": "BROKEN — gh CLI unavailable",
+    "kb_staleness_days": 21,
+    "brain_connector_staleness_days": 55
+  },
+  "ideas": [
+    {
+      "id": 1,
+      "title": "Step 9E credential expiry escalation (2nd carry-forward)",
+      "verdict": "WINNER"
+    },
+    {
+      "id": 2,
+      "title": "Step 9G MCP trigger fix",
+      "verdict": "WEAKENED — parking lot, run 122 candidate"
+    },
+    {
+      "id": 3,
+      "title": "GH #870 batch patch script",
+      "verdict": "Not debated — deferred run 123+"
+    },
+    {
+      "id": 4,
+      "title": "AI metering middleware proposal",
+      "verdict": "WEAKENED — parking lot, file GH issue as bonus"
+    },
+    {
+      "id": 5,
+      "title": "Brain connector Step 9C 30d escalation",
+      "verdict": "Not debated — run 122-123 candidate"
+    }
+  ],
+  "escalation_path": {
+    "run_119": "RECOMMEND (carry_forward_count=0)",
+    "run_120": "RECOMMEND (carry_forward_count=1)",
+    "run_121": "RECOMMEND with escalation flag (carry_forward_count=2)",
+    "run_122": "AUTONOMOUS-EXECUTABLE (direct SKILL.md edit + commit without human approval)"
+  },
+  "implementation_target": ".claude/skills/nightly-commit-review/SKILL.md Step 9E block (~lines 277-300)",
+  "implementation_change": "Change days_since_rotation >= 76 to days_remaining <= 10 (where days_remaining = 90 - days_since_rotation); add GH search by label:credential-rotation + credential name; comment on GH #399 if found, create new issue if not",
+  "run_122_mandate": [
+    "Verify days_remaining and <= 10 threshold present in Step 9E",
+    "Did Step 9E fire in nightly-2026-09-17 or later? GH #399 comment added?",
+    "AUTOPILOT_GH_TOKEN rotated before 2026-10-02?",
+    "Brain PAT rotation: GH issue filed?",
+    "SUPABASE_ACCESS_TOKEN: human filled in rotation date?",
+    "Step 9G MCP fix: implement (run 122 winner candidate)",
+    "GH #875 AI metering middleware proposal: GH issue filed?"
+  ]
+}
