@@ -1,0 +1,56 @@
+{
+  "run_id": "2026-09-17",
+  "run_number": 121,
+  "date": "2026-09-17",
+  "winner": {
+    "title": "Step 9E Credential Expiry Escalation — Earlier Warning + GH Issue Filing",
+    "category": "workflow_efficiency",
+    "subcategory": "operational",
+    "effort": "XS",
+    "confidence": "HIGH",
+    "carry_forward_count": 2,
+    "escalation_flag": true,
+    "autonomous_executable_at_run": 122
+  },
+  "runner_up": {
+    "title": "Fix Step 9G: Replace gh CLI with mcp__github__actions_run_trigger",
+    "category": "workflow_efficiency",
+    "effort": "XS",
+    "recommendation": "bundle with Step 9E implementation"
+  },
+  "evidence_summary": {
+    "commits_reviewed": 2,
+    "bugs_fixed_autonomously": 0,
+    "issues_opened": 0,
+    "ai_violations": 45,
+    "ai_violations_delta": 5,
+    "brain_connector_staleness_days": 56,
+    "kb_staleness_days": 22,
+    "autopilot_gh_token_days_since_rotation": 75,
+    "autopilot_gh_token_expires": "2026-10-02",
+    "autopilot_gh_token_days_remaining": 15,
+    "dependabot_prs_open": 5,
+    "dependabot_prs_merged": 0,
+    "issues_closed_by_owner": ["#870", "#875"]
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "rejected_this_run": [
+    "React 18→19 migration checklist — low urgency, no deadline",
+    "Step 9D idle escalation — low urgency, no deadline"
+  ],
+  "deferred_to_next_run": [
+    "AI metering pre-commit guard (carry-forward count: 0)",
+    "Step 9D idle escalation (carry-forward count: 0)",
+    "React 18→19 readiness checklist (carry-forward count: 0)"
+  ],
+  "mandate_for_run_122": [
+    "Verify Step 9E has days_remaining and <= 10 in SKILL.md (grep check)",
+    "Did Step 9E fire on 2026-09-18 nightly? GH #399 comment added?",
+    "AUTOPILOT_GH_TOKEN rotated before 2026-10-02?",
+    "Brain PAT rotation issue filed?",
+    "Step 9G MCP fix implemented?",
+    "AI metering violations still growing or decreasing?",
+    "ESCALATION: if Step 9E not implemented -> autonomous-execute"
+  ]
+}
