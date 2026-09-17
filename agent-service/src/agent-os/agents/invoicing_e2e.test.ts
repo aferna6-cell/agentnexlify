@@ -145,6 +145,29 @@ test("department create → exact payload → send parks with no pre-approval ef
   assert.deepEqual(parked.input, { invoice_id: draft.id, method: "email" });
 });
 
+test("create clarifies missing or ambiguous customer and never writes", async () => {
+  const missing = await runInvoicing(
+    "Bill $850 for termite treatment, due in 14 days.",
+    context(),
+  );
+  assert.equal(missing.needsClarification, true);
+  assert.match(missing.orchestratorNotes?.[0] ?? "", /who should i bill/i);
+  assert.equal(h.invoices.allInvoices().length, 0);
+  assert.equal((await h.store.list({ accountId: "tenantA" })).length, 0);
+
+  const ambiguous = await runInvoicing(
+    "Bill Mike $850 for termite treatment, due in 14 days.",
+    context(),
+  );
+  assert.equal(ambiguous.needsClarification, true);
+  assert.match(
+    ambiguous.orchestratorNotes?.[0] ?? "",
+    /multiple customers matching "Mike"/i,
+  );
+  assert.equal(h.invoices.allInvoices().length, 0);
+  assert.equal((await h.store.list({ accountId: "tenantA" })).length, 0);
+});
+
 test("overdue reminder parks; paid and non-overdue reminder asks propose no action", async () => {
   const overdueCtx = context([
     {

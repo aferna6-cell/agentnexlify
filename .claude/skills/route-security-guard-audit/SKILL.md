@@ -1,7 +1,7 @@
 ---
 name: route-security-guard-audit
-description: Audit FastAPI routers for missing block_demo_role and ai_usage_guard dependencies. Use when adding new routers, reviewing PRs with new endpoints, or after GH issues flag missing security guards.
-version: 1.0.0
+description: Audit FastAPI route security coverage for the centralized demo-role mutation middleware, route-local high-risk guards, and AI usage guards. Use when adding routers, reviewing endpoint changes, or triaging security-guard findings.
+version: 1.1.0
 origin: subconscious-run-105
 user-invocable: true
 triggers:
@@ -14,135 +14,133 @@ effort: low
 
 # Route Security Guard Audit
 
-Checks `backend/routers/` for mutating endpoints missing `block_demo_role` or AI-invoking routes missing `ai_usage_guard`. Recurring pattern: GH #643 (appointment_briefs.py, 2026-08-11), GH #661 (scoring_config.py, 2026-08-16).
+Audit `backend/routers/` without assuming every mutating router must import `block_demo_role`.
 
-## Step 1 — Inventory existing guards
+The primary demo-role mutation control is `backend/middleware/demo_role_guard.py::DemoRoleBlockMiddleware`, registered in `backend/main.py`. It blocks verified `role=demo` JWTs from POST/PUT/PATCH/DELETE outside the explicit allowlist. Route-local `block_demo_role` remains belt-and-suspenders protection for money/destructive endpoints that live under an allowlisted prefix such as `/api/v1/auth`.
 
-```bash
-# Which routers already import block_demo_role?
-grep -rl "block_demo_role" backend/routers/
+AI-invoking routes still require separate review for `ai_usage_guard`; the centralized demo middleware does not replace plan/token enforcement.
 
-# Which routers already import ai_usage_guard?
-grep -rl "ai_usage_guard" backend/routers/
+## Step 1 — Verify the centralized demo mutation guard first
 
-# Where is block_demo_role defined?
-grep -rn "def block_demo_role" backend/
-```
-
-Note the baseline. Any router NOT in this list is a candidate for review.
-
-## Step 2 — Find mutating routes missing block_demo_role
+Before flagging routers, verify all three invariants:
 
 ```bash
-# All routers with POST/PUT/PATCH/DELETE that don't import block_demo_role
-for f in backend/routers/*.py; do
-  if grep -qE "@router\.(post|put|patch|delete)" "$f"; then
-    if ! grep -q "block_demo_role" "$f"; then
-      echo "MISSING block_demo_role: $f"
-    fi
-  fi
-done
+# Middleware implementation exists
+grep -n "class DemoRoleBlockMiddleware" backend/middleware/demo_role_guard.py
+
+# Middleware is registered by the app
+grep -n "DemoRoleBlockMiddleware" backend/main.py
+
+# Project invariant checker knows about the registration
+grep -n "DemoRoleBlockMiddleware" scripts/check_project_invariants.py
 ```
 
-For each flagged file, check whether the routes are truly mutating (not just read endpoints declared under a non-GET method). Exclude routers that handle only internal/admin traffic not accessible to demo tenants.
+Inspect `DEMO_MUTATION_ALLOWLIST_PREFIXES` in `backend/middleware/demo_role_guard.py`. If the middleware is absent, unregistered, or broadened unsafely, treat that as the primary finding instead of opening dozens of router-local issues.
 
-## Step 3 — Find AI-invoking routes missing ai_usage_guard
+## Step 2 — Review mutating routes by middleware coverage
+
+For POST/PUT/PATCH/DELETE routes, ask:
+
+1. Is the route outside `DEMO_MUTATION_ALLOWLIST_PREFIXES`? If yes, the centralized middleware is the primary demo-role control; **do not flag the router merely because it lacks `Depends(block_demo_role)`**.
+2. Is the route under an allowlisted prefix? If yes, determine whether demo writes are intentionally permitted (public ingress/auth/widget/book flows) or whether the endpoint is money/destructive/account-sensitive and therefore needs a route-local `block_demo_role` dependency.
+3. Does the route bypass the FastAPI app/middleware path entirely? If so, review that ingress separately.
+
+Useful inventory:
 
 ```bash
-# Routers that call Claude/AI but don't import ai_usage_guard
-for f in backend/routers/*.py; do
-  if grep -qE "claude|anthropic|llm|ai_service" "$f"; then
-    if ! grep -q "ai_usage_guard" "$f"; then
-      echo "MISSING ai_usage_guard: $f"
-    fi
-  fi
-done
+grep -RnoE '@router\.(post|put|patch|delete)' backend/routers/
+grep -Rno "block_demo_role" backend/routers/ backend/dependencies.py
 ```
 
-Cross-reference against `backend/services/ai_usage_guard.py` to confirm the guard is plan-gated for the relevant plan tiers.
+A missing router-local import is not a finding by itself.
 
-## Step 4 — Assess business impact
+## Step 3 — Verify high-risk allowlisted-prefix routes retain local guards
 
-For each flagged router:
-- What data does it mutate? (leads, appointments, messages, configs)
-- Which plan tiers can reach it?
-- Is there a demo tenant in production that could reach this endpoint?
-- What's the blast radius if a demo tenant writes here? (data leak, billing bypass, phantom leads)
+The `/api/v1/auth` prefix is allowlisted for login/OAuth/password-reset flows, so money/destructive endpoints under that prefix must keep local protection.
 
-Score: HIGH (demo tenant can mutate live data) / MEDIUM (limited scope) / LOW (internal only).
+For each such endpoint, inspect FastAPI dependencies and confirm `block_demo_role` is present where demo access would create financial, destructive, or account-level effects.
 
-## Step 5 — Add block_demo_role dependency pattern
-
-For HIGH/MEDIUM findings, add the guard as a FastAPI `Depends()`:
+Established pattern:
 
 ```python
-from backend.dependencies.auth import block_demo_role
+from backend.dependencies import block_demo_role
 
-# Before (mutating route with no guard):
-@router.post("/appointments")
-async def create_appointment(
-    data: AppointmentCreate,
-    current_user: dict = Depends(get_current_user),
-    db = Depends(get_db),
-):
-    ...
-
-# After (with guard):
-@router.post("/appointments")
-async def create_appointment(
-    data: AppointmentCreate,
-    current_user: dict = Depends(get_current_user),
-    db = Depends(get_db),
+@router.post("/sensitive-action")
+async def sensitive_action(
+    ...,
     _: None = Depends(block_demo_role),
 ):
     ...
 ```
 
-The `_: None = Depends(block_demo_role)` pattern is the established convention (see `backend/routers/leads.py` for reference). The guard raises HTTP 403 for demo tenants before the route body executes.
+Do not duplicate this dependency across ordinary dashboard routers already covered by `DemoRoleBlockMiddleware` unless there is a specific defense-in-depth reason.
 
-## Step 6 — Add structural test
+## Step 4 — Find AI-invoking routes missing ai_usage_guard
 
-After adding guards, confirm coverage in `backend/tests/test_plan_gating_new_plans.py`:
-
-```python
-def test_demo_tenant_blocked_from_new_router():
-    """Demo tenants must not be able to mutate data via newly added routes."""
-    response = client.post(
-        "/api/new-endpoint",
-        json={"field": "value"},
-        headers={"Authorization": f"Bearer {DEMO_TENANT_TOKEN}"},
-    )
-    assert response.status_code == 403
-    assert "demo" in response.json()["detail"].lower()
+```bash
+for f in backend/routers/*.py; do
+  if grep -qiE 'claude|anthropic|llm|ai_service|model_client' "$f"; then
+    if ! grep -q "ai_usage_guard" "$f"; then
+      echo "REVIEW ai_usage_guard: $f"
+    fi
+  fi
+done
 ```
 
-Run the test suite to verify:
+This is a review candidate list, not an automatic violation list. Confirm the route actually initiates paid/plan-metered model work and whether enforcement occurs at the router, shared dependency, or called service before filing an issue.
+
+## Step 5 — Assess business impact
+
+For each real gap:
+- Which request path and HTTP method are affected?
+- Which control should apply: centralized demo middleware, route-local `block_demo_role`, `ai_usage_guard`, or another shared gate?
+- Which tenant/plan can reach it?
+- Is the path intentionally allowlisted/public?
+- What is the concrete blast radius: financial action, destructive mutation, data integrity, or paid-model bypass?
+
+Score HIGH / MEDIUM / LOW from reachable impact, not from a grep-only absence.
+
+## Step 6 — Test the control at the correct layer
+
+For centralized demo-role behavior, prefer tests around `DemoRoleBlockMiddleware` / app registration and representative blocked + allowlisted paths. For a high-risk allowlisted-prefix endpoint, assert the route-local dependency remains attached. For AI usage enforcement, test the actual metering/plan gate used by the route or service.
+
+Relevant checks:
+
 ```bash
 python -m pytest backend/tests/test_plan_gating_new_plans.py -x -q
+python scripts/check_project_invariants.py
 ```
+
+Add a focused regression test when the finding exposes behavior not already protected structurally.
 
 ## Output format
 
-File GH issue if findings exist (severity HIGH or MEDIUM):
+File an issue only for a verified control gap:
 
-```
-Title: security: [router name] missing block_demo_role on mutating endpoints
+```text
+Title: security: <specific control gap>
 Body:
-- Affected file: backend/routers/<name>.py
-- Routes: POST /path1, PUT /path2 (list all)
-- Risk: demo tenant can [specific action]
-- Fix: add Depends(block_demo_role) per SKILL.md Step 5 pattern
-- Test: add test_plan_gating_new_plans.py case per SKILL.md Step 6
+- Affected path/file: <path + source file>
+- Method/control: <POST/PUT/PATCH/DELETE; middleware/local guard/AI guard>
+- Reachability: <who can reach it and why existing shared controls do not apply>
+- Risk: <specific effect>
+- Fix: <smallest correct control-layer change>
+- Test: <focused regression or invariant>
 Labels: security, backend
 ```
 
-## Known open issues
-- GH #643: appointment_briefs.py (draft PR #653)
-- GH #661: scoring_config.py (no PR yet as of 2026-08-17)
+Do not open one issue per router simply because `block_demo_role` is absent. Deduplicate against existing issues and account for centralized middleware before reporting.
+
+## Historical note
+
+GH #669 originally reported 95 routers missing route-local `Depends(block_demo_role)`. That detector assumption became stale after the repository adopted `DemoRoleBlockMiddleware` as the class-wide fix. Future audits must evaluate middleware coverage and its allowlist instead of recreating that false-positive pattern.
 
 ## Cross-refs
-- `backend/dependencies/auth.py` — block_demo_role definition
-- `backend/services/ai_usage_guard.py` — ai_usage_guard definition
-- `backend/tests/test_plan_gating_new_plans.py` — structural test home
+- `backend/middleware/demo_role_guard.py` — centralized demo mutation guard + allowlist
+- `backend/main.py` — middleware registration
+- `backend/dependencies.py` — route-local `block_demo_role`
+- `backend/services/ai_usage_guard.py` — AI plan/token enforcement
+- `backend/tests/test_plan_gating_new_plans.py` — plan/security structural tests
+- `scripts/check_project_invariants.py` — app/security invariants
 - `.claude/rules/schema-discipline.md` — related security invariants
-- `docs/dev-knowledge/bug-patterns.md` — for logging new findings
+- `docs/dev-knowledge/bug-patterns.md` — durable bug-pattern notes

@@ -1,0 +1,56 @@
+{
+  "run_id": "2026-09-11-pm",
+  "run_number": 120,
+  "timestamp": "2026-09-11T18:00:00Z",
+  "winner": {
+    "title": "Step 9E credential expiry early-warning + GH issue filing",
+    "category": "workflow_efficiency",
+    "effort": "XS",
+    "confidence": "HIGH",
+    "carry_forward_count": 1,
+    "autonomous_executable_at_run": 122
+  },
+  "mandate_check": {
+    "step_9e_implemented": false,
+    "autopilot_gh_token_days_since_rotation": 69,
+    "autopilot_gh_token_days_to_threshold": 7,
+    "autopilot_gh_token_expires": "2026-10-02",
+    "brain_pat_days_since_rotation": 69,
+    "supabase_access_token_status": "unknown",
+    "step_9g_mcp_trigger_viable": true,
+    "step_9g_weakened_by_api_key": true,
+    "step_9l_confirmed_implemented": true,
+    "step_9l_governance_flag_fixed": true
+  },
+  "ideas_generated": 5,
+  "ideas": [
+    {
+      "id": 1,
+      "title": "Step 9E early warning escalation",
+      "verdict": "WINNER"
+    },
+    { "id": 2, "title": "Step 9G MCP trigger fix", "verdict": "parking_lot" },
+    { "id": 3, "title": "Step 9D stalled nudge", "verdict": "killed" },
+    { "id": 4, "title": "os_tool_executions split", "verdict": "deferred" },
+    {
+      "id": 5,
+      "title": "governance verified_date schema",
+      "verdict": "parking_lot"
+    }
+  ],
+  "next_run_mandate": [
+    "Verify days_remaining and <= 10 threshold in Step 9E (grep check)",
+    "Did Step 9E fire on next nightly? GH #399 comment added?",
+    "AUTOPILOT_GH_TOKEN rotated before 2026-09-18?",
+    "Brain PAT rotation: GH issue filed?",
+    "SUPABASE_ACCESS_TOKEN: human filled in rotation date?",
+    "Step 9G MCP fix: evaluate for run 121 implementation",
+    "governance.json Step 9L stale flag: verify fixed"
+  ],
+  "governance_updates": [
+    "total_runs: 119 → 120",
+    "last_run: 2026-09-11 → 2026-09-11-pm",
+    "active_directions[0] Step 9L: implemented: false → true, verified_date: 2026-09-10-pm",
+    "active_directions: add Step 9E carry-forward entry"
+  ]
+}
