@@ -82,7 +82,7 @@ Step 9G MCP fix (replace `gh workflow run` with `mcp__github__actions_run_trigge
 
 This is the 2nd carry-forward of Step 9E. Per governance escalation path:
 - Run 119: first carry → RECOMMEND
-- Run 120 (prev): first carry → RECOMMEND  
+- Run 120 (prev): first carry → RECOMMEND
 - Run 121 (this run): 2nd carry → RECOMMEND with escalation flag
 - Run 122: 3rd carry → autonomous-executable (no human approval required)
 
