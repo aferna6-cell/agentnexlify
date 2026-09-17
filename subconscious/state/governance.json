@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-09-11",
-  "total_runs": 119,
+  "last_run": "2026-09-17-pm",
+  "total_runs": 120,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -2070,5 +2070,65 @@
       "Secondary: verify kb-autopopulate.yml has workflow_dispatch trigger (for Step 9G fix viability)"
     ],
     "note": "Most urgent finding from run 119. AUTOPILOT_GH_TOKEN powers the autonomous engineering loop. Expiry is silent — no error until the first nightly that uses the token. Adding GH issue escalation turns a log warning into a trackable P0 action item before outage."
+  },
+  "run_120_governance_correction": {
+    "step9e_status": "NOT YET IMPLEMENTED — grep for 'days_remaining' and '<= 10' in Step 9E block returns 0. 1st carry-forward. Autonomous-executable fires at run 122 (3rd consecutive carry per Steps 9F/9G/9I/9J/9K precedent).",
+    "step9l_status": "CONFIRMED IMPLEMENTED — stale flag corrected. implemented: false → true, verified_date: 2026-09-10-pm added. Grep of SKILL.md lines 457/471 confirms functional block '9L. (AI Usage Guard Coverage Sweep)' present.",
+    "step9g_status": "BROKEN — gh CLI unavailable in CCR sessions. kb-autopopulate.yml has workflow_dispatch confirmed. Fix (mcp__github__actions_run_trigger) weakened by unverified tool availability + ANTHROPIC_API_KEY still missing (#403). Parked for run 121.",
+    "step9j_cursor_status": "MOOT — 0 open Dependabot PRs as of 2026-09-11 nightly. Cursor approach valid when PRs reappear.",
+    "autopilot_gh_token": "69d since rotation (threshold 76d, interval 90d). Expires 2026-10-02. 7 days to threshold. No GH issue filed.",
+    "kb_staleness": "16 days stale (last: 2026-08-26). Step 9G broken prevents trigger.",
+    "ideas_generated": 5,
+    "winner": "Step 9E credential expiry escalation — 1st carry-forward",
+    "parking_lot": [
+      "Step 9G MCP trigger fix (run 121)",
+      "governance verified_date schema (run 122)"
+    ],
+    "killed": ["Step 9D stalled nudge — proven ineffective mechanism"],
+    "deferred": [
+      "os_tool_executions.py split — stability window broken (modified 2026-09-11)"
+    ],
+    "total_runs": "119 → 120",
+    "last_run": "2026-09-11 → 2026-09-11-pm"
+  },
+  "run_121_governance_correction": {
+    "step9e_status": "STILL NOT IMPLEMENTED — days_remaining/<= 10 grep = 0. 2nd carry-forward. Urgency diminished: AUTOPILOT_GH_TOKEN crosses 76d threshold today (existing logic fires). 10-day early warning deferred to next rotation cycle. Autonomous-executable fires at run 122 per run 120 escalation path.",
+    "step9g_status": "BROKEN — confirmed 30+ days (gh CLI unavailable in CCR). mcp__github__actions_run_trigger confirmed in deferred tools list for this session type. Unverified tool availability uncertainty from run 120 RESOLVED. Run 121 winner.",
+    "step9l_status": "CONFIRMED IMPLEMENTED — lines 457/471. Violations at 45 (+5 new 2026-09-17).",
+    "step9j_status": "5 Dependabot PRs open, all skipped (1 CI unstable, 4 major-version bumps: React 18→19, vitest 4→5, mcp 2→3). No cursor needed (0 minor-version PRs).",
+    "autopilot_gh_token": "75d since rotation (threshold 76d, expires 2026-10-02). Crosses threshold today. Existing Step 9E will fire on next nightly (2026-09-18). GH #399 comment expected.",
+    "kb_staleness": "22 days stale (last: 2026-08-26). Step 9G broken prevents trigger. GH #403 unresolved.",
+    "ostool_executions_status": "783L, 14d stable. 4th consecutive subconscious run noting god class. Escalated to owner in improvement-backlog.md.",
+    "ideas_generated": 5,
+    "winner": "Fix Step 9G: replace gh workflow run with mcp__github__actions_run_trigger",
+    "parking_lot": [
+      "Step 9E 10-day early warning (3rd carry-forward → run 122 autonomous-executable)",
+      "os_tool_executions.py god class split (M effort, human approval required)"
+    ],
+    "killed": [
+      "Step 9L closed-issue dedup guard (one cycle only — insufficient evidence)",
+      "Dependabot major-version tracking issue (low leverage)"
+    ],
+    "total_runs": "120 → 121",
+    "last_run": "2026-09-11-pm → 2026-09-17-pm"
+  },
+  "run_121_active_direction": {
+    "title": "Fix Step 9G: replace gh workflow run kb-autopopulate.yml with mcp__github__actions_run_trigger",
+    "date": "2026-09-17",
+    "confidence": "HIGH",
+    "status": "recommendation",
+    "implemented": false,
+    "autonomous_executable": false,
+    "autonomous_executable_at_run": 124,
+    "requires_human": true,
+    "category": "workflow_efficiency",
+    "moratorium_override": false,
+    "source_run": 121,
+    "effort": "XS",
+    "evidence": "Step 9G has been silently failing since ~run 107 (2026-08-19). gh CLI unavailable in CCR sessions. KB 22 days stale as of 2026-09-17 (last: 2026-08-26, threshold: 7d). Step 9G ABSENT from nightly-2026-09-17 output. mcp__github__actions_run_trigger confirmed in deferred tools list for this session type — resolves run 120 'unverified tool availability' uncertainty. Fix restores escalation loop to GH #403 even if kb-autopopulate still fails (ANTHROPIC_API_KEY missing).",
+    "action": "Edit Step 9G block in .claude/skills/nightly-commit-review/SKILL.md. Replace bash block 'gh workflow run kb-autopopulate.yml --repo aferna6-cell/agentnexlify' with mcp__github__actions_run_trigger call (owner=aferna6-cell, repo=agentnexlify, workflow_id=kb-autopopulate.yml, ref=main). On success: log trigger. On failure: comment on GH #403 with diagnostic.",
+    "implementation_sketch": "subconscious/runs/2026-09-17-pm/winning-concept.md",
+    "escalation_condition": "Autonomous-executable if not approved by run 124 (3rd consecutive carry per Steps 9F/9G/9I/9J/9K/9L precedent)",
+    "note": "Even if kb-autopopulate Actions workflow fails after trigger (ANTHROPIC_API_KEY missing per GH #403), Step 9G will generate an explicit error and comment on #403 — restoring 30 days of lost escalation pressure. When #403 is resolved, Step 9G works immediately."
   }
 }
