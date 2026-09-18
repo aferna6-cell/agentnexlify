@@ -1,0 +1,44 @@
+{
+  "run_id": "2026-09-18",
+  "run_number": 122,
+  "timestamp": "2026-09-18T00:00:00Z",
+  "winner": {
+    "title": "Step 9E: 10-Day P0 Credential Expiry Escalation Tier",
+    "category": "operational/workflow_efficiency",
+    "effort": "S",
+    "confidence": "HIGH",
+    "carry_forward_count": 3,
+    "autonomous_executable": true,
+    "skill_file": ".claude/skills/nightly-commit-review/SKILL.md",
+    "step": "9E"
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "commits_reviewed": 4,
+  "production_bugs_fixed": 0,
+  "issues_filed": 0,
+  "key_signals": {
+    "AUTOPILOT_GH_TOKEN_days_since_rotation": 76,
+    "AUTOPILOT_GH_TOKEN_days_remaining": 14,
+    "AUTOPILOT_GH_TOKEN_expires": "2026-10-02",
+    "Brain_PAT_days_remaining": 14,
+    "step_9g_skill_fix_carry_forward": 1,
+    "step_9g_inSession_workaround_applied": true,
+    "step_9l_violations": 45,
+    "os_tool_executions_lines": 783,
+    "os_tool_executions_consecutive_mentions": 6
+  },
+  "parking_lot": [
+    "Step 9G SKILL.md fix (2nd carry-forward, autonomous-executable at run 124)",
+    "os_tool_executions.py 783L god class split (6th mention — file GH issue at run 123)",
+    "AI metering canonical GH issue verification"
+  ],
+  "run_123_mandate": [
+    "Verify Step 9E has days_remaining + P0 tier in SKILL.md",
+    "Check nightly log: did Step 9E correctly compute days_remaining for AUTOPILOT_GH_TOKEN?",
+    "Step 9G: 2nd carry-forward. Autonomous-executable at run 124.",
+    "os_tool_executions.py: file GH issue if not yet done",
+    "AUTOPILOT_GH_TOKEN: rotated by owner before 2026-10-02?",
+    "AI metering: verify or file canonical tracking issue"
+  ]
+}
