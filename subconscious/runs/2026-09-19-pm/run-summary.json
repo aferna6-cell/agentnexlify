@@ -1,0 +1,43 @@
+{
+  "run": 125,
+  "date": "2026-09-19-pm",
+  "slot": "pm",
+  "winner": "Step 9G: Replace broken gh CLI with mcp__github__actions_run_trigger in nightly SKILL.md",
+  "winner_category": "workflow_efficiency",
+  "confidence": "HIGH",
+  "autonomous_executable": true,
+  "autonomous_executable_at_run": 124,
+  "implemented": false,
+  "blocked_by": "task_prompt_recommend_only",
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "debate_verdicts": {
+    "idea_1_step9g_fix": "SURVIVES → CHOSEN",
+    "idea_2_step9e_p0_tier": "WEAKENED → PARKING LOT (6th carry-forward)",
+    "idea_3_dependabot_triage": "WEAKENED → PARKING LOT"
+  },
+  "key_evidence": [
+    "nightly-2026-09-19: Step 9G still uses broken gh CLI command (confirmed)",
+    "grep mcp__github__actions_run_trigger .claude/skills/nightly-commit-review/SKILL.md = 0 hits",
+    "In-session MCP call 2026-09-18 returned HTTP 204 (success) — fix path proven",
+    "KB stale 24+ days — direct consequence of Step 9G failure",
+    "Autonomous-executable threshold: run 124. This is run 125 = 1 run overdue",
+    "AUTOPILOT_GH_TOKEN expires 2026-10-02 (13 days). P0 fires 2026-09-22 (3 days)"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-09-19-pm/ideas/ideas.md",
+    "subconscious/runs/2026-09-19-pm/debate/debate-log.md",
+    "subconscious/runs/2026-09-19-pm/winning-concept.md",
+    "subconscious/runs/2026-09-19-pm/improvement-backlog.md",
+    "subconscious/runs/2026-09-19-pm/run-summary.json"
+  ],
+  "parking_lot": [
+    "Step 9E P0 credential escalation tier (6th carry, autonomous-executable, P0 fires 2026-09-22 — URGENT)",
+    "Dependabot major-version triage issue (5 PRs aging)",
+    "Step 9M AI metering violation trend tracking",
+    "os_tool_executions.py god-class split plan (1219L, 6th mention)"
+  ],
+  "urgent_human_action_required": "AUTOPILOT_GH_TOKEN expires 2026-10-02 (13 days). P0 fires 2026-09-22 (3 days). Step 9E P0 escalation tier NOT in SKILL.md after 6 carries. Rotate credential or implement tier before deadline.",
+  "governance_updated": true,
+  "memory_appended": true
+}
