@@ -1,0 +1,44 @@
+{
+  "run": 126,
+  "date": "2026-09-20",
+  "winner": "Step 9E 10-Day P0 Credential Expiry Escalation Tier",
+  "winner_category": "operational",
+  "winner_confidence": "HIGH",
+  "carry_forward_count": 6,
+  "autonomous_executable": true,
+  "autonomous_executable_at_run": 122,
+  "evidence_summary": "AUTOPILOT_GH_TOKEN: 78d elapsed, expires 2026-10-02 (12 days). P0 fires 2026-09-22 (2 days). Step 9E P0 tier absent from SKILL.md (days_remaining=0 grep hits, P0=0 hits). GH #399 has 7+ comments, 0 human responses. Step 9G SKILL.md still uses broken bash gh command (KB 25d stale). 5 Dependabot PRs open, 0 merged. Step 9L: 45 violations stalled, GH #827 open.",
+  "ideas_count": 5,
+  "debate_verdicts": {
+    "Step 9E P0 tier": "SURVIVES",
+    "Step 9G SKILL.md fix": "SURVIVES",
+    "Step 9J Dependabot triage": "WEAKENED",
+    "Step 9N metering trend": "WEAKENED",
+    "os_tool_executions split": "WEAKENED"
+  },
+  "rejected": [],
+  "parking_lot": [
+    "Step 9G SKILL.md fix (2nd carry)",
+    "Step 9J Dependabot triage",
+    "Step 9N metering violation trend tracking",
+    "os_tool_executions.py god-class split"
+  ],
+  "key_data_points": {
+    "autopilot_gh_token_days_elapsed": 78,
+    "autopilot_gh_token_expiry": "2026-10-02",
+    "autopilot_gh_token_days_remaining": 12,
+    "p0_fires_date": "2026-09-22",
+    "p0_fires_days": 2,
+    "kb_last_run": "2026-08-26",
+    "kb_days_stale": 25,
+    "dependabot_open_prs": 5,
+    "step_9l_violations": 45,
+    "os_tool_executions_lines": 783
+  },
+  "run_125_mandate": [
+    "If P0 fires 2026-09-22 as expected: confirm P0 GH issue was filed by Step 9E (requires implementation first)",
+    "AUTOPILOT_GH_TOKEN rotation status — has owner responded?",
+    "Step 9G SKILL.md fix status — still unimplemented?",
+    "This is the 6th carry — interactive session required for /subconscious --implement"
+  ]
+}
