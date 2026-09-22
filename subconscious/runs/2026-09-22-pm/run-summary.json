@@ -1,0 +1,44 @@
+{
+  "run": 126,
+  "date": "2026-09-22",
+  "session": "pm",
+  "winner": {
+    "id": "step_9g_mcp_fix",
+    "title": "Step 9G SKILL.md Fix — Replace gh CLI with mcp__github__actions_run_trigger",
+    "category": "Workflow Efficiency",
+    "carry_count": 3,
+    "autonomous_executable": true,
+    "autonomous_executable_since_run": 124,
+    "status": "recommend_only",
+    "constraint": "task-prompt: Do NOT implement. Only recommend.",
+    "file": ".claude/skills/nightly-commit-review/SKILL.md",
+    "section": "Step 9G"
+  },
+  "candidates_evaluated": 5,
+  "top_3_debated": ["step_9g_mcp_fix", "step_9e_p0_tier", "gh_892_ci_fix"],
+  "step_9e_status": {
+    "carry_count": 6,
+    "autonomous_executable": true,
+    "autonomous_executable_since_run": 122,
+    "parked": true,
+    "park_reason": "GH #893 handles immediate P0. 6-carry deadlock with task-prompt constraint. Pivoting to Step 9G.",
+    "gh_issue": "#893",
+    "token_expiry": "2026-10-02",
+    "days_remaining": 10
+  },
+  "evidence_summary": {
+    "commits_last_24h": 2,
+    "repo_quiet_prior_48h": true,
+    "kb_staleness_days": 27,
+    "new_gh_issues": ["#893 P0 AUTOPILOT_GH_TOKEN", "#892 P1 CI test escape"],
+    "new_dependabot_prs": 6,
+    "autopilot_gh_token_days_remaining": 10
+  },
+  "governance_correction": {
+    "step9g_fix_still_not_implemented": true,
+    "step9e_p0_tier_still_absent": true,
+    "gh_893_filed": true,
+    "winner_rotation": "Step 9E (runs 119-125) → Step 9G (run 126)",
+    "rationale": "6-carry deadlock on Step 9E warrants pivot. Step 9G is next highest impact. GH #893 provides human notification path for P0 crisis."
+  }
+}
