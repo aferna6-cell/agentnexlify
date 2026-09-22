@@ -1,0 +1,57 @@
+{
+  "run_date": "2026-09-22",
+  "run_number": 125,
+  "winner": {
+    "title": "Step 9E 10-Day P0 Credential Expiry Escalation Tier",
+    "category": "operational/workflow_efficiency",
+    "effort": "S",
+    "confidence": "HIGH",
+    "carry_forward_count": 6,
+    "autonomous_executable": true,
+    "autonomous_executable_since_run": 122
+  },
+  "bonus_action": {
+    "title": "File emergency P0 GH issue for AUTOPILOT_GH_TOKEN",
+    "effort": "XS",
+    "labels": ["human-action-required", "ops", "P0"],
+    "urgency": "CRITICAL"
+  },
+  "evidence_digest": {
+    "repo_commits_24h": 0,
+    "last_commit": "f64f3d1 (2026-09-20)",
+    "autopilot_gh_token_days_elapsed": 80,
+    "autopilot_gh_token_expires": "2026-10-02",
+    "autopilot_gh_token_days_remaining": 10,
+    "brain_pat_expires": "2026-10-02",
+    "p0_threshold_fires_today": true,
+    "step_9e_p0_tier_present": false,
+    "step_9g_broken": true,
+    "kb_last_update": "2026-08-26",
+    "kb_days_stale": 27,
+    "os_tool_executions_lines": 783,
+    "ai_metering_violations": 45,
+    "ai_metering_issue": "GH #827"
+  },
+  "ideas_generated": 5,
+  "ideas": [
+    "Step 9E P0 escalation tier in SKILL.md",
+    "Step 9G gh→MCP fix",
+    "File emergency P0 GH issue directly",
+    "Split os_tool_executions.py",
+    "Step 9M metering trend tracker"
+  ],
+  "debate_verdicts": {
+    "idea_1_step9e": "WINNER",
+    "idea_3_p0_issue": "BONUS_ACTION",
+    "idea_2_step9g": "PARKING_LOT",
+    "idea_4_os_tool": "PARKING_LOT",
+    "idea_5_step9m": "PARKING_LOT"
+  },
+  "parking_lot": [
+    "Step 9G gh→MCP fix (run 126 candidate, post-credential-rotation)",
+    "os_tool_executions.py split (run 127+)",
+    "Step 9M metering trend (low urgency vs credential crisis)"
+  ],
+  "frozen_ideas": ["ai_human_handoff"],
+  "implementation_blocked_by": "task_prompt_constraint_do_not_implement"
+}

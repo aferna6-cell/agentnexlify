@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-09-19",
-  "total_runs": 124,
+  "last_run": "2026-09-22",
+  "total_runs": 125,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -2272,6 +2272,53 @@
       "AUTOPILOT_GH_TOKEN rotated before 2026-10-02? GH #399 status?",
       "Step 9G SKILL.md fix: gh CLI replaced with mcp__github__actions_run_trigger?",
       "os_tool_executions.py GH issue: confirm filed (run 123 bonus mandate). File if missing."
+    ]
+  },
+  "run_125_governance_correction": {
+    "step9e_status": "STILL NOT IMPLEMENTED — days_remaining/<= 10 grep = 0. 6th carry-forward. Task prompt prevents autonomous execution (recommend-only constraint). AUTOPILOT_GH_TOKEN at 80d, expires 2026-10-02 (10 days). P0 threshold fires TODAY (2026-09-22). No P0 issue filed. P0 tier absent.",
+    "step9g_status": "SKILL.MD BASH COMMAND STILL BROKEN — gh CLI unavailable in CCR. In-session MCP workaround applied 2026-09-18 only (not persisted to SKILL.md). KB last updated 2026-08-26 (27d stale). 2nd carry-forward. Autonomous-executable mandate reached at run 124.",
+    "step9l_status": "45 violations (unchanged). GH #827 open P1.",
+    "step9j_status": "5 open Dependabot PRs (react 18→19 x3, vitest 4→5, mcp >=2.2.0). 0 merged.",
+    "autopilot_gh_token": "80d since rotation (P0 threshold fires today), expires 2026-10-02 (10 days).",
+    "brain_pat": "80d since rotation, expires 2026-10-02 (10 days).",
+    "ostool_executions_status": "783L. GH issue status unverified from run 123 bonus action.",
+    "repo_commits_24h": 0,
+    "ideas_generated": 5,
+    "winner": "Step 9E 10-Day P0 credential expiry escalation tier (6th carry-forward, autonomous-executable blocked by task prompt)",
+    "bonus_action": "File emergency P0 GH issue for AUTOPILOT_GH_TOKEN directly (XS effort, immediate human notification)",
+    "parking_lot": [
+      "Step 9G: Replace gh CLI in SKILL.md (autonomous-executable, awaiting interactive session)",
+      "os_tool_executions.py split (M effort, run 127+ candidate)",
+      "Step 9M: AI metering violation trend tracking (S effort, post-credential-crisis)"
+    ],
+    "killed": [],
+    "total_runs": "124 → 125",
+    "last_run": "2026-09-19 → 2026-09-22"
+  },
+  "run_125_active_direction": {
+    "title": "Step 9E: Add 10-Day P0 Credential Expiry Escalation Tier",
+    "date": "2026-09-22",
+    "confidence": "HIGH",
+    "status": "autonomous_executable",
+    "implemented": false,
+    "autonomous_executable": true,
+    "autonomous_executable_at_run": 122,
+    "requires_human": false,
+    "category": "operational/workflow_efficiency",
+    "moratorium_override": false,
+    "source_run": 125,
+    "effort": "S",
+    "carry_forward_count": 6,
+    "evidence": "6th consecutive carry-forward (runs 119→120→121→122→123→124→125). AUTOPILOT_GH_TOKEN expires 2026-10-02 (10 days). P0 threshold fires TODAY 2026-09-22. grep confirms P0 tier absent from SKILL.md (days_remaining=0 hits, P0 context=0 hits). Task prompt prevents execution despite autonomous-executable mandate (reached run 122). Bonus action recommended: file P0 GH issue directly (XS effort, immediate notification path).",
+    "action": "Edit Step 9E block in .claude/skills/nightly-commit-review/SKILL.md. After existing >=76d staleness logic, add: compute days_remaining = next_due_date - today; if days_remaining <= 10: (1) search for existing open P0 credential issue (dedup guard), (2) if none, file GH issue via mcp__github__issue_write with labels human-action-required + ops + P0, title 'P0: {credential_name} expires in {days_remaining} days — rotate now'.",
+    "implementation_sketch": "subconscious/runs/2026-09-22/winning-concept.md",
+    "escalation_condition": "Already autonomous-executable (mandate reached run 122). Task prompt recommend-only constraint is the blocker. P0 fires TODAY. Token expires 2026-10-02 — 10 days. CRITICAL: if not patched before next nightly run, no automated P0 alert will fire.",
+    "run_126_mandate": [
+      "Verify Step 9E P0 tier in SKILL.md: grep days_remaining, P0, <= 10",
+      "Was a P0 GH issue filed for AUTOPILOT_GH_TOKEN? Check open issues with labels P0 + ops.",
+      "AUTOPILOT_GH_TOKEN rotated before 2026-10-02? If not, token expires in <10 days.",
+      "Step 9G SKILL.md fix: gh CLI replaced with mcp__github__actions_run_trigger? KB still stale?",
+      "If token rotated: update ops/credential-rotation-schedule.md with new last_rotated date."
     ]
   }
 }
