@@ -1,0 +1,36 @@
+{
+  "run": 127,
+  "date": "2026-09-23",
+  "winner": "Step 9E: Add 10-Day P0 Credential Expiry Escalation Tier",
+  "category": "operational",
+  "effort": "S",
+  "confidence": "HIGH",
+  "carry_count": 7,
+  "autonomous_executable": true,
+  "autonomous_executable_since_run": 122,
+  "requires_human": false,
+  "task_prompt_constraint": "recommend-only",
+  "mandate_executed": true,
+  "mandate_items": {
+    "run_126_winner_implemented": "PASS — Step 9G gh→MCP fix implemented by nightly-2026-09-23",
+    "step_9e_p0_in_skill_md": "FAIL — grep shows Step 9E exists (76-day threshold) but no days_remaining <= 10 branch",
+    "autopilot_gh_token_expiry": "9 days (expires 2026-10-02). GH #893 filed 2026-09-22.",
+    "gh_403_resolved": "OPEN — ANTHROPIC_API_KEY still missing from GH Actions (75d+)",
+    "gh_399_resolved": "OPEN — AUTOPILOT_GH_TOKEN expired (75d+)",
+    "dependabot_prs_fresh": "6 PRs (#885-#891) opened 2026-09-22, awaiting Step 9J"
+  },
+  "ideas_generated": 5,
+  "debate_verdicts": {
+    "idea_1_step_9e_p0_tier": "SURVIVES → WINNER",
+    "idea_2_precommit_ai_guard": "WEAKENED → parking lot",
+    "idea_3_step_9j_ordering": "WEAKENED → parking lot"
+  },
+  "evidence_summary": "Run 126 winner (Step 9G) implemented by today's nightly. AUTOPILOT_GH_TOKEN at 9 days to expiry — P0 tier fires exactly now. GH #893 filed ad-hoc, proving need. Step 9E currently has no escalation as deadline approaches. 45 unguarded AI call sites (GH #827) growing. 6 fresh Dependabot PRs needing merge.",
+  "parking_lot": [
+    "Pre-commit hook for unguarded AI call sites (false-positive risk, design clarity needed)",
+    "Step 9J ordering fix (tradeoff unclear — deprioritizes security steps)",
+    "GH #892 CI network isolation (needs issue-to-pr-loop)",
+    "os_tool_executions.py god class split (GH #881, ai-ready, GH #399 required)"
+  ],
+  "run_126_winner_status": "IMPLEMENTED — nightly-2026-09-23 confirms Step 9G gh→MCP fix applied"
+}
