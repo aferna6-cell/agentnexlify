@@ -320,8 +320,9 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
        If days_stale <= 7: skip this step entirely (Step 9F already logged clean state).
        If days_stale > 7: proceed.
     2. **Trigger workflow:**
-       Run: `gh workflow run kb-autopopulate.yml -R aferna6-cell/agentnexlify`
-       If command fails (exit non-zero): log "Step 9G: gh workflow run failed — check GH token or workflow name" and continue to step 10.
+       In CCR (Cloud Code Runtime — `gh` unavailable): call `mcp__github__actions_run_trigger` with owner="aferna6-cell", repo="agentnexlify", workflow_id="kb-autopopulate.yml", ref="main".
+       Fallback (interactive session, `gh` available): `gh workflow run kb-autopopulate.yml -R aferna6-cell/agentnexlify`
+       If trigger fails: log "Step 9G: workflow trigger failed — check GH token or workflow name" and continue to step 10.
     3. **Wait for initial status:**
        `sleep 30`
        Run: `gh run list --workflow=kb-autopopulate.yml -R aferna6-cell/agentnexlify --limit=1 --json conclusion,url`
