@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-09-22-pm",
-  "total_runs": 126,
+  "last_run": "2026-09-23",
+  "total_runs": 127,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -2368,6 +2368,57 @@
       "Did Step 9G fire after rotation? Check KB staleness (knowledge-base/log.md).",
       "Step 9E P0 tier: still absent from SKILL.md? GH #893 still open?",
       "GH #892 CI fix: addressed? Still P1 blocker?"
+    ]
+  },
+  "run_127_governance_correction": {
+    "step9g_status": "CONFIRMED IMPLEMENTED — nightly-2026-09-23 applied LOW-risk auto-fix; mcp__github__actions_run_trigger now in SKILL.md replacing broken gh CLI.",
+    "step9e_status": "STILL NOT IMPLEMENTED — 7th carry-forward blocked by task-prompt recommend-only. Winner restored from run 126 parking lot (Step 9G delivered). Autonomous-executable mandate unchanged (binding since run 122).",
+    "step9e_p0_threshold": "CROSSED — AUTOPILOT_GH_TOKEN at 9 days (expires 2026-10-02). GH #893 open (manual one-time notification). P0 tier absent from SKILL.md.",
+    "step9l_status": "45 violations (unchanged). GH #827 open P1.",
+    "gh_892_status": "OPEN P1 — CI safety test escape. Filed 2026-09-22. Issue-to-pr-loop blocked pending AUTOPILOT_GH_TOKEN rotation.",
+    "gh_893_status": "OPEN P0 — AUTOPILOT_GH_TOKEN expires 2026-10-02. No human response. 9 days remain.",
+    "kb_staleness_days": 27,
+    "repo_commits_24h": 0,
+    "repo_idle_days": 4,
+    "ideas_generated": 5,
+    "winner": "Step 9E: Add 10-Day P0 Credential Expiry Escalation Tier (7th carry, restored from run 126 parking lot post Step 9G delivery)",
+    "winner_restoration_rationale": "Step 9G confirmed implemented. Step 9E restored as winner — highest urgency (9 days to token expiry), clearest implementation path, proven SKILL.md channel.",
+    "parking_lot": [
+      "Step 9M: AI metering violation trend tracking (S effort, post-Step-9E)",
+      "os_tool_executions.py split GH issue (XS effort — verify or file run 128)",
+      "Step 9N: credential rotation reminder comment automation (prerequisite: Step 9E)"
+    ],
+    "killed": [
+      "GH #892 specific fix — tracked as P1, loop will handle post-token-rotation"
+    ],
+    "total_runs": "126 → 127",
+    "last_run": "2026-09-22-pm → 2026-09-23"
+  },
+  "run_127_active_direction": {
+    "title": "Step 9E: Add 10-Day P0 Credential Expiry Escalation Tier",
+    "date": "2026-09-23",
+    "confidence": "HIGH",
+    "status": "autonomous_executable",
+    "implemented": false,
+    "autonomous_executable": true,
+    "autonomous_executable_at_run": 122,
+    "requires_human": false,
+    "category": "operational/workflow_efficiency",
+    "moratorium_override": false,
+    "source_run": 127,
+    "effort": "S",
+    "carry_forward_count": 7,
+    "evidence": "7th consecutive carry-forward (runs 119→127, rotation to Step 9G at run 126). AUTOPILOT_GH_TOKEN expires 2026-10-02 (9 days). P0 threshold crossed 2026-09-22. grep confirms P0 tier absent (days_remaining=0 hits, P0-context hits=0 in Step 9E block). Step 9G confirmed implemented today — SKILL.md channel proven. GH #893 provides one-time manual notification only; Step 9E is permanent.",
+    "action": "Edit Step 9E block in .claude/skills/nightly-commit-review/SKILL.md (lines ~277-300). After existing days_since_rotation computation, add: compute days_remaining = 90 - days_since_rotation. If days_remaining <= 10: (1) search open GH issues with labels P0+ops for that credential (dedup guard), (2) if none, file GH issue via mcp__github__issue_write with labels human-action-required + ops + P0, title 'P0: {credential_name} expires in {days_remaining} days — rotate now'. Extend step 4 log line to include K=count of P0-tier alerts fired.",
+    "implementation_sketch": "subconscious/runs/2026-09-23/winning-concept.md",
+    "escalation_condition": "Autonomous-executable since run 122. Task prompt recommend-only constraint is the sole blocker. P0 fires NOW (9 days). Token expires 2026-10-02.",
+    "run_128_mandate": [
+      "Verify Step 9E P0 tier in SKILL.md: grep days_remaining, P0, <= 10",
+      "Did Step 9E P0 ALERT fire in nightly-2026-09-24 for AUTOPILOT_GH_TOKEN?",
+      "AUTOPILOT_GH_TOKEN rotated before 2026-10-02? 8 days remain.",
+      "Step 9G fired correctly post-implementation? KB staleness check.",
+      "GH #892 CI fix: any PR from issue-to-pr-loop post-token-rotation?",
+      "os_tool_executions.py GH issue: confirm filed (runs 122/123 bonus) or file run 128."
     ]
   }
 }
