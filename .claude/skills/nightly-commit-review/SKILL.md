@@ -296,8 +296,21 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
             labels: ["credential-rotation", "human-action-required"]
        c. If open credential-rotation issue FOUND:
           Add comment via `mcp__github__add_issue_comment` with updated days_since_rotation.
-    4. **Log result:**
-       Add to nightly commit log: "Step 9E: {N} credentials checked, {M} approaching expiry (>=76 days), {K} unknown state"
+    4. **P0 escalation (days_remaining <= 10):**
+       Compute days_remaining = (next_due_date - today).
+       If days_remaining <= 10 AND days_remaining > 0:
+         a. Search for existing open GH issue with title containing credential name + "expires":
+            `mcp__github__search_issues` query: "{credential_name} expires repo:aferna6-cell/agentnexlify"
+         b. If NONE found: create GH issue via `mcp__github__issue_write`:
+              title: "P0: {credential_name} expires in {days_remaining} days — rotate NOW"
+              labels: ["p0", "human-action-required", "ops"]
+              body: credential name, last_rotated date, expiry date, days_remaining, rotation steps from schedule
+            Log: "Step 9E: P0 ALERT — {credential_name} expires in {days_remaining} days. GH #{number} filed."
+         c. If FOUND: log "Step 9E: P0 dedup skip — GH #{number} exists for {credential_name}."
+       If days_remaining <= 0:
+         Log: "Step 9E: EXPIRED — {credential_name} may have expired {abs(days_remaining)} days ago. Manual rotation required."
+    5. **Log result:**
+       Add to nightly commit log: "Step 9E: {N} credentials checked, {M} approaching expiry (>=76 days), {P} P0 (<= 10 days), {K} unknown state"
 9F. (KB Autopopulate Staleness Check) Check when knowledge base was last successfully populated:
     1. **Read KB log:**
        Read `knowledge-base/log.md`.
