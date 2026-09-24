@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-09-23",
-  "total_runs": 127,
+  "last_run": "2026-09-24",
+  "total_runs": 128,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -2399,7 +2399,9 @@
     "date": "2026-09-23",
     "confidence": "HIGH",
     "status": "autonomous_executable",
-    "implemented": false,
+    "implemented": true,
+    "implemented_by": "nightly-2026-09-24",
+    "implementation_channel": "autonomous-executable (SKILL.md)",
     "autonomous_executable": true,
     "autonomous_executable_at_run": 122,
     "requires_human": false,
@@ -2419,6 +2421,39 @@
       "Did tonight's nightly fire Step 9E P0 tier? Check nightly log for 'Step 9E: P0 ALERT'.",
       "GH #892 CI escape: any PR linked or fix landed?",
       "Dependabot PRs #885-#891: how many merged by Step 9J?"
+    ]
+  },
+  "run_128_active_direction": {
+    "title": "Step 9J Priority Queue: Add sort:created-asc + perPage=5 to nightly-commit-review SKILL.md Step 9J.1 search call (run 128 winner)",
+    "date": "2026-09-24",
+    "confidence": "HIGH",
+    "status": "autonomous_executable",
+    "implemented": false,
+    "autonomous_executable": true,
+    "requires_human": false,
+    "category": "workflow_efficiency",
+    "moratorium_override": false,
+    "source_run": 128,
+    "effort": "XS",
+    "carry_forward_count": 1,
+    "evidence": "7+ consecutive nightly runs show 17/19 Dependabot PRs skipped per run (token budget depleted before Step 9J processes all results). Oldest PRs (#885-#891, some 7d+) carry highest CVE-age risk but are not guaranteed to be processed first with default search ordering. Step 9E P0 tier (run 127 winner, 7th carry) was IMPLEMENTED by nightly-2026-09-24 via autonomous-executable channel — clearing the carry-forward queue for a fresh direction.",
+    "action": "In .claude/skills/nightly-commit-review/SKILL.md, Step 9J block, locate the search_pull_requests call at Step 9J.1. Add sort: 'created', direction: 'asc', perPage: 5 parameters. Update log entry to: 'Step 9J: {N} oldest Dependabot PRs checked (sort:created-asc), {M} merged, {R} rebase-triggered, {K} skipped.'",
+    "implementation_sketch": "subconscious/runs/2026-09-24/winning-concept.md",
+    "parking_lot": [
+      "GH #881 spec enhancement (parked — blocked by AUTOPILOT_GH_TOKEN expiry, GH #399)",
+      "Step 9M AI metering trend tracking (parked — blocked by GH #399)",
+      "GH #403/#616/#618 consolidation comment (parked — belongs in nightly actions, not subconscious winner)"
+    ],
+    "killed": [
+      "Step 9O credential liveness test (Step 9E P0 covers urgency signal; no early-revocation evidence; token budget pressure)"
+    ],
+    "run_129_mandate": [
+      "Verify Step 9J search call has sort:created + direction:asc + perPage:5 in SKILL.md after nightly implements.",
+      "First nightly with fix: log entry confirms 'oldest Dependabot PRs checked (sort:created-asc)'. How many merged? Rebase-triggered? Skipped?",
+      "AUTOPILOT_GH_TOKEN rotated before 2026-10-02? GH #399 status.",
+      "Brain connector GitHub PAT rotated before 2026-10-02?",
+      "KB: Step 9G triggered post-rotation? knowledge-base/log.md date post-2026-08-26?",
+      "GH #881 spec: sufficient for loop execution when GH #399 resolves?"
     ]
   }
 }

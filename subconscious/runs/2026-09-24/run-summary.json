@@ -1,0 +1,50 @@
+{
+  "run": 128,
+  "date": "2026-09-24",
+  "winner": {
+    "title": "Step 9J Priority Queue — sort:created-asc + perPage=5",
+    "category": "workflow_efficiency",
+    "carry_count": 1,
+    "autonomous_executable": true,
+    "confidence": "HIGH",
+    "effort": "XS",
+    "status": "recommend"
+  },
+  "prior_winner_status": {
+    "run": 127,
+    "winner": "Step 9E P0 Tier",
+    "carry_count": 7,
+    "implemented_by": "nightly-2026-09-24",
+    "implementation_channel": "autonomous-executable (SKILL.md)",
+    "notes": "Nightly review not bound by subconscious recommend-only constraint. 7th carry resolved."
+  },
+  "ideas_generated": 5,
+  "ideas_debated": 3,
+  "debate_verdicts": {
+    "idea_1_step_9j_priority_queue": "SURVIVES → WINNER",
+    "idea_2_gh_881_spec_enhancement": "WEAKENED → Parking lot",
+    "idea_3_credential_liveness_step_9o": "KILLED"
+  },
+  "evidence_signals": {
+    "dependabot_prs_skipped_per_run": "17/19 (7+ consecutive runs)",
+    "autopilot_gh_token_days_remaining": 8,
+    "autopilot_gh_token_expiry": "2026-10-02",
+    "kb_staleness_days": 29,
+    "kb_last_compiled": "2026-08-26",
+    "os_tool_executions_lines": 783,
+    "ai_metering_violations": 45,
+    "gh_399_comments": 19,
+    "gh_399_human_actions": 0
+  },
+  "p0_alerts": [
+    "AUTOPILOT_GH_TOKEN expires 2026-10-02 — 8 days. Human action required.",
+    "Brain connector GitHub PAT expires 2026-10-02 — 8 days. Human action required."
+  ],
+  "mandate_items": [
+    "Verify Step 9J search call has sort:created-asc + perPage=5 after nightly implements",
+    "First nightly with fix: log entry confirms oldest PRs processed. Count merged/rebase/skipped.",
+    "AUTOPILOT_GH_TOKEN rotated before 2026-10-02?",
+    "KB: Step 9G triggered post-rotation? knowledge-base/log.md date post-2026-08-26?",
+    "GH #881 spec sufficient for loop execution when GH #399 resolves?"
+  ]
+}
