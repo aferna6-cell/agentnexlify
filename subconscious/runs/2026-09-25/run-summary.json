@@ -1,0 +1,51 @@
+{
+  "run": 130,
+  "date": "2026-09-25",
+  "winner": "Step 9G KB Failure Diagnostics — poll kb-autopopulate.yml run status post-trigger + GH #403 comment on failure",
+  "category": "workflow_efficiency",
+  "effort": "S",
+  "confidence": "HIGH",
+  "ideas_count": 5,
+  "autonomous_executable": true,
+  "carry_forward_count": 1,
+  "evidence_summary": "Step 9J sort:created-asc CONFIRMED IMPLEMENTED by nightly-2026-09-25 (parking lot condition for Step 9G met). KB still 30 days stale (last: 2026-08-26). Step 9G logs false-positive 'TRIGGERED — SUCCESS' 15+ consecutive runs due to ANTHROPIC_API_KEY missing in GH Actions (GH #403). AUTOPILOT_GH_TOKEN expires 2026-10-02 (7 days). GH #399 open.",
+  "mandate_check": {
+    "step9j_sort_confirmed": "PASS — nightly-2026-09-25 confirmed sort:created-asc + perPage=5 in SKILL.md and in nightly log",
+    "autopilot_gh_token_rotated": "FAIL — GH #399 still open, 7 days to expiry",
+    "brain_connector_pat_rotated": "UNKNOWN",
+    "kb_staleness_resolved": "FAIL — still 30 days stale (2026-08-26)",
+    "gh_827_trend": "NOT CHECKED — parking lot item (add to run 131)"
+  },
+  "debate_verdicts": {
+    "step9g_kb_diagnostics": "SURVIVES → WINNER",
+    "step9e_elapsed_auto_issue": "WEAKENED → parking lot (promote run 131 post-Step-9G clearance)",
+    "os_tool_executions_split": "WEAKENED → parking lot (7th mention, requires human session)"
+  },
+  "parking_lot": [
+    "Step 9E ELAPSED Auto-Issue Filing (promote run 131)",
+    "os_tool_executions.py God Class Split (7th mention, human session required)",
+    "GH #827 AI Metering Baseline Log (3-line nightly addition)",
+    "Step 9E Expiry State Persistence (post token rotation)"
+  ],
+  "killed": [],
+  "p0_alerts": [
+    "AUTOPILOT_GH_TOKEN expires 2026-10-02 — 7 days. GH #399.",
+    "Brain connector GitHub PAT — expiry unknown. Rotate alongside AUTOPILOT_GH_TOKEN.",
+    "ANTHROPIC_API_KEY missing from GH Actions — GH #403. Root cause of KB stagnation."
+  ],
+  "run_131_mandate": [
+    "Was Step 9G KB Failure Diagnostics implemented? grep mcp__github__actions_list in SKILL.md Step 9G.",
+    "Did nightly log show 'KB autopopulate: TRIGGERED — RUN FAILED' or 'TRIGGERED+CONFIRMED'?",
+    "AUTOPILOT_GH_TOKEN rotated before 2026-10-02? URGENT — 7 days remain.",
+    "Brain connector GitHub PAT rotated?",
+    "KB staleness: knowledge-base/log.md date post-2026-08-26?",
+    "GH #827 ai-metering: open count? Trending up or down?"
+  ],
+  "artifacts": [
+    "subconscious/runs/2026-09-25/winning-concept.md",
+    "subconscious/runs/2026-09-25/improvement-backlog.md",
+    "subconscious/runs/2026-09-25/run-summary.json",
+    "subconscious/runs/2026-09-25/ideas/ideas.md",
+    "subconscious/runs/2026-09-25/debate/debate-log.md"
+  ]
+}
