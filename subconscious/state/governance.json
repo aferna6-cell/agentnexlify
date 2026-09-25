@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "last_run": "2026-09-24-pm",
-  "total_runs": 129,
+  "last_run": "2026-09-25",
+  "total_runs": 130,
   "run_70_mandate": "EXECUTED 2026-06-28. check_project_invariants.py exited 1 at run 70 (widget drift, 6th consecutive run). Actions taken: (1) docs/reminders/widget-drift-URGENT.md written with exact fix command, (2) URGENT push notification sent, (3) widget drift topic retired from subconscious permanently. Now human-only task. No further subconscious debate on widget drift.",
   "widget_drift_topic_retired": true,
   "widget_drift_retired_reason": "6-run delivery failure chain (runs 65-70). FORBIDDEN paths list in nightly-commit-review SKILL.md prevents autonomous fix. Human-only task. Fix: cp widget/agentnexlify-widget.js landing-page-v2/widget/agentnexlify-widget.js",
@@ -2487,6 +2487,30 @@
       "Brain connector GitHub PAT rotated before 2026-10-02?",
       "KB staleness: knowledge-base/log.md date post-2026-08-26?",
       "GH #827: ai-ready + billing issues count trending up or down?"
+    ],
+    "run_130_governance_corrections": {
+      "run_129_step9j": "status: autonomous_executable → implemented (nightly-2026-09-25). sort:created-asc + perPage=5 confirmed in SKILL.md and nightly log.",
+      "total_runs": "129 → 130",
+      "last_run": "2026-09-24-pm → 2026-09-25"
+    },
+    "run_130_active_direction": {
+      "winner": "Step 9G KB Failure Diagnostics",
+      "carry_forward_count": 1,
+      "autonomous_executable": true,
+      "status": "pending_recommendation",
+      "description": "Poll kb-autopopulate.yml run status ~90s post-trigger via mcp__github__actions_list; log honest outcome; post specific error comment to GH #403 if run failed. Ends 15+ consecutive false-positive 'TRIGGERED — SUCCESS' logs while KB is 30 days stale.",
+      "effort": "S",
+      "category": "workflow_efficiency",
+      "parking_lot_condition_met_at_run": 130,
+      "parking_lot_condition": "Step 9J sort:created-asc cleared by nightly-2026-09-25"
+    },
+    "run_131_mandate": [
+      "Was Step 9G KB Failure Diagnostics implemented? grep mcp__github__actions_list in nightly-commit-review SKILL.md Step 9G section.",
+      "Did nightly log show 'KB autopopulate: TRIGGERED — RUN FAILED' or 'TRIGGERED+CONFIRMED'?",
+      "AUTOPILOT_GH_TOKEN rotated before 2026-10-02? URGENT — expires in 7 days as of 2026-09-25.",
+      "Brain connector GitHub PAT rotated? Still unknown as of 2026-09-25.",
+      "KB staleness: knowledge-base/log.md still 2026-08-26? If token rotated + Step 9G diagnostics running, expect recovery.",
+      "GH #827: ai-metering violations open count — trending up, stable, or down?"
     ]
   }
 }
