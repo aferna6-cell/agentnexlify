@@ -405,7 +405,8 @@ You are the AgentNexLiFy nightly commit reviewer. It is 2:37 AM local, time to r
        {K} new issues filed, {J} already tracked in open issues"
 9J. (Dependabot Auto-Merge) Merge CI-green Dependabot PRs with no review requests:
     1. **List open Dependabot PRs:**
-       `mcp__github__search_pull_requests` with query="is:pr is:open author:app/dependabot".
+       `mcp__github__search_pull_requests` with query="is:pr is:open author:app/dependabot", sort="created", order="asc", perPage=5.
+       (Oldest PRs first — highest CVE-age risk processed within 1-2 nightly cycles.)
        If 0 Dependabot PRs found: log "Step 9J: 0 Dependabot PRs open — skip" and continue to step 10.
     2. **Initialize counters:** rebase_trigger_count = 0
     3. **For each Dependabot PR, check eligibility:**
