@@ -24,10 +24,20 @@ if str(SCRIPTS) not in sys.path:
 import m8_staging_credentials as creds
 
 
-def _get(url: str, headers: dict) -> tuple[int, object]:
-    req = urllib.request.Request(url, headers=headers, method="GET")
+class _RejectCredentialRedirects(urllib.request.HTTPRedirectHandler):
+    """Refuse automatic redirects so credential headers are not replayed."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _build_opener():
+    return urllib.request.build_opener(_RejectCredentialRedirects())
+
+
+def _open(req: urllib.request.Request, timeout: int) -> tuple[int, object]:
     try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
+        with _build_opener().open(req, timeout=timeout) as resp:
             raw = resp.read().decode("utf-8", errors="replace")
             return int(resp.status), json.loads(raw) if raw else None
     except urllib.error.HTTPError as exc:
@@ -37,6 +47,11 @@ def _get(url: str, headers: dict) -> tuple[int, object]:
         except Exception:
             body = raw[:200]
         return int(exc.code), body
+
+
+def _get(url: str, headers: dict) -> tuple[int, object]:
+    req = urllib.request.Request(url, headers=headers, method="GET")
+    return _open(req, 20)
 
 
 def _post_json(url: str, payload: dict) -> tuple[int, object]:
@@ -47,22 +62,19 @@ def _post_json(url: str, payload: dict) -> tuple[int, object]:
         headers={"Content-Type": "application/json", "Accept": "application/json"},
         method="POST",
     )
-    try:
-        with urllib.request.urlopen(req, timeout=25) as resp:
-            raw = resp.read().decode("utf-8", errors="replace")
-            return int(resp.status), json.loads(raw) if raw else None
-    except urllib.error.HTTPError as exc:
-        raw = exc.read().decode("utf-8", errors="replace")
-        try:
-            body = json.loads(raw)
-        except Exception:
-            body = raw[:200]
-        return int(exc.code), body
+    return _open(req, 25)
 
 
 def main() -> int:
-    base = (os.environ.get("M8_SMOKE_API_BASE") or "").rstrip("/")
-    sb_url = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
+    base = (os.environ.get("M8_SMOKE_API_BASE") or "").strip().rstrip("/")
+    sb_url = (os.environ.get("SUPABASE_URL") or "").strip().rstrip("/")
+    target_fails = creds.staging_target_errors(supabase_url=sb_url, api_base=base)
+    if target_fails:
+        print("FAIL step-3 verification:")
+        for item in target_fails:
+            print(f"  - {item}")
+        return 1
+
     anon = (os.environ.get("SUPABASE_KEY") or "").strip()
     service = (
         os.environ.get("SUPABASE_SERVICE_KEY")
@@ -75,8 +87,6 @@ def main() -> int:
     password = (os.environ.get("M8_SMOKE_LOGIN_PASSWORD") or "").strip()
 
     fails: list[str] = []
-
-    fails.extend(creds.staging_target_errors(supabase_url=sb_url, api_base=base))
 
     expected_ref = creds.project_ref_from_supabase_url(sb_url) or creds.STAGING_SUPABASE_PROJECT_REF
     validation = creds.validate_staging_server_key(service, expected_project_ref=expected_ref)

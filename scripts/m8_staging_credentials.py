@@ -15,6 +15,41 @@ from urllib.parse import urlparse
 
 STAGING_SUPABASE_PROJECT_REF = "nohanoiugcbaxtxinttp"
 PRODUCTION_SUPABASE_PROJECT_REF = "pxserpybmajixqrmzaly"
+STAGING_API_HOST = "agentnexlify-staging.up.railway.app"
+PRODUCTION_API_HOST = "agentnexlify-production.up.railway.app"
+
+REASON_PRODUCTION_API = "M8_SMOKE_API_BASE is production API"
+REASON_PRODUCTION_SUPABASE = "SUPABASE_URL host is production project ref"
+REASON_MALFORMED_API = "M8_SMOKE_API_BASE is malformed"
+REASON_MALFORMED_SUPABASE = "SUPABASE_URL is malformed"
+REASON_USERINFO_API = "M8_SMOKE_API_BASE contains URL userinfo"
+REASON_USERINFO_SUPABASE = "SUPABASE_URL contains URL userinfo"
+REASON_UNAPPROVED_API = "M8_SMOKE_API_BASE host is not an approved staging host"
+REASON_UNAPPROVED_SUPABASE = "SUPABASE_URL host is not an approved staging host"
+
+_API_TARGET = "api"
+_SUPABASE_TARGET = "supabase"
+_TARGET_REASONS = {
+    _API_TARGET: {
+        "production": REASON_PRODUCTION_API,
+        "malformed": REASON_MALFORMED_API,
+        "userinfo": REASON_USERINFO_API,
+        "unapproved": REASON_UNAPPROVED_API,
+    },
+    _SUPABASE_TARGET: {
+        "production": REASON_PRODUCTION_SUPABASE,
+        "malformed": REASON_MALFORMED_SUPABASE,
+        "userinfo": REASON_USERINFO_SUPABASE,
+        "unapproved": REASON_UNAPPROVED_SUPABASE,
+    },
+}
+_TARGET_HOSTS = {
+    _API_TARGET: (STAGING_API_HOST, PRODUCTION_API_HOST),
+    _SUPABASE_TARGET: (
+        f"{STAGING_SUPABASE_PROJECT_REF}.supabase.co",
+        f"{PRODUCTION_SUPABASE_PROJECT_REF}.supabase.co",
+    ),
+}
 
 MODERN_SECRET_PREFIX = "sb_secret_"
 MODERN_PUBLISHABLE_PREFIX = "sb_publishable_"
@@ -172,18 +207,57 @@ def safe_key_metadata(raw: str, validation: StagingKeyValidation | None = None) 
     return meta
 
 
+def _normalized_hostname(hostname: str | None) -> str:
+    return (hostname or "").rstrip(".").lower()
+
+
+def _classify_staging_target(raw: str, target: str) -> str | None:
+    """Return one secret-safe reason, or None when the target is approved staging.
+
+    Empty values are unset configuration, not malformed targets. Host checks use
+    the parsed hostname only, case-folded, with trailing dots removed.
+    urlparse and port access raise ValueError for unmatched IPv6 brackets and
+    invalid ports. Those, and any other parser exception, become the malformed
+    reason so the raw URL cannot leak through a traceback.
+    """
+    text = (raw or "").strip()
+    if not text:
+        return None
+    reasons = _TARGET_REASONS[target]
+    staging_host, production_host = _TARGET_HOSTS[target]
+    try:
+        parsed = urlparse(text)
+        hostname = parsed.hostname
+        port = parsed.port
+        username = parsed.username
+        password = parsed.password
+    except Exception:
+        return reasons["malformed"]
+
+    host = _normalized_hostname(hostname)
+    if not host:
+        return reasons["malformed"]
+    if host == production_host:
+        return reasons["production"]
+    if host != staging_host:
+        return reasons["unapproved"]
+    if parsed.scheme not in {"http", "https"}:
+        return reasons["malformed"]
+    if username is not None or password is not None:
+        return reasons["userinfo"]
+    default_port = 443 if parsed.scheme == "https" else 80
+    if port is not None and port != default_port:
+        return reasons["malformed"]
+    return None
+
+
 def staging_target_errors(*, supabase_url: str, api_base: str) -> list[str]:
-    """Fail closed if smoke tooling targets production."""
+    """Fail closed unless both targets are the approved staging hosts."""
     fails: list[str] = []
-    host = project_ref_from_supabase_url(supabase_url)
-    if PRODUCTION_SUPABASE_PROJECT_REF in (supabase_url or ""):
-        fails.append("SUPABASE_URL points at production Supabase project")
-    if supabase_url and host == PRODUCTION_SUPABASE_PROJECT_REF:
-        fails.append("SUPABASE_URL host is production project ref")
-    if supabase_url and host and host != STAGING_SUPABASE_PROJECT_REF:
-        fails.append(
-            f"SUPABASE_URL host {host!r} is not staging ref {STAGING_SUPABASE_PROJECT_REF!r}"
-        )
-    if "agentnexlify-production" in (api_base or ""):
-        fails.append("M8_SMOKE_API_BASE is production API")
+    supabase_reason = _classify_staging_target(supabase_url, _SUPABASE_TARGET)
+    if supabase_reason:
+        fails.append(supabase_reason)
+    api_reason = _classify_staging_target(api_base, _API_TARGET)
+    if api_reason:
+        fails.append(api_reason)
     return fails
