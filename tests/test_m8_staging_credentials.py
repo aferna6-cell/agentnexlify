@@ -449,6 +449,82 @@ class TestVerifyScriptOutput:
         rc, raised, counts, out, err = self._run_invalid_main(monkeypatch, capsys, api, supabase)
         self._assert_rejected(rc, raised, counts, out, err, api, supabase, reasons)
 
+    @pytest.mark.parametrize(
+        ("service_key", "reason"),
+        [
+            (None, "local server credential invalid: empty credential"),
+            (
+                f"not-a-server-credential-{CANARY}",
+                "local server credential invalid: "
+                "expected legacy service_role JWT (eyJ...) or modern secret key (sb_secret_...)",
+            ),
+        ],
+        ids=["missing-service-credential", "invalid-service-credential"],
+    )
+    def test_real_main_rejects_missing_or_invalid_service_credential(
+        self, monkeypatch, capsys, service_key, reason
+    ):
+        mod = self._load_verify_module()
+        counts = {"urlopen": 0, "getaddrinfo": 0, "_get": 0, "_post_json": 0}
+        monkeypatch.setattr(urllib.request, "urlopen", _watch(counts, "urlopen"))
+        monkeypatch.setattr(socket, "getaddrinfo", _watch(counts, "getaddrinfo"))
+
+        def fake_get(url, headers):
+            counts["_get"] += 1
+            assert url == f"{STAGING_API}/health"
+            return 599, {"status": "blocked"}
+
+        def fake_post(url, payload):
+            counts["_post_json"] += 1
+            raise AssertionError("_post_json")
+
+        monkeypatch.setattr(mod, "_get", fake_get)
+        monkeypatch.setattr(mod, "_post_json", fake_post)
+        for key in (
+            "SUPABASE_SERVICE_KEY",
+            "SUPABASE_SERVICE_ROLE_KEY",
+            "STAGING_SUPABASE_SERVICE_ROLE_KEY",
+            "SUPABASE_KEY",
+            "M8_SMOKE_CLIENT_ID",
+            "M8_SMOKE_LOGIN_EMAIL",
+        ):
+            monkeypatch.delenv(key, raising=False)
+        monkeypatch.setenv("M8_SMOKE_API_BASE", STAGING_API)
+        monkeypatch.setenv("SUPABASE_URL", STAGING_SB)
+        monkeypatch.setenv("M8_SMOKE_LOGIN_PASSWORD", CANARY)
+        if service_key is not None:
+            monkeypatch.setenv("SUPABASE_SERVICE_KEY", service_key)
+
+        raised = None
+        rc = None
+        try:
+            rc = mod.main()
+        except AssertionError as exc:
+            raised = exc
+        captured = capsys.readouterr()
+        text = captured.out + captured.err
+        assert raised is None
+        assert rc == 1
+        assert counts["urlopen"] == 0
+        assert counts["getaddrinfo"] == 0
+        assert counts["_post_json"] == 0
+        assert _reason_lines(captured.out) == [
+            reason,
+            "SUPABASE_KEY unset",
+            "/health failed http=599",
+        ]
+        assert captured.out.count(reason) == 1
+        assert "PASS" not in text
+        assert "OK" not in text
+        assert "Traceback" not in text
+        assert "ValueError" not in text
+        assert CANARY not in text
+        assert MODERN_SECRET not in text
+        assert STAGING_API not in text
+        assert STAGING_SB not in text
+        if service_key is not None:
+            assert service_key not in text
+
     def test_opener_disables_stock_redirects(self):
         mod = self._load_verify_module()
         opener = mod._build_opener()
