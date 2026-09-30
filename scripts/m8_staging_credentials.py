@@ -26,6 +26,8 @@ REASON_USERINFO_API = "M8_SMOKE_API_BASE contains URL userinfo"
 REASON_USERINFO_SUPABASE = "SUPABASE_URL contains URL userinfo"
 REASON_UNAPPROVED_API = "M8_SMOKE_API_BASE host is not an approved staging host"
 REASON_UNAPPROVED_SUPABASE = "SUPABASE_URL host is not an approved staging host"
+REASON_HTTPS_API = "M8_SMOKE_API_BASE must use https"
+REASON_HTTPS_SUPABASE = "SUPABASE_URL must use https"
 
 _API_TARGET = "api"
 _SUPABASE_TARGET = "supabase"
@@ -35,12 +37,14 @@ _TARGET_REASONS = {
         "malformed": REASON_MALFORMED_API,
         "userinfo": REASON_USERINFO_API,
         "unapproved": REASON_UNAPPROVED_API,
+        "https": REASON_HTTPS_API,
     },
     _SUPABASE_TARGET: {
         "production": REASON_PRODUCTION_SUPABASE,
         "malformed": REASON_MALFORMED_SUPABASE,
         "userinfo": REASON_USERINFO_SUPABASE,
         "unapproved": REASON_UNAPPROVED_SUPABASE,
+        "https": REASON_HTTPS_SUPABASE,
     },
 }
 _TARGET_HOSTS = {
@@ -216,6 +220,7 @@ def _classify_staging_target(raw: str, target: str) -> str | None:
 
     Empty values are unset configuration, not malformed targets. Host checks use
     the parsed hostname only, case-folded, with trailing dots removed.
+    An approved staging host is accepted only over https.
     urlparse and port access raise ValueError for unmatched IPv6 brackets and
     invalid ports. Those, and any other parser exception, become the malformed
     reason so the raw URL cannot leak through a traceback.
@@ -241,12 +246,11 @@ def _classify_staging_target(raw: str, target: str) -> str | None:
         return reasons["production"]
     if host != staging_host:
         return reasons["unapproved"]
-    if parsed.scheme not in {"http", "https"}:
-        return reasons["malformed"]
+    if parsed.scheme != "https":
+        return reasons["https"]
     if username is not None or password is not None:
         return reasons["userinfo"]
-    default_port = 443 if parsed.scheme == "https" else 80
-    if port is not None and port != default_port:
+    if port is not None and port != 443:
         return reasons["malformed"]
     return None
 

@@ -160,6 +160,13 @@ class TestStagingTargetGuard:
         )
         assert fails == []
 
+    def test_rejects_cleartext_approved_staging_hosts(self):
+        fails = creds.staging_target_errors(
+            supabase_url=f"http://{STAGING_REF.upper()}.supabase.co",
+            api_base="http://AGENTNEXLIFY-STAGING.UP.RAILWAY.APP:80",
+        )
+        assert fails == [creds.REASON_HTTPS_SUPABASE, creds.REASON_HTTPS_API]
+
     def test_unset_targets_are_not_target_errors(self):
         assert creds.staging_target_errors(supabase_url="", api_base="") == []
 
@@ -441,6 +448,21 @@ class TestVerifyScriptOutput:
             ("https://evil.example", STAGING_SB, [creds.REASON_UNAPPROVED_API]),
             (STAGING_API, f"https://{STAGING_REF}.supabase.co:bad", [creds.REASON_MALFORMED_SUPABASE]),
             (STAGING_API, "https://[::1", [creds.REASON_MALFORMED_SUPABASE]),
+            (
+                "http://agentnexlify-staging.up.railway.app",
+                STAGING_SB,
+                [creds.REASON_HTTPS_API],
+            ),
+            (
+                STAGING_API,
+                f"http://{STAGING_REF}.supabase.co",
+                [creds.REASON_HTTPS_SUPABASE],
+            ),
+            (
+                "http://AGENTNEXLIFY-STAGING.UP.RAILWAY.APP",
+                f"http://{STAGING_REF.upper()}.SUPABASE.CO",
+                [creds.REASON_HTTPS_SUPABASE, creds.REASON_HTTPS_API],
+            ),
         ],
     )
     def test_real_main_rejects_invalid_targets_before_io(
@@ -466,31 +488,21 @@ class TestVerifyScriptOutput:
     ):
         mod = self._load_verify_module()
         counts = {"urlopen": 0, "getaddrinfo": 0, "_get": 0, "_post_json": 0}
+        monkeypatch.setattr(mod, "_get", _watch(counts, "_get"))
+        monkeypatch.setattr(mod, "_post_json", _watch(counts, "_post_json"))
         monkeypatch.setattr(urllib.request, "urlopen", _watch(counts, "urlopen"))
         monkeypatch.setattr(socket, "getaddrinfo", _watch(counts, "getaddrinfo"))
-
-        def fake_get(url, headers):
-            counts["_get"] += 1
-            assert url == f"{STAGING_API}/health"
-            return 599, {"status": "blocked"}
-
-        def fake_post(url, payload):
-            counts["_post_json"] += 1
-            raise AssertionError("_post_json")
-
-        monkeypatch.setattr(mod, "_get", fake_get)
-        monkeypatch.setattr(mod, "_post_json", fake_post)
         for key in (
             "SUPABASE_SERVICE_KEY",
             "SUPABASE_SERVICE_ROLE_KEY",
             "STAGING_SUPABASE_SERVICE_ROLE_KEY",
-            "SUPABASE_KEY",
-            "M8_SMOKE_CLIENT_ID",
-            "M8_SMOKE_LOGIN_EMAIL",
         ):
             monkeypatch.delenv(key, raising=False)
         monkeypatch.setenv("M8_SMOKE_API_BASE", STAGING_API)
         monkeypatch.setenv("SUPABASE_URL", STAGING_SB)
+        monkeypatch.setenv("SUPABASE_KEY", LEGACY_ANON)
+        monkeypatch.setenv("M8_SMOKE_CLIENT_ID", "7451537b-a694-4c31-83b0-1b804df3d757")
+        monkeypatch.setenv("M8_SMOKE_LOGIN_EMAIL", f"{CANARY}@agentnexlify.invalid")
         monkeypatch.setenv("M8_SMOKE_LOGIN_PASSWORD", CANARY)
         if service_key is not None:
             monkeypatch.setenv("SUPABASE_SERVICE_KEY", service_key)
@@ -505,14 +517,8 @@ class TestVerifyScriptOutput:
         text = captured.out + captured.err
         assert raised is None
         assert rc == 1
-        assert counts["urlopen"] == 0
-        assert counts["getaddrinfo"] == 0
-        assert counts["_post_json"] == 0
-        assert _reason_lines(captured.out) == [
-            reason,
-            "SUPABASE_KEY unset",
-            "/health failed http=599",
-        ]
+        _assert_counts(counts, ("_get", "_post_json", "urlopen", "getaddrinfo"))
+        assert _reason_lines(captured.out) == [reason]
         assert captured.out.count(reason) == 1
         assert "PASS" not in text
         assert "OK" not in text
@@ -520,8 +526,10 @@ class TestVerifyScriptOutput:
         assert "ValueError" not in text
         assert CANARY not in text
         assert MODERN_SECRET not in text
+        assert LEGACY_ANON not in text
         assert STAGING_API not in text
         assert STAGING_SB not in text
+        assert "/health failed" not in text
         if service_key is not None:
             assert service_key not in text
 

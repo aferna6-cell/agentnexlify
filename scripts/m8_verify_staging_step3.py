@@ -104,6 +104,12 @@ def main() -> int:
     else:
         fails.append("SUPABASE_KEY unset")
 
+    if not validation.ok:
+        print("FAIL step-3 verification:")
+        for item in fails:
+            print(f"  - {item}")
+        return 1
+
     if base:
         code, body = _get(f"{base}/health", {"Accept": "application/json"})
         if code != 200 or not isinstance(body, dict) or body.get("status") != "ok":
