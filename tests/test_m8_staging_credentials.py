@@ -472,19 +472,37 @@ class TestVerifyScriptOutput:
         self._assert_rejected(rc, raised, counts, out, err, api, supabase, reasons)
 
     @pytest.mark.parametrize(
-        ("service_key", "reason"),
+        ("field", "value", "reason"),
         [
-            (None, "local server credential invalid: empty credential"),
+            ("M8_SMOKE_API_BASE", None, "M8_SMOKE_API_BASE unset"),
+            ("SUPABASE_URL", None, "SUPABASE_URL unset"),
+            ("SUPABASE_KEY", None, "SUPABASE_KEY unset"),
+            ("SUPABASE_SERVICE_KEY", None, "local server credential invalid: empty credential"),
+            ("M8_SMOKE_CLIENT_ID", None, "M8_SMOKE_CLIENT_ID unset"),
+            ("M8_SMOKE_LOGIN_EMAIL", None, "M8_SMOKE_LOGIN_EMAIL unset"),
+            ("M8_SMOKE_LOGIN_PASSWORD", None, "M8_SMOKE_LOGIN_PASSWORD unset"),
+            ("SUPABASE_KEY", CANARY, "SUPABASE_KEY is not anon JWT"),
             (
+                "SUPABASE_SERVICE_KEY",
                 f"not-a-server-credential-{CANARY}",
                 "local server credential invalid: "
                 "expected legacy service_role JWT (eyJ...) or modern secret key (sb_secret_...)",
             ),
         ],
-        ids=["missing-service-credential", "invalid-service-credential"],
+        ids=[
+            "missing-api-base",
+            "missing-supabase-url",
+            "missing-anon-key",
+            "missing-service-credential",
+            "missing-client-id",
+            "missing-login-email",
+            "missing-login-password",
+            "invalid-anon-key",
+            "invalid-service-credential",
+        ],
     )
-    def test_real_main_rejects_missing_or_invalid_service_credential(
-        self, monkeypatch, capsys, service_key, reason
+    def test_real_main_rejects_incomplete_local_configuration(
+        self, monkeypatch, capsys, field, value, reason
     ):
         mod = self._load_verify_module()
         counts = {"urlopen": 0, "getaddrinfo": 0, "_get": 0, "_post_json": 0}
@@ -492,6 +510,7 @@ class TestVerifyScriptOutput:
         monkeypatch.setattr(mod, "_post_json", _watch(counts, "_post_json"))
         monkeypatch.setattr(urllib.request, "urlopen", _watch(counts, "urlopen"))
         monkeypatch.setattr(socket, "getaddrinfo", _watch(counts, "getaddrinfo"))
+        client_id = "7451537b-a694-4c31-83b0-1b804df3d757"
         for key in (
             "SUPABASE_SERVICE_KEY",
             "SUPABASE_SERVICE_ROLE_KEY",
@@ -501,11 +520,14 @@ class TestVerifyScriptOutput:
         monkeypatch.setenv("M8_SMOKE_API_BASE", STAGING_API)
         monkeypatch.setenv("SUPABASE_URL", STAGING_SB)
         monkeypatch.setenv("SUPABASE_KEY", LEGACY_ANON)
-        monkeypatch.setenv("M8_SMOKE_CLIENT_ID", "7451537b-a694-4c31-83b0-1b804df3d757")
+        monkeypatch.setenv("SUPABASE_SERVICE_KEY", MODERN_SECRET)
+        monkeypatch.setenv("M8_SMOKE_CLIENT_ID", client_id)
         monkeypatch.setenv("M8_SMOKE_LOGIN_EMAIL", f"{CANARY}@agentnexlify.invalid")
         monkeypatch.setenv("M8_SMOKE_LOGIN_PASSWORD", CANARY)
-        if service_key is not None:
-            monkeypatch.setenv("SUPABASE_SERVICE_KEY", service_key)
+        if value is None:
+            monkeypatch.delenv(field, raising=False)
+        else:
+            monkeypatch.setenv(field, value)
 
         raised = None
         rc = None
@@ -520,8 +542,12 @@ class TestVerifyScriptOutput:
         _assert_counts(counts, ("_get", "_post_json", "urlopen", "getaddrinfo"))
         assert _reason_lines(captured.out) == [reason]
         assert captured.out.count(reason) == 1
-        assert "PASS" not in text
-        assert "OK" not in text
+        success_lines = [
+            line.strip()
+            for line in text.splitlines()
+            if line.strip().startswith(("PASS", "OK"))
+        ]
+        assert success_lines == []
         assert "Traceback" not in text
         assert "ValueError" not in text
         assert CANARY not in text
@@ -529,9 +555,11 @@ class TestVerifyScriptOutput:
         assert LEGACY_ANON not in text
         assert STAGING_API not in text
         assert STAGING_SB not in text
+        assert client_id not in text
         assert "/health failed" not in text
-        if service_key is not None:
-            assert service_key not in text
+        assert "FAIL step-3 verification:" in captured.out
+        if value is not None:
+            assert value not in text
 
     def test_opener_disables_stock_redirects(self):
         mod = self._load_verify_module()

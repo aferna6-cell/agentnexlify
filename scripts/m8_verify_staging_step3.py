@@ -87,28 +87,35 @@ def main() -> int:
     password = (os.environ.get("M8_SMOKE_LOGIN_PASSWORD") or "").strip()
 
     fails: list[str] = []
+    if not base:
+        fails.append("M8_SMOKE_API_BASE unset")
+    if not sb_url:
+        fails.append("SUPABASE_URL unset")
 
     expected_ref = creds.project_ref_from_supabase_url(sb_url) or creds.STAGING_SUPABASE_PROJECT_REF
     validation = creds.validate_staging_server_key(service, expected_project_ref=expected_ref)
     if not validation.ok:
         fails.append(f"local server credential invalid: {validation.error}")
-    elif validation.kind == creds.StagingKeyKind.LEGACY_SERVICE_ROLE:
-        print(f"PASS local server credential kind={validation.kind.value} jwt_role=service_role")
-    else:
-        print(f"PASS local server credential kind={validation.kind.value} (functional verify below)")
-
-    if anon:
-        anon_role = creds.jwt_claims(anon).get("role")
-        if anon_role != "anon":
-            fails.append("SUPABASE_KEY is not anon JWT")
-    else:
+    if not anon:
         fails.append("SUPABASE_KEY unset")
-
-    if not validation.ok:
+    elif creds.jwt_claims(anon).get("role") != "anon":
+        fails.append("SUPABASE_KEY is not anon JWT")
+    if not client_id:
+        fails.append("M8_SMOKE_CLIENT_ID unset")
+    if not email:
+        fails.append("M8_SMOKE_LOGIN_EMAIL unset")
+    if not password:
+        fails.append("M8_SMOKE_LOGIN_PASSWORD unset")
+    if fails:
         print("FAIL step-3 verification:")
         for item in fails:
             print(f"  - {item}")
         return 1
+
+    if validation.kind == creds.StagingKeyKind.LEGACY_SERVICE_ROLE:
+        print(f"PASS local server credential kind={validation.kind.value} jwt_role=service_role")
+    else:
+        print(f"PASS local server credential kind={validation.kind.value} (functional verify below)")
 
     if base:
         code, body = _get(f"{base}/health", {"Accept": "application/json"})
