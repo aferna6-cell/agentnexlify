@@ -28,6 +28,8 @@ REASON_UNAPPROVED_API = "M8_SMOKE_API_BASE host is not an approved staging host"
 REASON_UNAPPROVED_SUPABASE = "SUPABASE_URL host is not an approved staging host"
 REASON_HTTPS_API = "M8_SMOKE_API_BASE must use https"
 REASON_HTTPS_SUPABASE = "SUPABASE_URL must use https"
+REASON_STRICT_ORIGIN_API = "M8_SMOKE_API_BASE is not a strict https origin"
+REASON_STRICT_ORIGIN_SUPABASE = "SUPABASE_URL is not a strict https origin"
 
 _API_TARGET = "api"
 _SUPABASE_TARGET = "supabase"
@@ -38,6 +40,7 @@ _TARGET_REASONS = {
         "userinfo": REASON_USERINFO_API,
         "unapproved": REASON_UNAPPROVED_API,
         "https": REASON_HTTPS_API,
+        "origin": REASON_STRICT_ORIGIN_API,
     },
     _SUPABASE_TARGET: {
         "production": REASON_PRODUCTION_SUPABASE,
@@ -45,6 +48,7 @@ _TARGET_REASONS = {
         "userinfo": REASON_USERINFO_SUPABASE,
         "unapproved": REASON_UNAPPROVED_SUPABASE,
         "https": REASON_HTTPS_SUPABASE,
+        "origin": REASON_STRICT_ORIGIN_SUPABASE,
     },
 }
 _TARGET_HOSTS = {
@@ -220,10 +224,12 @@ def _classify_staging_target(raw: str, target: str) -> str | None:
 
     Empty values are unset configuration, not malformed targets. Host checks use
     the parsed hostname only, case-folded, with trailing dots removed.
-    An approved staging host is accepted only over https.
+    An approved target must be a strict https origin: scheme https, the
+    approved hostname, port omitted or 443, path empty or "/", and no params,
+    query, or fragment.
     urlparse and port access raise ValueError for unmatched IPv6 brackets and
-    invalid ports. Those, and any other parser exception, become the malformed
-    reason so the raw URL cannot leak through a traceback.
+    invalid ports. That parser error becomes the malformed reason so the raw
+    URL cannot leak through a traceback.
     """
     text = (raw or "").strip()
     if not text:
@@ -236,7 +242,7 @@ def _classify_staging_target(raw: str, target: str) -> str | None:
         port = parsed.port
         username = parsed.username
         password = parsed.password
-    except Exception:
+    except ValueError:
         return reasons["malformed"]
 
     host = _normalized_hostname(hostname)
@@ -252,6 +258,8 @@ def _classify_staging_target(raw: str, target: str) -> str | None:
         return reasons["userinfo"]
     if port is not None and port != 443:
         return reasons["malformed"]
+    if parsed.path not in {"", "/"} or parsed.params or parsed.query or parsed.fragment:
+        return reasons["origin"]
     return None
 
 

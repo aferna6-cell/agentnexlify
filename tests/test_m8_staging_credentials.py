@@ -44,7 +44,8 @@ STAGING_SB = f"https://{STAGING_REF}.supabase.co"
 PROD_API = "https://agentnexlify-production.up.railway.app"
 PROD_SB = f"https://{creds.PRODUCTION_SUPABASE_PROJECT_REF}.supabase.co"
 CANARY = "URL_CANARY"
-_IO_COUNTS = ("_get", "_post_json", "urlopen", "getaddrinfo")
+_RAW_IO_COUNTS = ("urlopen", "getaddrinfo", "create_connection")
+_IO_COUNTS = ("_get", "_post_json") + _RAW_IO_COUNTS
 
 
 def _reason_lines(out: str) -> list[str]:
@@ -62,6 +63,12 @@ def _watch(counts: dict[str, int], name: str):
         raise AssertionError(name)
 
     return _inner
+
+
+def _bind_raw_sentinels(monkeypatch, counts: dict[str, int]) -> None:
+    monkeypatch.setattr(urllib.request, "urlopen", _watch(counts, "urlopen"))
+    monkeypatch.setattr(socket, "getaddrinfo", _watch(counts, "getaddrinfo"))
+    monkeypatch.setattr(socket, "create_connection", _watch(counts, "create_connection"))
 
 
 def _assert_counts(counts: dict[str, int], names: tuple[str, ...]) -> None:
@@ -167,6 +174,24 @@ class TestStagingTargetGuard:
         )
         assert fails == [creds.REASON_HTTPS_SUPABASE, creds.REASON_HTTPS_API]
 
+    @pytest.mark.parametrize(
+        "suffix",
+        ["/extra", "/;params", "?q=1", "#frag"],
+        ids=["path", "params", "query", "fragment"],
+    )
+    def test_rejects_approved_host_that_is_not_a_strict_origin(self, suffix):
+        api_fails = creds.staging_target_errors(
+            supabase_url=STAGING_SB,
+            api_base=f"{STAGING_API}{suffix}",
+        )
+        assert api_fails == [creds.REASON_STRICT_ORIGIN_API]
+        supabase_fails = creds.staging_target_errors(
+            supabase_url=f"{STAGING_SB}{suffix}",
+            api_base=STAGING_API,
+        )
+        assert supabase_fails == [creds.REASON_STRICT_ORIGIN_SUPABASE]
+        assert CANARY not in " ".join(api_fails + supabase_fails)
+
     def test_unset_targets_are_not_target_errors(self):
         assert creds.staging_target_errors(supabase_url="", api_base="") == []
 
@@ -247,8 +272,7 @@ class TestVerifyScriptOutput:
         counts = {name: 0 for name in _IO_COUNTS}
         monkeypatch.setattr(mod, "_get", _watch(counts, "_get"))
         monkeypatch.setattr(mod, "_post_json", _watch(counts, "_post_json"))
-        monkeypatch.setattr(urllib.request, "urlopen", _watch(counts, "urlopen"))
-        monkeypatch.setattr(socket, "getaddrinfo", _watch(counts, "getaddrinfo"))
+        _bind_raw_sentinels(monkeypatch, counts)
         return counts
 
     def _run_invalid_main(self, monkeypatch, capsys, api: str, supabase: str):
@@ -287,9 +311,8 @@ class TestVerifyScriptOutput:
         assert supabase not in text
 
     def _install_raw_io_sentinels(self, monkeypatch):
-        counts = {"urlopen": 0, "getaddrinfo": 0}
-        monkeypatch.setattr(urllib.request, "urlopen", _watch(counts, "urlopen"))
-        monkeypatch.setattr(socket, "getaddrinfo", _watch(counts, "getaddrinfo"))
+        counts = {name: 0 for name in _RAW_IO_COUNTS}
+        _bind_raw_sentinels(monkeypatch, counts)
         return counts
 
     def _fake_success_handlers(self, calls, base, sb, client_id):
@@ -344,7 +367,7 @@ class TestVerifyScriptOutput:
         out = capsys.readouterr().out
         assert rc == 0
         assert calls == ["health", "anonymous", "service", "login"]
-        _assert_counts(counts, ("urlopen", "getaddrinfo"))
+        _assert_counts(counts, _RAW_IO_COUNTS)
         assert MODERN_SECRET not in out
         assert CANARY not in out
         assert LEGACY_ANON not in out
@@ -373,7 +396,7 @@ class TestVerifyScriptOutput:
         out = capsys.readouterr().out
         assert rc == 0
         assert calls == ["health", "anonymous", "service", "login"]
-        _assert_counts(counts, ("urlopen", "getaddrinfo"))
+        _assert_counts(counts, _RAW_IO_COUNTS)
         assert CANARY not in out
         assert MODERN_SECRET not in out
 
@@ -463,6 +486,14 @@ class TestVerifyScriptOutput:
                 f"http://{STAGING_REF.upper()}.SUPABASE.CO",
                 [creds.REASON_HTTPS_SUPABASE, creds.REASON_HTTPS_API],
             ),
+            (f"{STAGING_API}/extra", STAGING_SB, [creds.REASON_STRICT_ORIGIN_API]),
+            (f"{STAGING_API}/;params", STAGING_SB, [creds.REASON_STRICT_ORIGIN_API]),
+            (f"{STAGING_API}?q=1", STAGING_SB, [creds.REASON_STRICT_ORIGIN_API]),
+            (f"{STAGING_API}#frag", STAGING_SB, [creds.REASON_STRICT_ORIGIN_API]),
+            (STAGING_API, f"{STAGING_SB}/extra", [creds.REASON_STRICT_ORIGIN_SUPABASE]),
+            (STAGING_API, f"{STAGING_SB}/;params", [creds.REASON_STRICT_ORIGIN_SUPABASE]),
+            (STAGING_API, f"{STAGING_SB}?q=1", [creds.REASON_STRICT_ORIGIN_SUPABASE]),
+            (STAGING_API, f"{STAGING_SB}#frag", [creds.REASON_STRICT_ORIGIN_SUPABASE]),
         ],
     )
     def test_real_main_rejects_invalid_targets_before_io(
@@ -505,11 +536,7 @@ class TestVerifyScriptOutput:
         self, monkeypatch, capsys, field, value, reason
     ):
         mod = self._load_verify_module()
-        counts = {"urlopen": 0, "getaddrinfo": 0, "_get": 0, "_post_json": 0}
-        monkeypatch.setattr(mod, "_get", _watch(counts, "_get"))
-        monkeypatch.setattr(mod, "_post_json", _watch(counts, "_post_json"))
-        monkeypatch.setattr(urllib.request, "urlopen", _watch(counts, "urlopen"))
-        monkeypatch.setattr(socket, "getaddrinfo", _watch(counts, "getaddrinfo"))
+        counts = self._install_boundary_sentinels(monkeypatch, mod)
         client_id = "7451537b-a694-4c31-83b0-1b804df3d757"
         for key in (
             "SUPABASE_SERVICE_KEY",
@@ -539,7 +566,7 @@ class TestVerifyScriptOutput:
         text = captured.out + captured.err
         assert raised is None
         assert rc == 1
-        _assert_counts(counts, ("_get", "_post_json", "urlopen", "getaddrinfo"))
+        _assert_counts(counts, _IO_COUNTS)
         assert _reason_lines(captured.out) == [reason]
         assert captured.out.count(reason) == 1
         success_lines = [
@@ -582,9 +609,7 @@ class TestVerifyScriptOutput:
             return opener
 
         monkeypatch.setattr(mod, "_build_opener", build)
-        counts = {"urlopen": 0, "getaddrinfo": 0}
-        monkeypatch.setattr(urllib.request, "urlopen", _watch(counts, "urlopen"))
-        monkeypatch.setattr(socket, "getaddrinfo", _watch(counts, "getaddrinfo"))
+        counts = self._install_raw_io_sentinels(monkeypatch)
         for key in (
             "http_proxy",
             "https_proxy",
@@ -610,7 +635,7 @@ class TestVerifyScriptOutput:
                 {"email": f"{CANARY}@agentnexlify.invalid", "password": CANARY},
             )
 
-        _assert_counts(counts, ("urlopen", "getaddrinfo"))
+        _assert_counts(counts, _RAW_IO_COUNTS)
         assert code == status
         assert len(recorder.requests) == 1
         assert urlparse(recorder.requests[0].full_url).hostname == approved
