@@ -47,7 +47,7 @@ STAGING_SB = f"https://{STAGING_REF}.supabase.co"
 PROD_API = "https://agentnexlify-production.up.railway.app"
 PROD_SB = f"https://{creds.PRODUCTION_SUPABASE_PROJECT_REF}.supabase.co"
 CANARY = "URL_CANARY"
-_RAW_IO_COUNTS = ("urlopen", "getaddrinfo", "create_connection")
+_RAW_IO_COUNTS = ("urlopen", "getaddrinfo", "create_connection", "socket.connect")
 _IO_COUNTS = ("_get", "_post_json") + _RAW_IO_COUNTS
 
 
@@ -72,6 +72,7 @@ def _bind_raw_sentinels(monkeypatch, counts: dict[str, int]) -> None:
     monkeypatch.setattr(urllib.request, "urlopen", _watch(counts, "urlopen"))
     monkeypatch.setattr(socket, "getaddrinfo", _watch(counts, "getaddrinfo"))
     monkeypatch.setattr(socket, "create_connection", _watch(counts, "create_connection"))
+    monkeypatch.setattr(socket.socket, "connect", _watch(counts, "socket.connect"))
 
 
 def _assert_counts(counts: dict[str, int], names: tuple[str, ...]) -> None:
@@ -595,6 +596,7 @@ class TestVerifyScriptOutput:
             ("SUPABASE_KEY", None, "SUPABASE_KEY unset"),
             ("SUPABASE_SERVICE_KEY", None, "local server credential invalid: empty credential"),
             ("M8_SMOKE_CLIENT_ID", None, "M8_SMOKE_CLIENT_ID unset"),
+            ("M8_SMOKE_CLIENT_ID", "not-a-uuid", "M8_SMOKE_CLIENT_ID is invalid"),
             ("M8_SMOKE_LOGIN_EMAIL", None, "M8_SMOKE_LOGIN_EMAIL unset"),
             ("M8_SMOKE_LOGIN_PASSWORD", None, "M8_SMOKE_LOGIN_PASSWORD unset"),
             ("SUPABASE_KEY", CANARY, "SUPABASE_KEY is not anon JWT"),
@@ -621,6 +623,7 @@ class TestVerifyScriptOutput:
             "missing-anon-key",
             "missing-service-credential",
             "missing-client-id",
+            "malformed-client-id",
             "missing-login-email",
             "missing-login-password",
             "invalid-anon-key",

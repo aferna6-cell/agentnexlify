@@ -15,6 +15,7 @@ import os
 import sys
 import urllib.error
 import urllib.request
+import uuid
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
@@ -29,6 +30,15 @@ def _request_base(url: str) -> str:
     if url.endswith("/") and not url.endswith("//"):
         return url[:-1]
     return url
+
+
+def _is_canonical_client_id(value: str) -> bool:
+    """True only for the lowercase hyphenated form produced by str(uuid.UUID)."""
+    try:
+        parsed = uuid.UUID(value)
+    except (ValueError, TypeError, AttributeError):
+        return False
+    return str(parsed) == value
 
 
 class _RejectCredentialRedirects(urllib.request.HTTPRedirectHandler):
@@ -111,6 +121,8 @@ def main() -> int:
         fails.append("SUPABASE_KEY is not anon JWT")
     if not client_id:
         fails.append("M8_SMOKE_CLIENT_ID unset")
+    elif not _is_canonical_client_id(client_id):
+        fails.append("M8_SMOKE_CLIENT_ID is invalid")
     if not email:
         fails.append("M8_SMOKE_LOGIN_EMAIL unset")
     if not password:
