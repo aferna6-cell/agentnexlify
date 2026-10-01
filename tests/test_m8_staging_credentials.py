@@ -37,6 +37,9 @@ STAGING_REF = creds.STAGING_SUPABASE_PROJECT_REF
 LEGACY_SERVICE = _fake_jwt({"role": "service_role", "ref": STAGING_REF})
 LEGACY_ANON = _fake_jwt({"role": "anon", "ref": STAGING_REF})
 LEGACY_WRONG_REF = _fake_jwt({"role": "service_role", "ref": "wrongprojectref"})
+CLAIM_CANARY = "SECRET_CANARY_VALUE"
+LEGACY_CANARY_ROLE = _fake_jwt({"role": CLAIM_CANARY, "ref": STAGING_REF})
+LEGACY_CANARY_REF = _fake_jwt({"role": "service_role", "ref": CLAIM_CANARY})
 MODERN_SECRET = "sb_secret_test_key_abcdefghijklmnopqrstuvwxyz"
 MODERN_PUBLISHABLE = "sb_publishable_test_key_abcdefghijklmnopqrstuvwxyz"
 STAGING_API = "https://agentnexlify-staging.up.railway.app"
@@ -191,6 +194,24 @@ class TestStagingTargetGuard:
         )
         assert supabase_fails == [creds.REASON_STRICT_ORIGIN_SUPABASE]
         assert CANARY not in " ".join(api_fails + supabase_fails)
+
+    def test_empty_path_and_single_root_slash_stay_approved(self):
+        assert creds.staging_target_errors(supabase_url=STAGING_SB, api_base=STAGING_API) == []
+        assert creds.staging_target_errors(
+            supabase_url=f"{STAGING_SB}/",
+            api_base=f"{STAGING_API}/",
+        ) == []
+
+    @pytest.mark.parametrize("suffix", ["//", "///"])
+    def test_multiple_trailing_slashes_are_not_a_root_origin(self, suffix):
+        assert creds.staging_target_errors(
+            supabase_url=STAGING_SB,
+            api_base=f"{STAGING_API}{suffix}",
+        ) == [creds.REASON_STRICT_ORIGIN_API]
+        assert creds.staging_target_errors(
+            supabase_url=f"{STAGING_SB}{suffix}",
+            api_base=STAGING_API,
+        ) == [creds.REASON_STRICT_ORIGIN_SUPABASE]
 
     def test_unset_targets_are_not_target_errors(self):
         assert creds.staging_target_errors(supabase_url="", api_base="") == []
@@ -400,6 +421,66 @@ class TestVerifyScriptOutput:
         assert CANARY not in out
         assert MODERN_SECRET not in out
 
+    def test_verify_accepts_normalized_supabase_with_legacy_service_jwt(self, monkeypatch, capsys):
+        mod = self._load_verify_module()
+        client_id = "7451537b-a694-4c31-83b0-1b804df3d757"
+        base = "https://AGENTNEXLIFY-STAGING.UP.RAILWAY.APP:443"
+        sb = f"https://{STAGING_REF.upper()}.SUPABASE.CO.:443"
+        calls = []
+        counts = self._install_raw_io_sentinels(monkeypatch)
+        anon_url = f"{sb}/rest/v1/tenant_kb_chunks?select=id&limit=3"
+        service_url = (
+            f"{sb}/rest/v1/tenant_kb_chunks?select=id"
+            f"&client_id=eq.{client_id}&status=eq.active&limit=5"
+        )
+
+        def fake_get(url, headers):
+            if url == f"{base}/health":
+                calls.append("health")
+                return 200, {"status": "ok"}
+            if url == anon_url and headers.get("apikey") == LEGACY_ANON:
+                assert headers.get("Authorization") == f"Bearer {LEGACY_ANON}"
+                calls.append("anonymous")
+                return 200, []
+            if url == service_url and headers.get("apikey") == LEGACY_SERVICE:
+                assert headers.get("Authorization") == f"Bearer {LEGACY_SERVICE}"
+                calls.append("service")
+                return 200, [{"id": "chunk-1"}]
+            raise AssertionError(url)
+
+        def fake_post(url, payload):
+            assert url == f"{base}/api/v1/auth/login"
+            assert payload["password"] == CANARY
+            calls.append("login")
+            return 200, {"token": "jwt"}
+
+        for key in (
+            "SUPABASE_SERVICE_ROLE_KEY",
+            "STAGING_SUPABASE_SERVICE_ROLE_KEY",
+        ):
+            monkeypatch.delenv(key, raising=False)
+        monkeypatch.setenv("M8_SMOKE_API_BASE", base)
+        monkeypatch.setenv("SUPABASE_URL", sb)
+        monkeypatch.setenv("SUPABASE_KEY", LEGACY_ANON)
+        monkeypatch.setenv("SUPABASE_SERVICE_KEY", LEGACY_SERVICE)
+        monkeypatch.setenv("M8_SMOKE_CLIENT_ID", client_id)
+        monkeypatch.setenv("M8_SMOKE_LOGIN_EMAIL", f"{CANARY}@agentnexlify.invalid")
+        monkeypatch.setenv("M8_SMOKE_LOGIN_PASSWORD", CANARY)
+        monkeypatch.setattr(mod, "_get", fake_get)
+        monkeypatch.setattr(mod, "_post_json", fake_post)
+
+        rc = mod.main()
+        out = capsys.readouterr().out
+        assert rc == 0
+        assert calls == ["health", "anonymous", "service", "login"]
+        _assert_counts(counts, _RAW_IO_COUNTS)
+        assert LEGACY_SERVICE not in out
+        assert LEGACY_ANON not in out
+        assert CANARY not in out
+        assert CLAIM_CANARY not in out
+        assert "legacy_service_role_jwt" in out
+        assert "OK step-3 verification complete" in out
+
     def test_verify_rejects_production_api_base(self, monkeypatch, capsys):
         rc, raised, counts, out, err = self._run_invalid_main(
             monkeypatch, capsys, PROD_API, STAGING_SB
@@ -494,6 +575,10 @@ class TestVerifyScriptOutput:
             (STAGING_API, f"{STAGING_SB}/;params", [creds.REASON_STRICT_ORIGIN_SUPABASE]),
             (STAGING_API, f"{STAGING_SB}?q=1", [creds.REASON_STRICT_ORIGIN_SUPABASE]),
             (STAGING_API, f"{STAGING_SB}#frag", [creds.REASON_STRICT_ORIGIN_SUPABASE]),
+            (f"{STAGING_API}//", STAGING_SB, [creds.REASON_STRICT_ORIGIN_API]),
+            (f"{STAGING_API}///", STAGING_SB, [creds.REASON_STRICT_ORIGIN_API]),
+            (STAGING_API, f"{STAGING_SB}//", [creds.REASON_STRICT_ORIGIN_SUPABASE]),
+            (STAGING_API, f"{STAGING_SB}///", [creds.REASON_STRICT_ORIGIN_SUPABASE]),
         ],
     )
     def test_real_main_rejects_invalid_targets_before_io(
@@ -519,6 +604,16 @@ class TestVerifyScriptOutput:
                 "local server credential invalid: "
                 "expected legacy service_role JWT (eyJ...) or modern secret key (sb_secret_...)",
             ),
+            (
+                "SUPABASE_SERVICE_KEY",
+                LEGACY_CANARY_ROLE,
+                "local server credential invalid: JWT role is not service_role",
+            ),
+            (
+                "SUPABASE_SERVICE_KEY",
+                LEGACY_CANARY_REF,
+                "local server credential invalid: JWT ref does not match expected project",
+            ),
         ],
         ids=[
             "missing-api-base",
@@ -530,6 +625,8 @@ class TestVerifyScriptOutput:
             "missing-login-password",
             "invalid-anon-key",
             "invalid-service-credential",
+            "invalid-legacy-role",
+            "invalid-legacy-ref",
         ],
     )
     def test_real_main_rejects_incomplete_local_configuration(
@@ -578,8 +675,11 @@ class TestVerifyScriptOutput:
         assert "Traceback" not in text
         assert "ValueError" not in text
         assert CANARY not in text
+        assert CLAIM_CANARY not in text
         assert MODERN_SECRET not in text
         assert LEGACY_ANON not in text
+        assert LEGACY_CANARY_ROLE not in text
+        assert LEGACY_CANARY_REF not in text
         assert STAGING_API not in text
         assert STAGING_SB not in text
         assert client_id not in text

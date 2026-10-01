@@ -104,7 +104,18 @@ def is_masked_value(raw: str) -> bool:
 
 
 def project_ref_from_supabase_url(supabase_url: str) -> str:
-    return urlparse((supabase_url or "").strip()).netloc.split(".")[0]
+    """First label of the parsed hostname, lowercased, with trailing dots removed."""
+    text = (supabase_url or "").strip()
+    if not text:
+        return ""
+    try:
+        hostname = urlparse(text).hostname
+    except ValueError:
+        return ""
+    host = _normalized_hostname(hostname)
+    if not host:
+        return ""
+    return host.split(".", 1)[0]
 
 
 def classify_staging_server_key(raw: str) -> StagingKeyKind:
@@ -157,17 +168,13 @@ def validate_staging_server_key(
             return StagingKeyValidation(
                 False,
                 StagingKeyKind.INVALID,
-                f"JWT role is {role!r}, expected service_role",
-                jwt_role=str(role) if role is not None else None,
-                jwt_ref=str(ref) if ref is not None else None,
+                "JWT role is not service_role",
             )
         if expected_project_ref and ref and ref != expected_project_ref:
             return StagingKeyValidation(
                 False,
                 StagingKeyKind.INVALID,
-                f"JWT ref {ref!r} does not match expected {expected_project_ref!r}",
-                jwt_role="service_role",
-                jwt_ref=str(ref),
+                "JWT ref does not match expected project",
             )
         return StagingKeyValidation(
             True,
@@ -181,6 +188,27 @@ def validate_staging_server_key(
         StagingKeyKind.INVALID,
         "expected legacy service_role JWT (eyJ...) or modern secret key (sb_secret_...)",
     )
+
+
+_SAFE_SERVER_CREDENTIAL_DETAILS = frozenset(
+    {
+        "empty credential",
+        "masked UI paste (bullet characters)",
+        "publishable key cannot be used as server credential",
+        "modern secret key too short",
+        "expected legacy service_role JWT (eyJ...) or modern secret key (sb_secret_...)",
+        "JWT role is not service_role",
+        "JWT ref does not match expected project",
+    }
+)
+
+
+def local_server_credential_reason(validation: StagingKeyValidation) -> str:
+    """Fixed diagnostic for logs. Never includes decoded claims or raw key text."""
+    detail = validation.error or ""
+    if detail not in _SAFE_SERVER_CREDENTIAL_DETAILS:
+        detail = "invalid server credential"
+    return f"local server credential invalid: {detail}"
 
 
 def is_trusted_server_key(raw: str, *, expected_project_ref: str | None = None) -> bool:

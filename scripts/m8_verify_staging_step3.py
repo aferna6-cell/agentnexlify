@@ -24,6 +24,13 @@ if str(SCRIPTS) not in sys.path:
 import m8_staging_credentials as creds
 
 
+def _request_base(url: str) -> str:
+    """Drop one accepted root slash after origin validation has passed."""
+    if url.endswith("/") and not url.endswith("//"):
+        return url[:-1]
+    return url
+
+
 class _RejectCredentialRedirects(urllib.request.HTTPRedirectHandler):
     """Refuse automatic redirects so credential headers are not replayed."""
 
@@ -66,14 +73,16 @@ def _post_json(url: str, payload: dict) -> tuple[int, object]:
 
 
 def main() -> int:
-    base = (os.environ.get("M8_SMOKE_API_BASE") or "").strip().rstrip("/")
-    sb_url = (os.environ.get("SUPABASE_URL") or "").strip().rstrip("/")
+    base = (os.environ.get("M8_SMOKE_API_BASE") or "").strip()
+    sb_url = (os.environ.get("SUPABASE_URL") or "").strip()
     target_fails = creds.staging_target_errors(supabase_url=sb_url, api_base=base)
     if target_fails:
         print("FAIL step-3 verification:")
         for item in target_fails:
             print(f"  - {item}")
         return 1
+    base = _request_base(base)
+    sb_url = _request_base(sb_url)
 
     anon = (os.environ.get("SUPABASE_KEY") or "").strip()
     service = (
@@ -95,7 +104,7 @@ def main() -> int:
     expected_ref = creds.project_ref_from_supabase_url(sb_url) or creds.STAGING_SUPABASE_PROJECT_REF
     validation = creds.validate_staging_server_key(service, expected_project_ref=expected_ref)
     if not validation.ok:
-        fails.append(f"local server credential invalid: {validation.error}")
+        fails.append(creds.local_server_credential_reason(validation))
     if not anon:
         fails.append("SUPABASE_KEY unset")
     elif creds.jwt_claims(anon).get("role") != "anon":
