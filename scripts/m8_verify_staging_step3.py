@@ -25,6 +25,15 @@ if str(SCRIPTS) not in sys.path:
 import m8_staging_credentials as creds
 
 
+def _chunk_read_failure(expected: str, code: int, body: object) -> str:
+    """Status and type only. Response bodies can echo request credentials."""
+    if isinstance(body, list):
+        shape = f"type=list n={len(body)}"
+    else:
+        shape = f"type={type(body).__name__}"
+    return f"{expected} http={code} {shape}"
+
+
 def _request_base(url: str) -> str:
     """Drop one accepted root slash after origin validation has passed."""
     if url.endswith("/") and not url.endswith("//"):
@@ -153,9 +162,7 @@ def main() -> int:
         if code == 200 and isinstance(body, list) and len(body) == 0:
             print("PASS anon tenant_kb_chunks []")
         else:
-            fails.append(
-                f"anon chunks expected [] got http={code} n={len(body) if isinstance(body, list) else body}"
-            )
+            fails.append(_chunk_read_failure("anon chunks expected [] got", code, body))
 
     if sb_url and service and client_id and validation.ok:
         code, body = _get(
@@ -166,8 +173,7 @@ def main() -> int:
             print(f"PASS server credential smoke chunks n={len(body)}")
         else:
             fails.append(
-                "server credential smoke chunks expected >0 got "
-                f"http={code} n={len(body) if isinstance(body, list) else body}"
+                _chunk_read_failure("server credential smoke chunks expected >0 got", code, body)
             )
 
     if base and email and password:

@@ -482,6 +482,77 @@ class TestVerifyScriptOutput:
         assert "legacy_service_role_jwt" in out
         assert "OK step-3 verification complete" in out
 
+    @pytest.mark.parametrize("mode", ["anonymous", "service"])
+    def test_chunk_read_failure_does_not_reflect_credentials(self, monkeypatch, capsys, mode):
+        mod = self._load_verify_module()
+        client_id = "7451537b-a694-4c31-83b0-1b804df3d757"
+        anon_url = f"{STAGING_SB}/rest/v1/tenant_kb_chunks?select=id&limit=3"
+        service_url = (
+            f"{STAGING_SB}/rest/v1/tenant_kb_chunks?select=id"
+            f"&client_id=eq.{client_id}&status=eq.active&limit=5"
+        )
+        counts = self._install_raw_io_sentinels(monkeypatch)
+        reflected = {}
+
+        def fake_get(url, headers):
+            body = {
+                "apikey": headers.get("apikey"),
+                "authorization": headers.get("Authorization"),
+                "canary": CANARY,
+            }
+            if url == f"{STAGING_API}/health":
+                return 200, {"status": "ok"}
+            if url == anon_url:
+                reflected["anonymous"] = body
+                if mode == "anonymous":
+                    return 401, body
+                return 200, []
+            if url == service_url:
+                reflected["service"] = body
+                if mode == "service":
+                    return 500, body
+                return 200, [{"id": "chunk-1"}]
+            raise AssertionError(url)
+
+        def fake_post(url, payload):
+            assert url == f"{STAGING_API}/api/v1/auth/login"
+            return 200, {"token": "jwt"}
+
+        for key in ("SUPABASE_SERVICE_ROLE_KEY", "STAGING_SUPABASE_SERVICE_ROLE_KEY"):
+            monkeypatch.delenv(key, raising=False)
+        monkeypatch.setenv("M8_SMOKE_API_BASE", STAGING_API)
+        monkeypatch.setenv("SUPABASE_URL", STAGING_SB)
+        monkeypatch.setenv("SUPABASE_KEY", LEGACY_ANON)
+        monkeypatch.setenv("SUPABASE_SERVICE_KEY", LEGACY_SERVICE)
+        monkeypatch.setenv("M8_SMOKE_CLIENT_ID", client_id)
+        monkeypatch.setenv("M8_SMOKE_LOGIN_EMAIL", f"{CANARY}@agentnexlify.invalid")
+        monkeypatch.setenv("M8_SMOKE_LOGIN_PASSWORD", CANARY)
+        monkeypatch.setattr(mod, "_get", fake_get)
+        monkeypatch.setattr(mod, "_post_json", fake_post)
+
+        rc = mod.main()
+        captured = capsys.readouterr()
+        text = captured.out + captured.err
+        assert rc == 1
+        _assert_counts(counts, _RAW_IO_COUNTS)
+        if mode == "anonymous":
+            assert "anon chunks expected [] got http=401 type=dict" in captured.out
+            secret_body = reflected["anonymous"]
+        else:
+            assert "server credential smoke chunks expected >0 got http=500 type=dict" in captured.out
+            secret_body = reflected["service"]
+        for forbidden in (
+            LEGACY_ANON,
+            LEGACY_SERVICE,
+            f"Bearer {LEGACY_ANON}",
+            f"Bearer {LEGACY_SERVICE}",
+            CANARY,
+            str(secret_body),
+            secret_body["apikey"],
+            secret_body["authorization"],
+        ):
+            assert forbidden not in text
+
     def test_verify_rejects_production_api_base(self, monkeypatch, capsys):
         rc, raised, counts, out, err = self._run_invalid_main(
             monkeypatch, capsys, PROD_API, STAGING_SB
