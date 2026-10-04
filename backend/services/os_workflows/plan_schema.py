@@ -125,6 +125,20 @@ class CaseScore(BaseModel):
     unsafe_unauthorized_edges: int
     cross_tenant_edges: int
     issues: List[str] = Field(default_factory=list)
+    # Required verification is counted per step occurrence (duplicates kept).
+    required_verification_occurrences: int = 0
+    verified_required_verification_count: int = 0
+    missing_required_verification_count: int = 0
+    required_verification_recall: float = 1.0
+    verification_precision: float = 1.0
+    verification_predicted_positives: int = 0
+    verification_true_positives: int = 0
+    material_department_support: Dict[str, int] = Field(default_factory=dict)
+    material_department_hits: Dict[str, int] = Field(default_factory=dict)
+    mutation_department_checks: int = 0
+    mutation_department_hits: int = 0
+    customer_communication_department_checks: int = 0
+    customer_communication_department_hits: int = 0
 
 
 class SuiteReport(BaseModel):

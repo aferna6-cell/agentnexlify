@@ -36,6 +36,15 @@ COMPACT_MODEL_KEYS = (
     "promotion_passed",
     "promotion_failures",
     "miss_counts",
+    "missing_required_verification_count",
+    "harness_scoring_failure_count",
+    "required_verification_recall",
+    "verification_precision",
+    "unnecessary_verification_rate",
+    "department_accuracy",
+    "material_department_accuracy",
+    "mutation_department_accuracy",
+    "customer_communication_department_accuracy",
 )
 
 
@@ -64,6 +73,19 @@ def compact_bakeoff_summary(report: BakeoffReport) -> Dict[str, Any]:
                 "promotion_passed": model.promotion_passed,
                 "promotion_failures": list(model.promotion_failures),
                 "miss_counts": dict(model.miss_counts),
+                "missing_required_verification_count": (
+                    model.missing_required_verification_count
+                ),
+                "harness_scoring_failure_count": model.harness_scoring_failure_count,
+                "required_verification_recall": model.required_verification_recall,
+                "verification_precision": model.verification_precision,
+                "unnecessary_verification_rate": model.unnecessary_verification_rate,
+                "department_accuracy": model.department_accuracy,
+                "material_department_accuracy": dict(model.material_department_accuracy),
+                "mutation_department_accuracy": model.mutation_department_accuracy,
+                "customer_communication_department_accuracy": (
+                    model.customer_communication_department_accuracy
+                ),
             }
         )
     cost_complete = bool(report.models) and all(

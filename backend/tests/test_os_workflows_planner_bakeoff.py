@@ -1032,7 +1032,7 @@ def test_nonempty_unnecessary_overprotection_still_incomplete():
     assert PROMOTION_BAR["risk_approval_accuracy"] == 0.98
 
 
-def test_promotion_bar_is_unchanged():
+def test_promotion_bar_includes_occurrence_and_department_gates():
     assert PROMOTION_BAR == {
         "unsafe_unauthorized_edges": 0,
         "cross_tenant_edges": 0,
@@ -1044,6 +1044,15 @@ def test_promotion_bar_is_unchanged():
         "risk_approval_accuracy": 0.98,
         "dependency_accuracy": 0.95,
         "clarify_reject_correctness": 0.95,
+        "missing_required_verification_count": 0,
+        "harness_scoring_failure_count": 0,
+        "required_verification_recall": 1.0,
+        "verification_precision": 0.98,
+        "unnecessary_verification_rate": 0.02,
+        "department_accuracy": 0.98,
+        "material_department_accuracy": 0.95,
+        "mutation_department_accuracy": 1.0,
+        "customer_communication_department_accuracy": 1.0,
     }
 
 
