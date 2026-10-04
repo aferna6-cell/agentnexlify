@@ -906,7 +906,7 @@ def test_empty_terminal_gold_is_ok_not_incomplete(cases):
         row = report.case_results[0]
         assert row.score is not None
         assert row.score.unnecessary_approval_rate == 0.0
-        assert row.score.unnecessary_verification_rate == 0.0
+        assert row.score.unnecessary_verification_rate is None
         assert row.miss_class == MISS_OK, (
             f"{case_id} gold empty terminal classified {row.miss_class}"
         )
@@ -946,7 +946,7 @@ def test_empty_step_terminals_are_ok_not_false_incomplete(terminal):
     assert row.score is not None
     assert row.score.valid is True
     assert row.score.unnecessary_approval_rate == 0.0
-    assert row.score.unnecessary_verification_rate == 0.0
+    assert row.score.unnecessary_verification_rate is None
     assert row.miss_class == MISS_OK
     assert row.miss_class != MISS_INCOMPLETE
     assert PROMOTION_BAR["valid_plan_rate"] == 0.95

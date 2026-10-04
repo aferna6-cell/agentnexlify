@@ -236,18 +236,17 @@ def test_n100_duplicate_occurrence_fails_only_on_missing_verification():
     )
     assert report.attempts == _N
     assert report.harness_scoring_failure_count == 0
-    assert report.promotion_unevaluated_reasons == []
-    assert report.promotion_evaluated is True
-    assert report.promotion_passed is False
-    assert report.promotion_failures == [
-        "missing_required_verification_count=100 (must be 0)"
-    ]
+    assert report.promotion_evaluated is False
+    assert report.promotion_passed is None
+    assert report.promotion_failures == []
+    assert report.promotion_unevaluated_reasons == ["optional_support"]
     assert report.required_verification_recall == 0.5
-    assert report.required_verification_occurrences == 200
+    assert report.required_verification_support == 200
+    assert report.optional_verification_support == 0
     assert report.verified_required_verification_count == 100
     assert report.missing_required_verification_count == 100
     assert report.verification_precision == 1.0
-    assert report.unnecessary_verification_rate == 0.0
+    assert report.unnecessary_verification_rate is None
     assert report.required_step_recall == 1.0
     assert report.input_tokens_total == 0
     assert report.output_tokens_total == 0
@@ -260,6 +259,8 @@ def test_n100_duplicate_occurrence_fails_only_on_missing_verification():
         assert row.score.missing_required_verification_count == 1
         assert row.score.required_verification_recall == 0.5
         assert row.score.verification_placement_accuracy == 0.5
+        assert row.score.optional_verification_support == 0
+        assert row.score.unnecessary_verification_rate is None
         assert row.input_tokens == 0
         assert row.output_tokens == 0
         assert row.cost_usd == 0.0
@@ -287,7 +288,7 @@ def test_fixture_provenance_of_duplicate_case_stays_unevaluated():
     assert report.case_results[0].score.required_verification_recall == 0.5
 
 
-def test_clean_control_promotes_with_zero_provider_usage():
+def test_clean_control_without_required_support_stays_unevaluated():
     case = _lookup_case("get_customer", case_id="clean-get-customer")
     plan = _catalog_plan(case, "get_customer")
 
@@ -302,22 +303,198 @@ def test_clean_control_promotes_with_zero_provider_usage():
         mode="live",
         planner=planner,
     )
-    assert report.promotion_evaluated is True
-    assert report.promotion_passed is True
+    assert report.promotion_evaluated is False
+    assert report.promotion_passed is None
     assert report.promotion_failures == []
-    assert report.promotion_unevaluated_reasons == []
-    assert report.missing_required_verification_count == 0
-    assert report.harness_scoring_failure_count == 0
-    assert report.required_verification_recall == 1.0
+    assert report.promotion_unevaluated_reasons == ["required_support"]
+    assert report.required_verification_support == 0
+    assert report.optional_verification_support == 1
+    assert report.verification_true_negatives == 1
+    assert report.unnecessary_verification_rate == 0.0
+    assert report.required_verification_recall is None
     assert report.input_tokens_total == 0
     assert report.output_tokens_total == 0
     assert report.total_tokens_total == 0
     assert report.estimated_total_cost_usd == 0.0
 
 
+def _balanced_case() -> FrozenCase:
+    return FrozenCase(
+        id="balanced-get-customer",
+        category="verification_requirements",
+        goal="read the customer, then read it again",
+        client_id=_CLIENT,
+        expected=ExpectedPlan(
+            departments=["admin_records"],
+            required_tools=["get_customer", "get_customer"],
+            allowed_tools=["get_customer"],
+            verification_required_tools=["get_customer"],
+            max_steps=4,
+            terminal="valid_plan",
+        ),
+    )
+
+
+def _balanced_plan(case: FrozenCase, *, optional_flag: bool) -> CandidatePlan:
+    return CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        terminal="valid_plan",
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="get_customer",
+                department="admin_records",
+                risk_level=0,
+                approval_required=False,
+                verification_required=True,
+            ),
+            PlanStepSpec(
+                id="s1",
+                tool_name="get_customer",
+                department="admin_records",
+                risk_level=0,
+                approval_required=False,
+                verification_required=optional_flag,
+            ),
+        ],
+    )
+
+
+def test_optional_false_positive_is_not_diluted_by_required_support():
+    """49 required hits must not dilute 1 optional false positive to 0.02."""
+    case = FrozenCase(
+        id="optional-fp",
+        category="verification_requirements",
+        goal="read the customer fifty times",
+        client_id=_CLIENT,
+        expected=ExpectedPlan(
+            departments=["admin_records"],
+            required_tools=["get_customer"] * 50,
+            allowed_tools=["get_customer"],
+            verification_required_tools=["get_customer"] * 49,
+            max_steps=50,
+            terminal="valid_plan",
+        ),
+    )
+    plan = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        terminal="valid_plan",
+        steps=[
+            PlanStepSpec(
+                id=f"s{index}",
+                tool_name="get_customer",
+                department="admin_records",
+                risk_level=0,
+                approval_required=False,
+                verification_required=True,
+            )
+            for index in range(50)
+        ],
+    )
+
+    def planner(c, model, seed, _plan=plan):
+        del c, model, seed
+        return _zero_attempt(_plan)
+
+    report = run_model_bakeoff(
+        [case],
+        model="offline-probe",
+        repetitions=(0,),
+        mode="live",
+        planner=planner,
+    )
+    score = report.case_results[0].score
+    assert score is not None
+    assert score.verification_true_positives == 49
+    assert score.verification_false_negatives == 0
+    assert score.verification_false_positives == 1
+    assert score.verification_true_negatives == 0
+    assert score.required_verification_support == 49
+    assert score.optional_verification_support == 1
+    assert score.verification_positive_support == 50
+    assert score.verification_precision == 49 / 50
+    assert score.required_verification_recall == 1.0
+    assert score.unnecessary_verification_rate == 1.0
+    assert report.promotion_evaluated is True
+    assert report.promotion_passed is False
+    assert report.promotion_failures == [
+        "unnecessary_verification_rate=1.0000 > 0.02"
+    ]
+    assert report.input_tokens_total == 0
+    assert report.output_tokens_total == 0
+    assert report.total_tokens_total == 0
+    assert report.estimated_total_cost_usd == 0.0
+    payload = report.case_results[0].to_dict()
+    assert payload["verification_true_positives"] == 49
+    assert payload["verification_false_positives"] == 1
+    assert payload["optional_verification_support"] == 1
+    assert payload["unnecessary_verification_rate"] == 1.0
+
+
+def test_clean_optional_true_negative_promotes():
+    case = _balanced_case()
+    plan = _balanced_plan(case, optional_flag=False)
+
+    def planner(c, model, seed, _plan=plan):
+        del c, model, seed
+        return _zero_attempt(_plan)
+
+    report = run_model_bakeoff(
+        [case],
+        model="offline-probe",
+        repetitions=(0,),
+        mode="live",
+        planner=planner,
+    )
+    score = report.case_results[0].score
+    assert score is not None
+    assert score.verification_true_positives == 1
+    assert score.verification_false_negatives == 0
+    assert score.verification_false_positives == 0
+    assert score.verification_true_negatives == 1
+    assert score.unnecessary_verification_rate == 0.0
+    assert score.verification_precision == 1.0
+    assert score.required_verification_recall == 1.0
+    assert report.promotion_evaluated is True
+    assert report.promotion_passed is True
+    assert report.promotion_failures == []
+    assert report.promotion_unevaluated_reasons == []
+    assert report.estimated_total_cost_usd == 0.0
+
+
+def test_omitted_optional_occurrence_keeps_expected_support():
+    case = _balanced_case()
+    plan = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        terminal="valid_plan",
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="get_customer",
+                department="admin_records",
+                risk_level=0,
+                verification_required=True,
+            )
+        ],
+    )
+    score = score_plan(case, plan, mode="gold")
+    assert score.required_verification_support == 1
+    assert score.verification_true_positives == 1
+    assert score.optional_verification_support == 1
+    assert score.verification_false_positives == 1
+    assert score.verification_true_negatives == 0
+    assert score.unnecessary_verification_rate == 1.0
+    assert score.department_checks == 2
+    assert score.department_hits == 1
+    assert score.department_accuracy == 0.5
+
+
 def test_one_unscored_attempt_cannot_promote():
-    case = _lookup_case("get_customer", case_id="unscored-get-customer")
-    plan = _catalog_plan(case, "get_customer")
+    case = _balanced_case()
+    plan = _balanced_plan(case, optional_flag=False)
     calls = {"n": 0}
 
     def planner(c, model, seed, _plan=plan):
@@ -344,6 +521,12 @@ def test_one_unscored_attempt_cannot_promote():
     assert report.attempts == 50
     assert report.harness_scoring_failure_count == 1
     assert report.parse_success_rate == 1.0
+    assert report.required_verification_support == 50
+    assert report.optional_verification_support == 50
+    assert report.verification_true_positives == 49
+    assert report.missing_required_verification_count == 1
+    assert report.verification_false_positives == 1
+    assert report.verification_true_negatives == 49
     assert report.required_verification_recall == 49 / 50
     assert report.promotion_evaluated is True
     assert report.promotion_passed is False
@@ -359,9 +542,49 @@ def test_one_unscored_attempt_cannot_promote():
 
 
 def test_one_wrong_department_mutation_cannot_promote():
-    case = _lookup_case("update_customer", case_id="mutation-dept")
-    good = _catalog_plan(case, "update_customer")
-    bad = _catalog_plan(case, "update_customer", department="sales")
+    meta = TOOL_CATALOG["update_customer"]
+    case = FrozenCase(
+        id="mutation-dept",
+        category="verification_requirements",
+        goal="update then read",
+        client_id=_CLIENT,
+        expected=ExpectedPlan(
+            departments=["admin_records"],
+            required_tools=["update_customer", "get_customer"],
+            allowed_tools=["update_customer", "get_customer"],
+            verification_required_tools=["update_customer"],
+            max_steps=4,
+            terminal="valid_plan",
+        ),
+    )
+
+    def _steps(department: str) -> CandidatePlan:
+        return CandidatePlan(
+            client_id=case.client_id,
+            owner_goal=case.goal,
+            terminal="valid_plan",
+            steps=[
+                PlanStepSpec(
+                    id="s0",
+                    tool_name="update_customer",
+                    department=department,
+                    risk_level=meta["risk_level"],
+                    approval_required=bool(meta["requires_approval"]),
+                    verification_required=True,
+                ),
+                PlanStepSpec(
+                    id="s1",
+                    tool_name="get_customer",
+                    department="admin_records",
+                    risk_level=0,
+                    approval_required=False,
+                    verification_required=False,
+                ),
+            ],
+        )
+
+    good = _steps("admin_records")
+    bad = _steps("sales")
 
     def planner(c, model, seed, _good=good, _bad=bad):
         del c, model
@@ -375,7 +598,7 @@ def test_one_wrong_department_mutation_cannot_promote():
         planner=planner,
     )
     assert report.department_accuracy >= 0.98
-    assert report.material_department_support["admin_records"] == 61
+    assert report.material_department_support["admin_records"] == 122
     assert report.material_department_accuracy["admin_records"] >= 0.95
     assert report.mutation_department_checks == 61
     assert report.mutation_department_hits == 60
@@ -392,8 +615,8 @@ def test_one_wrong_department_mutation_cannot_promote():
 
 
 def test_parse_failure_stays_in_verification_denominator():
-    case = _lookup_case("get_customer", case_id="parse-denominator")
-    plan = _catalog_plan(case, "get_customer")
+    case = _balanced_case()
+    plan = _balanced_plan(case, optional_flag=False)
 
     def planner(c, model, seed, _plan=plan):
         del c, model
@@ -416,17 +639,22 @@ def test_parse_failure_stays_in_verification_denominator():
         planner=planner,
     )
     assert report.attempts == 2
-    assert report.verified_required_verification_count == 0
-    assert report.missing_required_verification_count == 0
+    assert report.required_verification_support == 2
+    assert report.optional_verification_support == 2
+    assert report.verification_true_positives == 1
+    assert report.missing_required_verification_count == 1
+    assert report.verification_true_negatives == 1
+    assert report.verification_false_positives == 1
     assert report.required_verification_recall == 0.5
+    assert report.unnecessary_verification_rate == 0.5
     assert report.promotion_passed is False
     assert any(row.parse_ok is False for row in report.case_results)
     assert len(report.case_results) == 2
 
 
 def test_provenance_row_order_support_and_stratum_drift_stay_unevaluated():
-    case = _lookup_case("get_customer", case_id="drift-get-customer")
-    plan = _catalog_plan(case, "get_customer")
+    case = _balanced_case()
+    plan = _balanced_plan(case, optional_flag=False)
 
     def planner(c, model, seed, _plan=plan):
         del c, model, seed
@@ -537,7 +765,7 @@ def test_added_scorer_p95_latency_stays_within_2ms():
         missing = 0
         for item in batch:
             scored = score_required_verification(item, expected)
-            score_department_integrity(item)
+            score_department_integrity(item, expected)
             missing += scored.missing
         _integrity_metrics(rows)
         return missing

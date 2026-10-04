@@ -353,7 +353,7 @@ def test_empty_plan_has_zero_unnecessary_overprotection_rates():
         score = score_plan(case, plan, mode="gold")
         assert score.valid
         assert score.unnecessary_approval_rate == 0.0
-        assert score.unnecessary_verification_rate == 0.0
+        assert score.unnecessary_verification_rate is None
 
 
 def test_department_and_verification_expectations_are_scored():
@@ -516,7 +516,7 @@ def test_department_accuracy_toolless_and_unknown_tools():
         terminal="clarification_needed",
     )
     toolless_score = score_plan(toolless_case, toolless, mode="gold")
-    assert toolless_score.department_accuracy == 1.0
+    assert toolless_score.department_accuracy is None
 
     mixed_case = FrozenCase(
         id="dept-unknown",
@@ -601,7 +601,8 @@ def test_duplicate_get_customer_verification_is_per_occurrence():
     assert score.required_verification_recall == 0.5
     assert score.verification_placement_accuracy == 0.5
     assert score.verification_precision == 1.0
-    assert score.unnecessary_verification_rate == 0.0
+    assert score.optional_verification_support == 0
+    assert score.unnecessary_verification_rate is None
 
 
 def test_clarification_and_reject_terminals_have_no_side_effects(cases):

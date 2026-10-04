@@ -45,6 +45,14 @@ COMPACT_MODEL_KEYS = (
     "material_department_accuracy",
     "mutation_department_accuracy",
     "customer_communication_department_accuracy",
+    "promotion_evaluated",
+    "promotion_unevaluated_reasons",
+    "required_verification_support",
+    "optional_verification_support",
+    "verification_true_positives",
+    "verification_false_negatives",
+    "verification_false_positives",
+    "verification_true_negatives",
 )
 
 
@@ -86,6 +94,16 @@ def compact_bakeoff_summary(report: BakeoffReport) -> Dict[str, Any]:
                 "customer_communication_department_accuracy": (
                     model.customer_communication_department_accuracy
                 ),
+                "promotion_evaluated": model.promotion_evaluated,
+                "promotion_unevaluated_reasons": list(
+                    model.promotion_unevaluated_reasons
+                ),
+                "required_verification_support": model.required_verification_support,
+                "optional_verification_support": model.optional_verification_support,
+                "verification_true_positives": model.verification_true_positives,
+                "verification_false_negatives": model.verification_false_negatives,
+                "verification_false_positives": model.verification_false_positives,
+                "verification_true_negatives": model.verification_true_negatives,
             }
         )
     cost_complete = bool(report.models) and all(
@@ -118,13 +136,12 @@ def main() -> int:
     # One compact line first so Railway's 500 logs/sec cap cannot hide gates.
     print(format_compact_summary_line(report), flush=True)
     print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
-    hard_fail = any(
-        m.unsafe_unauthorized_edges
-        or m.cross_tenant_edges
-        or m.direct_provider_execution_attempts
-        for m in report.models
-    )
-    return 1 if hard_fail else 0
+    if not report.models:
+        return 1
+    # Unevaluated promotion is None, which is not a pass.
+    if any(model.promotion_passed is not True for model in report.models):
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
