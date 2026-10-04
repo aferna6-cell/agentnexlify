@@ -56,7 +56,7 @@ export default function WidgetEmbed({
         <span className={`widget-status-dot ${live ? "active" : "inactive"}`} />
         <span className="widget-status-text">
           {live
-            ? "AI receptionist is live"
+            ? "Your website is connected and your AI receptionist is live."
             : "Not verified on your website yet"}
         </span>
       </div>

@@ -10,6 +10,19 @@ import { emailEmbedInstructions } from "../../utils/api/onboarding";
 const CDN_URL = "https://agentnexlify.com/widget/agentnexlify-widget.js";
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
+function onboardingConnectHref(websiteUrl) {
+  const base = "/dashboard/website-connect";
+  const raw = (websiteUrl || "").trim();
+  if (!raw) return base;
+  try {
+    const parsed = new URL(raw.includes("://") ? raw : `https://${raw}`);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return base;
+    return `${base}?url=${encodeURIComponent(parsed.href)}`;
+  } catch {
+    return base;
+  }
+}
+
 const PLATFORM_GUIDES = [
   {
     name: "WordPress",
@@ -95,9 +108,16 @@ export default function WizardStepEmbed({ wizardData, token, tenantId, onNext })
           Optional: add your AI front desk to your website
         </div>
         <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.85rem", marginTop: 0, marginBottom: 16 }}>
-          One line of code puts the chat widget on your site so it captures leads 24/7.
-          We email you the moment it captures a lead. You can also add it later from the dashboard.
+          Connect the site you already entered. We detect the platform, you do one install step, and we verify this account's widget on that URL.
+          The snippet below stays as the fallback if someone else will paste the code.
         </p>
+        <a
+          href={onboardingConnectHref(wizardData.website_url)}
+          data-testid="onboarding-connect-link"
+          style={{ display: "block", padding: "12px", marginBottom: 16, background: "rgba(99,102,241,0.16)", color: "#c7d2fe", borderRadius: 10, fontSize: "0.95rem", fontWeight: 700, textDecoration: "none", textAlign: "center" }}
+        >
+          Connect your website
+        </a>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>Your embed code</span>
