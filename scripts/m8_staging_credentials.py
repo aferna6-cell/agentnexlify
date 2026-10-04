@@ -15,6 +15,49 @@ from urllib.parse import urlparse
 
 STAGING_SUPABASE_PROJECT_REF = "nohanoiugcbaxtxinttp"
 PRODUCTION_SUPABASE_PROJECT_REF = "pxserpybmajixqrmzaly"
+STAGING_API_HOST = "agentnexlify-staging.up.railway.app"
+PRODUCTION_API_HOST = "agentnexlify-production.up.railway.app"
+
+REASON_PRODUCTION_API = "M8_SMOKE_API_BASE is production API"
+REASON_PRODUCTION_SUPABASE = "SUPABASE_URL host is production project ref"
+REASON_MALFORMED_API = "M8_SMOKE_API_BASE is malformed"
+REASON_MALFORMED_SUPABASE = "SUPABASE_URL is malformed"
+REASON_USERINFO_API = "M8_SMOKE_API_BASE contains URL userinfo"
+REASON_USERINFO_SUPABASE = "SUPABASE_URL contains URL userinfo"
+REASON_UNAPPROVED_API = "M8_SMOKE_API_BASE host is not an approved staging host"
+REASON_UNAPPROVED_SUPABASE = "SUPABASE_URL host is not an approved staging host"
+REASON_HTTPS_API = "M8_SMOKE_API_BASE must use https"
+REASON_HTTPS_SUPABASE = "SUPABASE_URL must use https"
+REASON_STRICT_ORIGIN_API = "M8_SMOKE_API_BASE is not a strict https origin"
+REASON_STRICT_ORIGIN_SUPABASE = "SUPABASE_URL is not a strict https origin"
+
+_API_TARGET = "api"
+_SUPABASE_TARGET = "supabase"
+_TARGET_REASONS = {
+    _API_TARGET: {
+        "production": REASON_PRODUCTION_API,
+        "malformed": REASON_MALFORMED_API,
+        "userinfo": REASON_USERINFO_API,
+        "unapproved": REASON_UNAPPROVED_API,
+        "https": REASON_HTTPS_API,
+        "origin": REASON_STRICT_ORIGIN_API,
+    },
+    _SUPABASE_TARGET: {
+        "production": REASON_PRODUCTION_SUPABASE,
+        "malformed": REASON_MALFORMED_SUPABASE,
+        "userinfo": REASON_USERINFO_SUPABASE,
+        "unapproved": REASON_UNAPPROVED_SUPABASE,
+        "https": REASON_HTTPS_SUPABASE,
+        "origin": REASON_STRICT_ORIGIN_SUPABASE,
+    },
+}
+_TARGET_HOSTS = {
+    _API_TARGET: (STAGING_API_HOST, PRODUCTION_API_HOST),
+    _SUPABASE_TARGET: (
+        f"{STAGING_SUPABASE_PROJECT_REF}.supabase.co",
+        f"{PRODUCTION_SUPABASE_PROJECT_REF}.supabase.co",
+    ),
+}
 
 MODERN_SECRET_PREFIX = "sb_secret_"
 MODERN_PUBLISHABLE_PREFIX = "sb_publishable_"
@@ -61,7 +104,18 @@ def is_masked_value(raw: str) -> bool:
 
 
 def project_ref_from_supabase_url(supabase_url: str) -> str:
-    return urlparse((supabase_url or "").strip()).netloc.split(".")[0]
+    """First label of the parsed hostname, lowercased, with trailing dots removed."""
+    text = (supabase_url or "").strip()
+    if not text:
+        return ""
+    try:
+        hostname = urlparse(text).hostname
+    except ValueError:
+        return ""
+    host = _normalized_hostname(hostname)
+    if not host:
+        return ""
+    return host.split(".", 1)[0]
 
 
 def classify_staging_server_key(raw: str) -> StagingKeyKind:
@@ -114,17 +168,13 @@ def validate_staging_server_key(
             return StagingKeyValidation(
                 False,
                 StagingKeyKind.INVALID,
-                f"JWT role is {role!r}, expected service_role",
-                jwt_role=str(role) if role is not None else None,
-                jwt_ref=str(ref) if ref is not None else None,
+                "JWT role is not service_role",
             )
         if expected_project_ref and ref and ref != expected_project_ref:
             return StagingKeyValidation(
                 False,
                 StagingKeyKind.INVALID,
-                f"JWT ref {ref!r} does not match expected {expected_project_ref!r}",
-                jwt_role="service_role",
-                jwt_ref=str(ref),
+                "JWT ref does not match expected project",
             )
         return StagingKeyValidation(
             True,
@@ -138,6 +188,27 @@ def validate_staging_server_key(
         StagingKeyKind.INVALID,
         "expected legacy service_role JWT (eyJ...) or modern secret key (sb_secret_...)",
     )
+
+
+_SAFE_SERVER_CREDENTIAL_DETAILS = frozenset(
+    {
+        "empty credential",
+        "masked UI paste (bullet characters)",
+        "publishable key cannot be used as server credential",
+        "modern secret key too short",
+        "expected legacy service_role JWT (eyJ...) or modern secret key (sb_secret_...)",
+        "JWT role is not service_role",
+        "JWT ref does not match expected project",
+    }
+)
+
+
+def local_server_credential_reason(validation: StagingKeyValidation) -> str:
+    """Fixed diagnostic for logs. Never includes decoded claims or raw key text."""
+    detail = validation.error or ""
+    if detail not in _SAFE_SERVER_CREDENTIAL_DETAILS:
+        detail = "invalid server credential"
+    return f"local server credential invalid: {detail}"
 
 
 def is_trusted_server_key(raw: str, *, expected_project_ref: str | None = None) -> bool:
@@ -172,18 +243,61 @@ def safe_key_metadata(raw: str, validation: StagingKeyValidation | None = None) 
     return meta
 
 
+def _normalized_hostname(hostname: str | None) -> str:
+    return (hostname or "").rstrip(".").lower()
+
+
+def _classify_staging_target(raw: str, target: str) -> str | None:
+    """Return one secret-safe reason, or None when the target is approved staging.
+
+    Empty values are unset configuration, not malformed targets. Host checks use
+    the parsed hostname only, case-folded, with trailing dots removed.
+    An approved target must be a strict https origin: scheme https, the
+    approved hostname, port omitted or 443, path empty or "/", and no params,
+    query, or fragment.
+    urlparse and port access raise ValueError for unmatched IPv6 brackets and
+    invalid ports. That parser error becomes the malformed reason so the raw
+    URL cannot leak through a traceback.
+    """
+    text = (raw or "").strip()
+    if not text:
+        return None
+    reasons = _TARGET_REASONS[target]
+    staging_host, production_host = _TARGET_HOSTS[target]
+    try:
+        parsed = urlparse(text)
+        hostname = parsed.hostname
+        port = parsed.port
+        username = parsed.username
+        password = parsed.password
+    except ValueError:
+        return reasons["malformed"]
+
+    host = _normalized_hostname(hostname)
+    if not host:
+        return reasons["malformed"]
+    if host == production_host:
+        return reasons["production"]
+    if host != staging_host:
+        return reasons["unapproved"]
+    if parsed.scheme != "https":
+        return reasons["https"]
+    if username is not None or password is not None:
+        return reasons["userinfo"]
+    if port is not None and port != 443:
+        return reasons["malformed"]
+    if parsed.path not in {"", "/"} or parsed.params or parsed.query or parsed.fragment:
+        return reasons["origin"]
+    return None
+
+
 def staging_target_errors(*, supabase_url: str, api_base: str) -> list[str]:
-    """Fail closed if smoke tooling targets production."""
+    """Fail closed unless both targets are the approved staging hosts."""
     fails: list[str] = []
-    host = project_ref_from_supabase_url(supabase_url)
-    if PRODUCTION_SUPABASE_PROJECT_REF in (supabase_url or ""):
-        fails.append("SUPABASE_URL points at production Supabase project")
-    if supabase_url and host == PRODUCTION_SUPABASE_PROJECT_REF:
-        fails.append("SUPABASE_URL host is production project ref")
-    if supabase_url and host and host != STAGING_SUPABASE_PROJECT_REF:
-        fails.append(
-            f"SUPABASE_URL host {host!r} is not staging ref {STAGING_SUPABASE_PROJECT_REF!r}"
-        )
-    if "agentnexlify-production" in (api_base or ""):
-        fails.append("M8_SMOKE_API_BASE is production API")
+    supabase_reason = _classify_staging_target(supabase_url, _SUPABASE_TARGET)
+    if supabase_reason:
+        fails.append(supabase_reason)
+    api_reason = _classify_staging_target(api_base, _API_TARGET)
+    if api_reason:
+        fails.append(api_reason)
     return fails

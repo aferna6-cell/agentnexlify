@@ -15,6 +15,7 @@ import os
 import sys
 import urllib.error
 import urllib.request
+import uuid
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
@@ -24,10 +25,45 @@ if str(SCRIPTS) not in sys.path:
 import m8_staging_credentials as creds
 
 
-def _get(url: str, headers: dict) -> tuple[int, object]:
-    req = urllib.request.Request(url, headers=headers, method="GET")
+def _chunk_read_failure(expected: str, code: int, body: object) -> str:
+    """Status and type only. Response bodies can echo request credentials."""
+    if isinstance(body, list):
+        shape = f"type=list n={len(body)}"
+    else:
+        shape = f"type={type(body).__name__}"
+    return f"{expected} http={code} {shape}"
+
+
+def _request_base(url: str) -> str:
+    """Drop one accepted root slash after origin validation has passed."""
+    if url.endswith("/") and not url.endswith("//"):
+        return url[:-1]
+    return url
+
+
+def _is_canonical_client_id(value: str) -> bool:
+    """True only for the lowercase hyphenated form produced by str(uuid.UUID)."""
     try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
+        parsed = uuid.UUID(value)
+    except (ValueError, TypeError, AttributeError):
+        return False
+    return str(parsed) == value
+
+
+class _RejectCredentialRedirects(urllib.request.HTTPRedirectHandler):
+    """Refuse automatic redirects so credential headers are not replayed."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _build_opener():
+    return urllib.request.build_opener(_RejectCredentialRedirects())
+
+
+def _open(req: urllib.request.Request, timeout: int) -> tuple[int, object]:
+    try:
+        with _build_opener().open(req, timeout=timeout) as resp:
             raw = resp.read().decode("utf-8", errors="replace")
             return int(resp.status), json.loads(raw) if raw else None
     except urllib.error.HTTPError as exc:
@@ -37,6 +73,11 @@ def _get(url: str, headers: dict) -> tuple[int, object]:
         except Exception:
             body = raw[:200]
         return int(exc.code), body
+
+
+def _get(url: str, headers: dict) -> tuple[int, object]:
+    req = urllib.request.Request(url, headers=headers, method="GET")
+    return _open(req, 20)
 
 
 def _post_json(url: str, payload: dict) -> tuple[int, object]:
@@ -47,22 +88,21 @@ def _post_json(url: str, payload: dict) -> tuple[int, object]:
         headers={"Content-Type": "application/json", "Accept": "application/json"},
         method="POST",
     )
-    try:
-        with urllib.request.urlopen(req, timeout=25) as resp:
-            raw = resp.read().decode("utf-8", errors="replace")
-            return int(resp.status), json.loads(raw) if raw else None
-    except urllib.error.HTTPError as exc:
-        raw = exc.read().decode("utf-8", errors="replace")
-        try:
-            body = json.loads(raw)
-        except Exception:
-            body = raw[:200]
-        return int(exc.code), body
+    return _open(req, 25)
 
 
 def main() -> int:
-    base = (os.environ.get("M8_SMOKE_API_BASE") or "").rstrip("/")
-    sb_url = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
+    base = (os.environ.get("M8_SMOKE_API_BASE") or "").strip()
+    sb_url = (os.environ.get("SUPABASE_URL") or "").strip()
+    target_fails = creds.staging_target_errors(supabase_url=sb_url, api_base=base)
+    if target_fails:
+        print("FAIL step-3 verification:")
+        for item in target_fails:
+            print(f"  - {item}")
+        return 1
+    base = _request_base(base)
+    sb_url = _request_base(sb_url)
+
     anon = (os.environ.get("SUPABASE_KEY") or "").strip()
     service = (
         os.environ.get("SUPABASE_SERVICE_KEY")
@@ -75,24 +115,37 @@ def main() -> int:
     password = (os.environ.get("M8_SMOKE_LOGIN_PASSWORD") or "").strip()
 
     fails: list[str] = []
-
-    fails.extend(creds.staging_target_errors(supabase_url=sb_url, api_base=base))
+    if not base:
+        fails.append("M8_SMOKE_API_BASE unset")
+    if not sb_url:
+        fails.append("SUPABASE_URL unset")
 
     expected_ref = creds.project_ref_from_supabase_url(sb_url) or creds.STAGING_SUPABASE_PROJECT_REF
     validation = creds.validate_staging_server_key(service, expected_project_ref=expected_ref)
     if not validation.ok:
-        fails.append(f"local server credential invalid: {validation.error}")
-    elif validation.kind == creds.StagingKeyKind.LEGACY_SERVICE_ROLE:
+        fails.append(creds.local_server_credential_reason(validation))
+    if not anon:
+        fails.append("SUPABASE_KEY unset")
+    elif creds.jwt_claims(anon).get("role") != "anon":
+        fails.append("SUPABASE_KEY is not anon JWT")
+    if not client_id:
+        fails.append("M8_SMOKE_CLIENT_ID unset")
+    elif not _is_canonical_client_id(client_id):
+        fails.append("M8_SMOKE_CLIENT_ID is invalid")
+    if not email:
+        fails.append("M8_SMOKE_LOGIN_EMAIL unset")
+    if not password:
+        fails.append("M8_SMOKE_LOGIN_PASSWORD unset")
+    if fails:
+        print("FAIL step-3 verification:")
+        for item in fails:
+            print(f"  - {item}")
+        return 1
+
+    if validation.kind == creds.StagingKeyKind.LEGACY_SERVICE_ROLE:
         print(f"PASS local server credential kind={validation.kind.value} jwt_role=service_role")
     else:
         print(f"PASS local server credential kind={validation.kind.value} (functional verify below)")
-
-    if anon:
-        anon_role = creds.jwt_claims(anon).get("role")
-        if anon_role != "anon":
-            fails.append("SUPABASE_KEY is not anon JWT")
-    else:
-        fails.append("SUPABASE_KEY unset")
 
     if base:
         code, body = _get(f"{base}/health", {"Accept": "application/json"})
@@ -109,9 +162,7 @@ def main() -> int:
         if code == 200 and isinstance(body, list) and len(body) == 0:
             print("PASS anon tenant_kb_chunks []")
         else:
-            fails.append(
-                f"anon chunks expected [] got http={code} n={len(body) if isinstance(body, list) else body}"
-            )
+            fails.append(_chunk_read_failure("anon chunks expected [] got", code, body))
 
     if sb_url and service and client_id and validation.ok:
         code, body = _get(
@@ -122,8 +173,7 @@ def main() -> int:
             print(f"PASS server credential smoke chunks n={len(body)}")
         else:
             fails.append(
-                "server credential smoke chunks expected >0 got "
-                f"http={code} n={len(body) if isinstance(body, list) else body}"
+                _chunk_read_failure("server credential smoke chunks expected >0 got", code, body)
             )
 
     if base and email and password:
