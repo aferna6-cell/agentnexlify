@@ -22,6 +22,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 from backend.services.os_workflows.plan_eval import (
     MATERIAL_DEPARTMENT_MIN_SUPPORT,
     MATERIAL_DEPARTMENTS,
+    frozen_occurrence_support,
     score_plan,
 )
 from backend.services.os_workflows.plan_schema import (
@@ -32,7 +33,6 @@ from backend.services.os_workflows.plan_schema import (
 from backend.services.os_workflows.tool_catalog import (
     ALWAYS_FORBIDDEN_TOOLS,
     TOOL_CATALOG,
-    tool_department,
 )
 
 # Repo model routing (CLAUDE.md / model-routing.md).
@@ -131,6 +131,9 @@ _PROVENANCE_KEYS = (
     "stratum",
     "department_support",
     "case_support",
+    "case_verification_support",
+    "required_verification_support",
+    "optional_verification_support",
 )
 _FIXTURE_EVIDENCE = frozenset({"fixture", "fixture_gold"})
 
@@ -312,12 +315,21 @@ def classify_case_result(result: "BakeoffCaseResult") -> str:
         or score.risk_approval_accuracy
         < CLASSIFICATION_QUALITY_FLOOR["risk_approval_accuracy"]
         or score.risk_tier_accuracy < CLASSIFICATION_QUALITY_FLOOR["risk_tier_accuracy"]
-        or score.department_accuracy
-        < CLASSIFICATION_QUALITY_FLOOR["department_accuracy"]
-        or score.verification_placement_accuracy
-        < CLASSIFICATION_QUALITY_FLOOR["verification_placement_accuracy"]
+        or (
+            score.department_accuracy is not None
+            and score.department_accuracy
+            < CLASSIFICATION_QUALITY_FLOOR["department_accuracy"]
+        )
+        or (
+            score.verification_placement_accuracy is not None
+            and score.verification_placement_accuracy
+            < CLASSIFICATION_QUALITY_FLOOR["verification_placement_accuracy"]
+        )
         or score.unnecessary_approval_rate > 0.0
-        or score.unnecessary_verification_rate > 0.0
+        or (
+            score.unnecessary_verification_rate is not None
+            and score.unnecessary_verification_rate > 0.0
+        )
     )
     if quality_miss:
         return MISS_INCOMPLETE
@@ -415,6 +427,12 @@ class BakeoffCaseResult:
     output_tokens: Optional[int] = None
     total_tokens: Optional[int] = None
     cost_usd: Optional[float] = None
+    expected_required_verification_support: int = 0
+    expected_optional_verification_support: int = 0
+    expected_department_checks: int = 0
+    expected_department_support: Dict[str, int] = field(default_factory=dict)
+    expected_mutation_support: int = 0
+    expected_communication_support: int = 0
     error: Optional[str] = None
     plan: Optional[CandidatePlan] = None
     expected_terminal: str = "valid_plan"
@@ -427,6 +445,34 @@ class BakeoffCaseResult:
             [s.tool_name for s in self.plan.steps if s.tool_name] if self.plan else []
         )
         score = self.score
+        if score is not None:
+            true_positives = score.verification_true_positives
+            false_negatives = score.verification_false_negatives
+            false_positives = score.verification_false_positives
+            true_negatives = score.verification_true_negatives
+            required_support = score.required_verification_support
+            optional_support = score.optional_verification_support
+            positive_support = score.verification_positive_support
+            recall = score.required_verification_recall
+            precision = score.verification_precision
+            unnecessary_rate = score.unnecessary_verification_rate
+            department_accuracy = score.department_accuracy
+            placement = score.verification_placement_accuracy
+        else:
+            true_positives = 0
+            true_negatives = 0
+            required_support = self.expected_required_verification_support
+            optional_support = self.expected_optional_verification_support
+            false_negatives = required_support
+            false_positives = optional_support
+            positive_support = false_positives
+            recall = None if required_support <= 0 else 0.0
+            precision = None if positive_support <= 0 else 0.0
+            unnecessary_rate = None if optional_support <= 0 else 1.0
+            department_accuracy = (
+                0.0 if self.expected_department_checks else None
+            )
+            placement = recall
         return {
             "case_id": self.case_id,
             "category": self.category,
@@ -443,31 +489,26 @@ class BakeoffCaseResult:
             "dependency_edge_accuracy": (
                 score.dependency_edge_accuracy if score else 0.0
             ),
-            "department_accuracy": score.department_accuracy if score else 0.0,
-            "verification_placement_accuracy": (
-                score.verification_placement_accuracy if score else 0.0
-            ),
-            "required_verification_occurrences": (
-                score.required_verification_occurrences if score else 0
-            ),
-            "verified_required_verification_count": (
-                score.verified_required_verification_count if score else 0
-            ),
-            "missing_required_verification_count": (
-                score.missing_required_verification_count if score else 0
-            ),
-            "required_verification_recall": (
-                score.required_verification_recall if score else 0.0
-            ),
-            "verification_precision": score.verification_precision if score else 0.0,
+            "department_accuracy": department_accuracy,
+            "verification_placement_accuracy": placement,
+            "required_verification_occurrences": required_support,
+            "verified_required_verification_count": true_positives,
+            "missing_required_verification_count": false_negatives,
+            "required_verification_recall": recall,
+            "verification_precision": precision,
+            "verification_true_positives": true_positives,
+            "verification_false_negatives": false_negatives,
+            "verification_false_positives": false_positives,
+            "verification_true_negatives": true_negatives,
+            "required_verification_support": required_support,
+            "optional_verification_support": optional_support,
+            "verification_positive_support": positive_support,
             "risk_tier_accuracy": score.risk_tier_accuracy if score else 0.0,
             "risk_approval_accuracy": score.risk_approval_accuracy if score else 0.0,
             "unnecessary_approval_rate": (
                 score.unnecessary_approval_rate if score else 0.0
             ),
-            "unnecessary_verification_rate": (
-                score.unnecessary_verification_rate if score else 0.0
-            ),
+            "unnecessary_verification_rate": unnecessary_rate,
             "forbidden_action_rate": score.forbidden_action_rate if score else 0.0,
             "tenant_violation_rate": score.tenant_violation_rate if score else 0.0,
             "missing_required_step_rate": (
@@ -509,18 +550,25 @@ class ModelBakeoffReport:
     required_verification_occurrences: int = 0
     verified_required_verification_count: int = 0
     missing_required_verification_count: int = 0
-    required_verification_recall: float = 1.0
-    verification_precision: float = 1.0
-    unnecessary_verification_rate: float = 0.0
-    department_accuracy: float = 1.0
+    verification_true_positives: int = 0
+    verification_false_negatives: int = 0
+    verification_false_positives: int = 0
+    verification_true_negatives: int = 0
+    required_verification_support: int = 0
+    optional_verification_support: int = 0
+    verification_positive_support: int = 0
+    required_verification_recall: Optional[float] = None
+    verification_precision: Optional[float] = None
+    unnecessary_verification_rate: Optional[float] = None
+    department_accuracy: Optional[float] = None
     material_department_support: Dict[str, int] = field(default_factory=dict)
     material_department_accuracy: Dict[str, float] = field(default_factory=dict)
     mutation_department_checks: int = 0
     mutation_department_hits: int = 0
-    mutation_department_accuracy: float = 1.0
+    mutation_department_accuracy: Optional[float] = None
     customer_communication_department_checks: int = 0
     customer_communication_department_hits: int = 0
-    customer_communication_department_accuracy: float = 1.0
+    customer_communication_department_accuracy: Optional[float] = None
     harness_scoring_failure_count: int = 0
     frozen_provenance: Dict[str, Any] = field(default_factory=dict)
     promotion_unevaluated_reasons: List[str] = field(default_factory=list)
@@ -557,6 +605,13 @@ class ModelBakeoffReport:
             "required_verification_occurrences": self.required_verification_occurrences,
             "verified_required_verification_count": self.verified_required_verification_count,
             "missing_required_verification_count": self.missing_required_verification_count,
+            "verification_true_positives": self.verification_true_positives,
+            "verification_false_negatives": self.verification_false_negatives,
+            "verification_false_positives": self.verification_false_positives,
+            "verification_true_negatives": self.verification_true_negatives,
+            "required_verification_support": self.required_verification_support,
+            "optional_verification_support": self.optional_verification_support,
+            "verification_positive_support": self.verification_positive_support,
             "required_verification_recall": self.required_verification_recall,
             "verification_precision": self.verification_precision,
             "unnecessary_verification_rate": self.unnecessary_verification_rate,
@@ -732,17 +787,16 @@ def _provenance_digest(payload: Dict[str, Any]) -> str:
 
 def _case_department_support(case: FrozenCase) -> Dict[str, int]:
     """Catalog-department support for one frozen case, independent of the candidate."""
-    names: List[str] = []
-    if case.gold_plan is not None and case.gold_plan.steps:
-        names = [step.tool_name for step in case.gold_plan.steps if step.tool_name]
-    else:
-        names = [tool for tool in case.expected.required_tools if tool]
-    counts: Dict[str, int] = {}
-    for name in names:
-        dept = tool_department(name)
-        if dept in MATERIAL_DEPARTMENTS:
-            counts[dept] = counts.get(dept, 0) + 1
-    return counts
+    support = frozen_occurrence_support(case.expected, case.gold_plan)
+    return dict(support.department_support)
+
+
+def _case_verification_support(case: FrozenCase) -> Dict[str, int]:
+    support = frozen_occurrence_support(case.expected, case.gold_plan)
+    return {
+        "required": len(support.required_names),
+        "optional": len(support.optional_names),
+    }
 
 
 def freeze_promotion_provenance(
@@ -754,9 +808,14 @@ def freeze_promotion_provenance(
     stratum: Counter = Counter()
     support: Counter = Counter()
     case_support: Dict[str, Dict[str, int]] = {}
+    case_verification: Dict[str, Dict[str, int]] = {}
+    required_verification_support = 0
+    optional_verification_support = 0
     for case in cases:
         per_case = _case_department_support(case)
+        verification = _case_verification_support(case)
         case_support[case.id] = dict(sorted(per_case.items()))
+        case_verification[case.id] = verification
         for rep in reps:
             ordering.append(
                 {
@@ -768,12 +827,19 @@ def freeze_promotion_provenance(
             stratum[case.category] += 1
             for dept, count in per_case.items():
                 support[dept] += count
+            required_verification_support += verification["required"]
+            optional_verification_support += verification["optional"]
     payload: Dict[str, Any] = {
         "row_count": len(ordering),
         "ordering": ordering,
         "stratum": dict(sorted(stratum.items())),
         "department_support": dict(sorted((dept, int(n)) for dept, n in support.items())),
         "case_support": {key: case_support[key] for key in sorted(case_support)},
+        "case_verification_support": {
+            key: case_verification[key] for key in sorted(case_verification)
+        },
+        "required_verification_support": required_verification_support,
+        "optional_verification_support": optional_verification_support,
     }
     payload["digest"] = _provenance_digest(payload)
     return payload
@@ -803,20 +869,31 @@ def provenance_drift_reasons(report: ModelBakeoffReport) -> List[str]:
     if observed_ordering != list(frozen.get("ordering") or []):
         reasons.append("ordering")
     case_support = frozen.get("case_support") or {}
+    case_verification = frozen.get("case_verification_support") or {}
     observed_support: Counter = Counter()
+    observed_required = 0
+    observed_optional = 0
     support_ok = True
     for row in results:
         per_case = case_support.get(row.case_id)
-        if per_case is None:
+        per_verification = case_verification.get(row.case_id)
+        if per_case is None or per_verification is None:
             support_ok = False
             break
         for dept, count in per_case.items():
             observed_support[dept] += int(count)
+        observed_required += int(per_verification.get("required", 0))
+        observed_optional += int(per_verification.get("optional", 0))
     expected_support = {
         str(dept): int(count)
         for dept, count in (frozen.get("department_support") or {}).items()
     }
-    if (not support_ok) or dict(sorted(observed_support.items())) != expected_support:
+    if (
+        (not support_ok)
+        or dict(sorted(observed_support.items())) != expected_support
+        or observed_required != int(frozen.get("required_verification_support") or 0)
+        or observed_optional != int(frozen.get("optional_verification_support") or 0)
+    ):
         reasons.append("support")
     observed_stratum = dict(sorted(Counter(row.category for row in results).items()))
     if observed_stratum != dict(frozen.get("stratum") or {}):
@@ -827,22 +904,20 @@ def provenance_drift_reasons(report: ModelBakeoffReport) -> List[str]:
     return reasons
 
 
+def _ratio(numerator: int, denominator: int) -> Optional[float]:
+    if denominator <= 0:
+        return None
+    return numerator / denominator
+
+
 def _integrity_metrics(results: Sequence[BakeoffCaseResult]) -> Dict[str, Any]:
-    """Attempt-weighted rates. Unscored and parse failures add 0 and stay in the denominator."""
-    attempts = len(results)
-
-    def _mean_metric(getter: Callable[[CaseScore], float]) -> float:
-        if not attempts:
-            return 0.0
-        total = 0.0
-        for row in results:
-            if row.score is not None and row.parse_ok:
-                total += float(getter(row.score))
-        return total / attempts
-
-    occurrences = 0
-    verified = 0
-    missing = 0
+    """Micro counts over frozen support. Failed rows add zero hits and full expected support."""
+    true_positives = 0
+    false_negatives = 0
+    false_positives = 0
+    true_negatives = 0
+    department_hits = 0
+    department_checks = 0
     dept_support: Counter = Counter()
     dept_hits: Counter = Counter()
     mutation_checks = 0
@@ -850,12 +925,22 @@ def _integrity_metrics(results: Sequence[BakeoffCaseResult]) -> Dict[str, Any]:
     communication_checks = 0
     communication_hits = 0
     for row in results:
-        score = row.score
-        if score is None or not row.parse_ok:
+        score = row.score if row.parse_ok else None
+        if score is None:
+            false_negatives += row.expected_required_verification_support
+            false_positives += row.expected_optional_verification_support
+            department_checks += row.expected_department_checks
+            for dept, count in row.expected_department_support.items():
+                dept_support[dept] += count
+            mutation_checks += row.expected_mutation_support
+            communication_checks += row.expected_communication_support
             continue
-        occurrences += score.required_verification_occurrences
-        verified += score.verified_required_verification_count
-        missing += score.missing_required_verification_count
+        true_positives += score.verification_true_positives
+        false_negatives += score.verification_false_negatives
+        false_positives += score.verification_false_positives
+        true_negatives += score.verification_true_negatives
+        department_checks += score.department_checks
+        department_hits += score.department_hits
         for dept, count in score.material_department_support.items():
             dept_support[dept] += count
         for dept, count in score.material_department_hits.items():
@@ -864,34 +949,38 @@ def _integrity_metrics(results: Sequence[BakeoffCaseResult]) -> Dict[str, Any]:
         mutation_hits += score.mutation_department_hits
         communication_checks += score.customer_communication_department_checks
         communication_hits += score.customer_communication_department_hits
+    required_support = true_positives + false_negatives
+    optional_support = false_positives + true_negatives
+    positive_support = true_positives + false_positives
     material_accuracy = {
         dept: (dept_hits.get(dept, 0) / dept_support[dept])
         for dept in sorted(dept_support)
         if dept_support[dept]
     }
     return {
-        "required_verification_occurrences": occurrences,
-        "verified_required_verification_count": verified,
-        "missing_required_verification_count": missing,
-        "required_verification_recall": _mean_metric(
-            lambda score: score.required_verification_recall
-        ),
-        "verification_precision": _mean_metric(lambda score: score.verification_precision),
-        "unnecessary_verification_rate": _mean_metric(
-            lambda score: score.unnecessary_verification_rate
-        ),
-        "department_accuracy": _mean_metric(lambda score: score.department_accuracy),
+        "required_verification_occurrences": required_support,
+        "verified_required_verification_count": true_positives,
+        "missing_required_verification_count": false_negatives,
+        "verification_true_positives": true_positives,
+        "verification_false_negatives": false_negatives,
+        "verification_false_positives": false_positives,
+        "verification_true_negatives": true_negatives,
+        "required_verification_support": required_support,
+        "optional_verification_support": optional_support,
+        "verification_positive_support": positive_support,
+        "required_verification_recall": _ratio(true_positives, required_support),
+        "verification_precision": _ratio(true_positives, positive_support),
+        "unnecessary_verification_rate": _ratio(false_positives, optional_support),
+        "department_accuracy": _ratio(department_hits, department_checks),
         "material_department_support": dict(sorted(dept_support.items())),
         "material_department_accuracy": material_accuracy,
         "mutation_department_checks": mutation_checks,
         "mutation_department_hits": mutation_hits,
-        "mutation_department_accuracy": (
-            mutation_hits / mutation_checks if mutation_checks else 1.0
-        ),
+        "mutation_department_accuracy": _ratio(mutation_hits, mutation_checks),
         "customer_communication_department_checks": communication_checks,
         "customer_communication_department_hits": communication_hits,
-        "customer_communication_department_accuracy": (
-            communication_hits / communication_checks if communication_checks else 1.0
+        "customer_communication_department_accuracy": _ratio(
+            communication_hits, communication_checks
         ),
         "harness_scoring_failure_count": sum(
             1 for row in results if row.miss_class == MISS_HARNESS_SCORE
@@ -907,6 +996,19 @@ def evaluate_promotion(report: ModelBakeoffReport) -> ModelBakeoffReport:
         report.promotion_failures = []
         report.promotion_unevaluated_reasons = drift
         return report
+    frozen = report.frozen_provenance or {}
+    if frozen:
+        support_gaps: List[str] = []
+        if int(frozen.get("required_verification_support") or 0) <= 0:
+            support_gaps.append("required_support")
+        if int(frozen.get("optional_verification_support") or 0) <= 0:
+            support_gaps.append("optional_support")
+        if support_gaps:
+            report.promotion_evaluated = False
+            report.promotion_passed = None
+            report.promotion_failures = []
+            report.promotion_unevaluated_reasons = support_gaps
+            return report
 
     failures: List[str] = []
     bar = PROMOTION_BAR
@@ -945,24 +1047,36 @@ def evaluate_promotion(report: ModelBakeoffReport) -> ModelBakeoffReport:
         )
     elif report.required_verification_recall != bar["required_verification_recall"]:
         # Same occurrence miss as the absolute count when every attempt is scored.
-        # Recall is its own stop when unscored rows zero the numerator and stay
-        # in the denominator without incrementing the missing-occurrence counter.
-        failures.append(
-            "required_verification_recall="
-            f"{report.required_verification_recall:.4f} < 1.0"
+        # Recall is its own stop when failed rows add expected support as misses
+        # without a separate missing counter... the missing counter includes them.
+        recall_text = (
+            "null"
+            if report.required_verification_recall is None
+            else f"{report.required_verification_recall:.4f}"
         )
-    if report.verification_precision < float(bar["verification_precision"]):
+        failures.append(f"required_verification_recall={recall_text} < 1.0")
+    if (
+        report.verification_precision is not None
+        and report.verification_precision < float(bar["verification_precision"])
+    ):
         failures.append(
             "verification_precision="
             f"{report.verification_precision:.4f} < {bar['verification_precision']}"
         )
-    if report.unnecessary_verification_rate > float(bar["unnecessary_verification_rate"]):
+    if (
+        report.unnecessary_verification_rate is not None
+        and report.unnecessary_verification_rate
+        > float(bar["unnecessary_verification_rate"])
+    ):
         failures.append(
             "unnecessary_verification_rate="
             f"{report.unnecessary_verification_rate:.4f} > "
             f"{bar['unnecessary_verification_rate']}"
         )
-    if report.department_accuracy < float(bar["department_accuracy"]):
+    if (
+        report.department_accuracy is not None
+        and report.department_accuracy < float(bar["department_accuracy"])
+    ):
         failures.append(
             f"department_accuracy={report.department_accuracy:.4f} < "
             f"{bar['department_accuracy']}"
@@ -978,22 +1092,28 @@ def evaluate_promotion(report: ModelBakeoffReport) -> ModelBakeoffReport:
                 f"material_department_accuracy[{dept}]={accuracy:.4f} < {floor} "
                 f"(support={support})"
             )
-    if (
-        report.mutation_department_checks
-        and report.mutation_department_accuracy != bar["mutation_department_accuracy"]
+    if report.mutation_department_checks and (
+        report.mutation_department_accuracy is None
+        or report.mutation_department_accuracy != bar["mutation_department_accuracy"]
     ):
-        failures.append(
-            "mutation_department_accuracy="
-            f"{report.mutation_department_accuracy:.4f} < 1.0"
+        shown = (
+            "null"
+            if report.mutation_department_accuracy is None
+            else f"{report.mutation_department_accuracy:.4f}"
         )
-    if (
-        report.customer_communication_department_checks
-        and report.customer_communication_department_accuracy
+        failures.append(f"mutation_department_accuracy={shown} < 1.0")
+    if report.customer_communication_department_checks and (
+        report.customer_communication_department_accuracy is None
+        or report.customer_communication_department_accuracy
         != bar["customer_communication_department_accuracy"]
     ):
+        shown = (
+            "null"
+            if report.customer_communication_department_accuracy is None
+            else f"{report.customer_communication_department_accuracy:.4f}"
+        )
         failures.append(
-            "customer_communication_department_accuracy="
-            f"{report.customer_communication_department_accuracy:.4f} < 1.0"
+            f"customer_communication_department_accuracy={shown} < 1.0"
         )
     checks = [
         ("valid_plan_rate", report.valid_plan_rate),
@@ -1148,6 +1268,13 @@ def summarize_model_results(
         missing_required_verification_count=integrity[
             "missing_required_verification_count"
         ],
+        verification_true_positives=integrity["verification_true_positives"],
+        verification_false_negatives=integrity["verification_false_negatives"],
+        verification_false_positives=integrity["verification_false_positives"],
+        verification_true_negatives=integrity["verification_true_negatives"],
+        required_verification_support=integrity["required_verification_support"],
+        optional_verification_support=integrity["optional_verification_support"],
+        verification_positive_support=integrity["verification_positive_support"],
         required_verification_recall=integrity["required_verification_recall"],
         verification_precision=integrity["verification_precision"],
         unnecessary_verification_rate=integrity["unnecessary_verification_rate"],
@@ -1180,6 +1307,16 @@ def summarize_model_results(
     return report
 
 
+def _stamp_expected_support(row: BakeoffCaseResult, case: FrozenCase) -> None:
+    support = frozen_occurrence_support(case.expected, case.gold_plan)
+    row.expected_required_verification_support = len(support.required_names)
+    row.expected_optional_verification_support = len(support.optional_names)
+    row.expected_department_checks = support.department_checks
+    row.expected_department_support = dict(support.department_support)
+    row.expected_mutation_support = support.mutation_support
+    row.expected_communication_support = support.communication_support
+
+
 def run_model_bakeoff(
     cases: Sequence[FrozenCase],
     *,
@@ -1201,12 +1338,16 @@ def run_model_bakeoff(
     results: List[BakeoffCaseResult] = []
 
     for case in selected:
+        def _keep(row: BakeoffCaseResult, _case: FrozenCase = case) -> None:
+            _stamp_expected_support(row, _case)
+            results.append(row)
+
         for repetition in repetitions:
             started = time.perf_counter()
             try:
                 attempt = fn(case, model, repetition)
             except Exception as exc:  # noqa: BLE001 — planner invocation/runtime
-                results.append(
+                _keep(
                     BakeoffCaseResult(
                         case_id=case.id,
                         category=case.category,
@@ -1224,7 +1365,7 @@ def run_model_bakeoff(
             try:
                 plan = parse_candidate_plan(attempt.raw_text, case=case)
             except Exception as exc:  # noqa: BLE001 — JSON / Pydantic
-                results.append(
+                _keep(
                     BakeoffCaseResult(
                         case_id=case.id,
                         category=case.category,
@@ -1247,7 +1388,7 @@ def run_model_bakeoff(
             try:
                 score = score_plan(case, plan, mode="gold")
             except Exception as exc:  # noqa: BLE001 — scorer / harness
-                results.append(
+                _keep(
                     BakeoffCaseResult(
                         case_id=case.id,
                         category=case.category,
@@ -1268,7 +1409,7 @@ def run_model_bakeoff(
                     )
                 )
                 continue
-            results.append(
+            _keep(
                 BakeoffCaseResult(
                     case_id=case.id,
                     category=case.category,

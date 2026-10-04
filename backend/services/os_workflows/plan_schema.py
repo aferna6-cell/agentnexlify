@@ -110,12 +110,12 @@ class CaseScore(BaseModel):
     valid: bool
     step_intent_accuracy: float
     dependency_edge_accuracy: float
-    department_accuracy: float
-    verification_placement_accuracy: float
+    department_accuracy: Optional[float] = None
+    verification_placement_accuracy: Optional[float] = None
     risk_tier_accuracy: float
     risk_approval_accuracy: float
     unnecessary_approval_rate: float
-    unnecessary_verification_rate: float
+    unnecessary_verification_rate: Optional[float] = None
     forbidden_action_rate: float
     tenant_violation_rate: float
     missing_required_step_rate: float
@@ -129,10 +129,18 @@ class CaseScore(BaseModel):
     required_verification_occurrences: int = 0
     verified_required_verification_count: int = 0
     missing_required_verification_count: int = 0
-    required_verification_recall: float = 1.0
-    verification_precision: float = 1.0
+    required_verification_recall: Optional[float] = None
+    verification_precision: Optional[float] = None
     verification_predicted_positives: int = 0
     verification_true_positives: int = 0
+    verification_false_negatives: int = 0
+    verification_false_positives: int = 0
+    verification_true_negatives: int = 0
+    required_verification_support: int = 0
+    optional_verification_support: int = 0
+    verification_positive_support: int = 0
+    department_checks: int = 0
+    department_hits: int = 0
     material_department_support: Dict[str, int] = Field(default_factory=dict)
     material_department_hits: Dict[str, int] = Field(default_factory=dict)
     mutation_department_checks: int = 0
