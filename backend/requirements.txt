@@ -10,7 +10,7 @@
 # backend/tests/test_router_composition_semantics.py. Lift via #265, in lockstep
 # with the starlette bump, only once that suite passes on the new pair.
 fastapi>=0.115.6,<0.136
-starlette>=0.49.1,<0.50.0
+starlette>=1.7.0,<1.8.0
 uvicorn[standard]==0.52.4
 anthropic>=0.95.0,<1
 supabase==2.28.3
