@@ -17,31 +17,60 @@ const PLATFORMS = [
   { id: "custom", label: "Custom / other" },
 ];
 
+const CONNECTED_COPY =
+  "Your website is connected and your AI receptionist is live.";
+
 const STATUS_META = {
-  connected: {
-    label: "AI receptionist is live",
-    color: "var(--green)",
-    bg: "var(--green-dim)",
+  not_started: {
+    label: "Connect your website",
+    reason:
+      "Enter your website address. We detect the platform, then you complete one install step and verify.",
+    color: "var(--text-secondary)",
+    bg: "var(--hover-overlay)",
   },
   needs_action: {
     label: "Install the widget, then verify",
+    reason:
+      "Finish the platform step below, publish the site, and click Verify. We only check the URL you submit.",
     color: "var(--yellow)",
     bg: "var(--yellow-dim)",
   },
+  verifying: {
+    label: "Verifying your website",
+    reason:
+      "Checking the URL you submitted for this account's widget key. This page updates when the check finishes.",
+    color: "var(--accent)",
+    bg: "var(--accent-dim)",
+  },
+  connected: {
+    label: CONNECTED_COPY,
+    reason: "",
+    color: "var(--green)",
+    bg: "var(--green-dim)",
+  },
   failed: {
     label: "We could not verify this site yet",
+    reason:
+      "We could not reach that page. Confirm it is public, publish the widget, and verify again.",
     color: "var(--red)",
     bg: "var(--red-dim)",
-  },
-  not_started: {
-    label: "Connect your website",
-    color: "var(--text-secondary)",
-    bg: "var(--hover-overlay)",
   },
 };
 
 function statusMeta(status) {
   return STATUS_META[status] || STATUS_META.not_started;
+}
+
+function websiteUrlFromSearch(search) {
+  const raw = new URLSearchParams(search || "").get("url");
+  if (!raw) return "";
+  try {
+    const parsed = new URL(raw.includes("://") ? raw : `https://${raw}`);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "";
+    return parsed.href;
+  } catch {
+    return "";
+  }
 }
 
 export default function WebsiteConnectPage() {
@@ -77,7 +106,14 @@ export default function WebsiteConnectPage() {
     ])
       .then(([connectPayload, dash]) => {
         if (cancelled) return;
+        const row =
+          connectPayload?.connection ||
+          (connectPayload?.id ? connectPayload : null);
         applyPayload(connectPayload);
+        if (!row?.website_url) {
+          const prefill = websiteUrlFromSearch(window.location.search);
+          if (prefill) setUrl(prefill);
+        }
         if (dash?.widget_api_key) setApiKey(dash.widget_api_key);
       })
       .catch((err) => {
@@ -155,7 +191,15 @@ export default function WebsiteConnectPage() {
 
   if (loading) return <SkeletonLoader />;
 
-  const meta = statusMeta(status);
+  const displayStatus = verifying ? "verifying" : status;
+  const meta = statusMeta(displayStatus);
+  const serverDetail = connection?.verification_detail || "";
+  const reason =
+    displayStatus === "connected"
+      ? serverDetail
+      : verifying
+        ? STATUS_META.verifying.reason
+        : serverDetail || meta.reason;
   const action = connection?.next_action;
   const live = status === "connected";
   const showSnippet =
@@ -182,7 +226,12 @@ export default function WebsiteConnectPage() {
         }}
         data-testid="connect-status"
       >
-        <strong style={{ color: meta.color }}>{meta.label}</strong>
+        <strong
+          data-testid="connect-status-label"
+          style={{ color: meta.color }}
+        >
+          {meta.label}
+        </strong>
         {connection?.website_url && (
           <p className="settings-card-desc" style={{ marginBottom: 0 }}>
             {connection.website_url}
@@ -191,9 +240,17 @@ export default function WebsiteConnectPage() {
               : ""}
           </p>
         )}
-        {connection?.verification_detail && (
-          <p className="settings-card-desc" style={{ marginBottom: 0 }}>
-            {connection.verification_detail}
+        {reason && (
+          <p
+            className="settings-card-desc"
+            data-testid={
+              displayStatus === "connected"
+                ? undefined
+                : "connect-status-reason"
+            }
+            style={{ marginBottom: 0 }}
+          >
+            {reason}
           </p>
         )}
       </div>
