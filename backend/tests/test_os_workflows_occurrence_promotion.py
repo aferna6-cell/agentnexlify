@@ -1286,6 +1286,141 @@ def _p95(samples: Sequence[float]) -> float:
     return ordered[index]
 
 
+_LATENCY_LIMIT_MS = 2.0
+# Windows GetProcessTimes / process_time_ns quantum. It cannot prove a 2 ms bound.
+_WINDOWS_PROCESS_TIME_QUANTUM_NS = 15_625_000
+
+
+def clock_can_prove_latency_limit(
+    resolution_ns: int, limit_ms: float = _LATENCY_LIMIT_MS
+) -> bool:
+    """True only when one tick is at most one tenth of the ceiling.
+
+    A 15.625 ms process-time quantum reports every fast sample as 0 or
+    15.625 ms, so it is not admissible for a 2 ms p95 gate.
+    """
+    if resolution_ns <= 0:
+        return False
+    return resolution_ns * 10 <= int(limit_ms * 1_000_000)
+
+
+def observe_clock_resolution_ns(clock, probes: int = 32) -> int:
+    deltas = []
+    previous = clock()
+    spins = 0
+    spin_limit = probes * 100_000
+    while len(deltas) < probes and spins < spin_limit:
+        spins += 1
+        current = clock()
+        if current == previous:
+            continue
+        delta = current - previous
+        previous = current
+        if delta > 0:
+            deltas.append(delta)
+    if not deltas:
+        return 10**18
+    return min(deltas)
+
+
+def select_latency_clock():
+    """Pick perf_counter_ns only when its resolution can prove the 2 ms ceiling."""
+    resolution_ns = observe_clock_resolution_ns(time.perf_counter_ns)
+    if not clock_can_prove_latency_limit(resolution_ns):
+        raise AssertionError(
+            "perf_counter_ns resolution "
+            f"{resolution_ns} ns cannot prove a {_LATENCY_LIMIT_MS} ms bound"
+        )
+    return time.perf_counter_ns, "perf_counter_ns", resolution_ns
+
+
+def run_paired_latency(new_fn, old_fn, *, clock, warmup: int, iterations: int):
+    """Alternate which slice runs first. Restore GC even if timing raises."""
+    gc_was_enabled = gc.isenabled()
+    gc.disable()
+    order = []
+    deltas_ns = []
+    new_ns = []
+    old_ns = []
+    try:
+        for _ in range(warmup):
+            new_fn()
+            old_fn()
+        for index in range(iterations):
+            if index % 2 == 0:
+                order.append("new-first")
+                started = clock()
+                new_fn()
+                mid = clock()
+                old_fn()
+                finished = clock()
+                new_elapsed = mid - started
+                old_elapsed = finished - mid
+            else:
+                order.append("old-first")
+                started = clock()
+                old_fn()
+                mid = clock()
+                new_fn()
+                finished = clock()
+                old_elapsed = mid - started
+                new_elapsed = finished - mid
+            new_ns.append(new_elapsed)
+            old_ns.append(old_elapsed)
+            deltas_ns.append(new_elapsed - old_elapsed)
+        return deltas_ns, new_ns, old_ns, order
+    finally:
+        if gc_was_enabled:
+            gc.enable()
+        else:
+            gc.disable()
+
+
+def test_coarse_process_time_quantum_cannot_be_the_latency_clock():
+    quantum = _WINDOWS_PROCESS_TIME_QUANTUM_NS
+
+    class _Quantized:
+        def __init__(self):
+            self.now = 0
+
+        def __call__(self):
+            self.now += quantum
+            return self.now
+
+    resolution = observe_clock_resolution_ns(_Quantized(), probes=8)
+    assert resolution == quantum
+    assert clock_can_prove_latency_limit(resolution, _LATENCY_LIMIT_MS) is False
+
+    clock, name, selected_resolution = select_latency_clock()
+    assert name == "perf_counter_ns"
+    assert clock is time.perf_counter_ns
+    assert clock_can_prove_latency_limit(selected_resolution, _LATENCY_LIMIT_MS) is True
+    assert selected_resolution < quantum
+
+    seen = []
+
+    def _new():
+        seen.append("new")
+
+    def _old():
+        seen.append("old")
+
+    gc.enable()
+    _deltas, _new_ns, _old_ns, order = run_paired_latency(
+        _new, _old, clock=time.perf_counter_ns, warmup=1, iterations=4
+    )
+    assert order == ["new-first", "old-first", "new-first", "old-first"]
+    assert seen == ["new", "old", "new", "old", "old", "new", "new", "old", "old", "new"]
+    assert gc.isenabled() is True
+
+    gc.disable()
+    try:
+        run_paired_latency(_new, _old, clock=time.perf_counter_ns, warmup=0, iterations=2)
+        assert gc.isenabled() is False
+    finally:
+        gc.enable()
+
+
 def test_added_scorer_p95_latency_stays_within_2ms():
     case = _duplicate_case()
     plan = _duplicate_plan(case)
@@ -1312,6 +1447,7 @@ def test_added_scorer_p95_latency_stays_within_2ms():
     ]
     warmup = 50
     iterations = 200
+    clock, clock_name, resolution_ns = select_latency_clock()
 
     def _new_slice(batch: List[CandidatePlan]) -> int:
         missing = 0
@@ -1328,40 +1464,17 @@ def test_added_scorer_p95_latency_stays_within_2ms():
             total += _legacy_verification_accuracy(item, expected)
         return total
 
-    clock = time.process_time_ns
-    gc_was_enabled = gc.isenabled()
-    gc.disable()
-    try:
-        for _ in range(warmup):
-            _new_slice(plans)
-            _old_slice(plans)
-
-        deltas_ns = []
-        new_ns = []
-        old_ns = []
-        for index in range(iterations):
-            if index % 2 == 0:
-                started = clock()
-                _new_slice(plans)
-                mid = clock()
-                _old_slice(plans)
-                finished = clock()
-                new_elapsed = mid - started
-                old_elapsed = finished - mid
-            else:
-                started = clock()
-                _old_slice(plans)
-                mid = clock()
-                _new_slice(plans)
-                finished = clock()
-                old_elapsed = mid - started
-                new_elapsed = finished - mid
-            new_ns.append(new_elapsed)
-            old_ns.append(old_elapsed)
-            deltas_ns.append(new_elapsed - old_elapsed)
-    finally:
-        if gc_was_enabled:
-            gc.enable()
+    gc_before = gc.isenabled()
+    deltas_ns, new_ns, old_ns, order = run_paired_latency(
+        lambda: _new_slice(plans),
+        lambda: _old_slice(plans),
+        clock=clock,
+        warmup=warmup,
+        iterations=iterations,
+    )
+    assert order[0] == "new-first"
+    assert order[1] == "old-first"
+    assert gc.isenabled() is gc_before
 
     p95_delta_ms = _p95(deltas_ns) / 1_000_000
     evidence = {
@@ -1371,7 +1484,8 @@ def test_added_scorer_p95_latency_stays_within_2ms():
         "p95_added_latency_ms": p95_delta_ms,
         "p95_new_ms": _p95(new_ns) / 1_000_000,
         "p95_old_ms": _p95(old_ns) / 1_000_000,
-        "clock": "process_time_ns",
+        "clock": clock_name,
+        "clock_resolution_ns": resolution_ns,
         "provider_calls": 0,
         "input_tokens": 0,
         "output_tokens": 0,
