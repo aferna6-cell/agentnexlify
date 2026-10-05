@@ -1,5 +1,6 @@
 """Occurrence-safe M9.4 promotion gates. Offline only — no provider calls."""
 
+import gc
 import json
 import time
 from typing import List, Sequence
@@ -321,17 +322,15 @@ def test_n100_one_mutated_duplicate_occurrence_fails_only_on_missing():
     assert mutated.score.verification_true_positives == 1
     assert mutated.score.verification_false_negatives == 1
     assert mutated.score.required_verification_support == 2
+    assert mutated.score.required_verification_recall == 0.5
     assert report.attempts == _N
     assert report.harness_scoring_failure_count == 0
-    assert report.promotion_unevaluated_reasons == []
     assert report.missing_required_verification_count == 1
     assert report.verification_true_positives == 100
     assert report.verification_false_negatives == 1
-    assert report.promotion_evaluated is True
-    assert report.promotion_passed is False
-    assert report.promotion_failures == [
-        "missing_required_verification_count=1 (must be 0)"
-    ]
+    assert report.promotion_evaluated is False
+    assert report.promotion_passed is None
+    assert report.promotion_unevaluated_reasons == ["unsealed_provenance"]
     assert [row.case_id for row in report.case_results] == [case.id for case in cases]
     assert report.input_tokens_total == 0
     assert report.output_tokens_total == 0
@@ -358,10 +357,8 @@ def test_one_missing_required_verification_fails_at_every_boundary(width: int):
     report = _sealed(cases, planner=planner, repetitions=(0,))
     assert report.missing_required_verification_count == 1
     assert report.harness_scoring_failure_count == 0
-    assert report.promotion_passed is False
-    assert report.promotion_failures == [
-        "missing_required_verification_count=1 (must be 0)"
-    ]
+    assert report.promotion_passed is None
+    assert report.promotion_unevaluated_reasons == ["unsealed_provenance"]
 
 
 @pytest.mark.parametrize(
@@ -388,7 +385,11 @@ def test_optional_fp_dilution_boundary(width: int, must_fail: bool):
     assert report.verification_true_negatives == width - 1
     assert report.unnecessary_verification_rate == 1 / width
     assert report.verification_precision == width / (width + 1)
-    assert report.promotion_passed is (not must_fail)
+    assert (report.unnecessary_verification_rate > 0.02) is must_fail or (
+        report.verification_precision < 0.98
+    ) is must_fail
+    assert report.promotion_passed is None
+    assert report.promotion_unevaluated_reasons == ["unsealed_provenance"]
 
 
 def test_optional_false_positive_is_not_diluted_by_required_hits():
@@ -447,10 +448,8 @@ def test_optional_false_positive_is_not_diluted_by_required_hits():
     assert score.optional_verification_support == 1
     assert score.verification_precision == 100 / 101
     assert score.unnecessary_verification_rate == 1.0
-    assert report.promotion_passed is False
-    assert report.promotion_failures == [
-        "unnecessary_verification_rate=1.0000 > 0.02"
-    ]
+    assert report.promotion_passed is None
+    assert report.promotion_unevaluated_reasons == ["unsealed_provenance"]
     assert report.estimated_total_cost_usd == 0.0
 
 
@@ -503,8 +502,9 @@ def test_omitted_expected_department_occurrences_stay_in_support():
     assert report.material_department_candidate["admin_records"] == 1
     assert report.material_department_support["admin_records"] == 20
     assert report.material_department_missing["admin_records"] == 19
-    assert report.promotion_passed is False
-    assert any("department_accuracy" in failure for failure in report.promotion_failures)
+    assert report.department_accuracy is not None and report.department_accuracy < 0.98
+    assert report.promotion_passed is None
+    assert report.promotion_unevaluated_reasons == ["unsealed_provenance"]
     assert report.estimated_total_cost_usd == 0.0
 
 
@@ -651,11 +651,134 @@ def test_source_change_before_run_is_unevaluated_against_prior_seal():
     assert "ordering" in reordered.promotion_unevaluated_reasons
 
 
+def test_caller_minted_seal_cannot_promote_synthetic_corpus():
+    case = _balanced_case()
+    plan = _balanced_plan(case, optional_flag=False)
+    seal = seal_promotion_manifest([case], (0,))
+
+    def planner(c, model, seed, _plan=plan):
+        del c, model, seed
+        return _zero_attempt(_plan)
+
+    report = run_model_bakeoff(
+        [case],
+        model="offline-probe",
+        repetitions=(0,),
+        mode="live",
+        planner=planner,
+        sealed_manifest=seal,
+    )
+    assert report.promotion_evaluated is False
+    assert report.promotion_passed is None
+    assert report.promotion_failures == []
+    assert report.promotion_unevaluated_reasons == ["unsealed_provenance"]
+    assert report.input_tokens_total == 0
+    assert report.output_tokens_total == 0
+    assert report.estimated_total_cost_usd == 0.0
+
+
+def test_unmatched_candidate_occurrence_is_fp_and_department_miss():
+    tools = ["get_customer"] * 49 + ["search_customers"]
+    case = FrozenCase(
+        id="extra-step",
+        category="verification_requirements",
+        goal="forty nine required and one optional",
+        client_id=_CLIENT,
+        expected=ExpectedPlan(
+            departments=["admin_records"],
+            required_tools=tools,
+            allowed_tools=["get_customer", "search_customers"],
+            verification_required_tools=["get_customer"] * 49,
+            max_steps=51,
+        ),
+    )
+    steps = [
+        PlanStepSpec(
+            id=f"g{index}",
+            tool_name="get_customer",
+            department="admin_records",
+            risk_level=0,
+            verification_required=True,
+        )
+        for index in range(49)
+    ]
+    steps.append(
+        PlanStepSpec(
+            id="opt",
+            tool_name="search_customers",
+            department="admin_records",
+            risk_level=0,
+            verification_required=False,
+        )
+    )
+    steps.append(
+        PlanStepSpec(
+            id="extra",
+            tool_name="search_customers",
+            department="sales",
+            risk_level=0,
+            verification_required=True,
+        )
+    )
+    plan = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        terminal="valid_plan",
+        steps=steps,
+    )
+    score = score_plan(case, plan, mode="gold")
+    assert len(plan.steps) == 51
+    assert score.verification_true_positives == 49
+    assert score.verification_false_negatives == 0
+    assert score.verification_false_positives == 1
+    assert score.verification_true_negatives == 1
+    assert score.optional_verification_support == 2
+    assert score.unnecessary_verification_rate == 0.5
+    assert score.verification_precision == 49 / 50
+    assert score.material_department_expected["admin_records"] == 50
+    assert score.material_department_candidate["admin_records"] == 51
+    assert score.department_checks == 51
+    assert score.department_hits == 50
+    assert score.material_department_missing["admin_records"] == 1
+    assert score.department_accuracy == 50 / 51
+
+    def planner(c, model, seed, _plan=plan):
+        del c, model, seed
+        return _zero_attempt(_plan)
+
+    report = _sealed([case], planner=planner)
+    assert report.verification_false_positives == 1
+    assert report.material_department_candidate["admin_records"] == 51
+    assert report.material_department_expected["admin_records"] == 50
+    assert report.promotion_passed is None
+    assert report.promotion_unevaluated_reasons == ["unsealed_provenance"]
+    assert report.estimated_total_cost_usd == 0.0
+
+
+def test_case_context_changes_committed_fingerprint():
+    from backend.services.os_workflows.planner_bakeoff import promotion_is_allowlisted
+
+    cases = build_frozen_cases()
+    original = case_content_fingerprint(cases)
+    assert original == CANONICAL_CASE_CONTENT_FINGERPRINT
+    changed = cases[0].model_copy(deep=True)
+    changed.context = {"injected": "changed planner semantics"}
+    mutated = [changed] + list(cases[1:])
+    assert case_content_fingerprint(mutated) != original
+    manifest = seal_promotion_manifest(mutated, (0,))
+    assert manifest["case_content_fingerprint"] != CANONICAL_CASE_CONTENT_FINGERPRINT
+    assert promotion_is_allowlisted(manifest) is False
+
+
 def test_canonical_frozen_corpus_fingerprint_is_committed():
+    from backend.services.os_workflows.planner_bakeoff import promotion_is_allowlisted
+
     cases = build_frozen_cases()
     assert action_manifest_fingerprint() == CANONICAL_ACTION_MANIFEST_FINGERPRINT
     assert catalog_fingerprint() == CANONICAL_CATALOG_FINGERPRINT
     assert case_content_fingerprint(cases) == CANONICAL_CASE_CONTENT_FINGERPRINT
+    assert promotion_is_allowlisted(seal_promotion_manifest(cases, (0,))) is True
+    assert promotion_is_allowlisted(seal_promotion_manifest(cases, (0, 1))) is True
 
 
 def test_action_manifest_fingerprint_is_checkout_newline_invariant(tmp_path, monkeypatch):
@@ -851,11 +974,9 @@ def test_optional_false_positive_is_not_diluted_by_required_support():
     assert score.verification_precision == 49 / 50
     assert score.required_verification_recall == 1.0
     assert score.unnecessary_verification_rate == 1.0
-    assert report.promotion_evaluated is True
-    assert report.promotion_passed is False
-    assert report.promotion_failures == [
-        "unnecessary_verification_rate=1.0000 > 0.02"
-    ]
+    assert report.promotion_evaluated is False
+    assert report.promotion_passed is None
+    assert report.promotion_unevaluated_reasons == ["unsealed_provenance"]
     assert report.input_tokens_total == 0
     assert report.output_tokens_total == 0
     assert report.total_tokens_total == 0
@@ -891,10 +1012,10 @@ def test_clean_optional_true_negative_promotes():
     assert score.unnecessary_verification_rate == 0.0
     assert score.verification_precision == 1.0
     assert score.required_verification_recall == 1.0
-    assert report.promotion_evaluated is True
-    assert report.promotion_passed is True
+    assert report.promotion_evaluated is False
+    assert report.promotion_passed is None
     assert report.promotion_failures == []
-    assert report.promotion_unevaluated_reasons == []
+    assert report.promotion_unevaluated_reasons == ["unsealed_provenance"]
     assert report.estimated_total_cost_usd == 0.0
 
 
@@ -962,12 +1083,9 @@ def test_one_unscored_attempt_cannot_promote():
     assert report.verification_false_positives == 1
     assert report.verification_true_negatives == 49
     assert report.required_verification_recall == 49 / 50
-    assert report.promotion_evaluated is True
-    assert report.promotion_passed is False
-    assert any(
-        failure.startswith("harness_scoring_failure_count=1")
-        for failure in report.promotion_failures
-    )
+    assert report.promotion_evaluated is False
+    assert report.promotion_passed is None
+    assert report.promotion_unevaluated_reasons == ["unsealed_provenance"]
     unscored = [row for row in report.case_results if row.score is None]
     assert len(unscored) == 1
     assert unscored[0].parse_ok is True
@@ -1040,11 +1158,9 @@ def test_one_wrong_department_mutation_cannot_promote():
     assert report.customer_communication_department_checks == 0
     assert report.missing_required_verification_count == 0
     assert report.harness_scoring_failure_count == 0
-    assert report.promotion_evaluated is True
-    assert report.promotion_passed is False
-    assert report.promotion_failures == [
-        f"mutation_department_accuracy={report.mutation_department_accuracy:.4f} < 1.0"
-    ]
+    assert report.promotion_evaluated is False
+    assert report.promotion_passed is None
+    assert report.promotion_unevaluated_reasons == ["unsealed_provenance"]
     assert report.estimated_total_cost_usd == 0.0
 
 
@@ -1081,7 +1197,8 @@ def test_parse_failure_stays_in_verification_denominator():
     assert report.verification_false_positives == 1
     assert report.required_verification_recall == 0.5
     assert report.unnecessary_verification_rate == 0.5
-    assert report.promotion_passed is False
+    assert report.promotion_passed is None
+    assert report.promotion_unevaluated_reasons == ["unsealed_provenance"]
     assert any(row.parse_ok is False for row in report.case_results)
     assert len(report.case_results) == 2
 
@@ -1101,7 +1218,8 @@ def test_provenance_row_order_support_and_stratum_drift_stay_unevaluated():
         mode="live",
         planner=planner,
     )
-    assert report.promotion_passed is True
+    assert report.promotion_passed is None
+    assert report.promotion_unevaluated_reasons == ["unsealed_provenance"]
 
     from dataclasses import replace
 
@@ -1192,7 +1310,7 @@ def test_added_scorer_p95_latency_stays_within_2ms():
         )
         for index in range(_N)
     ]
-    warmup = 20
+    warmup = 50
     iterations = 200
 
     def _new_slice(batch: List[CandidatePlan]) -> int:
@@ -1210,33 +1328,40 @@ def test_added_scorer_p95_latency_stays_within_2ms():
             total += _legacy_verification_accuracy(item, expected)
         return total
 
-    for _ in range(warmup):
-        _new_slice(plans)
-        _old_slice(plans)
+    clock = time.process_time_ns
+    gc_was_enabled = gc.isenabled()
+    gc.disable()
+    try:
+        for _ in range(warmup):
+            _new_slice(plans)
+            _old_slice(plans)
 
-    deltas_ns = []
-    new_ns = []
-    old_ns = []
-    for index in range(iterations):
-        if index % 2 == 0:
-            started = time.perf_counter_ns()
-            _new_slice(plans)
-            mid = time.perf_counter_ns()
-            _old_slice(plans)
-            finished = time.perf_counter_ns()
-            new_elapsed = mid - started
-            old_elapsed = finished - mid
-        else:
-            started = time.perf_counter_ns()
-            _old_slice(plans)
-            mid = time.perf_counter_ns()
-            _new_slice(plans)
-            finished = time.perf_counter_ns()
-            old_elapsed = mid - started
-            new_elapsed = finished - mid
-        new_ns.append(new_elapsed)
-        old_ns.append(old_elapsed)
-        deltas_ns.append(new_elapsed - old_elapsed)
+        deltas_ns = []
+        new_ns = []
+        old_ns = []
+        for index in range(iterations):
+            if index % 2 == 0:
+                started = clock()
+                _new_slice(plans)
+                mid = clock()
+                _old_slice(plans)
+                finished = clock()
+                new_elapsed = mid - started
+                old_elapsed = finished - mid
+            else:
+                started = clock()
+                _old_slice(plans)
+                mid = clock()
+                _new_slice(plans)
+                finished = clock()
+                old_elapsed = mid - started
+                new_elapsed = finished - mid
+            new_ns.append(new_elapsed)
+            old_ns.append(old_elapsed)
+            deltas_ns.append(new_elapsed - old_elapsed)
+    finally:
+        if gc_was_enabled:
+            gc.enable()
 
     p95_delta_ms = _p95(deltas_ns) / 1_000_000
     evidence = {
@@ -1246,6 +1371,7 @@ def test_added_scorer_p95_latency_stays_within_2ms():
         "p95_added_latency_ms": p95_delta_ms,
         "p95_new_ms": _p95(new_ns) / 1_000_000,
         "p95_old_ms": _p95(old_ns) / 1_000_000,
+        "clock": "process_time_ns",
         "provider_calls": 0,
         "input_tokens": 0,
         "output_tokens": 0,

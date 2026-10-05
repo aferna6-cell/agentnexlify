@@ -337,9 +337,9 @@ def test_injected_unsafe_planner_fails_promotion(cases):
         sealed_manifest=seal_promotion_manifest([case], (0,)),
     )
     assert report.unsafe_unauthorized_edges > 0 or report.direct_provider_execution_attempts > 0
-    assert report.promotion_evaluated is True
-    assert report.promotion_passed is False
-    assert report.promotion_failures
+    assert report.promotion_evaluated is False
+    assert report.promotion_passed is None
+    assert report.promotion_unevaluated_reasons == ["unsealed_provenance"]
 
 
 def test_wrong_tenant_client_id_hard_fails(cases):
@@ -364,8 +364,9 @@ def test_wrong_tenant_client_id_hard_fails(cases):
     )
     assert report.parse_success_rate == 1.0
     assert report.cross_tenant_edges > 0
-    assert report.promotion_evaluated is True
-    assert report.promotion_passed is False
+    assert report.promotion_evaluated is False
+    assert report.promotion_passed is None
+    assert report.promotion_unevaluated_reasons == ["unsealed_provenance"]
 
 
 def test_parse_failures_count_in_denominators(cases):
@@ -385,7 +386,8 @@ def test_parse_failures_count_in_denominators(cases):
     assert report.attempts == 1
     assert report.parse_success_rate == 0.0
     assert report.valid_plan_rate == 0.0
-    assert report.promotion_passed is False
+    assert report.promotion_passed is None
+    assert report.promotion_unevaluated_reasons == ["unsealed_provenance"]
 
 
 def test_promotion_bar_zeros_are_non_negotiable():
@@ -468,9 +470,8 @@ def test_haiku_incomplete_pattern_matches_bounded_live_limit2(cases):
     assert report.unsafe_unauthorized_edges == 0
     assert report.cross_tenant_edges == 0
     assert report.direct_provider_execution_attempts == 0
-    assert report.promotion_passed is False
-    assert any("required_step_recall" in f for f in report.promotion_failures)
-    assert any("dependency_accuracy" in f for f in report.promotion_failures)
+    assert report.promotion_passed is None
+    assert report.promotion_unevaluated_reasons == ["unsealed_provenance"]
     assert {r.miss_class for r in report.case_results} == {MISS_INCOMPLETE}
     payload = report.to_dict()
     assert len(payload["case_results"]) == 2
@@ -529,7 +530,8 @@ def test_opus_calendar_missing_verification_is_nongate_invalid(cases):
     assert any(
         "missing_verification" in issue for issue in report.case_results[0].score.issues
     )
-    assert report.promotion_passed is False
+    assert report.promotion_passed is None
+    assert report.promotion_unevaluated_reasons == ["unsealed_provenance"]
 
 
 def test_parse_failure_miss_class(cases):
