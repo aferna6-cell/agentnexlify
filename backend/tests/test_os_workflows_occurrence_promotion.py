@@ -12,6 +12,7 @@ from backend.services.os_workflows.plan_eval import (
     CUSTOMER_COMMUNICATION_TOOLS,
     MATERIAL_DEPARTMENT_MIN_SUPPORT,
     MATERIAL_DEPARTMENTS,
+    _score_bound_occurrences,
     score_department_integrity,
     score_plan,
     score_required_verification,
@@ -1374,6 +1375,63 @@ def run_paired_latency(new_fn, old_fn, *, clock, warmup: int, iterations: int):
             gc.enable()
         else:
             gc.disable()
+
+
+def test_paired_scorers_bind_once_per_plan_and_repeat_each_plan():
+    """Verification and department share one bind. The next plan binds again."""
+    case = _duplicate_case()
+    plan = _duplicate_plan(case)
+    expected = case.expected
+    with patch(
+        "backend.services.os_workflows.plan_eval._score_bound_occurrences",
+        wraps=_score_bound_occurrences,
+    ) as bound:
+        verification = score_required_verification(plan, expected)
+        department = score_department_integrity(plan, expected)
+        assert bound.call_count == 1
+        assert verification.true_positives == 1
+        assert verification.false_negatives == 1
+        assert verification.false_positives == 0
+        assert verification.true_negatives == 0
+        assert department.checks == 2
+        assert department.hits == 2
+
+        score_department_integrity(plan, expected)
+        score_required_verification(plan, expected)
+        assert bound.call_count == 2
+
+        before = bound.call_count
+        for item in [plan] * _N:
+            score_required_verification(item, expected)
+            score_department_integrity(item, expected)
+        assert bound.call_count - before == _N
+
+        plan.steps[0].department = "sales"
+        score_required_verification(plan, expected)
+        refreshed = score_department_integrity(plan, expected)
+        assert bound.call_count - before == _N + 1
+        assert refreshed.hits == 1
+        assert refreshed.missing_by_department.get("admin_records") == 1
+
+        plan.steps[0].department = "admin_records"
+        score_department_integrity(plan, expected)
+        plan.steps[1].verification_required = False
+        repeated = score_department_integrity(plan, expected)
+        assert repeated.hits == 2
+        missed = score_required_verification(plan, expected)
+        assert missed.true_positives == 0
+        assert missed.false_negatives == 2
+
+    mutated = _duplicate_case()
+    mutated_plan = _duplicate_plan(mutated)
+    score_required_verification(mutated_plan, mutated.expected)
+    mutated.expected.verification_required_tools.clear()
+    score_department_integrity(mutated_plan, mutated.expected)
+    optional = score_required_verification(mutated_plan, mutated.expected)
+    assert optional.required_support == 0
+    assert optional.optional_support == 2
+    assert optional.false_positives == 1
+    assert optional.true_negatives == 1
 
 
 def test_coarse_process_time_quantum_cannot_be_the_latency_clock():

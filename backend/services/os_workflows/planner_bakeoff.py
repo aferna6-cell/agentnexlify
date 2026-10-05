@@ -1081,25 +1081,28 @@ def _integrity_metrics(results: Sequence[BakeoffCaseResult]) -> Dict[str, Any]:
     true_negatives = 0
     department_hits = 0
     department_checks = 0
-    dept_support: Counter = Counter()
-    dept_hits: Counter = Counter()
-    dept_candidate: Counter = Counter()
-    dept_missing: Counter = Counter()
+    dept_support: Dict[str, int] = {}
+    dept_hits: Dict[str, int] = {}
+    dept_candidate: Dict[str, int] = {}
+    dept_missing: Dict[str, int] = {}
     mutation_checks = 0
     mutation_hits = 0
     mutation_candidate = 0
     communication_checks = 0
     communication_hits = 0
     communication_candidate = 0
+    harness_scoring_failure_count = 0
     for row in results:
+        if row.miss_class == MISS_HARNESS_SCORE:
+            harness_scoring_failure_count += 1
         score = row.score if row.parse_ok else None
         if score is None:
             false_negatives += row.expected_required_verification_support
             false_positives += row.expected_optional_verification_support
             department_checks += row.expected_department_checks
             for dept, count in row.expected_department_support.items():
-                dept_support[dept] += count
-                dept_missing[dept] += count
+                dept_support[dept] = dept_support.get(dept, 0) + count
+                dept_missing[dept] = dept_missing.get(dept, 0) + count
             mutation_checks += row.expected_mutation_support
             communication_checks += row.expected_communication_support
             continue
@@ -1110,13 +1113,13 @@ def _integrity_metrics(results: Sequence[BakeoffCaseResult]) -> Dict[str, Any]:
         department_checks += score.department_checks
         department_hits += score.department_hits
         for dept, count in score.material_department_expected.items():
-            dept_support[dept] += count
+            dept_support[dept] = dept_support.get(dept, 0) + count
         for dept, count in score.material_department_hits.items():
-            dept_hits[dept] += count
+            dept_hits[dept] = dept_hits.get(dept, 0) + count
         for dept, count in score.material_department_candidate.items():
-            dept_candidate[dept] += count
+            dept_candidate[dept] = dept_candidate.get(dept, 0) + count
         for dept, count in score.material_department_missing.items():
-            dept_missing[dept] += count
+            dept_missing[dept] = dept_missing.get(dept, 0) + count
         mutation_checks += score.mutation_expected
         mutation_hits += score.mutation_department_hits
         mutation_candidate += score.mutation_candidate
@@ -1165,9 +1168,7 @@ def _integrity_metrics(results: Sequence[BakeoffCaseResult]) -> Dict[str, Any]:
         "customer_communication_department_accuracy": _ratio(
             communication_hits, communication_checks
         ),
-        "harness_scoring_failure_count": sum(
-            1 for row in results if row.miss_class == MISS_HARNESS_SCORE
-        ),
+        "harness_scoring_failure_count": harness_scoring_failure_count,
     }
 
 
