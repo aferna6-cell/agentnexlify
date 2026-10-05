@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from backend.config import settings
 from backend.models.database import get_service_supabase
+from backend.services.billing_confirmation_email import drain_billing_confirmation_tasks
 from backend.services.idempotency import check_and_record, delete_key, record_response
 from backend.routers.billing import (
     _handle_checkout_completed,
@@ -78,6 +79,7 @@ async def stripe_webhook(request: Request):
                 logger.info("Ignoring legacy marketing add-on checkout event (add-on retired 2026-06-10)")
             else:
                 activation = _handle_checkout_completed(db, data)
+                await drain_billing_confirmation_tasks()
                 if activation:
                     from backend.services.owner_alerts import notify_new_paid_signup
                     await notify_new_paid_signup(
