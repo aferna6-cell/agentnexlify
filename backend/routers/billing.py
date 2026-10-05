@@ -16,6 +16,10 @@ from backend.models.database import get_service_supabase
 from backend.models.schemas import CreateCheckoutRequest, CheckoutResponse, PortalResponse
 from backend.dependencies import _get_current_tenant, block_demo_role
 from backend.services.activity import log_activity
+from backend.services.billing_confirmation_email import (
+    drain_billing_confirmation_tasks,
+    enqueue_subscription_confirmation,
+)
 from backend.services.fraud_guard import guard_checkout_for_fraud
 from backend.services.idempotency import check_and_record, delete_key, record_response
 from backend.services.stripe_service import (
@@ -262,6 +266,7 @@ async def stripe_webhook(request: Request):
                 logger.info("Ignoring legacy marketing add-on checkout event (add-on retired 2026-06-10)")
             else:
                 activation = _handle_checkout_completed(db, data)
+                await drain_billing_confirmation_tasks()
                 if activation:
                     from backend.services.owner_alerts import notify_new_paid_signup
                     await notify_new_paid_signup(
@@ -591,6 +596,23 @@ def _handle_checkout_completed(db, session: dict) -> dict | None:
     logger.info("checkout.session.completed: update result data=%s", update_result.data)
 
     logger.info("Tenant %s upgraded to %s", tenant_id, plan)
+
+    # Confirmation email only after the tenant row is activated. Best-effort;
+    # a failure here must not change the activation result.
+    try:
+        enqueue_subscription_confirmation(
+            db,
+            session,
+            tenant_id=str(tenant_id),
+            plan=str(plan),
+        )
+    except Exception as exc:
+        logger.warning(
+            "billing confirmation key=billing_sub_confirm:%s tenant_id=%s error_type=%s",
+            session.get("id") or "",
+            tenant_id,
+            type(exc).__name__,
+        )
 
     # Feature 3: log paid conversion for funnel analytics
     try:

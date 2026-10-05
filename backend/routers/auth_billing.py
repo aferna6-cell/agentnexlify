@@ -18,6 +18,7 @@ from backend.config import settings
 from backend.dependencies import require_role, block_demo_role
 from backend.models.database import get_service_supabase as _get_service_supabase
 from backend.services.activity import log_activity
+from backend.services.billing_confirmation_email import send_unsubscribe_confirmation
 from backend.services.stripe_service import (
     BILLING_INTERVALS,
     PLAN_PRICES,
@@ -298,7 +299,7 @@ async def billing_cancel(
     db = get_service_supabase()
     result = (
         db.table("tenants")
-        .select("stripe_customer_id, plan")
+        .select("stripe_customer_id, plan, owner_email")
         .eq("id", tenant_id)
         .limit(1)
         .execute()
@@ -386,6 +387,23 @@ async def billing_cancel(
     )
 
     logger.info("Subscription cancellation scheduled for tenant %s", tenant_id)
+    # Best-effort. A send failure must not change this response.
+    try:
+        await send_unsubscribe_confirmation(
+            db,
+            subscription_id=str(subscription_id or ""),
+            tenant_id=str(tenant_id),
+            plan=str(tenant.get("plan") or ""),
+            recipient=str(tenant.get("owner_email") or ""),
+            period_end_iso=current_period_end_iso,
+        )
+    except Exception as exc:
+        logger.warning(
+            "billing confirmation key=billing_unsub_confirm:%s tenant_id=%s error_type=%s",
+            subscription_id or "",
+            tenant_id,
+            type(exc).__name__,
+        )
     return {
         "status": "cancellation_scheduled",
         "current_period_end": current_period_end,
