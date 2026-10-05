@@ -294,6 +294,32 @@ def _score_bound_occurrences(
             communication_checks += 1
             if matched:
                 communication_hits += 1
+    # Unbound candidate steps are still occurrences. A verification flag is an
+    # unmatched false positive. A wrong catalog department is a miss.
+    leftover_misses: Dict[str, int] = {}
+    for index, step in enumerate(steps):
+        if consumed[index] or not step.tool_name:
+            continue
+        if step.verification_required:
+            false_positives += 1
+        if step.tool_name not in TOOL_CATALOG:
+            continue
+        checks += 1
+        catalog_dept = tool_department(step.tool_name)
+        matched = step.department == catalog_dept
+        if matched:
+            hits += 1
+        elif catalog_dept in MATERIAL_DEPARTMENTS:
+            leftover_misses[catalog_dept] = leftover_misses.get(catalog_dept, 0) + 1
+        meta = TOOL_CATALOG[step.tool_name]
+        if meta["mutating"]:
+            mutation_checks += 1
+            if matched:
+                mutation_hits += 1
+        if step.tool_name in CUSTOMER_COMMUNICATION_TOOLS:
+            communication_checks += 1
+            if matched:
+                communication_hits += 1
     return (
         VerificationOccurrenceScore(
             true_positives=true_positives,
@@ -308,8 +334,10 @@ def _score_bound_occurrences(
             hits_by_department=dept_hits,
             candidate_support=candidate_support,
             missing_by_department={
-                dept: dept_support[dept] - dept_hits.get(dept, 0)
-                for dept in dept_support
+                dept: dept_support.get(dept, 0)
+                - dept_hits.get(dept, 0)
+                + leftover_misses.get(dept, 0)
+                for dept in set(dept_support) | set(leftover_misses)
             },
             mutation_checks=mutation_checks,
             mutation_hits=mutation_hits,

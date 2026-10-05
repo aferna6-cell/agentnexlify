@@ -152,7 +152,7 @@ CANONICAL_CATALOG_FINGERPRINT = (
     "263825e9e753ecce7ed707d134da6e0fc416f1da93994bf8b266664fa3f85840"
 )
 CANONICAL_CASE_CONTENT_FINGERPRINT = (
-    "a2e67eb91a3889eb1b7d9195368d73a8a3a6f6201412c83be0a665cf7bb425c3"
+    "60294d45025f1ec3ccac9abcd78a12a3ccf1c86827a527886dd4f68f1cfba617"
 )
 _FIXTURE_EVIDENCE = frozenset({"fixture", "fixture_gold"})
 
@@ -845,43 +845,16 @@ def catalog_fingerprint() -> str:
 
 
 def case_content_fingerprint(cases: Sequence[FrozenCase]) -> str:
+    """Hash complete FrozenCase semantics, including context and gold/attack plans."""
     payload = []
     for case in cases:
-        gold = None
-        if case.gold_plan is not None:
-            gold = [
-                {
-                    "id": step.id,
-                    "tool_name": step.tool_name,
-                    "department": step.department,
-                    "verification_required": step.verification_required,
-                    "risk_level": step.risk_level,
-                    "approval_required": step.approval_required,
-                    "dependencies": list(step.dependencies),
-                }
-                for step in case.gold_plan.steps
-            ]
-        attack = None
-        if case.attack_plan is not None:
-            attack = [step.tool_name for step in case.attack_plan.steps]
-        expected_payload = case.expected.model_dump()
-        # Forbidden-tool membership is a set in the case builder. Sort it so
-        # the committed fingerprint does not follow process hash randomization.
-        expected_payload["forbidden_tools"] = sorted(
-            expected_payload.get("forbidden_tools") or []
-        )
-        payload.append(
-            {
-                "id": case.id,
-                "category": case.category,
-                "goal": case.goal,
-                "client_id": case.client_id,
-                "tags": list(case.tags),
-                "expected": expected_payload,
-                "gold_steps": gold,
-                "attack_tools": attack,
-            }
-        )
+        # Forbidden-tool order is normalized because the case builder fills it
+        # from a set. Every other field, including context, stays intact.
+        case_payload = case.model_dump()
+        forbidden = case_payload.get("expected", {}).get("forbidden_tools")
+        if isinstance(forbidden, list):
+            case_payload["expected"]["forbidden_tools"] = sorted(forbidden)
+        payload.append(case_payload)
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
@@ -966,7 +939,10 @@ def freeze_promotion_provenance(
 def seal_promotion_manifest(
     cases: Sequence[FrozenCase], repetitions: Sequence[int]
 ) -> Dict[str, Any]:
-    """Committed-style manifest. Callers must pass this in; the run must not mint one."""
+    """Snapshot a corpus. This object is not promotion authority.
+
+    Promotion accepts only a digest in ``ALLOWLISTED_PROMOTION_DIGESTS``.
+    """
     return freeze_promotion_provenance(cases, repetitions)
 
 
@@ -1007,15 +983,29 @@ def promotion_manifest_drift(
     return reasons
 
 
-def _matches_committed_canonical(actual: Dict[str, Any]) -> bool:
-    if not CANONICAL_CASE_CONTENT_FINGERPRINT:
+# Digests of freeze_promotion_provenance for the committed full frozen corpus.
+# A caller-minted seal of any other corpus is not in this set.
+ALLOWLISTED_PROMOTION_DIGESTS = frozenset(
+    {
+        # Full frozen corpus, repetition 0.
+        "b80aad440f64a329a1eb04cb6504df035686fbc418a685f0158988ae0217219e",
+        # Full frozen corpus, repetitions 0 and 1.
+        "f030901567f42f9902a7a1118d049e6a6955f00d6a34a450e72f7bfe1449366d",
+    }
+)
+
+
+def promotion_is_allowlisted(manifest: Dict[str, Any]) -> bool:
+    """True only for an externally committed seal of the exact selected corpus."""
+    if manifest.get("digest") not in ALLOWLISTED_PROMOTION_DIGESTS:
         return False
-    return (
-        actual.get("action_manifest_fingerprint")
-        == CANONICAL_ACTION_MANIFEST_FINGERPRINT
-        and actual.get("catalog_fingerprint") == CANONICAL_CATALOG_FINGERPRINT
-        and actual.get("case_content_fingerprint") == CANONICAL_CASE_CONTENT_FINGERPRINT
-    )
+    if manifest.get("action_manifest_fingerprint") != CANONICAL_ACTION_MANIFEST_FINGERPRINT:
+        return False
+    if manifest.get("catalog_fingerprint") != CANONICAL_CATALOG_FINGERPRINT:
+        return False
+    if manifest.get("case_content_fingerprint") != CANONICAL_CASE_CONTENT_FINGERPRINT:
+        return False
+    return True
 
 
 def provenance_drift_reasons(report: ModelBakeoffReport) -> List[str]:
@@ -1657,25 +1647,36 @@ def run_model_bakeoff(
         report.promotion_failures = []
         report.promotion_unevaluated_reasons = ["fixture_provenance"]
         return report
-    if sealed_manifest is None:
-        if _matches_committed_canonical(actual_manifest):
-            sealed_manifest = actual_manifest
-        else:
+    if sealed_manifest is not None:
+        drift = promotion_manifest_drift(actual_manifest, sealed_manifest)
+        if drift:
             report.frozen_provenance = actual_manifest
             report.promotion_evaluated = False
             report.promotion_passed = None
             report.promotion_failures = []
-            report.promotion_unevaluated_reasons = ["unsealed_provenance"]
+            report.promotion_unevaluated_reasons = drift
             return report
-    drift = promotion_manifest_drift(actual_manifest, sealed_manifest)
-    if drift:
-        report.frozen_provenance = sealed_manifest
+    support_gaps: List[str] = []
+    if int(actual_manifest.get("required_verification_support") or 0) <= 0:
+        support_gaps.append("required_support")
+    if int(actual_manifest.get("optional_verification_support") or 0) <= 0:
+        support_gaps.append("optional_support")
+    if support_gaps:
+        report.frozen_provenance = actual_manifest
         report.promotion_evaluated = False
         report.promotion_passed = None
         report.promotion_failures = []
-        report.promotion_unevaluated_reasons = drift
+        report.promotion_unevaluated_reasons = support_gaps
         return report
-    report.frozen_provenance = sealed_manifest
+    # A matching caller-minted seal is still not authority.
+    if not promotion_is_allowlisted(actual_manifest):
+        report.frozen_provenance = actual_manifest
+        report.promotion_evaluated = False
+        report.promotion_passed = None
+        report.promotion_failures = []
+        report.promotion_unevaluated_reasons = ["unsealed_provenance"]
+        return report
+    report.frozen_provenance = actual_manifest
     return evaluate_promotion(report)
 
 
