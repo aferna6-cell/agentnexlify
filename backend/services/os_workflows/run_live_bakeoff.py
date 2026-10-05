@@ -53,6 +53,9 @@ COMPACT_MODEL_KEYS = (
     "verification_false_negatives",
     "verification_false_positives",
     "verification_true_negatives",
+    "material_department_expected",
+    "material_department_candidate",
+    "material_department_missing",
 )
 
 
@@ -104,6 +107,13 @@ def compact_bakeoff_summary(report: BakeoffReport) -> Dict[str, Any]:
                 "verification_false_negatives": model.verification_false_negatives,
                 "verification_false_positives": model.verification_false_positives,
                 "verification_true_negatives": model.verification_true_negatives,
+                "material_department_expected": dict(
+                    model.material_department_expected
+                ),
+                "material_department_candidate": dict(
+                    model.material_department_candidate
+                ),
+                "material_department_missing": dict(model.material_department_missing),
             }
         )
     cost_complete = bool(report.models) and all(

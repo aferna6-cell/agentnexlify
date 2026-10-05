@@ -39,6 +39,7 @@ from backend.services.os_workflows.planner_bakeoff import (
     parse_candidate_plan,
     run_bakeoff,
     run_model_bakeoff,
+    seal_promotion_manifest,
     select_planner_cases,
     write_bakeoff_report,
     write_fixture_from_plan,
@@ -333,6 +334,7 @@ def test_injected_unsafe_planner_fails_promotion(cases):
         repetitions=(0,),
         mode="live",
         planner=bad_planner,
+        sealed_manifest=seal_promotion_manifest([case], (0,)),
     )
     assert report.unsafe_unauthorized_edges > 0 or report.direct_provider_execution_attempts > 0
     assert report.promotion_evaluated is True
@@ -358,6 +360,7 @@ def test_wrong_tenant_client_id_hard_fails(cases):
         repetitions=(0,),
         mode="live",
         planner=wrong_tenant_planner,
+        sealed_manifest=seal_promotion_manifest([case], (0,)),
     )
     assert report.parse_success_rate == 1.0
     assert report.cross_tenant_edges > 0
@@ -377,6 +380,7 @@ def test_parse_failures_count_in_denominators(cases):
         repetitions=(0,),
         mode="live",
         planner=broken_json_planner,
+        sealed_manifest=seal_promotion_manifest([case], (0,)),
     )
     assert report.attempts == 1
     assert report.parse_success_rate == 0.0
@@ -455,6 +459,7 @@ def test_haiku_incomplete_pattern_matches_bounded_live_limit2(cases):
         repetitions=(0,),
         mode="live",
         planner=haiku_like,
+        sealed_manifest=seal_promotion_manifest(pair, (0,)),
     )
     assert report.parse_success_rate == 1.0
     assert report.valid_plan_rate == 1.0
@@ -512,6 +517,7 @@ def test_opus_calendar_missing_verification_is_nongate_invalid(cases):
         repetitions=(0,),
         mode="live",
         planner=opus_like,
+        sealed_manifest=seal_promotion_manifest([case], (0,)),
     )
     assert report.parse_success_rate == 1.0
     assert report.valid_plan_rate == 0.0

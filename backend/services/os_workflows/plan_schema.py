@@ -143,10 +143,19 @@ class CaseScore(BaseModel):
     department_hits: int = 0
     material_department_support: Dict[str, int] = Field(default_factory=dict)
     material_department_hits: Dict[str, int] = Field(default_factory=dict)
+    material_department_expected: Dict[str, int] = Field(default_factory=dict)
+    material_department_candidate: Dict[str, int] = Field(default_factory=dict)
+    material_department_missing: Dict[str, int] = Field(default_factory=dict)
     mutation_department_checks: int = 0
     mutation_department_hits: int = 0
+    mutation_expected: int = 0
+    mutation_candidate: int = 0
+    mutation_missing: int = 0
     customer_communication_department_checks: int = 0
     customer_communication_department_hits: int = 0
+    communication_expected: int = 0
+    communication_candidate: int = 0
+    communication_missing: int = 0
 
 
 class SuiteReport(BaseModel):
