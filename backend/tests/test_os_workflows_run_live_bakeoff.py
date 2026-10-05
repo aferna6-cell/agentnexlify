@@ -116,7 +116,7 @@ def test_run_live_bakeoff_emits_exactly_one_summary_before_pretty_json():
     ):
         rc = main()
 
-    assert rc == 0
+    assert rc == 1
     cases.assert_called_once_with()
     baked.assert_called_once()
     kwargs = baked.call_args.kwargs
@@ -145,6 +145,27 @@ def test_run_live_bakeoff_emits_exactly_one_summary_before_pretty_json():
     pretty = json.loads(rest)
     assert "models" in pretty
     assert pretty["models"][0]["model"] == STRONG_PLANNER_MODEL
+
+
+def test_run_live_bakeoff_fails_when_promotion_is_unevaluated():
+    report = _two_model_report()
+    for model in report.models:
+        model.promotion_passed = None
+        model.promotion_evaluated = False
+    buf = io.StringIO()
+    with (
+        patch(
+            "backend.services.os_workflows.run_live_bakeoff.build_frozen_cases",
+            return_value=["unused"],
+        ),
+        patch(
+            "backend.services.os_workflows.run_live_bakeoff.run_bakeoff",
+            return_value=report,
+        ),
+        redirect_stdout(buf),
+    ):
+        rc = main()
+    assert rc == 1
 
 
 def test_run_live_bakeoff_has_no_store_or_executor_imports():

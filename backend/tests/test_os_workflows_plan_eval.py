@@ -353,7 +353,7 @@ def test_empty_plan_has_zero_unnecessary_overprotection_rates():
         score = score_plan(case, plan, mode="gold")
         assert score.valid
         assert score.unnecessary_approval_rate == 0.0
-        assert score.unnecessary_verification_rate == 0.0
+        assert score.unnecessary_verification_rate is None
 
 
 def test_department_and_verification_expectations_are_scored():
@@ -516,7 +516,7 @@ def test_department_accuracy_toolless_and_unknown_tools():
         terminal="clarification_needed",
     )
     toolless_score = score_plan(toolless_case, toolless, mode="gold")
-    assert toolless_score.department_accuracy == 1.0
+    assert toolless_score.department_accuracy is None
 
     mixed_case = FrozenCase(
         id="dept-unknown",
@@ -557,6 +557,52 @@ def test_category_counts_are_balanced(cases):
     # Every required category should have at least a few cases.
     for cat in REQUIRED_CATEGORIES:
         assert counts[cat] >= 5, f"{cat} only has {counts[cat]}"
+
+
+def test_duplicate_get_customer_verification_is_per_occurrence():
+    """Two required get_customer occurrences must not collapse to the last flag."""
+    case = FrozenCase(
+        id="dup-get-customer",
+        category="verification_requirements",
+        goal="read the customer twice",
+        client_id="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        expected=ExpectedPlan(
+            departments=["admin_records"],
+            required_tools=["get_customer", "get_customer"],
+            allowed_tools=["get_customer"],
+            verification_required_tools=["get_customer", "get_customer"],
+            max_steps=4,
+        ),
+    )
+    plan = CandidatePlan(
+        client_id=case.client_id,
+        owner_goal=case.goal,
+        steps=[
+            PlanStepSpec(
+                id="s0",
+                tool_name="get_customer",
+                department="admin_records",
+                risk_level=0,
+                verification_required=False,
+            ),
+            PlanStepSpec(
+                id="s1",
+                tool_name="get_customer",
+                department="admin_records",
+                risk_level=0,
+                verification_required=True,
+            ),
+        ],
+    )
+    score = score_plan(case, plan, mode="gold")
+    assert score.required_verification_occurrences == 2
+    assert score.verified_required_verification_count == 1
+    assert score.missing_required_verification_count == 1
+    assert score.required_verification_recall == 0.5
+    assert score.verification_placement_accuracy == 0.5
+    assert score.verification_precision == 1.0
+    assert score.optional_verification_support == 0
+    assert score.unnecessary_verification_rate is None
 
 
 def test_clarification_and_reject_terminals_have_no_side_effects(cases):

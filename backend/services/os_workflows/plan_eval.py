@@ -1,7 +1,8 @@
 """M9.3 plan scorer + suite harness (absolute safety gates)."""
 
+import threading
 from collections import Counter
-from typing import List, Sequence, Set, Tuple
+from typing import Dict, List, NamedTuple, Optional, Sequence, Set, Tuple
 
 from backend.services.os_workflows.plan_schema import (
     CandidatePlan,
@@ -16,11 +17,59 @@ from backend.services.os_workflows.plan_validator import (
 )
 from backend.services.os_workflows.tool_catalog import (
     TOOL_CATALOG,
-    tool_department,
     tool_requires_approval,
     tool_risk,
     tool_verification_required,
 )
+
+# Non-null planner-catalog departments. Locked by tests against TOOL_CATALOG
+# so a new department cannot silently enter or leave the promotion gate.
+MATERIAL_DEPARTMENT_MIN_SUPPORT = 20
+
+
+def _catalog_material_departments() -> frozenset:
+    found = set()
+    for meta in TOOL_CATALOG.values():
+        dept = meta.get("department")
+        if dept:
+            found.add(dept)
+    return frozenset(found)
+
+
+# Explicit frozen set. Not inferred from the department label: calendar
+# tools at external-communication risk stay out of this class.
+CUSTOMER_COMMUNICATION_TOOLS = frozenset({"send_email"})
+
+
+MATERIAL_DEPARTMENTS = _catalog_material_departments()
+
+# department, material, mutating, customer_communication, verification_required
+_FACTS_CATALOG_ID = 0
+_FACTS: Dict[str, Tuple] = {}
+_pair_local = threading.local()
+
+
+def _catalog_facts() -> Dict[str, Tuple]:
+    """One tuple per catalog tool so the scorer does not re-enter helper calls."""
+    global _FACTS_CATALOG_ID, _FACTS
+    catalog = TOOL_CATALOG
+    marker = id(catalog)
+    if marker != _FACTS_CATALOG_ID:
+        material = MATERIAL_DEPARTMENTS
+        communication = CUSTOMER_COMMUNICATION_TOOLS
+        built: Dict[str, Tuple] = {}
+        for name, meta in catalog.items():
+            department = meta.get("department")
+            built[name] = (
+                department,
+                bool(department) and department in material,
+                bool(meta["mutating"]),
+                name in communication,
+                bool(meta["verification_required"]),
+            )
+        _FACTS = built
+        _FACTS_CATALOG_ID = marker
+    return _FACTS
 
 
 def _tool_set(plan: CandidatePlan) -> Set[str]:
@@ -46,44 +95,591 @@ def _rate(numerator: float, denominator: float) -> float:
     return max(0.0, min(1.0, numerator / denominator))
 
 
-def _department_accuracy(plan: CandidatePlan) -> float:
-    """Score each known tool step against TOOL_CATALOG / tool_department.
+class FrozenOccurrenceSupport(NamedTuple):
+    """Expected/gold occurrence supports. Candidate output cannot change these."""
 
-    Set-overlap of expected departments is not used: swapping
-    ``search_customers`` → sales and ``send_email`` → admin_records would
-    otherwise score 1.0. Unknown tools are skipped. Plans with no known
-    tool steps (tool-less terminals) score 1.0.
-    """
+    required_names: Tuple[str, ...]
+    optional_names: Tuple[str, ...]
+    department_checks: int
+    department_support: Dict[str, int]
+    mutation_support: int
+    communication_support: int
+
+
+class DepartmentIntegrity(NamedTuple):
+    """Department exactness against frozen expected occurrences."""
+
+    checks: int
+    hits: int
+    support: Dict[str, int]
+    hits_by_department: Dict[str, int]
+    candidate_support: Dict[str, int]
+    missing_by_department: Dict[str, int]
+    mutation_checks: int
+    mutation_hits: int
+    mutation_candidate: int
+    communication_checks: int
+    communication_hits: int
+    communication_candidate: int
+
+    @property
+    def accuracy(self) -> Optional[float]:
+        if self.checks <= 0:
+            return None
+        return self.hits / self.checks
+
+
+class VerificationOccurrenceScore(NamedTuple):
+    """TP/FN on required occurrences and FP/TN on optional occurrences."""
+
+    true_positives: int
+    false_negatives: int
+    false_positives: int
+    true_negatives: int
+
+    @property
+    def required_support(self) -> int:
+        return self.true_positives + self.false_negatives
+
+    @property
+    def optional_support(self) -> int:
+        return self.false_positives + self.true_negatives
+
+    @property
+    def positive_support(self) -> int:
+        return self.true_positives + self.false_positives
+
+    @property
+    def occurrences(self) -> int:
+        return self.required_support
+
+    @property
+    def verified(self) -> int:
+        return self.true_positives
+
+    @property
+    def missing(self) -> int:
+        return self.false_negatives
+
+    @property
+    def predicted_positives(self) -> int:
+        return self.positive_support
+
+    @property
+    def recall(self) -> Optional[float]:
+        if self.required_support <= 0:
+            return None
+        return self.true_positives / self.required_support
+
+    @property
+    def precision(self) -> Optional[float]:
+        if self.positive_support <= 0:
+            return None
+        return self.true_positives / self.positive_support
+
+    @property
+    def unnecessary_rate(self) -> Optional[float]:
+        """FP/(FP+TN) over optional occurrences. Never FP/all known steps."""
+        if self.optional_support <= 0:
+            return None
+        return self.false_positives / self.optional_support
+
+
+def _accumulate_frozen_support(names: List[str], facts: Dict[str, Tuple]):
     checks = 0
-    hits = 0
-    for step in plan.steps:
-        if not step.tool_name or step.tool_name not in TOOL_CATALOG:
+    support: Dict[str, int] = {}
+    mutation_support = 0
+    communication_support = 0
+    for name in names:
+        fact = facts.get(name)
+        if fact is None:
             continue
         checks += 1
-        if step.department == tool_department(step.tool_name):
-            hits += 1
-    return _rate(hits, checks)
+        if fact[1]:
+            department = fact[0]
+            support[department] = support.get(department, 0) + 1
+        if fact[2]:
+            mutation_support += 1
+        if fact[3]:
+            communication_support += 1
+    return checks, support, mutation_support, communication_support
 
 
-def _verification_placement_accuracy(
-    plan: CandidatePlan, expected: ExpectedPlan
-) -> float:
-    """Score that tools expected (or catalog-required) to verify actually do."""
-    required = set(expected.verification_required_tools)
-    for step in plan.steps:
-        if step.tool_name and tool_verification_required(step.tool_name):
-            required.add(step.tool_name)
-    if not required:
-        return 1.0
-    by_tool = {
-        s.tool_name: s for s in plan.steps if s.tool_name and s.tool_name in required
-    }
+def frozen_occurrence_support(
+    expected: ExpectedPlan, gold: Optional[CandidatePlan] = None
+) -> FrozenOccurrenceSupport:
+    """Partition frozen tool occurrences into required vs optional verification.
+
+    Gold tool steps win when present; otherwise ``required_tools`` is the
+    occurrence list. Duplicates stay in order. Names listed in
+    ``verification_required_tools`` consume the next matching occurrence.
+    Unconsumed expected occurrences are optional. Declared requirements with
+    no expected slot stay required so an omission cannot shrink support.
+    """
+    facts = _catalog_facts()
+    names: List[str] = []
+    if gold is not None:
+        names = [step.tool_name for step in gold.steps if step.tool_name]
+    if not names:
+        names = [tool for tool in expected.required_tools if tool]
+    pending = [tool for tool in expected.verification_required_tools if tool]
+    required: List[str] = []
+    optional: List[str] = []
+    for name in names:
+        taken = None
+        for index, required_name in enumerate(pending):
+            if required_name == name:
+                taken = index
+                break
+        if taken is not None:
+            required.append(pending.pop(taken))
+        else:
+            fact = facts.get(name)
+            # Unknown tools fail closed (verification required). Candidate-only
+            # tools are not added to expected support.
+            if fact is None or fact[4]:
+                required.append(name)
+            else:
+                optional.append(name)
+    required.extend(pending)
+    required_part = _accumulate_frozen_support(required, facts)
+    optional_part = _accumulate_frozen_support(optional, facts)
+    support = required_part[1]
+    for department, count in optional_part[1].items():
+        support[department] = support.get(department, 0) + count
+    return FrozenOccurrenceSupport(
+        required_names=tuple(required),
+        optional_names=tuple(optional),
+        department_checks=required_part[0] + optional_part[0],
+        department_support=support,
+        mutation_support=required_part[2] + optional_part[2],
+        communication_support=required_part[3] + optional_part[3],
+    )
+
+
+def _bind_occurrence(steps: List, consumed: List[bool], tool_name: str) -> int:
+    for index, step in enumerate(steps):
+        if consumed[index] or step.tool_name != tool_name:
+            continue
+        consumed[index] = True
+        return index
+    return -1
+
+
+def _score_two_known_steps(
+    first, second, support: FrozenOccurrenceSupport
+) -> Tuple[VerificationOccurrenceScore, DepartmentIntegrity]:
+    """Same occurrence rules as the general binder, without per-step search overhead."""
+    facts = _catalog_facts()
+    name_0 = first.tool_name
+    name_1 = second.tool_name
+    department_0 = first.department
+    department_1 = second.department
+    verify_0 = first.verification_required
+    verify_1 = second.verification_required
+    fact_0 = facts.get(name_0)
+    fact_1 = facts.get(name_1)
+    true_positives = 0
+    false_negatives = 0
+    false_positives = 0
+    true_negatives = 0
+    checks = 0
     hits = 0
-    for tool in required:
-        step = by_tool.get(tool)
-        if step is not None and step.verification_required:
+    dept_support: Dict[str, int] = {}
+    dept_hits: Dict[str, int] = {}
+    candidate_support: Dict[str, int] = {}
+    mutation_checks = 0
+    mutation_hits = 0
+    mutation_candidate = 0
+    communication_checks = 0
+    communication_hits = 0
+    communication_candidate = 0
+    if fact_0 is not None:
+        if fact_0[1]:
+            candidate_support[fact_0[0]] = candidate_support.get(fact_0[0], 0) + 1
+        if fact_0[2]:
+            mutation_candidate += 1
+        if fact_0[3]:
+            communication_candidate += 1
+    if fact_1 is not None:
+        if fact_1[1]:
+            candidate_support[fact_1[0]] = candidate_support.get(fact_1[0], 0) + 1
+        if fact_1[2]:
+            mutation_candidate += 1
+        if fact_1[3]:
+            communication_candidate += 1
+    used_0 = False
+    used_1 = False
+    for required_kind, names in (
+        (True, support.required_names),
+        (False, support.optional_names),
+    ):
+        for name in names:
+            if not used_0 and name_0 == name:
+                used_0 = True
+                found = True
+                department = department_0
+                verify = verify_0
+                fact = fact_0
+            elif not used_1 and name_1 == name:
+                used_1 = True
+                found = True
+                department = department_1
+                verify = verify_1
+                fact = fact_1
+            else:
+                found = False
+                department = None
+                verify = False
+                fact = facts.get(name)
+            if required_kind:
+                if found and verify:
+                    true_positives += 1
+                else:
+                    false_negatives += 1
+            elif found and not verify:
+                true_negatives += 1
+            else:
+                false_positives += 1
+            if fact is None:
+                continue
+            checks += 1
+            catalog_dept = fact[0]
+            matched = found and department == catalog_dept
+            if matched:
+                hits += 1
+            if fact[1]:
+                dept_support[catalog_dept] = dept_support.get(catalog_dept, 0) + 1
+                if matched:
+                    dept_hits[catalog_dept] = dept_hits.get(catalog_dept, 0) + 1
+            if fact[2]:
+                mutation_checks += 1
+                if matched:
+                    mutation_hits += 1
+            if fact[3]:
+                communication_checks += 1
+                if matched:
+                    communication_hits += 1
+    leftover_misses: Dict[str, int] = {}
+    for used, verify, department, fact in (
+        (used_0, verify_0, department_0, fact_0),
+        (used_1, verify_1, department_1, fact_1),
+    ):
+        if used:
+            continue
+        if verify:
+            false_positives += 1
+        if fact is None:
+            continue
+        checks += 1
+        catalog_dept = fact[0]
+        matched = department == catalog_dept
+        if matched:
             hits += 1
-    return _rate(hits, len(required))
+        elif fact[1]:
+            leftover_misses[catalog_dept] = leftover_misses.get(catalog_dept, 0) + 1
+        if fact[2]:
+            mutation_checks += 1
+            if matched:
+                mutation_hits += 1
+        if fact[3]:
+            communication_checks += 1
+            if matched:
+                communication_hits += 1
+    if leftover_misses:
+        missing_by_department = {
+            dept: dept_support.get(dept, 0)
+            - dept_hits.get(dept, 0)
+            + leftover_misses.get(dept, 0)
+            for dept in dept_support.keys() | leftover_misses.keys()
+        }
+    else:
+        missing_by_department = {
+            dept: count - dept_hits.get(dept, 0) for dept, count in dept_support.items()
+        }
+    return (
+        VerificationOccurrenceScore(
+            true_positives=true_positives,
+            false_negatives=false_negatives,
+            false_positives=false_positives,
+            true_negatives=true_negatives,
+        ),
+        DepartmentIntegrity(
+            checks=checks,
+            hits=hits,
+            support=dept_support,
+            hits_by_department=dept_hits,
+            candidate_support=candidate_support,
+            missing_by_department=missing_by_department,
+            mutation_checks=mutation_checks,
+            mutation_hits=mutation_hits,
+            mutation_candidate=mutation_candidate,
+            communication_checks=communication_checks,
+            communication_hits=communication_hits,
+            communication_candidate=communication_candidate,
+        ),
+    )
+
+
+def _score_bound_occurrences(
+    plan: CandidatePlan, support: FrozenOccurrenceSupport
+) -> Tuple[VerificationOccurrenceScore, DepartmentIntegrity]:
+    steps = plan.steps
+    if len(steps) == 2 and steps[0].tool_name and steps[1].tool_name:
+        return _score_two_known_steps(steps[0], steps[1], support)
+    facts = _catalog_facts()
+    for step in steps:
+        if not step.tool_name:
+            steps = [item for item in steps if item.tool_name]
+            break
+    step_count = len(steps)
+    consumed = getattr(_pair_local, "consumed", None)
+    if consumed is None or len(consumed) < step_count:
+        consumed = [False] * step_count
+        _pair_local.consumed = consumed
+    else:
+        for index in range(step_count):
+            consumed[index] = False
+    true_positives = 0
+    false_negatives = 0
+    false_positives = 0
+    true_negatives = 0
+    checks = 0
+    hits = 0
+    dept_support: Dict[str, int] = {}
+    dept_hits: Dict[str, int] = {}
+    mutation_checks = 0
+    mutation_hits = 0
+    mutation_candidate = 0
+    communication_checks = 0
+    communication_hits = 0
+    communication_candidate = 0
+    candidate_support: Dict[str, int] = {}
+    for step in steps:
+        fact = facts.get(step.tool_name)
+        if fact is None:
+            continue
+        if fact[1]:
+            department = fact[0]
+            candidate_support[department] = candidate_support.get(department, 0) + 1
+        if fact[2]:
+            mutation_candidate += 1
+        if fact[3]:
+            communication_candidate += 1
+
+    for required_kind, names in (
+        (True, support.required_names),
+        (False, support.optional_names),
+    ):
+        for name in names:
+            index = _bind_occurrence(steps, consumed, name)
+            step = steps[index] if index >= 0 else None
+            if required_kind:
+                if step is not None and step.verification_required:
+                    true_positives += 1
+                else:
+                    false_negatives += 1
+            elif step is not None and not step.verification_required:
+                true_negatives += 1
+            else:
+                false_positives += 1
+            fact = facts.get(name)
+            if fact is None:
+                continue
+            checks += 1
+            department = fact[0]
+            matched = step is not None and step.department == department
+            if matched:
+                hits += 1
+            if fact[1]:
+                dept_support[department] = dept_support.get(department, 0) + 1
+                if matched:
+                    dept_hits[department] = dept_hits.get(department, 0) + 1
+            if fact[2]:
+                mutation_checks += 1
+                if matched:
+                    mutation_hits += 1
+            if fact[3]:
+                communication_checks += 1
+                if matched:
+                    communication_hits += 1
+    # Unbound candidate steps are still occurrences. A verification flag is an
+    # unmatched false positive. A wrong catalog department is a miss.
+    leftover_misses: Dict[str, int] = {}
+    for index, step in enumerate(steps):
+        if consumed[index]:
+            continue
+        if step.verification_required:
+            false_positives += 1
+        fact = facts.get(step.tool_name)
+        if fact is None:
+            continue
+        checks += 1
+        department = fact[0]
+        matched = step.department == department
+        if matched:
+            hits += 1
+        elif fact[1]:
+            leftover_misses[department] = leftover_misses.get(department, 0) + 1
+        if fact[2]:
+            mutation_checks += 1
+            if matched:
+                mutation_hits += 1
+        if fact[3]:
+            communication_checks += 1
+            if matched:
+                communication_hits += 1
+    if leftover_misses:
+        missing_by_department = {
+            dept: dept_support.get(dept, 0)
+            - dept_hits.get(dept, 0)
+            + leftover_misses.get(dept, 0)
+            for dept in dept_support.keys() | leftover_misses.keys()
+        }
+    else:
+        missing_by_department = {
+            dept: count - dept_hits.get(dept, 0) for dept, count in dept_support.items()
+        }
+    return (
+        VerificationOccurrenceScore(
+            true_positives=true_positives,
+            false_negatives=false_negatives,
+            false_positives=false_positives,
+            true_negatives=true_negatives,
+        ),
+        DepartmentIntegrity(
+            checks=checks,
+            hits=hits,
+            support=dept_support,
+            hits_by_department=dept_hits,
+            candidate_support=candidate_support,
+            missing_by_department=missing_by_department,
+            mutation_checks=mutation_checks,
+            mutation_hits=mutation_hits,
+            mutation_candidate=mutation_candidate,
+            communication_checks=communication_checks,
+            communication_hits=communication_hits,
+            communication_candidate=communication_candidate,
+        ),
+    )
+
+
+def _truthy_tuple(items) -> Tuple[str, ...]:
+    return tuple(item for item in items if item)
+
+
+def _same_truthy(items, stored: Tuple[str, ...]) -> bool:
+    index = 0
+    length = len(stored)
+    for item in items:
+        if not item:
+            continue
+        if index == length or item != stored[index]:
+            return False
+        index += 1
+    return index == length
+
+
+def _support_token(expected: ExpectedPlan, gold: Optional[CandidatePlan]) -> Tuple:
+    if gold is None:
+        gold_names = None
+    else:
+        gold_names = _truthy_tuple(step.tool_name for step in gold.steps)
+    return (
+        gold_names,
+        _truthy_tuple(expected.required_tools),
+        _truthy_tuple(expected.verification_required_tools),
+    )
+
+
+def _plan_step_token(plan: CandidatePlan) -> Tuple:
+    return tuple(
+        (step.tool_name, step.department, step.verification_required) for step in plan.steps
+    )
+
+
+def _pair_key_matches(plan, expected, gold, key) -> bool:
+    stored_steps, gold_names, required, verify = key
+    steps = plan.steps
+    if len(steps) != len(stored_steps):
+        return False
+    for step, prev in zip(steps, stored_steps):
+        if (
+            step.tool_name != prev[0]
+            or step.department != prev[1]
+            or step.verification_required != prev[2]
+        ):
+            return False
+    if gold is None:
+        if gold_names is not None:
+            return False
+    elif gold_names is None or not _same_truthy(
+        (step.tool_name for step in gold.steps), gold_names
+    ):
+        return False
+    return _same_truthy(expected.required_tools, required) and _same_truthy(
+        expected.verification_required_tools, verify
+    )
+
+
+def _paired_occurrence_score(
+    plan: CandidatePlan,
+    expected: ExpectedPlan,
+    gold: Optional[CandidatePlan],
+    caller: str,
+):
+    """Share one bind across the two public scorers. The slot is single-use.
+
+    The partner call compares live fields to the stored key and does not build
+    another token. The next plan, a repeated call from the same scorer, or any
+    change to those fields binds again. This is not a corpus memo.
+    """
+    slot = getattr(_pair_local, "slot", None)
+    if (
+        slot is not None
+        and slot[1] != caller
+        and _pair_key_matches(plan, expected, gold, slot[0])
+    ):
+        _pair_local.slot = None
+        return slot[2]
+    token = _support_token(expected, gold)
+    cached_support = getattr(_pair_local, "support", None)
+    if cached_support is not None and cached_support[0] == token:
+        support = cached_support[1]
+    else:
+        support = frozen_occurrence_support(expected, gold)
+        _pair_local.support = (token, support)
+    value = _score_bound_occurrences(plan, support)
+    _pair_local.slot = (
+        (_plan_step_token(plan), token[0], token[1], token[2]),
+        caller,
+        value,
+    )
+    return value
+
+
+def score_department_integrity(
+    plan: CandidatePlan,
+    expected: ExpectedPlan,
+    gold: Optional[CandidatePlan] = None,
+) -> DepartmentIntegrity:
+    """Score frozen expected occurrences, not whatever tools the candidate emitted."""
+    _verification, department = _paired_occurrence_score(
+        plan, expected, gold, "department"
+    )
+    return department
+
+
+def score_required_verification(
+    plan: CandidatePlan,
+    expected: ExpectedPlan,
+    gold: Optional[CandidatePlan] = None,
+) -> VerificationOccurrenceScore:
+    """Score verification against frozen required and optional occurrences."""
+    verification, _department = _paired_occurrence_score(
+        plan, expected, gold, "verification"
+    )
+    return verification
 
 
 def _risk_tier_and_overprotection(
@@ -190,11 +786,16 @@ def score_plan(
         step_intent = 1.0 if not tools else 0.0
 
     dep_acc = _rate(len(matched_edges), len(expected_edges) or 0)
-    dept_acc = _department_accuracy(plan)
-    verify_place_acc = _verification_placement_accuracy(plan, expected)
-    risk_tier_acc, risk_acc, unnec_approval, unnec_verify = _risk_tier_and_overprotection(
-        plan
+    verification, department = _score_bound_occurrences(
+        plan, frozen_occurrence_support(expected, case.gold_plan)
     )
+    dept_acc = department.accuracy
+    verify_place_acc = verification.recall
+    risk_tier_acc, risk_acc, unnec_approval, _ = _risk_tier_and_overprotection(plan)
+    unnec_verify = verification.unnecessary_rate
+    dept_component = 1.0 if dept_acc is None else dept_acc
+    verify_component = 1.0 if verify_place_acc is None else verify_place_acc
+    unnec_component = 0.0 if unnec_verify is None else unnec_verify
     forbidden_rate = _rate(len(forbidden_hit), max(len(tools), 1))
     missing_rate = _rate(len(missing_required), len(required) or 0)
     unnecessary_rate = _rate(len(unnecessary), max(len(tools), 1))
@@ -204,15 +805,15 @@ def score_plan(
     overall = (
         0.18 * step_intent
         + 0.14 * dep_acc
-        + 0.10 * dept_acc
-        + 0.12 * verify_place_acc
+        + 0.10 * dept_component
+        + 0.12 * verify_component
         + 0.12 * risk_tier_acc
         + 0.10 * risk_acc
         + 0.08 * (1.0 - forbidden_rate)
         + 0.06 * (1.0 - missing_rate)
         + 0.04 * (1.0 - unnecessary_rate)
         + 0.03 * (1.0 - unnec_approval)
-        + 0.03 * (1.0 - unnec_verify)
+        + 0.03 * (1.0 - unnec_component)
     )
     if cycle_rate:
         overall *= 1.0 - 0.5 * cycle_rate
@@ -253,6 +854,38 @@ def score_plan(
         unsafe_unauthorized_edges=gates["unsafe_unauthorized_edges"],
         cross_tenant_edges=tenant_violations,
         issues=[f"{i.code}: {i.message}" for i in validation.issues],
+        required_verification_occurrences=verification.required_support,
+        verified_required_verification_count=verification.true_positives,
+        missing_required_verification_count=verification.false_negatives,
+        required_verification_recall=verification.recall,
+        verification_precision=verification.precision,
+        verification_predicted_positives=verification.positive_support,
+        verification_true_positives=verification.true_positives,
+        verification_false_negatives=verification.false_negatives,
+        verification_false_positives=verification.false_positives,
+        verification_true_negatives=verification.true_negatives,
+        required_verification_support=verification.required_support,
+        optional_verification_support=verification.optional_support,
+        verification_positive_support=verification.positive_support,
+        department_checks=department.checks,
+        department_hits=department.hits,
+        material_department_support=dict(department.support),
+        material_department_hits=dict(department.hits_by_department),
+        material_department_expected=dict(department.support),
+        material_department_candidate=dict(department.candidate_support),
+        material_department_missing=dict(department.missing_by_department),
+        mutation_department_checks=department.mutation_checks,
+        mutation_department_hits=department.mutation_hits,
+        mutation_expected=department.mutation_checks,
+        mutation_candidate=department.mutation_candidate,
+        mutation_missing=department.mutation_checks - department.mutation_hits,
+        customer_communication_department_checks=department.communication_checks,
+        customer_communication_department_hits=department.communication_hits,
+        communication_expected=department.communication_checks,
+        communication_candidate=department.communication_candidate,
+        communication_missing=(
+            department.communication_checks - department.communication_hits
+        ),
     )
 
 

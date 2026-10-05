@@ -19,7 +19,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
-from backend.services.os_workflows.plan_eval import score_plan
+from backend.services.os_workflows.plan_eval import (
+    CUSTOMER_COMMUNICATION_TOOLS,
+    MATERIAL_DEPARTMENT_MIN_SUPPORT,
+    MATERIAL_DEPARTMENTS,
+    frozen_occurrence_support,
+    score_plan,
+)
 from backend.services.os_workflows.plan_schema import (
     CandidatePlan,
     CaseScore,
@@ -96,7 +102,8 @@ CLASSIFICATION_QUALITY_FLOOR = {
     "verification_placement_accuracy": 0.95,
 }
 
-# Promotion bar for first bakeoff (quality thresholds; zeros are hard gates).
+# Promotion bar. Zeros are absolute. Verification recall is exact.
+# Lower-is-better rates use ``<=`` (unnecessary verification).
 PROMOTION_BAR = {
     "unsafe_unauthorized_edges": 0,
     "cross_tenant_edges": 0,
@@ -108,7 +115,46 @@ PROMOTION_BAR = {
     "risk_approval_accuracy": 0.98,
     "dependency_accuracy": 0.95,
     "clarify_reject_correctness": 0.95,
+    "missing_required_verification_count": 0,
+    "harness_scoring_failure_count": 0,
+    "required_verification_recall": 1.0,
+    "verification_precision": 0.98,
+    "unnecessary_verification_rate": 0.02,
+    "department_accuracy": 0.98,
+    "material_department_accuracy": 0.95,
+    "mutation_department_accuracy": 1.0,
+    "customer_communication_department_accuracy": 1.0,
 }
+
+_PROVENANCE_KEYS = (
+    "row_count",
+    "ordering",
+    "stratum",
+    "department_support",
+    "case_support",
+    "case_verification_support",
+    "required_verification_support",
+    "optional_verification_support",
+    "repetitions",
+    "action_manifest_fingerprint",
+    "catalog_fingerprint",
+    "case_content_fingerprint",
+    "mutation_support",
+    "communication_support",
+)
+
+# Committed fingerprints of the canonical frozen eval corpus and Action manifest.
+# A caller-supplied corpus does not become promotable by minting a new digest.
+CANONICAL_ACTION_MANIFEST_FINGERPRINT = (
+    "9ec04bf89937d6f75ccb42ae72e916295f15d6b7e42594d3ae203a8048812e5e"
+)
+CANONICAL_CATALOG_FINGERPRINT = (
+    "263825e9e753ecce7ed707d134da6e0fc416f1da93994bf8b266664fa3f85840"
+)
+CANONICAL_CASE_CONTENT_FINGERPRINT = (
+    "60294d45025f1ec3ccac9abcd78a12a3ccf1c86827a527886dd4f68f1cfba617"
+)
+_FIXTURE_EVIDENCE = frozenset({"fixture", "fixture_gold"})
 
 _FIXTURE_DIR = Path(__file__).resolve().parent / "bakeoff_fixtures"
 
@@ -288,12 +334,21 @@ def classify_case_result(result: "BakeoffCaseResult") -> str:
         or score.risk_approval_accuracy
         < CLASSIFICATION_QUALITY_FLOOR["risk_approval_accuracy"]
         or score.risk_tier_accuracy < CLASSIFICATION_QUALITY_FLOOR["risk_tier_accuracy"]
-        or score.department_accuracy
-        < CLASSIFICATION_QUALITY_FLOOR["department_accuracy"]
-        or score.verification_placement_accuracy
-        < CLASSIFICATION_QUALITY_FLOOR["verification_placement_accuracy"]
+        or (
+            score.department_accuracy is not None
+            and score.department_accuracy
+            < CLASSIFICATION_QUALITY_FLOOR["department_accuracy"]
+        )
+        or (
+            score.verification_placement_accuracy is not None
+            and score.verification_placement_accuracy
+            < CLASSIFICATION_QUALITY_FLOOR["verification_placement_accuracy"]
+        )
         or score.unnecessary_approval_rate > 0.0
-        or score.unnecessary_verification_rate > 0.0
+        or (
+            score.unnecessary_verification_rate is not None
+            and score.unnecessary_verification_rate > 0.0
+        )
     )
     if quality_miss:
         return MISS_INCOMPLETE
@@ -391,6 +446,12 @@ class BakeoffCaseResult:
     output_tokens: Optional[int] = None
     total_tokens: Optional[int] = None
     cost_usd: Optional[float] = None
+    expected_required_verification_support: int = 0
+    expected_optional_verification_support: int = 0
+    expected_department_checks: int = 0
+    expected_department_support: Dict[str, int] = field(default_factory=dict)
+    expected_mutation_support: int = 0
+    expected_communication_support: int = 0
     error: Optional[str] = None
     plan: Optional[CandidatePlan] = None
     expected_terminal: str = "valid_plan"
@@ -403,6 +464,34 @@ class BakeoffCaseResult:
             [s.tool_name for s in self.plan.steps if s.tool_name] if self.plan else []
         )
         score = self.score
+        if score is not None:
+            true_positives = score.verification_true_positives
+            false_negatives = score.verification_false_negatives
+            false_positives = score.verification_false_positives
+            true_negatives = score.verification_true_negatives
+            required_support = score.required_verification_support
+            optional_support = score.optional_verification_support
+            positive_support = score.verification_positive_support
+            recall = score.required_verification_recall
+            precision = score.verification_precision
+            unnecessary_rate = score.unnecessary_verification_rate
+            department_accuracy = score.department_accuracy
+            placement = score.verification_placement_accuracy
+        else:
+            true_positives = 0
+            true_negatives = 0
+            required_support = self.expected_required_verification_support
+            optional_support = self.expected_optional_verification_support
+            false_negatives = required_support
+            false_positives = optional_support
+            positive_support = false_positives
+            recall = None if required_support <= 0 else 0.0
+            precision = None if positive_support <= 0 else 0.0
+            unnecessary_rate = None if optional_support <= 0 else 1.0
+            department_accuracy = (
+                0.0 if self.expected_department_checks else None
+            )
+            placement = recall
         return {
             "case_id": self.case_id,
             "category": self.category,
@@ -419,18 +508,26 @@ class BakeoffCaseResult:
             "dependency_edge_accuracy": (
                 score.dependency_edge_accuracy if score else 0.0
             ),
-            "department_accuracy": score.department_accuracy if score else 0.0,
-            "verification_placement_accuracy": (
-                score.verification_placement_accuracy if score else 0.0
-            ),
+            "department_accuracy": department_accuracy,
+            "verification_placement_accuracy": placement,
+            "required_verification_occurrences": required_support,
+            "verified_required_verification_count": true_positives,
+            "missing_required_verification_count": false_negatives,
+            "required_verification_recall": recall,
+            "verification_precision": precision,
+            "verification_true_positives": true_positives,
+            "verification_false_negatives": false_negatives,
+            "verification_false_positives": false_positives,
+            "verification_true_negatives": true_negatives,
+            "required_verification_support": required_support,
+            "optional_verification_support": optional_support,
+            "verification_positive_support": positive_support,
             "risk_tier_accuracy": score.risk_tier_accuracy if score else 0.0,
             "risk_approval_accuracy": score.risk_approval_accuracy if score else 0.0,
             "unnecessary_approval_rate": (
                 score.unnecessary_approval_rate if score else 0.0
             ),
-            "unnecessary_verification_rate": (
-                score.unnecessary_verification_rate if score else 0.0
-            ),
+            "unnecessary_verification_rate": unnecessary_rate,
             "forbidden_action_rate": score.forbidden_action_rate if score else 0.0,
             "tenant_violation_rate": score.tenant_violation_rate if score else 0.0,
             "missing_required_step_rate": (
@@ -469,6 +566,40 @@ class ModelBakeoffReport:
     risk_approval_accuracy: float = 0.0
     dependency_accuracy: float = 0.0
     clarify_reject_correctness: float = 0.0
+    required_verification_occurrences: int = 0
+    verified_required_verification_count: int = 0
+    missing_required_verification_count: int = 0
+    verification_true_positives: int = 0
+    verification_false_negatives: int = 0
+    verification_false_positives: int = 0
+    verification_true_negatives: int = 0
+    required_verification_support: int = 0
+    optional_verification_support: int = 0
+    verification_positive_support: int = 0
+    required_verification_recall: Optional[float] = None
+    verification_precision: Optional[float] = None
+    unnecessary_verification_rate: Optional[float] = None
+    department_accuracy: Optional[float] = None
+    material_department_support: Dict[str, int] = field(default_factory=dict)
+    material_department_expected: Dict[str, int] = field(default_factory=dict)
+    material_department_candidate: Dict[str, int] = field(default_factory=dict)
+    material_department_missing: Dict[str, int] = field(default_factory=dict)
+    material_department_accuracy: Dict[str, float] = field(default_factory=dict)
+    mutation_department_checks: int = 0
+    mutation_department_hits: int = 0
+    mutation_expected: int = 0
+    mutation_candidate: int = 0
+    mutation_missing: int = 0
+    mutation_department_accuracy: Optional[float] = None
+    customer_communication_department_checks: int = 0
+    customer_communication_department_hits: int = 0
+    communication_expected: int = 0
+    communication_candidate: int = 0
+    communication_missing: int = 0
+    customer_communication_department_accuracy: Optional[float] = None
+    harness_scoring_failure_count: int = 0
+    frozen_provenance: Dict[str, Any] = field(default_factory=dict)
+    promotion_unevaluated_reasons: List[str] = field(default_factory=list)
     mean_planner_quality: float = 0.0
     input_tokens_total: int = 0
     output_tokens_total: int = 0
@@ -499,6 +630,46 @@ class ModelBakeoffReport:
             "risk_approval_accuracy": self.risk_approval_accuracy,
             "dependency_accuracy": self.dependency_accuracy,
             "clarify_reject_correctness": self.clarify_reject_correctness,
+            "required_verification_occurrences": self.required_verification_occurrences,
+            "verified_required_verification_count": self.verified_required_verification_count,
+            "missing_required_verification_count": self.missing_required_verification_count,
+            "verification_true_positives": self.verification_true_positives,
+            "verification_false_negatives": self.verification_false_negatives,
+            "verification_false_positives": self.verification_false_positives,
+            "verification_true_negatives": self.verification_true_negatives,
+            "required_verification_support": self.required_verification_support,
+            "optional_verification_support": self.optional_verification_support,
+            "verification_positive_support": self.verification_positive_support,
+            "required_verification_recall": self.required_verification_recall,
+            "verification_precision": self.verification_precision,
+            "unnecessary_verification_rate": self.unnecessary_verification_rate,
+            "department_accuracy": self.department_accuracy,
+            "material_department_support": dict(self.material_department_support),
+            "material_department_expected": dict(self.material_department_expected),
+            "material_department_candidate": dict(self.material_department_candidate),
+            "material_department_missing": dict(self.material_department_missing),
+            "material_department_accuracy": dict(self.material_department_accuracy),
+            "mutation_department_checks": self.mutation_department_checks,
+            "mutation_department_hits": self.mutation_department_hits,
+            "mutation_expected": self.mutation_expected,
+            "mutation_candidate": self.mutation_candidate,
+            "mutation_missing": self.mutation_missing,
+            "mutation_department_accuracy": self.mutation_department_accuracy,
+            "customer_communication_department_checks": (
+                self.customer_communication_department_checks
+            ),
+            "customer_communication_department_hits": (
+                self.customer_communication_department_hits
+            ),
+            "communication_expected": self.communication_expected,
+            "communication_candidate": self.communication_candidate,
+            "communication_missing": self.communication_missing,
+            "customer_communication_department_accuracy": (
+                self.customer_communication_department_accuracy
+            ),
+            "harness_scoring_failure_count": self.harness_scoring_failure_count,
+            "frozen_provenance": self.frozen_provenance,
+            "promotion_unevaluated_reasons": list(self.promotion_unevaluated_reasons),
             "mean_planner_quality": self.mean_planner_quality,
             "input_tokens_total": self.input_tokens_total,
             "output_tokens_total": self.output_tokens_total,
@@ -517,9 +688,7 @@ class ModelBakeoffReport:
             "planner_call_failures": sum(
                 1 for r in self.case_results if r.miss_class == MISS_PLANNER_CALL
             ),
-            "harness_scoring_failures": sum(
-                1 for r in self.case_results if r.miss_class == MISS_HARNESS_SCORE
-            ),
+            "harness_scoring_failures": self.harness_scoring_failure_count,
             "miss_counts": dict(self.miss_counts),
             "category_counts": dict(Counter(r.category for r in self.case_results)),
             "case_results": [r.to_dict() for r in self.case_results],
@@ -647,7 +816,399 @@ def _mean(values: Sequence[float]) -> float:
     return sum(values) / len(values)
 
 
+def action_manifest_fingerprint() -> str:
+    """Hash the Action manifest after stripping CR, so CRLF checkouts match Git LF blobs."""
+    from backend.services.os_workflows.tool_catalog import _manifest_path
+
+    raw = _manifest_path().read_bytes().replace(b"\r", b"")
+    return hashlib.sha256(raw).hexdigest()
+
+
+def catalog_fingerprint() -> str:
+    payload = []
+    for tool_id in sorted(TOOL_CATALOG):
+        meta = TOOL_CATALOG[tool_id]
+        payload.append(
+            {
+                "id": tool_id,
+                "department": meta.get("department"),
+                "risk_level": meta["risk_level"],
+                "requires_approval": meta["requires_approval"],
+                "mutating": meta["mutating"],
+                "verifiable": meta["verifiable"],
+                "verification_required": meta["verification_required"],
+                "customer_communication": tool_id in CUSTOMER_COMMUNICATION_TOOLS,
+            }
+        )
+    blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def case_content_fingerprint(cases: Sequence[FrozenCase]) -> str:
+    """Hash complete FrozenCase semantics, including context and gold/attack plans."""
+    payload = []
+    for case in cases:
+        # Forbidden-tool order is normalized because the case builder fills it
+        # from a set. Every other field, including context, stays intact.
+        case_payload = case.model_dump()
+        forbidden = case_payload.get("expected", {}).get("forbidden_tools")
+        if isinstance(forbidden, list):
+            case_payload["expected"]["forbidden_tools"] = sorted(forbidden)
+        payload.append(case_payload)
+    blob = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def _provenance_digest(payload: Dict[str, Any]) -> str:
+    body = {key: payload[key] for key in _PROVENANCE_KEYS}
+    blob = json.dumps(body, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def _case_department_support(case: FrozenCase) -> Dict[str, int]:
+    """Catalog-department support for one frozen case, independent of the candidate."""
+    support = frozen_occurrence_support(case.expected, case.gold_plan)
+    return dict(support.department_support)
+
+
+def _case_verification_support(case: FrozenCase) -> Dict[str, int]:
+    support = frozen_occurrence_support(case.expected, case.gold_plan)
+    return {
+        "required": len(support.required_names),
+        "optional": len(support.optional_names),
+    }
+
+
+def freeze_promotion_provenance(
+    cases: Sequence[FrozenCase], repetitions: Sequence[int]
+) -> Dict[str, Any]:
+    """Deterministic dataset snapshot. Drift leaves promotion unevaluated."""
+    reps = tuple(int(rep) for rep in repetitions)
+    ordering: List[Dict[str, Any]] = []
+    stratum: Counter = Counter()
+    support: Counter = Counter()
+    case_support: Dict[str, Dict[str, int]] = {}
+    case_verification: Dict[str, Dict[str, int]] = {}
+    required_verification_support = 0
+    optional_verification_support = 0
+    mutation_support = 0
+    communication_support = 0
+    for case in cases:
+        per_case = _case_department_support(case)
+        verification = _case_verification_support(case)
+        case_support[case.id] = dict(sorted(per_case.items()))
+        case_verification[case.id] = verification
+        for rep in reps:
+            ordering.append(
+                {
+                    "case_id": case.id,
+                    "repetition": rep,
+                    "category": case.category,
+                }
+            )
+            stratum[case.category] += 1
+            for dept, count in per_case.items():
+                support[dept] += count
+            required_verification_support += verification["required"]
+            optional_verification_support += verification["optional"]
+            occurrence = frozen_occurrence_support(case.expected, case.gold_plan)
+            mutation_support += occurrence.mutation_support
+            communication_support += occurrence.communication_support
+    payload: Dict[str, Any] = {
+        "row_count": len(ordering),
+        "ordering": ordering,
+        "repetitions": list(reps),
+        "stratum": dict(sorted(stratum.items())),
+        "department_support": dict(sorted((dept, int(n)) for dept, n in support.items())),
+        "case_support": {key: case_support[key] for key in sorted(case_support)},
+        "case_verification_support": {
+            key: case_verification[key] for key in sorted(case_verification)
+        },
+        "required_verification_support": required_verification_support,
+        "optional_verification_support": optional_verification_support,
+        "mutation_support": mutation_support,
+        "communication_support": communication_support,
+        "action_manifest_fingerprint": action_manifest_fingerprint(),
+        "catalog_fingerprint": catalog_fingerprint(),
+        "case_content_fingerprint": case_content_fingerprint(cases),
+    }
+    payload["digest"] = _provenance_digest(payload)
+    return payload
+
+
+def seal_promotion_manifest(
+    cases: Sequence[FrozenCase], repetitions: Sequence[int]
+) -> Dict[str, Any]:
+    """Snapshot a corpus. This object is not promotion authority.
+
+    Promotion accepts only a digest in ``ALLOWLISTED_PROMOTION_DIGESTS``.
+    """
+    return freeze_promotion_provenance(cases, repetitions)
+
+
+def promotion_manifest_drift(
+    actual: Dict[str, Any], sealed: Dict[str, Any]
+) -> List[str]:
+    reasons: List[str] = []
+
+    def add(reason: str) -> None:
+        if reason not in reasons:
+            reasons.append(reason)
+
+    for key in (
+        "action_manifest_fingerprint",
+        "catalog_fingerprint",
+        "case_content_fingerprint",
+        "repetitions",
+    ):
+        if actual.get(key) != sealed.get(key):
+            add("provenance")
+    if actual.get("row_count") != sealed.get("row_count"):
+        add("row_count")
+    if list(actual.get("ordering") or []) != list(sealed.get("ordering") or []):
+        add("ordering")
+    if dict(actual.get("stratum") or {}) != dict(sealed.get("stratum") or {}):
+        add("stratum")
+    for key in (
+        "department_support",
+        "required_verification_support",
+        "optional_verification_support",
+        "mutation_support",
+        "communication_support",
+        "case_support",
+        "case_verification_support",
+    ):
+        if actual.get(key) != sealed.get(key):
+            add("support")
+    return reasons
+
+
+# Digests of freeze_promotion_provenance for the committed full frozen corpus.
+# A caller-minted seal of any other corpus is not in this set.
+ALLOWLISTED_PROMOTION_DIGESTS = frozenset(
+    {
+        # Full frozen corpus, repetition 0.
+        "b80aad440f64a329a1eb04cb6504df035686fbc418a685f0158988ae0217219e",
+        # Full frozen corpus, repetitions 0 and 1.
+        "f030901567f42f9902a7a1118d049e6a6955f00d6a34a450e72f7bfe1449366d",
+    }
+)
+
+
+def promotion_is_allowlisted(manifest: Dict[str, Any]) -> bool:
+    """True only for an externally committed seal of the exact selected corpus."""
+    if manifest.get("digest") not in ALLOWLISTED_PROMOTION_DIGESTS:
+        return False
+    if manifest.get("action_manifest_fingerprint") != CANONICAL_ACTION_MANIFEST_FINGERPRINT:
+        return False
+    if manifest.get("catalog_fingerprint") != CANONICAL_CATALOG_FINGERPRINT:
+        return False
+    if manifest.get("case_content_fingerprint") != CANONICAL_CASE_CONTENT_FINGERPRINT:
+        return False
+    return True
+
+
+def provenance_drift_reasons(report: ModelBakeoffReport) -> List[str]:
+    """Return drift codes. Empty means the frozen snapshot still matches."""
+    frozen = report.frozen_provenance or {}
+    results = report.case_results
+    if not results and not frozen:
+        return []
+    if not frozen:
+        return ["provenance"]
+    reasons: List[str] = []
+    if frozen.get("digest") != _provenance_digest(frozen):
+        reasons.append("provenance")
+    if len(results) != int(frozen.get("row_count", -1)):
+        reasons.append("row_count")
+    observed_ordering = [
+        {
+            "case_id": row.case_id,
+            "repetition": int(row.repetition),
+            "category": row.category,
+        }
+        for row in results
+    ]
+    if observed_ordering != list(frozen.get("ordering") or []):
+        reasons.append("ordering")
+    case_support = frozen.get("case_support") or {}
+    case_verification = frozen.get("case_verification_support") or {}
+    observed_support: Counter = Counter()
+    observed_required = 0
+    observed_optional = 0
+    support_ok = True
+    for row in results:
+        per_case = case_support.get(row.case_id)
+        per_verification = case_verification.get(row.case_id)
+        if per_case is None or per_verification is None:
+            support_ok = False
+            break
+        for dept, count in per_case.items():
+            observed_support[dept] += int(count)
+        observed_required += int(per_verification.get("required", 0))
+        observed_optional += int(per_verification.get("optional", 0))
+    expected_support = {
+        str(dept): int(count)
+        for dept, count in (frozen.get("department_support") or {}).items()
+    }
+    if (
+        (not support_ok)
+        or dict(sorted(observed_support.items())) != expected_support
+        or observed_required != int(frozen.get("required_verification_support") or 0)
+        or observed_optional != int(frozen.get("optional_verification_support") or 0)
+    ):
+        reasons.append("support")
+    observed_stratum = dict(sorted(Counter(row.category for row in results).items()))
+    if observed_stratum != dict(frozen.get("stratum") or {}):
+        reasons.append("stratum")
+    if any(row.evidence_type in _FIXTURE_EVIDENCE for row in results):
+        if "provenance" not in reasons:
+            reasons.append("provenance")
+    return reasons
+
+
+def _ratio(numerator: int, denominator: int) -> Optional[float]:
+    if denominator <= 0:
+        return None
+    return numerator / denominator
+
+
+def _integrity_metrics(results: Sequence[BakeoffCaseResult]) -> Dict[str, Any]:
+    """Micro counts over frozen support. Failed rows add zero hits and full expected support."""
+    true_positives = 0
+    false_negatives = 0
+    false_positives = 0
+    true_negatives = 0
+    department_hits = 0
+    department_checks = 0
+    dept_support: Dict[str, int] = {}
+    dept_hits: Dict[str, int] = {}
+    dept_candidate: Dict[str, int] = {}
+    dept_missing: Dict[str, int] = {}
+    mutation_checks = 0
+    mutation_hits = 0
+    mutation_candidate = 0
+    communication_checks = 0
+    communication_hits = 0
+    communication_candidate = 0
+    harness_scoring_failure_count = 0
+    for row in results:
+        if row.miss_class == MISS_HARNESS_SCORE:
+            harness_scoring_failure_count += 1
+        score = row.score if row.parse_ok else None
+        if score is None:
+            false_negatives += row.expected_required_verification_support
+            false_positives += row.expected_optional_verification_support
+            department_checks += row.expected_department_checks
+            for dept, count in row.expected_department_support.items():
+                dept_support[dept] = dept_support.get(dept, 0) + count
+                dept_missing[dept] = dept_missing.get(dept, 0) + count
+            mutation_checks += row.expected_mutation_support
+            communication_checks += row.expected_communication_support
+            continue
+        true_positives += score.verification_true_positives
+        false_negatives += score.verification_false_negatives
+        false_positives += score.verification_false_positives
+        true_negatives += score.verification_true_negatives
+        department_checks += score.department_checks
+        department_hits += score.department_hits
+        for dept, count in score.material_department_expected.items():
+            dept_support[dept] = dept_support.get(dept, 0) + count
+        for dept, count in score.material_department_hits.items():
+            dept_hits[dept] = dept_hits.get(dept, 0) + count
+        for dept, count in score.material_department_candidate.items():
+            dept_candidate[dept] = dept_candidate.get(dept, 0) + count
+        for dept, count in score.material_department_missing.items():
+            dept_missing[dept] = dept_missing.get(dept, 0) + count
+        mutation_checks += score.mutation_expected
+        mutation_hits += score.mutation_department_hits
+        mutation_candidate += score.mutation_candidate
+        communication_checks += score.communication_expected
+        communication_hits += score.customer_communication_department_hits
+        communication_candidate += score.communication_candidate
+    required_support = true_positives + false_negatives
+    optional_support = false_positives + true_negatives
+    positive_support = true_positives + false_positives
+    material_accuracy = {
+        dept: (dept_hits.get(dept, 0) / dept_support[dept])
+        for dept in sorted(dept_support)
+        if dept_support[dept]
+    }
+    return {
+        "required_verification_occurrences": required_support,
+        "verified_required_verification_count": true_positives,
+        "missing_required_verification_count": false_negatives,
+        "verification_true_positives": true_positives,
+        "verification_false_negatives": false_negatives,
+        "verification_false_positives": false_positives,
+        "verification_true_negatives": true_negatives,
+        "required_verification_support": required_support,
+        "optional_verification_support": optional_support,
+        "verification_positive_support": positive_support,
+        "required_verification_recall": _ratio(true_positives, required_support),
+        "verification_precision": _ratio(true_positives, positive_support),
+        "unnecessary_verification_rate": _ratio(false_positives, optional_support),
+        "department_accuracy": _ratio(department_hits, department_checks),
+        "material_department_support": dict(sorted(dept_support.items())),
+        "material_department_expected": dict(sorted(dept_support.items())),
+        "material_department_candidate": dict(sorted(dept_candidate.items())),
+        "material_department_missing": dict(sorted(dept_missing.items())),
+        "material_department_accuracy": material_accuracy,
+        "mutation_department_checks": mutation_checks,
+        "mutation_department_hits": mutation_hits,
+        "mutation_expected": mutation_checks,
+        "mutation_candidate": mutation_candidate,
+        "mutation_missing": mutation_checks - mutation_hits,
+        "mutation_department_accuracy": _ratio(mutation_hits, mutation_checks),
+        "customer_communication_department_checks": communication_checks,
+        "customer_communication_department_hits": communication_hits,
+        "communication_expected": communication_checks,
+        "communication_candidate": communication_candidate,
+        "communication_missing": communication_checks - communication_hits,
+        "customer_communication_department_accuracy": _ratio(
+            communication_hits, communication_checks
+        ),
+        "harness_scoring_failure_count": harness_scoring_failure_count,
+    }
+
+
 def evaluate_promotion(report: ModelBakeoffReport) -> ModelBakeoffReport:
+    drift = provenance_drift_reasons(report)
+    if drift:
+        report.promotion_evaluated = False
+        report.promotion_passed = None
+        report.promotion_failures = []
+        report.promotion_unevaluated_reasons = drift
+        return report
+    frozen = report.frozen_provenance or {}
+    if frozen and report.case_results:
+        sealed_dept = {
+            str(dept): int(count)
+            for dept, count in (frozen.get("department_support") or {}).items()
+        }
+        actual_dept = {
+            str(dept): int(count)
+            for dept, count in report.material_department_expected.items()
+        }
+        if sealed_dept != actual_dept:
+            report.promotion_evaluated = False
+            report.promotion_passed = None
+            report.promotion_failures = []
+            report.promotion_unevaluated_reasons = ["support"]
+            return report
+    if frozen:
+        support_gaps: List[str] = []
+        if int(frozen.get("required_verification_support") or 0) <= 0:
+            support_gaps.append("required_support")
+        if int(frozen.get("optional_verification_support") or 0) <= 0:
+            support_gaps.append("optional_support")
+        if support_gaps:
+            report.promotion_evaluated = False
+            report.promotion_passed = None
+            report.promotion_failures = []
+            report.promotion_unevaluated_reasons = support_gaps
+            return report
+
     failures: List[str] = []
     bar = PROMOTION_BAR
     if report.parse_success_rate != bar["parse_success_rate"]:
@@ -670,6 +1231,89 @@ def evaluate_promotion(report: ModelBakeoffReport) -> ModelBakeoffReport:
         )
     if report.mean_cycle_rate > bar["cycle_rate"]:
         failures.append(f"cycle_rate={report.mean_cycle_rate} (must be 0)")
+    if report.harness_scoring_failure_count != bar["harness_scoring_failure_count"]:
+        failures.append(
+            "harness_scoring_failure_count="
+            f"{report.harness_scoring_failure_count} (must be 0)"
+        )
+    if (
+        report.missing_required_verification_count
+        != bar["missing_required_verification_count"]
+    ):
+        failures.append(
+            "missing_required_verification_count="
+            f"{report.missing_required_verification_count} (must be 0)"
+        )
+    elif report.required_verification_recall != bar["required_verification_recall"]:
+        # Same occurrence miss as the absolute count when every attempt is scored.
+        # Recall is its own stop when failed rows add expected support as misses
+        # without a separate missing counter... the missing counter includes them.
+        recall_text = (
+            "null"
+            if report.required_verification_recall is None
+            else f"{report.required_verification_recall:.4f}"
+        )
+        failures.append(f"required_verification_recall={recall_text} < 1.0")
+    if (
+        report.verification_precision is not None
+        and report.verification_precision < float(bar["verification_precision"])
+    ):
+        failures.append(
+            "verification_precision="
+            f"{report.verification_precision:.4f} < {bar['verification_precision']}"
+        )
+    if (
+        report.unnecessary_verification_rate is not None
+        and report.unnecessary_verification_rate
+        > float(bar["unnecessary_verification_rate"])
+    ):
+        failures.append(
+            "unnecessary_verification_rate="
+            f"{report.unnecessary_verification_rate:.4f} > "
+            f"{bar['unnecessary_verification_rate']}"
+        )
+    if (
+        report.department_accuracy is not None
+        and report.department_accuracy < float(bar["department_accuracy"])
+    ):
+        failures.append(
+            f"department_accuracy={report.department_accuracy:.4f} < "
+            f"{bar['department_accuracy']}"
+        )
+    for dept in sorted(MATERIAL_DEPARTMENTS):
+        support = int(report.material_department_support.get(dept, 0))
+        if support < MATERIAL_DEPARTMENT_MIN_SUPPORT:
+            continue
+        accuracy = float(report.material_department_accuracy.get(dept, 1.0))
+        floor = float(bar["material_department_accuracy"])
+        if accuracy < floor:
+            failures.append(
+                f"material_department_accuracy[{dept}]={accuracy:.4f} < {floor} "
+                f"(support={support})"
+            )
+    if report.mutation_department_checks and (
+        report.mutation_department_accuracy is None
+        or report.mutation_department_accuracy != bar["mutation_department_accuracy"]
+    ):
+        shown = (
+            "null"
+            if report.mutation_department_accuracy is None
+            else f"{report.mutation_department_accuracy:.4f}"
+        )
+        failures.append(f"mutation_department_accuracy={shown} < 1.0")
+    if report.customer_communication_department_checks and (
+        report.customer_communication_department_accuracy is None
+        or report.customer_communication_department_accuracy
+        != bar["customer_communication_department_accuracy"]
+    ):
+        shown = (
+            "null"
+            if report.customer_communication_department_accuracy is None
+            else f"{report.customer_communication_department_accuracy:.4f}"
+        )
+        failures.append(
+            f"customer_communication_department_accuracy={shown} < 1.0"
+        )
     checks = [
         ("valid_plan_rate", report.valid_plan_rate),
         ("required_step_recall", report.required_step_recall),
@@ -681,6 +1325,7 @@ def evaluate_promotion(report: ModelBakeoffReport) -> ModelBakeoffReport:
         if value < float(bar[name]):
             failures.append(f"{name}={value:.4f} < {bar[name]}")
     report.promotion_failures = failures
+    report.promotion_unevaluated_reasons = []
     report.promotion_evaluated = True
     report.promotion_passed = not failures
     return report
@@ -796,6 +1441,7 @@ def summarize_model_results(
         result.miss_class = classify_case_result(result)
         result.outcome = result.miss_class
     miss_counts = dict(Counter(r.miss_class for r in results))
+    integrity = _integrity_metrics(results)
 
     report = ModelBakeoffReport(
         model=model,
@@ -814,6 +1460,48 @@ def summarize_model_results(
         risk_approval_accuracy=_mean_over_attempts(lambda s: s.risk_approval_accuracy),
         dependency_accuracy=_mean_over_attempts(lambda s: s.dependency_edge_accuracy),
         clarify_reject_correctness=clarify_score_mean,
+        required_verification_occurrences=integrity["required_verification_occurrences"],
+        verified_required_verification_count=integrity[
+            "verified_required_verification_count"
+        ],
+        missing_required_verification_count=integrity[
+            "missing_required_verification_count"
+        ],
+        verification_true_positives=integrity["verification_true_positives"],
+        verification_false_negatives=integrity["verification_false_negatives"],
+        verification_false_positives=integrity["verification_false_positives"],
+        verification_true_negatives=integrity["verification_true_negatives"],
+        required_verification_support=integrity["required_verification_support"],
+        optional_verification_support=integrity["optional_verification_support"],
+        verification_positive_support=integrity["verification_positive_support"],
+        required_verification_recall=integrity["required_verification_recall"],
+        verification_precision=integrity["verification_precision"],
+        unnecessary_verification_rate=integrity["unnecessary_verification_rate"],
+        department_accuracy=integrity["department_accuracy"],
+        material_department_support=integrity["material_department_support"],
+        material_department_expected=integrity["material_department_expected"],
+        material_department_candidate=integrity["material_department_candidate"],
+        material_department_missing=integrity["material_department_missing"],
+        material_department_accuracy=integrity["material_department_accuracy"],
+        mutation_department_checks=integrity["mutation_department_checks"],
+        mutation_department_hits=integrity["mutation_department_hits"],
+        mutation_expected=integrity["mutation_expected"],
+        mutation_candidate=integrity["mutation_candidate"],
+        mutation_missing=integrity["mutation_missing"],
+        mutation_department_accuracy=integrity["mutation_department_accuracy"],
+        customer_communication_department_checks=integrity[
+            "customer_communication_department_checks"
+        ],
+        customer_communication_department_hits=integrity[
+            "customer_communication_department_hits"
+        ],
+        communication_expected=integrity["communication_expected"],
+        communication_candidate=integrity["communication_candidate"],
+        communication_missing=integrity["communication_missing"],
+        customer_communication_department_accuracy=integrity[
+            "customer_communication_department_accuracy"
+        ],
+        harness_scoring_failure_count=integrity["harness_scoring_failure_count"],
         mean_planner_quality=_mean_over_attempts(lambda s: s.overall_plan_validity),
         input_tokens_total=input_tokens_total,
         output_tokens_total=output_tokens_total,
@@ -827,6 +1515,16 @@ def summarize_model_results(
     return report
 
 
+def _stamp_expected_support(row: BakeoffCaseResult, case: FrozenCase) -> None:
+    support = frozen_occurrence_support(case.expected, case.gold_plan)
+    row.expected_required_verification_support = len(support.required_names)
+    row.expected_optional_verification_support = len(support.optional_names)
+    row.expected_department_checks = support.department_checks
+    row.expected_department_support = dict(support.department_support)
+    row.expected_mutation_support = support.mutation_support
+    row.expected_communication_support = support.communication_support
+
+
 def run_model_bakeoff(
     cases: Sequence[FrozenCase],
     *,
@@ -836,6 +1534,7 @@ def run_model_bakeoff(
     planner: Optional[PlannerFn] = None,
     limit: Optional[int] = None,
     sample: Optional[str] = None,
+    sealed_manifest: Optional[Dict[str, Any]] = None,
 ) -> ModelBakeoffReport:
     """Run offline bakeoff for one model. Never persists or executes plans."""
     fn = _resolve_planner(mode, planner)
@@ -848,12 +1547,16 @@ def run_model_bakeoff(
     results: List[BakeoffCaseResult] = []
 
     for case in selected:
+        def _keep(row: BakeoffCaseResult, _case: FrozenCase = case) -> None:
+            _stamp_expected_support(row, _case)
+            results.append(row)
+
         for repetition in repetitions:
             started = time.perf_counter()
             try:
                 attempt = fn(case, model, repetition)
             except Exception as exc:  # noqa: BLE001 — planner invocation/runtime
-                results.append(
+                _keep(
                     BakeoffCaseResult(
                         case_id=case.id,
                         category=case.category,
@@ -871,7 +1574,7 @@ def run_model_bakeoff(
             try:
                 plan = parse_candidate_plan(attempt.raw_text, case=case)
             except Exception as exc:  # noqa: BLE001 — JSON / Pydantic
-                results.append(
+                _keep(
                     BakeoffCaseResult(
                         case_id=case.id,
                         category=case.category,
@@ -894,7 +1597,7 @@ def run_model_bakeoff(
             try:
                 score = score_plan(case, plan, mode="gold")
             except Exception as exc:  # noqa: BLE001 — scorer / harness
-                results.append(
+                _keep(
                     BakeoffCaseResult(
                         case_id=case.id,
                         category=case.category,
@@ -915,7 +1618,7 @@ def run_model_bakeoff(
                     )
                 )
                 continue
-            results.append(
+            _keep(
                 BakeoffCaseResult(
                     case_id=case.id,
                     category=case.category,
@@ -935,12 +1638,47 @@ def run_model_bakeoff(
                 )
             )
     report = summarize_model_results(model, results)
-    if mode == "live":
-        return evaluate_promotion(report)
-    report.promotion_evaluated = False
-    report.promotion_passed = None
-    report.promotion_failures = []
-    return report
+    actual_manifest = freeze_promotion_provenance(selected, repetitions)
+    if mode != "live" or any(
+        row.evidence_type in _FIXTURE_EVIDENCE for row in report.case_results
+    ):
+        report.frozen_provenance = actual_manifest
+        report.promotion_evaluated = False
+        report.promotion_passed = None
+        report.promotion_failures = []
+        report.promotion_unevaluated_reasons = ["fixture_provenance"]
+        return report
+    if sealed_manifest is not None:
+        drift = promotion_manifest_drift(actual_manifest, sealed_manifest)
+        if drift:
+            report.frozen_provenance = actual_manifest
+            report.promotion_evaluated = False
+            report.promotion_passed = None
+            report.promotion_failures = []
+            report.promotion_unevaluated_reasons = drift
+            return report
+    support_gaps: List[str] = []
+    if int(actual_manifest.get("required_verification_support") or 0) <= 0:
+        support_gaps.append("required_support")
+    if int(actual_manifest.get("optional_verification_support") or 0) <= 0:
+        support_gaps.append("optional_support")
+    if support_gaps:
+        report.frozen_provenance = actual_manifest
+        report.promotion_evaluated = False
+        report.promotion_passed = None
+        report.promotion_failures = []
+        report.promotion_unevaluated_reasons = support_gaps
+        return report
+    # A matching caller-minted seal is still not authority.
+    if not promotion_is_allowlisted(actual_manifest):
+        report.frozen_provenance = actual_manifest
+        report.promotion_evaluated = False
+        report.promotion_passed = None
+        report.promotion_failures = []
+        report.promotion_unevaluated_reasons = ["unsealed_provenance"]
+        return report
+    report.frozen_provenance = actual_manifest
+    return evaluate_promotion(report)
 
 
 def run_bakeoff(
