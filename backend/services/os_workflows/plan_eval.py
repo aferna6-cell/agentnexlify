@@ -36,17 +36,12 @@ def _catalog_material_departments() -> frozenset:
     return frozenset(found)
 
 
-def _catalog_customer_communication_tools() -> frozenset:
-    """Sales mutations are the customer-communication department class."""
-    return frozenset(
-        tool_id
-        for tool_id, meta in TOOL_CATALOG.items()
-        if meta.get("department") == "sales" and meta["mutating"]
-    )
+# Explicit frozen set. Not inferred from the department label: calendar
+# tools at external-communication risk stay out of this class.
+CUSTOMER_COMMUNICATION_TOOLS = frozenset({"send_email"})
 
 
 MATERIAL_DEPARTMENTS = _catalog_material_departments()
-CUSTOMER_COMMUNICATION_TOOLS = _catalog_customer_communication_tools()
 
 
 def _tool_set(plan: CandidatePlan) -> Set[str]:
@@ -90,10 +85,14 @@ class DepartmentIntegrity(NamedTuple):
     hits: int
     support: Dict[str, int]
     hits_by_department: Dict[str, int]
+    candidate_support: Dict[str, int]
+    missing_by_department: Dict[str, int]
     mutation_checks: int
     mutation_hits: int
+    mutation_candidate: int
     communication_checks: int
     communication_hits: int
+    communication_candidate: int
 
     @property
     def accuracy(self) -> Optional[float]:
@@ -183,10 +182,14 @@ def frozen_occurrence_support(
             if required_name == name:
                 taken = index
                 break
-        if taken is None:
-            optional.append(name)
-        else:
+        if taken is not None:
             required.append(pending.pop(taken))
+        elif tool_verification_required(name):
+            # Catalog-required expected occurrences stay required even when the
+            # explicit list omitted them. Candidate-only tools are not added.
+            required.append(name)
+        else:
+            optional.append(name)
     required.extend(pending)
 
     checks = 0
@@ -239,8 +242,23 @@ def _score_bound_occurrences(
     dept_hits: Dict[str, int] = {}
     mutation_checks = 0
     mutation_hits = 0
+    mutation_candidate = 0
     communication_checks = 0
     communication_hits = 0
+    communication_candidate = 0
+    candidate_support: Dict[str, int] = {}
+    for step in steps:
+        tool_name = step.tool_name
+        if not tool_name or tool_name not in TOOL_CATALOG:
+            continue
+        catalog_dept = tool_department(tool_name)
+        if catalog_dept in MATERIAL_DEPARTMENTS:
+            candidate_support[catalog_dept] = candidate_support.get(catalog_dept, 0) + 1
+        meta = TOOL_CATALOG[tool_name]
+        if meta["mutating"]:
+            mutation_candidate += 1
+        if tool_name in CUSTOMER_COMMUNICATION_TOOLS:
+            communication_candidate += 1
 
     labeled = [("required", name) for name in support.required_names]
     labeled.extend(("optional", name) for name in support.optional_names)
@@ -288,10 +306,17 @@ def _score_bound_occurrences(
             hits=hits,
             support=dept_support,
             hits_by_department=dept_hits,
+            candidate_support=candidate_support,
+            missing_by_department={
+                dept: dept_support[dept] - dept_hits.get(dept, 0)
+                for dept in dept_support
+            },
             mutation_checks=mutation_checks,
             mutation_hits=mutation_hits,
+            mutation_candidate=mutation_candidate,
             communication_checks=communication_checks,
             communication_hits=communication_hits,
+            communication_candidate=communication_candidate,
         ),
     )
 
@@ -506,10 +531,21 @@ def score_plan(
         department_hits=department.hits,
         material_department_support=dict(department.support),
         material_department_hits=dict(department.hits_by_department),
+        material_department_expected=dict(department.support),
+        material_department_candidate=dict(department.candidate_support),
+        material_department_missing=dict(department.missing_by_department),
         mutation_department_checks=department.mutation_checks,
         mutation_department_hits=department.mutation_hits,
+        mutation_expected=department.mutation_checks,
+        mutation_candidate=department.mutation_candidate,
+        mutation_missing=department.mutation_checks - department.mutation_hits,
         customer_communication_department_checks=department.communication_checks,
         customer_communication_department_hits=department.communication_hits,
+        communication_expected=department.communication_checks,
+        communication_candidate=department.communication_candidate,
+        communication_missing=(
+            department.communication_checks - department.communication_hits
+        ),
     )
 
 

@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from backend.services.os_workflows.plan_eval import (
+    CUSTOMER_COMMUNICATION_TOOLS,
     MATERIAL_DEPARTMENT_MIN_SUPPORT,
     MATERIAL_DEPARTMENTS,
     frozen_occurrence_support,
@@ -134,6 +135,24 @@ _PROVENANCE_KEYS = (
     "case_verification_support",
     "required_verification_support",
     "optional_verification_support",
+    "repetitions",
+    "action_manifest_fingerprint",
+    "catalog_fingerprint",
+    "case_content_fingerprint",
+    "mutation_support",
+    "communication_support",
+)
+
+# Committed fingerprints of the canonical frozen eval corpus and Action manifest.
+# A caller-supplied corpus does not become promotable by minting a new digest.
+CANONICAL_ACTION_MANIFEST_FINGERPRINT = (
+    "9ec04bf89937d6f75ccb42ae72e916295f15d6b7e42594d3ae203a8048812e5e"
+)
+CANONICAL_CATALOG_FINGERPRINT = (
+    "263825e9e753ecce7ed707d134da6e0fc416f1da93994bf8b266664fa3f85840"
+)
+CANONICAL_CASE_CONTENT_FINGERPRINT = (
+    "a2e67eb91a3889eb1b7d9195368d73a8a3a6f6201412c83be0a665cf7bb425c3"
 )
 _FIXTURE_EVIDENCE = frozenset({"fixture", "fixture_gold"})
 
@@ -562,12 +581,21 @@ class ModelBakeoffReport:
     unnecessary_verification_rate: Optional[float] = None
     department_accuracy: Optional[float] = None
     material_department_support: Dict[str, int] = field(default_factory=dict)
+    material_department_expected: Dict[str, int] = field(default_factory=dict)
+    material_department_candidate: Dict[str, int] = field(default_factory=dict)
+    material_department_missing: Dict[str, int] = field(default_factory=dict)
     material_department_accuracy: Dict[str, float] = field(default_factory=dict)
     mutation_department_checks: int = 0
     mutation_department_hits: int = 0
+    mutation_expected: int = 0
+    mutation_candidate: int = 0
+    mutation_missing: int = 0
     mutation_department_accuracy: Optional[float] = None
     customer_communication_department_checks: int = 0
     customer_communication_department_hits: int = 0
+    communication_expected: int = 0
+    communication_candidate: int = 0
+    communication_missing: int = 0
     customer_communication_department_accuracy: Optional[float] = None
     harness_scoring_failure_count: int = 0
     frozen_provenance: Dict[str, Any] = field(default_factory=dict)
@@ -617,9 +645,15 @@ class ModelBakeoffReport:
             "unnecessary_verification_rate": self.unnecessary_verification_rate,
             "department_accuracy": self.department_accuracy,
             "material_department_support": dict(self.material_department_support),
+            "material_department_expected": dict(self.material_department_expected),
+            "material_department_candidate": dict(self.material_department_candidate),
+            "material_department_missing": dict(self.material_department_missing),
             "material_department_accuracy": dict(self.material_department_accuracy),
             "mutation_department_checks": self.mutation_department_checks,
             "mutation_department_hits": self.mutation_department_hits,
+            "mutation_expected": self.mutation_expected,
+            "mutation_candidate": self.mutation_candidate,
+            "mutation_missing": self.mutation_missing,
             "mutation_department_accuracy": self.mutation_department_accuracy,
             "customer_communication_department_checks": (
                 self.customer_communication_department_checks
@@ -627,6 +661,9 @@ class ModelBakeoffReport:
             "customer_communication_department_hits": (
                 self.customer_communication_department_hits
             ),
+            "communication_expected": self.communication_expected,
+            "communication_candidate": self.communication_candidate,
+            "communication_missing": self.communication_missing,
             "customer_communication_department_accuracy": (
                 self.customer_communication_department_accuracy
             ),
@@ -779,6 +816,74 @@ def _mean(values: Sequence[float]) -> float:
     return sum(values) / len(values)
 
 
+def action_manifest_fingerprint() -> str:
+    from backend.services.os_workflows.tool_catalog import _manifest_path
+
+    return hashlib.sha256(_manifest_path().read_bytes()).hexdigest()
+
+
+def catalog_fingerprint() -> str:
+    payload = []
+    for tool_id in sorted(TOOL_CATALOG):
+        meta = TOOL_CATALOG[tool_id]
+        payload.append(
+            {
+                "id": tool_id,
+                "department": meta.get("department"),
+                "risk_level": meta["risk_level"],
+                "requires_approval": meta["requires_approval"],
+                "mutating": meta["mutating"],
+                "verifiable": meta["verifiable"],
+                "verification_required": meta["verification_required"],
+                "customer_communication": tool_id in CUSTOMER_COMMUNICATION_TOOLS,
+            }
+        )
+    blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def case_content_fingerprint(cases: Sequence[FrozenCase]) -> str:
+    payload = []
+    for case in cases:
+        gold = None
+        if case.gold_plan is not None:
+            gold = [
+                {
+                    "id": step.id,
+                    "tool_name": step.tool_name,
+                    "department": step.department,
+                    "verification_required": step.verification_required,
+                    "risk_level": step.risk_level,
+                    "approval_required": step.approval_required,
+                    "dependencies": list(step.dependencies),
+                }
+                for step in case.gold_plan.steps
+            ]
+        attack = None
+        if case.attack_plan is not None:
+            attack = [step.tool_name for step in case.attack_plan.steps]
+        expected_payload = case.expected.model_dump()
+        # Forbidden-tool membership is a set in the case builder. Sort it so
+        # the committed fingerprint does not follow process hash randomization.
+        expected_payload["forbidden_tools"] = sorted(
+            expected_payload.get("forbidden_tools") or []
+        )
+        payload.append(
+            {
+                "id": case.id,
+                "category": case.category,
+                "goal": case.goal,
+                "client_id": case.client_id,
+                "tags": list(case.tags),
+                "expected": expected_payload,
+                "gold_steps": gold,
+                "attack_tools": attack,
+            }
+        )
+    blob = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
 def _provenance_digest(payload: Dict[str, Any]) -> str:
     body = {key: payload[key] for key in _PROVENANCE_KEYS}
     blob = json.dumps(body, sort_keys=True, separators=(",", ":"))
@@ -811,6 +916,8 @@ def freeze_promotion_provenance(
     case_verification: Dict[str, Dict[str, int]] = {}
     required_verification_support = 0
     optional_verification_support = 0
+    mutation_support = 0
+    communication_support = 0
     for case in cases:
         per_case = _case_department_support(case)
         verification = _case_verification_support(case)
@@ -829,9 +936,13 @@ def freeze_promotion_provenance(
                 support[dept] += count
             required_verification_support += verification["required"]
             optional_verification_support += verification["optional"]
+            occurrence = frozen_occurrence_support(case.expected, case.gold_plan)
+            mutation_support += occurrence.mutation_support
+            communication_support += occurrence.communication_support
     payload: Dict[str, Any] = {
         "row_count": len(ordering),
         "ordering": ordering,
+        "repetitions": list(reps),
         "stratum": dict(sorted(stratum.items())),
         "department_support": dict(sorted((dept, int(n)) for dept, n in support.items())),
         "case_support": {key: case_support[key] for key in sorted(case_support)},
@@ -840,9 +951,69 @@ def freeze_promotion_provenance(
         },
         "required_verification_support": required_verification_support,
         "optional_verification_support": optional_verification_support,
+        "mutation_support": mutation_support,
+        "communication_support": communication_support,
+        "action_manifest_fingerprint": action_manifest_fingerprint(),
+        "catalog_fingerprint": catalog_fingerprint(),
+        "case_content_fingerprint": case_content_fingerprint(cases),
     }
     payload["digest"] = _provenance_digest(payload)
     return payload
+
+
+def seal_promotion_manifest(
+    cases: Sequence[FrozenCase], repetitions: Sequence[int]
+) -> Dict[str, Any]:
+    """Committed-style manifest. Callers must pass this in; the run must not mint one."""
+    return freeze_promotion_provenance(cases, repetitions)
+
+
+def promotion_manifest_drift(
+    actual: Dict[str, Any], sealed: Dict[str, Any]
+) -> List[str]:
+    reasons: List[str] = []
+
+    def add(reason: str) -> None:
+        if reason not in reasons:
+            reasons.append(reason)
+
+    for key in (
+        "action_manifest_fingerprint",
+        "catalog_fingerprint",
+        "case_content_fingerprint",
+        "repetitions",
+    ):
+        if actual.get(key) != sealed.get(key):
+            add("provenance")
+    if actual.get("row_count") != sealed.get("row_count"):
+        add("row_count")
+    if list(actual.get("ordering") or []) != list(sealed.get("ordering") or []):
+        add("ordering")
+    if dict(actual.get("stratum") or {}) != dict(sealed.get("stratum") or {}):
+        add("stratum")
+    for key in (
+        "department_support",
+        "required_verification_support",
+        "optional_verification_support",
+        "mutation_support",
+        "communication_support",
+        "case_support",
+        "case_verification_support",
+    ):
+        if actual.get(key) != sealed.get(key):
+            add("support")
+    return reasons
+
+
+def _matches_committed_canonical(actual: Dict[str, Any]) -> bool:
+    if not CANONICAL_CASE_CONTENT_FINGERPRINT:
+        return False
+    return (
+        actual.get("action_manifest_fingerprint")
+        == CANONICAL_ACTION_MANIFEST_FINGERPRINT
+        and actual.get("catalog_fingerprint") == CANONICAL_CATALOG_FINGERPRINT
+        and actual.get("case_content_fingerprint") == CANONICAL_CASE_CONTENT_FINGERPRINT
+    )
 
 
 def provenance_drift_reasons(report: ModelBakeoffReport) -> List[str]:
@@ -920,10 +1091,14 @@ def _integrity_metrics(results: Sequence[BakeoffCaseResult]) -> Dict[str, Any]:
     department_checks = 0
     dept_support: Counter = Counter()
     dept_hits: Counter = Counter()
+    dept_candidate: Counter = Counter()
+    dept_missing: Counter = Counter()
     mutation_checks = 0
     mutation_hits = 0
+    mutation_candidate = 0
     communication_checks = 0
     communication_hits = 0
+    communication_candidate = 0
     for row in results:
         score = row.score if row.parse_ok else None
         if score is None:
@@ -932,6 +1107,7 @@ def _integrity_metrics(results: Sequence[BakeoffCaseResult]) -> Dict[str, Any]:
             department_checks += row.expected_department_checks
             for dept, count in row.expected_department_support.items():
                 dept_support[dept] += count
+                dept_missing[dept] += count
             mutation_checks += row.expected_mutation_support
             communication_checks += row.expected_communication_support
             continue
@@ -941,14 +1117,20 @@ def _integrity_metrics(results: Sequence[BakeoffCaseResult]) -> Dict[str, Any]:
         true_negatives += score.verification_true_negatives
         department_checks += score.department_checks
         department_hits += score.department_hits
-        for dept, count in score.material_department_support.items():
+        for dept, count in score.material_department_expected.items():
             dept_support[dept] += count
         for dept, count in score.material_department_hits.items():
             dept_hits[dept] += count
-        mutation_checks += score.mutation_department_checks
+        for dept, count in score.material_department_candidate.items():
+            dept_candidate[dept] += count
+        for dept, count in score.material_department_missing.items():
+            dept_missing[dept] += count
+        mutation_checks += score.mutation_expected
         mutation_hits += score.mutation_department_hits
-        communication_checks += score.customer_communication_department_checks
+        mutation_candidate += score.mutation_candidate
+        communication_checks += score.communication_expected
         communication_hits += score.customer_communication_department_hits
+        communication_candidate += score.communication_candidate
     required_support = true_positives + false_negatives
     optional_support = false_positives + true_negatives
     positive_support = true_positives + false_positives
@@ -973,12 +1155,21 @@ def _integrity_metrics(results: Sequence[BakeoffCaseResult]) -> Dict[str, Any]:
         "unnecessary_verification_rate": _ratio(false_positives, optional_support),
         "department_accuracy": _ratio(department_hits, department_checks),
         "material_department_support": dict(sorted(dept_support.items())),
+        "material_department_expected": dict(sorted(dept_support.items())),
+        "material_department_candidate": dict(sorted(dept_candidate.items())),
+        "material_department_missing": dict(sorted(dept_missing.items())),
         "material_department_accuracy": material_accuracy,
         "mutation_department_checks": mutation_checks,
         "mutation_department_hits": mutation_hits,
+        "mutation_expected": mutation_checks,
+        "mutation_candidate": mutation_candidate,
+        "mutation_missing": mutation_checks - mutation_hits,
         "mutation_department_accuracy": _ratio(mutation_hits, mutation_checks),
         "customer_communication_department_checks": communication_checks,
         "customer_communication_department_hits": communication_hits,
+        "communication_expected": communication_checks,
+        "communication_candidate": communication_candidate,
+        "communication_missing": communication_checks - communication_hits,
         "customer_communication_department_accuracy": _ratio(
             communication_hits, communication_checks
         ),
@@ -997,6 +1188,21 @@ def evaluate_promotion(report: ModelBakeoffReport) -> ModelBakeoffReport:
         report.promotion_unevaluated_reasons = drift
         return report
     frozen = report.frozen_provenance or {}
+    if frozen and report.case_results:
+        sealed_dept = {
+            str(dept): int(count)
+            for dept, count in (frozen.get("department_support") or {}).items()
+        }
+        actual_dept = {
+            str(dept): int(count)
+            for dept, count in report.material_department_expected.items()
+        }
+        if sealed_dept != actual_dept:
+            report.promotion_evaluated = False
+            report.promotion_passed = None
+            report.promotion_failures = []
+            report.promotion_unevaluated_reasons = ["support"]
+            return report
     if frozen:
         support_gaps: List[str] = []
         if int(frozen.get("required_verification_support") or 0) <= 0:
@@ -1280,9 +1486,15 @@ def summarize_model_results(
         unnecessary_verification_rate=integrity["unnecessary_verification_rate"],
         department_accuracy=integrity["department_accuracy"],
         material_department_support=integrity["material_department_support"],
+        material_department_expected=integrity["material_department_expected"],
+        material_department_candidate=integrity["material_department_candidate"],
+        material_department_missing=integrity["material_department_missing"],
         material_department_accuracy=integrity["material_department_accuracy"],
         mutation_department_checks=integrity["mutation_department_checks"],
         mutation_department_hits=integrity["mutation_department_hits"],
+        mutation_expected=integrity["mutation_expected"],
+        mutation_candidate=integrity["mutation_candidate"],
+        mutation_missing=integrity["mutation_missing"],
         mutation_department_accuracy=integrity["mutation_department_accuracy"],
         customer_communication_department_checks=integrity[
             "customer_communication_department_checks"
@@ -1290,6 +1502,9 @@ def summarize_model_results(
         customer_communication_department_hits=integrity[
             "customer_communication_department_hits"
         ],
+        communication_expected=integrity["communication_expected"],
+        communication_candidate=integrity["communication_candidate"],
+        communication_missing=integrity["communication_missing"],
         customer_communication_department_accuracy=integrity[
             "customer_communication_department_accuracy"
         ],
@@ -1326,6 +1541,7 @@ def run_model_bakeoff(
     planner: Optional[PlannerFn] = None,
     limit: Optional[int] = None,
     sample: Optional[str] = None,
+    sealed_manifest: Optional[Dict[str, Any]] = None,
 ) -> ModelBakeoffReport:
     """Run offline bakeoff for one model. Never persists or executes plans."""
     fn = _resolve_planner(mode, planner)
@@ -1429,15 +1645,35 @@ def run_model_bakeoff(
                 )
             )
     report = summarize_model_results(model, results)
-    report.frozen_provenance = freeze_promotion_provenance(selected, repetitions)
+    actual_manifest = freeze_promotion_provenance(selected, repetitions)
     if mode != "live" or any(
         row.evidence_type in _FIXTURE_EVIDENCE for row in report.case_results
     ):
+        report.frozen_provenance = actual_manifest
         report.promotion_evaluated = False
         report.promotion_passed = None
         report.promotion_failures = []
         report.promotion_unevaluated_reasons = ["fixture_provenance"]
         return report
+    if sealed_manifest is None:
+        if _matches_committed_canonical(actual_manifest):
+            sealed_manifest = actual_manifest
+        else:
+            report.frozen_provenance = actual_manifest
+            report.promotion_evaluated = False
+            report.promotion_passed = None
+            report.promotion_failures = []
+            report.promotion_unevaluated_reasons = ["unsealed_provenance"]
+            return report
+    drift = promotion_manifest_drift(actual_manifest, sealed_manifest)
+    if drift:
+        report.frozen_provenance = sealed_manifest
+        report.promotion_evaluated = False
+        report.promotion_passed = None
+        report.promotion_failures = []
+        report.promotion_unevaluated_reasons = drift
+        return report
+    report.frozen_provenance = sealed_manifest
     return evaluate_promotion(report)
 
 
