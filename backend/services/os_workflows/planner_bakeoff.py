@@ -817,9 +817,11 @@ def _mean(values: Sequence[float]) -> float:
 
 
 def action_manifest_fingerprint() -> str:
+    """Hash the Action manifest after stripping CR, so CRLF checkouts match Git LF blobs."""
     from backend.services.os_workflows.tool_catalog import _manifest_path
 
-    return hashlib.sha256(_manifest_path().read_bytes()).hexdigest()
+    raw = _manifest_path().read_bytes().replace(b"\r", b"")
+    return hashlib.sha256(raw).hexdigest()
 
 
 def catalog_fingerprint() -> str:

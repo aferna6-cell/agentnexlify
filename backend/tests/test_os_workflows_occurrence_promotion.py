@@ -658,6 +658,28 @@ def test_canonical_frozen_corpus_fingerprint_is_committed():
     assert case_content_fingerprint(cases) == CANONICAL_CASE_CONTENT_FINGERPRINT
 
 
+def test_action_manifest_fingerprint_is_checkout_newline_invariant(tmp_path, monkeypatch):
+    """LF and CRLF copies of the same manifest must share the committed fingerprint."""
+    from backend.services.os_workflows import tool_catalog
+
+    real_path = tool_catalog._manifest_path()
+    lf_bytes = real_path.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    crlf_bytes = lf_bytes.replace(b"\n", b"\r\n")
+    assert crlf_bytes != lf_bytes
+    lf_path = tmp_path / "action_manifest.lf.json"
+    crlf_path = tmp_path / "action_manifest.crlf.json"
+    lf_path.write_bytes(lf_bytes)
+    crlf_path.write_bytes(crlf_bytes)
+
+    monkeypatch.setattr(tool_catalog, "_manifest_path", lambda: lf_path)
+    lf_hash = action_manifest_fingerprint()
+    monkeypatch.setattr(tool_catalog, "_manifest_path", lambda: crlf_path)
+    crlf_hash = action_manifest_fingerprint()
+    assert lf_hash == crlf_hash
+    assert lf_hash == CANONICAL_ACTION_MANIFEST_FINGERPRINT
+    assert crlf_hash == CANONICAL_ACTION_MANIFEST_FINGERPRINT
+
+
 def test_unsealed_custom_corpus_cannot_promote():
     case = _balanced_case()
     plan = _balanced_plan(case, optional_flag=False)
