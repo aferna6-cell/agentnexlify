@@ -2,7 +2,7 @@
 
 Contract:
 - Claude spend uses reserve_ai_tokens → call_claude_messages_sync →
-  record_ai_usage (release on provider error or record failure).
+  record_ai_usage (release on provider error; record failure retains accounting debt).
   llm_runtime does not record.
 - Hard cap and missing/unloadable tenant policy block before the provider.
   The helper returns []; it must not raise into lead capture or the visitor
@@ -29,7 +29,7 @@ from fastapi import BackgroundTasks
 
 from backend.routers import widget_chat_effects, widget_lead_helpers as extract
 from backend.routers.widget_lead_helpers import EXTRACT_TAGS_MAX_TOKENS
-from backend.services.ai_usage_guard import AIUsageReservation, record_ai_usage
+from backend.services.ai_usage_guard import AIUsageAccountingDebt, AIUsageReservation, record_ai_usage
 from backend.tests.fake_supabase import db, run
 from backend.tests.test_widget_chat_pipeline import _req, _tenant, _widget
 
@@ -433,7 +433,7 @@ def test_metered_call_metadata_is_ids_and_counts_only():
     _assert_no_secrets(str(meta))
 
 
-def test_record_ai_usage_releases_reservation_on_persist_failure():
+def test_record_ai_usage_retains_debt_on_persist_failure():
     reservation = _allowed()
     with (
         patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
@@ -447,11 +447,13 @@ def test_record_ai_usage_releases_reservation_on_persist_failure():
             session_id=_SESSION_ID,
             model="claude-sonnet-4-6",
         )
-    assert recorded is None
-    release.assert_called_once_with(reservation)
+    assert isinstance(recorded, AIUsageAccountingDebt)
+    assert recorded.reason == "record_rpc_failed"
+    assert recorded.alert_triggered is False
+    release.assert_not_called()
 
 
-def test_extract_path_releases_when_record_rpc_fails():
+def test_extract_path_retains_debt_when_record_rpc_fails():
     reservation = _allowed()
 
     def fail_record(**kwargs):
@@ -469,7 +471,7 @@ def test_extract_path_releases_when_record_rpc_fails():
         result = _run()
     assert result == ["interested in: kitchen remodel", "budget: high"]
     provider.assert_called_once()
-    release.assert_called_once_with(reservation)
+    release.assert_not_called()
 
 
 def test_provider_and_budget_logs_do_not_leak_secrets(caplog):

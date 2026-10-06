@@ -71,6 +71,25 @@ class AIUsageRecord:
     hard_limit_reached: bool
 
 
+@dataclass(frozen=True)
+class AIUsageAccountingDebt:
+    """Billable usage whose record RPC failed. The reservation stays held.
+
+    ``alert_triggered`` stays false so existing callers that read it
+    (widget chat) do not treat debt as a threshold crossing or raise
+    into a post-success release.
+    """
+
+    tenant_id: str
+    period_month: str
+    estimated_tokens: int
+    operation: str
+    session_id: str
+    model: str
+    reason: str = "record_rpc_failed"
+    alert_triggered: bool = False
+
+
 def current_period_month() -> str:
     now = datetime.now(timezone.utc)
     return date(now.year, now.month, 1).isoformat()
@@ -278,7 +297,17 @@ def record_ai_usage(
     operation: str,
     session_id: str,
     model: str,
-) -> AIUsageRecord | None:
+) -> AIUsageRecord | AIUsageAccountingDebt | None:
+    """Record actual tokens for a held reservation.
+
+    Success returns ``AIUsageRecord``. A ``record_ai_token_usage`` RPC
+    failure returns ``AIUsageAccountingDebt`` and does not release: the
+    provider result is already billable, so clearing the reservation
+    would count the spend as zero. Denied and guard-unavailable
+    reservations return None and are not released here. Provider
+    failures release through ``release_ai_token_reservation`` exactly
+    once at the call site, before this function runs.
+    """
     if not reservation.allowed or reservation.reason == "guard_unavailable":
         return None
 
@@ -297,16 +326,26 @@ def record_ai_usage(
                 "p_hard_limit_tokens": reservation.hard_limit_tokens,
             },
         ).execute()
-    except Exception:
+    except Exception as exc:
+        # Identifiers only. The exception text can carry RPC payloads.
         logger.warning(
-            "Failed to record AI usage tenant=%s op=%s session=%s",
+            "accounting_debt tenant=%s period=%s op=%s session=%s model=%s reserved_tokens=%s reason=record_rpc_failed error_type=%s",
             reservation.tenant_id,
+            reservation.period_month,
             operation,
             session_id,
-            exc_info=True,
+            model,
+            reservation.estimated_tokens,
+            type(exc).__name__,
         )
-        release_ai_token_reservation(reservation)
-        return None
+        return AIUsageAccountingDebt(
+            tenant_id=reservation.tenant_id,
+            period_month=reservation.period_month,
+            estimated_tokens=reservation.estimated_tokens,
+            operation=operation,
+            session_id=session_id,
+            model=model,
+        )
 
     payload = response.data or {}
     if isinstance(payload, list) and payload:

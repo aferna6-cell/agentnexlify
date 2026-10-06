@@ -6,11 +6,17 @@ All functions are async; all call `call_claude_messages` and return parsed JSON.
 
 import json
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 import anthropic
 
 from backend.config import settings
+from backend.services.ai_usage_guard import (
+    estimate_widget_chat_tokens,
+    record_ai_usage,
+    release_ai_token_reservation,
+    reserve_ai_tokens,
+)
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.local_seo_scoring import (
     _parse_json_array_response,
@@ -20,8 +26,25 @@ from backend.services.local_seo_scoring import (
 logger = logging.getLogger(__name__)
 
 
-async def _generate_keywords(business_type: Optional[str], city: Optional[str]) -> list[str]:
-    """Use Claude to generate local keyword suggestions based on business type and city."""
+_KEYWORD_OPERATION = "seo.generate_keywords"
+_KEYWORD_MODEL = "claude-sonnet-4-6"
+_KEYWORD_MAX_TOKENS = 400
+
+
+async def _generate_keywords(
+    business_type: Optional[str],
+    city: Optional[str],
+    *,
+    tenant: Optional[dict[str, Any]] = None,
+    session_id: str = "",
+) -> list[str]:
+    """Use Claude to generate local keyword suggestions based on business type and city.
+
+    Missing tenant, missing budget policy, hard denial, and guard
+    unavailability return [] before the provider. A provider exception
+    releases the reservation once. A returned provider result is recorded
+    once, including when the JSON parse falls back to [].
+    """
     if not business_type and not city:
         return []
 
@@ -29,52 +52,113 @@ async def _generate_keywords(business_type: Optional[str], city: Optional[str]) 
         logger.warning("Anthropic API key not configured; skipping keyword generation")
         return []
 
+    raw_tenant_id = tenant.get("id") if isinstance(tenant, dict) else None
+    tenant_id = raw_tenant_id.strip() if isinstance(raw_tenant_id, str) else ""
+    if not tenant_id:
+        logger.warning("seo.generate_keywords missing tenant — failing closed before provider")
+        return []
+    policy_loaded = isinstance(tenant, dict) and any(
+        key in tenant
+        for key in (
+            "plan",
+            "ai_monthly_token_hard_limit",
+            "ai_monthly_token_alert_threshold",
+        )
+    )
+    if not policy_loaded:
+        logger.warning(
+            "seo.generate_keywords missing policy tenant=%s — failing closed before provider",
+            tenant_id,
+        )
+        return []
+
+    usage_session = session_id or tenant_id
     location_desc = city or "your area"
     biz_desc = business_type or "local business"
-    raw = ""
+    system = (
+        "You are a local SEO expert. Return ONLY a JSON array of keyword strings. "
+        "No explanations, no markdown, just the raw JSON array."
+    )
+    messages = [{
+        "role": "user",
+        "content": (
+            f"Generate 10-15 high-value local SEO keywords for a {biz_desc} "
+            f"in {location_desc}. Include a mix of:\n"
+            "- Service-based keywords (e.g., 'emergency plumber near me')\n"
+            "- Location-based keywords (e.g., 'plumber in [city]')\n"
+            "- Long-tail keywords (e.g., 'best affordable plumber [city]')\n"
+            "Return ONLY the JSON array."
+        ),
+    }]
+
+    try:
+        reservation = reserve_ai_tokens(
+            tenant=tenant,
+            estimated_tokens=estimate_widget_chat_tokens(
+                system_prompt=system,
+                messages=messages,
+                max_tokens=_KEYWORD_MAX_TOKENS,
+            ),
+            operation=_KEYWORD_OPERATION,
+            session_id=usage_session,
+        )
+    except Exception:
+        logger.warning(
+            "seo.generate_keywords guard unavailable tenant=%s session=%s",
+            tenant_id,
+            usage_session,
+        )
+        return []
+
+    if not reservation.allowed or reservation.reason == "guard_unavailable":
+        logger.warning(
+            "seo.generate_keywords blocked tenant=%s session=%s reason=%s",
+            tenant_id,
+            usage_session,
+            reservation.reason or "hard_limit",
+        )
+        return []
 
     try:
         resp = await call_claude_messages(
-            operation="seo.generate_keywords",
-            model="claude-sonnet-4-6",
-            max_tokens=400,
+            operation=_KEYWORD_OPERATION,
+            model=_KEYWORD_MODEL,
+            max_tokens=_KEYWORD_MAX_TOKENS,
             temperature=0.5,
             timeout=30.0,
-            system=(
-                "You are a local SEO expert. Return ONLY a JSON array of keyword strings. "
-                "No explanations, no markdown, just the raw JSON array."
-            ),
-            messages=[{
-                "role": "user",
-                "content": (
-                    f"Generate 10-15 high-value local SEO keywords for a {biz_desc} "
-                    f"in {location_desc}. Include a mix of:\n"
-                    "- Service-based keywords (e.g., 'emergency plumber near me')\n"
-                    "- Location-based keywords (e.g., 'plumber in [city]')\n"
-                    "- Long-tail keywords (e.g., 'best affordable plumber [city]')\n"
-                    "Return ONLY the JSON array."
-                ),
-            }],
-            metadata={"business_type": biz_desc, "city": location_desc},
+            system=system,
+            messages=messages,
+            metadata={"tenant_id": tenant_id},
         )
-        raw = resp.text.strip()
-        keywords = _parse_json_array_response(raw)
-        return [str(k) for k in keywords[:20]]
+    except Exception as exc:
+        release_ai_token_reservation(reservation)
+        if isinstance(exc, anthropic.RateLimitError):
+            logger.warning("Anthropic rate limited during keyword generation")
+        elif isinstance(exc, anthropic.AuthenticationError):
+            logger.error("Anthropic API auth failure during keyword generation")
+        elif isinstance(exc, anthropic.APIError):
+            logger.error("Anthropic API error during keyword generation")
+        else:
+            logger.error("Keyword generation failed unexpectedly")
+        return []
+
+    text = getattr(resp, "text", None)
+    raw = text.strip() if isinstance(text, str) else ""
+    try:
+        parsed = _parse_json_array_response(raw)
+        keywords = [str(item) for item in parsed[:20]]
     except (json.JSONDecodeError, ValueError):
-        logger.error("Failed to parse keyword suggestions JSON from Claude: %.200s", raw)
-        return []
-    except anthropic.RateLimitError:
-        logger.warning("Anthropic rate limited during keyword generation")
-        return []
-    except anthropic.AuthenticationError:
-        logger.error("Anthropic API auth failure during keyword generation")
-        return []
-    except anthropic.APIError as e:
-        logger.error("Anthropic API error during keyword generation: %s", str(e))
-        return []
-    except Exception:
-        logger.error("Keyword generation failed unexpectedly", exc_info=True)
-        return []
+        logger.error("Failed to parse keyword suggestions JSON from Claude")
+        keywords = []
+
+    record_ai_usage(
+        reservation=reservation,
+        result=resp,
+        operation=_KEYWORD_OPERATION,
+        session_id=usage_session,
+        model=_KEYWORD_MODEL,
+    )
+    return keywords
 
 
 async def _run_seo_audit_ai(pages_json: list, extracted_text: str, business_name: str, business_type: str) -> dict:
