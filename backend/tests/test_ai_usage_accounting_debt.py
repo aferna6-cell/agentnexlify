@@ -183,7 +183,7 @@ def test_release_skips_denied_and_guard_unavailable_reservations():
     assert calls == []
 
 
-def _record_response(data: dict):
+def _record_response(data):
     calls: list[str] = []
 
     def rpc(name, _payload):
@@ -231,6 +231,150 @@ def test_malformed_record_payload_is_unproved_debt_without_release(caplog):
     assert "malformed" not in caplog.text
     assert "invalid literal" not in caplog.text
     assert "Traceback" not in caplog.text
+
+
+_PROVED_FLAGS = {"alert_triggered": False, "hard_limit_reached": False}
+_UNPROVED_PAYLOADS = [
+    pytest.param(
+        {"alert_triggered": False, "hard_limit_reached": False},
+        "",
+        id="missing-total",
+    ),
+    pytest.param({}, "", id="empty-dict"),
+    pytest.param([], "", id="empty-list"),
+    pytest.param("not-a-record", "not-a-record", id="string-payload"),
+    pytest.param({**_PROVED_FLAGS, "total_tokens": True}, "", id="bool-total"),
+    pytest.param({**_PROVED_FLAGS, "total_tokens": 1.5}, "1.5", id="float-total"),
+    pytest.param({**_PROVED_FLAGS, "total_tokens": -3}, "-3", id="negative-total"),
+    pytest.param(
+        {"total_tokens": 18, "hard_limit_reached": False},
+        "",
+        id="missing-alert-flag",
+    ),
+    pytest.param(
+        {"total_tokens": 18, "alert_triggered": "false", "hard_limit_reached": False},
+        "false",
+        id="string-alert-flag",
+    ),
+    pytest.param(
+        {"total_tokens": 18, "alert_triggered": 1, "hard_limit_reached": False},
+        "",
+        id="int-alert-flag",
+    ),
+    pytest.param(
+        {"total_tokens": 18, "alert_triggered": False},
+        "",
+        id="missing-hard-flag",
+    ),
+    pytest.param(
+        {"total_tokens": 18, "alert_triggered": False, "hard_limit_reached": 0},
+        "",
+        id="int-hard-flag",
+    ),
+    pytest.param(
+        {**_PROVED_FLAGS, "total_tokens": "18"},
+        "18",
+        id="decimal-string-total",
+    ),
+    pytest.param(
+        [
+            {**_PROVED_FLAGS, "total_tokens": 1},
+            {**_PROVED_FLAGS, "total_tokens": 2},
+        ],
+        "",
+        id="multirow",
+    ),
+]
+
+
+def _assert_unproved(recorded, caplog, banned: str) -> None:
+    assert isinstance(recorded, AIUsageAccountingDebt)
+    assert not isinstance(recorded, AIUsageRecord)
+    assert recorded.reason == "record_response_unproved"
+    assert "total_tokens" not in recorded.__dataclass_fields__
+    assert recorded.alert_triggered is False
+    assert "record_response_unproved" in caplog.text
+    assert "record_rpc_failed" not in caplog.text
+    assert "Traceback" not in caplog.text
+    if banned:
+        assert banned not in caplog.text
+
+
+@pytest.mark.parametrize(("payload", "banned"), _UNPROVED_PAYLOADS)
+def test_unproved_record_payloads_do_not_invent_a_total_or_release(payload, banned, caplog):
+    calls, rpc = _record_response(payload)
+    with (
+        caplog.at_level(logging.WARNING),
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+    ):
+        mock_supa.return_value.rpc.side_effect = rpc
+        recorded = record_ai_usage(
+            reservation=_reservation(),
+            result=_result(),
+            operation="seo.generate_keywords",
+            session_id=_SESSION_ID,
+            model="claude-sonnet-4-6",
+        )
+
+    assert calls == ["record_ai_token_usage"]
+    _assert_unproved(recorded, caplog, banned)
+
+
+def test_record_data_access_failure_is_unproved_debt_without_release(caplog):
+    calls: list[str] = []
+
+    class _RaisingExecute:
+        def execute(self):
+            return self
+
+        @property
+        def data(self):
+            raise RuntimeError(_SECRET)
+
+    def rpc(name, _payload):
+        calls.append(name)
+        if name != "record_ai_token_usage":
+            return MagicMock()
+        return _RaisingExecute()
+
+    with (
+        caplog.at_level(logging.WARNING),
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+    ):
+        mock_supa.return_value.rpc.side_effect = rpc
+        recorded = record_ai_usage(
+            reservation=_reservation(),
+            result=_result(),
+            operation="seo.generate_keywords",
+            session_id=_SESSION_ID,
+            model="claude-sonnet-4-6",
+        )
+
+    assert calls == ["record_ai_token_usage"]
+    _assert_unproved(recorded, caplog, _SECRET)
+
+
+def test_singleton_list_and_zero_total_are_proved_records():
+    proved_cases = [
+        [{"total_tokens": 18, "alert_triggered": False, "hard_limit_reached": True}],
+        {"total_tokens": 0, "alert_triggered": False, "hard_limit_reached": False},
+    ]
+    seen = []
+    for payload in proved_cases:
+        calls, rpc = _record_response(payload)
+        with patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa:
+            mock_supa.return_value.rpc.side_effect = rpc
+            recorded = record_ai_usage(
+                reservation=_reservation(),
+                result=_result(),
+                operation="seo.generate_keywords",
+                session_id=_SESSION_ID,
+                model="claude-sonnet-4-6",
+            )
+        assert calls == ["record_ai_token_usage"]
+        assert isinstance(recorded, AIUsageRecord)
+        seen.append((recorded.total_tokens, recorded.hard_limit_reached))
+    assert seen == [(18, True), (0, False)]
 
 
 def test_activity_log_failure_returns_proved_record_without_release(caplog):
@@ -317,6 +461,56 @@ async def test_graph_adapter_does_not_release_after_malformed_record_payload(cap
     assert "record_response_unproved" in caplog.text
     assert "malformed" not in caplog.text
     assert "invalid literal" not in caplog.text
+
+
+@pytest.mark.parametrize(("payload", "banned"), _UNPROVED_PAYLOADS)
+async def test_graph_adapter_records_without_release_for_unproved_payloads(
+    payload, banned, caplog
+):
+    calls, rpc = _record_response(payload)
+
+    async def provider(**_kwargs):
+        return _result()
+
+    with caplog.at_level(logging.WARNING):
+        result = await _run_metered_graph_node(provider=provider, rpc=rpc)
+
+    assert calls == ["record_ai_token_usage"]
+    assert result.updates["reply"] == '["keyword"]'
+    assert "record_response_unproved" in caplog.text
+    assert "Traceback" not in caplog.text
+    if banned:
+        assert banned not in caplog.text
+
+
+async def test_graph_adapter_records_without_release_when_data_access_fails(caplog):
+    calls: list[str] = []
+
+    class _RaisingExecute:
+        def execute(self):
+            return self
+
+        @property
+        def data(self):
+            raise RuntimeError(_SECRET)
+
+    def rpc(name, _payload):
+        calls.append(name)
+        if name != "record_ai_token_usage":
+            return MagicMock()
+        return _RaisingExecute()
+
+    async def provider(**_kwargs):
+        return _result()
+
+    with caplog.at_level(logging.WARNING):
+        result = await _run_metered_graph_node(provider=provider, rpc=rpc)
+
+    assert calls == ["record_ai_token_usage"]
+    assert result.updates["reply"] == '["keyword"]'
+    assert "record_response_unproved" in caplog.text
+    assert _SECRET not in caplog.text
+    assert "Traceback" not in caplog.text
 
 
 async def test_graph_adapter_does_not_release_when_activity_log_fails(caplog):

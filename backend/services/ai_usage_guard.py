@@ -327,21 +327,40 @@ def _accounting_debt(
 
 
 def _usage_record_from_payload(data: Any) -> AIUsageRecord:
-    """Build a proved usage record. Raises when ``total_tokens`` cannot be coerced.
+    """Prove a ``record_ai_token_usage`` payload or raise without quoting it.
 
-    Missing totals stay ``0``, matching the previous empty-payload record.
-    A non-numeric value such as ``"malformed"`` raises so the caller can
-    return unproved debt instead of inventing a total.
+    The SQL function returns one jsonb object: a nonnegative integer
+    ``total_tokens`` plus boolean ``alert_triggered`` and
+    ``hard_limit_reached``. A one-element list of that object is the only
+    wrapper accepted. Missing fields, extra rows, non-dicts, bools, floats,
+    negatives, and numeric strings are not proved and must not be coerced.
     """
-    payload = data or {}
-    if isinstance(payload, list) and payload:
-        payload = payload[0]
-    if not isinstance(payload, dict):
-        payload = {}
+    if isinstance(data, list):
+        if len(data) != 1 or not isinstance(data[0], dict):
+            raise TypeError
+        payload = data[0]
+    elif isinstance(data, dict):
+        payload = data
+    else:
+        raise TypeError
+
+    if (
+        "total_tokens" not in payload
+        or "alert_triggered" not in payload
+        or "hard_limit_reached" not in payload
+    ):
+        raise TypeError
+    total = payload["total_tokens"]
+    alert = payload["alert_triggered"]
+    hard = payload["hard_limit_reached"]
+    if isinstance(total, bool) or not isinstance(total, int) or total < 0:
+        raise TypeError
+    if not isinstance(alert, bool) or not isinstance(hard, bool):
+        raise TypeError
     return AIUsageRecord(
-        total_tokens=int(payload.get("total_tokens") or 0),
-        alert_triggered=bool(payload.get("alert_triggered")),
-        hard_limit_reached=bool(payload.get("hard_limit_reached")),
+        total_tokens=total,
+        alert_triggered=alert,
+        hard_limit_reached=hard,
     )
 
 
@@ -355,16 +374,19 @@ def record_ai_usage(
 ) -> AIUsageRecord | AIUsageAccountingDebt | None:
     """Record actual tokens for a held reservation.
 
-    Success returns ``AIUsageRecord``. A ``record_ai_token_usage`` RPC
-    failure returns debt with ``reason="record_rpc_failed"`` and does not
-    release. A returned RPC payload that cannot be coerced returns debt
-    with ``reason="record_response_unproved"`` and does not invent a total
-    or raise. Threshold activity logging failures are swallowed after a
-    proved record. Callers that release on exception therefore cannot turn
-    a post-record failure into a release. Denied and guard-unavailable
-    reservations return None. Provider failures release through
-    ``release_ai_token_reservation`` exactly once at the call site, before
-    this function runs.
+    Success returns ``AIUsageRecord`` only when the RPC payload is a
+    supported object (or a one-element list of that object) with a
+    nonnegative integer total and boolean threshold flags. A
+    ``record_ai_token_usage`` RPC failure returns debt with
+    ``reason="record_rpc_failed"`` and does not release. Any other returned
+    shape, including missing or wrong-typed fields and ``.data`` access
+    failures, returns debt with ``reason="record_response_unproved"`` and
+    does not invent a total or raise. Threshold activity logging failures
+    are swallowed after a proved record. Callers that release on exception
+    therefore cannot turn a post-record failure into a release. Denied and
+    guard-unavailable reservations return None. Provider failures release
+    through ``release_ai_token_reservation`` exactly once at the call site,
+    before this function runs.
     """
     if not reservation.allowed or reservation.reason == "guard_unavailable":
         return None
