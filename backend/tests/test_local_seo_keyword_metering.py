@@ -171,7 +171,7 @@ async def test_reserve_exception_skips_provider(monkeypatch, caplog):
         return _claude("[]")
 
     def reserve(**_kwargs):
-        raise RuntimeError("guard blew up sk-ant-secret")
+        raise RuntimeError("guard blew up sentinel-token")
 
     with (
         caplog.at_level(logging.WARNING),
@@ -183,7 +183,7 @@ async def test_reserve_exception_skips_provider(monkeypatch, caplog):
     assert keywords == []
     assert provider_calls == []
     assert "guard unavailable" in caplog.text
-    assert "sk-ant-secret" not in caplog.text
+    assert "sentinel-token" not in caplog.text
     assert _CITY not in caplog.text
 
 
@@ -194,7 +194,7 @@ async def test_provider_exception_releases_once_and_returns_empty(monkeypatch, c
     recorded: list[str] = []
 
     async def provider(**_kwargs):
-        raise RuntimeError("provider down sk-ant-secret")
+        raise RuntimeError("provider down sentinel-token")
 
     def release(active):
         released.append(active.tenant_id)
@@ -215,7 +215,7 @@ async def test_provider_exception_releases_once_and_returns_empty(monkeypatch, c
     assert keywords == []
     assert released == [_TENANT_ID]
     assert recorded == []
-    assert "sk-ant-secret" not in caplog.text
+    assert "sentinel-token" not in caplog.text
     assert _CITY not in caplog.text
     assert "Keyword generation failed unexpectedly" in caplog.text
 
@@ -313,7 +313,7 @@ async def test_provider_success_record_failure_retains_debt(monkeypatch, caplog)
 
     def rpc(name, _payload):
         rpc_calls.append(name)
-        raise RuntimeError("sk-ant-secret prompt body")
+        raise RuntimeError("sentinel-token prompt body")
 
     async def provider(**_kwargs):
         return _claude('["kept keyword"]')
@@ -331,7 +331,7 @@ async def test_provider_success_record_failure_retains_debt(monkeypatch, caplog)
     assert rpc_calls == ["record_ai_token_usage"]
     assert "accounting_debt" in caplog.text
     assert "record_rpc_failed" in caplog.text
-    assert "sk-ant-secret" not in caplog.text
+    assert "sentinel-token" not in caplog.text
     assert _CITY not in caplog.text
     assert "emergency plumber near me" not in caplog.text
 

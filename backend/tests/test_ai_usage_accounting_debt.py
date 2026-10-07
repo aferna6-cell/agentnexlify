@@ -24,7 +24,7 @@ from backend.services.llm_runtime import ClaudeCallResult
 
 _TENANT_ID = "tenant-accounting-debt"
 _SESSION_ID = "sess-accounting-debt"
-_SECRET = "sk-ant-secret prompt body"
+_SECRET = "sentinel-token prompt body"
 
 
 def _reservation(**overrides) -> AIUsageReservation:
@@ -554,7 +554,7 @@ async def test_graph_provider_failure_releases_exactly_once():
     assert calls == ["release_ai_token_reservation"]
 
 
-_FORGED_SESSION = "visitor@example.com\nINJECTED authorization=Bearer sk-ant-secret"
+_FORGED_SESSION = "visitor@example.com\nINJECTED authorization=Bearer sentinel-token"
 _LOG_MODES = ("rpc_failed", "unproved", "activity")
 
 
@@ -571,7 +571,7 @@ def _forged_session_absent(caplog) -> None:
     assert "visitor@example.com" not in text
     assert "INJECTED" not in text
     assert "Bearer" not in text
-    assert "sk-ant-secret" not in text
+    assert "sentinel-token" not in text
     assert all("\n" not in record.getMessage() for record in caplog.records if record.name == "backend.services.ai_usage_guard")
 
 
