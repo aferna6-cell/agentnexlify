@@ -239,10 +239,9 @@ def reserve_ai_tokens(
 
     if not allowed:
         logger.warning(
-            "AI usage hard limit blocked tenant=%s op=%s session=%s estimate=%s hard=%s",
+            "AI usage hard limit blocked tenant=%s op=%s estimate=%s hard=%s",
             tenant_id,
             operation,
-            session_id,
             estimated,
             policy.hard_limit_tokens,
         )
@@ -294,6 +293,14 @@ def _usage_value(value: int | None) -> int:
     return value if isinstance(value, int) and value > 0 else 0
 
 
+def _emit_accounting_diagnostic(message: str, *args: object) -> None:
+    """Best-effort log. A handler failure must not escape or release spend."""
+    try:
+        logger.warning(message, *args)
+    except Exception:
+        return
+
+
 def _accounting_debt(
     *,
     reservation: AIUsageReservation,
@@ -303,13 +310,16 @@ def _accounting_debt(
     reason: str,
     exc: Exception,
 ) -> AIUsageAccountingDebt:
-    """Log identifier-only debt and return it. Never includes exception text."""
-    logger.warning(
-        "accounting_debt tenant=%s period=%s op=%s session=%s model=%s reserved_tokens=%s reason=%s error_type=%s",
+    """Return debt even when the diagnostic log fails.
+
+    The line omits caller-controlled session ids, response values, and
+    exception text so a newline or address cannot forge a second record.
+    """
+    _emit_accounting_diagnostic(
+        "accounting_debt tenant=%s period=%s op=%s model=%s reserved_tokens=%s reason=%s error_type=%s",
         reservation.tenant_id,
         reservation.period_month,
         operation,
-        session_id,
         model,
         reservation.estimated_tokens,
         reason,
@@ -382,8 +392,9 @@ def record_ai_usage(
     shape, including missing or wrong-typed fields and ``.data`` access
     failures, returns debt with ``reason="record_response_unproved"`` and
     does not invent a total or raise. Threshold activity logging failures
-    are swallowed after a proved record. Callers that release on exception
-    therefore cannot turn a post-record failure into a release. Denied and
+    are swallowed after a proved record. Diagnostic logs are best-effort
+    and omit raw session ids, so a logger failure cannot escape into a
+    caller that releases. Denied and
     guard-unavailable reservations return None. Provider failures release
     through ``release_ai_token_reservation`` exactly once at the call site,
     before this function runs.
@@ -446,12 +457,11 @@ def record_ai_usage(
                 },
             )
         except Exception as exc:
-            logger.warning(
-                "accounting_observability_failed tenant=%s period=%s op=%s session=%s model=%s error_type=%s",
+            _emit_accounting_diagnostic(
+                "accounting_observability_failed tenant=%s period=%s op=%s model=%s error_type=%s",
                 reservation.tenant_id,
                 reservation.period_month,
                 operation,
-                session_id,
                 model,
                 type(exc).__name__,
             )

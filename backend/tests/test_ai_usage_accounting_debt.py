@@ -8,7 +8,7 @@ once through ``release_ai_token_reservation``.
 """
 
 import logging
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -410,7 +410,7 @@ def test_activity_log_failure_returns_proved_record_without_release(caplog):
     assert "Traceback" not in caplog.text
 
 
-async def _run_metered_graph_node(*, provider, rpc, activity=None):
+async def _run_metered_graph_node(*, provider, rpc, activity=None, session_id=_SESSION_ID):
     from backend.graph.adapters.llm import agent_node
     from backend.graph.nodes import NodeContext
 
@@ -423,7 +423,7 @@ async def _run_metered_graph_node(*, provider, rpc, activity=None):
         state={},
         node="keywords",
         superstep=0,
-        run_id=_SESSION_ID,
+        run_id=session_id,
         tenant_id=_TENANT_ID,
     )
     with (
@@ -551,3 +551,235 @@ async def test_graph_provider_failure_releases_exactly_once():
         await _run_metered_graph_node(provider=provider, rpc=rpc)
 
     assert calls == ["release_ai_token_reservation"]
+
+
+_FORGED_SESSION = "visitor@example.com\nINJECTED authorization=Bearer sk-ant-secret"
+_LOG_MODES = ("rpc_failed", "unproved", "activity")
+
+
+def _accounting_log_text(caplog) -> str:
+    return "\n".join(
+        record.getMessage()
+        for record in caplog.records
+        if record.name == "backend.services.ai_usage_guard"
+    )
+
+
+def _forged_session_absent(caplog) -> None:
+    text = _accounting_log_text(caplog)
+    assert "visitor@example.com" not in text
+    assert "INJECTED" not in text
+    assert "Bearer" not in text
+    assert "sk-ant-secret" not in text
+    assert all("\n" not in record.getMessage() for record in caplog.records if record.name == "backend.services.ai_usage_guard")
+
+
+def _rpc_for_mode(mode: str):
+    calls: list[str] = []
+
+    def rpc(name, _payload=None, **_kwargs):
+        calls.append(name)
+        if name != "record_ai_token_usage":
+            response = MagicMock()
+            response.execute.return_value.data = True
+            return response
+        if mode == "rpc_failed":
+            raise RuntimeError("record rpc down")
+        response = MagicMock()
+        if mode == "activity":
+            response.execute.return_value.data = {
+                "total_tokens": 18,
+                "alert_triggered": True,
+                "hard_limit_reached": False,
+            }
+        else:
+            response.execute.return_value.data = {}
+        return response
+
+    return calls, rpc
+
+
+def _activity_for_mode(mode: str):
+    if mode != "activity":
+        return None
+
+    def explode(**_kwargs):
+        raise RuntimeError("activity down")
+
+    return explode
+
+
+@pytest.mark.parametrize("mode", _LOG_MODES)
+def test_logger_failure_still_returns_accounting_outcome(mode, caplog):
+    calls, rpc = _rpc_for_mode(mode)
+    with (
+        caplog.at_level(logging.WARNING),
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+        patch("backend.services.ai_usage_guard.log_activity", side_effect=_activity_for_mode(mode)),
+        patch("backend.services.ai_usage_guard.logger.warning", side_effect=RuntimeError("log down")),
+    ):
+        mock_supa.return_value.rpc.side_effect = rpc
+        recorded = record_ai_usage(
+            reservation=_reservation(),
+            result=_result(),
+            operation="seo.generate_keywords",
+            session_id=_FORGED_SESSION,
+            model="claude-sonnet-4-6",
+        )
+
+    assert calls == ["record_ai_token_usage"]
+    if mode == "activity":
+        assert isinstance(recorded, AIUsageRecord)
+        assert recorded.total_tokens == 18
+        assert recorded.alert_triggered is True
+    else:
+        assert isinstance(recorded, AIUsageAccountingDebt)
+        assert recorded.reason == (
+            "record_rpc_failed" if mode == "rpc_failed" else "record_response_unproved"
+        )
+        assert recorded.session_id == _FORGED_SESSION
+        assert "total_tokens" not in recorded.__dataclass_fields__
+    _forged_session_absent(caplog)
+
+
+@pytest.mark.parametrize("mode", _LOG_MODES)
+def test_accounting_diagnostics_omit_forged_session_id(mode, caplog):
+    calls, rpc = _rpc_for_mode(mode)
+    with (
+        caplog.at_level(logging.WARNING),
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+        patch("backend.services.ai_usage_guard.log_activity", side_effect=_activity_for_mode(mode)),
+    ):
+        mock_supa.return_value.rpc.side_effect = rpc
+        recorded = record_ai_usage(
+            reservation=_reservation(),
+            result=_result(),
+            operation="seo.generate_keywords",
+            session_id=_FORGED_SESSION,
+            model="claude-sonnet-4-6",
+        )
+
+    assert calls == ["record_ai_token_usage"]
+    text = _accounting_log_text(caplog)
+    if mode == "activity":
+        assert isinstance(recorded, AIUsageRecord)
+        assert "accounting_observability_failed" in text
+    elif mode == "rpc_failed":
+        assert recorded.reason == "record_rpc_failed"
+        assert "accounting_debt" in text
+        assert "record_rpc_failed" in text
+    else:
+        assert recorded.reason == "record_response_unproved"
+        assert "record_response_unproved" in text
+    _forged_session_absent(caplog)
+
+
+@pytest.mark.parametrize("mode", _LOG_MODES)
+async def test_graph_logger_failure_does_not_release(mode):
+    calls, rpc = _rpc_for_mode(mode)
+
+    async def provider(**_kwargs):
+        return _result()
+
+    with patch("backend.services.ai_usage_guard.logger.warning", side_effect=RuntimeError("log down")):
+        result = await _run_metered_graph_node(
+            provider=provider,
+            rpc=rpc,
+            activity=_activity_for_mode(mode),
+            session_id=_FORGED_SESSION,
+        )
+
+    assert calls == ["record_ai_token_usage"]
+    assert result.updates["reply"] == '["keyword"]'
+
+
+@pytest.mark.parametrize("mode", _LOG_MODES)
+def test_widget_logger_failure_does_not_release(mode, client, mock_supabase, caplog):
+    from backend.tests.test_widget_chat_pipeline import _Chain, _patch_llm, _post_chat, _result, _seed
+
+    suffix = {"rpc_failed": "1", "unproved": "2", "activity": "3"}[mode]
+    tenant_id = f"p9270000-0000-4000-8000-00000000000{suffix}"
+    api_key = f"anx_acct_log_{mode}"
+    _seed(mock_supabase, tenant_id=tenant_id, api_key=api_key)
+    calls, rpc = _rpc_for_mode(mode)
+
+    def routed(name, params=None, **kwargs):
+        if name == "reserve_ai_token_budget":
+            calls.append(name)
+            return _Chain(_result(True))
+        return rpc(name, params, **kwargs)
+
+    mock_supabase.rpc.side_effect = routed
+    llm_patch, kb_patch, _llm = _patch_llm("Still here.")
+
+    async def _allow_screen(*_args, **_kwargs):
+        return None
+
+    with (
+        caplog.at_level(logging.WARNING),
+        llm_patch,
+        kb_patch,
+        patch(
+            "backend.routers.widget_chat_guards.input_screen_guard",
+            side_effect=_allow_screen,
+        ),
+        patch("backend.services.ai_usage_guard.log_activity", side_effect=_activity_for_mode(mode)),
+        patch("backend.services.ai_usage_guard.logger.warning", side_effect=RuntimeError("log down")),
+    ):
+        response = _post_chat(
+            client,
+            api_key,
+            "How fast can you fix a pipeline?",
+            _FORGED_SESSION,
+        )
+
+    assert response.status_code == 200
+    assert response.json()["response"] == "Still here."
+    assert calls.count("record_ai_token_usage") == 1
+    assert calls.count("release_ai_token_reservation") == 0
+    _forged_session_absent(caplog)
+
+
+def test_widget_provider_failure_releases_exactly_once(client, mock_supabase):
+    from backend.tests.test_widget_chat_pipeline import _Chain, _post_chat, _result, _seed
+
+    _seed(
+        mock_supabase,
+        tenant_id="p9270000-0000-4000-8000-000000000004",
+        api_key="anx_acct_provider_down",
+    )
+    calls: list[str] = []
+
+    def routed(name, params=None, **_kwargs):
+        calls.append(name)
+        if name == "reserve_ai_token_budget":
+            return _Chain(_result(True))
+        raise AssertionError(name)
+
+    mock_supabase.rpc.side_effect = routed
+
+    async def provider(**_kwargs):
+        raise RuntimeError("provider down")
+
+    async def _allow_screen(*_args, **_kwargs):
+        return None
+
+    with (
+        patch("backend.routers.widget_chat.call_claude_messages", side_effect=provider),
+        patch("backend.routers.widget_chat._query_kb_articles", new=AsyncMock(return_value=[])),
+        patch(
+            "backend.routers.widget_chat_guards.input_screen_guard",
+            side_effect=_allow_screen,
+        ),
+    ):
+        response = _post_chat(
+            client,
+            "anx_acct_provider_down",
+            "How fast can you fix a pipeline?",
+            "sess-provider-down",
+        )
+
+    assert response.status_code == 200
+    assert "having trouble" in response.json()["response"]
+    assert calls.count("record_ai_token_usage") == 0
+    assert calls.count("release_ai_token_reservation") == 1
