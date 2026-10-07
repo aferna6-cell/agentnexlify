@@ -251,7 +251,6 @@ def reserve_ai_tokens(
             description="AI reply blocked by monthly usage guardrail",
             metadata={
                 "operation": operation,
-                "session_id": session_id,
                 "estimated_tokens": estimated,
                 "hard_limit_tokens": policy.hard_limit_tokens,
             },
@@ -447,7 +446,6 @@ def record_ai_usage(
                 description="AI monthly usage crossed a guardrail threshold",
                 metadata={
                     "operation": operation,
-                    "session_id": session_id,
                     "model": model,
                     "total_tokens": record.total_tokens,
                     "alert_threshold_tokens": reservation.alert_threshold_tokens,

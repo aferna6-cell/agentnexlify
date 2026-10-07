@@ -18,6 +18,7 @@ from backend.services.ai_usage_guard import (
     AIUsageReservation,
     record_ai_usage,
     release_ai_token_reservation,
+    reserve_ai_tokens,
 )
 from backend.services.llm_runtime import ClaudeCallResult
 
@@ -783,3 +784,176 @@ def test_widget_provider_failure_releases_exactly_once(client, mock_supabase):
     assert "having trouble" in response.json()["response"]
     assert calls.count("record_ai_token_usage") == 0
     assert calls.count("release_ai_token_reservation") == 1
+
+
+_THRESHOLD_METADATA_KEYS = {
+    "operation",
+    "model",
+    "total_tokens",
+    "alert_threshold_tokens",
+    "hard_limit_tokens",
+    "alert_triggered",
+    "hard_limit_reached",
+}
+
+
+def _capture_activity():
+    seen: list[dict] = []
+
+    def capture(**kwargs):
+        seen.append(kwargs)
+
+    return seen, capture
+
+
+def _assert_sentinel_absent(payload) -> None:
+    rendered = repr(payload)
+    assert "visitor@example.com" not in rendered
+    assert "INJECTED" not in rendered
+    assert "Bearer" not in rendered
+    assert "\n" not in rendered
+
+
+def test_threshold_activity_omits_raw_session_id():
+    calls, rpc = _rpc_for_mode("activity")
+    seen, capture = _capture_activity()
+    with (
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+        patch("backend.services.ai_usage_guard.log_activity", side_effect=capture),
+    ):
+        mock_supa.return_value.rpc.side_effect = rpc
+        recorded = record_ai_usage(
+            reservation=_reservation(),
+            result=_result(),
+            operation="seo.generate_keywords",
+            session_id=_FORGED_SESSION,
+            model="claude-sonnet-4-6",
+        )
+
+    assert calls == ["record_ai_token_usage"]
+    assert isinstance(recorded, AIUsageRecord)
+    assert recorded.total_tokens == 18
+    assert len(seen) == 1
+    assert seen[0]["activity_type"] == "ai_usage_threshold"
+    assert seen[0]["tenant_id"] == _TENANT_ID
+    assert seen[0]["description"] == "AI monthly usage crossed a guardrail threshold"
+    assert seen[0]["metadata"] == {
+        "operation": "seo.generate_keywords",
+        "model": "claude-sonnet-4-6",
+        "total_tokens": 18,
+        "alert_threshold_tokens": 800_000,
+        "hard_limit_tokens": 1_000_000,
+        "alert_triggered": True,
+        "hard_limit_reached": False,
+    }
+    assert set(seen[0]["metadata"]) == _THRESHOLD_METADATA_KEYS
+    _assert_sentinel_absent(seen)
+
+
+async def test_graph_threshold_activity_omits_raw_session_id():
+    calls, rpc = _rpc_for_mode("activity")
+    seen, capture = _capture_activity()
+
+    async def provider(**_kwargs):
+        return _result()
+
+    result = await _run_metered_graph_node(
+        provider=provider,
+        rpc=rpc,
+        activity=capture,
+        session_id=_FORGED_SESSION,
+    )
+
+    assert calls == ["record_ai_token_usage"]
+    assert result.updates["reply"] == '["keyword"]'
+    assert len(seen) == 1
+    assert seen[0]["activity_type"] == "ai_usage_threshold"
+    assert seen[0]["metadata"]["operation"] == "seo.generate_keywords"
+    assert seen[0]["metadata"]["model"] == "claude-sonnet-4-6"
+    assert seen[0]["metadata"]["total_tokens"] == 18
+    assert seen[0]["metadata"]["alert_triggered"] is True
+    assert seen[0]["metadata"]["hard_limit_reached"] is False
+    assert set(seen[0]["metadata"]) == _THRESHOLD_METADATA_KEYS
+    _assert_sentinel_absent(seen)
+
+
+def test_widget_threshold_activity_omits_raw_session_id(client, mock_supabase):
+    from backend.tests.test_widget_chat_pipeline import _Chain, _patch_llm, _post_chat, _result, _seed
+
+    _seed(
+        mock_supabase,
+        tenant_id="p9270000-0000-4000-8000-000000000005",
+        api_key="anx_acct_threshold",
+    )
+    calls, rpc = _rpc_for_mode("activity")
+
+    def routed(name, params=None, **kwargs):
+        if name == "reserve_ai_token_budget":
+            calls.append(name)
+            return _Chain(_result(True))
+        return rpc(name, params, **kwargs)
+
+    mock_supabase.rpc.side_effect = routed
+    seen, capture = _capture_activity()
+    llm_patch, kb_patch, _llm = _patch_llm("Still here.")
+
+    async def _allow_screen(*_args, **_kwargs):
+        return None
+
+    with (
+        llm_patch,
+        kb_patch,
+        patch(
+            "backend.routers.widget_chat_guards.input_screen_guard",
+            side_effect=_allow_screen,
+        ),
+        patch("backend.services.ai_usage_guard.log_activity", side_effect=capture),
+    ):
+        response = _post_chat(
+            client,
+            "anx_acct_threshold",
+            "How fast can you fix a pipeline?",
+            _FORGED_SESSION,
+        )
+
+    assert response.status_code == 200
+    assert response.json()["response"] == "Still here."
+    assert calls.count("record_ai_token_usage") == 1
+    assert calls.count("release_ai_token_reservation") == 0
+    assert len(seen) == 1
+    assert seen[0]["activity_type"] == "ai_usage_threshold"
+    assert seen[0]["metadata"]["operation"] == "widget_chat.reply"
+    assert seen[0]["metadata"]["total_tokens"] == 18
+    assert seen[0]["metadata"]["alert_triggered"] is True
+    assert isinstance(seen[0]["metadata"]["model"], str)
+    assert set(seen[0]["metadata"]) == _THRESHOLD_METADATA_KEYS
+    _assert_sentinel_absent(seen)
+
+
+def test_blocked_reservation_activity_omits_raw_session_id():
+    seen, capture = _capture_activity()
+    with (
+        patch("backend.services.ai_usage_guard._sum_usage_packs", return_value=0),
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+        patch("backend.services.ai_usage_guard.log_activity", side_effect=capture),
+    ):
+        mock_supa.return_value.rpc.return_value.execute.return_value.data = False
+        reservation = reserve_ai_tokens(
+            tenant={"id": _TENANT_ID, "plan": "chatbot"},
+            estimated_tokens=700,
+            operation="seo.generate_keywords",
+            session_id=_FORGED_SESSION,
+        )
+
+    assert reservation.allowed is False
+    assert reservation.reason == "hard_limit"
+    assert len(seen) == 1
+    assert seen[0]["activity_type"] == "ai_usage_blocked"
+    assert seen[0]["tenant_id"] == _TENANT_ID
+    assert seen[0]["description"] == "AI reply blocked by monthly usage guardrail"
+    assert seen[0]["metadata"] == {
+        "operation": "seo.generate_keywords",
+        "estimated_tokens": 700,
+        "hard_limit_tokens": 800_000,
+    }
+    _assert_sentinel_absent(seen)
