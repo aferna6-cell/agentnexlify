@@ -71,6 +71,29 @@ class AIUsageRecord:
     hard_limit_reached: bool
 
 
+@dataclass(frozen=True)
+class AIUsageAccountingDebt:
+    """Billable usage that could not be proved as an ``AIUsageRecord``.
+
+    ``reason="record_rpc_failed"`` means the record RPC itself raised, so
+    the reservation stays held. ``reason="record_response_unproved"`` means
+    the RPC returned but its payload could not be coerced into proved
+    totals; nothing is invented and callers must not release.
+    ``alert_triggered`` stays false so existing callers that read it
+    (widget chat) do not treat either outcome as a threshold crossing or
+    raise into a post-success release.
+    """
+
+    tenant_id: str
+    period_month: str
+    estimated_tokens: int
+    operation: str
+    session_id: str
+    model: str
+    reason: str = "record_rpc_failed"
+    alert_triggered: bool = False
+
+
 def current_period_month() -> str:
     now = datetime.now(timezone.utc)
     return date(now.year, now.month, 1).isoformat()
@@ -216,10 +239,9 @@ def reserve_ai_tokens(
 
     if not allowed:
         logger.warning(
-            "AI usage hard limit blocked tenant=%s op=%s session=%s estimate=%s hard=%s",
+            "AI usage hard limit blocked tenant=%s op=%s estimate=%s hard=%s",
             tenant_id,
             operation,
-            session_id,
             estimated,
             policy.hard_limit_tokens,
         )
@@ -229,7 +251,6 @@ def reserve_ai_tokens(
             description="AI reply blocked by monthly usage guardrail",
             metadata={
                 "operation": operation,
-                "session_id": session_id,
                 "estimated_tokens": estimated,
                 "hard_limit_tokens": policy.hard_limit_tokens,
             },
@@ -271,6 +292,87 @@ def _usage_value(value: int | None) -> int:
     return value if isinstance(value, int) and value > 0 else 0
 
 
+def _emit_accounting_diagnostic(message: str, *args: object) -> None:
+    """Best-effort log. A handler failure must not escape or release spend."""
+    try:
+        logger.warning(message, *args)
+    except Exception:
+        return
+
+
+def _accounting_debt(
+    *,
+    reservation: AIUsageReservation,
+    operation: str,
+    session_id: str,
+    model: str,
+    reason: str,
+    exc: Exception,
+) -> AIUsageAccountingDebt:
+    """Return debt even when the diagnostic log fails.
+
+    The line omits caller-controlled session ids, response values, and
+    exception text so a newline or address cannot forge a second record.
+    """
+    _emit_accounting_diagnostic(
+        "accounting_debt tenant=%s period=%s op=%s model=%s reserved_tokens=%s reason=%s error_type=%s",
+        reservation.tenant_id,
+        reservation.period_month,
+        operation,
+        model,
+        reservation.estimated_tokens,
+        reason,
+        type(exc).__name__,
+    )
+    return AIUsageAccountingDebt(
+        tenant_id=reservation.tenant_id,
+        period_month=reservation.period_month,
+        estimated_tokens=reservation.estimated_tokens,
+        operation=operation,
+        session_id=session_id,
+        model=model,
+        reason=reason,
+    )
+
+
+def _usage_record_from_payload(data: Any) -> AIUsageRecord:
+    """Prove a ``record_ai_token_usage`` payload or raise without quoting it.
+
+    The SQL function returns one jsonb object: a nonnegative integer
+    ``total_tokens`` plus boolean ``alert_triggered`` and
+    ``hard_limit_reached``. A one-element list of that object is the only
+    wrapper accepted. Missing fields, extra rows, non-dicts, bools, floats,
+    negatives, and numeric strings are not proved and must not be coerced.
+    """
+    if isinstance(data, list):
+        if len(data) != 1 or not isinstance(data[0], dict):
+            raise TypeError
+        payload = data[0]
+    elif isinstance(data, dict):
+        payload = data
+    else:
+        raise TypeError
+
+    if (
+        "total_tokens" not in payload
+        or "alert_triggered" not in payload
+        or "hard_limit_reached" not in payload
+    ):
+        raise TypeError
+    total = payload["total_tokens"]
+    alert = payload["alert_triggered"]
+    hard = payload["hard_limit_reached"]
+    if isinstance(total, bool) or not isinstance(total, int) or total < 0:
+        raise TypeError
+    if not isinstance(alert, bool) or not isinstance(hard, bool):
+        raise TypeError
+    return AIUsageRecord(
+        total_tokens=total,
+        alert_triggered=alert,
+        hard_limit_reached=hard,
+    )
+
+
 def record_ai_usage(
     *,
     reservation: AIUsageReservation,
@@ -278,7 +380,24 @@ def record_ai_usage(
     operation: str,
     session_id: str,
     model: str,
-) -> AIUsageRecord | None:
+) -> AIUsageRecord | AIUsageAccountingDebt | None:
+    """Record actual tokens for a held reservation.
+
+    Success returns ``AIUsageRecord`` only when the RPC payload is a
+    supported object (or a one-element list of that object) with a
+    nonnegative integer total and boolean threshold flags. A
+    ``record_ai_token_usage`` RPC failure returns debt with
+    ``reason="record_rpc_failed"`` and does not release. Any other returned
+    shape, including missing or wrong-typed fields and ``.data`` access
+    failures, returns debt with ``reason="record_response_unproved"`` and
+    does not invent a total or raise. Threshold activity logging failures
+    are swallowed after a proved record. Diagnostic logs are best-effort
+    and omit raw session ids, so a logger failure cannot escape into a
+    caller that releases. Denied and
+    guard-unavailable reservations return None. Provider failures release
+    through ``release_ai_token_reservation`` exactly once at the call site,
+    before this function runs.
+    """
     if not reservation.allowed or reservation.reason == "guard_unavailable":
         return None
 
@@ -297,45 +416,53 @@ def record_ai_usage(
                 "p_hard_limit_tokens": reservation.hard_limit_tokens,
             },
         ).execute()
-    except Exception:
-        logger.warning(
-            "Failed to record AI usage tenant=%s op=%s session=%s",
-            reservation.tenant_id,
-            operation,
-            session_id,
-            exc_info=True,
+    except Exception as exc:
+        return _accounting_debt(
+            reservation=reservation,
+            operation=operation,
+            session_id=session_id,
+            model=model,
+            reason="record_rpc_failed",
+            exc=exc,
         )
-        release_ai_token_reservation(reservation)
-        return None
 
-    payload = response.data or {}
-    if isinstance(payload, list) and payload:
-        payload = payload[0]
-    if not isinstance(payload, dict):
-        payload = {}
-
-    record = AIUsageRecord(
-        total_tokens=int(payload.get("total_tokens") or 0),
-        alert_triggered=bool(payload.get("alert_triggered")),
-        hard_limit_reached=bool(payload.get("hard_limit_reached")),
-    )
+    try:
+        record = _usage_record_from_payload(response.data)
+    except Exception as exc:
+        return _accounting_debt(
+            reservation=reservation,
+            operation=operation,
+            session_id=session_id,
+            model=model,
+            reason="record_response_unproved",
+            exc=exc,
+        )
 
     if record.alert_triggered or record.hard_limit_reached:
-        log_activity(
-            tenant_id=reservation.tenant_id,
-            activity_type="ai_usage_threshold",
-            description="AI monthly usage crossed a guardrail threshold",
-            metadata={
-                "operation": operation,
-                "session_id": session_id,
-                "model": model,
-                "total_tokens": record.total_tokens,
-                "alert_threshold_tokens": reservation.alert_threshold_tokens,
-                "hard_limit_tokens": reservation.hard_limit_tokens,
-                "alert_triggered": record.alert_triggered,
-                "hard_limit_reached": record.hard_limit_reached,
-            },
-        )
+        try:
+            log_activity(
+                tenant_id=reservation.tenant_id,
+                activity_type="ai_usage_threshold",
+                description="AI monthly usage crossed a guardrail threshold",
+                metadata={
+                    "operation": operation,
+                    "model": model,
+                    "total_tokens": record.total_tokens,
+                    "alert_threshold_tokens": reservation.alert_threshold_tokens,
+                    "hard_limit_tokens": reservation.hard_limit_tokens,
+                    "alert_triggered": record.alert_triggered,
+                    "hard_limit_reached": record.hard_limit_reached,
+                },
+            )
+        except Exception as exc:
+            _emit_accounting_diagnostic(
+                "accounting_observability_failed tenant=%s period=%s op=%s model=%s error_type=%s",
+                reservation.tenant_id,
+                reservation.period_month,
+                operation,
+                model,
+                type(exc).__name__,
+            )
 
     return record
 

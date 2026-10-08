@@ -2,7 +2,7 @@
 
 Contract:
 - Claude spend uses reserve_ai_tokens → call_claude_messages →
-  record_ai_usage (release on provider error or record failure).
+  record_ai_usage (release on provider error; record failure retains accounting debt).
   llm_runtime does not record.
 - Hard cap and missing/unloadable tenant policy block before the provider.
   The helper returns the existing fail-open fallback
@@ -29,7 +29,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from backend.routers import widget_chat, widget_chat_fallback, widget_chat_guards
 from backend.services import widget_guard as guard
-from backend.services.ai_usage_guard import AIUsageReservation, record_ai_usage
+from backend.services.ai_usage_guard import AIUsageAccountingDebt, AIUsageReservation, record_ai_usage
 from backend.services.widget_guard import _GUARD_MAX_TOKENS, SCREEN_OPERATION
 from backend.tests.fake_supabase import db, run
 from backend.tests.test_widget_chat_pipeline import _req, _tenant
@@ -454,7 +454,7 @@ def test_metered_call_metadata_is_ids_only():
     _assert_no_secrets(str(meta))
 
 
-def test_record_ai_usage_releases_reservation_on_persist_failure():
+def test_record_ai_usage_retains_debt_on_persist_failure():
     reservation = _allowed()
     with (
         patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
@@ -468,11 +468,13 @@ def test_record_ai_usage_releases_reservation_on_persist_failure():
             session_id=_SESSION_ID,
             model="claude-haiku-4-5-20251001",
         )
-    assert recorded is None
-    release.assert_called_once_with(reservation)
+    assert isinstance(recorded, AIUsageAccountingDebt)
+    assert recorded.reason == "record_rpc_failed"
+    assert recorded.alert_triggered is False
+    release.assert_not_called()
 
 
-def test_screen_path_releases_when_record_rpc_fails_and_keeps_classification():
+def test_screen_path_retains_debt_when_record_rpc_fails_and_keeps_classification():
     reservation = _allowed()
 
     def fail_record(**kwargs):
@@ -494,7 +496,7 @@ def test_screen_path_releases_when_record_rpc_fails_and_keeps_classification():
         result = _run()
     assert result == {"allow": False, "reason": "prompt_injection"}
     provider.assert_awaited_once()
-    release.assert_called_once_with(reservation)
+    release.assert_not_called()
 
 
 def test_provider_and_budget_logs_do_not_leak_secrets(caplog):

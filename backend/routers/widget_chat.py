@@ -107,7 +107,7 @@ async def widget_chat(
 ):
     """Process a chat message through the multi-tenant widget pipeline."""
     request_started = perf_counter()
-    logger.info("widget_chat: received request session=%s", req.session_id)
+    logger.info("widget_chat: received request")
 
     # 1. Look up widget config + tenant
     widget = _get_widget_config(req.api_key)
@@ -163,13 +163,11 @@ async def widget_chat(
                 messages = tiered
         except Exception:
             logger.warning(
-                "widget_chat: memory tier failed for session=%s — using default history",
-                req.session_id,
+                "widget_chat: memory tier failed — using default history",
                 exc_info=True,
             )
     logger.info(
-        "widget_chat: session=%s loaded %d previous messages, first_role=%s",
-        req.session_id,
+        "widget_chat: loaded %d previous messages, first_role=%s",
         len(messages),
         messages[0]["role"] if messages else "NONE",
     )
@@ -215,9 +213,7 @@ async def widget_chat(
             kb_article_refs = await _query_kb_articles(req.message)
         except Exception:
             logger.warning(
-                "widget_chat: kb_articles retrieval failed for session=%s — "
-                "continuing without KB augmentation",
-                req.session_id,
+                "widget_chat: kb_articles retrieval failed — continuing without KB augmentation",
                 exc_info=True,
             )
 
@@ -315,30 +311,6 @@ async def widget_chat(
                 "prompt_profile": ctx.prompt_profile,
             },
         )
-        assistant_text = llm_result.text or (
-            "I'm sorry, I'm having trouble right now. "
-            "Please try again in a moment or contact us directly."
-        )
-        logger.info(
-            "widget_chat: Anthropic success, response_len=%d llm_ms=%d input_tokens=%s output_tokens=%s",
-            len(assistant_text),
-            llm_result.duration_ms,
-            llm_result.input_tokens,
-            llm_result.output_tokens,
-        )
-        usage_record = record_ai_usage(
-            reservation=usage_reservation,
-            result=llm_result,
-            operation="widget_chat.reply",
-            session_id=req.session_id,
-            model=widget_model,
-        )
-        if usage_record and usage_record.alert_triggered:
-            logger.warning(
-                "widget_chat: tenant=%s crossed AI usage alert threshold total_tokens=%s",
-                tenant["id"],
-                usage_record.total_tokens,
-            )
     except anthropic.AuthenticationError as e:
         release_ai_token_reservation(usage_reservation)
         logger.error("widget_chat: Anthropic AUTH error - API key invalid: %s", e)
@@ -371,6 +343,37 @@ async def widget_chat(
             "I'm sorry, I'm having trouble right now. "
             "Please try again in a moment or contact us directly."
         )
+    else:
+        usage_record = record_ai_usage(
+            reservation=usage_reservation,
+            result=llm_result,
+            operation="widget_chat.reply",
+            session_id=req.session_id,
+            model=widget_model,
+        )
+        assistant_text = llm_result.text or (
+            "I'm sorry, I'm having trouble right now. "
+            "Please try again in a moment or contact us directly."
+        )
+        try:
+            logger.info(
+                "widget_chat: Anthropic success, response_len=%d llm_ms=%d input_tokens=%s output_tokens=%s",
+                len(assistant_text),
+                llm_result.duration_ms,
+                llm_result.input_tokens,
+                llm_result.output_tokens,
+            )
+        except Exception:
+            pass
+        if usage_record and usage_record.alert_triggered:
+            try:
+                logger.warning(
+                    "widget_chat: tenant=%s crossed AI usage alert threshold total_tokens=%s",
+                    tenant["id"],
+                    usage_record.total_tokens,
+                )
+            except Exception:
+                pass
 
     # 9. Extract order from AI response (restaurant ordering flow)
     order_data = _extract_order_from_response(assistant_text)
@@ -423,16 +426,14 @@ async def widget_chat(
                 assistant_text=assistant_text,
             ):
                 logger.info(
-                    "widget_chat: confidence_gate LOW_CONFIDENCE session=%s — "
-                    "routing to human handoff instead of model answer",
-                    req.session_id,
+                    "widget_chat: confidence_gate LOW_CONFIDENCE — "
+                    "routing to human handoff instead of model answer"
                 )
                 assistant_text = LOW_CONFIDENCE_FALLBACK_TEXT
         except Exception:
             logger.warning(
-                "widget_chat: confidence gate check failed for session=%s — "
+                "widget_chat: confidence gate check failed — "
                 "falling back to model answer unchanged",
-                req.session_id,
                 exc_info=True,
             )
 
@@ -476,8 +477,7 @@ async def widget_chat(
 
     total_duration_ms = int((perf_counter() - request_started) * 1000)
     logger.info(
-        "widget_chat: timing_summary session=%s total_ms=%d context_ms=%d final_history_count=%d handoff=%s",
-        req.session_id,
+        "widget_chat: timing_summary total_ms=%d context_ms=%d final_history_count=%d handoff=%s",
         total_duration_ms,
         ctx.context_duration_ms,
         len(ctx.history_for_model),
