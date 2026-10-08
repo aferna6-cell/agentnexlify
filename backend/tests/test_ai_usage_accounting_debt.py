@@ -862,6 +862,61 @@ def test_widget_post_record_warning_failure_keeps_reply_and_reservation(
     assert "\n" not in blob
 
 
+def test_widget_success_info_failure_still_records_and_keeps_reply(
+    client, mock_supabase
+):
+    """A success-log failure after a billable result must not skip recording."""
+    from backend.routers.widget_chat import logger as widget_logger
+    from backend.tests.test_widget_chat_pipeline import _Chain, _patch_llm, _post_chat, _result, _seed
+
+    _seed(
+        mock_supabase,
+        tenant_id="p9270000-0000-4000-8000-000000000007",
+        api_key="anx_acct_success_info",
+    )
+    calls, rpc = _rpc_for_mode("activity")
+
+    def routed(name, params=None, **kwargs):
+        if name == "reserve_ai_token_budget":
+            calls.append(name)
+            return _Chain(_result(True))
+        return rpc(name, params, **kwargs)
+
+    mock_supabase.rpc.side_effect = routed
+    llm_patch, kb_patch, llm = _patch_llm("Still here.")
+    original_info = widget_logger.info
+
+    def info(msg, *args, **kwargs):
+        if isinstance(msg, str) and msg.startswith("widget_chat: Anthropic success"):
+            raise RuntimeError("success info down")
+        return original_info(msg, *args, **kwargs)
+
+    async def _allow_screen(*_args, **_kwargs):
+        return None
+
+    with (
+        llm_patch,
+        kb_patch,
+        patch(
+            "backend.routers.widget_chat_guards.input_screen_guard",
+            side_effect=_allow_screen,
+        ),
+        patch.object(widget_logger, "info", side_effect=info),
+    ):
+        response = _post_chat(
+            client,
+            "anx_acct_success_info",
+            "How fast can you fix a pipeline?",
+            "sess-success-info",
+        )
+
+    assert llm.await_count == 1
+    assert calls.count("record_ai_token_usage") == 1
+    assert calls.count("release_ai_token_reservation") == 0
+    assert response.status_code == 200
+    assert response.json()["response"] == "Still here."
+
+
 _THRESHOLD_METADATA_KEYS = {
     "operation",
     "model",

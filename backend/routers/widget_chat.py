@@ -344,17 +344,6 @@ async def widget_chat(
             "Please try again in a moment or contact us directly."
         )
     else:
-        assistant_text = llm_result.text or (
-            "I'm sorry, I'm having trouble right now. "
-            "Please try again in a moment or contact us directly."
-        )
-        logger.info(
-            "widget_chat: Anthropic success, response_len=%d llm_ms=%d input_tokens=%s output_tokens=%s",
-            len(assistant_text),
-            llm_result.duration_ms,
-            llm_result.input_tokens,
-            llm_result.output_tokens,
-        )
         usage_record = record_ai_usage(
             reservation=usage_reservation,
             result=llm_result,
@@ -362,6 +351,20 @@ async def widget_chat(
             session_id=req.session_id,
             model=widget_model,
         )
+        assistant_text = llm_result.text or (
+            "I'm sorry, I'm having trouble right now. "
+            "Please try again in a moment or contact us directly."
+        )
+        try:
+            logger.info(
+                "widget_chat: Anthropic success, response_len=%d llm_ms=%d input_tokens=%s output_tokens=%s",
+                len(assistant_text),
+                llm_result.duration_ms,
+                llm_result.input_tokens,
+                llm_result.output_tokens,
+            )
+        except Exception:
+            pass
         if usage_record and usage_record.alert_triggered:
             try:
                 logger.warning(
