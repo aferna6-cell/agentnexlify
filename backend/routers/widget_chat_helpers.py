@@ -369,7 +369,7 @@ def _get_or_create_conversation(tenant_id: str, session_id: str) -> tuple[str, b
             return result.data[0]["id"], False
     except Exception:
         logger.warning(
-            "conversations lookup failed for session %s", session_id, exc_info=True
+            "conversations lookup failed for tenant %s", tenant_id, exc_info=True
         )
 
     # Try to create one (upsert — safe against race conditions with unique constraint)
@@ -385,14 +385,12 @@ def _get_or_create_conversation(tenant_id: str, session_id: str) -> tuple[str, b
             return new_conv.data[0]["id"], True
         else:
             logger.error(
-                "conversations upsert returned no data for session %s tenant %s",
-                session_id,
+                "conversations upsert returned no data for tenant %s",
                 tenant_id,
             )
     except Exception:
         logger.error(
-            "conversations upsert FAILED for session %s tenant %s",
-            session_id,
+            "conversations upsert FAILED for tenant %s",
             tenant_id,
             exc_info=True,
         )
@@ -400,8 +398,8 @@ def _get_or_create_conversation(tenant_id: str, session_id: str) -> tuple[str, b
     # Fallback: use session_id as a stable conversation identifier.
     # WARNING: This is NOT a UUID — downstream code must validate before DB updates.
     logger.warning(
-        "conversations fallback: using session_id %s as conversation_id (not a UUID)",
-        session_id,
+        "conversations fallback: using non-UUID session key as conversation_id for tenant %s",
+        tenant_id,
     )
     return session_id, True
 
@@ -423,18 +421,16 @@ def _load_chat_history(
             {"role": m["role"], "content": m["content"]} for m in (result.data or [])
         ]
         logger.info(
-            "chat_history: tenant=%s session=%s → %d messages loaded",
+            "chat_history: tenant=%s messages_loaded=%d",
             tenant_id,
-            session_id,
             len(msgs),
         )
         return msgs
     except Exception as e:
         logger.error(
-            "chat_history FAILED: tenant=%s session=%s error=%s",
+            "chat_history FAILED: tenant=%s error_type=%s",
             tenant_id,
-            session_id,
-            e,
+            type(e).__name__,
             exc_info=True,
         )
         # Retry without .order() in case created_at column is missing
@@ -494,18 +490,16 @@ def _save_chat_messages(
         result = tenant_insert(db, "chat_messages", tenant_id, rows).execute()
         inserted = list(result.data or [])
         logger.info(
-            "chat_save: OK tenant=%s session=%s msgs=%d",
+            "chat_save: OK tenant=%s msgs=%d",
             tenant_id,
-            session_id,
             len(inserted),
         )
         return inserted
     except Exception as e:
         logger.error(
-            "chat_save FAILED: tenant=%s session=%s error=%s",
+            "chat_save FAILED: tenant=%s error_type=%s",
             tenant_id,
-            session_id,
-            e,
+            type(e).__name__,
             exc_info=True,
         )
         return []
@@ -1012,9 +1006,8 @@ def _record_response_metric(
         ).execute()
     except Exception:
         logger.error(
-            "response_metric: failed for tenant %s session %s",
+            "response_metric: failed for tenant %s",
             tenant_id,
-            session_id,
             exc_info=True,
         )
 

@@ -786,6 +786,82 @@ def test_widget_provider_failure_releases_exactly_once(client, mock_supabase):
     assert calls.count("release_ai_token_reservation") == 1
 
 
+_RAW_WIDGET_SESSION = (
+    "visitor@example.com\r\nINJECTED authorization=Bearer sentinel-token"
+)
+
+
+def _widget_and_guard_log_blob(caplog) -> str:
+    pieces = []
+    for record in caplog.records:
+        name = record.name
+        if name.startswith("backend.routers.widget_chat") or name == "backend.services.ai_usage_guard":
+            pieces.append(record.getMessage())
+            if record.exc_text:
+                pieces.append(record.exc_text)
+    return "".join(pieces)
+
+
+def test_widget_post_record_warning_failure_keeps_reply_and_reservation(
+    client, mock_supabase, caplog
+):
+    """Provider success plus a later widget warning must not release or replace the reply."""
+    from backend.tests.test_widget_chat_pipeline import _Chain, _patch_llm, _post_chat, _result, _seed
+
+    _seed(
+        mock_supabase,
+        tenant_id="p9270000-0000-4000-8000-000000000006",
+        api_key="anx_acct_widget_warn",
+    )
+    calls, rpc = _rpc_for_mode("activity")
+
+    def routed(name, params=None, **kwargs):
+        if name == "reserve_ai_token_budget":
+            calls.append(name)
+            return _Chain(_result(True))
+        return rpc(name, params, **kwargs)
+
+    mock_supabase.rpc.side_effect = routed
+    llm_patch, kb_patch, llm = _patch_llm("Still here.")
+
+    async def _allow_screen(*_args, **_kwargs):
+        return None
+
+    with (
+        caplog.at_level(logging.DEBUG),
+        llm_patch,
+        kb_patch,
+        patch(
+            "backend.routers.widget_chat_guards.input_screen_guard",
+            side_effect=_allow_screen,
+        ),
+        patch(
+            "backend.routers.widget_chat.logger.warning",
+            side_effect=RuntimeError("widget warning down"),
+        ),
+    ):
+        response = _post_chat(
+            client,
+            "anx_acct_widget_warn",
+            "How fast can you fix a pipeline?",
+            _RAW_WIDGET_SESSION,
+        )
+
+    assert response.status_code == 200
+    assert response.json()["response"] == "Still here."
+    assert llm.await_count == 1
+    assert calls.count("record_ai_token_usage") == 1
+    assert calls.count("release_ai_token_reservation") == 0
+    blob = _widget_and_guard_log_blob(caplog)
+    assert "visitor@example.com" not in blob
+    assert "authorization" not in blob.lower()
+    assert "Bearer" not in blob
+    assert "sentinel-token" not in blob
+    assert "INJECTED" not in blob
+    assert "\r" not in blob
+    assert "\n" not in blob
+
+
 _THRESHOLD_METADATA_KEYS = {
     "operation",
     "model",

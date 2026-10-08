@@ -5,7 +5,7 @@ emits the FALLBACK_TO_SUPPORT_AGENT marker and the widget config opts in,
 the support_agent managed agent takes over the turn; low confidence,
 timeout, or errors force a human handoff instead.
 
-Do NOT add 'from __future__ import annotations' — breaks Pydantic on FastAPI.
+Do not enable postponed annotation evaluation here; it breaks Pydantic on FastAPI.
 """
 
 import logging
@@ -119,16 +119,13 @@ async def _run_support_fallback(
                     _sdk_raw.get("result") or ""
                 )
                 logger.info(
-                    "widget_chat: agent_sdk_fallback session=%s turns=%s cost_usd=%.4f",
-                    session_id,
+                    "widget_chat: agent_sdk_fallback turns=%s cost_usd=%.4f",
                     _sdk_raw.get("turns"),
                     _sdk_raw.get("cost_usd", 0),
                 )
         except Exception:
             logger.warning(
-                "widget_chat: agent_sdk_fallback failed session=%s — "
-                "falling back to managed agents",
-                session_id,
+                "widget_chat: agent_sdk_fallback failed — falling back to managed agents",
                 exc_info=True,
             )
 
@@ -153,9 +150,7 @@ async def _run_support_fallback(
             assistant_text = fallback_answer.strip()
             fallback_success = True
             logger.info(
-                "widget_chat: managed_agent_fallback SUCCESS session=%s "
-                "confidence=%s",
-                session_id,
+                "widget_chat: managed_agent_fallback SUCCESS confidence=%s",
                 fallback_confidence,
             )
         else:
@@ -172,35 +167,28 @@ async def _run_support_fallback(
             )
             assistant_text = f"{handoff_prefix}\nHANDOFF_REQUESTED"
             logger.info(
-                "widget_chat: managed_agent_fallback LOW_CONFIDENCE "
-                "session=%s reason=%s",
-                session_id,
+                "widget_chat: managed_agent_fallback LOW_CONFIDENCE reason=%s",
                 fallback_escalate_reason,
             )
     except asyncio.TimeoutError:
         fallback_error = "timeout"
         assistant_text = generic_handoff_text
         logger.warning(
-            "widget_chat: managed_agent_fallback TIMEOUT session=%s — "
-            "forcing human handoff",
-            session_id,
+            "widget_chat: managed_agent_fallback TIMEOUT — forcing human handoff"
         )
     except ManagedAgentNotConfigured as exc:
         fallback_error = f"not_configured: {exc}"
         assistant_text = generic_handoff_text
         logger.warning(
-            "widget_chat: managed_agent_fallback NOT_CONFIGURED "
-            "session=%s — forcing human handoff (%s)",
-            session_id,
-            exc,
+            "widget_chat: managed_agent_fallback NOT_CONFIGURED — "
+            "forcing human handoff (%s)",
+            type(exc).__name__,
         )
     except Exception as exc:  # noqa: BLE001
         fallback_error = f"exception: {type(exc).__name__}"
         assistant_text = generic_handoff_text
         logger.exception(
-            "widget_chat: managed_agent_fallback ERROR session=%s — "
-            "forcing human handoff",
-            session_id,
+            "widget_chat: managed_agent_fallback ERROR — forcing human handoff"
         )
     finally:
         fallback_duration_ms = int((perf_counter() - fallback_start) * 1000)
@@ -220,9 +208,7 @@ async def _run_support_fallback(
             )
         except Exception:
             logger.warning(
-                "widget_chat: failed to log ai_fallback_fired activity "
-                "for session %s",
-                session_id,
+                "widget_chat: failed to log ai_fallback_fired activity",
                 exc_info=True,
             )
 
