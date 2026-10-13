@@ -288,8 +288,29 @@ def release_ai_token_reservation(reservation: AIUsageReservation) -> None:
         )
 
 
-def _usage_value(value: int | None) -> int:
-    return value if isinstance(value, int) and value > 0 else 0
+def _proved_usage_component(value: Any) -> int:
+    """Accept only a nonnegative built-in int. Bool, None, and other types are unproved."""
+    if type(value) is not int or value < 0:
+        raise TypeError
+    return value
+
+
+def _proved_provider_usage(result: ClaudeCallResult) -> dict[str, int]:
+    """Prove every usage field the record RPC would persist.
+
+    ``llm_runtime`` leaves a field as ``None`` when provider usage is absent.
+    Zero is proved only when the field is an actual ``int`` zero.
+    """
+    return {
+        "p_input_tokens": _proved_usage_component(result.input_tokens),
+        "p_output_tokens": _proved_usage_component(result.output_tokens),
+        "p_cache_creation_input_tokens": _proved_usage_component(
+            result.cache_creation_input_tokens
+        ),
+        "p_cache_read_input_tokens": _proved_usage_component(
+            result.cache_read_input_tokens
+        ),
+    }
 
 
 def _emit_accounting_diagnostic(message: str, *args: object) -> None:
@@ -383,10 +404,13 @@ def record_ai_usage(
 ) -> AIUsageRecord | AIUsageAccountingDebt | None:
     """Record actual tokens for a held reservation.
 
-    Success returns ``AIUsageRecord`` only when the RPC payload is a
+    Success returns ``AIUsageRecord`` only when every provider usage
+    field is a nonnegative built-in int and the RPC payload is a
     supported object (or a one-element list of that object) with a
-    nonnegative integer total and boolean threshold flags. A
-    ``record_ai_token_usage`` RPC failure returns debt with
+    nonnegative integer total and boolean threshold flags. Absent or
+    malformed provider usage returns debt with
+    ``reason="provider_usage_unproved"`` and does not call the record
+    RPC or release. A ``record_ai_token_usage`` RPC failure returns debt with
     ``reason="record_rpc_failed"`` and does not release. Any other returned
     shape, including missing or wrong-typed fields and ``.data`` access
     failures, returns debt with ``reason="record_response_unproved"`` and
@@ -402,16 +426,25 @@ def record_ai_usage(
         return None
 
     try:
+        proved_usage = _proved_provider_usage(result)
+    except Exception as exc:
+        return _accounting_debt(
+            reservation=reservation,
+            operation=operation,
+            session_id=session_id,
+            model=model,
+            reason="provider_usage_unproved",
+            exc=exc,
+        )
+
+    try:
         response = get_service_supabase().rpc(
             "record_ai_token_usage",
             {
                 "p_tenant_id": reservation.tenant_id,
                 "p_period_month": reservation.period_month,
                 "p_reserved_tokens": reservation.estimated_tokens,
-                "p_input_tokens": _usage_value(result.input_tokens),
-                "p_output_tokens": _usage_value(result.output_tokens),
-                "p_cache_creation_input_tokens": _usage_value(result.cache_creation_input_tokens),
-                "p_cache_read_input_tokens": _usage_value(result.cache_read_input_tokens),
+                **proved_usage,
                 "p_alert_threshold_tokens": reservation.alert_threshold_tokens,
                 "p_hard_limit_tokens": reservation.hard_limit_tokens,
             },
