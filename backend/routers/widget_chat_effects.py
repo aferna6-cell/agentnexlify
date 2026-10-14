@@ -6,7 +6,7 @@ the background-task fan-out (OS bridge, lead capture, enrichment,
 categorization, action items, response metrics). Moved verbatim from the
 widget_chat route body; behavior is unchanged.
 
-Do NOT add 'from __future__ import annotations' — breaks Pydantic on FastAPI.
+Do not enable postponed annotation evaluation here; it breaks Pydantic on FastAPI.
 """
 
 import logging
@@ -128,8 +128,8 @@ async def handle_handoff_detection(
                 ).execute()
     except Exception:
         logger.warning(
-            "Failed to tag conversation as handoff for session %s",
-            req.session_id,
+            "Failed to tag conversation as handoff for tenant %s",
+            tenant["id"],
             exc_info=True,
         )
 

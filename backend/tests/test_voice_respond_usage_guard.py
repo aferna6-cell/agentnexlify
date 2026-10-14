@@ -2,7 +2,7 @@
 
 Contract:
 - Claude spend uses reserve_ai_tokens → call_claude_messages → record_ai_usage
-  (release on provider error or record failure). llm_runtime does not record.
+  (release on provider error; record failure retains accounting debt). llm_runtime does not record.
 - Hard cap blocks before the provider. Twilio still gets HTTP 200 TwiML with
   a paused spoken line and goodbye (more Gather rounds cannot unblock a cap).
 - Purchased usage packs are honored because the tenant row passed to reserve
@@ -33,7 +33,7 @@ os.environ.setdefault("TESTING", "1")
 from backend.main import app
 from backend.routers import calls_webhooks as voice
 from backend.routers.automations import verify_twilio_request
-from backend.services.ai_usage_guard import AIUsageReservation, record_ai_usage
+from backend.services.ai_usage_guard import AIUsageAccountingDebt, AIUsageReservation, record_ai_usage
 from backend.tests.conftest import SyncASGITestClient
 from backend.tests.fake_supabase import db, run
 
@@ -362,7 +362,7 @@ def test_metered_call_metadata_is_ids_and_counts_only():
     _assert_no_secrets(str(meta))
 
 
-def test_record_ai_usage_releases_reservation_on_persist_failure():
+def test_record_ai_usage_retains_debt_on_persist_failure():
     reservation = _allowed()
     with (
         patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
@@ -376,11 +376,13 @@ def test_record_ai_usage_releases_reservation_on_persist_failure():
             session_id=_CALL_SID,
             model="claude-sonnet-4-6",
         )
-    assert recorded is None
-    release.assert_called_once_with(reservation)
+    assert isinstance(recorded, AIUsageAccountingDebt)
+    assert recorded.reason == "record_rpc_failed"
+    assert recorded.alert_triggered is False
+    release.assert_not_called()
 
 
-def test_voice_path_releases_when_record_rpc_fails():
+def test_voice_path_retains_debt_when_record_rpc_fails():
     reservation = _allowed()
 
     def fail_record(**kwargs):
@@ -397,7 +399,7 @@ def test_voice_path_releases_when_record_rpc_fails():
         out = run(_call())
     assert out.text.startswith("We are open")
     provider.assert_called_once()
-    release.assert_called_once_with(reservation)
+    release.assert_not_called()
 
 
 # --- Twilio HTTP semantics ---------------------------------------------------
@@ -535,7 +537,7 @@ def test_exhausted_minutes_are_not_rechecked_on_gather(respond_client):
 
 
 def test_record_persist_failure_returns_200_with_completed_reply(respond_client):
-    """Persist failure releases; the already-completed Claude reply is not a 5xx."""
+    """Persist failure retains accounting debt; the completed reply is not a 5xx."""
     reservation = _allowed()
     provider = AsyncMock(return_value=_claude_result())
 
@@ -563,7 +565,7 @@ def test_record_persist_failure_returns_200_with_completed_reply(respond_client)
     assert "We are open" in resp.text
     assert "having a little trouble" not in resp.text
     provider.assert_called_once()
-    release.assert_called_once_with(reservation)
+    release.assert_not_called()
     _assert_no_secrets(resp.text)
 
 

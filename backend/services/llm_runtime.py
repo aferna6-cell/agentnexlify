@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import time
 import uuid
 from dataclasses import dataclass
@@ -100,13 +101,42 @@ def resolve_int_setting(name: str, fallback: int, minimum: int = 1) -> int:
     return fallback
 
 
-def _extract_usage_value(usage: Any, field: str) -> int | None:
+def _builtin_nonnegative_int(value: Any) -> int | None:
+    """Return a built-in nonnegative int, or None when the value is unproved.
+
+    Bool is an int subclass and is rejected. Floats, strings, and negatives
+    are not coerced.
+    """
+    if type(value) is int and value >= 0:
+        return value
+    return None
+
+
+def _extract_core_usage(usage: Any, field: str) -> int | None:
+    """Keep input/output tokens only when the provider already proved them.
+
+    Missing or malformed core counters stay None. They are not rewritten to
+    zero.
+    """
+    if usage is None:
+        return None
+    return _builtin_nonnegative_int(getattr(usage, field, None))
+
+
+def _extract_cache_usage(usage: Any, field: str) -> int | None:
+    """Map an absent SDK cache counter to zero and reject malformed values.
+
+    ``anthropic.types.Usage`` leaves ``cache_creation_input_tokens`` and
+    ``cache_read_input_tokens`` as None when no prompt-cache activity
+    occurred. That absence is a proved zero. A missing usage object is not
+    that case. Bools, negatives, floats, and strings stay unproved.
+    """
     if usage is None:
         return None
     value = getattr(usage, field, None)
-    if isinstance(value, int):
-        return value
-    return None
+    if value is None:
+        return 0
+    return _builtin_nonnegative_int(value)
 
 
 def _extract_text(response: Any) -> str:
@@ -341,6 +371,30 @@ def _log_finish(
     })
 
 
+_EXCEPTION_TYPE_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,80}$")
+
+
+def _safe_exception_type_name(exc: BaseException) -> str:
+    """Return a plain identifier, never the exception text or a forged name."""
+    name = getattr(type(exc), "__name__", "")
+    if type(name) is str and _EXCEPTION_TYPE_NAME.fullmatch(name):
+        return name
+    return "Exception"
+
+
+def _proved_http_status(exc: BaseException) -> int | None:
+    """Return a built-in HTTP status, or None when the value is unproved.
+
+    Bool, strings, floats, and out-of-range numbers are omitted. They are
+    not interpolated.
+    """
+    for attr in ("status_code", "status"):
+        value = getattr(exc, attr, None)
+        if type(value) is int and 100 <= value <= 599:
+            return value
+    return None
+
+
 def _log_error(
     call_id: str,
     operation: str,
@@ -351,9 +405,13 @@ def _log_error(
     metadata: dict[str, Any] | None,
     exc: Exception,
 ) -> None:
-    logger.warning(
-        "llm.call.error id=%s op=%s model=%s duration_ms=%d message_count=%d role_counts=%s system_chars=%d "
-        "message_chars=%d error_type=%s error=%s metadata=%s",
+    error_type = _safe_exception_type_name(exc)
+    status_code = _proved_http_status(exc)
+    message = (
+        "llm.call.error id=%s op=%s model=%s duration_ms=%d message_count=%d role_counts=%s "
+        "system_chars=%d message_chars=%d error_type=%s"
+    )
+    args: list[Any] = [
         call_id,
         operation,
         model,
@@ -362,26 +420,31 @@ def _log_error(
         _message_role_counts(messages),
         len(system or ""),
         _message_chars(messages),
-        type(exc).__name__,
-        str(exc)[:300],
-        _safe_metadata(metadata),
-        exc_info=True,
-    )
-    _write_trace({
+        error_type,
+    ]
+    if status_code is not None:
+        message += " status=%d"
+        args.append(status_code)
+    message += " metadata=%s"
+    args.append(_safe_metadata(metadata))
+    logger.warning(message, *args)
+    trace = {
         "ts": datetime.now(timezone.utc).isoformat(),
         "event": "error",
         "id": call_id,
         "op": operation,
         "model": model,
         "duration_ms": duration_ms,
-        "error_type": type(exc).__name__,
-        "error": str(exc)[:300],
+        "error_type": error_type,
         "message_count": len(messages),
         "role_counts": _message_role_counts(messages),
         "system_chars": len(system or ""),
         "message_chars": _message_chars(messages),
         "metadata": _safe_metadata(metadata),
-    })
+    }
+    if status_code is not None:
+        trace["status_code"] = status_code
+    _write_trace(trace)
 
 
 def _should_retry(exc: Exception) -> bool:
@@ -450,7 +513,7 @@ def _call_single_model(
                 attempts,
                 max_retries,
                 retryable,
-                type(exc).__name__,
+                _safe_exception_type_name(exc),
             )
             if retryable:
                 time.sleep(retry_delay_seconds * attempts)
@@ -463,10 +526,10 @@ def _call_single_model(
     result = ClaudeCallResult(
         text=_extract_text(response),
         duration_ms=duration_ms,
-        input_tokens=_extract_usage_value(usage, "input_tokens"),
-        output_tokens=_extract_usage_value(usage, "output_tokens"),
-        cache_creation_input_tokens=_extract_usage_value(usage, "cache_creation_input_tokens"),
-        cache_read_input_tokens=_extract_usage_value(usage, "cache_read_input_tokens"),
+        input_tokens=_extract_core_usage(usage, "input_tokens"),
+        output_tokens=_extract_core_usage(usage, "output_tokens"),
+        cache_creation_input_tokens=_extract_cache_usage(usage, "cache_creation_input_tokens"),
+        cache_read_input_tokens=_extract_cache_usage(usage, "cache_read_input_tokens"),
         stop_reason=getattr(response, "stop_reason", None),
         raw_response=response,
     )
@@ -584,7 +647,7 @@ def call_claude_messages_sync(
             call_id,
             operation,
             models_to_try,
-            type(last_exc).__name__ if last_exc else None,
+            _safe_exception_type_name(last_exc) if last_exc else None,
         )
         return ClaudeCallResult(
             text=graceful_reply,

@@ -1,0 +1,1539 @@
+"""Post-billable accounting: a failed record RPC must not release spend.
+
+A provider result is already billable. If ``record_ai_token_usage`` fails,
+the reservation stays held and is marked accounting debt. A successful RPC
+with an unreadable payload, or a later activity-log failure, must not raise
+into a caller that would release. Pre-billable paths still release exactly
+once through ``release_ai_token_reservation``.
+"""
+
+import logging
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from backend.services.ai_usage_guard import (
+    AIUsageAccountingDebt,
+    AIUsageRecord,
+    AIUsageReservation,
+    record_ai_usage,
+    release_ai_token_reservation,
+    reserve_ai_tokens,
+)
+from backend.services.llm_runtime import ClaudeCallResult
+
+_TENANT_ID = "tenant-accounting-debt"
+_SESSION_ID = "sess-accounting-debt"
+_SECRET = "sentinel-token prompt body"
+
+
+def _reservation(**overrides) -> AIUsageReservation:
+    payload = {
+        "allowed": True,
+        "tenant_id": _TENANT_ID,
+        "period_month": "2026-10-01",
+        "estimated_tokens": 640,
+        "alert_threshold_tokens": 800_000,
+        "hard_limit_tokens": 1_000_000,
+        "reason": "",
+    }
+    payload.update(overrides)
+    return AIUsageReservation(**payload)
+
+
+def _result() -> ClaudeCallResult:
+    return ClaudeCallResult(
+        text='["keyword"]',
+        duration_ms=12,
+        input_tokens=11,
+        output_tokens=7,
+        cache_creation_input_tokens=0,
+        cache_read_input_tokens=0,
+    )
+
+
+def test_record_rpc_failure_retains_observable_debt_without_release(caplog):
+    """Mutation: release-after-record-failure must fail this test."""
+    calls: list[str] = []
+
+    def rpc(name, _payload):
+        calls.append(name)
+        raise RuntimeError(_SECRET)
+
+    with (
+        caplog.at_level(logging.WARNING),
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+    ):
+        mock_supa.return_value.rpc.side_effect = rpc
+        recorded = record_ai_usage(
+            reservation=_reservation(),
+            result=_result(),
+            operation="seo.generate_keywords",
+            session_id=_SESSION_ID,
+            model="claude-sonnet-4-6",
+        )
+
+    assert calls == ["record_ai_token_usage"]
+    assert isinstance(recorded, AIUsageAccountingDebt)
+    assert not isinstance(recorded, AIUsageRecord)
+    assert recorded.reason == "record_rpc_failed"
+    assert recorded.alert_triggered is False
+    assert recorded.tenant_id == _TENANT_ID
+    assert recorded.session_id == _SESSION_ID
+    assert recorded.operation == "seo.generate_keywords"
+    assert recorded.estimated_tokens == 640
+    assert recorded.model == "claude-sonnet-4-6"
+    assert not (recorded and recorded.alert_triggered)
+    assert "accounting_debt" in caplog.text
+    assert "record_rpc_failed" in caplog.text
+    assert _TENANT_ID in caplog.text
+    assert _SECRET not in caplog.text
+    assert "Traceback" not in caplog.text
+    assert _SECRET not in repr(recorded)
+
+
+def test_record_rpc_success_returns_usage_and_does_not_release():
+    calls: list[tuple[str, int, int]] = []
+
+    def rpc(name, payload):
+        calls.append((name, payload["p_input_tokens"], payload["p_output_tokens"]))
+        response = MagicMock()
+        response.execute.return_value.data = {
+            "total_tokens": 18,
+            "alert_triggered": False,
+            "hard_limit_reached": False,
+        }
+        return response
+
+    with patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa:
+        mock_supa.return_value.rpc.side_effect = rpc
+        recorded = record_ai_usage(
+            reservation=_reservation(),
+            result=_result(),
+            operation="seo.generate_keywords",
+            session_id=_SESSION_ID,
+            model="claude-sonnet-4-6",
+        )
+
+    assert calls == [("record_ai_token_usage", 11, 7)]
+    assert isinstance(recorded, AIUsageRecord)
+    assert recorded.total_tokens == 18
+    assert recorded.alert_triggered is False
+
+
+def test_unheld_reservations_do_not_record_or_release():
+    calls: list[str] = []
+
+    def rpc(name, _payload):
+        calls.append(name)
+        raise AssertionError(name)
+
+    with patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa:
+        mock_supa.return_value.rpc.side_effect = rpc
+        denied = record_ai_usage(
+            reservation=_reservation(allowed=False, reason="hard_limit"),
+            result=_result(),
+            operation="seo.generate_keywords",
+            session_id=_SESSION_ID,
+            model="claude-sonnet-4-6",
+        )
+        unavailable = record_ai_usage(
+            reservation=_reservation(allowed=True, reason="guard_unavailable"),
+            result=_result(),
+            operation="seo.generate_keywords",
+            session_id=_SESSION_ID,
+            model="claude-sonnet-4-6",
+        )
+
+    assert denied is None
+    assert unavailable is None
+    assert calls == []
+
+
+def test_pre_billable_release_fires_exactly_once_for_a_held_reservation():
+    calls: list[tuple[str, str, int]] = []
+
+    def rpc(name, payload):
+        calls.append((name, payload["p_tenant_id"], payload["p_reserved_tokens"]))
+        return MagicMock()
+
+    reservation = _reservation()
+    with patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa:
+        mock_supa.return_value.rpc.side_effect = rpc
+        release_ai_token_reservation(reservation)
+
+    assert calls == [
+        ("release_ai_token_reservation", _TENANT_ID, reservation.estimated_tokens)
+    ]
+
+
+def test_release_skips_denied_and_guard_unavailable_reservations():
+    calls: list[str] = []
+
+    def rpc(name, _payload):
+        calls.append(name)
+        return MagicMock()
+
+    with patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa:
+        mock_supa.return_value.rpc.side_effect = rpc
+        release_ai_token_reservation(_reservation(allowed=False, reason="hard_limit"))
+        release_ai_token_reservation(
+            _reservation(allowed=True, reason="guard_unavailable")
+        )
+
+    assert calls == []
+
+
+def _record_response(data):
+    calls: list[str] = []
+
+    def rpc(name, _payload):
+        calls.append(name)
+        if name != "record_ai_token_usage":
+            return MagicMock()
+        response = MagicMock()
+        response.execute.return_value.data = data
+        return response
+
+    return calls, rpc
+
+
+def test_malformed_record_payload_is_unproved_debt_without_release(caplog):
+    """Successful RPC + total_tokens='malformed' must not raise or release."""
+    calls, rpc = _record_response(
+        {
+            "total_tokens": "malformed",
+            "alert_triggered": False,
+            "hard_limit_reached": False,
+        }
+    )
+    with (
+        caplog.at_level(logging.WARNING),
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+    ):
+        mock_supa.return_value.rpc.side_effect = rpc
+        recorded = record_ai_usage(
+            reservation=_reservation(),
+            result=_result(),
+            operation="seo.generate_keywords",
+            session_id=_SESSION_ID,
+            model="claude-sonnet-4-6",
+        )
+
+    assert calls == ["record_ai_token_usage"]
+    assert isinstance(recorded, AIUsageAccountingDebt)
+    assert not isinstance(recorded, AIUsageRecord)
+    assert recorded.reason == "record_response_unproved"
+    assert "total_tokens" not in recorded.__dataclass_fields__
+    assert recorded.alert_triggered is False
+    assert not (recorded and recorded.alert_triggered)
+    assert "record_response_unproved" in caplog.text
+    assert "record_rpc_failed" not in caplog.text
+    assert "malformed" not in caplog.text
+    assert "invalid literal" not in caplog.text
+    assert "Traceback" not in caplog.text
+
+
+_PROVED_FLAGS = {"alert_triggered": False, "hard_limit_reached": False}
+_UNPROVED_PAYLOADS = [
+    pytest.param(
+        {"alert_triggered": False, "hard_limit_reached": False},
+        "",
+        id="missing-total",
+    ),
+    pytest.param({}, "", id="empty-dict"),
+    pytest.param([], "", id="empty-list"),
+    pytest.param("not-a-record", "not-a-record", id="string-payload"),
+    pytest.param({**_PROVED_FLAGS, "total_tokens": True}, "", id="bool-total"),
+    pytest.param({**_PROVED_FLAGS, "total_tokens": 1.5}, "1.5", id="float-total"),
+    pytest.param({**_PROVED_FLAGS, "total_tokens": -3}, "-3", id="negative-total"),
+    pytest.param(
+        {"total_tokens": 18, "hard_limit_reached": False},
+        "",
+        id="missing-alert-flag",
+    ),
+    pytest.param(
+        {"total_tokens": 18, "alert_triggered": "false", "hard_limit_reached": False},
+        "false",
+        id="string-alert-flag",
+    ),
+    pytest.param(
+        {"total_tokens": 18, "alert_triggered": 1, "hard_limit_reached": False},
+        "",
+        id="int-alert-flag",
+    ),
+    pytest.param(
+        {"total_tokens": 18, "alert_triggered": False},
+        "",
+        id="missing-hard-flag",
+    ),
+    pytest.param(
+        {"total_tokens": 18, "alert_triggered": False, "hard_limit_reached": 0},
+        "",
+        id="int-hard-flag",
+    ),
+    pytest.param(
+        {**_PROVED_FLAGS, "total_tokens": "18"},
+        "18",
+        id="decimal-string-total",
+    ),
+    pytest.param(
+        [
+            {**_PROVED_FLAGS, "total_tokens": 1},
+            {**_PROVED_FLAGS, "total_tokens": 2},
+        ],
+        "",
+        id="multirow",
+    ),
+]
+
+
+def _assert_unproved(recorded, caplog, banned: str) -> None:
+    assert isinstance(recorded, AIUsageAccountingDebt)
+    assert not isinstance(recorded, AIUsageRecord)
+    assert recorded.reason == "record_response_unproved"
+    assert "total_tokens" not in recorded.__dataclass_fields__
+    assert recorded.alert_triggered is False
+    assert "record_response_unproved" in caplog.text
+    assert "record_rpc_failed" not in caplog.text
+    assert "Traceback" not in caplog.text
+    if banned:
+        assert banned not in caplog.text
+
+
+@pytest.mark.parametrize(("payload", "banned"), _UNPROVED_PAYLOADS)
+def test_unproved_record_payloads_do_not_invent_a_total_or_release(payload, banned, caplog):
+    calls, rpc = _record_response(payload)
+    with (
+        caplog.at_level(logging.WARNING),
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+    ):
+        mock_supa.return_value.rpc.side_effect = rpc
+        recorded = record_ai_usage(
+            reservation=_reservation(),
+            result=_result(),
+            operation="seo.generate_keywords",
+            session_id=_SESSION_ID,
+            model="claude-sonnet-4-6",
+        )
+
+    assert calls == ["record_ai_token_usage"]
+    _assert_unproved(recorded, caplog, banned)
+
+
+def test_record_data_access_failure_is_unproved_debt_without_release(caplog):
+    calls: list[str] = []
+
+    class _RaisingExecute:
+        def execute(self):
+            return self
+
+        @property
+        def data(self):
+            raise RuntimeError(_SECRET)
+
+    def rpc(name, _payload):
+        calls.append(name)
+        if name != "record_ai_token_usage":
+            return MagicMock()
+        return _RaisingExecute()
+
+    with (
+        caplog.at_level(logging.WARNING),
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+    ):
+        mock_supa.return_value.rpc.side_effect = rpc
+        recorded = record_ai_usage(
+            reservation=_reservation(),
+            result=_result(),
+            operation="seo.generate_keywords",
+            session_id=_SESSION_ID,
+            model="claude-sonnet-4-6",
+        )
+
+    assert calls == ["record_ai_token_usage"]
+    _assert_unproved(recorded, caplog, _SECRET)
+
+
+def test_singleton_list_and_zero_total_are_proved_records():
+    proved_cases = [
+        [{"total_tokens": 18, "alert_triggered": False, "hard_limit_reached": True}],
+        {"total_tokens": 0, "alert_triggered": False, "hard_limit_reached": False},
+    ]
+    seen = []
+    for payload in proved_cases:
+        calls, rpc = _record_response(payload)
+        with patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa:
+            mock_supa.return_value.rpc.side_effect = rpc
+            recorded = record_ai_usage(
+                reservation=_reservation(),
+                result=_result(),
+                operation="seo.generate_keywords",
+                session_id=_SESSION_ID,
+                model="claude-sonnet-4-6",
+            )
+        assert calls == ["record_ai_token_usage"]
+        assert isinstance(recorded, AIUsageRecord)
+        seen.append((recorded.total_tokens, recorded.hard_limit_reached))
+    assert seen == [(18, True), (0, False)]
+
+
+def test_activity_log_failure_returns_proved_record_without_release(caplog):
+    calls, rpc = _record_response(
+        {"total_tokens": 18, "alert_triggered": True, "hard_limit_reached": False}
+    )
+
+    def explode(**_kwargs):
+        raise RuntimeError(_SECRET)
+
+    with (
+        caplog.at_level(logging.WARNING),
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+        patch("backend.services.ai_usage_guard.log_activity", side_effect=explode),
+    ):
+        mock_supa.return_value.rpc.side_effect = rpc
+        recorded = record_ai_usage(
+            reservation=_reservation(),
+            result=_result(),
+            operation="seo.generate_keywords",
+            session_id=_SESSION_ID,
+            model="claude-sonnet-4-6",
+        )
+
+    assert calls == ["record_ai_token_usage"]
+    assert isinstance(recorded, AIUsageRecord)
+    assert recorded.total_tokens == 18
+    assert recorded.alert_triggered is True
+    assert "accounting_observability_failed" in caplog.text
+    assert "record_response_unproved" not in caplog.text
+    assert "record_rpc_failed" not in caplog.text
+    assert _SECRET not in caplog.text
+    assert "Traceback" not in caplog.text
+
+
+async def _run_metered_graph_node(*, provider, rpc, activity=None, session_id=_SESSION_ID):
+    from backend.graph.adapters.llm import agent_node
+    from backend.graph.nodes import NodeContext
+
+    node = agent_node(
+        operation="seo.generate_keywords",
+        model="claude-sonnet-4-6",
+        prompt="hi",
+    )
+    context = NodeContext(
+        state={},
+        node="keywords",
+        superstep=0,
+        run_id=session_id,
+        tenant_id=_TENANT_ID,
+    )
+    with (
+        patch(
+            "backend.graph.adapters.llm._load_budget_tenant",
+            return_value={"id": _TENANT_ID, "plan": "chatbot"},
+        ),
+        patch("backend.graph.adapters.llm.reserve_ai_tokens", return_value=_reservation()),
+        patch("backend.graph.adapters.llm.call_claude_messages", side_effect=provider),
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+        patch("backend.services.ai_usage_guard.log_activity", side_effect=activity),
+    ):
+        mock_supa.return_value.rpc.side_effect = rpc
+        return await node(context)
+
+
+async def test_graph_adapter_does_not_release_after_malformed_record_payload(caplog):
+    """Falsifier: graph catch must not turn a post-record ValueError into release."""
+    calls, rpc = _record_response(
+        {
+            "total_tokens": "malformed",
+            "alert_triggered": False,
+            "hard_limit_reached": False,
+        }
+    )
+
+    async def provider(**_kwargs):
+        return _result()
+
+    with caplog.at_level(logging.WARNING):
+        result = await _run_metered_graph_node(provider=provider, rpc=rpc)
+
+    assert calls == ["record_ai_token_usage"]
+    assert result.updates["reply"] == '["keyword"]'
+    assert "record_response_unproved" in caplog.text
+    assert "malformed" not in caplog.text
+    assert "invalid literal" not in caplog.text
+
+
+@pytest.mark.parametrize(("payload", "banned"), _UNPROVED_PAYLOADS)
+async def test_graph_adapter_records_without_release_for_unproved_payloads(
+    payload, banned, caplog
+):
+    calls, rpc = _record_response(payload)
+
+    async def provider(**_kwargs):
+        return _result()
+
+    with caplog.at_level(logging.WARNING):
+        result = await _run_metered_graph_node(provider=provider, rpc=rpc)
+
+    assert calls == ["record_ai_token_usage"]
+    assert result.updates["reply"] == '["keyword"]'
+    assert "record_response_unproved" in caplog.text
+    assert "Traceback" not in caplog.text
+    if banned:
+        assert banned not in caplog.text
+
+
+async def test_graph_adapter_records_without_release_when_data_access_fails(caplog):
+    calls: list[str] = []
+
+    class _RaisingExecute:
+        def execute(self):
+            return self
+
+        @property
+        def data(self):
+            raise RuntimeError(_SECRET)
+
+    def rpc(name, _payload):
+        calls.append(name)
+        if name != "record_ai_token_usage":
+            return MagicMock()
+        return _RaisingExecute()
+
+    async def provider(**_kwargs):
+        return _result()
+
+    with caplog.at_level(logging.WARNING):
+        result = await _run_metered_graph_node(provider=provider, rpc=rpc)
+
+    assert calls == ["record_ai_token_usage"]
+    assert result.updates["reply"] == '["keyword"]'
+    assert "record_response_unproved" in caplog.text
+    assert _SECRET not in caplog.text
+    assert "Traceback" not in caplog.text
+
+
+async def test_graph_adapter_does_not_release_when_activity_log_fails(caplog):
+    calls, rpc = _record_response(
+        {"total_tokens": 18, "alert_triggered": True, "hard_limit_reached": False}
+    )
+
+    async def provider(**_kwargs):
+        return _result()
+
+    def explode(**_kwargs):
+        raise RuntimeError(_SECRET)
+
+    with caplog.at_level(logging.WARNING):
+        result = await _run_metered_graph_node(
+            provider=provider,
+            rpc=rpc,
+            activity=explode,
+        )
+
+    assert calls == ["record_ai_token_usage"]
+    assert result.updates["reply"] == '["keyword"]'
+    assert "accounting_observability_failed" in caplog.text
+    assert _SECRET not in caplog.text
+
+
+async def test_graph_provider_failure_releases_exactly_once():
+    calls: list[str] = []
+
+    def rpc(name, _payload):
+        calls.append(name)
+        return MagicMock()
+
+    async def provider(**_kwargs):
+        raise RuntimeError("provider down")
+
+    with pytest.raises(RuntimeError, match="provider down"):
+        await _run_metered_graph_node(provider=provider, rpc=rpc)
+
+    assert calls == ["release_ai_token_reservation"]
+
+
+_FORGED_SESSION = "visitor@example.com\nINJECTED authorization=Bearer sentinel-token"
+_LOG_MODES = ("rpc_failed", "unproved", "activity")
+
+
+def _accounting_log_text(caplog) -> str:
+    return "\n".join(
+        record.getMessage()
+        for record in caplog.records
+        if record.name == "backend.services.ai_usage_guard"
+    )
+
+
+def _forged_session_absent(caplog) -> None:
+    text = _accounting_log_text(caplog)
+    assert "visitor@example.com" not in text
+    assert "INJECTED" not in text
+    assert "Bearer" not in text
+    assert "sentinel-token" not in text
+    assert all("\n" not in record.getMessage() for record in caplog.records if record.name == "backend.services.ai_usage_guard")
+
+
+def _rpc_for_mode(mode: str):
+    calls: list[str] = []
+
+    def rpc(name, _payload=None, **_kwargs):
+        calls.append(name)
+        if name != "record_ai_token_usage":
+            response = MagicMock()
+            response.execute.return_value.data = True
+            return response
+        if mode == "rpc_failed":
+            raise RuntimeError("record rpc down")
+        response = MagicMock()
+        if mode == "activity":
+            response.execute.return_value.data = {
+                "total_tokens": 18,
+                "alert_triggered": True,
+                "hard_limit_reached": False,
+            }
+        else:
+            response.execute.return_value.data = {}
+        return response
+
+    return calls, rpc
+
+
+def _activity_for_mode(mode: str):
+    if mode != "activity":
+        return None
+
+    def explode(**_kwargs):
+        raise RuntimeError("activity down")
+
+    return explode
+
+
+@pytest.mark.parametrize("mode", _LOG_MODES)
+def test_logger_failure_still_returns_accounting_outcome(mode, caplog):
+    calls, rpc = _rpc_for_mode(mode)
+    with (
+        caplog.at_level(logging.WARNING),
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+        patch("backend.services.ai_usage_guard.log_activity", side_effect=_activity_for_mode(mode)),
+        patch("backend.services.ai_usage_guard.logger.warning", side_effect=RuntimeError("log down")),
+    ):
+        mock_supa.return_value.rpc.side_effect = rpc
+        recorded = record_ai_usage(
+            reservation=_reservation(),
+            result=_result(),
+            operation="seo.generate_keywords",
+            session_id=_FORGED_SESSION,
+            model="claude-sonnet-4-6",
+        )
+
+    assert calls == ["record_ai_token_usage"]
+    if mode == "activity":
+        assert isinstance(recorded, AIUsageRecord)
+        assert recorded.total_tokens == 18
+        assert recorded.alert_triggered is True
+    else:
+        assert isinstance(recorded, AIUsageAccountingDebt)
+        assert recorded.reason == (
+            "record_rpc_failed" if mode == "rpc_failed" else "record_response_unproved"
+        )
+        assert recorded.session_id == _FORGED_SESSION
+        assert "total_tokens" not in recorded.__dataclass_fields__
+    _forged_session_absent(caplog)
+
+
+@pytest.mark.parametrize("mode", _LOG_MODES)
+def test_accounting_diagnostics_omit_forged_session_id(mode, caplog):
+    calls, rpc = _rpc_for_mode(mode)
+    with (
+        caplog.at_level(logging.WARNING),
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+        patch("backend.services.ai_usage_guard.log_activity", side_effect=_activity_for_mode(mode)),
+    ):
+        mock_supa.return_value.rpc.side_effect = rpc
+        recorded = record_ai_usage(
+            reservation=_reservation(),
+            result=_result(),
+            operation="seo.generate_keywords",
+            session_id=_FORGED_SESSION,
+            model="claude-sonnet-4-6",
+        )
+
+    assert calls == ["record_ai_token_usage"]
+    text = _accounting_log_text(caplog)
+    if mode == "activity":
+        assert isinstance(recorded, AIUsageRecord)
+        assert "accounting_observability_failed" in text
+    elif mode == "rpc_failed":
+        assert recorded.reason == "record_rpc_failed"
+        assert "accounting_debt" in text
+        assert "record_rpc_failed" in text
+    else:
+        assert recorded.reason == "record_response_unproved"
+        assert "record_response_unproved" in text
+    _forged_session_absent(caplog)
+
+
+@pytest.mark.parametrize("mode", _LOG_MODES)
+async def test_graph_logger_failure_does_not_release(mode):
+    calls, rpc = _rpc_for_mode(mode)
+
+    async def provider(**_kwargs):
+        return _result()
+
+    with patch("backend.services.ai_usage_guard.logger.warning", side_effect=RuntimeError("log down")):
+        result = await _run_metered_graph_node(
+            provider=provider,
+            rpc=rpc,
+            activity=_activity_for_mode(mode),
+            session_id=_FORGED_SESSION,
+        )
+
+    assert calls == ["record_ai_token_usage"]
+    assert result.updates["reply"] == '["keyword"]'
+
+
+@pytest.mark.parametrize("mode", _LOG_MODES)
+def test_widget_logger_failure_does_not_release(mode, client, mock_supabase, caplog):
+    from backend.tests.test_widget_chat_pipeline import _Chain, _patch_llm, _post_chat, _result, _seed
+
+    suffix = {"rpc_failed": "1", "unproved": "2", "activity": "3"}[mode]
+    tenant_id = f"p9270000-0000-4000-8000-00000000000{suffix}"
+    api_key = f"anx_acct_log_{mode}"
+    _seed(mock_supabase, tenant_id=tenant_id, api_key=api_key)
+    calls, rpc = _rpc_for_mode(mode)
+
+    def routed(name, params=None, **kwargs):
+        if name == "reserve_ai_token_budget":
+            calls.append(name)
+            return _Chain(_result(True))
+        return rpc(name, params, **kwargs)
+
+    mock_supabase.rpc.side_effect = routed
+    llm_patch, kb_patch, _llm = _patch_llm("Still here.")
+
+    async def _allow_screen(*_args, **_kwargs):
+        return None
+
+    with (
+        caplog.at_level(logging.WARNING),
+        llm_patch,
+        kb_patch,
+        patch(
+            "backend.routers.widget_chat_guards.input_screen_guard",
+            side_effect=_allow_screen,
+        ),
+        patch("backend.services.ai_usage_guard.log_activity", side_effect=_activity_for_mode(mode)),
+        patch("backend.services.ai_usage_guard.logger.warning", side_effect=RuntimeError("log down")),
+    ):
+        response = _post_chat(
+            client,
+            api_key,
+            "How fast can you fix a pipeline?",
+            _FORGED_SESSION,
+        )
+
+    assert response.status_code == 200
+    assert response.json()["response"] == "Still here."
+    assert calls.count("record_ai_token_usage") == 1
+    assert calls.count("release_ai_token_reservation") == 0
+    _forged_session_absent(caplog)
+
+
+def test_widget_provider_failure_releases_exactly_once(client, mock_supabase):
+    from backend.tests.test_widget_chat_pipeline import _Chain, _post_chat, _result, _seed
+
+    _seed(
+        mock_supabase,
+        tenant_id="p9270000-0000-4000-8000-000000000004",
+        api_key="anx_acct_provider_down",
+    )
+    calls: list[str] = []
+
+    def routed(name, params=None, **_kwargs):
+        calls.append(name)
+        if name == "reserve_ai_token_budget":
+            return _Chain(_result(True))
+        raise AssertionError(name)
+
+    mock_supabase.rpc.side_effect = routed
+
+    async def provider(**_kwargs):
+        raise RuntimeError("provider down")
+
+    async def _allow_screen(*_args, **_kwargs):
+        return None
+
+    with (
+        patch("backend.routers.widget_chat.call_claude_messages", side_effect=provider),
+        patch("backend.routers.widget_chat._query_kb_articles", new=AsyncMock(return_value=[])),
+        patch(
+            "backend.routers.widget_chat_guards.input_screen_guard",
+            side_effect=_allow_screen,
+        ),
+    ):
+        response = _post_chat(
+            client,
+            "anx_acct_provider_down",
+            "How fast can you fix a pipeline?",
+            "sess-provider-down",
+        )
+
+    assert response.status_code == 200
+    assert "having trouble" in response.json()["response"]
+    assert calls.count("record_ai_token_usage") == 0
+    assert calls.count("release_ai_token_reservation") == 1
+
+
+_RAW_WIDGET_SESSION = (
+    "visitor@example.com\r\nINJECTED authorization=Bearer sentinel-token"
+)
+
+
+def _widget_and_guard_log_blob(caplog) -> str:
+    pieces = []
+    for record in caplog.records:
+        name = record.name
+        if name.startswith("backend.routers.widget_chat") or name == "backend.services.ai_usage_guard":
+            pieces.append(record.getMessage())
+            if record.exc_text:
+                pieces.append(record.exc_text)
+    return "".join(pieces)
+
+
+def test_widget_post_record_warning_failure_keeps_reply_and_reservation(
+    client, mock_supabase, caplog
+):
+    """Provider success plus a later widget warning must not release or replace the reply."""
+    from backend.tests.test_widget_chat_pipeline import _Chain, _patch_llm, _post_chat, _result, _seed
+
+    _seed(
+        mock_supabase,
+        tenant_id="p9270000-0000-4000-8000-000000000006",
+        api_key="anx_acct_widget_warn",
+    )
+    calls, rpc = _rpc_for_mode("activity")
+
+    def routed(name, params=None, **kwargs):
+        if name == "reserve_ai_token_budget":
+            calls.append(name)
+            return _Chain(_result(True))
+        return rpc(name, params, **kwargs)
+
+    mock_supabase.rpc.side_effect = routed
+    llm_patch, kb_patch, llm = _patch_llm("Still here.")
+
+    async def _allow_screen(*_args, **_kwargs):
+        return None
+
+    with (
+        caplog.at_level(logging.DEBUG),
+        llm_patch,
+        kb_patch,
+        patch(
+            "backend.routers.widget_chat_guards.input_screen_guard",
+            side_effect=_allow_screen,
+        ),
+        patch(
+            "backend.routers.widget_chat.logger.warning",
+            side_effect=RuntimeError("widget warning down"),
+        ),
+    ):
+        response = _post_chat(
+            client,
+            "anx_acct_widget_warn",
+            "How fast can you fix a pipeline?",
+            _RAW_WIDGET_SESSION,
+        )
+
+    assert response.status_code == 200
+    assert response.json()["response"] == "Still here."
+    assert llm.await_count == 1
+    assert calls.count("record_ai_token_usage") == 1
+    assert calls.count("release_ai_token_reservation") == 0
+    blob = _widget_and_guard_log_blob(caplog)
+    assert "visitor@example.com" not in blob
+    assert "authorization" not in blob.lower()
+    assert "Bearer" not in blob
+    assert "sentinel-token" not in blob
+    assert "INJECTED" not in blob
+    assert "\r" not in blob
+    assert "\n" not in blob
+
+
+def test_widget_success_info_failure_still_records_and_keeps_reply(
+    client, mock_supabase
+):
+    """A success-log failure after a billable result must not skip recording."""
+    from backend.routers.widget_chat import logger as widget_logger
+    from backend.tests.test_widget_chat_pipeline import _Chain, _patch_llm, _post_chat, _result, _seed
+
+    _seed(
+        mock_supabase,
+        tenant_id="p9270000-0000-4000-8000-000000000007",
+        api_key="anx_acct_success_info",
+    )
+    calls, rpc = _rpc_for_mode("activity")
+
+    def routed(name, params=None, **kwargs):
+        if name == "reserve_ai_token_budget":
+            calls.append(name)
+            return _Chain(_result(True))
+        return rpc(name, params, **kwargs)
+
+    mock_supabase.rpc.side_effect = routed
+    llm_patch, kb_patch, llm = _patch_llm("Still here.")
+    original_info = widget_logger.info
+
+    def info(msg, *args, **kwargs):
+        if isinstance(msg, str) and msg.startswith("widget_chat: Anthropic success"):
+            raise RuntimeError("success info down")
+        return original_info(msg, *args, **kwargs)
+
+    async def _allow_screen(*_args, **_kwargs):
+        return None
+
+    with (
+        llm_patch,
+        kb_patch,
+        patch(
+            "backend.routers.widget_chat_guards.input_screen_guard",
+            side_effect=_allow_screen,
+        ),
+        patch.object(widget_logger, "info", side_effect=info),
+    ):
+        response = _post_chat(
+            client,
+            "anx_acct_success_info",
+            "How fast can you fix a pipeline?",
+            "sess-success-info",
+        )
+
+    assert llm.await_count == 1
+    assert calls.count("record_ai_token_usage") == 1
+    assert calls.count("release_ai_token_reservation") == 0
+    assert response.status_code == 200
+    assert response.json()["response"] == "Still here."
+
+
+_THRESHOLD_METADATA_KEYS = {
+    "operation",
+    "model",
+    "total_tokens",
+    "alert_threshold_tokens",
+    "hard_limit_tokens",
+    "alert_triggered",
+    "hard_limit_reached",
+}
+
+
+def _capture_activity():
+    seen: list[dict] = []
+
+    def capture(**kwargs):
+        seen.append(kwargs)
+
+    return seen, capture
+
+
+def _assert_sentinel_absent(payload) -> None:
+    rendered = repr(payload)
+    assert "visitor@example.com" not in rendered
+    assert "INJECTED" not in rendered
+    assert "Bearer" not in rendered
+    assert "\n" not in rendered
+
+
+def test_threshold_activity_omits_raw_session_id():
+    calls, rpc = _rpc_for_mode("activity")
+    seen, capture = _capture_activity()
+    with (
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+        patch("backend.services.ai_usage_guard.log_activity", side_effect=capture),
+    ):
+        mock_supa.return_value.rpc.side_effect = rpc
+        recorded = record_ai_usage(
+            reservation=_reservation(),
+            result=_result(),
+            operation="seo.generate_keywords",
+            session_id=_FORGED_SESSION,
+            model="claude-sonnet-4-6",
+        )
+
+    assert calls == ["record_ai_token_usage"]
+    assert isinstance(recorded, AIUsageRecord)
+    assert recorded.total_tokens == 18
+    assert len(seen) == 1
+    assert seen[0]["activity_type"] == "ai_usage_threshold"
+    assert seen[0]["tenant_id"] == _TENANT_ID
+    assert seen[0]["description"] == "AI monthly usage crossed a guardrail threshold"
+    assert seen[0]["metadata"] == {
+        "operation": "seo.generate_keywords",
+        "model": "claude-sonnet-4-6",
+        "total_tokens": 18,
+        "alert_threshold_tokens": 800_000,
+        "hard_limit_tokens": 1_000_000,
+        "alert_triggered": True,
+        "hard_limit_reached": False,
+    }
+    assert set(seen[0]["metadata"]) == _THRESHOLD_METADATA_KEYS
+    _assert_sentinel_absent(seen)
+
+
+async def test_graph_threshold_activity_omits_raw_session_id():
+    calls, rpc = _rpc_for_mode("activity")
+    seen, capture = _capture_activity()
+
+    async def provider(**_kwargs):
+        return _result()
+
+    result = await _run_metered_graph_node(
+        provider=provider,
+        rpc=rpc,
+        activity=capture,
+        session_id=_FORGED_SESSION,
+    )
+
+    assert calls == ["record_ai_token_usage"]
+    assert result.updates["reply"] == '["keyword"]'
+    assert len(seen) == 1
+    assert seen[0]["activity_type"] == "ai_usage_threshold"
+    assert seen[0]["metadata"]["operation"] == "seo.generate_keywords"
+    assert seen[0]["metadata"]["model"] == "claude-sonnet-4-6"
+    assert seen[0]["metadata"]["total_tokens"] == 18
+    assert seen[0]["metadata"]["alert_triggered"] is True
+    assert seen[0]["metadata"]["hard_limit_reached"] is False
+    assert set(seen[0]["metadata"]) == _THRESHOLD_METADATA_KEYS
+    _assert_sentinel_absent(seen)
+
+
+def test_widget_threshold_activity_omits_raw_session_id(client, mock_supabase):
+    from backend.tests.test_widget_chat_pipeline import _Chain, _patch_llm, _post_chat, _result, _seed
+
+    _seed(
+        mock_supabase,
+        tenant_id="p9270000-0000-4000-8000-000000000005",
+        api_key="anx_acct_threshold",
+    )
+    calls, rpc = _rpc_for_mode("activity")
+
+    def routed(name, params=None, **kwargs):
+        if name == "reserve_ai_token_budget":
+            calls.append(name)
+            return _Chain(_result(True))
+        return rpc(name, params, **kwargs)
+
+    mock_supabase.rpc.side_effect = routed
+    seen, capture = _capture_activity()
+    llm_patch, kb_patch, _llm = _patch_llm("Still here.")
+
+    async def _allow_screen(*_args, **_kwargs):
+        return None
+
+    with (
+        llm_patch,
+        kb_patch,
+        patch(
+            "backend.routers.widget_chat_guards.input_screen_guard",
+            side_effect=_allow_screen,
+        ),
+        patch("backend.services.ai_usage_guard.log_activity", side_effect=capture),
+    ):
+        response = _post_chat(
+            client,
+            "anx_acct_threshold",
+            "How fast can you fix a pipeline?",
+            _FORGED_SESSION,
+        )
+
+    assert response.status_code == 200
+    assert response.json()["response"] == "Still here."
+    assert calls.count("record_ai_token_usage") == 1
+    assert calls.count("release_ai_token_reservation") == 0
+    assert len(seen) == 1
+    assert seen[0]["activity_type"] == "ai_usage_threshold"
+    assert seen[0]["metadata"]["operation"] == "widget_chat.reply"
+    assert seen[0]["metadata"]["total_tokens"] == 18
+    assert seen[0]["metadata"]["alert_triggered"] is True
+    assert isinstance(seen[0]["metadata"]["model"], str)
+    assert set(seen[0]["metadata"]) == _THRESHOLD_METADATA_KEYS
+    _assert_sentinel_absent(seen)
+
+
+def test_blocked_reservation_activity_omits_raw_session_id():
+    seen, capture = _capture_activity()
+    with (
+        patch("backend.services.ai_usage_guard._sum_usage_packs", return_value=0),
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+        patch("backend.services.ai_usage_guard.log_activity", side_effect=capture),
+    ):
+        mock_supa.return_value.rpc.return_value.execute.return_value.data = False
+        reservation = reserve_ai_tokens(
+            tenant={"id": _TENANT_ID, "plan": "chatbot"},
+            estimated_tokens=700,
+            operation="seo.generate_keywords",
+            session_id=_FORGED_SESSION,
+        )
+
+    assert reservation.allowed is False
+    assert reservation.reason == "hard_limit"
+    assert len(seen) == 1
+    assert seen[0]["activity_type"] == "ai_usage_blocked"
+    assert seen[0]["tenant_id"] == _TENANT_ID
+    assert seen[0]["description"] == "AI reply blocked by monthly usage guardrail"
+    assert seen[0]["metadata"] == {
+        "operation": "seo.generate_keywords",
+        "estimated_tokens": 700,
+        "hard_limit_tokens": 800_000,
+    }
+    _assert_sentinel_absent(seen)
+
+
+_USAGE_FIELDS = (
+    "input_tokens",
+    "output_tokens",
+    "cache_creation_input_tokens",
+    "cache_read_input_tokens",
+)
+_SAFE_FALLBACK = (
+    "I'm sorry, I'm having trouble right now. "
+    "Please try again in a moment or contact us directly."
+)
+
+
+def _absent_usage_result() -> ClaudeCallResult:
+    return ClaudeCallResult(
+        text="",
+        duration_ms=3,
+        input_tokens=None,
+        output_tokens=None,
+        cache_creation_input_tokens=None,
+        cache_read_input_tokens=None,
+    )
+
+
+def test_absent_provider_usage_does_not_record_fabricated_zeroes(caplog):
+    """Billable result with missing usage must retain the 823-token reservation."""
+    calls: list[dict] = []
+
+    def rpc(name, payload):
+        calls.append({"name": name, **payload})
+        response = MagicMock()
+        response.execute.return_value.data = {
+            "total_tokens": 0,
+            "alert_triggered": False,
+            "hard_limit_reached": False,
+        }
+        return response
+
+    with (
+        caplog.at_level(logging.DEBUG),
+        patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
+    ):
+        mock_supa.return_value.rpc.side_effect = rpc
+        recorded = record_ai_usage(
+            reservation=_reservation(estimated_tokens=823),
+            result=_absent_usage_result(),
+            operation="widget_chat.reply",
+            session_id=_FORGED_SESSION,
+            model="claude-sonnet-4-6",
+        )
+
+    assert calls == []
+    assert isinstance(recorded, AIUsageAccountingDebt)
+    assert recorded.reason == "provider_usage_unproved"
+    assert recorded.estimated_tokens == 823
+    assert recorded.session_id == _FORGED_SESSION
+    assert "provider_usage_unproved" in caplog.text
+    assert "Traceback" not in caplog.text
+    assert _FORGED_SESSION not in caplog.text
+    assert "visitor@example.com" not in caplog.text
+
+
+@pytest.mark.parametrize("field", _USAGE_FIELDS)
+@pytest.mark.parametrize("bad", (True, -3, 1.5, "0"))
+def test_malformed_provider_usage_component_is_unproved_debt(field, bad):
+    calls: list[str] = []
+
+    def rpc(name, _payload):
+        calls.append(name)
+        raise AssertionError(name)
+
+    usage = {
+        "input_tokens": 2,
+        "output_tokens": 2,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+    }
+    usage[field] = bad
+    with patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa:
+        mock_supa.return_value.rpc.side_effect = rpc
+        recorded = record_ai_usage(
+            reservation=_reservation(estimated_tokens=823),
+            result=ClaudeCallResult(text="ok", duration_ms=1, **usage),
+            operation="widget_chat.reply",
+            session_id=_SESSION_ID,
+            model="claude-sonnet-4-6",
+        )
+
+    assert calls == []
+    assert isinstance(recorded, AIUsageAccountingDebt)
+    assert recorded.reason == "provider_usage_unproved"
+    assert recorded.estimated_tokens == 823
+
+
+def test_explicit_zero_provider_usage_still_records_once():
+    calls: list[dict] = []
+
+    def rpc(name, payload):
+        calls.append(payload)
+        response = MagicMock()
+        response.execute.return_value.data = {
+            "total_tokens": 0,
+            "alert_triggered": False,
+            "hard_limit_reached": False,
+        }
+        return response
+
+    with patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa:
+        mock_supa.return_value.rpc.side_effect = rpc
+        recorded = record_ai_usage(
+            reservation=_reservation(estimated_tokens=823),
+            result=ClaudeCallResult(
+                text="",
+                duration_ms=1,
+                input_tokens=0,
+                output_tokens=0,
+                cache_creation_input_tokens=0,
+                cache_read_input_tokens=0,
+            ),
+            operation="widget_chat.reply",
+            session_id=_SESSION_ID,
+            model="claude-sonnet-4-6",
+        )
+
+    assert len(calls) == 1
+    assert calls[0]["p_reserved_tokens"] == 823
+    assert calls[0]["p_input_tokens"] == 0
+    assert calls[0]["p_output_tokens"] == 0
+    assert calls[0]["p_cache_creation_input_tokens"] == 0
+    assert calls[0]["p_cache_read_input_tokens"] == 0
+    assert isinstance(recorded, AIUsageRecord)
+    assert recorded.total_tokens == 0
+
+
+def _post_widget_result(client, mock_supabase, *, api_key, tenant_suffix, result, session_id):
+    from backend.tests.test_widget_chat_pipeline import _Chain, _post_chat, _result, _seed
+
+    _seed(
+        mock_supabase,
+        tenant_id=f"p9270000-0000-4000-8000-0000000000{tenant_suffix}",
+        api_key=api_key,
+    )
+    calls: list[dict] = []
+
+    def routed(name, params=None, **_kwargs):
+        calls.append({"name": name, "payload": params})
+        if name == "reserve_ai_token_budget":
+            return _Chain(_result(True))
+        response = MagicMock()
+        response.execute.return_value.data = {
+            "total_tokens": 4,
+            "alert_triggered": False,
+            "hard_limit_reached": False,
+        }
+        return response
+
+    mock_supabase.rpc.side_effect = routed
+
+    async def provider(**_kwargs):
+        return result
+
+    async def _allow_screen(*_args, **_kwargs):
+        return None
+
+    with (
+        patch("backend.routers.widget_chat.call_claude_messages", side_effect=provider),
+        patch(
+            "backend.routers.widget_chat._query_kb_articles",
+            new=AsyncMock(return_value=[]),
+        ),
+        patch(
+            "backend.routers.widget_chat_guards.input_screen_guard",
+            side_effect=_allow_screen,
+        ),
+    ):
+        response = _post_chat(
+            client,
+            api_key,
+            "How fast can you fix a pipeline?",
+            session_id,
+        )
+    return response, calls
+
+
+def test_widget_absent_usage_keeps_fallback_without_zero_record(client, mock_supabase):
+    response, calls = _post_widget_result(
+        client,
+        mock_supabase,
+        api_key="anx_acct_absent_usage",
+        tenant_suffix="18",
+        result=_absent_usage_result(),
+        session_id=_FORGED_SESSION,
+    )
+    record_calls = [item for item in calls if item["name"] == "record_ai_token_usage"]
+    release_calls = [item for item in calls if item["name"] == "release_ai_token_reservation"]
+    assert response.status_code == 200
+    assert response.json()["response"] == _SAFE_FALLBACK
+    assert record_calls == []
+    assert release_calls == []
+
+
+def test_widget_empty_text_with_valid_usage_records_fallback(client, mock_supabase):
+    response, calls = _post_widget_result(
+        client,
+        mock_supabase,
+        api_key="anx_acct_empty_text",
+        tenant_suffix="19",
+        result=ClaudeCallResult(
+            text="",
+            duration_ms=4,
+            input_tokens=4,
+            output_tokens=0,
+            cache_creation_input_tokens=0,
+            cache_read_input_tokens=0,
+        ),
+        session_id="sess-empty-text",
+    )
+    record_calls = [item for item in calls if item["name"] == "record_ai_token_usage"]
+    release_calls = [item for item in calls if item["name"] == "release_ai_token_reservation"]
+    assert response.status_code == 200
+    assert response.json()["response"] == _SAFE_FALLBACK
+    assert len(record_calls) == 1
+    assert record_calls[0]["payload"]["p_input_tokens"] == 4
+    assert record_calls[0]["payload"]["p_output_tokens"] == 0
+    assert release_calls == []
+
+
+_PROVIDER_CANARY = "visitor@example.com\r\nINJECTED authorization=Bearer sentinel-token"
+
+
+class _WidgetProviderError(Exception):
+    def __init__(self):
+        super().__init__(_PROVIDER_CANARY + " response body")
+        self.status_code = 503
+
+
+def test_widget_provider_failure_omits_exception_text(client, mock_supabase, caplog, monkeypatch, tmp_path):
+    """Real widget provider failure keeps the fallback and does not log the exception."""
+    import json
+    from pathlib import Path
+
+    from backend.tests.test_llm_runtime_usage_normalization import _FakeAnthropic
+    from backend.tests.test_widget_chat_pipeline import _Chain, _post_chat, _result, _seed
+
+    monkeypatch.setenv("LLM_TRACE_DIR", str(tmp_path))
+    monkeypatch.setenv("LLM_TRACE_ENABLED", "1")
+    caplog.set_level(logging.DEBUG)
+    _seed(
+        mock_supabase,
+        tenant_id="p9270000-0000-4000-8000-000000000020",
+        api_key="anx_acct_provider_privacy",
+    )
+    calls: list[str] = []
+
+    def routed(name, params=None, **_kwargs):
+        calls.append(name)
+        if name == "reserve_ai_token_budget":
+            return _Chain(_result(True))
+        raise AssertionError(name)
+
+    mock_supabase.rpc.side_effect = routed
+    fake = _FakeAnthropic(_WidgetProviderError())
+
+    async def _allow_screen(*_args, **_kwargs):
+        return None
+
+    with (
+        patch("backend.services.llm_runtime.anthropic.Anthropic", fake),
+        patch("backend.routers.widget_chat._query_kb_articles", new=AsyncMock(return_value=[])),
+        patch(
+            "backend.routers.widget_chat_guards.input_screen_guard",
+            side_effect=_allow_screen,
+        ),
+    ):
+        response = _post_chat(
+            client,
+            "anx_acct_provider_privacy",
+            "How fast can you fix a pipeline?",
+            "sess-provider-privacy",
+        )
+
+    assert response.status_code == 200
+    assert response.json()["response"] == _SAFE_FALLBACK
+    assert calls.count("record_ai_token_usage") == 0
+    assert calls.count("release_ai_token_reservation") == 1
+    assert len(fake.messages.calls) == 1
+
+    pieces = []
+    for record in caplog.records:
+        if record.name.startswith("backend.routers.widget_chat") or record.name.startswith(
+            "backend.services.llm_runtime"
+        ):
+            pieces.append(record.getMessage())
+            assert "\r" not in record.getMessage()
+            assert "\n" not in record.getMessage()
+            assert record.exc_info is None
+            if record.exc_text:
+                pieces.append(record.exc_text)
+    trace = "".join(path.read_text(encoding="utf-8") for path in Path(tmp_path).glob("*.jsonl"))
+    blob = "\n".join(pieces) + trace
+    for piece in (
+        "visitor@example.com",
+        "INJECTED",
+        "authorization=Bearer",
+        "sentinel-token",
+        "Traceback",
+        "response body",
+        "\r",
+    ):
+        assert piece not in blob
+    assert "error_type=_WidgetProviderError" in blob
+    assert "status=503" in blob
+    rows = [json.loads(line) for line in trace.splitlines() if line.strip()]
+    assert rows[-1]["error_type"] == "_WidgetProviderError"
+    assert rows[-1]["status_code"] == 503
+
+
+class _BadProviderStatus:
+    def __str__(self):
+        return _PROVIDER_CANARY + " response body"
+
+
+def _concrete_provider_error(family, status):
+    import httpx
+    import anthropic
+
+    message = _PROVIDER_CANARY + " response body"
+    request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+    proved = type(status) is int and 100 <= status <= 599
+    if family == "generic":
+        exc = _WidgetProviderError()
+        exc.status_code = status
+        return exc, "_WidgetProviderError"
+    if family == "api":
+        exc = anthropic.APIError(message, request, body=message)
+        exc.status_code = status
+        return exc, "APIError"
+    response = httpx.Response(status if proved else 400, request=request)
+    cls = anthropic.AuthenticationError if family == "auth" else anthropic.RateLimitError
+    exc = cls(message, response=response, body=message)
+    if not proved:
+        exc.status_code = status
+    return exc, cls.__name__
+
+
+@pytest.mark.parametrize(
+    ("case_id", "family", "status", "proved"),
+    (
+        (30, "auth", 401, True),
+        (31, "rate", 429, True),
+        (32, "api", 500, True),
+        (33, "api", True, False),
+        (34, "api", "401", False),
+        (35, "api", 1.5, False),
+        (36, "api", -1, False),
+        (37, "api", 99, False),
+        (38, "api", 600, False),
+        (39, "auth", True, False),
+        (40, "rate", "429", False),
+        (41, "generic", 503, True),
+        (42, "generic", _BadProviderStatus(), False),
+    ),
+)
+def test_widget_concrete_provider_errors_omit_exception_text(
+    client, mock_supabase, caplog, monkeypatch, tmp_path, case_id, family, status, proved
+):
+    """Every widget provider-failure catch logs only a safe type and a proved status."""
+    import json
+    from pathlib import Path
+
+    from backend.tests.test_llm_runtime_usage_normalization import _FakeAnthropic
+    from backend.tests.test_widget_chat_pipeline import _Chain, _post_chat, _result, _seed
+
+    monkeypatch.setenv("LLM_TRACE_DIR", str(tmp_path))
+    monkeypatch.setenv("LLM_TRACE_ENABLED", "1")
+    caplog.set_level(logging.DEBUG)
+    api_key = f"anx_acct_priv_{case_id}"
+    _seed(
+        mock_supabase,
+        tenant_id=f"p9270000-0000-4000-8000-{case_id:012d}",
+        api_key=api_key,
+    )
+    calls: list[str] = []
+
+    def routed(name, params=None, **_kwargs):
+        calls.append(name)
+        if name in {"reserve_ai_token_budget", "release_ai_token_reservation"}:
+            return _Chain(_result(True))
+        raise AssertionError(name)
+
+    mock_supabase.rpc.side_effect = routed
+    exc, error_type = _concrete_provider_error(family, status)
+    fake = _FakeAnthropic(exc)
+
+    async def _allow_screen(*_args, **_kwargs):
+        return None
+
+    with (
+        patch("backend.services.llm_runtime.anthropic.Anthropic", fake),
+        patch("backend.services.llm_runtime.time.sleep", return_value=None),
+        patch("backend.routers.widget_chat._query_kb_articles", new=AsyncMock(return_value=[])),
+        patch(
+            "backend.routers.widget_chat_guards.input_screen_guard",
+            side_effect=_allow_screen,
+        ),
+    ):
+        response = _post_chat(
+            client,
+            api_key,
+            "How fast can you fix a pipeline?",
+            f"sess-provider-privacy-{case_id}",
+        )
+
+    assert response.status_code == 200
+    assert response.json()["response"] == _SAFE_FALLBACK
+    assert calls.count("record_ai_token_usage") == 0
+    assert calls.count("release_ai_token_reservation") == 1
+    assert len(fake.messages.calls) == (3 if family == "rate" else 1)
+
+    pieces = []
+    for record in caplog.records:
+        if record.name.startswith("backend.routers.widget_chat") or record.name.startswith(
+            "backend.services.llm_runtime"
+        ):
+            message = record.getMessage()
+            pieces.append(message)
+            assert "\r" not in message
+            assert "\n" not in message
+            assert record.exc_info is None
+            if record.exc_text:
+                pieces.append(record.exc_text)
+    trace = "".join(path.read_text(encoding="utf-8") for path in Path(tmp_path).glob("*.jsonl"))
+    blob = "\n".join(pieces) + trace
+    for piece in (
+        "visitor@example.com",
+        "INJECTED",
+        "authorization=Bearer",
+        "sentinel-token",
+        "Traceback",
+        "response body",
+        "\r",
+    ):
+        assert piece not in blob
+    assert f"error_type={error_type}" in blob
+    if proved:
+        assert f"status={status}" in blob
+    else:
+        assert "status=" not in blob

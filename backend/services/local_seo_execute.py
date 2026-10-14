@@ -423,7 +423,10 @@ async def execute_analyze_seo_profile(tenant_id: str) -> Dict[str, Any]:
     try:
         tenant_result = (
             db.table("tenants")
-            .select("business_name, business_type, city, website_url")
+            .select(
+                "id, business_name, business_type, city, website_url, plan, "
+                "ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit"
+            )
             .eq("id", tenant_id)
             .limit(1)
             .execute()
@@ -506,6 +509,8 @@ async def execute_analyze_seo_profile(tenant_id: str) -> Dict[str, Any]:
     keywords = await _generate_keywords(
         tenant.get("business_type"),
         tenant.get("city"),
+        tenant={**tenant, "id": tenant_id},
+        session_id=tenant_id,
     )
 
     now = datetime.now(timezone.utc).isoformat()

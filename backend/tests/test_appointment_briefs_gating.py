@@ -3,7 +3,7 @@
 Contract:
 - Router Depends: block_demo_role + require_agent_os_access (chatbot/free 402).
 - Claude spend uses reserve_ai_tokens → call_claude_messages → record_ai_usage
-  (release on provider error or record failure). llm_runtime does not record.
+  (release on provider error; record failure retains accounting debt). llm_runtime does not record.
 - Hard cap blocks before the provider (HTTP 429). Purchased usage packs are
   honored because the tenant row passed to reserve includes id.
 - Tenant/policy cannot be loaded (missing row or lookup exception): fail
@@ -30,7 +30,7 @@ os.environ.setdefault("TESTING", "1")
 
 from backend.routers import appointment_briefs as ab
 from backend.services import appointment_brief
-from backend.services.ai_usage_guard import AIUsageReservation, record_ai_usage
+from backend.services.ai_usage_guard import AIUsageAccountingDebt, AIUsageReservation, record_ai_usage
 from backend.services.appointment_brief import (
     AppointmentBudgetExceeded,
     AppointmentBudgetGuardUnavailable,
@@ -426,8 +426,8 @@ def test_metered_call_metadata_is_ids_only():
     assert meta["appointment_id"] == _APPT_ID
 
 
-def test_record_ai_usage_releases_reservation_on_persist_failure():
-    """Shared record_ai_usage releases the reservation when persist throws."""
+def test_record_ai_usage_retains_debt_on_persist_failure():
+    """Shared record_ai_usage retains accounting debt when persist throws."""
     reservation = _allowed()
     with (
         patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
@@ -441,12 +441,14 @@ def test_record_ai_usage_releases_reservation_on_persist_failure():
             session_id=_APPT_ID,
             model="claude-sonnet-5",
         )
-    assert recorded is None
-    release.assert_called_once_with(reservation)
+    assert isinstance(recorded, AIUsageAccountingDebt)
+    assert recorded.reason == "record_rpc_failed"
+    assert recorded.alert_triggered is False
+    release.assert_not_called()
 
 
-def test_brief_path_releases_when_record_rpc_fails():
-    """#791 path: successful provider + record RPC failure still releases."""
+def test_brief_path_retains_debt_when_record_rpc_fails():
+    """#791 path: successful provider + record RPC failure retains accounting debt."""
     reservation = _allowed()
 
     def fail_record(**kwargs):
@@ -463,4 +465,4 @@ def test_brief_path_releases_when_record_rpc_fails():
         out = run(appointment_brief.generate_brief(_fixture(), _TENANT_ID, _APPT_ID, "Acme"))
     assert out["brief"].startswith("## Who they are")
     provider.assert_called_once()
-    release.assert_called_once_with(reservation)
+    release.assert_not_called()
