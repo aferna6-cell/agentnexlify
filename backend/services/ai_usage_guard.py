@@ -298,8 +298,10 @@ def _proved_usage_component(value: Any) -> int:
 def _proved_provider_usage(result: ClaudeCallResult) -> dict[str, int]:
     """Prove every usage field the record RPC would persist.
 
-    ``llm_runtime`` leaves a field as ``None`` when provider usage is absent.
-    Zero is proved only when the field is an actual ``int`` zero.
+    Optional cache absence is already canonicalized to integer zero by
+    ``llm_runtime`` after a real provider response. Any None or malformed
+    component that still arrives here is unproved. Zero is proved only when
+    the field is an actual ``int`` zero.
     """
     return {
         "p_input_tokens": _proved_usage_component(result.input_tokens),

@@ -100,13 +100,42 @@ def resolve_int_setting(name: str, fallback: int, minimum: int = 1) -> int:
     return fallback
 
 
-def _extract_usage_value(usage: Any, field: str) -> int | None:
+def _builtin_nonnegative_int(value: Any) -> int | None:
+    """Return a built-in nonnegative int, or None when the value is unproved.
+
+    Bool is an int subclass and is rejected. Floats, strings, and negatives
+    are not coerced.
+    """
+    if type(value) is int and value >= 0:
+        return value
+    return None
+
+
+def _extract_core_usage(usage: Any, field: str) -> int | None:
+    """Keep input/output tokens only when the provider already proved them.
+
+    Missing or malformed core counters stay None. They are not rewritten to
+    zero.
+    """
+    if usage is None:
+        return None
+    return _builtin_nonnegative_int(getattr(usage, field, None))
+
+
+def _extract_cache_usage(usage: Any, field: str) -> int | None:
+    """Map an absent SDK cache counter to zero and reject malformed values.
+
+    ``anthropic.types.Usage`` leaves ``cache_creation_input_tokens`` and
+    ``cache_read_input_tokens`` as None when no prompt-cache activity
+    occurred. That absence is a proved zero. A missing usage object is not
+    that case. Bools, negatives, floats, and strings stay unproved.
+    """
     if usage is None:
         return None
     value = getattr(usage, field, None)
-    if isinstance(value, int):
-        return value
-    return None
+    if value is None:
+        return 0
+    return _builtin_nonnegative_int(value)
 
 
 def _extract_text(response: Any) -> str:
@@ -463,10 +492,10 @@ def _call_single_model(
     result = ClaudeCallResult(
         text=_extract_text(response),
         duration_ms=duration_ms,
-        input_tokens=_extract_usage_value(usage, "input_tokens"),
-        output_tokens=_extract_usage_value(usage, "output_tokens"),
-        cache_creation_input_tokens=_extract_usage_value(usage, "cache_creation_input_tokens"),
-        cache_read_input_tokens=_extract_usage_value(usage, "cache_read_input_tokens"),
+        input_tokens=_extract_core_usage(usage, "input_tokens"),
+        output_tokens=_extract_core_usage(usage, "output_tokens"),
+        cache_creation_input_tokens=_extract_cache_usage(usage, "cache_creation_input_tokens"),
+        cache_read_input_tokens=_extract_cache_usage(usage, "cache_read_input_tokens"),
         stop_reason=getattr(response, "stop_reason", None),
         raw_response=response,
     )
