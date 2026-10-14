@@ -1,10 +1,14 @@
-"""Provider usage normalization at the llm_runtime boundary.
+"""Provider usage normalization and provider-error diagnostics.
 
 A real Anthropic Usage object leaves optional cache counters as None when
 no prompt-cache activity occurred. That absence is zero. Missing or
 malformed core counters stay unproved and are not coerced to zero.
+Provider failures log a safe exception type and a proved HTTP status only.
 """
 
+import json
+import logging
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -231,3 +235,106 @@ def test_graceful_reply_is_not_a_proved_zero_usage_record():
     assert calls == []
     assert isinstance(recorded, AIUsageAccountingDebt)
     assert recorded.reason == "provider_usage_unproved"
+
+
+_PRIVACY_CANARY = "visitor@example.com\r\nINJECTED authorization=Bearer sentinel-token"
+_CANARY_PIECES = (
+    "visitor@example.com",
+    "INJECTED",
+    "authorization=Bearer",
+    "sentinel-token",
+    "Traceback",
+    "response body",
+    "\r",
+)
+
+
+class _StatusError(Exception):
+    def __init__(self, status_code):
+        super().__init__(_PRIVACY_CANARY + " response body")
+        self.status_code = status_code
+
+
+class _BadStatus:
+    def __str__(self):
+        return _PRIVACY_CANARY
+
+
+def _trace_text(directory: Path) -> str:
+    chunks = []
+    for path in directory.glob("*.jsonl"):
+        chunks.append(path.read_text(encoding="utf-8"))
+    return "".join(chunks)
+
+
+def _runtime_blob(caplog, directory: Path) -> str:
+    parts = [_trace_text(directory)]
+    for record in caplog.records:
+        if not record.name.startswith("backend.services.llm_runtime"):
+            continue
+        parts.append(record.getMessage())
+        if record.exc_text:
+            parts.append(record.exc_text)
+        if record.exc_info:
+            parts.append("exc_info")
+    return "\n".join(parts)
+
+
+def _assert_canaries_absent(blob: str, caplog) -> None:
+    for piece in _CANARY_PIECES:
+        assert piece not in blob
+    for record in caplog.records:
+        if not record.name.startswith("backend.services.llm_runtime"):
+            continue
+        message = record.getMessage()
+        assert "\n" not in message
+        assert "\r" not in message
+        assert record.exc_info is None
+
+
+def _raise_provider(monkeypatch, tmp_path, caplog, exc):
+    monkeypatch.setenv("LLM_TRACE_DIR", str(tmp_path))
+    monkeypatch.setenv("LLM_TRACE_ENABLED", "1")
+    caplog.set_level(logging.DEBUG)
+    fake = _FakeAnthropic(exc)
+    with patch("backend.services.llm_runtime.anthropic.Anthropic", fake):
+        with pytest.raises(type(exc)):
+            call_claude_messages_sync(
+                operation="seo.generate_keywords",
+                model="claude-sonnet-4-6",
+                max_tokens=200,
+                messages=[{"role": "user", "content": "keywords"}],
+            )
+    assert len(fake.messages.calls) == 1
+    return _runtime_blob(caplog, tmp_path)
+
+
+def test_provider_error_log_keeps_type_and_proved_status_only(monkeypatch, tmp_path, caplog):
+    blob = _raise_provider(monkeypatch, tmp_path, caplog, _StatusError(429))
+    _assert_canaries_absent(blob, caplog)
+    assert "error_type=_StatusError" in blob
+    assert "status=429" in blob
+    error_rows = [json.loads(line) for line in _trace_text(tmp_path).splitlines() if line.strip()]
+    assert error_rows[-1]["error_type"] == "_StatusError"
+    assert error_rows[-1]["status_code"] == 429
+    assert "error" not in error_rows[-1]
+
+
+@pytest.mark.parametrize("bad", (True, "401", 1.5, _BadStatus(), -1, 99, 600))
+def test_provider_error_omits_unproved_status(monkeypatch, tmp_path, caplog, bad):
+    blob = _raise_provider(monkeypatch, tmp_path, caplog, _StatusError(bad))
+    _assert_canaries_absent(blob, caplog)
+    assert "error_type=_StatusError" in blob
+    assert "status=" not in blob
+    error_rows = [json.loads(line) for line in _trace_text(tmp_path).splitlines() if line.strip()]
+    assert "status_code" not in error_rows[-1]
+
+
+def test_provider_error_replaces_unsafe_exception_type_name(monkeypatch, tmp_path, caplog):
+    class _Named(Exception):
+        pass
+
+    _Named.__name__ = "Bad\r\nINJECTED authorization=Bearer sentinel-token visitor@example.com"
+    blob = _raise_provider(monkeypatch, tmp_path, caplog, _Named(_PRIVACY_CANARY))
+    _assert_canaries_absent(blob, caplog)
+    assert "error_type=Exception" in blob

@@ -38,6 +38,8 @@ from backend.services.ai_usage_guard import (
     reserve_ai_tokens,
 )
 from backend.services.llm_runtime import (
+    _proved_http_status,
+    _safe_exception_type_name,
     call_claude_messages,
     resolve_int_setting,
     resolve_string_setting,
@@ -336,9 +338,20 @@ async def widget_chat(
             "I'm sorry, I'm having trouble right now. "
             "Please try again in a moment or contact us directly."
         )
-    except Exception as e:
+    except Exception as exc:
         release_ai_token_reservation(usage_reservation)
-        logger.exception("widget_chat: unexpected error calling Anthropic: %s", e)
+        status_code = _proved_http_status(exc)
+        if status_code is None:
+            logger.error(
+                "widget_chat: provider failure error_type=%s",
+                _safe_exception_type_name(exc),
+            )
+        else:
+            logger.error(
+                "widget_chat: provider failure error_type=%s status=%d",
+                _safe_exception_type_name(exc),
+                status_code,
+            )
         assistant_text = (
             "I'm sorry, I'm having trouble right now. "
             "Please try again in a moment or contact us directly."

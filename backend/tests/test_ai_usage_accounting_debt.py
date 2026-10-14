@@ -1314,3 +1314,93 @@ def test_widget_empty_text_with_valid_usage_records_fallback(client, mock_supaba
     assert record_calls[0]["payload"]["p_input_tokens"] == 4
     assert record_calls[0]["payload"]["p_output_tokens"] == 0
     assert release_calls == []
+
+
+_PROVIDER_CANARY = "visitor@example.com\r\nINJECTED authorization=Bearer sentinel-token"
+
+
+class _WidgetProviderError(Exception):
+    def __init__(self):
+        super().__init__(_PROVIDER_CANARY + " response body")
+        self.status_code = 503
+
+
+def test_widget_provider_failure_omits_exception_text(client, mock_supabase, caplog, monkeypatch, tmp_path):
+    """Real widget provider failure keeps the fallback and does not log the exception."""
+    import json
+    from pathlib import Path
+
+    from backend.tests.test_llm_runtime_usage_normalization import _FakeAnthropic
+    from backend.tests.test_widget_chat_pipeline import _Chain, _post_chat, _result, _seed
+
+    monkeypatch.setenv("LLM_TRACE_DIR", str(tmp_path))
+    monkeypatch.setenv("LLM_TRACE_ENABLED", "1")
+    caplog.set_level(logging.DEBUG)
+    _seed(
+        mock_supabase,
+        tenant_id="p9270000-0000-4000-8000-000000000020",
+        api_key="anx_acct_provider_privacy",
+    )
+    calls: list[str] = []
+
+    def routed(name, params=None, **_kwargs):
+        calls.append(name)
+        if name == "reserve_ai_token_budget":
+            return _Chain(_result(True))
+        raise AssertionError(name)
+
+    mock_supabase.rpc.side_effect = routed
+    fake = _FakeAnthropic(_WidgetProviderError())
+
+    async def _allow_screen(*_args, **_kwargs):
+        return None
+
+    with (
+        patch("backend.services.llm_runtime.anthropic.Anthropic", fake),
+        patch("backend.routers.widget_chat._query_kb_articles", new=AsyncMock(return_value=[])),
+        patch(
+            "backend.routers.widget_chat_guards.input_screen_guard",
+            side_effect=_allow_screen,
+        ),
+    ):
+        response = _post_chat(
+            client,
+            "anx_acct_provider_privacy",
+            "How fast can you fix a pipeline?",
+            "sess-provider-privacy",
+        )
+
+    assert response.status_code == 200
+    assert response.json()["response"] == _SAFE_FALLBACK
+    assert calls.count("record_ai_token_usage") == 0
+    assert calls.count("release_ai_token_reservation") == 1
+    assert len(fake.messages.calls) == 1
+
+    pieces = []
+    for record in caplog.records:
+        if record.name.startswith("backend.routers.widget_chat") or record.name.startswith(
+            "backend.services.llm_runtime"
+        ):
+            pieces.append(record.getMessage())
+            assert "\r" not in record.getMessage()
+            assert "\n" not in record.getMessage()
+            assert record.exc_info is None
+            if record.exc_text:
+                pieces.append(record.exc_text)
+    trace = "".join(path.read_text(encoding="utf-8") for path in Path(tmp_path).glob("*.jsonl"))
+    blob = "\n".join(pieces) + trace
+    for piece in (
+        "visitor@example.com",
+        "INJECTED",
+        "authorization=Bearer",
+        "sentinel-token",
+        "Traceback",
+        "response body",
+        "\r",
+    ):
+        assert piece not in blob
+    assert "error_type=_WidgetProviderError" in blob
+    assert "status=503" in blob
+    rows = [json.loads(line) for line in trace.splitlines() if line.strip()]
+    assert rows[-1]["error_type"] == "_WidgetProviderError"
+    assert rows[-1]["status_code"] == 503
