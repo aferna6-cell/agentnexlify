@@ -1404,3 +1404,136 @@ def test_widget_provider_failure_omits_exception_text(client, mock_supabase, cap
     rows = [json.loads(line) for line in trace.splitlines() if line.strip()]
     assert rows[-1]["error_type"] == "_WidgetProviderError"
     assert rows[-1]["status_code"] == 503
+
+
+class _BadProviderStatus:
+    def __str__(self):
+        return _PROVIDER_CANARY + " response body"
+
+
+def _concrete_provider_error(family, status):
+    import httpx
+    import anthropic
+
+    message = _PROVIDER_CANARY + " response body"
+    request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+    proved = type(status) is int and 100 <= status <= 599
+    if family == "generic":
+        exc = _WidgetProviderError()
+        exc.status_code = status
+        return exc, "_WidgetProviderError"
+    if family == "api":
+        exc = anthropic.APIError(message, request, body=message)
+        exc.status_code = status
+        return exc, "APIError"
+    response = httpx.Response(status if proved else 400, request=request)
+    cls = anthropic.AuthenticationError if family == "auth" else anthropic.RateLimitError
+    exc = cls(message, response=response, body=message)
+    if not proved:
+        exc.status_code = status
+    return exc, cls.__name__
+
+
+@pytest.mark.parametrize(
+    ("case_id", "family", "status", "proved"),
+    (
+        (30, "auth", 401, True),
+        (31, "rate", 429, True),
+        (32, "api", 500, True),
+        (33, "api", True, False),
+        (34, "api", "401", False),
+        (35, "api", 1.5, False),
+        (36, "api", -1, False),
+        (37, "api", 99, False),
+        (38, "api", 600, False),
+        (39, "auth", True, False),
+        (40, "rate", "429", False),
+        (41, "generic", 503, True),
+        (42, "generic", _BadProviderStatus(), False),
+    ),
+)
+def test_widget_concrete_provider_errors_omit_exception_text(
+    client, mock_supabase, caplog, monkeypatch, tmp_path, case_id, family, status, proved
+):
+    """Every widget provider-failure catch logs only a safe type and a proved status."""
+    import json
+    from pathlib import Path
+
+    from backend.tests.test_llm_runtime_usage_normalization import _FakeAnthropic
+    from backend.tests.test_widget_chat_pipeline import _Chain, _post_chat, _result, _seed
+
+    monkeypatch.setenv("LLM_TRACE_DIR", str(tmp_path))
+    monkeypatch.setenv("LLM_TRACE_ENABLED", "1")
+    caplog.set_level(logging.DEBUG)
+    api_key = f"anx_acct_priv_{case_id}"
+    _seed(
+        mock_supabase,
+        tenant_id=f"p9270000-0000-4000-8000-{case_id:012d}",
+        api_key=api_key,
+    )
+    calls: list[str] = []
+
+    def routed(name, params=None, **_kwargs):
+        calls.append(name)
+        if name in {"reserve_ai_token_budget", "release_ai_token_reservation"}:
+            return _Chain(_result(True))
+        raise AssertionError(name)
+
+    mock_supabase.rpc.side_effect = routed
+    exc, error_type = _concrete_provider_error(family, status)
+    fake = _FakeAnthropic(exc)
+
+    async def _allow_screen(*_args, **_kwargs):
+        return None
+
+    with (
+        patch("backend.services.llm_runtime.anthropic.Anthropic", fake),
+        patch("backend.services.llm_runtime.time.sleep", return_value=None),
+        patch("backend.routers.widget_chat._query_kb_articles", new=AsyncMock(return_value=[])),
+        patch(
+            "backend.routers.widget_chat_guards.input_screen_guard",
+            side_effect=_allow_screen,
+        ),
+    ):
+        response = _post_chat(
+            client,
+            api_key,
+            "How fast can you fix a pipeline?",
+            f"sess-provider-privacy-{case_id}",
+        )
+
+    assert response.status_code == 200
+    assert response.json()["response"] == _SAFE_FALLBACK
+    assert calls.count("record_ai_token_usage") == 0
+    assert calls.count("release_ai_token_reservation") == 1
+    assert len(fake.messages.calls) == (3 if family == "rate" else 1)
+
+    pieces = []
+    for record in caplog.records:
+        if record.name.startswith("backend.routers.widget_chat") or record.name.startswith(
+            "backend.services.llm_runtime"
+        ):
+            message = record.getMessage()
+            pieces.append(message)
+            assert "\r" not in message
+            assert "\n" not in message
+            assert record.exc_info is None
+            if record.exc_text:
+                pieces.append(record.exc_text)
+    trace = "".join(path.read_text(encoding="utf-8") for path in Path(tmp_path).glob("*.jsonl"))
+    blob = "\n".join(pieces) + trace
+    for piece in (
+        "visitor@example.com",
+        "INJECTED",
+        "authorization=Bearer",
+        "sentinel-token",
+        "Traceback",
+        "response body",
+        "\r",
+    ):
+        assert piece not in blob
+    assert f"error_type={error_type}" in blob
+    if proved:
+        assert f"status={status}" in blob
+    else:
+        assert "status=" not in blob

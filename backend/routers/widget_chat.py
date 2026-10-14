@@ -77,6 +77,22 @@ from backend.routers.widget_booking import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _log_widget_provider_failure(exc: Exception) -> None:
+    """Log a provider failure without exception text, body, or traceback."""
+    status_code = _proved_http_status(exc)
+    if status_code is None:
+        logger.error(
+            "widget_chat: provider failure error_type=%s",
+            _safe_exception_type_name(exc),
+        )
+        return
+    logger.error(
+        "widget_chat: provider failure error_type=%s status=%d",
+        _safe_exception_type_name(exc),
+        status_code,
+    )
 router = APIRouter(prefix="/api/v1/widget", tags=["widget"])
 
 
@@ -313,45 +329,30 @@ async def widget_chat(
                 "prompt_profile": ctx.prompt_profile,
             },
         )
-    except anthropic.AuthenticationError as e:
+    except anthropic.AuthenticationError as exc:
         release_ai_token_reservation(usage_reservation)
-        logger.error("widget_chat: Anthropic AUTH error - API key invalid: %s", e)
+        _log_widget_provider_failure(exc)
         assistant_text = (
             "I'm sorry, I'm having trouble right now. "
             "Please try again in a moment or contact us directly."
         )
-    except anthropic.RateLimitError as e:
+    except anthropic.RateLimitError as exc:
         release_ai_token_reservation(usage_reservation)
-        logger.error("widget_chat: Anthropic RATE LIMIT: %s", e)
+        _log_widget_provider_failure(exc)
         assistant_text = (
             "I'm sorry, I'm having trouble right now. "
             "Please try again in a moment or contact us directly."
         )
-    except anthropic.APIError as e:
+    except anthropic.APIError as exc:
         release_ai_token_reservation(usage_reservation)
-        logger.error(
-            "widget_chat: Anthropic API error status=%s: %s",
-            getattr(e, "status_code", "?"),
-            e,
-        )
+        _log_widget_provider_failure(exc)
         assistant_text = (
             "I'm sorry, I'm having trouble right now. "
             "Please try again in a moment or contact us directly."
         )
     except Exception as exc:
         release_ai_token_reservation(usage_reservation)
-        status_code = _proved_http_status(exc)
-        if status_code is None:
-            logger.error(
-                "widget_chat: provider failure error_type=%s",
-                _safe_exception_type_name(exc),
-            )
-        else:
-            logger.error(
-                "widget_chat: provider failure error_type=%s status=%d",
-                _safe_exception_type_name(exc),
-                status_code,
-            )
+        _log_widget_provider_failure(exc)
         assistant_text = (
             "I'm sorry, I'm having trouble right now. "
             "Please try again in a moment or contact us directly."
