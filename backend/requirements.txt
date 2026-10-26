@@ -20,7 +20,7 @@ pydantic-settings>=2.15.0,<3
 python-dotenv==1.2.3
 httpx==0.28.1
 python-multipart==0.0.32
-slowapi==0.1.9
+slowapi==0.1.10
 stripe>=11.0.0,<12
 # twilio SDK removed 2026-04-16 (audit item was wrong).
 # Commit 344df51 upgraded to twilio>=10.0.0,<11 but that version does NOT exist on PyPI (max is 9.10.5).
