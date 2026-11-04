@@ -94,3 +94,94 @@ def test_unknown_legacy_key_is_dropped():
             return _Chain()
 
     assert resolve_public_click_ref(_DB(), "anx_missing") is None
+
+
+class _Rows:
+    def __init__(self, data=None, error=None):
+        self.data = data if data is not None else []
+        self.error = error
+
+    def select(self, *_a, **_k):
+        return self
+
+    def eq(self, *_a, **_k):
+        return self
+
+    def limit(self, *_a, **_k):
+        return self
+
+    def execute(self):
+        if self.error is not None:
+            raise self.error
+        return type("Result", (), {"data": self.data})()
+
+
+class _ClickDB:
+    def __init__(self, tenants):
+        self.tenants = tenants
+
+    def table(self, name):
+        if name == "tenants":
+            return self.tenants
+        raise AssertionError(name)
+
+
+def test_click_decision_drops_blank_unknown_and_failed_lookups():
+    from backend.services.referral import decide_referral_click
+
+    db = _ClickDB(_Rows())
+    assert decide_referral_click(db, None).store_as is None
+    assert decide_referral_click(db, "   ").store_as is None
+    assert decide_referral_click(db, "not a code").store_as is None
+    assert decide_referral_click(db, "ab12cd34").store_as is None
+
+    failed = _ClickDB(_Rows(error=RuntimeError("db down")))
+    assert decide_referral_click(failed, "ab12cd34").store_as is None
+
+    found = _ClickDB(_Rows([{"id": "ten-9"}]))
+    decision = decide_referral_click(found, "ab12cd34")
+    assert decision.store_as == "ab12cd34"
+    assert decision.tenant_id == "ten-9"
+    assert decision.loud_unrecordable is False
+
+
+def test_legacy_key_without_public_code_is_not_echoed():
+    from backend.services.referral import decide_referral_click, resolve_public_click_ref
+
+    class _DB:
+        def table(self, name):
+            if name == "widget_configs":
+                return _Rows([{"tenant_id": "ten-1"}])
+            if name == "tenants":
+                return _Rows([{"referral_code": None}])
+            raise AssertionError(name)
+
+    decision = decide_referral_click(_DB(), "anx_real_key")
+    assert decision.loud_unrecordable is True
+    assert decision.store_as == "ten-1"
+    assert resolve_public_click_ref(_DB(), "anx_real_key") is None
+
+    class _NoTenantId:
+        def table(self, name):
+            if name == "widget_configs":
+                return _Rows([{"tenant_id": None}])
+            raise AssertionError(name)
+
+    assert decide_referral_click(_NoTenantId(), "anx_real_key").store_as is None
+
+    class _Broken:
+        def table(self, name):
+            if name == "widget_configs":
+                return _Rows([{"tenant_id": "ten-1"}])
+            if name == "tenants":
+                return _Rows(error=RuntimeError("db down"))
+            raise AssertionError(name)
+
+    assert decide_referral_click(_Broken(), "anx_real_key").store_as is None
+
+
+def test_widget_watermark_omits_non_public_codes():
+    from backend.routers.widget_config import _public_referral_code
+
+    assert _public_referral_code("anx_secret") is None
+    assert _public_referral_code("  ab12cd34  ") == "ab12cd34"
