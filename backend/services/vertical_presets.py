@@ -188,10 +188,20 @@ _ALIASES = {
 
 def get_vertical_preset(business_type: str | None) -> dict | None:
     """Return preset dict for a business_type, or None if no match."""
+    from backend.services.business_type_storage import (
+        is_warehouse_logistics_token,
+        normalize_business_type_token,
+        warehouse_logistics_enabled,
+    )
+
     if not business_type:
         return None
-    key = business_type.strip().lower().replace(" ", "_").replace("-", "_")
+    key = normalize_business_type_token(business_type)
+    if is_warehouse_logistics_token(key) and not warehouse_logistics_enabled():
+        return None
     key = _ALIASES.get(key, key)
+    if is_warehouse_logistics_token(key) and not warehouse_logistics_enabled():
+        return None
     return _PRESETS.get(key)
 
 

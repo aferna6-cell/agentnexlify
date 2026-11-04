@@ -193,12 +193,18 @@ def test_animal_clinic_alias_maps_to_veterinary():
     assert _greeting("animal_clinic") == _greeting("veterinary")
 
 
-def test_warehouse_logistics_direct_key_resolves():
+def test_warehouse_logistics_direct_key_resolves(monkeypatch):
+    monkeypatch.setattr(
+        "backend.config.settings.warehouse_logistics_enabled", True
+    )
     greeting = _greeting("warehouse_logistics")
     assert "storage" in greeting.lower() or "freight" in greeting.lower()
 
 
-def test_logistics_alias_maps_to_warehouse_logistics():
+def test_logistics_alias_maps_to_warehouse_logistics(monkeypatch):
+    monkeypatch.setattr(
+        "backend.config.settings.warehouse_logistics_enabled", True
+    )
     assert _greeting("logistics") == _greeting("warehouse_logistics")
     assert _greeting("warehouse") == _greeting("warehouse_logistics")
     assert _greeting("freight") == _greeting("warehouse_logistics")

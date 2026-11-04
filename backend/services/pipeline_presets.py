@@ -112,8 +112,18 @@ _TYPE_ALIASES: dict[str, str] = {
 
 def resolve_stages_for_business_type(business_type: str | None) -> list[dict]:
     """Pick the best stage preset for a business_type, falling back to DEFAULT_STAGES."""
-    btype = (business_type or "").lower()
+    from backend.services.business_type_storage import (
+        is_warehouse_logistics_token,
+        normalize_business_type_token,
+        warehouse_logistics_enabled,
+    )
+
+    btype = normalize_business_type_token(business_type)
+    if is_warehouse_logistics_token(btype) and not warehouse_logistics_enabled():
+        return DEFAULT_STAGES
     resolved = _TYPE_ALIASES.get(btype, btype)
+    if is_warehouse_logistics_token(resolved) and not warehouse_logistics_enabled():
+        return DEFAULT_STAGES
     return _INDUSTRY_STAGES.get(resolved, DEFAULT_STAGES)
 
 

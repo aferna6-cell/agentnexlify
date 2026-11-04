@@ -151,11 +151,20 @@ def load_vertical_preset(vertical: str) -> dict:
         and ``faqs``.  The ``faqs`` value is a list of dicts with
         ``question`` and ``answer`` keys.
     """
+    from backend.services.business_type_storage import (
+        is_warehouse_logistics_token,
+        warehouse_logistics_enabled,
+    )
+
     data = _load_yaml()
     key = _normalize(vertical)
-    # Direct key wins; otherwise try the business_type alias map.
-    if key not in data:
+    # Warehouse aliases stay off until migration 203 is live.
+    if is_warehouse_logistics_token(key) and not warehouse_logistics_enabled():
+        key = "generic"
+    elif key not in data:
         key = _VERTICAL_ALIASES.get(key, key)
+        if is_warehouse_logistics_token(key) and not warehouse_logistics_enabled():
+            key = "generic"
     preset = data.get(key)
     if preset is None:
         logger.info(

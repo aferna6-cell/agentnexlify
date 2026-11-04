@@ -892,6 +892,11 @@ async def update_settings(
     if not updates:
         raise HTTPException(status_code=400, detail="No valid fields to update")
 
+    if "business_type" in updates:
+        from backend.services.business_type_storage import business_type_for_settings_write
+
+        updates["business_type"] = business_type_for_settings_write(str(updates["business_type"]))
+
     # conversation_notify_email is used as a send_email recipient - reject
     # anything that isn't a plausible single address. Empty string is allowed
     # (clears the override; the notify job then falls back to owner_email).
