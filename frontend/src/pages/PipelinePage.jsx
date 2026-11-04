@@ -472,17 +472,13 @@ export default function PipelinePage() {
 
   return (
     <div className="fade-in">
-      <div className="page-header">
+      <div className="page-header page-header-split">
         <div>
           <h1>Pipeline</h1>
           <p>Visual sales pipeline - track deals from lead to close</p>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <button
-            className="btn-primary"
-            onClick={() => { setLoading(true); loadBoard(); }}
-            style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text-primary)" }}
-          >
+        <div className="page-header-actions">
+          <button className="btn-secondary" onClick={() => { setLoading(true); loadBoard(); }}>
             Refresh
           </button>
           <button className="btn-primary" onClick={() => setShowAddDeal(true)}>

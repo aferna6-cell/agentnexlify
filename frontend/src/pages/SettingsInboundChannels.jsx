@@ -134,7 +134,7 @@ export default function SettingsInboundChannels() {
   };
 
   return (
-    <div style={{ padding: "24px", maxWidth: "880px" }}>
+    <div>
       <div style={{ marginBottom: "24px" }}>
         <h1
           style={{

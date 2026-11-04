@@ -308,6 +308,23 @@ body {
 .page-header { margin-bottom: 28px; }
 .page-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
 .page-header p { color: var(--text-secondary); font-size: 14px; }
+.page-header-split {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px 24px;
+  flex-wrap: wrap;
+}
+.page-header-split > div:first-child { min-width: 0; flex: 1 1 220px; }
+.page-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+.page-header-actions .btn-primary,
+.page-header-actions .btn-secondary { white-space: nowrap; }
 
 /* ── Skeleton Loading ── */
 .skeleton {
@@ -3191,6 +3208,13 @@ body {
   font-weight: 700;
   color: var(--accent);
 }
+.billing-support-link {
+  color: #7dd3fc;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.app[data-theme="light"] .billing-support-link { color: #075985; }
 .billing-plan-status {
   font-size: 0.8rem;
   font-weight: 500;
@@ -3341,7 +3365,7 @@ body {
 
 /* ── Analytics Page ── */
 
-.analytics-page { max-width: 1400px; }
+.analytics-page { width: 100%; }
 
 .analytics-period-selector {
   display: flex;
@@ -4124,7 +4148,7 @@ body {
 }
 
 /* ── Team Page ── */
-.team-page { max-width: 900px; }
+.team-page { width: 100%; }
 .team-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
 .team-header h1 { font-size: 1.5rem; margin-bottom: 4px; }
 .team-subtitle { color: var(--text-secondary); font-size: 0.875rem; }
