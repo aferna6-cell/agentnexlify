@@ -103,6 +103,32 @@ class TestScheduledTasks:
         assert ok is True
         assert turn.await_args.kwargs["force_agent_id"] == "sales"
 
+    def test_run_task_keeps_the_full_scheduled_title(self):
+        sink = []
+        rows = {
+            "os_threads": [{"id": "th1"}],
+            "os_messages": [{"id": "m1", "content": "p"}],
+        }
+        db = _db(rows, sink)
+        prompt = "Prepare my weekly business summary: " + ("leads " * 12)
+        with patch(
+            "backend.services.os_thread_runner.process_user_turn",
+            new=AsyncMock(return_value={}),
+        ):
+            ok = asyncio.run(
+                os_scheduled_tasks.run_task(
+                    db, {"client_id": "c1", "prompt": prompt, "department": "operations"}
+                )
+            )
+        assert ok is True
+        titles = [
+            args[0]["title"]
+            for name, args in sink
+            if name == "insert" and args and isinstance(args[0], dict) and "title" in args[0]
+        ]
+        assert titles == [f"Scheduled: {prompt}"]
+        assert len(titles[0]) > 80
+
 
 class TestBizAnswers:
     def test_lead_count_template(self):
