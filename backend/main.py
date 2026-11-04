@@ -288,8 +288,22 @@ def _readiness_snapshot() -> dict:
             }
         )
 
+    from backend.services.ai_live import current_ai_live, normalize_api_key
+
+    try:
+        live = current_ai_live()
+    except Exception:
+        logger.warning("readyz ai_live failed reason=provider_status_unknown")
+        live = {
+            "ai_live_ok": False,
+            "ai_live_reason": "provider_status_unknown",
+            "ai_live_scope": "backend",
+        }
     optional_checks = {
-        "anthropic_configured": bool(settings.anthropic_api_key),
+        "anthropic_configured": bool(normalize_api_key(settings.anthropic_api_key)),
+        "ai_live_ok": bool(live["ai_live_ok"]),
+        "ai_live_reason": live["ai_live_reason"],
+        "ai_live_scope": live["ai_live_scope"],
         "resend_configured": bool(settings.resend_api_key),
         "sentry_configured": bool(settings.sentry_dsn),
         "widget_allowed_origins_explicit": _cors_origins() != ["*"],

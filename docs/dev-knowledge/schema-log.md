@@ -10,7 +10,7 @@ Every database schema change. Claude Code checks this when working with database
 
 **Why:** Website/Chatbot Connect v1 (GH #767). "connected" is only written after a live HTML fetch finds `agentnexlify-widget.js` **and** this tenant's `data-api-key`. No CMS passwords. No fake self-report connected state.
 
-**Applied:** NOT applied (this PR is code-only; no prod/schema deploy).
+**Applied:** APPLIED to prod (`pxserpybmajixqrmzaly`) 2026-11-04 via Supabase `apply_migration` (`201_website_connections`, version `20261104125122`). Verified `to_regclass('public.website_connections')` is the table. Staging (`nohanoiugcbaxtxinttp`) was inactive and was not changed. The GET `/api/v1/website-connect` 500 ("An internal error occurred") was this missing relation.
 
 ---
 

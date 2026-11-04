@@ -15,6 +15,7 @@ from typing import Any
 import anthropic
 
 from backend.config import settings
+from backend.services.ai_live import normalize_api_key, sanitize_exception
 
 logger = logging.getLogger(__name__)
 
@@ -351,9 +352,10 @@ def _log_error(
     metadata: dict[str, Any] | None,
     exc: Exception,
 ) -> None:
+    reason = sanitize_exception(exc)
     logger.warning(
         "llm.call.error id=%s op=%s model=%s duration_ms=%d message_count=%d role_counts=%s system_chars=%d "
-        "message_chars=%d error_type=%s error=%s metadata=%s",
+        "message_chars=%d error_type=%s reason=%s metadata=%s",
         call_id,
         operation,
         model,
@@ -363,9 +365,8 @@ def _log_error(
         len(system or ""),
         _message_chars(messages),
         type(exc).__name__,
-        str(exc)[:300],
+        reason,
         _safe_metadata(metadata),
-        exc_info=True,
     )
     _write_trace({
         "ts": datetime.now(timezone.utc).isoformat(),
@@ -375,7 +376,7 @@ def _log_error(
         "model": model,
         "duration_ms": duration_ms,
         "error_type": type(exc).__name__,
-        "error": str(exc)[:300],
+        "error": reason,
         "message_count": len(messages),
         "role_counts": _message_role_counts(messages),
         "system_chars": len(system or ""),
@@ -416,7 +417,10 @@ def _call_single_model(
     while True:
         attempts += 1
         try:
-            client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=timeout)
+            client = anthropic.Anthropic(
+                api_key=normalize_api_key(settings.anthropic_api_key),
+                timeout=timeout,
+            )
             request_kwargs: dict[str, Any] = {
                 "model": model,
                 "max_tokens": max_tokens,

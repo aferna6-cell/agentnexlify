@@ -47,7 +47,7 @@ ROLLBACK_MARKERS = (
 )
 
 PRECONDITIONS = (
-    "Migration 201 is present in the repo and logged as NOT applied",
+    "Migration 201 is present in the repo and schema-log records the prod apply",
     "Do not apply schema or deploy from this harness",
     "Tenant JWT scope + widget_configs.api_key for this tenant only",
     "Public http(s) URL; no CMS passwords accepted or stored",
@@ -72,7 +72,7 @@ def inspect_migration() -> dict:
             "blockers": ["migrations/201_website_connections.sql is missing"],
             "sql_markers": [],
             "rollback_documented": False,
-            "schema_log_not_applied": False,
+            "schema_log_prod_applied": False,
         }
 
     sql = MIGRATION.read_text(encoding="utf-8")
@@ -85,12 +85,15 @@ def inspect_migration() -> dict:
         blockers.append("migration 201 must document rollback: drop table if exists website_connections")
 
     log_text = SCHEMA_LOG.read_text(encoding="utf-8") if SCHEMA_LOG.is_file() else ""
-    logged = "201_website_connections" in log_text
-    not_applied = "NOT applied" in log_text and "201_website_connections" in log_text
+    start = log_text.find("## 201_website_connections")
+    nxt = log_text.find("\n## ", start + 4) if start >= 0 else -1
+    section = "" if start < 0 else log_text[start:] if nxt < 0 else log_text[start:nxt]
+    logged = start >= 0
+    prod_applied = "applied to prod" in section.lower()
     if not logged:
         blockers.append("docs/dev-knowledge/schema-log.md must mention 201_website_connections")
-    if not not_applied:
-        blockers.append("schema-log must record migration 201 as NOT applied")
+    if not prod_applied:
+        blockers.append("schema-log must record migration 201 as applied to prod")
 
     present = [marker for marker in REQUIRED_SQL if marker in sql]
     return {
@@ -98,7 +101,7 @@ def inspect_migration() -> dict:
         "blockers": blockers,
         "sql_markers": present,
         "rollback_documented": rollback_documented,
-        "schema_log_not_applied": not_applied,
+        "schema_log_prod_applied": prod_applied,
         "applied": False,
     }
 
@@ -140,7 +143,7 @@ def run_preflight(*, apply: bool = False) -> dict:
             "file": "migrations/201_website_connections.sql",
             "ok": inspection["ok"],
             "applied": False,
-            "schema_log_not_applied": inspection["schema_log_not_applied"],
+            "schema_log_prod_applied": inspection["schema_log_prod_applied"],
             "sql_markers": inspection["sql_markers"],
         },
         "bot_blocked": bot_blocked_behavior(),

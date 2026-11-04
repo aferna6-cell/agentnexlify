@@ -45,7 +45,17 @@ def test_healthz_readyz_and_version_are_registered():
     assert health_response.status_code == 200
     assert health_response.json()["status"] == "ok"
     assert ready_response.status_code == 200
-    assert ready_response.json()["status"] == "ready"
+    ready_body = ready_response.json()
+    assert ready_body["status"] == "ready"
+    optional = ready_body["checks"]["optional"]
+    assert "ai_live_ok" in optional
+    assert optional["ai_live_reason"] in {
+        "ok",
+        "no_api_key",
+        "invalid_api_key",
+        "provider_status_unknown",
+    }
+    assert "sk-" not in ready_response.text
     assert version_response.status_code == 200
     assert version_response.json()["service"] == "agentnexlify"
     assert version_response.json()["version"]

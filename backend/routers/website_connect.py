@@ -48,6 +48,19 @@ class ConnectWebsiteRequest(BaseModel):
         return v
 
 
+def _storage_unavailable(exc: BaseException) -> HTTPException | None:
+    if not connect_svc.is_missing_website_connections_table(exc):
+        return None
+    logger.warning(
+        "website_connect storage missing error_type=%s",
+        type(exc).__name__,
+    )
+    return HTTPException(
+        status_code=503,
+        detail="Website connect storage is not ready.",
+    )
+
+
 def _reject_raw_secrets(payload: dict) -> None:
     try:
         connect_svc.reject_credential_fields(payload)
@@ -59,7 +72,13 @@ def _reject_raw_secrets(payload: dict) -> None:
 def get_website_connection(claims: dict = Depends(_get_current_tenant)):
     tenant_id = claims["tenant_id"]
     db = get_service_supabase()
-    row = connect_svc.get_connection(db, tenant_id)
+    try:
+        row = connect_svc.get_connection(db, tenant_id)
+    except Exception as exc:
+        unavailable = _storage_unavailable(exc)
+        if unavailable is not None:
+            raise unavailable from exc
+        raise
     return {"connection": row, "status": row["status"] if row else "not_started"}
 
 
@@ -88,6 +107,11 @@ async def connect_website(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        unavailable = _storage_unavailable(exc)
+        if unavailable is not None:
+            raise unavailable from exc
+        raise
 
 
 @router.post("/verify")
@@ -98,6 +122,11 @@ def verify_website_connection(claims: dict = Depends(block_demo_role)):
         return connect_svc.verify_connection(db, tenant_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        unavailable = _storage_unavailable(exc)
+        if unavailable is not None:
+            raise unavailable from exc
+        raise
 
 
 @router.get("/wordpress-plugin")

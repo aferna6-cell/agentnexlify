@@ -48,7 +48,7 @@ class TestMigration201CheckOnly:
         assert payload["applied"] is False
         assert payload["deployed"] is False
         assert payload["rollback"]["executed"] is False
-        assert payload["migration"]["schema_log_not_applied"] is True
+        assert payload["migration"]["schema_log_prod_applied"] is True
         assert payload["ready"] is True
 
     def test_apply_flag_is_refused(self, capsys):

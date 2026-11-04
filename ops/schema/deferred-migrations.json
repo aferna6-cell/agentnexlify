@@ -1,4 +1,4 @@
 {
-  "deferred_unapplied": [201],
-  "note": "201_website_connections is intentionally unapplied. Do not apply from this checker."
+  "deferred_unapplied": [],
+  "note": "201_website_connections was applied to prod on 2026-11-04 (version 20261104125122). This checker still does not apply migrations."
 }

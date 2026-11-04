@@ -976,6 +976,41 @@ class TestWebsiteConnectRouter:
         assert len(db.tables["website_connections"]) == 1
         assert second.json()["status"] != "connected"
 
+    def test_missing_table_is_not_a_generic_internal_error(
+        self, client, auth_headers_for
+    ):
+        class _Missing:
+            def table(self, _name):
+                return self
+
+            def select(self, *_a, **_k):
+                return self
+
+            def eq(self, *_a, **_k):
+                return self
+
+            def limit(self, *_a, **_k):
+                return self
+
+            def execute(self):
+                raise RuntimeError(
+                    '{"code":"PGRST205","message":"Could not find the table '
+                    '\'public.website_connections\' in the schema cache"}'
+                )
+
+        with patch(
+            "backend.routers.website_connect.get_service_supabase",
+            return_value=_Missing(),
+        ):
+            resp = client.get(
+                "/api/v1/website-connect",
+                headers=auth_headers_for(TENANT_A),
+            )
+        assert resp.status_code == 503
+        assert resp.json()["detail"] == "Website connect storage is not ready."
+        assert "internal error" not in resp.text.lower()
+        assert "PGRST205" not in resp.text
+
     def test_plugin_zip_contains_wordpress_plugin_not_secrets(
         self, client, auth_headers_for
     ):

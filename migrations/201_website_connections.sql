@@ -3,7 +3,8 @@
 -- One live website connection per tenant. "connected" is only written by
 -- backend verification of this tenant's public widget key on the live HTML.
 -- Never store CMS passwords or desktop-installer artifacts.
--- NOT applied to prod in this PR (no deploy / prod schema changes).
+-- Applied to prod (pxserpybmajixqrmzaly) 2026-11-04 as 201_website_connections
+-- version 20261104125122. Staging was inactive and was not changed.
 
 CREATE TABLE IF NOT EXISTS website_connections (
     id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),

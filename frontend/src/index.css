@@ -1300,20 +1300,23 @@ body {
 .platform-tab {
   flex: 1;
   padding: 6px 12px;
-  background: transparent;
-  border: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  color: var(--text-muted);
+  color: var(--text-primary);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   font-family: var(--font);
+  opacity: 1;
   transition: all 0.15s;
 }
-.platform-tab:hover { color: var(--text-primary); }
+.platform-tab:hover { color: var(--text-primary); border-color: var(--border-hover); }
+.platform-tab:disabled { opacity: 0.45; cursor: not-allowed; }
 .platform-tab.active {
-  background: var(--bg-card);
+  background: var(--accent-dim);
   color: var(--accent);
+  border-color: var(--accent);
 }
 
 /* Widget preview */
@@ -2925,7 +2928,8 @@ body {
 }
 .settings-field input,
 .settings-field textarea,
-.settings-field select {
+.settings-field select,
+.settings-input {
   width: 100%;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
@@ -2937,7 +2941,8 @@ body {
 }
 .settings-field input:focus,
 .settings-field textarea:focus,
-.settings-field select:focus {
+.settings-field select:focus,
+.settings-input:focus {
   outline: none;
   border-color: var(--accent);
 }

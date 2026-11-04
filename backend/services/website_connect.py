@@ -378,6 +378,30 @@ def _serialize(row: dict) -> dict:
     }
 
 
+def is_missing_website_connections_table(exc: BaseException) -> bool:
+    """True for the prod failure mode: migration 201's table is absent.
+
+    PostgREST reports PGRST205 / schema cache. Postgres reports 42P01.
+    """
+    text = str(exc).lower()
+    code = ""
+    raw_code = getattr(exc, "code", None)
+    if isinstance(raw_code, str):
+        code = raw_code.lower()
+    args = getattr(exc, "args", ())
+    if args and isinstance(args[0], dict):
+        code = str(args[0].get("code") or code).lower()
+        text = f"{text} {args[0].get('message') or ''}".lower()
+    if "website_connections" not in text and "website_connections" not in code:
+        return False
+    return (
+        "does not exist" in text
+        or "schema cache" in text
+        or "pgrst205" in text
+        or code in {"42p01", "pgrst205"}
+    )
+
+
 def get_connection(db, tenant_id: str) -> dict | None:
     row = _get_row(db, tenant_id)
     return _serialize(row) if row else None
