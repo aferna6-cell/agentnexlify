@@ -12,6 +12,7 @@ from backend.services.activity import log_activity
 from backend.services.pipeline_analytics import (
     annotate_days_in_stage,
     compute_pipeline_metrics,
+    group_leads_by_stage,
 )
 from backend.services.pipeline_presets import (
     DEFAULT_STAGES,
@@ -258,24 +259,9 @@ async def get_pipeline_board(
     leads = leads_result.data or []
     annotate_days_in_stage(leads)
 
-    stage_names_lower = {s["name"].lower(): s["name"] for s in stages}
-    leads_by_stage: dict[str, list] = {s["name"]: [] for s in stages}
-    unmatched: list = []
-
-    for lead in leads:
-        status_lower = (lead.get("status") or "").lower()
-        canonical_name = stage_names_lower.get(status_lower)
-        if canonical_name:
-            leads_by_stage[canonical_name].append(lead)
-        else:
-            unmatched.append(lead)
-
-    if unmatched:
-        leads_by_stage["_unmatched"] = unmatched
-
     return {
         "stages": stages,
-        "leads_by_stage": leads_by_stage,
+        "leads_by_stage": group_leads_by_stage(leads, stages),
     }
 
 
