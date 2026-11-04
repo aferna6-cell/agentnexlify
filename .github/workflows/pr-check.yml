@@ -157,7 +157,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r backend/requirements.txt
+          python -m pip install -r ops/db-backup/requirements.txt
           python -m pip install pytest pytest-asyncio pytest-cov pytest-timeout diff-cover pip-audit
+
+      - name: Install Postgres and age for off-site backup tests
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql postgresql-client age
 
       - name: Managed Agents preflight
         run: python scripts/managed_agents/preflight.py

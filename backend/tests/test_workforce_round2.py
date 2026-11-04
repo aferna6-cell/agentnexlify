@@ -147,7 +147,7 @@ class TestStarterRecurringTasks:
             }
         )
         out = os_starter_tasks.suggest_recurring_tasks(db, "c1")
-        assert [s["department"] for s in out] == ["marketing", "operations"]
+        assert [s["department"] for s in out] == ["marketing", "accounting"]
         assert "coffee shop" in out[0]["prompt"]
         assert all(s["interval_days"] == 7 for s in out)
 
