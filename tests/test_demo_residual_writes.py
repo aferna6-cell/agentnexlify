@@ -20,6 +20,7 @@ from fastapi.testclient import TestClient
 
 from backend.dependencies import block_demo_role
 from backend.middleware.demo_role_guard import DEMO_BLOCK_DETAIL
+from backend.route_introspection import iter_routes
 
 
 TENANT = "demo-t1"
@@ -56,10 +57,8 @@ def _walk_dep_calls(dependant):
 
 
 def _route(app, method, path):
-    for route in app.routes:
-        if getattr(route, "path", None) == path and method in getattr(
-            route, "methods", set()
-        ):
+    for route_path, route in iter_routes(app):
+        if route_path == path and method in getattr(route, "methods", set()):
             return route
     raise AssertionError(f"route not found: {method} {path}")
 
