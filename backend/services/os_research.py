@@ -64,7 +64,7 @@ async def gather_sources(
     try:
         _extend(
             await os_graph_memory.graph_kb_entries(db, client_id, topic),
-            "learned memory",
+            "notes from past conversations",
         )
     except Exception:
         logger.warning("os_research: graph memory read failed", exc_info=True)
@@ -106,8 +106,8 @@ async def run_research(
     if not corpus.strip():
         return {
             "error": (
-                "No sources to research from yet - add knowledge in "
-                "Second Brain, connect a tool, or include a web page URL."
+                "No sources to research from yet. Add business knowledge, "
+                "connect a tool, or include a web page URL."
             )
         }
 
