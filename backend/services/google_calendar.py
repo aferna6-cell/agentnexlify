@@ -26,6 +26,23 @@ SCOPES = [
 ]
 
 
+def build_redirect_uri() -> str:
+    """Redirect URI sent to Google for the Calendar OAuth callback.
+
+    ``GOOGLE_PUBLIC_REDIRECT_URI`` overrides the host on the consent screen.
+    Set it to the Vercel app callback so Google shows ``app.agentnexlify.com``
+    instead of the Railway host. Vercel proxies ``/api/v1/*`` to the API:
+
+    ``https://app.agentnexlify.com/api/v1/integrations/google/callback``
+
+    When that variable is unset, ``GOOGLE_REDIRECT_URI`` is used unchanged.
+    """
+    public = (settings.google_public_redirect_uri or "").strip()
+    if public:
+        return public
+    return (settings.google_redirect_uri or "").strip()
+
+
 # ---------------------------------------------------------------------------
 # Token management
 # ---------------------------------------------------------------------------

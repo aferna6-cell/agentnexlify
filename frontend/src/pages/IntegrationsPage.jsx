@@ -111,14 +111,7 @@ function InstagramIcon({ size = 40 }) {
         stroke="#fff"
         strokeWidth="3"
       />
-      <circle
-        cx="24"
-        cy="24"
-        r="6"
-        fill="none"
-        stroke="#fff"
-        strokeWidth="3"
-      />
+      <circle cx="24" cy="24" r="6" fill="none" stroke="#fff" strokeWidth="3" />
       <circle cx="31.5" cy="16.5" r="2" fill="#fff" />
     </svg>
   );
@@ -152,8 +145,18 @@ function GmailIcon({ size = 40 }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path d="M4 12v22" stroke="#4285F4" strokeWidth="3" strokeLinecap="round" />
-      <path d="M44 12v22" stroke="#34A853" strokeWidth="3" strokeLinecap="round" />
+      <path
+        d="M4 12v22"
+        stroke="#4285F4"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M44 12v22"
+        stroke="#34A853"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -531,9 +534,7 @@ function InstagramSection({ token }) {
                 fontWeight: 600,
                 fontSize: "0.875rem",
                 cursor:
-                  connecting || !platformConfigured
-                    ? "not-allowed"
-                    : "pointer",
+                  connecting || !platformConfigured ? "not-allowed" : "pointer",
                 opacity: connecting || !platformConfigured ? 0.7 : 1,
                 transition: "opacity 0.15s",
               }}
@@ -924,8 +925,8 @@ function GmailSection({ token }) {
             )}
           </div>
           <div style={gcStyles.cardDesc}>
-            Let the Agent OS read and send email through your Gmail account
-            for outreach and inbound replies
+            Let the Agent OS read and send email through your Gmail account for
+            outreach and inbound replies
           </div>
         </div>
       </div>
@@ -1550,39 +1551,31 @@ export default function IntegrationsPage({ onNavigate }) {
     secret: "",
   });
   const [toast, setToast] = useState(null);
+  const [toastTone, setToastTone] = useState("success");
   const [testingId, setTestingId] = useState(null);
   const [testResult, setTestResult] = useState(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("google") === "connected") {
-      setToast("Google Calendar connected successfully!");
+    const notices = [
+      ["google", "Google Calendar"],
+      ["m365", "Microsoft 365 Calendar"],
+      ["instagram_connected", "Instagram"],
+      ["hubspot", "HubSpot"],
+    ];
+    for (const [key, label] of notices) {
+      const value = params.get(key);
+      const connected = value === "connected" || value === "true";
+      const failed = value === "error";
+      if (!connected && !failed) continue;
+      setToast(
+        connected
+          ? `${label} connected successfully!`
+          : `${label} could not be connected. Try again.`,
+      );
+      setToastTone(failed ? "error" : "success");
       const url = new URL(window.location);
-      url.searchParams.delete("google");
-      window.history.replaceState({}, "", url.pathname + url.search);
-      const timer = setTimeout(() => setToast(null), 5000);
-      return () => clearTimeout(timer);
-    }
-    if (params.get("m365") === "connected") {
-      setToast("Microsoft 365 Calendar connected successfully!");
-      const url = new URL(window.location);
-      url.searchParams.delete("m365");
-      window.history.replaceState({}, "", url.pathname + url.search);
-      const timer = setTimeout(() => setToast(null), 5000);
-      return () => clearTimeout(timer);
-    }
-    if (params.get("instagram_connected") === "true") {
-      setToast("Instagram connected successfully!");
-      const url = new URL(window.location);
-      url.searchParams.delete("instagram_connected");
-      window.history.replaceState({}, "", url.pathname + url.search);
-      const timer = setTimeout(() => setToast(null), 5000);
-      return () => clearTimeout(timer);
-    }
-    if (params.get("hubspot") === "connected") {
-      setToast("HubSpot connected successfully!");
-      const url = new URL(window.location);
-      url.searchParams.delete("hubspot");
+      url.searchParams.delete(key);
       window.history.replaceState({}, "", url.pathname + url.search);
       const timer = setTimeout(() => setToast(null), 5000);
       return () => clearTimeout(timer);
@@ -1718,12 +1711,20 @@ export default function IntegrationsPage({ onNavigate }) {
   return (
     <div className="fade-in">
       {toast && (
-        <div style={gcStyles.toast}>
-          <span style={gcStyles.toastIcon}>&#10003;</span>
+        <div
+          style={toastTone === "error" ? gcStyles.toastError : gcStyles.toast}
+          role="status"
+        >
+          <span style={gcStyles.toastIcon}>
+            {toastTone === "error" ? "!" : "\u2713"}
+          </span>
           {toast}
           <button
             onClick={() => setToast(null)}
-            style={gcStyles.toastClose}
+            style={{
+              ...gcStyles.toastClose,
+              color: toastTone === "error" ? "var(--red)" : "var(--green)",
+            }}
             aria-label="Dismiss"
           >
             &times;
@@ -2308,6 +2309,23 @@ const gcStyles = {
     border: "1px solid var(--green)",
     borderRadius: "var(--radius)",
     color: "var(--green)",
+    fontSize: "0.875rem",
+    fontWeight: 500,
+    animation: "fadeIn 0.3s ease forwards",
+  },
+  toastError: {
+    position: "fixed",
+    top: 24,
+    right: 24,
+    zIndex: 9999,
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+    padding: "0.75rem 1.25rem",
+    background: "var(--red-dim)",
+    border: "1px solid var(--red)",
+    borderRadius: "var(--radius)",
+    color: "var(--red)",
     fontSize: "0.875rem",
     fontWeight: 500,
     animation: "fadeIn 0.3s ease forwards",

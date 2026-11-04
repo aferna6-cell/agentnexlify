@@ -2356,8 +2356,8 @@ class TestM365OAuthRoutes:
                 follow_redirects=False,
             )
 
-        assert resp.status_code == 400
-        assert "offline_access" in resp.json()["detail"]
+        assert resp.status_code in (302, 303, 307, 308)
+        assert resp.headers["location"].endswith("/dashboard/integrations?m365=error")
         save.assert_not_called()
 
     def test_m365_callback_rejects_invalid_state(self):
@@ -2368,7 +2368,8 @@ class TestM365OAuthRoutes:
                 "/api/v1/integrations/m365/callback?code=auth-code&state=tampered-jwt",
                 follow_redirects=False,
             )
-        assert resp.status_code == 400
+        assert resp.status_code in (302, 303, 307, 308)
+        assert resp.headers["location"].endswith("/dashboard/integrations?m365=error")
         exchange.assert_not_called()
 
     def test_m365_status_returns_disconnected_when_no_integration(self):

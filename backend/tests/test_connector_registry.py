@@ -462,7 +462,7 @@ async def test_google_callback_redirects_to_thread_when_present(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_google_callback_falls_back_to_hash_redirect_without_thread(monkeypatch):
+async def test_google_callback_falls_back_to_dashboard_without_thread(monkeypatch):
     from backend.routers import integrations as integrations_router
 
     monkeypatch.setattr(
@@ -474,7 +474,7 @@ async def test_google_callback_falls_back_to_hash_redirect_without_thread(monkey
     response = await integrations_router.google_callback(code="auth-code", state=state)
 
     location = response.headers["location"]
-    assert location.endswith("/#integrations")
+    assert location.endswith("/dashboard/integrations?google=connected")
     assert "thread=" not in location
 
 
@@ -494,7 +494,6 @@ def test_oauth_success_response_falls_back_to_html_when_no_frontend_url(monkeypa
         provider_label="Google Calendar",
         os_thread_id=None,
         return_to=None,
-        fallback_hash="/#integrations",
     )
     assert isinstance(response, HTMLResponse)
     assert b"Connected!" in response.body

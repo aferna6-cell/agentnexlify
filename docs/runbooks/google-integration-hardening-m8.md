@@ -73,6 +73,22 @@ M8_SMOKE_SUITES=calendar,gmail,agent_os_e2e,isolation,rag,crm python3 scripts/m8
 
 Run Google's **restricted-scope verification** for `gmail.readonly` while Milestone 9 starts. Inbox monitoring stays off until approved.
 
+## Production consent screen (app domain)
+
+Google's consent screen shows the host of `redirect_uri`. The Calendar callback
+uses `GOOGLE_PUBLIC_REDIRECT_URI` when it is set, and `GOOGLE_REDIRECT_URI`
+when that override is unset (the Railway host today).
+
+Vercel proxies `/api/v1/*` to the API, so the public callback can be:
+
+`https://app.agentnexlify.com/api/v1/integrations/google/callback`
+
+Set that exact value as `GOOGLE_PUBLIC_REDIRECT_URI` on Railway, and add the
+same URI under the OAuth client's Authorized redirect URIs in Google Cloud
+Console. Also set the OAuth consent screen app name and branding there.
+Leaving `GOOGLE_PUBLIC_REDIRECT_URI` unset keeps the current
+`GOOGLE_REDIRECT_URI` behavior.
+
 ## Cross-refs
 
 - `ops/docs/runbook-integrations-enc-key.md` — key generation
