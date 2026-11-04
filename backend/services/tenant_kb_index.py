@@ -16,7 +16,6 @@ from backend.services.business_retrieval import CorpusChunk
 _CHUNK_MIN = 500
 _CHUNK_MAX = 1000
 _CHUNK_OVERLAP = 120
-_EMBED_BATCH = 64
 _UUID = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 )
@@ -227,14 +226,17 @@ def _looks_uuid(value: str) -> bool:
 
 
 async def embed_chunk_texts(texts: list[str]) -> list[list[float]]:
-    """Voyage embeddings for chunk bodies. Raises EmbeddingUnavailable if unset."""
+    """Voyage embeddings for chunk bodies. Raises EmbeddingUnavailable if unset.
+
+    ``embed_batch`` splits the list so each HTTP call stays under the token
+    cap and waits for VOYAGE_RPM. Callers still embed every chunk before any
+    existing rows are deleted.
+    """
     from backend.services.embeddings import embed_batch
 
     if not texts:
         return []
-    vectors: list[list[float]] = []
-    for start in range(0, len(texts), _EMBED_BATCH):
-        vectors.extend(await embed_batch(texts[start : start + _EMBED_BATCH]))
+    vectors = await embed_batch(texts)
     if len(vectors) != len(texts):
         raise RuntimeError("Voyage returned a different number of embeddings than chunks")
     return vectors
