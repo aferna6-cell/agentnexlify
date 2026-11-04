@@ -273,11 +273,11 @@ def _cors_origins() -> list[str]:
 
 
 def _public_ai_live() -> bool:
-    """Unauthenticated health bit. The reason stays on the admin route."""
+    """Cached boolean only. Never probes and never waits on a refresh."""
     try:
-        from backend.services.ai_live import current_ai_live
+        from backend.services.ai_live import read_ai_live_cache
 
-        return bool(current_ai_live()["ai_live"])
+        return bool(read_ai_live_cache()["ai_live"])
     except Exception:
         logger.warning("health ai_live failed")
         return False
@@ -300,13 +300,13 @@ def _readiness_snapshot() -> dict:
             }
         )
 
-    from backend.services.ai_live import current_ai_live, normalize_api_key
+    from backend.services.ai_live import normalize_api_key, read_ai_live_cache
 
     try:
-        live = current_ai_live()
+        live = read_ai_live_cache()
     except Exception:
         logger.warning("readyz ai_live failed")
-        live = {"ai_live": False, "ai_live_reason": "provider_status_unknown"}
+        live = {"ai_live": False, "ai_live_reason": "probe_pending"}
     # Public readiness gets the boolean only. The reason is admin-only.
     optional_checks = {
         "anthropic_configured": bool(normalize_api_key(settings.anthropic_api_key)),
@@ -748,6 +748,23 @@ async def _process_scheduled_campaigns():
         return 0
 
 
+
+async def _ai_live_refresh_loop():
+    """Refresh the models-list cache off the event loop. Health handlers never await this."""
+    from fastapi.concurrency import run_in_threadpool
+
+    from backend.services.ai_live import AI_LIVE_TTL_S, refresh_ai_live_cache
+
+    while True:
+        try:
+            await run_in_threadpool(refresh_ai_live_cache)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.warning("ai_live refresh failed")
+        await asyncio.sleep(AI_LIVE_TTL_S)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _startup_time
@@ -759,10 +776,15 @@ async def lifespan(app: FastAPI):
         )
     if not os.environ.get("TESTING"):
         task = asyncio.create_task(_automation_loop_supervisor())
+        ai_live_task = asyncio.create_task(_ai_live_refresh_loop())
+    else:
+        ai_live_task = None
     # The owner-facing MCP server (mounted at /mcp below) needs its
     # streamable-HTTP session manager running for the whole app lifetime.
     async with mcp_server.mcp.session_manager.run():
         yield
+    if ai_live_task is not None:
+        ai_live_task.cancel()
     if not os.environ.get("TESTING"):
         task.cancel()
     logger.info("AgentNexLiFy shutting down")

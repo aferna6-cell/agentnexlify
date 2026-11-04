@@ -158,29 +158,49 @@ def fetch_agent_service_status(
     return ok, "ok" if ok else "reason_unavailable"
 
 
-def current_ai_live(*, force: bool = False, _deps: dict | None = None) -> dict:
-    """Cached workforce liveness. TESTING does not call the network or treat a key as live."""
+def read_ai_live_cache() -> dict:
+    """Copy the last probe. Never starts I/O and never waits on a refresh."""
+    with _lock:
+        if _cache is None:
+            return {"ai_live": False, "ai_live_reason": "probe_pending"}
+        return dict(_cache)
+
+
+def refresh_ai_live_cache(*, force: bool = False, _deps: dict | None = None) -> dict:
+    """Probe off the request path. The lock is not held during network I/O.
+
+    /health and /readyz must call read_ai_live_cache instead. A hung probe
+    must not delay them or fail Railway's healthcheck.
+    """
     global _cache, _cache_at
     now = time.monotonic()
     with _lock:
         if not force and _cache is not None and now - _cache_at < AI_LIVE_TTL_S:
             return dict(_cache)
 
-        if os.environ.get("TESTING") == "1" and _deps is None:
-            result = {"ai_live": False, "ai_live_reason": "probe_skipped"}
-        else:
-            result = _measure(_deps)
-
-        result["ai_live"] = bool(result["ai_live"])
-        result["ai_live_reason"] = _safe_reason(
-            str(result.get("ai_live_reason") or ""),
-            ok=result["ai_live"],
-        )
-        if not result["ai_live"]:
-            logger.warning("ai_live not ok reason=%s", result["ai_live_reason"])
+    if os.environ.get("TESTING") == "1" and _deps is None:
+        measured = {"ai_live": False, "ai_live_reason": "probe_skipped"}
+    else:
+        measured = _measure(_deps)
+    ok = bool(measured.get("ai_live"))
+    result = {
+        "ai_live": ok,
+        "ai_live_reason": _safe_reason(str(measured.get("ai_live_reason") or ""), ok=ok),
+    }
+    if not result["ai_live"]:
+        logger.warning("ai_live not ok reason=%s", result["ai_live_reason"])
+    with _lock:
         _cache = result
         _cache_at = time.monotonic()
         return dict(result)
+
+
+def current_ai_live(*, force: bool = False, _deps: dict | None = None) -> dict:
+    """Synchronous refresh used by the background worker and unit tests.
+
+    Request handlers must not call this. Use read_ai_live_cache.
+    """
+    return refresh_ai_live_cache(force=force, _deps=_deps)
 
 
 def _measure(deps: dict | None) -> dict:

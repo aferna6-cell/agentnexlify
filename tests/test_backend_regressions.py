@@ -60,8 +60,8 @@ def test_healthz_readyz_and_version_are_registered():
 def test_ai_live_reason_is_admin_only(monkeypatch):
     """Public /health and /readyz expose the boolean. The reason requires admin."""
     monkeypatch.setattr(
-        "backend.services.ai_live.current_ai_live",
-        lambda **_kwargs: {"ai_live": False, "ai_live_reason": "invalid_api_key"},
+        "backend.services.ai_live.read_ai_live_cache",
+        lambda: {"ai_live": False, "ai_live_reason": "invalid_api_key"},
     )
     from backend.routers import admin_health
 
@@ -88,6 +88,78 @@ def test_ai_live_reason_is_admin_only(monkeypatch):
     )
     assert allowed.status_code == 200
     assert allowed.json() == {"ai_live": False, "ai_live_reason": "invalid_api_key"}
+
+
+def test_readyz_returns_200_when_ai_live_is_false():
+    """AI liveness only reports. A failed probe must not fail readiness or /health."""
+    from backend.services import ai_live
+
+    ai_live.reset_ai_live_cache()
+    ai_live.refresh_ai_live_cache(
+        force=True,
+        _deps={
+            "probe": lambda _api_key: (False, "invalid_api_key"),
+            "api_key": "sk-ant-present",
+            "service_url": "",
+        },
+    )
+    client = TestClient(app)
+    health = client.get("/api/health")
+    ready = client.get("/api/v1/readyz")
+    assert health.status_code == 200
+    assert ready.status_code == 200
+    assert health.json()["checks"]["ai_live"] is False
+    assert ready.json()["status"] == "ready"
+    assert ready.json()["checks"]["optional"]["ai_live"] is False
+    assert ready.json()["checks"]["ready"] is True
+    assert "invalid_api_key" not in health.text
+    assert "invalid_api_key" not in ready.text
+    ai_live.reset_ai_live_cache()
+
+
+def test_hung_ai_probe_does_not_delay_health_or_readyz():
+    """A probe stuck in the background must not hold /health or /readyz."""
+    import threading
+    import time
+
+    from backend.services import ai_live
+
+    ai_live.reset_ai_live_cache()
+    entered = threading.Event()
+    release = threading.Event()
+
+    def hung(_api_key):
+        entered.set()
+        release.wait(timeout=10)
+        return False, "timeout"
+
+    worker = threading.Thread(
+        target=ai_live.refresh_ai_live_cache,
+        kwargs={
+            "force": True,
+            "_deps": {
+                "probe": hung,
+                "api_key": "sk-ant-present",
+                "service_url": "",
+            },
+        },
+        daemon=True,
+    )
+    client = TestClient(app)
+    worker.start()
+    assert entered.wait(1)
+    started = time.perf_counter()
+    health = client.get("/api/health")
+    ready = client.get("/api/v1/readyz")
+    elapsed = time.perf_counter() - started
+    release.set()
+    worker.join(timeout=2)
+    assert elapsed < 0.5
+    assert health.status_code == 200
+    assert ready.status_code == 200
+    assert health.json()["checks"]["ai_live"] is False
+    assert ready.json()["checks"]["optional"]["ai_live"] is False
+    ai_live.reset_ai_live_cache()
 
 
 def test_version_metadata_prefers_explicit_release_env(monkeypatch):

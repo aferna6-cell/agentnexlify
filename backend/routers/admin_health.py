@@ -197,9 +197,9 @@ async def admin_ai_live(
 ):
     """Sanitized model-probe reason. Unauthenticated /health returns only ai_live."""
     _verify_admin_secret(x_api_secret)
-    from backend.services.ai_live import current_ai_live
+    from backend.services.ai_live import read_ai_live_cache
 
-    live = current_ai_live()
+    live = read_ai_live_cache()
     return {
         "ai_live": bool(live["ai_live"]),
         "ai_live_reason": live["ai_live_reason"],
