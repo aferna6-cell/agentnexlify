@@ -9,7 +9,8 @@ Usage:
 
 Requires VOYAGE_API_KEY and the Supabase service credentials in the environment.
 Requests are token-batched (VOYAGE_MAX_TOKENS_PER_REQUEST, default 8000) and
-paced at VOYAGE_RPM (default 3). A 429 does not delete existing chunks.
+paced at VOYAGE_RPM (default 3). A failure while saving chunks exits nonzero
+and does not delete the tenant's existing rows.
 """
 
 import argparse
@@ -22,7 +23,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from backend.services.embeddings import EmbeddingUnavailable  # noqa: E402
-from backend.services.tenant_kb_index import reindex_tenant  # noqa: E402
+from backend.services.tenant_kb_index import KbIndexPersistError, reindex_tenant  # noqa: E402
 
 
 def main() -> int:
@@ -37,6 +38,15 @@ def main() -> int:
     except EmbeddingUnavailable as exc:
         print(f"embeddings unavailable: {exc}", file=sys.stderr)
         return 3
+    except KbIndexPersistError as exc:
+        print(f"persist failed: {exc}", file=sys.stderr)
+        return 1
+    if summary["chunks"] == 0 and summary["embedded"]:
+        print(
+            f"persist failed: 0 chunks stored for {summary['embedded']} embeddings",
+            file=sys.stderr,
+        )
+        return 1
     print(
         f"reindexed {summary['client_id']}: "
         f"{summary['chunks']} chunks, {summary['embedded']} embeddings"

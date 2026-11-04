@@ -80,6 +80,13 @@ def pack_text(text: str) -> list[str]:
 logger = logging.getLogger(__name__)
 
 
+class KbIndexPersistError(RuntimeError):
+    """Raised when new chunks could not be stored.
+
+    Existing tenant_kb_chunks rows are left in place.
+    """
+
+
 def _sha(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
@@ -183,42 +190,134 @@ def load_corpus_from_documents(db: Any, client_id: str) -> list[CorpusChunk]:
     return chunks + _load_faq_chunks(db, client_id)
 
 
+def _result_rows(result: Any) -> list[dict]:
+    data = getattr(result, "data", None)
+    if isinstance(data, list):
+        return [row for row in data if isinstance(row, dict)]
+    return []
+
+
+def _load_existing_chunks(db: Any, client_id: str) -> list[dict]:
+    """Page through this tenant's current chunk ids. Other tenants are not read."""
+    rows: list[dict] = []
+    start = 0
+    page = 1000
+    paged = False
+    while True:
+        query = (
+            db.table("tenant_kb_chunks")
+            .select("id, document_id, chunk_index")
+            .eq("client_id", client_id)
+        )
+        ranger = getattr(query, "range", None)
+        if callable(ranger):
+            query = ranger(start, start + page - 1)
+        elif paged:
+            break
+        paged = True
+        batch = _result_rows(query.execute())
+        rows.extend(batch)
+        if len(batch) < page:
+            break
+        start += page
+    return rows
+
+
+def _stage_rows(persistable: list[dict], existing: list[dict]) -> tuple[list[dict], bool]:
+    """Copy rows for insert. Shift indexes that still belong to stored rows.
+
+    The unique key is (client_id, document_id, chunk_index). New rows are
+    inserted before the old ones are deleted, so a colliding index is parked
+    above the current maximum and moved back after the delete.
+    """
+    occupied = {
+        (str(row.get("document_id")), int(row.get("chunk_index") or 0))
+        for row in existing
+    }
+    desired_indexes = [int(row["chunk_index"]) for row in persistable]
+    highest = max(
+        [int(row.get("chunk_index") or 0) for row in existing] + desired_indexes,
+        default=-1,
+    )
+    collides = any(
+        (str(row["document_id"]), int(row["chunk_index"])) in occupied for row in persistable
+    )
+    staged: list[dict] = []
+    for offset, row in enumerate(persistable):
+        staged_row = dict(row)
+        if collides:
+            staged_row["chunk_index"] = highest + 1 + offset
+        staged.append(staged_row)
+    return staged, collides
+
+
 def replace_chunks_for_tenant(
     db: Any,
     client_id: str,
     chunks: list[CorpusChunk],
     embeddings: list[list[float] | None] | None = None,
 ) -> int:
-    """Delete + insert tenant_kb_chunks. Fail-open if table missing."""
+    """Replace one tenant's chunks without emptying the table on failure.
+
+    Rows are built and inserted first. Previous rows are deleted only after
+    every insert succeeds. ``chunk_index`` is the position in ``chunks``
+    (``faq-0`` is a valid chunk id and is not parsed as an integer).
+    """
+    rows = []
+    for i, c in enumerate(chunks):
+        row = {
+            "client_id": client_id,
+            "document_id": c.document_id if _looks_uuid(c.document_id) else None,
+            "chunk_index": i,
+            "source_type": c.source_type,
+            "title": c.title,
+            "section": c.section,
+            "content": c.content,
+            "content_sha256": _sha(c.content),
+            "status": "active",
+            "citation_label": c.citation_label,
+        }
+        if embeddings and i < len(embeddings) and embeddings[i]:
+            row["embedding"] = embeddings[i]
+        rows.append(row)
+    # document_id is uuid in schema — skip persist when ids are eval strings
+    persistable = [row for row in rows if row["document_id"]]
     try:
-        db.table("tenant_kb_chunks").delete().eq("client_id", client_id).execute()
-        if not chunks:
+        if not persistable:
+            db.table("tenant_kb_chunks").delete().eq("client_id", client_id).execute()
             return 0
-        rows = []
-        for i, c in enumerate(chunks):
-            row = {
-                "client_id": client_id,
-                "document_id": c.document_id if _looks_uuid(c.document_id) else None,
-                "chunk_index": int(c.chunk_id.rsplit("#", 1)[-1] or 0),
-                "source_type": c.source_type,
-                "title": c.title,
-                "section": c.section,
-                "content": c.content,
-                "content_sha256": _sha(c.content),
-                "status": "active",
-                "citation_label": c.citation_label,
-            }
-            if embeddings and i < len(embeddings) and embeddings[i]:
-                row["embedding"] = embeddings[i]
-            rows.append(row)
-        # document_id is uuid in schema — skip persist when ids are eval strings
-        persistable = [r for r in rows if r["document_id"]]
-        for start in range(0, len(persistable), 40):
-            db.table("tenant_kb_chunks").insert(persistable[start : start + 40]).execute()
+        existing = _load_existing_chunks(db, client_id)
+        staged, shifted = _stage_rows(persistable, existing)
+        for start in range(0, len(staged), 40):
+            db.table("tenant_kb_chunks").insert(staged[start : start + 40]).execute()
+        old_ids = [row["id"] for row in existing if row.get("id")]
+        for start in range(0, len(old_ids), 40):
+            batch = old_ids[start : start + 40]
+            (
+                db.table("tenant_kb_chunks")
+                .delete()
+                .eq("client_id", client_id)
+                .in_("id", batch)
+                .execute()
+            )
+        if shifted:
+            for desired, staged_row in zip(persistable, staged):
+                (
+                    db.table("tenant_kb_chunks")
+                    .update({"chunk_index": desired["chunk_index"]})
+                    .eq("client_id", client_id)
+                    .eq("document_id", staged_row["document_id"])
+                    .eq("chunk_index", staged_row["chunk_index"])
+                    .execute()
+                )
         return len(persistable)
-    except Exception:
-        logger.warning("tenant_kb_index: persist skipped client_id=%s", client_id, exc_info=True)
-        return 0
+    except Exception as exc:
+        logger.warning(
+            "tenant_kb_index: persist failed client_id=%s; existing chunks kept",
+            client_id,
+            exc_info=True,
+        )
+        raise KbIndexPersistError("existing chunks were kept") from exc
 
 
 def _looks_uuid(value: str) -> bool:
