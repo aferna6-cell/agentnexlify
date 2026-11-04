@@ -192,6 +192,72 @@ def upsert_document(
     return "added"
 
 
+def _faq_markdown(rows: list[dict]) -> str:
+    """Render active FAQ rows as markdown the chunker can split on headings."""
+    parts: list[str] = []
+    for row in rows:
+        if row.get("is_active") is False:
+            continue
+        question = (row.get("question") or "").strip()
+        answer = (row.get("answer") or "").strip()
+        if not question or not answer:
+            continue
+        parts.append(f"## {question}\n\n{answer}")
+    return "\n\n".join(parts)
+
+
+def sync_faq_document(db, client_id: str) -> str:
+    """Project faq_entries into one tenant_kb_documents row (source='faq').
+
+    The KB index is built from active documents. FAQ rows live in their own
+    table, so without this step a 'what do we offer' answer never sees them.
+    Returns added/updated/unchanged/empty/skipped. Fail-open.
+    """
+    try:
+        rows = (
+            db.table("faq_entries")
+            .select("question, answer, is_active")
+            .eq("tenant_id", client_id)
+            .execute()
+        ).data or []
+    except Exception:
+        logger.warning("tenant_kb: faq read failed client_id=%s", client_id, exc_info=True)
+        return "skipped"
+
+    markdown = _faq_markdown(rows)
+    if not markdown:
+        try:
+            existing = (
+                db.table("tenant_kb_documents")
+                .select("id, source, external_id")
+                .eq("client_id", client_id)
+                .eq("source", "faq")
+                .eq("external_id", "faq_entries")
+                .limit(1)
+                .execute()
+            ).data or []
+        except Exception:
+            logger.warning("tenant_kb: faq doc lookup failed client_id=%s", client_id, exc_info=True)
+            return "skipped"
+        faq_rows = [
+            row for row in existing
+            if row.get("source") == "faq" or row.get("external_id") == "faq_entries"
+        ]
+        if faq_rows and faq_rows[0].get("id"):
+            db.table("tenant_kb_documents").update(
+                {"status": "deleted", "updated_at": datetime.now(timezone.utc).isoformat()}
+            ).eq("id", faq_rows[0]["id"]).execute()
+        return "empty"
+
+    return upsert_document(
+        client_id,
+        source="faq",
+        external_id="faq_entries",
+        filename="FAQs.md",
+        content_md=markdown,
+    )
+
+
 def compile_tenant_kb(client_id: str) -> dict:
     """Assemble every active document into widget_configs.knowledge_base.
 
@@ -199,8 +265,11 @@ def compile_tenant_kb(client_id: str) -> dict:
         <!-- source: drive/pricing.pdf | synced: 2026-07-13 -->
     so the second-brain view and any human reading the KB can trace every
     answer back to its file. Returns {documents, chars, truncated}.
+    FAQ entries are projected into a source='faq' document first so the
+    chunk index includes them.
     """
     db = get_service_supabase()
+    sync_faq_document(db, client_id)
     result = (
         db.table("tenant_kb_documents")
         .select("source, external_id, filename, content_md, synced_at")

@@ -74,6 +74,62 @@ def test_generate_image_png_openai_provider_passes_size_through():
     gen_openai.assert_called_once_with("a cat", "sk-test", size="1024x1536")
 
 
+def test_openai_payload_omits_response_format_and_uses_image_gen_model():
+    """gpt-image models 400 on response_format and on the retired gpt-image-1 id."""
+    import base64
+
+    captured = {}
+
+    class _Resp:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"data": [{"b64_json": base64.b64encode(b"PNG").decode()}]}
+
+    def _post(url, json=None, headers=None, timeout=None):
+        captured["url"] = url
+        captured["json"] = json
+        captured["headers"] = headers
+        return _Resp()
+
+    with patch.object(image_gen.settings, "image_gen_model", "gpt-image-1.5"), patch.object(
+        image_gen.httpx, "post", _post
+    ):
+        png = image_gen._generate_openai("a cat", "sk-test", size="1024x1024")
+
+    assert png == b"PNG"
+    assert captured["json"]["model"] == "gpt-image-1.5"
+    assert captured["json"]["prompt"] == "a cat"
+    assert captured["json"]["size"] == "1024x1024"
+    assert captured["json"]["n"] == 1
+    assert "response_format" not in captured["json"]
+    assert captured["headers"]["Authorization"] == "Bearer sk-test"
+
+    captured.clear()
+    with patch.object(image_gen.settings, "image_gen_model", "gpt-image-1-mini"), patch.object(
+        image_gen.httpx, "post", _post
+    ):
+        image_gen._generate_openai("a dog", "sk-other")
+
+    assert captured["json"]["model"] == "gpt-image-1-mini"
+    assert "response_format" not in captured["json"]
+
+    captured.clear()
+    with patch.object(image_gen.settings, "image_gen_model", "  "), patch.object(
+        image_gen.httpx, "post", _post
+    ):
+        image_gen._generate_openai("a bird", "sk-test")
+    assert captured["json"]["model"] == "gpt-image-1.5"
+    assert "response_format" not in captured["json"]
+
+
+def test_image_gen_model_setting_defaults_to_gpt_image_1_5():
+    from backend.config import Settings
+
+    assert Settings.model_fields["image_gen_model"].default == "gpt-image-1.5"
+
+
 # ---------------------------------------------------------------------------
 # generate_post_image — service layer
 # ---------------------------------------------------------------------------
@@ -312,3 +368,30 @@ class TestGenerateImageEndpoint:
             )
         assert resp.status_code == 200
         assert resp.json()["url"] == fake_result["url"]
+
+
+def test_provider_401_becomes_image_gen_not_configured():
+    db, _bucket = _fake_storage_db()
+    with patch.object(images, "generate_image_png", side_effect=ImageGenError("no", status_code=401)):
+        try:
+            run(images.generate_post_image(db, tenant_id=_TENANT, prompt="x", platform="instagram"))
+            assert False, "expected SocialImageGenError"
+        except images.SocialImageGenError as exc:
+            assert str(exc) == "image_gen_not_configured"
+
+
+def test_generate_image_auth_failure_returns_not_configured_code():
+    client = _client()
+    try:
+        with patch(
+            "backend.routers.social_media.generate_post_image",
+            AsyncMock(side_effect=images.SocialImageGenError("image_gen_not_configured")),
+        ):
+            resp = client.post(
+                f"/api/v1/social/{_TENANT}/generate-image",
+                json={"prompt": "a coffee cup", "platform": "instagram"},
+            )
+        assert resp.status_code == 422, resp.text
+        assert resp.json()["detail"]["error"] == "image_gen_not_configured"
+    finally:
+        _teardown()
