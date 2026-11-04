@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { isBusinessKnowledgeQuestion } from "../_intent.ts";
 import { defineAgent } from "../_schema.ts";
-import { Authoring, presentProfileFields, firstName, greetingInstruction } from "../_authoring.ts";
+import {
+  Authoring,
+  presentProfileFields,
+  firstName,
+  greetingInstruction,
+} from "../_authoring.ts";
 import { finishBody } from "../_format.ts";
 import { generateDraft } from "../../lib/draft.ts";
 import type { AgentOutput, KbEntry, SharedContext } from "../../types/agent.ts";
@@ -13,19 +18,84 @@ const Input = z.object({
   customer_context: z.string().optional(),
 });
 
+const INTERNAL_KB =
+  /your knowledge about this business is incomplete|still missing:|what we are not building|weave one of these questions|setup gaps|never interrogate|system instruction|knowledge-gap/i;
+
+function isInternalKnowledge(entry: KbEntry): boolean {
+  if (entry.internal) return true;
+  return INTERNAL_KB.test(`${entry.topic} ${entry.answer}`);
+}
+
 function searchKb(kb: KbEntry[], query: string): KbEntry[] {
-  const terms = query.toLowerCase().split(/\W+/).filter((t) => t.length > 3);
+  const terms = query
+    .toLowerCase()
+    .split(/\W+/)
+    .filter((t) => t.length > 3);
   if (terms.length === 0) return [];
   return kb.filter((e) => {
+    if (isInternalKnowledge(e)) return false;
     const hay = `${e.topic} ${e.answer}`.toLowerCase();
     return terms.some((t) => hay.includes(t));
   });
 }
 
+function isEchoFragment(text: string, terms: string[]): boolean {
+  const words = text
+    .toLowerCase()
+    .split(/\W+/)
+    .filter((w) => w.length > 2);
+  if (words.length === 0) return true;
+  const informative = words.filter((w) => !terms.some((t) => w.includes(t)));
+  return text.length < 80 && informative.length < 2;
+}
+
+/** One customer-facing answer. Drops system text and does not join every hit. */
+export function synthesizeKbAnswer(question: string, hits: KbEntry[]): string {
+  const terms = question
+    .toLowerCase()
+    .split(/\W+/)
+    .filter((t) => t.length > 3);
+  const ranked = hits
+    .filter((entry) => !isInternalKnowledge(entry))
+    .map((entry) => (entry.answer || "").replace(/\s+/g, " ").trim())
+    .filter((text) => text && !isEchoFragment(text, terms))
+    .map((text) => {
+      const hay = text.toLowerCase();
+      const score = terms.reduce(
+        (n, term) => n + (hay.includes(term) ? 1 : 0),
+        0,
+      );
+      return { text, score };
+    })
+    .sort((a, b) => b.score - a.score || b.text.length - a.text.length);
+
+  const picked: string[] = [];
+  const seen = new Set<string>();
+  for (const row of ranked) {
+    const key = row.text.toLowerCase().slice(0, 96);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    picked.push(row.text);
+    if (picked.length >= 3 || picked.join(" ").length >= 700) break;
+  }
+  if (picked.length === 0)
+    return "I don't have that in your knowledge base yet.";
+  if (picked.length === 1) return picked[0]!;
+  const services = /\b(services|products|offer)\b/i.test(question);
+  if (services) {
+    const items = picked.map((text) =>
+      text.replace(/^we offer\s+/i, "").replace(/\.$/, ""),
+    );
+    return `We offer ${items.join("; ")}.`;
+  }
+  return picked.join(" ");
+}
+
 function deriveTopic(q: string): string {
   const a = q.toLowerCase();
   if (a.includes("hour")) return "hours";
-  if (a.includes("price") || a.includes("cost") || a.includes("how much")) return "pricing";
+  if (a.includes("price") || a.includes("cost") || a.includes("how much"))
+    return "pricing";
   if (a.includes("hybrid") || a.includes("battery")) return "hybrid service";
   if (a.includes("walk")) return "walk-ins";
   const words = q.trim().split(/\s+/).slice(0, 4).join(" ");
@@ -39,23 +109,43 @@ export const customerQuestion = defineAgent(
     bucket: "customer_service",
     status: "existing",
     build_priority: "P1",
-    purpose: "Drafts written answers to customer questions about hours, services, pricing, policies, or products.",
+    purpose:
+      "Drafts written answers to customer questions about hours, services, pricing, policies, or products.",
     channel: "widget_reply",
     routes_here_when: [
       "Owner pastes a customer question and asks for a reply",
       "(Phase 4) new widget conversation classified as 'question' intent",
     ],
-    keywords: ["question", "asked", "reply", "respond", "answer", "hours", "do you", "what time", "customer asked"],
+    keywords: [
+      "question",
+      "asked",
+      "reply",
+      "respond",
+      "answer",
+      "hours",
+      "do you",
+      "what time",
+      "customer asked",
+    ],
     strong_signals: ["draft a response", "draft a reply", "how do i reply"],
     shared_context_needed: ["business_profile", "widget_history", "kb"],
     tool_dependencies: ["none"],
     permission_scope: { default: "drafts_only", require_owner_approval: true },
     triggers_supported: ["manual", "event_based"],
     trigger_detail: { events: ["widget_conversation_question"] },
-    output_format: { title_template: "Reply to {customer} — {topic}", body_constraints: { no_markdown: true } },
+    output_format: {
+      title_template: "Reply to {customer} — {topic}",
+      body_constraints: { no_markdown: true },
+    },
     examples,
   },
-  async ({ input, context, emitTrace, ownerAsk, runId }): Promise<AgentOutput> => {
+  async ({
+    input,
+    context,
+    emitTrace,
+    ownerAsk,
+    runId,
+  }): Promise<AgentOutput> => {
     const a = new Authoring(context.businessProfile);
     const p = Input.safeParse(input);
     const params = p.success ? p.data : {};
@@ -72,9 +162,7 @@ export const customerQuestion = defineAgent(
           : "No knowledge-base entry matched this question",
         data: kbHits,
       });
-      const answer = kbHits.length
-        ? kbHits.map((entry) => entry.answer).join(" ")
-        : "I don't have that in your knowledge base yet.";
+      const answer = synthesizeKbAnswer(question, kbHits);
       return {
         orchestratorNotes: [answer],
         noDraftReason: "answered directly from the knowledge base",
@@ -110,12 +198,16 @@ export const customerQuestion = defineAgent(
       );
     }
 
-    const greeting = firstName(customerName) ? `Hi ${firstName(customerName)}!` : "Hi!";
-    const thanks = businessName ? `Thanks for reaching out to ${businessName}.` : "Thanks for reaching out.";
+    const greeting = firstName(customerName)
+      ? `Hi ${firstName(customerName)}!`
+      : "Hi!";
+    const thanks = businessName
+      ? `Thanks for reaching out to ${businessName}.`
+      : "Thanks for reaching out.";
 
     const local = (): string => {
       if (kbHasAnswer) {
-        return `${greeting} ${thanks} ${kbHits.map((e) => e.answer).join(" ")}${signoff ? ` — ${signoff}` : ""}`;
+        return `${greeting} ${thanks} ${synthesizeKbAnswer(question, kbHits)}${signoff ? ` — ${signoff}` : ""}`;
       }
       return (
         `${greeting} ${thanks} That's a great question — let me confirm the details on my end ` +
@@ -135,14 +227,25 @@ export const customerQuestion = defineAgent(
           `Never invent facts. Never expose internal status (do not ask the owner for their profile/KB inside this reply).`) +
       (signoff ? ` Sign off as ${signoff}.` : "");
     const prompt =
-      (kbHasAnswer ? `Knowledge base:\n${kbHits.map((e) => `- ${e.topic}: ${e.answer}`).join("\n")}\n\n` : "") +
-      `Customer question: "${question}"`;
+      (kbHasAnswer
+        ? `Knowledge base:\n${kbHits.map((e) => `- ${e.topic}: ${e.answer}`).join("\n")}\n\n`
+        : "") + `Customer question: "${question}"`;
 
-    await emitTrace.work("draft_reply", kbHasAnswer ? "Answered from the knowledge base" : "KB lacks this info — safe holding reply");
+    await emitTrace.work(
+      "draft_reply",
+      kbHasAnswer
+        ? "Answered from the knowledge base"
+        : "KB lacks this info — safe holding reply",
+    );
     const generated = await generateDraft({ system, prompt, runId, local });
     if (!generated) {
-      a.note("Service is temporarily unavailable — please try again in a few minutes.");
-      return { orchestratorNotes: a.notes, noDraftReason: "service temporarily unavailable" };
+      a.note(
+        "Service is temporarily unavailable — please try again in a few minutes.",
+      );
+      return {
+        orchestratorNotes: a.notes,
+        noDraftReason: "service temporarily unavailable",
+      };
     }
 
     const topic = deriveTopic(question);
@@ -151,7 +254,12 @@ export const customerQuestion = defineAgent(
         title: `Reply to ${customerName ?? "lead"} — ${topic}`,
         body: finishBody("widget_reply", generated.text),
         channel: "widget_reply",
-        metadata: { topic, kb_hit: kbHasAnswer, source: generated.source, cost_usd: generated.costUsd },
+        metadata: {
+          topic,
+          kb_hit: kbHasAnswer,
+          source: generated.source,
+          cost_usd: generated.costUsd,
+        },
         requiresApproval: true,
       },
       orchestratorNotes: a.notes,
@@ -160,10 +268,14 @@ export const customerQuestion = defineAgent(
 );
 
 function searchWidget(ctx: SharedContext, query: string) {
-  const terms = query.toLowerCase().split(/\W+/).filter((t) => t.length > 3);
+  const terms = query
+    .toLowerCase()
+    .split(/\W+/)
+    .filter((t) => t.length > 3);
   if (terms.length === 0) return [];
   return ctx.widgetHistory.filter((c) => {
-    const hay = `${c.summary} ${c.topics.join(" ")} ${c.contactName ?? ""}`.toLowerCase();
+    const hay =
+      `${c.summary} ${c.topics.join(" ")} ${c.contactName ?? ""}`.toLowerCase();
     return terms.some((t) => hay.includes(t));
   });
 }

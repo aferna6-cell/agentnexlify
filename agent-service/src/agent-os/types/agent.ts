@@ -83,6 +83,8 @@ export interface InvoiceData {
 export interface KbEntry {
   topic: string;
   answer: string;
+  /** Owner-only coaching. Never quote this in a customer-facing reply. */
+  internal?: boolean;
 }
 
 /** Retrieved approved tenant knowledge. Optional — absent when RAG is off. */

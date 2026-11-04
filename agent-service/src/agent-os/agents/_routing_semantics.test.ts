@@ -99,6 +99,39 @@ test("a business-fact question is answered from the KB with no draft", async () 
   assert.match(out.orchestratorNotes.join(" "), /oil changes/);
 });
 
+test("business-fact answers omit gap text and do not dump fragments", async () => {
+  const { emitter } = fakeEmitter();
+  const out = await customerService.run({
+    input: {},
+    context: fullContext({
+      kb: [
+        {
+          topic: "setup gaps — gather these from the owner",
+          internal: true,
+          answer:
+            "Your knowledge about this business is incomplete. Still missing: the list of services offered.",
+        },
+        { topic: "frag", answer: "offer offers offer" },
+        { topic: "roadmap", answer: "What we are NOT building in v1 is a marketplace." },
+        {
+          topic: "Services",
+          answer:
+            "We offer oil changes, brake jobs, and tire rotations for drivers in town.",
+        },
+      ],
+    }),
+    emitTrace: emitter,
+    ownerAsk: "What services do we offer?",
+    runId: "",
+  });
+  const note = out.orchestratorNotes.join(" ");
+  assert.match(note, /oil changes/i);
+  assert.equal(out.draft, undefined);
+  assert.doesNotMatch(note, /incomplete/i);
+  assert.doesNotMatch(note, /NOT building/i);
+  assert.doesNotMatch(note, /offer offers offer/);
+});
+
 test("business facts short-circuit before Haiku even if the model picks admin_records", async () => {
   setClassifierModel(async () => ({
     text: JSON.stringify({
