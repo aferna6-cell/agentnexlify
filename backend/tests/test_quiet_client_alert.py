@@ -49,11 +49,57 @@ class _Query:
         return SimpleNamespace(data=rows)
 
 
+class _Idempotency:
+    """Shared idempotency_keys table. Upsert with ignore_duplicates claims once."""
+
+    def __init__(self, rows):
+        self._rows = rows
+        self._payload = None
+        self._ignore_duplicates = False
+        self._eq_key = None
+
+    def upsert(self, payload, on_conflict="key", ignore_duplicates=False):
+        self._payload = payload
+        self._ignore_duplicates = ignore_duplicates
+        return self
+
+    def select(self, *_args, **_kwargs):
+        return self
+
+    def eq(self, column, value):
+        if column == "key":
+            self._eq_key = value
+        return self
+
+    def limit(self, _count):
+        return self
+
+    def execute(self):
+        if self._payload is not None:
+            key = self._payload["key"]
+            existing = [row for row in self._rows if row.get("key") == key]
+            payload = self._payload
+            self._payload = None
+            if existing and self._ignore_duplicates:
+                return SimpleNamespace(data=[])
+            if not existing:
+                row = dict(payload)
+                self._rows.append(row)
+                return SimpleNamespace(data=[row])
+            return SimpleNamespace(data=existing)
+        rows = self._rows
+        if self._eq_key is not None:
+            rows = [row for row in rows if row.get("key") == self._eq_key]
+        return SimpleNamespace(data=list(rows))
+
+
 class _DB:
     def __init__(self, tables):
         self.tables = tables
 
     def table(self, name):
+        if name == "idempotency_keys":
+            return _Idempotency(self.tables.setdefault("idempotency_keys", []))
         return _Query(self.tables.get(name, []))
 
 
@@ -127,8 +173,10 @@ def _fixture():
     }
 
 
-def setup_function():
-    alert._last_alert_date = None
+def _shared_db():
+    tables = _fixture()
+    tables["idempotency_keys"] = []
+    return _DB(tables)
 
 
 def test_before_morning_does_not_query(monkeypatch):
@@ -150,7 +198,8 @@ def test_flags_only_the_silent_paying_widget(monkeypatch):
         sent["body"] = body_html
         return {"success": True}
 
-    monkeypatch.setattr(alert, "get_service_supabase", lambda: _DB(_fixture()))
+    shared = _shared_db()
+    monkeypatch.setattr(alert, "get_service_supabase", lambda: shared)
     monkeypatch.setattr(alert, "send_platform_email", capture)
 
     count = run(alert.run_quiet_client_alert(_noon()))
@@ -165,16 +214,26 @@ def test_flags_only_the_silent_paying_widget(monkeypatch):
     assert "someone-else" not in sent["body"]
 
 
-def test_same_day_second_call_does_not_send_again(monkeypatch):
+def test_restart_or_second_replica_does_not_resend(monkeypatch):
+    """The claim lives in idempotency_keys, not in process memory."""
     calls = {"n": 0}
+    shared = _shared_db()
 
     async def capture(*_args, **_kwargs):
         calls["n"] += 1
         return {"success": True}
 
-    monkeypatch.setattr(alert, "get_service_supabase", lambda: _DB(_fixture()))
+    monkeypatch.setattr(alert, "get_service_supabase", lambda: shared)
     monkeypatch.setattr(alert, "send_platform_email", capture)
 
     assert run(alert.run_quiet_client_alert(_noon())) == 1
+    assert shared.tables["idempotency_keys"][0]["key"] == "quiet_client_alert:2026-11-04"
+
+    # A restarted process or another replica has no in-memory date. It sees
+    # the same claimed row and must not send again.
+    assert not hasattr(alert, "_last_alert_date")
+    replica = _DB(shared.tables)
+    monkeypatch.setattr(alert, "get_service_supabase", lambda: replica)
     assert run(alert.run_quiet_client_alert(_noon())) == 0
     assert calls["n"] == 1
+    assert len(shared.tables["idempotency_keys"]) == 1

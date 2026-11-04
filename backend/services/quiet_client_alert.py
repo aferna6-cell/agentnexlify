@@ -6,7 +6,9 @@ A silent widget is a paying tenant (plan other than ``free``, status
 tenant id. Demo, test, sandbox, preview, and internal tenants are skipped.
 
 The automation loop calls this on the 30-minute cadence. The job itself
-waits until 09:00 UTC and sends at most once per process per UTC day.
+waits until 09:00 UTC. A row in ``idempotency_keys``
+(``quiet_client_alert:{utc_date}``) is claimed before the email is sent,
+so a restart or a second replica does not send again that UTC day.
 Nothing is emailed to the tenant. The platform owner gets one message.
 """
 
@@ -15,6 +17,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from backend.models.database import get_service_supabase
+from backend.services.idempotency import check_and_record
 from backend.services.internal_tenants import is_internal_tenant
 from backend.services.platform_mailer import send_platform_email
 
@@ -24,8 +27,7 @@ _WINDOW_DAYS = 7
 _ALERT_HOUR_UTC = 9
 _PAID_STATUSES = {"active", "trialing"}
 _EXCLUDED_SLUGS = {"demo", "test", "sandbox", "preview"}
-
-_last_alert_date = None
+_IDEMPOTENCY_PROVIDER = "quiet_client_alert"
 
 
 def _now_utc() -> datetime:
@@ -36,16 +38,13 @@ async def run_quiet_client_alert(now: datetime | None = None) -> int:
     """Flag paying tenants whose widget had no conversations in 7 days.
 
     Returns the number of tenants included in the alert. Returns 0 before
-    09:00 UTC, on a later call the same UTC day, or when nobody is silent.
+    09:00 UTC, when the day's idempotency key is already claimed, or when
+    nobody is silent.
     """
-    global _last_alert_date
-
     current = now or _now_utc()
     if current.tzinfo is None:
         current = current.replace(tzinfo=timezone.utc)
     if current.hour < _ALERT_HOUR_UTC:
-        return 0
-    if _last_alert_date == current.date():
         return 0
 
     db = get_service_supabase()
@@ -67,7 +66,6 @@ async def run_quiet_client_alert(now: datetime | None = None) -> int:
             seen.add(tenant_id)
             tenant_ids.append(tenant_id)
     if not tenant_ids:
-        _last_alert_date = current.date()
         return 0
 
     try:
@@ -116,9 +114,14 @@ async def run_quiet_client_alert(now: datetime | None = None) -> int:
             }
         )
 
-    _last_alert_date = current.date()
     if not silent:
         logger.info("quiet_client_alert: no silent paying widgets")
+        return 0
+
+    claim_date = current.date().isoformat()
+    is_new, _cached = await check_and_record(db, _IDEMPOTENCY_PROVIDER, claim_date)
+    if not is_new:
+        logger.info("quiet_client_alert: already claimed for %s", claim_date)
         return 0
 
     logger.warning(
