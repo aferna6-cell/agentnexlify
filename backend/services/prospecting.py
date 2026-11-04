@@ -115,13 +115,26 @@ def _normalize_place(place: dict, location: str) -> dict[str, Any]:
     }
 
 
+def require_places_api_key() -> str:
+    """Return a stripped ASCII Places key, or raise ProspectingNotConfigured.
+
+    A non-ASCII key (smart quote, pasted whitespace from a rich editor) is
+    not a configured key: httpx encodes headers as ASCII and crashes before
+    Google ever sees the request. Callers map this exception to HTTP 422.
+    """
+    api_key = (settings.google_places_api_key or "").strip()
+    if not api_key or not api_key.isascii():
+        raise ProspectingNotConfigured(
+            "GOOGLE_PLACES_API_KEY is not set or is not valid ASCII"
+        )
+    return api_key
+
+
 async def discover(
     db: Any, *, client_id: str, query: str, location: str, limit: int = 20
 ) -> list[dict]:
     """Google Places Text Search -> upsert prospects, deduped on external_ref."""
-    api_key = settings.google_places_api_key
-    if not api_key:
-        raise ProspectingNotConfigured("GOOGLE_PLACES_API_KEY is not set")
+    api_key = require_places_api_key()
 
     bounded_limit = max(1, min(limit, _MAX_DISCOVER_LIMIT))
     page_size = min(bounded_limit, _PLACES_PAGE_SIZE_CAP)
