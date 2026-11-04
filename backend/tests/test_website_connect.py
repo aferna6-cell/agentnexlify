@@ -33,6 +33,7 @@ from backend.services.website_connect import (
     PageFetch,
     detect_platform,
     fetch_public_page,
+    is_missing_website_connections_table,
     next_action,
     normalize_website_url,
     redact_secret,
@@ -1057,6 +1058,94 @@ class TestWebsiteConnectRouter:
         assert resp.json()["detail"] == "Website connect storage is not ready."
         assert "internal error" not in resp.text.lower()
         assert "PGRST205" not in resp.text
+
+    def test_unrelated_read_error_is_not_called_storage_missing(
+        self, client, auth_headers_for
+    ):
+        class _Boom:
+            def table(self, _name):
+                raise RuntimeError("connection reset")
+
+        with patch(
+            "backend.routers.website_connect.get_service_supabase",
+            return_value=_Boom(),
+        ):
+            resp = client.get(
+                "/api/v1/website-connect",
+                headers=auth_headers_for(TENANT_A),
+            )
+        assert resp.status_code == 500
+
+    def test_post_and_verify_missing_table_are_503(self, client, auth_headers_for):
+        class _Missing:
+            def table(self, _name):
+                return self
+
+            def select(self, *_a, **_k):
+                return self
+
+            def eq(self, *_a, **_k):
+                return self
+
+            def limit(self, *_a, **_k):
+                return self
+
+            def insert(self, *_a, **_k):
+                return self
+
+            def update(self, *_a, **_k):
+                return self
+
+            def execute(self):
+                err = RuntimeError("ignored")
+                err.args = (
+                    {
+                        "code": "42P01",
+                        "message": "relation website_connections does not exist",
+                    },
+                )
+                raise err
+
+        with patch(
+            "backend.routers.website_connect.get_service_supabase",
+            return_value=_Missing(),
+        ):
+            created = client.post(
+                "/api/v1/website-connect",
+                headers=auth_headers_for(TENANT_A),
+                json={"website_url": "https://example.com"},
+            )
+            verified = client.post(
+                "/api/v1/website-connect/verify",
+                headers=auth_headers_for(TENANT_A),
+            )
+        assert created.status_code == 503
+        assert verified.status_code == 503
+
+    def test_post_value_error_is_400(self, client, auth_headers_for):
+        with patch(
+            "backend.routers.website_connect.connect_svc.upsert_connection",
+            side_effect=ValueError("bad url"),
+        ):
+            resp = client.post(
+                "/api/v1/website-connect",
+                headers=auth_headers_for(TENANT_A),
+                json={"website_url": "https://example.com"},
+            )
+        assert resp.status_code == 400
+        assert resp.json()["detail"] == "bad url"
+
+
+def test_missing_table_detector_reads_code_and_message():
+    coded = RuntimeError("noise")
+    coded.code = "PGRST205"
+    coded.args = (
+        {"code": "PGRST205", "message": "website_connections schema cache"},
+    )
+    assert is_missing_website_connections_table(coded) is True
+
+    unrelated = RuntimeError("website_connections is fine")
+    assert is_missing_website_connections_table(unrelated) is False
 
     def test_plugin_zip_contains_wordpress_plugin_not_secrets(
         self, client, auth_headers_for
