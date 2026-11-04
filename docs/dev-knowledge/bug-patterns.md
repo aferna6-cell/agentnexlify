@@ -18894,3 +18894,22 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(ai): retain post-billable usage as accounting debt (#1001)
+
+A failed or unproved usage record after a billable provider result keeps
+the reservation and returns accounting debt. Keyword generation is metered
+through the SEO profile path. Widget log redaction is left for a separate
+change.
+
+Refs #827
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+**Date:** 2026-11-04
+**Commit:** 30fd138
+**Author:** aferna6-cell
+**Files Changed:** backend/routers/widget_chat.py,backend/services/ai_usage_guard.py,backend/services/llm_runtime.py,backend/services/local_seo_ai.py,backend/services/local_seo_execute.py,backend/tests/test_ai_usage_accounting_debt.py,backend/tests/test_appointment_briefs_gating.py,backend/tests/test_llm_runtime_usage_normalization.py,backend/tests/test_local_seo_keyword_metering.py,backend/tests/test_sms_agent_reply_usage_guard.py,backend/tests/test_voice_call_summary_usage_guard.py,backend/tests/test_voice_respond_usage_guard.py,backend/tests/test_widget_categorize_conversation_usage_guard.py,backend/tests/test_widget_extract_action_items_usage_guard.py,backend/tests/test_widget_extract_tags_usage_guard.py,backend/tests/test_widget_guard_screen_usage_guard.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
