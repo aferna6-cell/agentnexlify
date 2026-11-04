@@ -6,8 +6,6 @@ stays off and those strings save as other, which is already in the CHECK
 allowlist.
 """
 
-from __future__ import annotations
-
 from backend.config import settings
 
 WAREHOUSE_FREE_TEXT = frozenset(
