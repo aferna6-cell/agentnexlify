@@ -18906,3 +18906,14 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Merge pull request #980 from aferna6-cell/cursor/starlette-fastapi-bump-fc1b
+
+fix(security): bump FastAPI and Starlette together
+**Date:** 2026-11-04
+**Commit:** 98f7cca
+**Author:** cursor[bot]
+**Files Changed:** 
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
