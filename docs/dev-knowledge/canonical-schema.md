@@ -99,7 +99,7 @@ Captured leads from widget, forms, and conversations.
 | budget | TEXT | | |
 | timeline | TEXT | | |
 | status | TEXT | DEFAULT 'new' | new, contacted, appointment_booked, closed, lost (`leads_status_check`) |
-| pipeline_stage | TEXT | | Display label for the pipeline board (migration 200). Not the status check. |
+| pipeline_stage | TEXT | | Display label for the pipeline board (migration 202). Not the status check. |
 | source | TEXT | DEFAULT 'widget' | |
 | conversation_id | UUID | FK → conversations.id | |
 | notes | TEXT | | |

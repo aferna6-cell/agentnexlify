@@ -1,4 +1,4 @@
--- 200_leads_pipeline_stage.sql
+-- 202_leads_pipeline_stage.sql
 --
 -- Pipeline display names ("New Lead", "Qualified", "Won") are not legal
 -- leads.status values. leads_status_check allows only:
