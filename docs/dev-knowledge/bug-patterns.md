@@ -18906,3 +18906,21 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Fix garbled knowledge-base answers and tiny chunks (#1013)
+
+Customer-facing replies were joining every lexical hit, including the
+owner knowledge-gap prompt and 30-character fragments. Drop that internal
+text and synthesize a short answer. Pack documents into 500-1000 character
+chunks with overlap, store Voyage embeddings, and reindex one tenant only
+after embeddings succeed.
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+**Date:** 2026-11-04
+**Commit:** 1783963
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/pr-check.yml,agent-service/src/agent-os/agents/_routing_semantics.test.ts,agent-service/src/agent-os/agents/customer_question/agent.ts,agent-service/src/agent-os/types/agent.ts,backend/routers/tenant_kb.py,backend/services/os_kb_feed.py,backend/services/tenant_kb_index.py,backend/tests/test_kb_chunk_reindex.py,backend/tests/test_os_kb_feed.py,scripts/reindex_tenant_kb.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
