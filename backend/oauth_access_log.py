@@ -8,6 +8,7 @@ values have to be removed before a log line is formatted.
 
 import logging
 import re
+import traceback
 
 _CALLBACK_WITH_QUERY = re.compile(
     r"(/integrations/(?:google|m365|hubspot)/callback)\?[^\s\"']*"
@@ -53,13 +54,23 @@ def _redact_value(value):
 
 
 class OAuthCallbackQueryRedactionFilter(logging.Filter):
-    """Remove callback query strings from uvicorn access lines and app logs."""
+    """Remove callback query strings from access lines and exception text."""
 
     def filter(self, record: logging.LogRecord) -> bool:
         if isinstance(record.msg, str):
             record.msg = redact_oauth_callback_secrets(record.msg)
         if record.args:
             record.args = _redact_value(record.args)
+        if record.exc_info and record.exc_info[0] is not None:
+            try:
+                formatted = "".join(traceback.format_exception(*record.exc_info))
+            except Exception:
+                formatted = record.exc_text if isinstance(record.exc_text, str) else ""
+            record.exc_text = redact_oauth_callback_secrets(formatted)
+        elif isinstance(record.exc_text, str):
+            record.exc_text = redact_oauth_callback_secrets(record.exc_text)
+        if isinstance(record.stack_info, str):
+            record.stack_info = redact_oauth_callback_secrets(record.stack_info)
         for key, value in list(record.__dict__.items()):
             if key in {"msg", "args", "exc_info", "exc_text", "stack_info"}:
                 continue
@@ -68,13 +79,36 @@ class OAuthCallbackQueryRedactionFilter(logging.Filter):
         return True
 
 
+_REDACTION_FILTER = OAuthCallbackQueryRedactionFilter()
+
+
+def _install_handler_redaction() -> None:
+    """Run redaction inside every handler, including ones attached later.
+
+    Logger filters do not see records propagated from a child logger, and
+    exception text is formatted by the handler. Hooking ``Handler.handle``
+    covers access logs and ``logger.exception`` output.
+    """
+    if getattr(logging.Handler.handle, "_oauth_callback_redaction", False):
+        return
+    original = logging.Handler.handle
+
+    def handle(self, record):
+        _REDACTION_FILTER.filter(record)
+        return original(self, record)
+
+    handle._oauth_callback_redaction = True
+    logging.Handler.handle = handle
+
+
 def install_oauth_callback_log_redaction(*handlers: logging.Handler) -> None:
     """Attach the redaction filter to access loggers and the given handlers.
 
     Logger filters do not run for records propagated from a child logger, so
     the JSON handler on the root logger needs the filter too.
     """
-    filt = OAuthCallbackQueryRedactionFilter()
+    _install_handler_redaction()
+    filt = _REDACTION_FILTER
     targets: list[logging.Logger] = [logging.getLogger(name) for name in _ACCESS_LOGGERS]
     targets.append(logging.getLogger())
     seen_handlers: set[int] = set()

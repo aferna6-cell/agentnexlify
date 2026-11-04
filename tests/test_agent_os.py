@@ -2356,6 +2356,8 @@ class TestM365OAuthRoutes:
                 follow_redirects=False,
             )
 
+        # Frontend is configured, so the browser is sent to Integrations
+        # with an error indicator instead of the previous JSON 400 body.
         assert resp.status_code in (302, 303, 307, 308)
         assert resp.headers["location"].endswith("/dashboard/integrations?m365=error")
         save.assert_not_called()
@@ -2368,6 +2370,7 @@ class TestM365OAuthRoutes:
                 "/api/v1/integrations/m365/callback?code=auth-code&state=tampered-jwt",
                 follow_redirects=False,
             )
+        # Invalid state is the same browser redirect. The code is not exchanged.
         assert resp.status_code in (302, 303, 307, 308)
         assert resp.headers["location"].endswith("/dashboard/integrations?m365=error")
         exchange.assert_not_called()

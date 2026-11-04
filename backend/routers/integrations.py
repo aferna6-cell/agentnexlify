@@ -7,7 +7,9 @@ between the two based on which row is present.
 """
 
 import logging
+import re
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlencode, urlparse
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -107,11 +109,29 @@ def _decode_state(state: str) -> dict:
         raise HTTPException(status_code=400, detail=detail) from exc
 
 
+_THREAD_ID = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+_ALLOWED_RETURN_PREFIXES = ("/dashboard/", "/settings/")
+
+
 def _safe_return_to(return_to: str | None) -> str | None:
-    """Only accept a relative dashboard path - never an absolute URL,
-    which would turn ``return_to`` into an open redirect."""
-    if return_to and return_to.startswith("/") and not return_to.startswith("//"):
-        return return_to
+    """Relative dashboard path only. Absolute and protocol-relative values
+    would turn ``return_to`` into an open redirect."""
+    if not return_to or not return_to.startswith("/") or return_to.startswith(("//", "/\\")):
+        return None
+    if any(token in return_to for token in ("\\", "://", "@")):
+        return None
+    lowered = return_to.lower()
+    if lowered.startswith("/%2f") or "%5c" in lowered or "%00" in lowered:
+        return None
+    path = return_to.split("?", 1)[0].split("#", 1)[0]
+    if not path.startswith(_ALLOWED_RETURN_PREFIXES):
+        return None
+    return return_to
+
+
+def _safe_thread_id(os_thread_id: str | None) -> str | None:
+    if os_thread_id and _THREAD_ID.fullmatch(os_thread_id):
+        return os_thread_id
     return None
 
 
@@ -123,8 +143,40 @@ _OAUTH_STATUS_PARAMS = {
 }
 
 
-def _frontend_base() -> str:
-    return (settings.frontend_url or "").rstrip("/")
+def _frontend_origin() -> str | None:
+    """Scheme + host of ``FRONTEND_URL``. Userinfo, paths, and other schemes
+    are rejected so a callback cannot be aimed at an arbitrary host."""
+    raw = (settings.frontend_url or "").strip()
+    if not raw:
+        return None
+    parsed = urlparse(raw)
+    host = parsed.hostname
+    if parsed.scheme not in {"http", "https"} or not host:
+        return None
+    if parsed.username or parsed.password:
+        return None
+    if any(char in host for char in "\\ \t\r\n"):
+        return None
+    port = f":{parsed.port}" if parsed.port else ""
+    return f"{parsed.scheme}://{host}{port}"
+
+
+def _frontend_redirect(path: str) -> str | None:
+    """Build a redirect on the frontend origin, or None if the result would
+    leave that host."""
+    origin = _frontend_origin()
+    if origin is None:
+        return None
+    if not path.startswith("/") or path.startswith(("//", "/\\")):
+        return None
+    url = f"{origin}{path}"
+    target = urlparse(url)
+    allowed = urlparse(origin)
+    if target.scheme != allowed.scheme or target.hostname != allowed.hostname:
+        return None
+    if target.port != allowed.port:
+        return None
+    return url
 
 
 def _dashboard_integrations_path(provider_key: str, outcome: str) -> str:
@@ -138,6 +190,24 @@ def _dashboard_integrations_path(provider_key: str, outcome: str) -> str:
     return f"/dashboard/integrations?{param}={outcome}"
 
 
+def _post_callback_path(
+    provider_key: str,
+    *,
+    outcome: str,
+    os_thread_id: str | None = None,
+    return_to: str | None = None,
+) -> str:
+    if outcome == "connected":
+        thread_id = _safe_thread_id(os_thread_id)
+        if thread_id:
+            query = urlencode({"thread": thread_id, "connected": provider_key})
+            return f"/dashboard/agent-os?{query}"
+        safe_return_to = _safe_return_to(return_to)
+        if safe_return_to:
+            return safe_return_to
+    return _dashboard_integrations_path(provider_key, outcome)
+
+
 def _oauth_error_response(
     provider_key: str,
     *,
@@ -146,13 +216,13 @@ def _oauth_error_response(
 ):
     """Send the browser to Integrations with an error indicator.
 
-    With no frontend configured, keep the JSON error for non-browser callers.
+    With no allowlisted frontend origin, keep the JSON error for non-browser callers.
     """
-    base = _frontend_base()
-    if base:
-        return RedirectResponse(
-            url=f"{base}{_dashboard_integrations_path(provider_key, 'error')}"
-        )
+    url = _frontend_redirect(
+        _post_callback_path(provider_key, outcome="error")
+    )
+    if url:
+        return RedirectResponse(url=url)
     raise HTTPException(status_code=status_code, detail=detail)
 
 
@@ -168,18 +238,17 @@ def _oauth_success_response(
     ``os_thread_id`` the owner lands back in that Agent OS chat thread with
     ``?connected=<provider>`` so the UI can post a "connected, resuming"
     message; otherwise falls back to ``return_to`` or the integrations page
-    with a connected indicator.
+    with a connected indicator. The host is always the frontend origin.
     """
-    base = _frontend_base()
-    if base:
-        if os_thread_id:
-            url = (
-                f"{base}/dashboard/agent-os"
-                f"?thread={os_thread_id}&connected={provider_key}"
-            )
-        else:
-            safe_return_to = _safe_return_to(return_to)
-            url = f"{base}{safe_return_to or _dashboard_integrations_path(provider_key, 'connected')}"
+    url = _frontend_redirect(
+        _post_callback_path(
+            provider_key,
+            outcome="connected",
+            os_thread_id=os_thread_id,
+            return_to=return_to,
+        )
+    )
+    if url:
         return RedirectResponse(url=url)
 
     return HTMLResponse(
