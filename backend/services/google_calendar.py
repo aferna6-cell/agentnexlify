@@ -2,6 +2,7 @@
 
 
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Any
 
@@ -451,6 +452,251 @@ def lookup_calendar_event(tenant_id: str, event_id: str) -> dict:
         return {"state": "unknown", "reason": type(exc).__name__}
 
 
+def deterministic_event_id(approval_id: str) -> str:
+    """Stable Google event id for one approval.
+
+    Google event ids are base32hex (``a-v`` and ``0-9``), 5–1024 characters.
+    A UUID's hex is inside that alphabet, so the same approval always maps
+    to the same id and a retry can look the event up before inserting.
+    """
+    compact = re.sub(r"[^a-v0-9]", "", str(approval_id).lower())
+    if len(compact) < 5:
+        compact = (compact + "calendar")[:8]
+    return ("anx" + compact)[:1024]
+
+
+def _http_status(exc: HttpError) -> int | None:
+    try:
+        return int(exc.resp.status)
+    except (AttributeError, TypeError, ValueError):
+        return None
+
+
+def _get_google_event(service, event_id: str) -> dict | None:
+    """Return the event, None on 404, or raise HttpError for other statuses."""
+    try:
+        return (
+            service.events()
+            .get(calendarId="primary", eventId=event_id)
+            .execute()
+        )
+    except HttpError as exc:
+        if _http_status(exc) == 404:
+            return None
+        raise
+
+
+def _store_google_event_id(db, tenant_id: str, run: dict, event_id: str) -> None:
+    """Remember the provider id on the approval row so a later approve is a no-op."""
+    from backend.services.tenant_scope import tenant_table
+
+    deliverable = dict(run.get("deliverable") or {})
+    if deliverable.get("google_event_id") == event_id:
+        return
+    deliverable["google_event_id"] = event_id
+    tenant_table(db, "os_agent_runs", tenant_id).update(
+        {"deliverable": deliverable, "updated_at": datetime.now(timezone.utc).isoformat()}
+    ).eq("id", run["id"]).execute()
+    run["deliverable"] = deliverable
+
+
+def insert_approved_calendar_event(db, tenant_id: str, approval_id: str) -> dict:
+    """Insert one Google event for an approved calendar card, or refuse.
+
+    Refuses unless this tenant's ``os_agent_runs`` row is ``approved`` and
+    ``calendar.event.create``. A second call, or a retry after a lost
+    response, returns the event already stored under the deterministic id
+    and does not call ``events.insert`` again.
+
+    The returned ``message`` is safe to show to the owner: it never includes
+    token material or the provider error body.
+    """
+    from backend.services.tenant_scope import tenant_table
+
+    rows = (
+        tenant_table(db, "os_agent_runs", tenant_id)
+        .select("*")
+        .eq("id", approval_id)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    if not rows:
+        return {
+            "ok": False,
+            "code": "not_found",
+            "event_id": None,
+            "message": "That approval is not on this account. No event was created.",
+        }
+    run = rows[0]
+    if run.get("deliverable_status") != "approved" or run.get("action_type") != (
+        "calendar.event.create"
+    ):
+        return {
+            "ok": False,
+            "code": "not_approved",
+            "event_id": None,
+            "message": (
+                "This booking is not approved, so nothing was added to Google Calendar."
+            ),
+        }
+
+    deliverable = run.get("deliverable") or {}
+    event = deliverable.get("calendar_event") or {}
+    card_body = str(event.get("card_body") or "")
+    if card_body and str(deliverable.get("body") or "").strip() != card_body.strip():
+        return {
+            "ok": False,
+            "code": "body_mismatch",
+            "event_id": None,
+            "message": (
+                "The approval card was edited and no longer matches the drafted "
+                "booking. No event was created. Ask again to draft a new card."
+            ),
+        }
+    summary = str(event.get("summary") or "").strip()
+    start_utc = event.get("start_utc")
+    end_utc = event.get("end_utc")
+    if not summary or not start_utc or not end_utc:
+        return {
+            "ok": False,
+            "code": "invalid_card",
+            "event_id": None,
+            "message": "This approval card is missing a time. No event was created.",
+        }
+
+    service = _build_service(tenant_id)
+    if not service:
+        return {
+            "ok": False,
+            "code": "token_unavailable",
+            "event_id": None,
+            "message": (
+                "Google Calendar access expired or was revoked. Reconnect it on "
+                "the Integrations page. No event was created."
+            ),
+        }
+
+    event_id = deliverable.get("google_event_id") or deterministic_event_id(approval_id)
+    try:
+        existing = _get_google_event(service, event_id)
+    except HttpError as exc:
+        return _insert_http_failure(exc)
+    if existing and existing.get("id"):
+        _store_google_event_id(db, tenant_id, run, existing["id"])
+        return {
+            "ok": True,
+            "code": "exists",
+            "event_id": existing["id"],
+            "deduplicated": True,
+            "message": "That booking is already on Google Calendar.",
+        }
+
+    event_body = {
+        "id": event_id,
+        "summary": summary,
+        "start": {"dateTime": start_utc, "timeZone": "UTC"},
+        "end": {"dateTime": end_utc, "timeZone": "UTC"},
+    }
+    if event.get("description"):
+        event_body["description"] = event.get("description")
+    # Attendees stay on the event, but Google must not email them. Invites
+    # are a separate send and this path does not open that gate.
+    if event.get("attendee_email"):
+        event_body["attendees"] = [{"email": event["attendee_email"]}]
+
+    try:
+        created = (
+            service.events()
+            .insert(calendarId="primary", body=event_body, sendUpdates="none")
+            .execute()
+        )
+    except TimeoutError:
+        try:
+            recovered = _get_google_event(service, event_id)
+        except HttpError as exc:
+            return _insert_http_failure(exc)
+        if recovered and recovered.get("id"):
+            _store_google_event_id(db, tenant_id, run, recovered["id"])
+            return {
+                "ok": True,
+                "code": "exists",
+                "event_id": recovered["id"],
+                "deduplicated": True,
+                "message": "That booking is already on Google Calendar.",
+            }
+        return {
+            "ok": False,
+            "code": "timeout",
+            "event_id": None,
+            "message": (
+                "Google Calendar didn't confirm the event in time. Retry the "
+                "approval and it will not create a duplicate."
+            ),
+        }
+    except HttpError as exc:
+        if _http_status(exc) == 409:
+            try:
+                recovered = _get_google_event(service, event_id)
+            except HttpError as nested:
+                return _insert_http_failure(nested)
+            if recovered and recovered.get("id"):
+                _store_google_event_id(db, tenant_id, run, recovered["id"])
+                return {
+                    "ok": True,
+                    "code": "exists",
+                    "event_id": recovered["id"],
+                    "deduplicated": True,
+                    "message": "That booking is already on Google Calendar.",
+                }
+        return _insert_http_failure(exc)
+    except Exception:
+        logger.warning(
+            "insert_approved_calendar_event failed tenant=%s approval=%s",
+            tenant_id,
+            approval_id,
+            exc_info=True,
+        )
+        return {
+            "ok": False,
+            "code": "provider_error",
+            "event_id": None,
+            "message": "Google Calendar couldn't create the event. No event was created.",
+        }
+
+    created_id = (created or {}).get("id") or event_id
+    _store_google_event_id(db, tenant_id, run, created_id)
+    return {
+        "ok": True,
+        "code": "created",
+        "event_id": created_id,
+        "deduplicated": False,
+        "message": "Added to Google Calendar.",
+    }
+
+
+def _insert_http_failure(exc: HttpError) -> dict:
+    status = _http_status(exc)
+    logger.warning("Google Calendar insert refused status=%s", status)
+    if status in (401, 403):
+        return {
+            "ok": False,
+            "code": f"http_{status}",
+            "event_id": None,
+            "message": (
+                "Google Calendar refused to create the event (access denied). "
+                "Reconnect Google Calendar. No event was created."
+            ),
+        }
+    return {
+        "ok": False,
+        "code": "http_error",
+        "event_id": None,
+        "message": "Google Calendar couldn't create the event. No event was created.",
+    }
+
+
 def list_calendar_events_in_window(
     tenant_id: str,
     time_min: datetime,
@@ -483,13 +729,24 @@ def list_calendar_events_in_window(
             "state": "ok",
             "events": [_normalize_calendar_event(ev) for ev in items],
         }
-    except Exception as exc:
+    except HttpError as exc:
+        status = _http_status(exc)
+        # Status only. The provider body can echo a bearer token.
+        logger.warning(
+            "list_calendar_events_in_window http status=%s tenant=%s",
+            status,
+            tenant_id,
+        )
+        if status in (401, 403):
+            return {"state": "unknown", "reason": f"http_{status}", "events": []}
+        return {"state": "unknown", "reason": "http_error", "events": []}
+    except Exception:
         logger.warning(
             "list_calendar_events_in_window failed tenant=%s",
             tenant_id,
             exc_info=True,
         )
-        return {"state": "unknown", "reason": type(exc).__name__, "events": []}
+        return {"state": "unknown", "reason": "provider_error", "events": []}
 
 
 def get_busy_times(

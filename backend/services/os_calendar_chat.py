@@ -382,12 +382,19 @@ async def _answer_read(
     if listed.get("state") != "ok":
         reason = listed.get("reason") or "unknown"
         if reason == "no_credentials":
-            reply = _not_connected_reply()
+            reply = (
+                "Google Calendar access expired or was revoked. Reconnect it "
+                "on the Integrations page. Nothing was changed."
+            )
+        elif reason in ("http_401", "http_403"):
+            reply = (
+                "Google Calendar refused the read (access denied). Reconnect "
+                "Google Calendar. Nothing was changed."
+            )
         else:
             reply = (
-                "I couldn't read Google Calendar just now "
-                f"({reason}). I didn't guess from internal appointments, "
-                "and nothing was changed."
+                "I couldn't read Google Calendar just now. I didn't guess "
+                "from internal appointments, and nothing was changed."
             )
         assistant = _persist_reply(db, client_id, thread_id, reply)
         if assistant is None:
@@ -456,8 +463,11 @@ async def _draft_booking(
             "summary": parsed["summary"],
             "start_utc": parsed["start_utc"],
             "end_utc": parsed["end_utc"],
+            "duration_minutes": parsed["minutes"],
+            "timezone": tz.key,
             "attendee_email": None,
             "description": content[:500],
+            "card_body": body,
         },
     }
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -500,7 +510,8 @@ async def _draft_booking(
         "Nothing is on your calendar until you approve.\n\n"
         f"{parsed['summary']}\n"
         f"{_fmt_local(parsed['start_local'])} – {_fmt_local(parsed['end_local'])} "
-        f"({tz.key})\n\n"
+        f"({tz.key})\n"
+        f"Duration: {parsed['minutes']} minutes\n\n"
         "Open Review draft and approve to create it on Google Calendar."
     )
     assistant = _persist_reply(
@@ -520,6 +531,55 @@ async def _draft_booking(
         },
     )
     return _turn(user_message_row, assistant, agent_run=agent_run, booking=True)
+
+
+def cancel_pending_calendar_approvals(db, client_id: str) -> int:
+    """Reject pending calendar cards so Disconnect cannot be followed by an insert."""
+    try:
+        rows = (
+            tenant_table(db, "os_agent_runs", client_id)
+            .select("id")
+            .eq("action_type", "calendar.event.create")
+            .eq("deliverable_status", "pending_approval")
+            .execute()
+            .data
+            or []
+        )
+    except Exception:
+        logger.warning(
+            "os_calendar_chat: pending-approval lookup failed client_id=%s",
+            client_id,
+            exc_info=True,
+        )
+        return 0
+    cancelled = 0
+    now_iso = datetime.now(timezone.utc).isoformat()
+    for row in rows:
+        try:
+            updated = (
+                tenant_table(db, "os_agent_runs", client_id)
+                .update(
+                    {
+                        "deliverable_status": "rejected",
+                        "error_detail": "Google Calendar was disconnected",
+                        "updated_at": now_iso,
+                    }
+                )
+                .eq("id", row["id"])
+                .eq("deliverable_status", "pending_approval")
+                .execute()
+                .data
+            )
+        except Exception:
+            logger.warning(
+                "os_calendar_chat: cancel pending failed client_id=%s",
+                client_id,
+                exc_info=True,
+            )
+            continue
+        if updated:
+            cancelled += 1
+    return cancelled
 
 
 def _turn(user_message_row, assistant, agent_run=None, read=False, booking=False) -> dict:

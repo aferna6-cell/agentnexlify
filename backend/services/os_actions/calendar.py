@@ -84,30 +84,47 @@ async def _extract_event_payload(deliverable_body: str, client_id: str) -> dict:
 def _calendar_event_from_deliverable(deliverable: dict) -> dict | None:
     """Structured event parked by the chat draft. Skips the Haiku extract.
 
-    Present only after the owner approves: ``_run`` is the approve handler.
-    Chat never calls Google while the deliverable is still pending.
+    The card already carries start and end. A missing end is a refusal,
+    not a silent 60-minute event.
     """
     event = (deliverable or {}).get("calendar_event")
     if not isinstance(event, dict):
         return None
     summary = str(event.get("summary") or "").strip()
     start_utc = event.get("start_utc")
-    if not summary or not start_utc:
-        return None
     end_utc = event.get("end_utc")
-    if not end_utc:
-        try:
-            start_dt = datetime.fromisoformat(str(start_utc).replace("Z", "+00:00"))
-            end_utc = (start_dt + timedelta(minutes=60)).astimezone(timezone.utc).isoformat()
-        except Exception:
-            return None
+    if not summary or not start_utc or not end_utc:
+        return None
     return {
         "summary": summary,
         "start_utc": start_utc,
         "end_utc": end_utc,
         "attendee_email": event.get("attendee_email"),
         "description": event.get("description"),
+        "duration_minutes": event.get("duration_minutes"),
     }
+
+
+def claim_calendar_approval(db, client_id: str, run_id: str) -> dict | None:
+    """Claim a pending calendar card once.
+
+    Same conditional update as ``os_tool_executions.claim_for_execution``:
+    the status filter is part of the write, so a second Approve gets no row
+    and must not insert.
+    """
+    from backend.services.os_actions.base import now_iso
+    from backend.services.tenant_scope import tenant_table
+
+    updated = (
+        tenant_table(db, "os_agent_runs", client_id)
+        .update({"deliverable_status": "approved", "updated_at": now_iso()})
+        .eq("id", run_id)
+        .eq("action_type", "calendar.event.create")
+        .eq("deliverable_status", "pending_approval")
+        .execute()
+        .data
+    )
+    return updated[0] if updated else None
 
 
 async def _run(ctx: ActionContext) -> ActionResult:
@@ -120,7 +137,40 @@ async def _run(ctx: ActionContext) -> ActionResult:
         )
 
     if structured is not None:
-        payload = structured
+        created = await asyncio.to_thread(
+            google_calendar.insert_approved_calendar_event,
+            ctx.db,
+            ctx.client_id,
+            ctx.deliverable_id,
+        )
+        request_payload = {
+            "summary": structured["summary"],
+            "start_utc": structured["start_utc"],
+            "end_utc": structured["end_utc"],
+            "attendee_email": structured.get("attendee_email"),
+            "description": structured.get("description"),
+            "duration_minutes": structured.get("duration_minutes"),
+        }
+        if not created.get("ok"):
+            return ActionResult(
+                status="failed",
+                request_payload=request_payload,
+                error_detail={
+                    "stage": created.get("code") or "refused",
+                    "message": created.get("message"),
+                    "provider": "google_calendar",
+                },
+            )
+        return ActionResult(
+            status="succeeded",
+            request_payload=request_payload,
+            response_payload={
+                "event_id": created.get("event_id"),
+                "calendar": "primary",
+                "provider": "google_calendar",
+                "deduplicated": bool(created.get("deduplicated")),
+            },
+        )
     else:
         try:
             payload = await _extract_event_payload(body, ctx.client_id)

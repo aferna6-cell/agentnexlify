@@ -269,10 +269,18 @@ async def google_status(claims: dict = Depends(_get_current_tenant)):
 
 @router.delete("/google")
 async def google_disconnect(claims: dict = Depends(_get_current_tenant)):
-    """Remove the Google Calendar integration for the tenant."""
+    """Remove the Google Calendar integration for the tenant.
+
+    Pending calendar approval cards are rejected first, so a disconnect
+    cannot be followed by events.insert for a card that was still waiting.
+    """
     tenant_id: str = claims["tenant_id"]
 
     try:
+        from backend.models.database import get_service_supabase
+        from backend.services.os_calendar_chat import cancel_pending_calendar_approvals
+
+        cancel_pending_calendar_approvals(get_service_supabase(), tenant_id)
         delete_integration(tenant_id)
     except Exception as exc:
         logger.exception(
