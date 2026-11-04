@@ -24,6 +24,8 @@ import DeliverablePanel from "../components/os/DeliverablePanel";
 import DemoTour from "../components/os/DemoTour";
 import MemoryPanel from "../components/os/MemoryPanel";
 import FirstRunStarters from "../components/os/FirstRunStarters";
+import AiOfflineBanner from "../components/os/AiOfflineBanner";
+import { aiGenerationUnavailable } from "../components/os/aiAvailability";
 import SuiteHintChips from "../components/os/SuiteHintChips";
 import OsInsightsCard from "../components/os/OsInsightsCard";
 import OpportunityCards from "../components/os/OpportunityCards";
@@ -121,6 +123,7 @@ export default function AgentOS({ onNavigate }) {
 
   const capReached = Boolean(usage?.cap_reached);
   const runMap = Object.fromEntries(runs.map((r) => [r.id, r]));
+  const showOfflineBanner = aiGenerationUnavailable(messages, runs);
   const hasInFlight = runs.some(
     (r) => r.status === "queued" || r.status === "running",
   );
@@ -651,6 +654,7 @@ export default function AgentOS({ onNavigate }) {
             )}
           </div>
         )}
+        {showOfflineBanner && <AiOfflineBanner />}
         {capReached && (
           <div
             style={{

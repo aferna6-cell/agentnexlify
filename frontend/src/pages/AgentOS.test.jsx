@@ -446,3 +446,25 @@ describe("AgentOS routing clarification", () => {
     expect(screen.queryByTestId("clarify-picker")).toBeNull();
   });
 });
+
+describe("AgentOS offline banner", () => {
+  it("stays visible when the latest reply was not live AI", async () => {
+    listOsThreads.mockResolvedValueOnce([
+      { id: "t1", title: "Task one", created_at: NOW },
+    ]);
+    fetchOsThreadMessages.mockResolvedValueOnce({
+      messages: [
+        {
+          id: "m1",
+          role: "assistant",
+          content: "Heads up - I'm running in offline mode right now.",
+        },
+      ],
+      agent_runs: [],
+    });
+    render(<AgentOS />);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "AI generation is unavailable",
+    );
+  });
+});

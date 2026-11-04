@@ -101,7 +101,10 @@ export async function handle(userId: string, ask: string, opts: HandleOptions = 
   // --- Direct answer: a cross-department "weekly briefing" the orchestrator
   // aggregates from all 8 departments (v2 Decision 1). A department-specific
   // briefing ("the Sales briefing") falls through to normal routing.
-  if (!opts.forceAgentId && isAggregateBriefingQuery(ask)) {
+  // A scheduled task can force a department. A business summary must still
+  // come back as a summary: forcing Operations used to draft a customer
+  // appointment because the prompt mentions bookings.
+  if (isAggregateBriefingQuery(ask)) {
     const ctx = await loadSharedContext(userId);
     const answer = aggregateBriefing(ctx);
     const decision = await getRunStore().createRoutingDecision({
@@ -396,7 +399,7 @@ async function runAndLog(
  */
 export function isAggregateBriefingQuery(ask: string): boolean {
   const a = ask.toLowerCase();
-  const wantsBriefing = /\b(weekly briefing|my briefing|briefing|recap|summary of (the )?(week|business)|how'?s business|what happened (this|last) week)\b/.test(a);
+  const wantsBriefing = /\b(weekly briefing|my briefing|briefing|recap|weekly business summary|daily business summary|business summary|summary of (the )?(week|business)|how'?s business|what happened (this|last) week)\b/.test(a);
   if (!wantsBriefing) return false;
   // If a specific department is named, let it route there instead.
   const dept = /\b(sales|marketing|customer service|operations|invoicing|collections|accounting|finance|admin|records|people|hr|hiring)\b/.test(a);
