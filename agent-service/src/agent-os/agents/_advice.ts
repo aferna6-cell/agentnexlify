@@ -5,8 +5,10 @@
  * default is Booking, which always drafts an SMS and, with no slot, asks the
  * customer for a time. An ask such as "give me ideas to reduce late shipments"
  * matches no booking keyword and names no action, so it used to inherit that
- * default. A scored skill or a detected action is left alone — "how can we
- * reduce no-shows? text Jane to confirm 3pm" still drafts.
+ * default. A scored skill, a detected action, or a named deliverable (text,
+ * SMS, email, message, reply, post, promo) is left alone — "how can we
+ * reduce no-shows? text Jane to confirm 3pm" still drafts, and so does
+ * "give me ideas for a promo text".
  *
  * This is a class check, applied only after a department is already chosen,
  * and only when nothing else in that department matches. It does not change
@@ -21,6 +23,15 @@ const WHAT_ARE_TIPS =
   /\bwhat are\b[\s\S]{0,40}\b(?:some |a few |the )?(?:tips?|ideas?|suggestions?|ways)\b/i;
 const HOW_IMPROVE =
   /\bhow (?:can|do|should|could) (?:i|we)\b[\s\S]{0,48}\b(?:improve|reduce|increase|cut|lower|boost|prevent|avoid|raise)\b/i;
+
+/** A customer-facing or campaign deliverable named in the ask. Not practice advice. */
+const DELIVERABLE =
+  /\b(?:texts?|sms|e-?mails?|messages?|replies|reply|posts?|promos?)\b/i;
+
+/** True when the owner named something to draft, even if the sentence also asks for ideas. */
+export function namesDeliverable(ask: string): boolean {
+  return DELIVERABLE.test(ask);
+}
 
 /** True when the owner is asking for practice advice rather than a draft or an action. */
 export function isPracticeAdviceAsk(ask: string): boolean {

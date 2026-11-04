@@ -21,7 +21,7 @@
  */
 
 import { defineAgent, PLAIN_TEXT_CHANNELS, type Agent, type AgentBucket, type AgentChannel } from "./_schema.ts";
-import { isPracticeAdviceAsk, practiceAdviceAnswer } from "./_advice.ts";
+import { isPracticeAdviceAsk, namesDeliverable, practiceAdviceAnswer } from "./_advice.ts";
 import { readAskIntent, type AskIntent, type SubjectType, type TaskIntent } from "./_intent.ts";
 import type { AgentOutput, AgentRunArgs, SharedContext } from "../types/agent.ts";
 import { executeAction } from "../actions/executor.ts";
@@ -294,8 +294,8 @@ export function defineDepartment(spec: DepartmentSpec): DepartmentAgent {
       const intent = readAskIntent(args.ownerAsk);
 
       // Checklist only for the fallthrough that used to inherit defaultSkillId
-      // (Operations → Booking). A scored skill or a detected action still runs,
-      // including when the sentence also asks for advice.
+      // (Operations → Booking). A scored skill, a detected action, or a named
+      // deliverable (text, SMS, email, message, reply, post, promo) still runs.
       const skillScore = eligibleSkills(spec, intent).reduce(
         (max, skill) => Math.max(max, scoreSkill(args.ownerAsk, skill)),
         0,
@@ -312,7 +312,13 @@ export function defineDepartment(spec: DepartmentSpec): DepartmentAgent {
         context: args.context,
         intent,
       });
-      if (isPracticeAdviceAsk(args.ownerAsk) && skillScore === 0 && !forcedSkillId && !detectedAction) {
+      if (
+        isPracticeAdviceAsk(args.ownerAsk) &&
+        skillScore === 0 &&
+        !forcedSkillId &&
+        !detectedAction &&
+        !namesDeliverable(args.ownerAsk)
+      ) {
         await args.emitTrace.work("advisory_answer", `${spec.display_name} → generic checklist, no skill or action matched`);
         return {
           orchestratorNotes: [practiceAdviceAnswer(args.ownerAsk)],

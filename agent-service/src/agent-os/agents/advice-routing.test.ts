@@ -24,7 +24,7 @@ delete process.env.INVOICE_ACTIONS_ENABLED;
 delete process.env.SEND_EMAIL_ENABLED;
 
 import { runOrchestration } from "../../agent-os-runtime/orchestrate.ts";
-import { isPracticeAdviceAsk } from "./_advice.ts";
+import { isPracticeAdviceAsk, namesDeliverable } from "./_advice.ts";
 import type { SharedContext } from "../types/agent.ts";
 
 const CONTEXT: SharedContext = {
@@ -256,4 +256,68 @@ test("Operations appointment reminders still run and are not the Booking skill",
   );
   assert.equal(out.result.draft?.channel, "sms");
   assert.match(out.result.draft?.title ?? "", /reminder/i);
+});
+
+test("a named deliverable skips the checklist and keeps the draft skill", async () => {
+  const promo = "give me ideas for a promo text to customers";
+  const reply = "suggestions for a reply to Dana";
+  assert.equal(isPracticeAdviceAsk(promo), true);
+  assert.equal(isPracticeAdviceAsk(reply), true);
+  assert.equal(namesDeliverable(promo), true);
+  assert.equal(namesDeliverable(reply), true);
+  assert.equal(
+    namesDeliverable(
+      "Give me three ideas to reduce late shipments at a warehouse.",
+    ),
+    false,
+  );
+
+  const marketing = await runOrchestration({
+    accountId: "tenant",
+    ask: promo,
+    context: CONTEXT,
+    forceAgentId: "marketing",
+  });
+  assert.match(skillLine(marketing.record.traceSteps) ?? "", /Campaign skill/);
+  assert.equal(
+    marketing.record.traceSteps.some((s) => s.step === "advisory_answer"),
+    false,
+  );
+  assert.ok(marketing.result.draft);
+  assert.equal(marketing.result.draft?.channel, "email");
+
+  const service = await runOrchestration({
+    accountId: "tenant",
+    ask: reply,
+    context: CONTEXT,
+    forceAgentId: "customer_service",
+  });
+  assert.match(
+    skillLine(service.record.traceSteps) ?? "",
+    /Customer Question skill/,
+  );
+  assert.equal(
+    service.record.traceSteps.some((s) => s.step === "advisory_answer"),
+    false,
+  );
+  assert.ok(service.result.draft);
+  assert.equal(service.result.draft?.channel, "widget_reply");
+});
+
+test("a deliverable with no skill keyword still skips the checklist", async () => {
+  const ask = "Give me ideas for an sms to the night crew.";
+  assert.equal(isPracticeAdviceAsk(ask), true);
+  assert.equal(namesDeliverable(ask), true);
+  const out = await runOrchestration({
+    accountId: "tenant",
+    ask,
+    context: CONTEXT,
+    forceAgentId: "operations",
+  });
+  assert.equal(
+    out.record.traceSteps.some((s) => s.step === "advisory_answer"),
+    false,
+  );
+  assert.match(skillLine(out.record.traceSteps) ?? "", /Booking skill/);
+  assert.ok(out.result.draft);
 });
