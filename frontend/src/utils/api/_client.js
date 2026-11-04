@@ -64,7 +64,10 @@ function responseHeader(res, name) {
 // this ceiling so callers get a real error and their `finally` clears the spinner.
 const REQUEST_TIMEOUT_MS = 30000;
 
-export async function request(path, { method = "GET", body, token } = {}) {
+export async function request(
+  path,
+  { method = "GET", body, token, timeoutMs } = {},
+) {
   const headers = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
@@ -74,7 +77,7 @@ export async function request(path, { method = "GET", body, token } = {}) {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs ?? REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
     const timedOut = error && error.name === "TimeoutError";

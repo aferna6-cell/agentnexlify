@@ -71,7 +71,7 @@ async def generate_post_image(db, *, tenant_id: str, prompt: str, platform: str)
     preset = PLATFORM_IMAGE_SIZES.get(platform, _DEFAULT_SIZE)
 
     try:
-        png_bytes = generate_image_png(prompt, size=preset["size"])
+        png_bytes = await generate_image_png(prompt, size=preset["size"])
     except ImageGenNotConfigured as exc:
         raise SocialImageGenError(
             "Image generation is not configured for this deployment. "

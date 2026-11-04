@@ -42,5 +42,6 @@ export function generateSocialImage(tenantId, token, { prompt, platform, post_id
     method: "POST",
     token,
     body: { prompt, platform, post_id },
+    timeoutMs: 120000,
   });
 }

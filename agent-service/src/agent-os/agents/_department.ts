@@ -22,7 +22,7 @@
 
 import { defineAgent, PLAIN_TEXT_CHANNELS, type Agent, type AgentBucket, type AgentChannel } from "./_schema.ts";
 import { isPracticeAdviceAsk, namesDeliverable, practiceAdviceAnswer } from "./_advice.ts";
-import { readAskIntent, type AskIntent, type SubjectType, type TaskIntent } from "./_intent.ts";
+import { isBusinessKnowledgeQuestion, readAskIntent, type AskIntent, type SubjectType, type TaskIntent } from "./_intent.ts";
 import type { AgentOutput, AgentRunArgs, SharedContext } from "../types/agent.ts";
 import { executeAction } from "../actions/executor.ts";
 import { hasActionStore } from "../actions/store.ts";
@@ -214,6 +214,12 @@ export function eligibleSkills(spec: DepartmentSpec, intent: AskIntent | undefin
 /** Pick the best-fit skill for an ask within a department (transparent scoring). */
 export function pickSkill(spec: DepartmentSpec, ask: string, intent?: AskIntent): DepartmentSkill {
   const candidates = eligibleSkills(spec, intent);
+  // Business facts are answered by the customer-question skill, not whichever
+  // keyword happens to score inside the department.
+  if (isBusinessKnowledgeQuestion(ask)) {
+    const direct = candidates.find((skill) => skill.agent.agent_id === "customer_question");
+    if (direct) return direct;
+  }
   let best: DepartmentSkill | undefined;
   let bestScore = 0;
   for (const skill of candidates) {
