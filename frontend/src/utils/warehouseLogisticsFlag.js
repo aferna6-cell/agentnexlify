@@ -1,5 +1,5 @@
 // Warehouse / Logistics is not in tenants_business_type_check until
-// migration 203 is applied. Keep the option off unless that flag is set.
+// migration 204 is applied. Keep the option off unless that flag is set.
 const WAREHOUSE_LOGISTICS_VALUES = new Set([
   "warehouse_logistics",
   "warehouse",

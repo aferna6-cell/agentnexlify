@@ -158,7 +158,7 @@ def load_vertical_preset(vertical: str) -> dict:
 
     data = _load_yaml()
     key = _normalize(vertical)
-    # Warehouse aliases stay off until migration 203 is live.
+    # Warehouse aliases stay off until migration 204 is live.
     if is_warehouse_logistics_token(key) and not warehouse_logistics_enabled():
         key = "generic"
     elif key not in data:

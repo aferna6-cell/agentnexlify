@@ -94,7 +94,7 @@ def resolve_business_profile_key(business_type: str | None) -> str:
     normalized = normalize_business_type_token(business_type)
     if not normalized:
         return "default"
-    # Until migration 203, warehouse free text stays on the default pack.
+    # Until migration 204, warehouse free text stays on the default pack.
     if is_warehouse_logistics_token(normalized) and not warehouse_logistics_enabled():
         return "default"
     return _TYPE_ALIASES.get(normalized, normalized if normalized in _BUSINESS_PROFILES else "default")

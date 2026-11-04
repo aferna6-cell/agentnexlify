@@ -74,7 +74,7 @@ class Settings(BaseSettings):
     # Metered price for photo-quote overage (>500/mo). Empty => reporting is a
     # no-op (usage is still counted locally). See services/photo_quote_usage.py.
     stripe_photo_quote_metered_price_id: str = ""
-    # Off until migration 203 is applied. Warehouse free text then stays "other"
+    # Off until migration 204 is applied. Warehouse free text then stays "other"
     # so tenants.business_type_check does not reject the write.
     warehouse_logistics_enabled: bool = False
     frontend_url: str = "http://localhost:5173"
@@ -178,6 +178,9 @@ class Settings(BaseSettings):
     # Agent OS image generation
     image_gen_provider: str = ""  # "openai" supported
     image_gen_api_key: str = ""
+    # gpt-image-1 400s on current keys ("model does not exist"). gpt-image-1.5
+    # is the default; override with IMAGE_GEN_MODEL.
+    image_gen_model: str = "gpt-image-1.5"
 
     facebook_app_id: str = ""
     facebook_app_secret: str = ""

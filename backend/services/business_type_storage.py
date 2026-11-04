@@ -1,7 +1,7 @@
 """Persistable tenants.business_type values.
 
 Warehouse / Logistics free text maps to warehouse_logistics only when
-WAREHOUSE_LOGISTICS_ENABLED is on. Until migration 203 is applied the flag
+WAREHOUSE_LOGISTICS_ENABLED is on. Until migration 204 is applied the flag
 stays off and those strings save as other, which is already in the CHECK
 allowlist.
 """

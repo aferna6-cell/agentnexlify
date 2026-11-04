@@ -1,4 +1,4 @@
 {
-  "deferred_unapplied": [201, 203],
-  "note": "201_website_connections and 203_warehouse_logistics_business_type are intentionally unapplied. Do not apply from this checker."
+  "deferred_unapplied": [201, 204],
+  "note": "201_website_connections and 204_warehouse_logistics_business_type are intentionally unapplied. Do not apply from this checker."
 }

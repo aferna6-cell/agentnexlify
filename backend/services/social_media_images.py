@@ -25,6 +25,7 @@ from backend.services.image_gen import (
     ImageGenError,
     ImageGenNotConfigured,
     generate_image_png,
+    provider_rejected_credentials,
 )
 
 logger = logging.getLogger(__name__)
@@ -83,6 +84,8 @@ async def generate_post_image(db, *, tenant_id: str, prompt: str, platform: str)
             platform,
             exc,
         )
+        if provider_rejected_credentials(exc):
+            raise SocialImageGenError("image_gen_not_configured") from exc
         raise SocialImageGenError("Image generation failed. Please retry.") from exc
 
     storage_path = f"{tenant_id}/social_{uuid4().hex}.png"
