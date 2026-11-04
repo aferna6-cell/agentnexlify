@@ -18,7 +18,6 @@ import {
 
 const inputStyle = { ...inputBaseStyle, flex: 1 };
 
-
 export default function ResearchCard({ token }) {
   const [topic, setTopic] = useState("");
   const [urlsText, setUrlsText] = useState("");
@@ -82,9 +81,9 @@ export default function ResearchCard({ token }) {
     <div style={cardStyle}>
       <h3 style={headingStyle}>Deep research</h3>
       <div style={{ ...mutedStyle, marginBottom: 12 }}>
-        A research brief built only from your own knowledge - your Second
-        Brain, FAQs, department instructions, learned memory, and connected
-        tools. Gaps are named, never papered over.
+        A research brief built only from what you already saved: your business
+        knowledge, FAQs, standing instructions, notes picked up from past
+        conversations, and connected tools. Gaps are named, never papered over.
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <input
@@ -142,8 +141,7 @@ export default function ResearchCard({ token }) {
             {deliverable.body || ""}
           </div>
           <div style={{ ...mutedStyle, marginTop: 8 }}>
-            Saved to Pending approvals - approve it there to keep it on
-            record.
+            Saved to Pending approvals - approve it there to keep it on record.
           </div>
           <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
             <button

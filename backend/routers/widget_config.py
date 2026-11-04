@@ -37,12 +37,18 @@ from datetime import datetime, timezone
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/widget", tags=["widget"])
 
-
 def _public_referral_code(code: str | None) -> str | None:
     """Return the code only when it is safe to embed in the widget watermark."""
     if not is_public_referral_code(code):
         return None
     return code.strip()
+
+
+# leads.id is a UUID. A non-UUID lid makes PostgREST raise 22P02, which
+# previously escaped this handler as HTTP 500.
+_LEAD_ID_RE = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
 
 # ---------------------------------------------------------------------------
 # File upload config
@@ -367,14 +373,32 @@ async def unsubscribe_lead(
     tid: str = Query("", description="Tenant ID", max_length=50),
 ):
     """Public endpoint clicked from email unsubscribe links."""
+    if not _LEAD_ID_RE.fullmatch(lid or ""):
+        return HTMLResponse(
+            "<html><body><h2>Invalid unsubscribe link.</h2></body></html>",
+            status_code=400,
+        )
+
     db = get_service_supabase()
-    result = (
-        db.table("leads")
-        .select("id, client_id, unsubscribed")
-        .eq("id", lid)
-        .limit(1)
-        .execute()
-    )
+    try:
+        result = (
+            db.table("leads")
+            .select("id, client_id, unsubscribed")
+            .eq("id", lid)
+            .limit(1)
+            .execute()
+        )
+    except Exception as exc:
+        # PostgREST rejects a value that is not a uuid (22P02). That is a
+        # bad link, not a server failure. Other lookup failures still raise.
+        detail = str(exc)
+        if "22P02" in detail or "invalid input syntax" in detail.lower():
+            return HTMLResponse(
+                "<html><body><h2>Invalid unsubscribe link.</h2></body></html>",
+                status_code=400,
+            )
+        logger.warning("unsubscribe lookup failed")
+        raise
     if not result.data:
         return HTMLResponse(
             "<html><body><h2>Lead not found.</h2></body></html>",

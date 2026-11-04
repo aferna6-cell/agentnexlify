@@ -44,6 +44,36 @@ function statusMeta(status) {
   return STATUS_META[status] || STATUS_META.not_started;
 }
 
+const TROUBLESHOOTING_TIPS = [
+  "Confirm the page is public and opens in a browser.",
+  "Publish the widget on that exact URL, then verify again.",
+  "Use the site address only, with no username or password in it.",
+];
+
+function parseWebsiteUrl(raw) {
+  const value = (raw || "").trim();
+  if (!value) return null;
+  try {
+    return new URL(value.includes("://") ? value : `https://${value}`);
+  } catch {
+    return null;
+  }
+}
+
+function urlHasUserinfo(raw) {
+  const parsed = parseWebsiteUrl(raw);
+  return Boolean(parsed && (parsed.username || parsed.password));
+}
+
+function websiteUrlFromSearch(search) {
+  const raw = new URLSearchParams(search || "").get("url");
+  const parsed = parseWebsiteUrl(raw);
+  if (!parsed) return "";
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "";
+  if (parsed.username || parsed.password) return "";
+  return parsed.href;
+}
+
 export default function WebsiteConnectPage() {
   const { user, token } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -77,7 +107,14 @@ export default function WebsiteConnectPage() {
     ])
       .then(([connectPayload, dash]) => {
         if (cancelled) return;
+        const row =
+          connectPayload?.connection ||
+          (connectPayload?.id ? connectPayload : null);
         applyPayload(connectPayload);
+        if (!row?.website_url) {
+          const prefill = websiteUrlFromSearch(window.location.search);
+          if (prefill) setUrl(prefill);
+        }
         if (dash?.widget_api_key) setApiKey(dash.widget_api_key);
       })
       .catch((err) => {
@@ -99,6 +136,10 @@ export default function WebsiteConnectPage() {
 
   async function handleConnect(event) {
     event.preventDefault();
+    if (urlHasUserinfo(url)) {
+      setError("Enter the site address without a username or password.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -260,6 +301,17 @@ export default function WebsiteConnectPage() {
           )}
         </div>
       </form>
+
+      {status === "failed" && !verifying && (
+        <div className="settings-card" data-testid="connect-troubleshooting">
+          <h3>Troubleshooting</h3>
+          <ul className="settings-card-desc" style={{ paddingLeft: 18 }}>
+            {TROUBLESHOOTING_TIPS.map((tip) => (
+              <li key={tip}>{tip}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {action && !live && (
         <div className="settings-card">
