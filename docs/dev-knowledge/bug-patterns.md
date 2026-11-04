@@ -18894,3 +18894,55 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Fix OAuth callback landing and Google consent redirect URI (#1008)
+
+* Fix OAuth callback landing and stop logging authorization codes.
+
+Google, Microsoft 365, and HubSpot callbacks were sending the browser to
+/#integrations, which is the marketing home page. Send them to
+/dashboard/integrations with a connected or error indicator. Add
+GOOGLE_PUBLIC_REDIRECT_URI so the Google consent screen can use the
+app.agentnexlify.com callback, and keep GOOGLE_REDIRECT_URI when it is
+unset. Strip code and state from callback access logs.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+* Keep OAuth redirects on the frontend origin and cover log redaction.
+
+Drop the CI workflow edit from this fix. Callback redirects now stay on
+the configured frontend host, and tests check that code and state are
+removed from access and exception logs for Google, Microsoft 365, and
+HubSpot on both the success and error paths.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+* Strip OAuth callback queries from Sentry events.
+
+send_default_pii does not remove request.query_string or request.url.
+before_send clears both on the Google, Microsoft 365, and HubSpot
+callback paths. Note that Railway and Vercel edge logs still keep the
+full URL, which is low risk because the code is single-use and state
+is signed.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+* Scrub callback locals, breadcrumbs, and exception text in Sentry.
+
+include_local_variables stays off, and callback events also drop frame
+vars. code= and state= are removed from breadcrumbs and exception values.
+The hook calls PR #977's scrubber afterward when that module is present.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+---------
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+**Date:** 2026-11-04
+**Commit:** 8bb7d02
+**Author:** aferna6-cell
+**Files Changed:** backend/config.py,backend/main.py,backend/oauth_access_log.py,backend/routers/integrations.py,backend/services/google_calendar.py,backend/tests/test_connector_registry.py,docs/runbooks/google-integration-hardening-m8.md,frontend/src/pages/IntegrationsPage.jsx,tests/test_agent_os.py,tests/test_oauth_callback_ux.py
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
