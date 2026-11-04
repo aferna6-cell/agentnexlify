@@ -49,16 +49,67 @@ function isEchoFragment(text: string, terms: string[]): boolean {
   return text.length < 80 && informative.length < 2;
 }
 
-/** One customer-facing answer. Drops system text and does not join every hit. */
-export function synthesizeKbAnswer(question: string, hits: KbEntry[]): string {
+const ENGINEERING =
+  /\{[A-Za-z_][A-Za-z0-9_]*\}|new behavior\s*:|\b\d+\.\s+if the\b/i;
+
+const ANSWER_SYSTEM =
+  "Answer only from these snippets. Be concise and customer-facing. " +
+  "No internal notes, no implementation plans, no template placeholders, and do not repeat the question. " +
+  "If the snippets do not contain the answer, say you do not have that yet.";
+
+/** FAQ rows store the question on the topic. The model only sees the answer. */
+export function faqAnswerText(entry: KbEntry): string {
+  const topic = (entry.topic || "").replace(/\s+/g, " ").trim();
+  let answer = (entry.answer || "").replace(/\s+/g, " ").trim();
+  if (
+    topic.endsWith("?") &&
+    answer.toLowerCase().startsWith(topic.toLowerCase())
+  ) {
+    answer = answer
+      .slice(topic.length)
+      .replace(/^[\s:—-]+/, "")
+      .trim();
+  }
+  const embedded = answer.match(/^([^?]{12,}\?)\s+(\S[\s\S]+)$/);
+  if (embedded?.[2] && !embedded[2].includes("?")) answer = embedded[2].trim();
+  return answer;
+}
+
+export function isEngineeringSnippet(text: string): boolean {
+  return ENGINEERING.test(text);
+}
+
+/** A complete customer sentence. Truncated spans and bare questions are not. */
+export function isWholeCustomerAnswer(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed.length < 24) return false;
+  if (/\.\.\./.test(trimmed)) return false;
+  if (!/[.!]["']?$/.test(trimmed)) return false;
+  if (/^[a-z(]/.test(trimmed)) return false;
+  if (/\?\s*$/.test(trimmed)) return false;
+  if (isEngineeringSnippet(trimmed)) return false;
+  return true;
+}
+
+/** Top snippets for the model: FAQ answers, not questions, and no spec notes. */
+export function customerFacingSnippets(
+  question: string,
+  hits: KbEntry[],
+): string[] {
   const terms = question
     .toLowerCase()
     .split(/\W+/)
-    .filter((t) => t.length > 3);
+    .filter((term) => term.length > 3);
   const ranked = hits
     .filter((entry) => !isInternalKnowledge(entry))
-    .map((entry) => (entry.answer || "").replace(/\s+/g, " ").trim())
-    .filter((text) => text && !isEchoFragment(text, terms))
+    .map((entry) => faqAnswerText(entry))
+    .filter(
+      (text) =>
+        text &&
+        !isEngineeringSnippet(text) &&
+        !isEchoFragment(text, terms) &&
+        !/^\s*[^?]{0,160}\?\s*$/.test(text),
+    )
     .map((text) => {
       const hay = text.toLowerCase();
       const score = terms.reduce(
@@ -76,19 +127,52 @@ export function synthesizeKbAnswer(question: string, hits: KbEntry[]): string {
     if (seen.has(key)) continue;
     seen.add(key);
     picked.push(row.text);
-    if (picked.length >= 3 || picked.join(" ").length >= 700) break;
+    if (picked.length >= 5) break;
   }
-  if (picked.length === 0)
+  return picked;
+}
+
+export function businessAnswerPrompt(
+  question: string,
+  snippets: string[],
+): string {
+  const body = snippets.length
+    ? snippets.map((snippet) => `- ${snippet}`).join("\n")
+    : "(no snippets)";
+  return `Question: ${question}\n\nSnippets:\n${body}`;
+}
+
+/** Used only when the model is down. Whole FAQ answers, never spliced spans. */
+export function extractiveKbAnswer(
+  _question: string,
+  snippets: string[],
+): string {
+  const whole = snippets.filter(isWholeCustomerAnswer);
+  if (whole.length === 0)
     return "I don't have that in your knowledge base yet.";
-  if (picked.length === 1) return picked[0]!;
-  const services = /\b(services|products|offer)\b/i.test(question);
-  if (services) {
-    const items = picked.map((text) =>
-      text.replace(/^we offer\s+/i, "").replace(/\.$/, ""),
-    );
-    return `We offer ${items.join("; ")}.`;
-  }
-  return picked.join(" ");
+  return whole.slice(0, 3).join(" ");
+}
+
+export function synthesizeKbAnswer(question: string, hits: KbEntry[]): string {
+  return extractiveKbAnswer(question, customerFacingSnippets(question, hits));
+}
+
+async function answerFromKnowledge(
+  question: string,
+  hits: KbEntry[],
+  runId: string,
+): Promise<string> {
+  const snippets = customerFacingSnippets(question, hits);
+  const generated = await generateDraft({
+    system: ANSWER_SYSTEM,
+    prompt: businessAnswerPrompt(question, snippets),
+    runId,
+    maxTokens: 400,
+    local: () => extractiveKbAnswer(question, snippets),
+  });
+  const text = generated?.text?.replace(/\s+/g, " ").trim() ?? "";
+  if (text && !isEngineeringSnippet(text)) return text;
+  return extractiveKbAnswer(question, snippets);
 }
 
 function deriveTopic(q: string): string {
@@ -162,7 +246,7 @@ export const customerQuestion = defineAgent(
           : "No knowledge-base entry matched this question",
         data: kbHits,
       });
-      const answer = synthesizeKbAnswer(question, kbHits);
+      const answer = await answerFromKnowledge(question, kbHits, runId);
       return {
         orchestratorNotes: [answer],
         noDraftReason: "answered directly from the knowledge base",
@@ -207,7 +291,7 @@ export const customerQuestion = defineAgent(
 
     const local = (): string => {
       if (kbHasAnswer) {
-        return `${greeting} ${thanks} ${synthesizeKbAnswer(question, kbHits)}${signoff ? ` — ${signoff}` : ""}`;
+        return `${greeting} ${thanks} ${extractiveKbAnswer(question, customerFacingSnippets(question, kbHits))}${signoff ? ` — ${signoff}` : ""}`;
       }
       return (
         `${greeting} ${thanks} That's a great question — let me confirm the details on my end ` +

@@ -8,13 +8,27 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { classify, classifyHeuristic, setClassifierModel } from "./_classifier.ts";
+import {
+  classify,
+  classifyHeuristic,
+  setClassifierModel,
+} from "./_classifier.ts";
 import { readAskIntent } from "./_intent.ts";
-import { departmentSemanticScore, eligibleSkills, pickSkill } from "./_department.ts";
+import {
+  departmentSemanticScore,
+  eligibleSkills,
+  pickSkill,
+} from "./_department.ts";
 import { adminRecords, customerService, sales } from "./departments.ts";
+import {
+  businessAnswerPrompt,
+  customerFacingSnippets,
+  extractiveKbAnswer,
+} from "./customer_question/agent.ts";
 import { fakeEmitter, fullContext } from "./_testkit.ts";
 
-const top = (ask: string): string | undefined => classifyHeuristic(ask).candidates[0]?.agentId;
+const top = (ask: string): string | undefined =>
+  classifyHeuristic(ask).candidates[0]?.agentId;
 
 test("record mutation reaches the department that owns records, whatever noun it mentions", () => {
   // The subject nouns here belong to four different departments. The task does
@@ -44,7 +58,9 @@ test("a department is routable for a capability none of its drafting skills desc
   // The regression this guards: routing signals used to be the union of the
   // skills' keywords, so a department whose skills all write documents could
   // never be reached for mutating a record.
-  const intent = readAskIntent("Add a note to Dana's record that she prefers mornings.");
+  const intent = readAskIntent(
+    "Add a note to Dana's record that she prefers mornings.",
+  );
   assert.ok(
     departmentSemanticScore(adminRecords.__department, intent) > 0,
     "the department that owns record mutation must score for a record mutation",
@@ -52,13 +68,27 @@ test("a department is routable for a capability none of its drafting skills desc
 });
 
 test("a generative skill is ineligible for a request about something that exists", () => {
-  const existing = readAskIntent("Email Dana about the quote we already sent her.");
-  const eligible = eligibleSkills(sales.__department, existing).map((s) => s.agent.agent_id);
-  assert.ok(!eligible.includes("quote_generator"), "a quote generator cannot serve a request about an existing quote");
+  const existing = readAskIntent(
+    "Email Dana about the quote we already sent her.",
+  );
+  const eligible = eligibleSkills(sales.__department, existing).map(
+    (s) => s.agent.agent_id,
+  );
+  assert.ok(
+    !eligible.includes("quote_generator"),
+    "a quote generator cannot serve a request about an existing quote",
+  );
 
-  const brandNew = readAskIntent("Draft a quote for Dana, parts $300 and labor $200.");
-  const eligibleNew = eligibleSkills(sales.__department, brandNew).map((s) => s.agent.agent_id);
-  assert.ok(eligibleNew.includes("quote_generator"), "a genuinely new quote still reaches the generator");
+  const brandNew = readAskIntent(
+    "Draft a quote for Dana, parts $300 and labor $200.",
+  );
+  const eligibleNew = eligibleSkills(sales.__department, brandNew).map(
+    (s) => s.agent.agent_id,
+  );
+  assert.ok(
+    eligibleNew.includes("quote_generator"),
+    "a genuinely new quote still reaches the generator",
+  );
 });
 
 test("business facts route to customer service ahead of admin records", () => {
@@ -80,7 +110,10 @@ test("business facts route to customer service ahead of admin records", () => {
 });
 
 test("drafting about hours stays with marketing, not a KB lookup", () => {
-  assert.equal(top("Write a Facebook post about our weekend hours."), "marketing");
+  assert.equal(
+    top("Write a Facebook post about our weekend hours."),
+    "marketing",
+  );
 });
 
 test("a business-fact question is answered from the KB with no draft", async () => {
@@ -88,7 +121,9 @@ test("a business-fact question is answered from the KB with no draft", async () 
   const out = await customerService.run({
     input: {},
     context: fullContext({
-      kb: [{ topic: "Services", answer: "We offer oil changes and brake jobs." }],
+      kb: [
+        { topic: "Services", answer: "We offer oil changes and brake jobs." },
+      ],
     }),
     emitTrace: emitter,
     ownerAsk: "what services do we offer",
@@ -112,7 +147,10 @@ test("business-fact answers omit gap text and do not dump fragments", async () =
             "Your knowledge about this business is incomplete. Still missing: the list of services offered.",
         },
         { topic: "frag", answer: "offer offers offer" },
-        { topic: "roadmap", answer: "What we are NOT building in v1 is a marketplace." },
+        {
+          topic: "roadmap",
+          answer: "What we are NOT building in v1 is a marketplace.",
+        },
         {
           topic: "Services",
           answer:
@@ -130,6 +168,69 @@ test("business-fact answers omit gap text and do not dump fragments", async () =
   assert.doesNotMatch(note, /incomplete/i);
   assert.doesNotMatch(note, /NOT building/i);
   assert.doesNotMatch(note, /offer offers offer/);
+});
+
+const SPLICED_SERVICES_REPLY =
+  "We offer What plans do you offer and how much do they cost? Two plans... AI Workforce is $99.99/month and adds...; current generalist produces empty placeholder drafts that just echo the owner's request back. New behavior: 1. If the LLM is available...{nearest_specialist}... Wishlist capture lives here...considered.";
+
+test("a services question is not a spliced FAQ question plus spec notes", async () => {
+  const kb = [
+    {
+      topic: "What plans do you offer and how much do they cost?",
+      answer:
+        "Two plans. The chatbot plan is $19.99/month. AI Workforce is $99.99/month and adds scheduling and follow-ups.",
+    },
+    {
+      topic: "rag:pricing-span",
+      answer: "Two plans... AI Workforce is $99.99/month and adds...",
+    },
+    {
+      topic: "rag:spec",
+      answer:
+        "current generalist produces empty placeholder drafts that just echo the owner's request back. New behavior: 1. If the LLM is available, route to {nearest_specialist}. Wishlist capture lives here until considered.",
+    },
+  ];
+  const snippets = customerFacingSnippets("What services do we offer?", kb);
+  assert.ok(snippets.some((snippet) => snippet.includes("$99.99")));
+  assert.equal(
+    snippets.some((snippet) => /What plans do you offer/.test(snippet)),
+    false,
+  );
+  assert.equal(
+    snippets.some((snippet) =>
+      /New behavior|nearest_specialist|Wishlist capture/.test(snippet),
+    ),
+    false,
+  );
+  const fallback = extractiveKbAnswer("What services do we offer?", snippets);
+  assert.notEqual(fallback, SPLICED_SERVICES_REPLY);
+  assert.match(fallback, /\$99\.99/);
+  assert.doesNotMatch(fallback, /We offer What plans/);
+  assert.doesNotMatch(fallback, /\.\.\./);
+  assert.doesNotMatch(
+    fallback,
+    /New behavior|nearest_specialist|Wishlist capture/,
+  );
+  const prompt = businessAnswerPrompt("What services do we offer?", snippets);
+  assert.match(prompt, /answer only|Snippets/i);
+  assert.doesNotMatch(prompt, /New behavior|nearest_specialist/);
+
+  const { emitter } = fakeEmitter();
+  const out = await customerService.run({
+    input: {},
+    context: fullContext({ kb }),
+    emitTrace: emitter,
+    ownerAsk: "What services do we offer?",
+    runId: "",
+  });
+  const note = out.orchestratorNotes.join(" ");
+  assert.notEqual(note, SPLICED_SERVICES_REPLY);
+  assert.equal(out.draft, undefined);
+  assert.doesNotMatch(note, /We offer What plans/);
+  assert.doesNotMatch(note, /New behavior/);
+  assert.doesNotMatch(note, /\{nearest_specialist\}/);
+  assert.doesNotMatch(note, /Wishlist capture/);
+  assert.match(note, /\$99\.99/);
 });
 
 test("business facts short-circuit before Haiku even if the model picks admin_records", async () => {
@@ -151,7 +252,8 @@ test("business facts short-circuit before Haiku even if the model picks admin_re
     assert.equal(result.candidates[0]?.confidence, 0.95);
     assert.equal(result.params.customer_question, "what services do we offer");
     assert.equal(
-      pickSkill(customerService.__department, "what services do we offer").agent.agent_id,
+      pickSkill(customerService.__department, "what services do we offer").agent
+        .agent_id,
       "customer_question",
     );
   } finally {
@@ -160,15 +262,22 @@ test("business facts short-circuit before Haiku even if the model picks admin_re
 });
 
 test("replying to a customer and writing to one go to different departments", () => {
-  assert.equal(top("Reply to the customer asking whether we service hybrids."), "customer_service");
-  assert.equal(top("Reply to the question that came in about our hours."), "customer_service");
+  assert.equal(
+    top("Reply to the customer asking whether we service hybrids."),
+    "customer_service",
+  );
+  assert.equal(
+    top("Reply to the question that came in about our hours."),
+    "customer_service",
+  );
 });
 
 test("an exclusively-owned intent is not merely a strong hint", () => {
   // A department that exclusively owns an intent must beat any pile of keywords
   // belonging to another, or the orchestrator asks the owner to break a tie
   // that is not actually a tie.
-  const ask = "Note on Dana's record that she approved the quote, the invoice and the appointment.";
+  const ask =
+    "Note on Dana's record that she approved the quote, the invoice and the appointment.";
   const candidates = classifyHeuristic(ask).candidates;
   const admin = candidates.find((c) => c.agentId === "admin_records");
   const runnerUp = candidates.find((c) => c.agentId !== "admin_records");
@@ -181,10 +290,14 @@ test("an exclusively-owned intent is not merely a strong hint", () => {
 
 test("a plural subject routes like its singular", () => {
   const pairs: [string, string][] = [
-    ["Send a reminder about the appointment tomorrow.", "Send reminders about the appointments tomorrow."],
+    [
+      "Send a reminder about the appointment tomorrow.",
+      "Send reminders about the appointments tomorrow.",
+    ],
     ["Chase the overdue invoice.", "Chase the overdue invoices."],
   ];
-  for (const [one, many] of pairs) assert.equal(top(one), top(many), `${one} / ${many}`);
+  for (const [one, many] of pairs)
+    assert.equal(top(one), top(many), `${one} / ${many}`);
 });
 
 test("both halves of an act/ask pair route to the same department", () => {
@@ -192,9 +305,19 @@ test("both halves of an act/ask pair route to the same department", () => {
   // that splits across departments means the router is reading the permission
   // axis, which is not its job.
   const pairs: [string, string][] = [
-    ["Email dana@example.com that her car is ready.", "What would you say to Dana to tell her the car is ready?"],
-    ["Note on Sam's record that he approved the work.", "Draft a note I could put on Sam's record."],
-    ["Chase the overdue invoice for Priya.", "Write me something to chase Priya's overdue invoice."],
+    [
+      "Email dana@example.com that her car is ready.",
+      "What would you say to Dana to tell her the car is ready?",
+    ],
+    [
+      "Note on Sam's record that he approved the work.",
+      "Draft a note I could put on Sam's record.",
+    ],
+    [
+      "Chase the overdue invoice for Priya.",
+      "Write me something to chase Priya's overdue invoice.",
+    ],
   ];
-  for (const [act, ask] of pairs) assert.equal(top(act), top(ask), `${act} / ${ask}`);
+  for (const [act, ask] of pairs)
+    assert.equal(top(act), top(ask), `${act} / ${ask}`);
 });
