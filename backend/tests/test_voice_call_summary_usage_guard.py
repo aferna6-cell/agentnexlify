@@ -2,7 +2,7 @@
 
 Contract:
 - Claude spend uses reserve_ai_tokens → call_claude_messages →
-  record_ai_usage (release on provider error or record failure).
+  record_ai_usage (release on provider error; record failure retains accounting debt).
   llm_runtime does not record.
 - Hard cap and missing/unloadable tenant policy block before the provider.
   The background task returns; it must not raise into an already-completed
@@ -45,7 +45,7 @@ from starlette.background import BackgroundTasks
 from backend.main import app
 from backend.routers import calls_webhooks
 from backend.routers.automations import verify_twilio_request
-from backend.services.ai_usage_guard import AIUsageReservation, record_ai_usage
+from backend.services.ai_usage_guard import AIUsageAccountingDebt, AIUsageReservation, record_ai_usage
 from backend.services.voice_call_summary import (
     SUMMARY_CLAIM,
     SUMMARY_CLAIM_LEASE_SECONDS,
@@ -727,7 +727,7 @@ def test_supabase_client_error_fails_closed_before_provider(caplog):
     _assert_no_secrets(caplog.text)
 
 
-def test_record_ai_usage_releases_reservation_on_persist_failure():
+def test_record_ai_usage_retains_debt_on_persist_failure():
     reservation = _allowed()
     with (
         patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
@@ -741,11 +741,13 @@ def test_record_ai_usage_releases_reservation_on_persist_failure():
             session_id=_SESSION_ID,
             model="claude-sonnet-4-6",
         )
-    assert recorded is None
-    release.assert_called_once_with(reservation)
+    assert isinstance(recorded, AIUsageAccountingDebt)
+    assert recorded.reason == "record_rpc_failed"
+    assert recorded.alert_triggered is False
+    release.assert_not_called()
 
 
-def test_summary_path_releases_when_record_rpc_fails():
+def test_summary_path_retains_debt_when_record_rpc_fails():
     reservation = _allowed()
     store = _store()
 
@@ -786,7 +788,7 @@ def test_summary_path_releases_when_record_rpc_fails():
         result = _run_summary()
     assert result is None
     provider.assert_awaited_once()
-    release.assert_called_once_with(reservation)
+    release.assert_not_called()
     # Provider already succeeded: persist the summary even though usage
     # record failed and the reservation was released. Retry would skip.
     assert store.calls[_CALL_ID]["summary"] == (
@@ -1051,6 +1053,7 @@ def test_in_flight_claim_skips_second_provider():
         ),
     ):
         _run_summary()
+    assert store.calls[_CALL_ID]["summary"] == SUMMARY_CLAIM
     reserve.assert_not_called()
     provider.assert_not_called()
 
@@ -1077,7 +1080,8 @@ def test_fresh_timestamped_claim_skips_provider():
 
 def test_unparseable_claim_is_not_reclaimed():
     """Legacy #<uuid> tokens cannot prove age — do not treat them as stale."""
-    store = _store(summary=f"{SUMMARY_CLAIM}#{uuid.uuid4()}")
+    original = f"{SUMMARY_CLAIM}#{uuid.uuid4()}"
+    store = _store(summary=original)
     provider = AsyncMock(side_effect=_ok_claude)
     with (
         patch(
@@ -1091,6 +1095,7 @@ def test_unparseable_claim_is_not_reclaimed():
         ),
     ):
         _run_summary()
+    assert store.calls[_CALL_ID]["summary"] == original
     reserve.assert_not_called()
     provider.assert_not_called()
 

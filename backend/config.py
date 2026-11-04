@@ -127,6 +127,12 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     google_redirect_uri: str = ""
+    # Public Calendar OAuth callback. When set, this exact URI is sent to
+    # Google instead of google_redirect_uri. Use the Vercel app origin so the
+    # consent screen does not show the Railway host:
+    # https://app.agentnexlify.com/api/v1/integrations/google/callback
+    # Vercel proxies /api/v1/* to the API. Unset keeps google_redirect_uri.
+    google_public_redirect_uri: str = ""
     # Drive KB sync (specs/drive-kb-onboarding_spec.md) — separate callback path
     google_drive_redirect_uri: str = ""
     # Gmail connector (inbox monitoring + AI triage) — separate callback path,

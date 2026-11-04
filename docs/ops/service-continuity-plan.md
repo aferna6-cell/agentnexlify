@@ -41,6 +41,7 @@ If the issue is customer-facing and the rollback path is obvious, roll back firs
 - Pause new paid signups
 - Issue an approved refund through the admin refund endpoint
 - Leave AI usage caps in place during suspicious traffic spikes
+- Confirm the latest nightly Postgres object is in the off-site bucket (`docs/ops/postgres-offsite-backup.md`)
 
 ## Actions Partners Should Not Take Alone
 
@@ -48,6 +49,7 @@ If the issue is customer-facing and the rollback path is obvious, roll back firs
 - Editing migrations in production
 - Manually patching tenant records without a written reason
 - Rotating more than one production secret at once
+- Restoring a backup over the production Supabase project
 
 ## Communication Cadence
 
@@ -61,3 +63,4 @@ If the issue is customer-facing and the rollback path is obvious, roll back firs
 - `docs/ops/refund-runbook.md`
 - `docs/incident-response-playbook.md`
 - `docs/production-runbook.md`
+- `docs/ops/postgres-offsite-backup.md`

@@ -252,6 +252,22 @@ export default function BusinessPageSettings() {
               )}
             </>
           )}
+        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap", marginTop: "1rem" }}>
+          <button className="btn-primary" onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : saved ? "Saved!" : "Save Changes"}
+          </button>
+          {pageUrl && form.business_page_enabled && (
+            <a
+              href={pageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary"
+              style={{ textDecoration: "none", textAlign: "center" }}
+            >
+              Preview Page
+            </a>
+          )}
+        </div>
         </div>
 
         {/* Business Info */}
@@ -550,23 +566,6 @@ export default function BusinessPageSettings() {
           </>
         )}
 
-        {/* Save button */}
-        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-          <button className="btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : saved ? "Saved!" : "Save Changes"}
-          </button>
-          {pageUrl && form.business_page_enabled && (
-            <a
-              href={pageUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-secondary"
-              style={{ textDecoration: "none", textAlign: "center" }}
-            >
-              Preview Page
-            </a>
-          )}
-        </div>
       </div>
     </div>
   );
