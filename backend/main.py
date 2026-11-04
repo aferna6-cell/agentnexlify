@@ -407,6 +407,7 @@ async def _automation_loop():
         run_churn_watch,
         purge_photo_quote_images_30d,
     )
+    from backend.services.quiet_client_alert import run_quiet_client_alert
     from backend.services.weekly_funnel_report import send_weekly_funnel_report
     from backend.services.os_sync import run_due_syncs as _os_sync_tick
     from backend.services.os_opportunities import run_opportunity_scan as _run_opportunity_scan
@@ -546,6 +547,9 @@ async def _automation_loop():
                             run_monthly_conversation_insights,
                         ),
                         _safe_run("run_churn_watch", run_churn_watch),
+                        _safe_run(
+                            "run_quiet_client_alert", run_quiet_client_alert
+                        ),
                         _safe_run(
                             "send_weekly_funnel_report", send_weekly_funnel_report
                         ),
