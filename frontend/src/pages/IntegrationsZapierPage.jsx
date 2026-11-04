@@ -338,7 +338,7 @@ export default function IntegrationsZapierPage() {
   const activeKeys = keys.filter((k) => !k.revoked_at);
 
   return (
-    <div style={{ padding: "24px 28px", maxWidth: 900, margin: "0 auto" }}>
+    <div>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ margin: 0, fontSize: "1.5rem", color: "var(--text-primary)" }}>
           Zapier

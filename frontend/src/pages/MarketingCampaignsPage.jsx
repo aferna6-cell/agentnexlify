@@ -218,7 +218,7 @@ export default function MarketingCampaignsPage({ onNavigate }) {
   if (loading && campaignsArray.length === 0) return <SkeletonLoader />;
 
   return (
-    <div style={{ padding: "24px 32px", maxWidth: 1200 }}>
+    <div>
       {/* Upgrade prompt modal */}
       {showUpgradePrompt && (
         <UpgradePrompt

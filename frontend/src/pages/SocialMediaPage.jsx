@@ -218,7 +218,7 @@ export default function SocialMediaPage() {
   if (loading && postsArray.length === 0) return <SkeletonLoader />;
 
   return (
-    <div style={{ padding: "24px 32px", maxWidth: 1200 }}>
+    <div>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
