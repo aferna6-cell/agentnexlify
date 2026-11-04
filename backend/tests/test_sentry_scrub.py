@@ -36,6 +36,7 @@ def test_dsn_initializes_with_scrubber_and_pii_off(monkeypatch):
     assert sentry_scrub.init_sentry("https://public@example.ingest.sentry.io/1") is True
     assert seen["send_default_pii"] is False
     assert seen["before_send"] is sentry_scrub.scrub_sentry_event
+    assert seen["before_breadcrumb"] is sentry_scrub.scrub_sentry_breadcrumb
     assert seen["dsn"].startswith("https://")
 
 
@@ -76,3 +77,48 @@ def test_scrubber_redacts_headers_user_and_exception_text():
     assert "ada@example.com" not in cleaned["exception"]["values"][0]["value"]
     assert "555" not in cleaned["exception"]["values"][0]["value"]
     assert "ada@example.com" not in cleaned["extra"]["owner_email"]
+
+
+def test_before_send_scrubs_breadcrumbs_and_logentry():
+    event = {
+        "breadcrumbs": {
+            "values": [
+                {
+                    "message": "login ada@example.com with Bearer sk-live-secretvalue",
+                    "data": {
+                        "api_key": "sk-live-secretvalue",
+                        "path": "/widget",
+                        "note": "owner ada@example.com token=abc123secret",
+                    },
+                }
+            ]
+        },
+        "logentry": {
+            "message": "mail to ada@example.com failed",
+            "formatted": "authorization=Bearer sk-live-secretvalue",
+        },
+    }
+
+    cleaned = sentry_scrub.scrub_sentry_event(event, {})
+    blob = str(cleaned["breadcrumbs"]) + str(cleaned["logentry"])
+    assert "ada@example.com" not in blob
+    assert "sk-live-secretvalue" not in blob
+    assert "abc123secret" not in blob
+    assert cleaned["breadcrumbs"]["values"][0]["data"]["api_key"] == "[redacted]"
+    assert cleaned["breadcrumbs"]["values"][0]["data"]["path"] == "/widget"
+    assert "[redacted-email]" in cleaned["logentry"]["message"]
+    assert "[redacted-key]" in cleaned["logentry"]["formatted"]
+
+
+def test_before_breadcrumb_scrubs_secrets_and_drops_non_dicts():
+    crumb = sentry_scrub.scrub_sentry_breadcrumb(
+        {
+            "message": "ada@example.com",
+            "data": {"password": "hunter2", "status": "ok"},
+        },
+        {},
+    )
+    assert crumb["data"]["password"] == "[redacted]"
+    assert crumb["data"]["status"] == "ok"
+    assert "ada@example.com" not in crumb["message"]
+    assert sentry_scrub.scrub_sentry_breadcrumb("raw ada@example.com", {}) is None
