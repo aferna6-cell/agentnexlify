@@ -11,8 +11,8 @@ CALENDAR_ACTIONS_FLAG = "CALENDAR_ACTIONS_ENABLED"
 CRM_ACTIONS_FLAG = "CRM_ACTIONS_ENABLED"
 INVOICE_ACTIONS_FLAG = "INVOICE_ACTIONS_ENABLED"
 # Owner-chat Google Calendar read/book and its approval insert.
-# Unset is off. The allowlist is optional: empty means every tenant when
-# the flag is on; a comma-separated list limits it to those tenant ids.
+# The flag defaults off. The allowlist fails closed: empty or unset admits
+# nobody. "*" is the only value that means every tenant.
 CALENDAR_CHAT_FLAG = "CALENDAR_CHAT_ENABLED"
 CALENDAR_CHAT_ALLOWLIST_ENV = "CALENDAR_CHAT_TENANT_ALLOWLIST"
 _TRUTHY = frozenset({"1", "true", "yes", "on"})
@@ -35,16 +35,21 @@ def crm_actions_enabled() -> bool:
 def calendar_chat_enabled(tenant_id: str | None) -> bool:
     """Owner-chat calendar fast path and its events.insert approval.
 
-    Off unless ``CALENDAR_CHAT_ENABLED`` is truthy. When
-    ``CALENDAR_CHAT_TENANT_ALLOWLIST`` is non-empty, only those tenant ids
-    are included. An empty allowlist with the flag on includes every tenant.
+    Off unless ``CALENDAR_CHAT_ENABLED`` is truthy. The allowlist is
+    fail-closed: empty or unset admits nobody, even with the flag on.
+    ``*`` admits every tenant. Any other value is a comma-separated list
+    of tenant ids, and only those ids are admitted.
+
+    Checked again at approve/insert time, so a card drafted while the
+    tenant was allowed is refused if the flag is later turned off or the
+    tenant is removed from the list.
     """
     if not _flag(CALENDAR_CHAT_FLAG):
         return False
-    raw = os.environ.get(CALENDAR_CHAT_ALLOWLIST_ENV, "").strip()
-    if not raw:
-        return True
+    raw = os.environ.get(CALENDAR_CHAT_ALLOWLIST_ENV, "")
     allowed = {part.strip() for part in raw.split(",") if part.strip()}
+    if "*" in allowed:
+        return True
     return bool(tenant_id) and tenant_id in allowed
 
 

@@ -133,7 +133,7 @@ def _patches(google, integration):
 def _calendar_chat_flag_on(monkeypatch):
     """Existing chat tests exercise the path. Flag-off tests override this."""
     monkeypatch.setenv("CALENDAR_CHAT_ENABLED", "1")
-    monkeypatch.setenv("CALENDAR_CHAT_TENANT_ALLOWLIST", "")
+    monkeypatch.setenv("CALENDAR_CHAT_TENANT_ALLOWLIST", "*")
 
 
 class TestRoutingRegression:
@@ -760,6 +760,124 @@ class TestCalendarChatFlag:
         assert created["ok"] is True
         assert skipped["code"] == "disabled"
         assert len(google.events().inserts) == 1
+
+    def test_empty_or_unset_allowlist_admits_nobody(self, monkeypatch):
+        from backend.services.m8_action_flags import calendar_chat_enabled
+
+        monkeypatch.setenv("CALENDAR_CHAT_ENABLED", "1")
+        for raw in ("", "   "):
+            monkeypatch.setenv("CALENDAR_CHAT_TENANT_ALLOWLIST", raw)
+            assert calendar_chat_enabled("c1") is False
+            assert calendar_chat_enabled("c2") is False
+        monkeypatch.delenv("CALENDAR_CHAT_TENANT_ALLOWLIST", raising=False)
+        assert calendar_chat_enabled("c1") is False
+
+    def test_star_allowlist_admits_every_tenant(self, monkeypatch):
+        from backend.services.m8_action_flags import calendar_chat_enabled
+
+        monkeypatch.setenv("CALENDAR_CHAT_ENABLED", "1")
+        monkeypatch.setenv("CALENDAR_CHAT_TENANT_ALLOWLIST", "*")
+        assert calendar_chat_enabled("c1") is True
+        assert calendar_chat_enabled("c2") is True
+        google = FakeGoogle()
+        patches = _patches(google, {"id": "int-1"})
+        with patches[0], patches[1], patches[2], patches[3], patches[4]:
+            for tenant in ("c1", "c2"):
+                out = _run_async(
+                    os_calendar_chat.try_calendar_turn(
+                        _owner_db(), tenant, "th1", {"content": BOOK_PROMPT}, now=NOW
+                    )
+                )
+                assert out["calendar_booking_draft"] is True
+
+    def test_flag_on_empty_allowlist_keeps_main_routing_and_inserts_nothing(
+        self, monkeypatch
+    ):
+        from backend.services import os_thread_runner
+
+        monkeypatch.setenv("CALENDAR_CHAT_ENABLED", "1")
+        monkeypatch.setenv("CALENDAR_CHAT_TENANT_ALLOWLIST", "")
+
+        def _no_google(*_args, **_kwargs):
+            raise AssertionError("Google was called with an empty allowlist")
+
+        database = _db(
+            {
+                "os_threads": [{"id": "th1", "source": "chat"}],
+                "os_messages": [{"id": "m-asst", "role": "assistant", "content": "ok"}],
+                "appointments": [{"id": "a1"}],
+            }
+        )
+        with (
+            patch("backend.services.google_calendar._build_service", side_effect=_no_google),
+            patch("backend.services.google_calendar.get_integration", return_value={"id": "int-1"}),
+            patch(
+                "backend.services.booking.get_business_hours",
+                return_value={"timezone": "America/New_York"},
+            ),
+            patch("backend.services.activity.log_activity"),
+            patch.object(
+                os_thread_runner.os_approval_notify,
+                "notify_pending_approval",
+                new=AsyncMock(),
+            ),
+        ):
+            out = _run_async(
+                os_thread_runner.process_user_turn(
+                    database, "c1", "th1", {"content": BOOK_PROMPT}, None
+                )
+            )
+        assert out.get("calendar_booking_draft") is not True
+        assert out.get("data_answer") is True
+        assert out.get("template") == "appointment_count"
+        refused = google_calendar.insert_approved_calendar_event(
+            MemoryDB({"os_agent_runs": [_approved_run()]}), "c1", "run-1"
+        )
+        assert refused["code"] == "disabled"
+
+    def test_approve_after_flag_off_or_allowlist_removal_makes_no_google_call(
+        self, monkeypatch
+    ):
+        """A card drafted while allowed must not insert after the gate closes."""
+        monkeypatch.setenv("CALENDAR_CHAT_ENABLED", "1")
+        monkeypatch.setenv("CALENDAR_CHAT_TENANT_ALLOWLIST", "c1")
+        google = FakeGoogle()
+        patches = _patches(google, {"id": "int-1"})
+        with patches[0], patches[1], patches[2], patches[3], patches[4]:
+            drafted = _run_async(
+                os_calendar_chat.try_calendar_turn(
+                    _owner_db(), "c1", "th1", {"content": BOOK_PROMPT}, now=NOW
+                )
+            )
+        assert drafted["calendar_booking_draft"] is True
+        assert google.events().inserts == []
+
+        run = _approved_run()
+        ctx = ActionContext(
+            db=MemoryDB({"os_agent_runs": [run]}),
+            client_id="c1",
+            deliverable_id="run-1",
+            action_run_id="act-1",
+            action_type="calendar.event.create",
+            deliverable=run["deliverable"],
+            agent_run=run,
+        )
+
+        def _no_google(*_args, **_kwargs):
+            raise AssertionError("Google was called after the gate closed")
+
+        monkeypatch.setenv("CALENDAR_CHAT_ENABLED", "0")
+        with patch("backend.services.google_calendar._build_service", side_effect=_no_google):
+            flagged_off = _run_async(_run(ctx))
+        assert flagged_off.status == "failed"
+        assert flagged_off.error_detail["stage"] == "disabled"
+
+        monkeypatch.setenv("CALENDAR_CHAT_ENABLED", "1")
+        monkeypatch.setenv("CALENDAR_CHAT_TENANT_ALLOWLIST", "someone-else")
+        with patch("backend.services.google_calendar._build_service", side_effect=_no_google):
+            removed = _run_async(_run(ctx))
+        assert removed.status == "failed"
+        assert removed.error_detail["stage"] == "disabled"
 
 
 class TestBizAnswerSplit:
