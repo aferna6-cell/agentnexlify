@@ -11,7 +11,8 @@ import assert from "node:assert/strict";
 import { classifyHeuristic } from "./_classifier.ts";
 import { readAskIntent } from "./_intent.ts";
 import { departmentSemanticScore, eligibleSkills } from "./_department.ts";
-import { adminRecords, sales } from "./departments.ts";
+import { adminRecords, customerService, sales } from "./departments.ts";
+import { fakeEmitter, fullContext } from "./_testkit.ts";
 
 const top = (ask: string): string | undefined => classifyHeuristic(ask).candidates[0]?.agentId;
 
@@ -58,6 +59,44 @@ test("a generative skill is ineligible for a request about something that exists
   const brandNew = readAskIntent("Draft a quote for Dana, parts $300 and labor $200.");
   const eligibleNew = eligibleSkills(sales.__department, brandNew).map((s) => s.agent.agent_id);
   assert.ok(eligibleNew.includes("quote_generator"), "a genuinely new quote still reaches the generator");
+});
+
+test("business facts route to customer service ahead of admin records", () => {
+  const asks = [
+    "what services do we offer",
+    "what products do we offer",
+    "what are our hours",
+    "what's our pricing",
+    "tell me about our business",
+  ];
+  for (const ask of asks) {
+    const topId = top(ask);
+    assert.equal(topId, "customer_service", ask);
+    const ranked = classifyHeuristic(ask).candidates.map((c) => c.agentId);
+    const adminAt = ranked.indexOf("admin_records");
+    const serviceAt = ranked.indexOf("customer_service");
+    assert.ok(serviceAt !== -1 && (adminAt === -1 || serviceAt < adminAt), ask);
+  }
+});
+
+test("drafting about hours stays with marketing, not a KB lookup", () => {
+  assert.equal(top("Write a Facebook post about our weekend hours."), "marketing");
+});
+
+test("a business-fact question is answered from the KB with no draft", async () => {
+  const { emitter } = fakeEmitter();
+  const out = await customerService.run({
+    input: {},
+    context: fullContext({
+      kb: [{ topic: "Services", answer: "We offer oil changes and brake jobs." }],
+    }),
+    emitTrace: emitter,
+    ownerAsk: "what services do we offer",
+    runId: "",
+  });
+  assert.equal(out.draft, undefined);
+  assert.match(out.noDraftReason ?? "", /knowledge base/);
+  assert.match(out.orchestratorNotes.join(" "), /oil changes/);
 });
 
 test("replying to a customer and writing to one go to different departments", () => {

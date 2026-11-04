@@ -18,6 +18,7 @@ import { addClientNote } from "../utils/api/crm";
 import { fetchSnippets } from "../utils/api/snippets";
 import { fetchTagDefinitions } from "../utils/api/tags";
 import { sendSms } from "../utils/api/misc";
+import { QuickAddLeadModal } from "./Dashboard/QuickActions";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 const SNIPPET_CATEGORY_COLORS = {
@@ -158,6 +159,7 @@ export default function ConversationsPage({ pageData }) {
 
   // New SMS compose panel state
   const [showSmsCompose, setShowSmsCompose] = useState(false);
+  const [showAddLead, setShowAddLead] = useState(false);
   const [smsPhone, setSmsPhone] = useState("");
   const [smsMessage, setSmsMessage] = useState("");
   const [sendingSms, setSendingSms] = useState(false);
@@ -677,18 +679,34 @@ export default function ConversationsPage({ pageData }) {
             {conversations.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <button
-          className="btn-primary"
-          onClick={() => {
-            setShowSmsCompose(true);
-            setSmsError(null);
-            setSmsSent(false);
-          }}
-          style={{ whiteSpace: "nowrap" }}
-        >
-          New SMS
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            className="btn-primary"
+            onClick={() => setShowAddLead(true)}
+            style={{ whiteSpace: "nowrap" }}
+          >
+            New lead
+          </button>
+          <button
+            className="btn-primary"
+            onClick={() => {
+              setShowSmsCompose(true);
+              setSmsError(null);
+              setSmsSent(false);
+            }}
+            style={{ whiteSpace: "nowrap" }}
+          >
+            New SMS
+          </button>
+        </div>
       </div>
+
+      {showAddLead && (
+        <QuickAddLeadModal
+          onClose={() => setShowAddLead(false)}
+          onSuccess={() => setShowAddLead(false)}
+        />
+      )}
 
       {/* New SMS compose panel */}
       {showSmsCompose && (

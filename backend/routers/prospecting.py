@@ -13,7 +13,6 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from backend.config import settings
 from backend.dependencies import _get_current_tenant, verify_tenant
 from backend.models.database import get_service_supabase
 from backend.services.agent_os_gate import require_agent_os_access
@@ -22,6 +21,7 @@ from backend.services.prospecting import (
     discover,
     enrich_prospect,
     promote_to_lead,
+    require_places_api_key,
     run_pipeline,
 )
 from backend.services.tenant_scope import tenant_select, tenant_update
@@ -47,7 +47,12 @@ class ProspectSearchRequest(BaseModel):
 @router.get("/status")
 async def prospecting_status(claims: dict = Depends(_get_current_tenant)):
     """Report whether the platform-level Places API key is configured."""
-    return {"configured": bool(settings.google_places_api_key)}
+    try:
+        require_places_api_key()
+        configured = True
+    except ProspectingNotConfigured:
+        configured = False
+    return {"configured": configured}
 
 
 @router.post("/search")
