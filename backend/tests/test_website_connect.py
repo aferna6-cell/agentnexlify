@@ -1122,6 +1122,27 @@ class TestWebsiteConnectRouter:
         assert created.status_code == 503
         assert verified.status_code == 503
 
+    def test_post_and_verify_unrelated_errors_propagate(self, client, auth_headers_for):
+        class _Boom:
+            def table(self, _name):
+                raise RuntimeError("connection reset")
+
+        with patch(
+            "backend.routers.website_connect.get_service_supabase",
+            return_value=_Boom(),
+        ):
+            created = client.post(
+                "/api/v1/website-connect",
+                headers=auth_headers_for(TENANT_A),
+                json={"website_url": "https://example.com"},
+            )
+            verified = client.post(
+                "/api/v1/website-connect/verify",
+                headers=auth_headers_for(TENANT_A),
+            )
+        assert created.status_code == 500
+        assert verified.status_code == 500
+
     def test_post_value_error_is_400(self, client, auth_headers_for):
         with patch(
             "backend.routers.website_connect.connect_svc.upsert_connection",
