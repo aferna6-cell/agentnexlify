@@ -479,6 +479,7 @@ class LeadUpdateRequest(BaseModel):
     email: str | None = None
     phone: str | None = None
     status: str | None = None
+    pipeline_stage: str | None = None
     conversation_summary: str | None = None
     lead_type: str | None = None
     areas_of_interest: str | None = None
@@ -494,7 +495,15 @@ class LeadUpdateRequest(BaseModel):
     @field_validator("status")
     @classmethod
     def validate_status(cls, v: str | None) -> str | None:
-        if v is not None and v not in VALID_LEAD_STAGES:
+        if v is None:
+            return None
+        # Accept canonical values and known stage aliases. The route maps
+        # aliases onto the check constraint and keeps the label in pipeline_stage.
+        from backend.services.lead_status import UnknownLeadStatus, canonical_lead_status
+
+        try:
+            canonical_lead_status(v)
+        except UnknownLeadStatus:
             raise ValueError(f"status must be one of {VALID_LEAD_STAGES}")
         return v
 

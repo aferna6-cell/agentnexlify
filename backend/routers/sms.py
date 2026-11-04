@@ -4,12 +4,14 @@ import logging
 import re
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from backend.dependencies import verify_tenant
 from backend.models.database import get_service_supabase
 from backend.dependencies import _get_current_tenant
 from backend.services.activity import log_activity
+from backend.services import sms_compliance
+from backend.services.os_actions.recipients import normalize_phone
 from backend.services.sms_rate_limiter import check_sms_rate_limit, increment_sms_count
 from backend.services.twilio_service import send_sms
 from backend.services.webhook_dispatcher import fire_event_background
@@ -20,9 +22,19 @@ router = APIRouter(prefix="/api/v1/sms", tags=["sms"])
 
 
 class SendSmsRequest(BaseModel):
-    lead_id: str
-    phone: str
+    lead_id: str | None = None
+    phone: str | None = None
     message: str
+
+    @model_validator(mode="after")
+    def require_lead_or_phone(self):
+        lead_id = (self.lead_id or "").strip()
+        phone = (self.phone or "").strip()
+        if not lead_id and not phone:
+            raise ValueError("lead_id or phone is required")
+        self.lead_id = lead_id or None
+        self.phone = phone or None
+        return self
 
 
 class SendSmsResponse(BaseModel):
@@ -46,32 +58,116 @@ async def send_sms_endpoint(
     if not check_sms_rate_limit(tenant_id, plan):
         raise HTTPException(status_code=429, detail="Daily SMS limit reached")
 
-    # Verify lead belongs to tenant
-    lead_result = (
-        db.table("leads")
-        .select("id")
-        .eq("id", req.lead_id)
-        .eq("client_id", tenant_id)
-        .limit(1)
-        .execute()
-    )
-    if not lead_result.data:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    destination = _normalize_destination(req.phone) if req.phone else None
+    if req.phone and destination is None:
+        raise HTTPException(status_code=422, detail="Phone must be a valid E.164 number")
+    lead_id = req.lead_id
 
-    success = await send_sms(to=req.phone, body=req.message, tenant_id=tenant_id)
+    if destination and sms_compliance.is_suppressed(db, tenant_id, destination):
+        raise HTTPException(
+            status_code=422,
+            detail="This number opted out of SMS (STOP). It can receive texts again after opting back in.",
+        )
+
+    if lead_id:
+        lead_result = (
+            db.table("leads")
+            .select("id, phone")
+            .eq("id", lead_id)
+            .eq("client_id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+        if not lead_result.data:
+            raise HTTPException(status_code=404, detail="Lead not found")
+        if destination is None:
+            destination = _normalize_destination(lead_result.data[0].get("phone"))
+            if destination is None:
+                raise HTTPException(status_code=422, detail="Lead has no valid phone number")
+            if sms_compliance.is_suppressed(db, tenant_id, destination):
+                raise HTTPException(
+                    status_code=422,
+                    detail="This number opted out of SMS (STOP). It can receive texts again after opting back in.",
+                )
+    else:
+        lead_id = _find_or_create_lead_by_phone(db, tenant_id, destination)
+
+    success = await send_sms(to=destination, body=req.message, tenant_id=tenant_id)
 
     if success:
         increment_sms_count(tenant_id)
         log_activity(
             tenant_id=tenant_id,
             activity_type="sms_sent",
-            description=f"SMS sent to {req.phone}",
-            lead_id=req.lead_id,
-            metadata={"phone": req.phone, "message": req.message[:200]},
+            description=f"SMS sent to {destination}",
+            lead_id=lead_id,
+            metadata={"phone": destination, "message": req.message[:200]},
         )
         return SendSmsResponse(success=True, detail="sent")
 
     return SendSmsResponse(success=False, detail="Failed to send SMS")
+
+
+def _normalize_destination(phone: str | None) -> str | None:
+    """E.164, or None when the number cannot be sent."""
+    return normalize_phone(phone)
+
+
+def _find_or_create_lead_by_phone(db, tenant_id: str, phone: str) -> str:
+    """Find a tenant lead by E.164 (or the same digits) or create one.
+
+    New rows are status ``new`` and source ``manual``. Raises 422 when the
+    phone itself is missing — callers normalize first.
+    """
+    if not phone:
+        raise HTTPException(status_code=422, detail="A valid phone number is required")
+
+    digits = sms_compliance.last10(phone)
+    candidates = [phone]
+    if digits:
+        candidates.extend([digits, f"1{digits}", f"+1{digits}"])
+    # Preserve order while dropping duplicates.
+    seen: list[str] = []
+    for candidate in candidates:
+        if candidate not in seen:
+            seen.append(candidate)
+
+    try:
+        existing = (
+            db.table("leads")
+            .select("id, phone")
+            .eq("client_id", tenant_id)
+            .in_("phone", seen)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.exception("sms_send: lead lookup failed tenant=%s", tenant_id)
+        raise HTTPException(status_code=503, detail="Lead lookup failed — please retry")
+
+    if existing.data:
+        return existing.data[0]["id"]
+
+    try:
+        created = (
+            db.table("leads")
+            .insert(
+                {
+                    "client_id": tenant_id,
+                    "phone": phone,
+                    "status": "new",
+                    "source": "manual",
+                }
+            )
+            .execute()
+        )
+    except Exception:
+        logger.exception("sms_send: lead create failed tenant=%s", tenant_id)
+        raise HTTPException(status_code=503, detail="Failed to create lead for this number")
+
+    if not created.data:
+        raise HTTPException(status_code=503, detail="Failed to create lead for this number")
+    return created.data[0]["id"]
 
 
 # ---------------------------------------------------------------------------

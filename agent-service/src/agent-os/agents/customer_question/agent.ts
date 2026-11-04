@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isBusinessKnowledgeQuestion } from "../_intent.ts";
 import { defineAgent } from "../_schema.ts";
 import { Authoring, presentProfileFields, firstName, greetingInstruction } from "../_authoring.ts";
 import { finishBody } from "../_format.ts";
@@ -60,6 +61,25 @@ export const customerQuestion = defineAgent(
     const params = p.success ? p.data : {};
     const question = (params.customer_question ?? "").trim() || ownerAsk;
     const customerName = params.customer_name?.trim();
+
+    // Factual questions about the business itself are answered from the KB.
+    // They are not a customer-facing draft waiting on approval.
+    if (isBusinessKnowledgeQuestion(ownerAsk)) {
+      const kbHits = searchKb(context.kb, question);
+      await emitTrace.emit("knowledge_base", {
+        description: kbHits.length
+          ? `Answered from ${kbHits.length} knowledge-base entr${kbHits.length === 1 ? "y" : "ies"}`
+          : "No knowledge-base entry matched this question",
+        data: kbHits,
+      });
+      const answer = kbHits.length
+        ? kbHits.map((entry) => entry.answer).join(" ")
+        : "I don't have that in your knowledge base yet.";
+      return {
+        orchestratorNotes: [answer],
+        noDraftReason: "answered directly from the knowledge base",
+      };
+    }
 
     await emitTrace.emit("load_business_profile", {
       description: `Loaded business profile (${presentProfileFields(context.businessProfile).join(", ")})`,
