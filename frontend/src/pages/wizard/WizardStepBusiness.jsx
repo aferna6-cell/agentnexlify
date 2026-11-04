@@ -7,6 +7,7 @@ const INDUSTRIES = [
   "cleaning", "pest_control", "painting", "flooring", "general_contractor",
   "auto_shop", "salon", "spa", "dental", "medical", "veterinary",
   "legal", "accounting", "real_estate", "restaurant", "retail",
+  "warehouse_logistics",
 ];
 
 const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
@@ -35,6 +36,7 @@ function industryLabel(value) {
     pest_control: "Pest Control",
     real_estate: "Real Estate",
     spa: "Spa",
+    warehouse_logistics: "Warehouse / Logistics",
   };
   return labels[value] || value.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }

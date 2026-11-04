@@ -109,6 +109,40 @@ _PRESETS: dict[str, dict] = {
             {"question": "Are you insured?", "answer": "Yes, fully insured.", "category": "credentials"},
         ],
     },
+    "warehouse_logistics": {
+        "services": [
+            "Pallet storage",
+            "Dock appointments",
+            "Pick and pack",
+            "LTL freight",
+            "Full truckload",
+            "Cross-dock",
+        ],
+        "hours": {
+            "Mon": "6am-6pm", "Tue": "6am-6pm", "Wed": "6am-6pm",
+            "Thu": "6am-6pm", "Fri": "6am-6pm", "Sat": "closed", "Sun": "closed",
+        },
+        "kb": (
+            "# About\n"
+            "Warehouse and logistics desk for storage, receiving, and freight.\n"
+            "## Services\n"
+            "Pallet storage, dock appointments, pick and pack, LTL, truckload, cross-dock.\n"
+            "## Quotes\n"
+            "Collect lane, pallet count, and needed-by date. Do not invent a rate or a tracking status.\n"
+            "## Hours\n"
+            "Dock appointments weekdays 6am-6pm. Weekend receiving only when booked ahead."
+        ),
+        "ci": (
+            "You are the warehouse dispatch assistant. Collect company, contact, phone, "
+            "and either a storage volume or a freight lane. NEVER invent a rate, door time, "
+            "or tracking status. NEVER mention AgentNexLiFy."
+        ),
+        "faqs": [
+            {"question": "How do I book a dock appointment?", "answer": "Send carrier, trailer type, pallet count, and the window you want. We confirm a door time.", "category": "booking"},
+            {"question": "How do you price storage?", "answer": "From pallet count and how long the freight stays. We send the quote before receiving.", "category": "pricing"},
+            {"question": "What if a shipment is damaged?", "answer": "Note it on the delivery receipt, then send photos and the BOL or PRO number so we can open a claim.", "category": "policy"},
+        ],
+    },
     "electrical": {
         "services": [
             "Outlet repair",
@@ -142,6 +176,13 @@ _ALIASES = {
     "lawn_care": "landscaping",
     "landscaper": "landscaping",
     "electrician": "electrical",
+    "warehouse": "warehouse_logistics",
+    "logistics": "warehouse_logistics",
+    "warehousing": "warehouse_logistics",
+    "freight": "warehouse_logistics",
+    "fulfillment": "warehouse_logistics",
+    "distribution": "warehouse_logistics",
+    "3pl": "warehouse_logistics",
 }
 
 

@@ -56,6 +56,15 @@ _TYPE_ALIASES: dict[str, str] = {
     "auto_detailer": "auto_shop",
     "fitness": "fitness",
     "retail": "retail",
+    "warehouse": "warehouse_logistics",
+    "warehouse_logistics": "warehouse_logistics",
+    "logistics": "warehouse_logistics",
+    "warehousing": "warehouse_logistics",
+    "freight": "warehouse_logistics",
+    "fulfillment": "warehouse_logistics",
+    "distribution": "warehouse_logistics",
+    "3pl": "warehouse_logistics",
+    "third_party_logistics": "warehouse_logistics",
 }
 
 
@@ -63,7 +72,12 @@ def humanize_business_type(business_type: str | None) -> str:
     raw = (business_type or "").strip().replace("_", " ")
     if not raw:
         return "Business"
-    special = {"hvac": "HVAC", "spa": "Spa"}
+    special = {
+        "hvac": "HVAC",
+        "spa": "Spa",
+        "warehouse logistics": "Warehouse / Logistics",
+        "3pl": "3PL",
+    }
     lower = raw.lower()
     if lower in special:
         return special[lower]
@@ -409,6 +423,35 @@ _BUSINESS_PROFILES: dict[str, dict] = {
             {"label": "View Conversations", "description": "Review customer questions", "action": "navigate", "page": "conversations"},
             {"label": "Open Automations", "description": "Launch campaigns and follow-up", "action": "navigate", "page": "automations"},
             {"label": "Open Dashboard", "description": "Stay on top of activity", "action": "navigate", "page": "dashboard"},
+        ],
+    },
+    "warehouse_logistics": {
+        **deepcopy(_BASE_PROFILE),
+        "key": "warehouse_logistics",
+        "headline": "Keep quotes, dock times, and shipments moving",
+        "subheadline": "Capture freight and storage inquiries, confirm what is on the dock, and follow up until the load is booked.",
+        "focus_areas": ["Quotes", "Dock Appointments", "Shipments"],
+        "conversation_label": "Shipper Conversations",
+        "conversation_empty_hint": "Share your widget so storage and freight questions land here",
+        "lead_label": "Quote Requests",
+        "lead_empty_hint": "New storage, fulfillment, and freight inquiries show up here",
+        "automation_label": "Follow-Ups Live",
+        "automation_empty_hint": "Turn on quote reminders and shipment check-ins",
+        "appointment_label": "Dock Appointments This Week",
+        "missed_call_label": "Missed Dispatch Calls",
+        "proof_metric_label": "Loads and storage leads captured",
+        "proof_metric_empty_hint": "Quote requests and dock appointments will count here",
+        "widget": {
+            "bot_name_suffix": "Dispatch Desk",
+            "primary_color": "#0369a1",
+            "greeting_template": "Hi! Thanks for contacting {business_name}. Do you need storage, a freight quote, or a dock appointment?",
+            "position": "bottom-right",
+        },
+        "quick_actions": [
+            {"label": "Book Dock Time", "description": "Schedule a receiving or pickup window", "action": "book"},
+            {"label": "Add Quote Lead", "description": "Log a storage or freight inquiry", "action": "lead"},
+            {"label": "Open Pipeline", "description": "Move quotes toward a booked load", "action": "navigate", "page": "pipeline"},
+            {"label": "Review Calls", "description": "Check missed dispatch calls", "action": "navigate", "page": "calls"},
         ],
     },
 }

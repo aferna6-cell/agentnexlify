@@ -4,6 +4,16 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 202_warehouse_logistics_business_type.sql (2026-11-04)
+
+**What:** Replaces `tenants_business_type_check` with the migration 142 allowlist plus `warehouse_logistics`. No new enum. `business_type` stays TEXT.
+
+**Why:** Settings and onboarding can store Warehouse / Logistics. Migration 142's CHECK list does not include that value, so an insert or update would fail.
+
+**Applied:** NOT applied. Shipped in the PR only. No production or Supabase write.
+
+---
+
 ## 201_website_connections.sql (2026-09-03)
 
 **What:** New `website_connections` table — one row per tenant (`UNIQUE (tenant_id)`). Columns: `tenant_id` **FK → tenants(id) ON DELETE CASCADE**, `website_url`, `platform` / `detected_platform` (`wordpress|wix|squarespace|godaddy|custom|unknown`), `platform_override`, `status` (`needs_action|verifying|connected|failed`), verification timestamps/detail, `next_action_code`. RLS on + deny-public + explicit `service_role` policy. Index `(tenant_id, status)`.

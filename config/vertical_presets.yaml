@@ -574,6 +574,55 @@ veterinary:
         review your pet's history at the exam and recommend the right
         schedule based on age, lifestyle, and local disease risks.
 
+warehouse_logistics:
+  greeting: >
+    Hi! I can help with pallet storage, a freight quote, or a dock
+    appointment. What are you trying to move or store?
+  services:
+    - Pallet and carton storage
+    - Inbound receiving and dock appointments
+    - Pick, pack, and order fulfillment
+    - LTL and full-truckload freight
+    - Cross-dock and local cartage
+  business_hours: >
+    Dock appointments run on weekdays. Office staff answer quote questions
+    during the same window. After-hours receiving is by prior appointment only.
+  faqs:
+    - question: What storage do you offer?
+      answer: >
+        We store palletized freight and cartons, including short-term overflow.
+        Share the pallet count, how long you need the space, and whether the
+        goods are ambient or temperature-controlled. We quote storage and
+        handling before anything is received.
+    - question: How do I get a dock appointment?
+      answer: >
+        Send the carrier, trailer type, pallet count, and the window you want.
+        We confirm a door time and the paperwork to bring: bill of lading,
+        packing list, and PO numbers. Live unloads and drop trailers both
+        need a confirmed slot.
+    - question: How do you quote freight?
+      answer: >
+        Freight pricing depends on the lane, the weight or pallet count, and
+        the service: LTL, full truckload, or local cartage. Chat can collect
+        those details. A coordinator sends the written rate before the load
+        is booked.
+    - question: Can you fulfill customer orders from stored inventory?
+      answer: >
+        Yes. We receive your inventory, store it, pick orders, and tender
+        them to the carrier you choose. Tell us a typical week's order count
+        and carton sizes and we will quote the handling fee.
+    - question: What should I do if freight arrives damaged or short?
+      answer: >
+        Note the exception on the delivery receipt before the driver leaves,
+        then send photos plus the BOL or PRO number. We open the carrier
+        claim and keep you posted. Claim payouts are decided by the carrier,
+        not in this chat.
+    - question: Which areas do you deliver to?
+      answer: >
+        Local cartage covers the metro around the warehouse. Longer lanes are
+        quoted as LTL or truckload. Tell us the destination city and we will
+        say whether it is a local run or a linehaul quote.
+
 generic:
   greeting: >
     Hi there! How can I help you today? I can answer questions about our
