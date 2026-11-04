@@ -160,6 +160,8 @@ def normalize_website_url(raw: str) -> str:
     if "://" not in url:
         url = f"https://{url}"
     parsed = urlparse(url)
+    if parsed.username or parsed.password:
+        raise ValueError("Enter a website URL without a username or password")
     netloc = _http_netloc(parsed)
     if parsed.scheme not in ("http", "https") or not netloc:
         raise ValueError("Enter a public http(s) website URL")
