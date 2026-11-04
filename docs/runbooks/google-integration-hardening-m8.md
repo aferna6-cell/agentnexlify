@@ -89,6 +89,11 @@ Console. Also set the OAuth consent screen app name and branding there.
 Leaving `GOOGLE_PUBLIC_REDIRECT_URI` unset keeps the current
 `GOOGLE_REDIRECT_URI` behavior.
 
+Application logs and Sentry strip the query string on the Google, Microsoft 365,
+and HubSpot OAuth callbacks. Railway edge logs and Vercel proxy logs still
+record the full URL. That is low risk: the authorization code is single-use,
+and the state value is signed.
+
 ## Cross-refs
 
 - `ops/docs/runbook-integrations-enc-key.md` — key generation

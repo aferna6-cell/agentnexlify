@@ -23,6 +23,7 @@ from backend.config import is_production, settings
 from backend.oauth_access_log import (
     install_oauth_callback_log_redaction,
     logged_http_target,
+    sentry_before_send,
 )
 from backend.limiter import limiter
 from backend import mcp_server
@@ -189,6 +190,7 @@ if settings.sentry_dsn:
         integrations=[StarletteIntegration(), FastApiIntegration()],
         traces_sample_rate=0.1,
         send_default_pii=False,
+        before_send=sentry_before_send,
     )
 
 _startup_time: float = 0.0

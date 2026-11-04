@@ -5,6 +5,7 @@ without a workflow change.
 """
 
 import io
+import json
 import logging
 from urllib.parse import urlparse
 
@@ -12,7 +13,7 @@ import pytest
 from fastapi import HTTPException
 from uvicorn.logging import AccessFormatter
 
-from backend.oauth_access_log import install_oauth_callback_log_redaction
+from backend.oauth_access_log import install_oauth_callback_log_redaction, sentry_before_send
 from backend.routers import integrations as integrations_router
 from backend.services import google_calendar
 
@@ -357,3 +358,49 @@ async def test_callback_logs_strip_code_and_state_on_success_and_error(
         assert "code=" not in error_text
         assert "state=" not in error_text
         assert path in error_text
+
+
+@pytest.mark.parametrize("provider", ["google", "m365", "hubspot"])
+@pytest.mark.parametrize("url_includes_query", [True, False])
+def test_sentry_callback_exception_event_has_no_code_or_state(provider, url_includes_query):
+    secret_code = f"super-secret-code-{provider}"
+    secret_state = f"super-secret-state-{provider}"
+    path = f"/api/v1/integrations/{provider}/callback"
+    query = f"code={secret_code}&state={secret_state}"
+    url = f"https://app.agentnexlify.com{path}"
+    if url_includes_query:
+        url = f"{url}?{query}"
+    event = {
+        "exception": {
+            "values": [{"type": "RuntimeError", "value": "OAuth callback failed"}]
+        },
+        "request": {
+            "method": "GET",
+            "url": url,
+            "query_string": query,
+        },
+    }
+
+    sent = sentry_before_send(event, {"exc_info": (RuntimeError, RuntimeError("x"), None)})
+    blob = json.dumps(sent)
+
+    assert secret_code not in blob
+    assert secret_state not in blob
+    assert "code=" not in blob
+    assert "state=" not in blob
+    assert sent["request"]["query_string"] == ""
+    assert sent["request"]["url"] == f"https://app.agentnexlify.com{path}"
+    assert sent["exception"]["values"][0]["type"] == "RuntimeError"
+
+
+def test_sentry_before_send_leaves_other_requests_unchanged():
+    event = {
+        "exception": {"values": [{"type": "RuntimeError", "value": "other"}]},
+        "request": {
+            "url": "https://app.agentnexlify.com/api/v1/leads?status=new",
+            "query_string": "status=new",
+        },
+    }
+    sent = sentry_before_send(event, {})
+    assert sent["request"]["query_string"] == "status=new"
+    assert sent["request"]["url"].endswith("?status=new")

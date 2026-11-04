@@ -9,6 +9,7 @@ values have to be removed before a log line is formatted.
 import logging
 import re
 import traceback
+from urllib.parse import urlparse
 
 _CALLBACK_WITH_QUERY = re.compile(
     r"(/integrations/(?:google|m365|hubspot)/callback)\?[^\s\"']*"
@@ -31,6 +32,36 @@ def is_oauth_callback_path(path: str) -> bool:
 def redact_oauth_callback_secrets(text: str) -> str:
     """Drop the query string on Google, M365, and HubSpot callback URLs."""
     return _CALLBACK_WITH_QUERY.sub(r"\1", text)
+
+
+def sentry_before_send(event, hint):
+    """Drop OAuth callback queries before Sentry stores the event.
+
+    ``send_default_pii=False`` still leaves ``request.query_string`` and, on
+    some SDK paths, the query on ``request.url``. The authorization code and
+    signed state must not leave the process.
+    """
+    if not isinstance(event, dict):
+        return event
+    request = event.get("request")
+    if not isinstance(request, dict):
+        return event
+    url = request.get("url")
+    if isinstance(url, (bytes, bytearray)):
+        url = url.decode("latin-1", "replace")
+    path = ""
+    if isinstance(url, str) and url:
+        path = urlparse(url).path or url.split("?", 1)[0]
+    if not is_oauth_callback_path(path):
+        return event
+    if isinstance(url, str):
+        request["url"] = redact_oauth_callback_secrets(url)
+    query = request.get("query_string")
+    if isinstance(query, list):
+        request["query_string"] = []
+    elif query is not None:
+        request["query_string"] = ""
+    return event
 
 
 def logged_http_target(path: str, query: str) -> str:
