@@ -18894,3 +18894,14 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Merge pull request #1002 from aferna6-cell/cursor/widget-provider-log-scrub-da2b
+
+fix(widget): redact provider failures and session ids from chat logs
+**Date:** 2026-11-04
+**Commit:** 5dba586
+**Author:** cursor[bot]
+**Files Changed:** 
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
