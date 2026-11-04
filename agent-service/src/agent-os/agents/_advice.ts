@@ -4,13 +4,13 @@
  * Department skill choice is keyword scoring plus a default skill. Operations'
  * default is Booking, which always drafts an SMS and, with no slot, asks the
  * customer for a time. An ask such as "give me ideas to reduce late shipments"
- * matches no booking keyword, so it used to inherit that default. The same
- * class also trips incidental keywords ("late" → HR memo, "book" inside
- * "booking show rate" → Booking). Those are advice, not instructions to draft
- * or to act.
+ * matches no booking keyword and names no action, so it used to inherit that
+ * default. A scored skill or a detected action is left alone — "how can we
+ * reduce no-shows? text Jane to confirm 3pm" still drafts.
  *
- * This is a class check, applied only after a department is already chosen.
- * It does not change classify(), confidence floors, or the routing model.
+ * This is a class check, applied only after a department is already chosen,
+ * and only when nothing else in that department matches. It does not change
+ * classify(), confidence floors, or the routing model.
  */
 
 const GIVE_IDEAS =
@@ -48,13 +48,16 @@ function practiceTopic(ask: string): string {
 }
 
 /**
- * A plain answer for the owner. No customer SMS, no appointment slot, no draft.
- * Deterministic so offline routing and CI do not depend on a model.
+ * Generic checklist, not a tailored answer and not a model reply.
+ *
+ * The same three bullets apply to every topic. Offline routing and CI stay
+ * deterministic, and the copy says so instead of presenting the list as a
+ * direct take. No customer SMS and no appointment slot.
  */
 export function practiceAdviceAnswer(ask: string): string {
   const topic = practiceTopic(ask);
   return [
-    `Here's a direct take on ${topic}. This is advice for you, not a message to a customer, so nothing was drafted for approval.`,
+    `Generic checklist for ${topic} — the same starter list for any question like this, not a tailored answer and not a message to a customer. Nothing was drafted for approval.`,
     "1. Measure the current rate for a short window before changing the process, so you can tell whether a change helped.",
     "2. Find the single step that causes most of the misses and fix that before adding more steps or more people.",
     "3. Put the new rule where the work happens — a cutoff, a checklist, or a visible standard — and review it after one cycle.",

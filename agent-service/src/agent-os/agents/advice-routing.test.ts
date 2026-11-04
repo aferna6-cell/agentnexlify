@@ -48,11 +48,13 @@ const ADVICE = [
   "Any suggestions for cutting dock wait time?",
   "How should we reduce mis-picks on the floor?",
   "Give me some advice on lowering overtime this month.",
-  "how can I improve our booking show rate",
 ];
 
 const BOOKING = [
   "book an appointment for Tuesday at 3",
+  "book me Tuesday at 3",
+  "reschedule my appointment",
+  "book a cleaning Tuesday 3pm",
   "Confirm Maria's Saturday 10am appointment.",
   "Reschedule Dana's Friday appointment to Thursday at 2.",
   "Cancel the booking for Priya's Tuesday slot.",
@@ -101,18 +103,19 @@ test("advice forced into Operations is not the Booking skill and does not draft 
       out.record.traceSteps.some((s) => s.step === "advisory_answer"),
       ask,
     );
-    assert.match(text, /advice for you/i, ask);
+    assert.match(text, /Generic checklist/i, ask);
+    assert.doesNotMatch(text, /direct take/i, ask);
     assert.doesNotMatch(text, /your appointment/i, ask);
     assert.doesNotMatch(text, /what day and time/i, ask);
     assert.equal(out.record.drafts.length, 0, ask);
   }
 });
 
-test("the warehouse ideas prompt is not a draft skill in any department", async () => {
+test("the warehouse ideas prompt is a checklist where no skill scores", async () => {
   const ask = "Give me three ideas to reduce late shipments at a warehouse.";
+  // "late" scores People → HR Memo, so that department is covered separately.
   for (const dept of [
     "operations",
-    "people",
     "sales",
     "marketing",
     "invoicing",
@@ -151,7 +154,7 @@ test("other advice prompts stay plain answers when the router picks Operations",
     assert.equal(out.result.draft, undefined, ask);
     assert.match(
       out.result.orchestratorNotes.join("\n"),
-      /advice for you/i,
+      /Generic checklist/i,
       ask,
     );
     assert.equal(out.record.drafts.length, 0, ask);
@@ -181,4 +184,76 @@ test("the reported prompt does not draft a booking SMS on the heuristic path eit
   assert.equal(out.result.draft, undefined);
   assert.doesNotMatch(skillLine(out.record.traceSteps) ?? "", /Booking/);
   assert.equal(out.record.drafts.length, 0);
+});
+
+test("advice plus a confirm text still drafts instead of the checklist", async () => {
+  const ask = "how can we reduce no-shows? text Jane to confirm 3pm";
+  assert.equal(isPracticeAdviceAsk(ask), true);
+  const out = await runOrchestration({
+    accountId: "tenant",
+    ask,
+    context: CONTEXT,
+    forceAgentId: "operations",
+  });
+  assert.equal(
+    out.record.traceSteps.some((s) => s.step === "advisory_answer"),
+    false,
+  );
+  const drafted = Boolean(out.result.draft);
+  const acted =
+    out.result.status === "needs_clarification" ||
+    out.record.traceSteps.some((s) => s.step.startsWith("tool_"));
+  assert.ok(drafted || acted, "expected a draft or an action");
+  assert.match(skillLine(out.record.traceSteps) ?? "", /Booking skill/);
+  assert.equal(out.result.draft?.channel, "sms");
+});
+
+test("a scored People skill is not replaced by the checklist", async () => {
+  const out = await runOrchestration({
+    accountId: "tenant",
+    ask: "Give me three ideas to reduce late shipments at a warehouse.",
+    context: CONTEXT,
+    forceAgentId: "people",
+  });
+  assert.match(skillLine(out.record.traceSteps) ?? "", /HR Memo skill/);
+  assert.equal(
+    out.record.traceSteps.some((s) => s.step === "advisory_answer"),
+    false,
+  );
+  assert.ok(out.result.draft);
+});
+
+test("Operations appointment reminders still run and are not the Booking skill", async () => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(15, 0, 0, 0);
+  const out = await runOrchestration({
+    accountId: "tenant",
+    ask: "Send tomorrow's appointments their day-before reminders.",
+    context: {
+      ...CONTEXT,
+      appointments: [
+        {
+          id: "apt_1",
+          customerName: "Jane",
+          service: "cleaning",
+          scheduledFor: tomorrow.toISOString(),
+          status: "scheduled",
+          reviewRequested: false,
+        },
+      ],
+    },
+  });
+  assert.equal(out.result.agentId, "operations");
+  assert.match(
+    skillLine(out.record.traceSteps) ?? "",
+    /Appointment Reminder skill/,
+  );
+  assert.doesNotMatch(skillLine(out.record.traceSteps) ?? "", /Booking skill/);
+  assert.equal(
+    out.record.traceSteps.some((s) => s.step === "advisory_answer"),
+    false,
+  );
+  assert.equal(out.result.draft?.channel, "sms");
+  assert.match(out.result.draft?.title ?? "", /reminder/i);
 });

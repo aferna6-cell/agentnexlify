@@ -293,15 +293,30 @@ export function defineDepartment(spec: DepartmentSpec): DepartmentAgent {
       // all need it, and re-deriving it per consumer is how they drift apart.
       const intent = readAskIntent(args.ownerAsk);
 
-      // Advice is not a skill. A zero-score ask otherwise inherits defaultSkillId
-      // (Operations → Booking), and an incidental keyword ("late", "book") can
-      // select a draft skill the owner did not ask for. Answer in plain text
-      // and do not run an action or a draft skill.
-      if (isPracticeAdviceAsk(args.ownerAsk)) {
-        await args.emitTrace.work("advisory_answer", `${spec.display_name} → advice, not a draft skill`);
+      // Checklist only for the fallthrough that used to inherit defaultSkillId
+      // (Operations → Booking). A scored skill or a detected action still runs,
+      // including when the sentence also asks for advice.
+      const skillScore = eligibleSkills(spec, intent).reduce(
+        (max, skill) => Math.max(max, scoreSkill(args.ownerAsk, skill)),
+        0,
+      );
+      const detectedAction = spec.resolveAction?.({
+        ownerAsk: args.ownerAsk,
+        params: args.input,
+        context: args.context,
+        intent,
+      });
+      const forcedSkillId = spec.resolveSkill?.({
+        ownerAsk: args.ownerAsk,
+        params: args.input,
+        context: args.context,
+        intent,
+      });
+      if (isPracticeAdviceAsk(args.ownerAsk) && skillScore === 0 && !forcedSkillId && !detectedAction) {
+        await args.emitTrace.work("advisory_answer", `${spec.display_name} → generic checklist, no skill or action matched`);
         return {
           orchestratorNotes: [practiceAdviceAnswer(args.ownerAsk)],
-          noDraftReason: "advice request — answered directly, no customer draft",
+          noDraftReason: "generic checklist — no skill matched and no action was detected",
         };
       }
 
