@@ -75,6 +75,9 @@ describe("AgentOS shell", () => {
       expect(screen.getByText(/No tasks yet/i)).toBeInTheDocument(),
     );
     expect(
+      screen.getByText(/What kind of business is this/),
+    ).toBeInTheDocument();
+    expect(
       screen.getByText("Hand a task to your AI staff"),
     ).toBeInTheDocument();
   });
@@ -168,7 +171,11 @@ describe("AgentOS shell", () => {
     orchestrateOsTurn.mockRejectedValueOnce(err);
     postOsMessage.mockResolvedValueOnce({
       user_message: { id: "u1", role: "user", content: "legacy path" },
-      assistant_message: { id: "a1", role: "assistant", content: "legacy reply" },
+      assistant_message: {
+        id: "a1",
+        role: "assistant",
+        content: "legacy reply",
+      },
       agent_runs: [],
     });
     render(<AgentOS />);
@@ -368,7 +375,10 @@ describe("AgentOS routing clarification", () => {
       },
       agent_runs: [],
       status: "needs_clarification",
-      clarify_between: [{ agent_id: "sales" }, { agent_id: "customer_service" }],
+      clarify_between: [
+        { agent_id: "sales" },
+        { agent_id: "customer_service" },
+      ],
       decision_id: "dec1",
     });
     render(<AgentOS />);
@@ -396,7 +406,11 @@ describe("AgentOS routing clarification", () => {
     await sendAmbiguous();
     orchestrateOsTurn.mockResolvedValueOnce({
       user_message: { id: "u2", role: "user", content: "follow up with them" },
-      assistant_message: { id: "a2", role: "assistant", content: "On it, Sales here." },
+      assistant_message: {
+        id: "a2",
+        role: "assistant",
+        content: "On it, Sales here.",
+      },
       agent_runs: [],
       status: "routed",
     });

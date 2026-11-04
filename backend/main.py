@@ -180,21 +180,21 @@ logger = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
-# --- Sentry (optional) ---
-if settings.sentry_dsn:
+# --- Sentry (optional; no-op unless SENTRY_DSN is set) ---
+_sentry_dsn = (settings.sentry_dsn or "").strip()
+if _sentry_dsn:
     import sentry_sdk
     from sentry_sdk.integrations.fastapi import FastApiIntegration
     from sentry_sdk.integrations.starlette import StarletteIntegration
 
     sentry_sdk.init(
-        dsn=settings.sentry_dsn,
+        dsn=_sentry_dsn,
         integrations=[StarletteIntegration(), FastApiIntegration()],
         traces_sample_rate=0.1,
         send_default_pii=False,
         include_local_variables=False,
         # OAuth scrub first. sentry_before_send then calls
-        # backend.services.sentry_scrub.scrub_sentry_event when that module
-        # exists, so this does not replace PR #977's scrubber.
+        # backend.services.sentry_scrub.scrub_sentry_event.
         before_send=sentry_before_send,
         before_breadcrumb=sentry_before_breadcrumb,
     )
