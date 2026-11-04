@@ -11,7 +11,7 @@
  * Primary text prefers `description` (v2) then `label` (v1); status colors
  * cover both vocabularies so old and new runs both render.
  */
-import React from "react";
+import React, { useState } from "react";
 
 const STEP_COLORS = {
   done: "#22c55e",
@@ -49,7 +49,15 @@ function stepTime(at) {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+
+/** Model ids, confidence, mode=propose, and skill names stay behind Details. */
+export function isRoutingDetail(step) {
+  const text = `${step?.step || ""} ${step?.description || ""} ${step?.label || ""} ${step?.detail || ""}`;
+  return /\bmode=|\bskill\b|confidence|claude-|haiku-|sonnet-|opus-|gpt-|local-composer|select_skill/i.test(text);
+}
+
 export default function AgentRunFlowchart({ run }) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   if (!run) return null;
 
   const steps = Array.isArray(run.thought_process) ? run.thought_process : [];
@@ -71,6 +79,8 @@ export default function AgentRunFlowchart({ run }) {
         routing.model || null,
       ].filter(Boolean)
     : [];
+  const visibleSteps = detailsOpen ? steps : steps.filter((step) => !isRoutingDetail(step));
+  const hasDetails = Boolean(routing) || steps.some(isRoutingDetail);
 
   return (
     <div
@@ -100,21 +110,41 @@ export default function AgentRunFlowchart({ run }) {
         >
           {run.agent_name || "Worker agent"}
         </span>
-        <span
-          style={{
-            padding: "2px 9px",
-            borderRadius: 999,
-            fontSize: "0.7rem",
-            fontWeight: 600,
-            color: meta.color,
-            background: meta.bg,
-          }}
-        >
-          {meta.label}
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {hasDetails && (
+            <button
+              type="button"
+              aria-expanded={detailsOpen}
+              onClick={() => setDetailsOpen((open) => !open)}
+              style={{
+                border: "1px solid var(--border)",
+                background: "transparent",
+                color: "var(--text-secondary)",
+                borderRadius: 8,
+                padding: "2px 8px",
+                fontSize: "0.7rem",
+                cursor: "pointer",
+              }}
+            >
+              {detailsOpen ? "Hide details" : "Details"}
+            </button>
+          )}
+          <span
+            style={{
+              padding: "2px 9px",
+              borderRadius: 999,
+              fontSize: "0.7rem",
+              fontWeight: 600,
+              color: meta.color,
+              background: meta.bg,
+            }}
+          >
+            {meta.label}
+          </span>
         </span>
       </div>
 
-      {routing && (
+      {detailsOpen && routing && (
         <div
           style={{
             fontSize: "0.72rem",
@@ -132,11 +162,11 @@ export default function AgentRunFlowchart({ run }) {
         </div>
       )}
 
-      {steps.length > 0 && (
+      {visibleSteps.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column" }}>
-          {steps.map((step, idx) => {
+          {visibleSteps.map((step, idx) => {
             const dot = STEP_COLORS[step.status] || STEP_COLORS.pending;
-            const last = idx === steps.length - 1;
+            const last = idx === visibleSteps.length - 1;
             return (
               <div key={step.ordinal ?? idx} style={{ display: "flex", gap: 10 }}>
                 <div
