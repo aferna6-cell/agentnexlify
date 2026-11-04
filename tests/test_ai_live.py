@@ -153,6 +153,114 @@ def test_agent_service_public_health_boolean_and_authed_reason():
     ]
 
 
+def test_remaining_provider_reason_codes():
+    from backend.services.ai_live import _safe_reason
+
+    assert sanitize_provider_reason(403, "permission_error") == "permission_denied"
+    assert sanitize_provider_reason(408, "") == "timeout"
+    assert sanitize_provider_reason(529, "overloaded") == "overloaded"
+    assert sanitize_provider_reason(500, "nope") == "provider_error"
+    assert _safe_reason("ignored", ok=True) == "ok"
+    assert _safe_reason("not a code", ok=False) == "provider_error"
+
+
+def test_models_list_non_success_and_transport_errors():
+    def overload(req, timeout=0):
+        return _Body(503, b"")
+
+    assert probe_models_list("sk-ant-x", opener=overload) == (False, "overloaded")
+
+    def unread(req, timeout=0):
+        class _Boom(io.BytesIO):
+            def read(self, *args, **kwargs):
+                raise OSError("no body")
+
+        raise urllib.error.HTTPError(req.full_url, 401, "no", hdrs=None, fp=_Boom())
+
+    assert probe_models_list("sk-ant-x", opener=unread) == (False, "invalid_api_key")
+
+    def down(req, timeout=0):
+        raise TimeoutError("slow")
+
+    assert probe_models_list("sk-ant-x", opener=down) == (False, "provider_unreachable")
+
+
+def test_agent_service_status_edges():
+    def missing(req, timeout=0):
+        return _Body(200, b'{"status":"ok"}')
+
+    assert fetch_agent_service_status("http://agent.internal", opener=missing) == (
+        False,
+        "agent_service_status_unknown",
+    )
+
+    def health_only(req, timeout=0):
+        return _Body(200, b'{"ai_live": false}')
+
+    assert fetch_agent_service_status("http://agent.internal", opener=health_only) == (
+        False,
+        "reason_unavailable",
+    )
+
+    def bad_detail(req, timeout=0):
+        if req.full_url.endswith("/health"):
+            return _Body(200, b'{"ai_live": true}')
+        return _Body(500, b"not-json")
+
+    assert fetch_agent_service_status(
+        "http://agent.internal", opener=bad_detail, token="tok"
+    ) == (True, "ok")
+
+    def http_fail(req, timeout=0):
+        raise urllib.error.HTTPError(req.full_url, 503, "down", hdrs=None, fp=io.BytesIO(b""))
+
+    assert fetch_agent_service_status("http://agent.internal", opener=http_fail)[0] is False
+
+    def boom(req, timeout=0):
+        raise TimeoutError("nope")
+
+    assert fetch_agent_service_status("http://agent.internal", opener=boom) == (
+        False,
+        "agent_service_status_unknown",
+    )
+
+
+def test_testing_refresh_skips_network_and_service_url_is_measured():
+    from backend.services.ai_live import refresh_ai_live_cache
+
+    reset_ai_live_cache()
+    skipped = refresh_ai_live_cache(force=True)
+    assert skipped == {"ai_live": False, "ai_live_reason": "probe_skipped"}
+
+    def fetch_service(url, token=""):
+        assert url == "http://agent.internal"
+        assert token == "tok"
+        return True, "ok"
+
+    reset_ai_live_cache()
+    measured = current_ai_live(
+        force=True,
+        _deps={
+            "service_url": "http://agent.internal",
+            "fetch_service": fetch_service,
+            "token": "tok",
+        },
+    )
+    assert measured == {"ai_live": True, "ai_live_reason": "ok"}
+
+
+def test_batch_client_strips_wrapped_key(monkeypatch):
+    from unittest.mock import patch
+
+    from backend.config import settings
+    from backend.services.batch_runtime import _client
+
+    monkeypatch.setattr(settings, "anthropic_api_key", '  "sk-ant-batch" ')
+    with patch("backend.services.batch_runtime.anthropic.Anthropic") as client_cls:
+        _client()
+    assert client_cls.call_args.kwargs["api_key"] == "sk-ant-batch"
+
+
 def test_llm_error_log_records_reason_not_secret(caplog):
     import logging
 
