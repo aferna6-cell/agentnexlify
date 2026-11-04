@@ -261,25 +261,27 @@ export default function WebsiteConnectPage() {
           We detect the platform when we can. You can override it. We never ask
           for your CMS password.
         </p>
-        <label className="settings-label" htmlFor="website-url">
-          Site address
-        </label>
-        <input
-          id="website-url"
-          type="url"
-          required
-          placeholder="https://yourbusiness.com"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          autoComplete="url"
-        />
+        <div className="settings-field">
+          <label htmlFor="website-url">Site address</label>
+          <input
+            id="website-url"
+            className="settings-input"
+            type="url"
+            required
+            placeholder="https://yourbusiness.com"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            autoComplete="url"
+          />
+        </div>
 
-        <div className="platform-tabs" style={{ marginTop: 16 }}>
+        <div className="platform-tabs" role="group" aria-label="Website platform">
           {PLATFORMS.map((p) => (
             <button
               key={p.id}
               type="button"
               className={`platform-tab${platform === p.id ? " active" : ""}`}
+              aria-pressed={platform === p.id}
               onClick={() => setPlatform(p.id)}
             >
               {p.label}

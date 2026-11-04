@@ -59,6 +59,26 @@ describe("WebsiteConnectPage", () => {
     expect(screen.queryByText(CONNECTED_COPY)).not.toBeInTheDocument();
   });
 
+  it("styles the site address and keeps platform tabs enabled", async () => {
+    getWebsiteConnection.mockResolvedValue({
+      connection: null,
+      status: "not_started",
+    });
+    render(<WebsiteConnectPage />);
+    const input = await screen.findByLabelText("Site address");
+    expect(input).toHaveClass("settings-input");
+    expect(input.closest(".settings-field")).not.toBeNull();
+    const wordpress = screen.getByRole("button", { name: "WordPress" });
+    const wix = screen.getByRole("button", { name: "Wix" });
+    expect(wordpress).toBeEnabled();
+    expect(wix).toBeEnabled();
+    expect(wordpress).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(wordpress);
+    expect(wordpress).toHaveAttribute("aria-pressed", "true");
+    expect(wordpress).toHaveClass("active");
+    expect(wix).toHaveAttribute("aria-pressed", "false");
+  });
+
   it("shows live only after the API reports connected", async () => {
     getWebsiteConnection.mockResolvedValue({
       status: "connected",
