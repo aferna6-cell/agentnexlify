@@ -245,7 +245,11 @@ function readIntent(
   }
 
   // Schedule, but not CRM stage moves ("move Sarah to contacted").
-  if (SCHEDULE_RE.test(ask) && !COMMUNICATE_RE.test(ask) && !isCrmStageAsk(ask)) {
+  if (
+    SCHEDULE_RE.test(ask) &&
+    !COMMUNICATE_RE.test(ask) &&
+    !isCrmStageAsk(ask)
+  ) {
     return "schedule";
   }
 
@@ -401,6 +405,25 @@ function readSubjectExists(ask: string): boolean {
 
 const QUESTION_RE =
   /^\s*(what|which|who|when|where|why|how|should|can|could|do|does|did|is|are|am)\b/i;
+
+/**
+ * Owner asking what the business itself offers, charges, or is — not asking
+ * for a draft, a post, or a record edit.
+ *
+ * These route to Customer Service and are answered from the knowledge base
+ * with no approval draft. Checked before the admin_records document boost so
+ * a retrieve-shaped question is not turned into a document.
+ */
+const BUSINESS_KB_EXCLUDE_RE =
+  /\b(draft|write|compose|post|blog|one[- ]?pager|contract|agreement|intake form|note on|add a note|reply|respond)\b/i;
+
+const BUSINESS_KB_RE =
+  /\bwhat (services|products)\b|\b(services|products)\b[^?.!]{0,40}\boffer\b|\b(our|your|the) (business )?hours\b|\b(hours of operation|opening hours|when (are we|do we) open)\b|\b(our|your) (pricing|prices)\b|\b(how much (do|does) (we|you) charge|what do we charge|price list)\b|\babout (our|the) business\b|\bwhat (do|does) (we|the business) do\b|\bwho are we\b/i;
+
+export function isBusinessKnowledgeQuestion(ask: string): boolean {
+  if (BUSINESS_KB_EXCLUDE_RE.test(ask)) return false;
+  return BUSINESS_KB_RE.test(ask);
+}
 
 /** Parse an owner ask onto the four semantic axes. Pure and deterministic. */
 export function readAskIntent(ask: string): AskIntent {

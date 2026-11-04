@@ -315,7 +315,7 @@ async def record_referral_click(
     ``ref`` is the tenant's public referral code. Legacy widget API keys are
     rewritten to that public code. The key is never stored.
 
-    Before migration 202, a real key can belong to a tenant whose
+    Before migration 203, a real key can belong to a tenant whose
     ``referral_code`` is still NULL or ``anx_``. That click is stored under
     the tenant id (not the key). The handler also emits an error log and
     increments ``referral_click_unrecordable_total``. It does not drop the

@@ -1,4 +1,4 @@
--- Migration 202: public referral codes must not be widget API keys.
+-- Migration 203: public referral codes must not be widget API keys.
 --
 -- tenants.referral_code (migration 135) is the non-secret share code.
 -- The widget watermark and GET /api/v1/referral/my-stats were publishing

@@ -9,7 +9,7 @@ from backend.services.referral import (
 
 
 def test_null_or_anx_code_falls_back_to_link_without_ref():
-    """Pre-202 rows: NULL or a stored widget key must not leak into the link."""
+    """Pre-203 rows: NULL or a stored widget key must not leak into the link."""
     for raw in (None, "", "   ", "anx_live_widget_key"):
         code, link = public_share_link(raw)
         assert code == ""

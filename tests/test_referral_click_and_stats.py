@@ -126,7 +126,7 @@ def test_widget_copies_are_byte_identical():
 
 
 def test_migration_202_does_not_add_a_second_unique_index():
-    sql = (ROOT / "migrations" / "202_public_referral_codes.sql").read_text()
+    sql = (ROOT / "migrations" / "203_public_referral_codes.sql").read_text()
     assert "CREATE UNIQUE INDEX" not in sql
     assert "tenants_referral_code_key" in sql
 

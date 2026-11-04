@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 _MAX_CODE_LEN = 200  # guard against oversized input
 # Public share codes are short alphanumeric tokens minted at signup
-# (secrets.token_hex) or by migration 202. Widget API keys start with anx_
+# (secrets.token_hex) or by migration 203. Widget API keys start with anx_
 # and must never be treated as a public code.
 _PUBLIC_CODE_RE = re.compile(r"^[A-Za-z0-9]{6,32}$")
 
@@ -45,7 +45,7 @@ def is_public_referral_code(code: str | None) -> bool:
     return _PUBLIC_CODE_RE.match(text) is not None
 
 
-# Before migration 202, referral_code may be NULL or still equal the widget
+# Before migration 203, referral_code may be NULL or still equal the widget
 # key. Those tenants get a link with no ref= parameter. The key is never used.
 SHARE_LINK_NO_REF = "https://agentnexlify.com?utm_source=widget"
 SHARE_LINK_WITH_REF = "https://agentnexlify.com?ref={ref_code}&utm_source=widget"
@@ -159,7 +159,7 @@ def decide_referral_click(db, ref: str | None) -> ReferralClickDecision:
     tenant_id = str(tenant_id)
     if is_public_referral_code(code):
         return ReferralClickDecision(code.strip(), False, tenant_id)
-    # Pre-202: the embed key is real, but there is no safe public code.
+    # Pre-203: the embed key is real, but there is no safe public code.
     # Park the click on the tenant id. Caller logs and increments the metric.
     return ReferralClickDecision(tenant_id, True, tenant_id)
 

@@ -140,8 +140,9 @@ def test_canonical_schema_log_accepts_prod_195_unprefixed_name():
         {"version": "20260902000000", "name": "199_os_workflows"},
             {"version": "20260902010000", "name": "200_os_workflows_integrity"},
     ]
-    # 202_public_referral_codes ships unapplied, same as deferred 201.
-    findings = compare(docs, live, deferred=EXPLICIT_201 | {202}, watch_from=195)
+    # 203_public_referral_codes ships unapplied, same as deferred 201.
+    # 202_leads_pipeline_stage is on main and has no applied/unapplied marker.
+    findings = compare(docs, live, deferred=EXPLICIT_201 | {203}, watch_from=195)
     assert findings == []
 
 
