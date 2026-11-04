@@ -97,6 +97,8 @@ test("business facts route to customer service ahead of admin records", () => {
     "what products do we offer",
     "what are our hours",
     "what's our pricing",
+    "how much does it cost and can I cancel anytime?",
+    "what's your phone number",
     "tell me about our business",
   ];
   for (const ask of asks) {
@@ -114,6 +116,59 @@ test("drafting about hours stays with marketing, not a KB lookup", () => {
     top("Write a Facebook post about our weekend hours."),
     "marketing",
   );
+});
+
+test("cancelling a booking stays with operations", () => {
+  assert.equal(
+    top("Cancel the booking for the customer who disputed her invoice."),
+    "operations",
+  );
+});
+
+test("owner pricing and cancellation questions are answered from the KB", async () => {
+  const ask = "How much does it cost and can I cancel anytime?";
+  setClassifierModel(async () => ({
+    text: JSON.stringify({
+      routed_to: "admin_records",
+      confidence: 0.99,
+      extracted_params: {},
+      alternates: [],
+    }),
+    model: "stub",
+    inputTokens: 1,
+    outputTokens: 1,
+    costUsd: 0,
+  }));
+  try {
+    const result = await classify(ask);
+    assert.equal(result.candidates[0]?.agentId, "customer_service");
+    assert.equal(
+      pickSkill(customerService.__department, ask).agent.agent_id,
+      "customer_question",
+    );
+  } finally {
+    setClassifierModel(null);
+  }
+  const { emitter } = fakeEmitter();
+  const out = await customerService.run({
+    input: {},
+    context: fullContext({
+      kb: [
+        {
+          topic: "What plans do you offer and how much do they cost?",
+          answer:
+            "Two plans. The chatbot plan is $19.99/month. AI Workforce is $99.99/month. You can cancel anytime.",
+        },
+      ],
+    }),
+    emitTrace: emitter,
+    ownerAsk: ask,
+    runId: "",
+  });
+  assert.equal(out.draft, undefined);
+  assert.match(out.noDraftReason ?? "", /knowledge base/);
+  assert.match(out.orchestratorNotes.join(" "), /\$99\.99/);
+  assert.match(out.orchestratorNotes.join(" "), /cancel anytime/i);
 });
 
 test("a business-fact question is answered from the KB with no draft", async () => {

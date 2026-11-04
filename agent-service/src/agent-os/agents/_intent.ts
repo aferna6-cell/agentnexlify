@@ -418,7 +418,7 @@ const BUSINESS_KB_EXCLUDE_RE =
   /\b(draft|write|compose|post|blog|one[- ]?pager|contract|agreement|intake form|note on|add a note|reply|respond)\b/i;
 
 const BUSINESS_KB_RE =
-  /\bwhat (services|products)\b|\b(services|products)\b[^?.!]{0,40}\boffer\b|\b(our|your|the) (business )?hours\b|\b(hours of operation|opening hours|when (are we|do we) open)\b|\b(our|your) (pricing|prices)\b|\b(how much (do|does) (we|you) charge|what do we charge|price list)\b|\babout (our|the) business\b|\bwhat (do|does) (we|the business) do\b|\bwho are we\b/i;
+  /\bwhat (services|products)\b|\b(services|products)\b[^?.!]{0,40}\boffer\b|\b(our|your|the) (business )?hours\b|\b(hours of operation|opening hours|when (are we|do we) open)\b|\b(our|your) (pricing|prices|plans)\b|\b(how much (do|does) (we|you|it) (charge|cost)|what do we charge|what does it cost|price list)\b|\b(what|which) plans\b|\babout (our|the) business\b|\bwhat (do|does) (we|the business) do\b|\bwho are we\b|\bcan (i|we) cancel\b|\bcancel(?:lation)? (policy|anytime|any time|fee)\b|\b(phone number|email address|mailing address)\b|\bhow (do|can) (i|we|you) (reach|contact) (you|us|me)\b|\bcontact (info|information|details)\b/i;
 
 export function isBusinessKnowledgeQuestion(ask: string): boolean {
   if (BUSINESS_KB_EXCLUDE_RE.test(ask)) return false;
