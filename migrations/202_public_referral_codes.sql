@@ -10,8 +10,10 @@
 -- widget_configs.api_key → this public code). The key is not written into
 -- new share links or referral_clicks rows.
 --
--- NOT applied by this PR. Apply manually in Supabase when promoting the
--- change. Do not run this against production from an agent session.
+-- NOT applied by this PR. Do not run this file against production from an
+-- agent session. Before applying, run the read-only duplicate pre-check in
+-- the pull request body. tenants already has rows (migration 135 backfilled
+-- referral_code); this index is not created on an empty table.
 
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS referral_code TEXT;
 

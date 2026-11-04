@@ -19,8 +19,9 @@ from backend.dependencies import _get_current_tenant
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.services.referral import (
+    decide_referral_click,
     public_share_link,
-    resolve_public_click_ref,
+    record_unrecordable_referral_click,
 )
 from backend.services.referral_overview import compute_referral_overview
 
@@ -312,21 +313,30 @@ async def record_referral_click(
     """Record a watermark click from an embedded widget.
 
     ``ref`` is the tenant's public referral code. Legacy widget API keys are
-    accepted and rewritten to that public code. The key is not stored.
+    rewritten to that public code. The key is never stored.
+
+    Before migration 202, a real key can belong to a tenant whose
+    ``referral_code`` is still NULL or ``anx_``. That click is stored under
+    the tenant id (not the key). The handler also emits an error log and
+    increments ``referral_click_unrecordable_total``. It does not drop the
+    click and return ok with no record and no log. An unknown key still
+    inserts nothing and returns the same ``{"ok": True}`` body.
     """
     db = get_service_supabase()
     try:
-        public_ref = resolve_public_click_ref(db, body.ref)
+        decision = decide_referral_click(db, body.ref)
     except Exception:
         logger.exception("Failed to resolve referral click")
         return _CLICK_OK
-    if not public_ref:
+    if decision.loud_unrecordable and decision.tenant_id:
+        record_unrecordable_referral_click(decision.tenant_id)
+    if not decision.store_as:
         return _CLICK_OK
 
     try:
         db.table("referral_clicks").insert(
             {
-                "ref_tenant_id": public_ref,
+                "ref_tenant_id": decision.store_as,
                 "path": body.path,
                 "referrer": body.referrer,
             }
@@ -334,5 +344,4 @@ async def record_referral_click(
     except Exception:
         logger.exception("Failed to record referral click")
 
-    # Same status and body for a stored click and a dropped unknown key.
     return _CLICK_OK

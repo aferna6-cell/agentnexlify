@@ -62,18 +62,54 @@ def public_share_link(code: str | None) -> tuple[str, str]:
     return "", SHARE_LINK_NO_REF
 
 
-def resolve_public_click_ref(db, ref: str | None) -> str | None:
-    """Map a click or share ``ref`` to the public referral code.
+# In-process counter. Logged at error when a real pre-202 click cannot be
+# stored under a public code. Tests read this; it is not a customer charge.
+referral_click_metrics = {"referral_click_unrecordable_total": 0}
 
-    A legacy ``anx_`` widget key still resolves, but the returned value is
-    the tenant's public code. The key itself is never returned or stored.
-    Unknown refs return None.
+
+def record_unrecordable_referral_click(tenant_id: str) -> int:
+    """Count and error-log a valid click that has no public code yet.
+
+    The raw widget key is never included. ``tenant_id`` is the non-secret
+    owner of the embed, used only so the log can be traced.
     """
+    referral_click_metrics["referral_click_unrecordable_total"] += 1
+    value = referral_click_metrics["referral_click_unrecordable_total"]
+    logger.error(
+        "referral_click_unrecordable metric=referral_click_unrecordable_total value=%s tenant_id=%s reason=no_public_referral_code",
+        value,
+        tenant_id,
+    )
+    return value
+
+
+class ReferralClickDecision:
+    """How POST /referral/click should persist one ref.
+
+    ``store_as`` is the value written to referral_clicks.ref_tenant_id.
+    It is never a widget API key. ``loud_unrecordable`` is true when the
+    key is real but the tenant has no public code yet (NULL or ``anx_``).
+    """
+
+    def __init__(self, store_as: str | None, loud_unrecordable: bool, tenant_id: str | None):
+        self.store_as = store_as
+        self.loud_unrecordable = loud_unrecordable
+        self.tenant_id = tenant_id
+
+
+def decide_referral_click(db, ref: str | None) -> ReferralClickDecision:
+    """Classify a click ref without ever returning the widget key.
+
+    Unknown refs store nothing. A public code is stored as itself. A real
+    ``anx_`` key whose tenant still has no public code is stored under that
+    tenant id so the click is not dropped.
+    """
+    empty = ReferralClickDecision(None, False, None)
     if not ref:
-        return None
+        return empty
     raw = ref.strip()[:_MAX_CODE_LEN]
     if not raw:
-        return None
+        return empty
 
     if is_public_referral_code(raw):
         try:
@@ -86,11 +122,13 @@ def resolve_public_click_ref(db, ref: str | None) -> str | None:
             )
         except Exception:
             logger.warning("referral: public code lookup failed", exc_info=True)
-            return None
-        return raw if found.data else None
+            return empty
+        if not found.data:
+            return empty
+        return ReferralClickDecision(raw, False, str(found.data[0].get("id") or ""))
 
     if not raw.startswith("anx_"):
-        return None
+        return empty
 
     try:
         wc = (
@@ -101,10 +139,10 @@ def resolve_public_click_ref(db, ref: str | None) -> str | None:
             .execute()
         )
         if not wc.data:
-            return None
+            return empty
         tenant_id = wc.data[0].get("tenant_id")
         if not tenant_id:
-            return None
+            return empty
         tenant = (
             db.table("tenants")
             .select("referral_code")
@@ -114,11 +152,29 @@ def resolve_public_click_ref(db, ref: str | None) -> str | None:
         )
     except Exception:
         logger.warning("referral: legacy key resolution failed", exc_info=True)
-        return None
+        return empty
     if not tenant.data:
-        return None
+        return empty
     code = tenant.data[0].get("referral_code")
-    return code if is_public_referral_code(code) else None
+    tenant_id = str(tenant_id)
+    if is_public_referral_code(code):
+        return ReferralClickDecision(code.strip(), False, tenant_id)
+    # Pre-202: the embed key is real, but there is no safe public code.
+    # Park the click on the tenant id. Caller logs and increments the metric.
+    return ReferralClickDecision(tenant_id, True, tenant_id)
+
+
+def resolve_public_click_ref(db, ref: str | None) -> str | None:
+    """Map a click or share ``ref`` to the public referral code.
+
+    A legacy ``anx_`` widget key still resolves, but the returned value is
+    the tenant's public code. The key itself is never returned or stored.
+    Unknown refs, and real keys with no public code yet, return None.
+    """
+    decision = decide_referral_click(db, ref)
+    if decision.loud_unrecordable:
+        return None
+    return decision.store_as
 
 
 def apply_referral_attribution(

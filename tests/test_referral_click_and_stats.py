@@ -5,6 +5,7 @@ An unknown key inserts no row. NULL or anx_ codes fall back to a link with
 no ref, and the response never contains anx_.
 """
 
+import logging
 import os
 
 os.environ.setdefault("TESTING", "1")
@@ -19,6 +20,7 @@ from fastapi.testclient import TestClient
 from jose import jwt
 
 from backend.main import app
+from backend.services.referral import referral_click_metrics
 
 ROOT = Path(__file__).resolve().parents[1]
 WIDGET_COPIES = (
@@ -186,3 +188,33 @@ def test_click_valid_and_unknown_anx_keys_return_the_same_body():
     assert db.inserts[0]["ref_tenant_id"] == PUBLIC_CODE
     assert VALID_KEY not in str(db.inserts[0])
     assert UNKNOWN_KEY not in str(db.inserts[0])
+
+
+def test_pre_202_valid_click_is_recorded_and_logged(caplog):
+    """A real key with no public code must not be dropped while returning ok.
+
+    The click is stored under the tenant id, an error is logged, and
+    referral_click_unrecordable_total increments. The widget key is not stored.
+    """
+    before = referral_click_metrics["referral_click_unrecordable_total"]
+    for raw_code in (None, VALID_KEY):
+        db = _DB(
+            widgets=[{"api_key": VALID_KEY, "tenant_id": TENANT_ID}],
+            tenants=[{"id": TENANT_ID, "referral_code": raw_code}],
+        )
+        with caplog.at_level(logging.ERROR, logger="backend.services.referral"):
+            with patch("backend.routers.referral.get_service_supabase", return_value=db):
+                response = _client().post(
+                    "/api/v1/referral/click",
+                    json={"ref": VALID_KEY, "path": "/pricing", "referrer": ""},
+                )
+        assert response.status_code == 200
+        assert response.json() == {"ok": True}
+        assert len(db.inserts) == 1
+        assert db.inserts[0]["ref_tenant_id"] == TENANT_ID
+        assert "anx_" not in str(db.inserts[0])
+        assert "anx_" not in response.text
+    assert referral_click_metrics["referral_click_unrecordable_total"] == before + 2
+    errors = [record for record in caplog.records if record.levelno >= logging.ERROR]
+    assert any("referral_click_unrecordable" in record.message for record in errors)
+    assert any("metric=referral_click_unrecordable_total" in record.message for record in errors)
