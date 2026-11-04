@@ -81,39 +81,122 @@ async def _extract_event_payload(deliverable_body: str, client_id: str) -> dict:
     return payload
 
 
+def _calendar_event_from_deliverable(deliverable: dict) -> dict | None:
+    """Structured event parked by the chat draft. Skips the Haiku extract.
+
+    The card already carries start and end. A missing end is a refusal,
+    not a silent 60-minute event.
+    """
+    event = (deliverable or {}).get("calendar_event")
+    if not isinstance(event, dict):
+        return None
+    summary = str(event.get("summary") or "").strip()
+    start_utc = event.get("start_utc")
+    end_utc = event.get("end_utc")
+    if not summary or not start_utc or not end_utc:
+        return None
+    return {
+        "summary": summary,
+        "start_utc": start_utc,
+        "end_utc": end_utc,
+        "attendee_email": event.get("attendee_email"),
+        "description": event.get("description"),
+        "duration_minutes": event.get("duration_minutes"),
+    }
+
+
+def claim_calendar_approval(db, client_id: str, run_id: str) -> dict | None:
+    """Claim a pending calendar card once.
+
+    Same conditional update as ``os_tool_executions.claim_for_execution``:
+    the status filter is part of the write, so a second Approve gets no row
+    and must not insert.
+    """
+    from backend.services.os_actions.base import now_iso
+    from backend.services.tenant_scope import tenant_table
+
+    updated = (
+        tenant_table(db, "os_agent_runs", client_id)
+        .update({"deliverable_status": "approved", "updated_at": now_iso()})
+        .eq("id", run_id)
+        .eq("action_type", "calendar.event.create")
+        .eq("deliverable_status", "pending_approval")
+        .execute()
+        .data
+    )
+    return updated[0] if updated else None
+
+
 async def _run(ctx: ActionContext) -> ActionResult:
     body = (ctx.deliverable.get("body") or "").strip()
-    if not body:
+    structured = _calendar_event_from_deliverable(ctx.deliverable)
+    if structured is None and not body:
         return ActionResult(
             status="failed",
             error_detail={"message": "deliverable has empty body"},
         )
 
-    try:
-        payload = await _extract_event_payload(body, ctx.client_id)
-    except Exception as e:
-        logger.warning(
-            "os_action_calendar: extraction failed client_id=%s deliverable_id=%s",
+    if structured is not None:
+        created = await asyncio.to_thread(
+            google_calendar.insert_approved_calendar_event,
+            ctx.db,
             ctx.client_id,
             ctx.deliverable_id,
-            exc_info=True,
         )
+        request_payload = {
+            "summary": structured["summary"],
+            "start_utc": structured["start_utc"],
+            "end_utc": structured["end_utc"],
+            "attendee_email": structured.get("attendee_email"),
+            "description": structured.get("description"),
+            "duration_minutes": structured.get("duration_minutes"),
+        }
+        if not created.get("ok"):
+            return ActionResult(
+                status="failed",
+                request_payload=request_payload,
+                error_detail={
+                    "stage": created.get("code") or "refused",
+                    "message": created.get("message"),
+                    "provider": "google_calendar",
+                },
+            )
         return ActionResult(
-            status="failed",
-            error_detail={"stage": "extract", "message": str(e)[:300]},
+            status="succeeded",
+            request_payload=request_payload,
+            response_payload={
+                "event_id": created.get("event_id"),
+                "calendar": "primary",
+                "provider": "google_calendar",
+                "deduplicated": bool(created.get("deduplicated")),
+            },
         )
+    else:
+        try:
+            payload = await _extract_event_payload(body, ctx.client_id)
+        except Exception as e:
+            logger.warning(
+                "os_action_calendar: extraction failed client_id=%s deliverable_id=%s",
+                ctx.client_id,
+                ctx.deliverable_id,
+                exc_info=True,
+            )
+            return ActionResult(
+                status="failed",
+                error_detail={"stage": "extract", "message": str(e)[:300]},
+            )
 
-    if "error" in payload:
-        return ActionResult(
-            status="failed",
-            error_detail={"stage": "extract", "message": payload["error"]},
-        )
+        if "error" in payload:
+            return ActionResult(
+                status="failed",
+                error_detail={"stage": "extract", "message": payload["error"]},
+            )
 
     summary = payload.get("summary") or "Booking"
     start_utc = payload.get("start_utc")
     end_utc = payload.get("end_utc")
     attendee_email = payload.get("attendee_email")
-    description = payload.get("description") or body[:500]
+    description = payload.get("description") or (body[:500] if body else None)
 
     if not start_utc:
         return ActionResult(

@@ -20,6 +20,12 @@ from slowapi.errors import RateLimitExceeded
 from starlette.datastructures import Headers, MutableHeaders
 
 from backend.config import is_production, settings
+from backend.oauth_access_log import (
+    install_oauth_callback_log_redaction,
+    logged_http_target,
+    sentry_before_breadcrumb,
+    sentry_before_send,
+)
 from backend.limiter import limiter
 from backend import mcp_server
 from backend.routers import (
@@ -167,6 +173,7 @@ _handler = logging.StreamHandler()
 _handler.setFormatter(JsonFormatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
 logging.root.handlers = [_handler]
 logging.root.setLevel(logging.INFO)
+install_oauth_callback_log_redaction(_handler)
 logger = logging.getLogger(__name__)
 
 # Suppress noisy httpx request logs — Railway misparses them as errors
@@ -174,9 +181,23 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 # --- Sentry (optional; no-op unless SENTRY_DSN is set) ---
-from backend.services.sentry_scrub import init_sentry
+_sentry_dsn = (settings.sentry_dsn or "").strip()
+if _sentry_dsn:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.starlette import StarletteIntegration
 
-init_sentry(settings.sentry_dsn)
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        integrations=[StarletteIntegration(), FastApiIntegration()],
+        traces_sample_rate=0.1,
+        send_default_pii=False,
+        include_local_variables=False,
+        # OAuth scrub first. sentry_before_send then calls
+        # backend.services.sentry_scrub.scrub_sentry_event.
+        before_send=sentry_before_send,
+        before_breadcrumb=sentry_before_breadcrumb,
+    )
 
 _startup_time: float = 0.0
 _LOCK_OWNER = f"{socket.gethostname()}:{os.getpid()}:{uuid.uuid4().hex}"
@@ -399,6 +420,7 @@ async def _automation_loop():
         run_churn_watch,
         purge_photo_quote_images_30d,
     )
+    from backend.services.quiet_client_alert import run_quiet_client_alert
     from backend.services.weekly_funnel_report import send_weekly_funnel_report
     from backend.services.os_sync import run_due_syncs as _os_sync_tick
     from backend.services.os_opportunities import run_opportunity_scan as _run_opportunity_scan
@@ -538,6 +560,9 @@ async def _automation_loop():
                             run_monthly_conversation_insights,
                         ),
                         _safe_run("run_churn_watch", run_churn_watch),
+                        _safe_run(
+                            "run_quiet_client_alert", run_quiet_client_alert
+                        ),
                         _safe_run(
                             "send_weekly_funnel_report", send_weekly_funnel_report
                         ),
@@ -895,6 +920,12 @@ class RequestContextMiddleware:
 
         method = scope["method"]
         path = scope["path"]
+        raw_query = scope.get("query_string") or b""
+        if isinstance(raw_query, (bytes, bytearray)):
+            query_text = raw_query.decode("latin-1", errors="replace")
+        else:
+            query_text = str(raw_query)
+        logged_path = logged_http_target(path, query_text)
         start = time.time()
         status_code = 500
 
@@ -913,7 +944,7 @@ class RequestContextMiddleware:
             duration_ms = (time.time() - start) * 1000
             log_data = {
                 "method": method,
-                "path": path,
+                "path": logged_path,
                 "status_code": status_code,
                 "duration_ms": round(duration_ms, 1),
                 "request_id": request_id,
