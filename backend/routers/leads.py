@@ -12,6 +12,12 @@ from pydantic import BaseModel, Field
 
 from backend.models.database import get_service_supabase as _get_service_supabase
 from backend.models.schemas import LeadScoreResponse, LeadUpdateRequest, ScoreAllResponse
+from backend.services.ai_usage_guard import (
+    estimate_widget_chat_tokens,
+    record_ai_usage,
+    release_ai_token_reservation,
+    reserve_ai_tokens,
+)
 from backend.services.llm_runtime import call_claude_messages
 from backend.dependencies import _get_current_tenant
 from backend.services.activity import log_activity
@@ -945,7 +951,61 @@ async def generate_lead_summary(
         for m in messages[-30:]
     )
 
-    # Generate AI summary
+    # Generate AI summary. Missing budget state fails closed before the provider.
+    summary_system = (
+        "Summarize this customer conversation in 1-2 sentences. Focus on: "
+        "what the customer needs, any decisions made, and next steps. Be concise."
+    )
+    summary_messages = [{"role": "user", "content": transcript[:3000]}]
+    try:
+        tenant_rows = (
+            db.table("tenants")
+            .select(
+                "id, plan, ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit"
+            )
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        ).data or []
+    except Exception:
+        logger.warning("lead summary tenant load failed tenant=%s", tenant_id)
+        raise HTTPException(status_code=503, detail="AI usage guard unavailable")
+    if not tenant_rows or not any(
+        key in tenant_rows[0]
+        for key in (
+            "plan",
+            "ai_monthly_token_hard_limit",
+            "ai_monthly_token_alert_threshold",
+        )
+    ):
+        logger.warning(
+            "lead summary missing policy tenant=%s — failing closed before provider",
+            tenant_id,
+        )
+        raise HTTPException(status_code=503, detail="AI usage guard unavailable")
+
+    try:
+        reservation = reserve_ai_tokens(
+            tenant={**tenant_rows[0], "id": tenant_id},
+            estimated_tokens=estimate_widget_chat_tokens(
+                system_prompt=summary_system,
+                messages=summary_messages,
+                max_tokens=150,
+            ),
+            operation="leads.generate_summary",
+            session_id=lead_id,
+        )
+    except Exception:
+        logger.warning("lead summary guard unavailable tenant=%s", tenant_id)
+        raise HTTPException(status_code=503, detail="AI usage guard unavailable")
+    if reservation.reason == "guard_unavailable":
+        raise HTTPException(status_code=503, detail="AI usage guard unavailable")
+    if not reservation.allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="Monthly AI usage limit reached — add a usage pack or wait for the next cycle",
+        )
+
     try:
         resp = await call_claude_messages(
             operation="leads.generate_summary",
@@ -953,14 +1013,23 @@ async def generate_lead_summary(
             max_tokens=150,
             temperature=0,
             timeout=15.0,
-            system="Summarize this customer conversation in 1-2 sentences. Focus on: what the customer needs, any decisions made, and next steps. Be concise.",
-            messages=[{"role": "user", "content": transcript[:3000]}],
+            system=summary_system,
+            messages=summary_messages,
             metadata={"tenant_id": tenant_id, "lead_id": lead_id, "message_count": len(messages)},
         )
         summary = resp.text.strip()
     except Exception:
-        logger.exception("Failed to generate AI summary for lead %s", lead_id)
+        release_ai_token_reservation(reservation)
+        logger.warning("Failed to generate AI summary tenant=%s", tenant_id)
         raise HTTPException(status_code=502, detail="AI summary generation failed")
+
+    record_ai_usage(
+        reservation=reservation,
+        result=resp,
+        operation="leads.generate_summary",
+        session_id=lead_id,
+        model="claude-sonnet-4-6",
+    )
 
     # Save the summary
     tenant_update(db, "leads", tenant_id, {"conversation_summary": summary}).eq("id", lead_id).execute()
