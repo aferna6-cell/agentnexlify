@@ -75,7 +75,7 @@ describe("AgentOS shell", () => {
       expect(screen.getByText(/No tasks yet/i)).toBeInTheDocument(),
     );
     expect(
-      screen.getByText("Hand a task to the orchestrator"),
+      screen.getByText("Hand a task to your AI staff"),
     ).toBeInTheDocument();
   });
 
@@ -150,7 +150,7 @@ describe("AgentOS shell", () => {
       expect(screen.getByText("Task one")).toBeInTheDocument(),
     );
     fireEvent.change(
-      screen.getByPlaceholderText("Describe a task for the orchestrator..."),
+      screen.getByPlaceholderText("Describe a task for your AI staff..."),
       { target: { value: "do the thing" } },
     );
     fireEvent.click(screen.getByText("Send"));
@@ -176,7 +176,7 @@ describe("AgentOS shell", () => {
       expect(screen.getByText("Task one")).toBeInTheDocument(),
     );
     fireEvent.change(
-      screen.getByPlaceholderText("Describe a task for the orchestrator..."),
+      screen.getByPlaceholderText("Describe a task for your AI staff..."),
       { target: { value: "legacy path" } },
     );
     fireEvent.click(screen.getByText("Send"));
@@ -203,7 +203,7 @@ describe("AgentOS shell", () => {
       expect(screen.getByText("Task one")).toBeInTheDocument(),
     );
     const composer = screen.getByPlaceholderText(
-      "Describe a task for the orchestrator...",
+      "Describe a task for your AI staff...",
     );
     fireEvent.change(composer, { target: { value: "via enter" } });
     fireEvent.keyDown(composer, { key: "Enter", shiftKey: false });
@@ -222,7 +222,7 @@ describe("AgentOS shell", () => {
       expect(screen.getByText("Task one")).toBeInTheDocument(),
     );
     fireEvent.change(
-      screen.getByPlaceholderText("Describe a task for the orchestrator..."),
+      screen.getByPlaceholderText("Describe a task for your AI staff..."),
       { target: { value: "overflow" } },
     );
     fireEvent.click(screen.getByText("Send"));
@@ -376,7 +376,7 @@ describe("AgentOS routing clarification", () => {
       expect(screen.getByText("Task one")).toBeInTheDocument(),
     );
     fireEvent.change(
-      screen.getByPlaceholderText("Describe a task for the orchestrator..."),
+      screen.getByPlaceholderText("Describe a task for your AI staff..."),
       { target: { value: "follow up with them" } },
     );
     fireEvent.click(screen.getByText("Send"));
@@ -438,7 +438,7 @@ describe("AgentOS routing clarification", () => {
       expect(screen.getByText("Task one")).toBeInTheDocument(),
     );
     fireEvent.change(
-      screen.getByPlaceholderText("Describe a task for the orchestrator..."),
+      screen.getByPlaceholderText("Describe a task for your AI staff..."),
       { target: { value: "email the invoice" } },
     );
     fireEvent.click(screen.getByText("Send"));
