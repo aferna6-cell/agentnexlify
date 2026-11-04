@@ -996,7 +996,7 @@
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           </button>
         </div>
-        <div id="anx-powered">${t('poweredBy')} <a href="https://agentnexlify.com?ref=${encodeURIComponent(API_KEY)}&utm_source=widget" target="_blank" rel="noopener">AgentNexLiFy</a></div>
+        <div id="anx-powered">${t('poweredBy')} <a href="https://agentnexlify.com?utm_source=widget" target="_blank" rel="noopener">AgentNexLiFy</a></div>
       </div>
     `;
 
@@ -1056,6 +1056,8 @@
   let selectedSlot = null;
   let bookingMaxDays = 30;
   let tenantPlan = "free";
+  // Public referral code from widget config. Never the embed api key.
+  let referralCode = "";
 
   // --- API calls ---
   async function fetchConfig() {
@@ -1091,6 +1093,13 @@
           proactiveOncePerSession = !!data.proactive.once_per_session;
       }
       if (data.plan) tenantPlan = data.plan;
+      if (data.referral_code && String(data.referral_code).indexOf("anx_") !== 0) {
+        referralCode = String(data.referral_code);
+        const powered = document.querySelector("#anx-powered a");
+        if (powered) {
+          powered.href = "https://agentnexlify.com?ref=" + encodeURIComponent(referralCode) + "&utm_source=widget";
+        }
+      }
       if (data.menu_items && data.menu_items.length > 0) {
         menuItems = data.menu_items;
       }
@@ -2227,6 +2236,25 @@
     await fetchConfig();
     updateHeader();
 
+    const poweredLink = document.querySelector("#anx-powered a");
+    if (poweredLink) {
+      poweredLink.addEventListener("click", function () {
+        if (!referralCode || referralCode.indexOf("anx_") === 0) return;
+        try {
+          fetch(API_BASE + "/api/v1/referral/click", {
+            method: "POST",
+            keepalive: true,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ref: referralCode,
+              path: window.location.pathname,
+              referrer: document.referrer,
+            }),
+          });
+        } catch (_) {}
+      });
+    }
+
     // Offline mode - show contact form instead of chat
     if (!widgetIsOnline) {
       const statusEl = document.querySelector("#anx-header-text p");
@@ -2323,27 +2351,6 @@
       .getElementById("anx-close")
       .addEventListener("click", () => toggleWindow(false));
     document.getElementById("anx-send").addEventListener("click", handleSend);
-
-    // Referral click tracking - fire-and-forget, keepalive so it survives navigation
-    document
-      .getElementById("anx-powered")
-      .querySelector("a")
-      .addEventListener("click", function () {
-        try {
-          fetch(API_BASE + "/api/v1/referral/click", {
-            method: "POST",
-            keepalive: true,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              ref: API_KEY,
-              path: window.location.pathname,
-              referrer: document.referrer,
-            }),
-          });
-        } catch (_) {
-          // tracking failure must never break the widget
-        }
-      });
 
     // File attachment
     document

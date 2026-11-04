@@ -7,7 +7,8 @@ from backend.tests.conftest import _make_auth_token
 
 
 TENANT_ID = "00000000-0000-0000-0000-000000000001"
-REF_CODE = "anx_test_api_key_abc123"
+PUBLIC_CODE = "ab12cd34"
+LEGACY_KEY = "anx_test_api_key_abc123"
 STATS_URL = "/api/v1/referral/my-stats"
 
 
@@ -19,44 +20,63 @@ def _auth_headers(tenant_id=TENANT_ID):
 def _mock_chain(
     mock_supabase,
     *,
-    wc_data,
+    referral_code=PUBLIC_CODE,
+    wc_data=None,
     total_count,
     last_7d_count,
     last_30d_count,
     signups_count=0,
 ):
-    """Wire mock_supabase so the five DB call sites return predictable values.
+    """Sequence the DB calls inside get_my_referral_stats.
 
-    Call order inside get_my_referral_stats:
-      1. widget_configs SELECT          → wc_data
-      2. referral_clicks total SELECT   → total_count
-      3. referral_clicks 7d SELECT      → last_7d_count
-      4. referral_clicks 30d SELECT     → last_30d_count
-      5. tenants referred_signups COUNT → signups_count
+    With a legacy anx_ key present the order is:
+      1. tenants.referral_code
+      2. widget_configs.api_key
+      3-4. clicks total (public, then legacy — legacy mocked as 0)
+      5-6. clicks 7d
+      7-8. clicks 30d
+      9. signups referred_by
+      10. signups legacy key (mocked as 0)
+      11. referral_rewards
     """
+    if wc_data is None:
+        wc_data = [{"api_key": LEGACY_KEY}]
+
     def _make_result(data, count):
         r = MagicMock()
         r.data = data
         r.count = count
         return r
 
+    zero = _make_result([], 0)
+    tenant_result = _make_result([{"referral_code": referral_code}], 1)
     wc_result = _make_result(wc_data, len(wc_data))
-    total_result = _make_result([], total_count)
-    last_7d_result = _make_result([], last_7d_count)
-    last_30d_result = _make_result([], last_30d_count)
-    signups_result = _make_result([], signups_count)
-    rewards_result = _make_result([], 0)  # referral_rewards aggregation (earned credit)
+    has_legacy = bool(wc_data and str(wc_data[0].get("api_key") or "").startswith("anx_"))
+    rewards_result = _make_result([], 0)
 
-    # Each table().select().eq()...execute() call returns one of the results in order.
-    # Use side_effect on the deepest .execute() to sequence the responses.
-    execute_mock = MagicMock(side_effect=[
-        wc_result,
-        total_result,
-        last_7d_result,
-        last_30d_result,
-        signups_result,
-        rewards_result,
-    ])
+    sequence = [tenant_result, wc_result]
+    if has_legacy:
+        sequence.extend([
+            _make_result([], total_count),
+            zero,
+            _make_result([], last_7d_count),
+            zero,
+            _make_result([], last_30d_count),
+            zero,
+            _make_result([], signups_count),
+            zero,
+            rewards_result,
+        ])
+    else:
+        sequence.extend([
+            _make_result([], total_count),
+            _make_result([], last_7d_count),
+            _make_result([], last_30d_count),
+            _make_result([], signups_count),
+            rewards_result,
+        ])
+
+    execute_mock = MagicMock(side_effect=sequence)
 
     chain = MagicMock()
     chain.select.return_value = chain
@@ -86,7 +106,7 @@ class TestGetMyReferralStats:
         """Valid auth + widget config → correct counts and share_link."""
         _mock_chain(
             mock_supabase,
-            wc_data=[{"api_key": REF_CODE}],
+            wc_data=[{"api_key": LEGACY_KEY}],
             total_count=42,
             last_7d_count=10,
             last_30d_count=30,
@@ -96,16 +116,18 @@ class TestGetMyReferralStats:
         assert resp.status_code == 200, resp.text
         body = resp.json()
 
-        assert body["ref_code"] == REF_CODE
-        assert body["share_link"] == f"https://agentnexlify.com?ref={REF_CODE}&utm_source=widget"
+        assert body["ref_code"] == PUBLIC_CODE
+        assert body["share_link"] == f"https://agentnexlify.com?ref={PUBLIC_CODE}&utm_source=widget"
+        assert LEGACY_KEY not in resp.text
         assert body["total_clicks"] == 42
         assert body["clicks_last_7d"] == 10
         assert body["clicks_last_30d"] == 30
 
-    def test_no_widget_config_returns_404(self, client, mock_supabase):
-        """Tenant has no widget_configs row → 404."""
+    def test_secret_shaped_code_is_not_returned(self, client, mock_supabase):
+        """A referral_code that is a widget key is not a public code."""
         _mock_chain(
             mock_supabase,
+            referral_code=LEGACY_KEY,
             wc_data=[],
             total_count=0,
             last_7d_count=0,
@@ -114,12 +136,13 @@ class TestGetMyReferralStats:
 
         resp = client.get(STATS_URL, headers=_auth_headers())
         assert resp.status_code == 404
+        assert LEGACY_KEY not in resp.text
 
     def test_zero_clicks_returns_zeros(self, client, mock_supabase):
         """Widget exists but no clicks yet → all counts 0."""
         _mock_chain(
             mock_supabase,
-            wc_data=[{"api_key": REF_CODE}],
+            wc_data=[{"api_key": LEGACY_KEY}],
             total_count=0,
             last_7d_count=0,
             last_30d_count=0,
@@ -146,11 +169,15 @@ class TestGetMyReferralStats:
 
     def test_db_error_on_click_aggregation_returns_500(self, client, mock_supabase):
         """DB failure during click count queries → 500."""
+        tenant_result = MagicMock()
+        tenant_result.data = [{"referral_code": PUBLIC_CODE}]
+        tenant_result.count = 1
         wc_result = MagicMock()
-        wc_result.data = [{"api_key": REF_CODE}]
+        wc_result.data = [{"api_key": LEGACY_KEY}]
         wc_result.count = 1
 
         execute_mock = MagicMock(side_effect=[
+            tenant_result,
             wc_result,
             Exception("DB error on count"),
         ])
@@ -176,7 +203,7 @@ class TestGetMyReferralStats:
         """
         _mock_chain(
             mock_supabase,
-            wc_data=[{"api_key": REF_CODE}],
+            wc_data=[{"api_key": LEGACY_KEY}],
             total_count=5,
             last_7d_count=2,
             last_30d_count=4,
@@ -196,7 +223,7 @@ class TestGetMyReferralStats:
         """(c) my-stats returns referred_signups count from tenants table."""
         _mock_chain(
             mock_supabase,
-            wc_data=[{"api_key": REF_CODE}],
+            wc_data=[{"api_key": LEGACY_KEY}],
             total_count=100,
             last_7d_count=20,
             last_30d_count=60,
@@ -212,7 +239,7 @@ class TestGetMyReferralStats:
         """referred_signups is 0 when no tenants have referred_by_widget_key set."""
         _mock_chain(
             mock_supabase,
-            wc_data=[{"api_key": REF_CODE}],
+            wc_data=[{"api_key": LEGACY_KEY}],
             total_count=10,
             last_7d_count=3,
             last_30d_count=8,

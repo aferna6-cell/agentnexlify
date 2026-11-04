@@ -23,11 +23,85 @@ Security contract for all:
 """
 
 import logging
+import re
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
 _MAX_CODE_LEN = 200  # guard against oversized input
+# Public share codes are short alphanumeric tokens minted at signup
+# (secrets.token_hex) or by migration 202. Widget API keys start with anx_
+# and must never be treated as a public code.
+_PUBLIC_CODE_RE = re.compile(r"^[A-Za-z0-9]{6,32}$")
+
+
+def is_public_referral_code(code: str | None) -> bool:
+    """True when ``code`` is safe to put in a URL or API response."""
+    if not code:
+        return False
+    text = code.strip()
+    if text.startswith("anx_"):
+        return False
+    return _PUBLIC_CODE_RE.match(text) is not None
+
+
+def resolve_public_click_ref(db, ref: str | None) -> str | None:
+    """Map a click or share ``ref`` to the public referral code.
+
+    A legacy ``anx_`` widget key still resolves, but the returned value is
+    the tenant's public code. The key itself is never returned or stored.
+    Unknown refs return None.
+    """
+    if not ref:
+        return None
+    raw = ref.strip()[:_MAX_CODE_LEN]
+    if not raw:
+        return None
+
+    if is_public_referral_code(raw):
+        try:
+            found = (
+                db.table("tenants")
+                .select("id")
+                .eq("referral_code", raw)
+                .limit(1)
+                .execute()
+            )
+        except Exception:
+            logger.warning("referral: public code lookup failed", exc_info=True)
+            return None
+        return raw if found.data else None
+
+    if not raw.startswith("anx_"):
+        return None
+
+    try:
+        wc = (
+            db.table("widget_configs")
+            .select("tenant_id")
+            .eq("api_key", raw)
+            .limit(1)
+            .execute()
+        )
+        if not wc.data:
+            return None
+        tenant_id = wc.data[0].get("tenant_id")
+        if not tenant_id:
+            return None
+        tenant = (
+            db.table("tenants")
+            .select("referral_code")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.warning("referral: legacy key resolution failed", exc_info=True)
+        return None
+    if not tenant.data:
+        return None
+    code = tenant.data[0].get("referral_code")
+    return code if is_public_referral_code(code) else None
 
 
 def apply_referral_attribution(
@@ -219,6 +293,39 @@ async def notify_referrer_of_signup(
     try:
         from backend.services.platform_mailer import send_platform_email
         from backend.config import settings as _settings
+
+        # Public codes resolve on tenants.referral_code. Legacy widget keys
+        # still resolve through widget_configs, but the key is not emailed.
+        if is_public_referral_code(widget_key):
+            public_result = (
+                db.table("tenants")
+                .select("id, owner_email")
+                .eq("referral_code", widget_key.strip())
+                .limit(1)
+                .execute()
+            )
+            if public_result.data and public_result.data[0].get("id"):
+                referring_tenant_id = str(public_result.data[0]["id"])
+                owner_email = (public_result.data[0].get("owner_email") or "").strip()
+                if owner_email:
+                    frontend_url = (_settings.frontend_url or "").rstrip("/")
+                    referral_dashboard_url = f"{frontend_url}/dashboard/referral"
+                    body_html = (
+                        "<p>Good news — someone just signed up for AgentNexLiFy through "
+                        "your referral link.</p>"
+                        f'<p>View your referral stats: <a href="{referral_dashboard_url}">'
+                        f"{referral_dashboard_url}</a></p>"
+                    )
+                    await send_platform_email(
+                        subject="Someone signed up through your referral link",
+                        body_html=body_html,
+                        recipient=owner_email,
+                    )
+                    logger.info(
+                        "referral-notify: email sent to referrer tenant %s",
+                        referring_tenant_id,
+                    )
+                return
 
         # Resolve widget_key → referrer tenant_id
         wc_result = (

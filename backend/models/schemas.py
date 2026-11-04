@@ -413,6 +413,8 @@ class WidgetConfigResponse(BaseModel):
     # Behavior-triggered proactive open (time-on-page / exit-intent). Passed
     # through to the widget; when null or {enabled:false} the widget does nothing.
     proactive: dict | None = None
+    # Public share code. Never the widget api_key.
+    referral_code: str | None = None
 
 
 class WidgetLeadRequest(BaseModel):

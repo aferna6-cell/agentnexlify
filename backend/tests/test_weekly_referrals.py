@@ -1,10 +1,10 @@
 """Tests for backend/services/weekly_referrals.py (referral stats in weekly digest).
 
 Coverage:
-- Resolves ref_code from widget_configs.api_key for the tenant.
-- Counts referral_clicks (ref_tenant_id == ref_code) in the window.
-- Counts referred signups (tenants.referred_by_widget_key == ref_code) in window.
-- No widget config → ref_code "" → all zeros, no further queries.
+- Resolves ref_code from tenants.referral_code (never the widget api key).
+- Counts referral_clicks for the public code and any legacy widget key.
+- Counts signups via referred_by and legacy referred_by_widget_key.
+- No public code and no legacy key → zeros, and click queries are skipped.
 - Partial failure resilience: one table error yields zero for that field, not a crash.
 - Tenant isolation: widget_configs uses tenant_id; clicks/signups use the embed key.
 - Digest integration: a referral row renders in the value table when signups > 0.
@@ -72,9 +72,10 @@ class TestHappyPath:
             signups_count=2,
         )
         out = compute_weekly_referrals(db, "tenant-1", SINCE)
-        assert out["ref_code"] == "wk_abc"
+        assert out["ref_code"] == ""
+        assert "wk_" not in out["ref_code"]
         assert out["referral_clicks"] == 9
-        assert out["referred_signups"] == 2
+        assert out["referred_signups"] == 4
 
     def test_result_has_all_expected_keys(self):
         db = _build_db(widget_configs=[{"api_key": "wk_abc"}], clicks_count=0, signups_count=0)
@@ -111,7 +112,7 @@ class TestNoReferralIdentity:
         compute_weekly_referrals(db, "tenant-1", SINCE)
         queried = [c.args[0] for c in db.table.call_args_list]
         assert "referral_clicks" not in queried
-        assert "tenants" not in queried
+        assert "tenants" in queried
 
 
 class TestPartialFailureResilience:
@@ -146,13 +147,13 @@ class TestPartialFailureResilience:
 
     def test_clicks_failure_yields_zero_clicks_keeps_signups(self):
         out = compute_weekly_referrals(self._db_with_failing("referral_clicks"), "t", SINCE)
-        assert out["ref_code"] == "wk_abc"
+        assert out["ref_code"] == ""
         assert out["referral_clicks"] == 0
-        assert out["referred_signups"] == 1
+        assert out["referred_signups"] == 2
 
     def test_signups_failure_yields_zero_signups_keeps_clicks(self):
         out = compute_weekly_referrals(self._db_with_failing("tenants"), "t", SINCE)
-        assert out["ref_code"] == "wk_abc"
+        assert out["ref_code"] == ""
         assert out["referral_clicks"] == 4
         assert out["referred_signups"] == 0
 
@@ -195,10 +196,18 @@ def _make_digest_db_with_referrals(api_key, clicks_count, signups_count):
         for meth in ("select", "eq", "neq", "in_", "gte", "limit", "or_", "filter"):
             getattr(m, meth).return_value = m
         if name == "tenants":
-            # tenants is used both for the digest roster (data) and the referred
-            # signups count (count=). _build_and_send_digest only triggers the
-            # count path here, so return both.
-            m.execute.return_value = _mock_result(data=[], count=signups_count)
+            def _tenant_execute():
+                select_cols = str(m.select.call_args) if m.select.call_args else ""
+                eqs = [c.args[0] for c in m.eq.call_args_list if c.args]
+                if "referral_code" in select_cols:
+                    return _mock_result(data=[])
+                if eqs == ["referred_by"] or (
+                    "referred_by" in eqs and "referred_by_widget_key" not in eqs
+                ):
+                    return _mock_result(count=0)
+                return _mock_result(data=[], count=signups_count)
+
+            m.execute.side_effect = _tenant_execute
         elif name == "widget_configs":
             m.execute.return_value = _mock_result(data=[{"api_key": api_key}])
         elif name == "referral_clicks":
