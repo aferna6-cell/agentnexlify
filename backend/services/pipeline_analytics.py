@@ -9,6 +9,91 @@ from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
+# Stored lead statuses (widget capture writes "new", "contacted",
+# "appointment_booked", "closed", "lost") mapped onto pipeline stage names.
+# Exact stage-name matches still win before this table is consulted.
+_STATUS_HINTS: dict[str, tuple[str, ...]] = {
+    "new": ("new", "new lead", "new patient", "new client", "inquiry", "trial"),
+    "contacted": ("contacted", "consulted", "consultation", "estimate sent"),
+    "appointment booked": (
+        "appointment booked",
+        "booked",
+        "qualified",
+        "reservation",
+        "showing scheduled",
+    ),
+    "qualified": ("qualified",),
+    "proposal sent": ("proposal sent",),
+    "closed": ("closed", "won", "completed", "resolved", "regular client", "member"),
+    "won": ("won", "closed", "completed", "resolved"),
+    "lost": ("lost", "inactive", "declined", "cancelled", "canceled", "churned"),
+}
+
+
+def _stage_name(stage: dict) -> str:
+    return (stage.get("name") or "").strip().lower()
+
+
+def resolve_stage(status: str | None, stages: list[dict]) -> dict | None:
+    """Map a lead status onto a pipeline stage.
+
+    Order: exact stage name, known status aliases, won/lost flags, then the
+    first open stage for a blank or ``new`` status. Unknown statuses return
+    None so they are not silently filed under the wrong column.
+    """
+    ordered = sorted(stages, key=lambda stage: stage.get("sort_order", 0))
+    if not ordered:
+        return None
+
+    raw = (status or "").strip().lower().replace("_", " ")
+    by_name = {_stage_name(stage): stage for stage in ordered if _stage_name(stage)}
+    if raw in by_name:
+        return by_name[raw]
+
+    for hint in _STATUS_HINTS.get(raw, ()):
+        match = by_name.get(hint)
+        if match is not None:
+            return match
+
+    if raw in {"closed", "won"}:
+        won = [stage for stage in ordered if stage.get("is_won")]
+        if won:
+            return won[0]
+    if raw == "lost":
+        lost = [stage for stage in ordered if stage.get("is_lost")]
+        if lost:
+            return lost[0]
+    if raw in {"", "new"}:
+        open_stages = [
+            stage
+            for stage in ordered
+            if not stage.get("is_won") and not stage.get("is_lost")
+        ]
+        if open_stages:
+            return open_stages[0]
+    return None
+
+
+def group_leads_by_stage(leads: list[dict], stages: list[dict]) -> dict[str, list]:
+    """Place each lead on the stage its pipeline label or status maps to.
+
+    Keys are stage names. Leads with no stage are returned under ``_unmatched``
+    so the total still includes them and the UI can see they were not dropped.
+    """
+    from backend.services.lead_status import stage_label_for_lead
+
+    grouped: dict[str, list] = {stage["name"]: [] for stage in stages}
+    unmatched: list = []
+    for lead in leads:
+        name = stage_label_for_lead(lead, stages)
+        if name in grouped:
+            grouped[name].append(lead)
+        else:
+            unmatched.append(lead)
+    if unmatched:
+        grouped["_unmatched"] = unmatched
+    return grouped
+
 
 def _parse_iso(value) -> datetime | None:
     if not value:
@@ -31,9 +116,6 @@ def compute_pipeline_metrics(leads: list[dict], stages: list[dict], now: datetim
     now = now or datetime.now(timezone.utc)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    won_stage_names = {s["name"].lower() for s in stages if s.get("is_won")}
-    lost_stage_names = {s["name"].lower() for s in stages if s.get("is_lost")}
-
     total_pipeline_value = 0.0
     total_won_value = 0.0
     won_count = 0
@@ -44,10 +126,10 @@ def compute_pipeline_metrics(leads: list[dict], stages: list[dict], now: datetim
     total_closed = 0
 
     for lead in leads:
-        status_lower = (lead.get("status") or "").lower()
+        stage = resolve_stage(lead.get("status"), stages)
         deal_value = float(lead.get("deal_value") or 0)
-        is_won = status_lower in won_stage_names
-        is_lost = status_lower in lost_stage_names
+        is_won = bool(stage and stage.get("is_won"))
+        is_lost = bool(stage and stage.get("is_lost"))
 
         if not is_lost:
             total_pipeline_value += deal_value

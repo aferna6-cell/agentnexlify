@@ -19,12 +19,13 @@ import {
 import SkeletonLoader from "../components/SkeletonLoader";
 
 const PERIODS = [
+  { value: "month", label: "This month" },
   { value: "7d", label: "7 days" },
   { value: "30d", label: "30 days" },
   { value: "90d", label: "90 days" },
 ];
 
-function StatCard({ label, value, change, suffix = "" }) {
+function StatCard({ label, value, change, suffix = "", note }) {
   const isPositive = change > 0;
   const isNeutral = change === 0;
   return (
@@ -38,6 +39,9 @@ function StatCard({ label, value, change, suffix = "" }) {
           <span className="analytics-change-arrow">{isPositive ? "\u2191" : isNeutral ? "\u2014" : "\u2193"}</span>
           {Math.abs(change)}% vs prev period
         </div>
+      )}
+      {note && (
+        <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 4 }}>{note}</div>
       )}
     </div>
   );
@@ -322,7 +326,7 @@ function ShareResultsModal({ snapshot, onClose }) {
 
 export default function AnalyticsPage() {
   const { user, token } = useAuth();
-  const [period, setPeriod] = useState("30d");
+  const [period, setPeriod] = useState("month");
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState(null);
   const [convoTrend, setConvoTrend] = useState([]);
@@ -519,7 +523,8 @@ export default function AnalyticsPage() {
         />
         <StatCard
           label="Leads Captured"
-          value={overview?.total_leads ?? 0}
+          note="All time"
+          value={overview?.leads_all_time ?? overview?.total_leads ?? 0}
           change={overview?.changes?.leads}
         />
         <StatCard

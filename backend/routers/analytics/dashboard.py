@@ -22,6 +22,16 @@ from backend.routers.analytics._common import (
     _pct_change,
     logger,
 )
+from backend.services.tenant_activity import (
+    activity_window,
+    conversation_trend,
+    count_conversations,
+    count_leads_created,
+    count_messages,
+    exact_lead_count,
+    last_activity_at,
+    load_activity_rows,
+)
 
 router = APIRouter()
 
@@ -34,7 +44,7 @@ router = APIRouter()
 @router.get("/{tenant_id}/overview")
 async def get_overview(
     tenant_id: str,
-    period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
+    period: str = Query("month", pattern="^(month|7d|14d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     verify_tenant(claims, tenant_id)
@@ -44,101 +54,45 @@ async def get_overview(
     if cached:
         return cached
 
-    days = _period_to_days(period)
-    start, prev_start = _date_range(days)
-    now_iso = datetime.now(timezone.utc).isoformat()
+    start_dt, end_dt, prev_start_dt = activity_window(period)
+    start = start_dt.isoformat()
+    prev_start = prev_start_dt.isoformat()
+    now_iso = end_dt.isoformat()
     db = get_service_supabase()
+    activity = load_activity_rows(db, tenant_id)
 
-    # Current period conversations — count unique sessions in chat_messages.
-    # The conversations table is not reliably populated for all tenants, so
-    # chat_messages (which drives the Peak Hours chart) is used as the
-    # authoritative source here.
-    try:
-        curr_msgs_for_count = (
-            tenant_table(db, "chat_messages", tenant_id)
-            .select("session_id")
-            .eq("tenant_id", tenant_id)
-            .gte("created_at", start)
-            .lt("created_at", now_iso)
-            .limit(5000)
-            .execute()
-        )
-        unique_sessions = {m["session_id"] for m in (curr_msgs_for_count.data or [])}
-        total_conversations = len(unique_sessions)
-    except Exception:
-        logger.warning("Failed to fetch conversation analytics for %s", tenant_id, exc_info=True)
-        total_conversations = 0
+    # Conversations: distinct sessions from conversations (client_id) and
+    # chat_messages (tenant_id) inside the same window billing uses.
+    total_conversations = count_conversations(
+        activity["conversations"], activity["messages"], start_dt, end_dt
+    )
+    prev_conversations = count_conversations(
+        activity["conversations"], activity["messages"], prev_start_dt, start_dt
+    )
+    total_messages = count_messages(activity["messages"], start_dt, end_dt)
+    avg_messages = (
+        round(total_messages / total_conversations, 1) if total_conversations > 0 else 0
+    )
 
-    # Avg messages per conversation via chat_messages (bounded query)
-    try:
-        curr_msgs = (
-            tenant_table(db, "chat_messages", tenant_id)
-            .select("id")
-            .eq("tenant_id", tenant_id)
-            .gte("created_at", start)
-            .lt("created_at", now_iso)
-            .limit(_QUERY_LIMIT)
-            .execute()
-        )
-        total_messages = len(curr_msgs.data or [])
-        avg_messages = round(total_messages / total_conversations, 1) if total_conversations > 0 else 0
-    except Exception:
-        logger.warning("Failed to fetch message count for %s", tenant_id, exc_info=True)
-        total_messages = 0
-        avg_messages = 0
+    # Leads captured on the card are the all-time stock (dashboard opportunities
+    # and pipeline deals). Period leads drive the conversion rate and the delta.
+    period_leads = count_leads_created(activity["leads"], start_dt, end_dt)
+    prev_leads = count_leads_created(activity["leads"], prev_start_dt, start_dt)
+    leads_all_time = exact_lead_count(db, tenant_id)
+    if leads_all_time is None:
+        leads_all_time = len(activity["leads"])
+    total_leads = leads_all_time
 
-    # Previous period conversations — same approach: unique sessions in chat_messages
-    try:
-        prev_msgs_for_count = (
-            tenant_table(db, "chat_messages", tenant_id)
-            .select("session_id")
-            .eq("tenant_id", tenant_id)
-            .gte("created_at", prev_start)
-            .lt("created_at", start)
-            .limit(5000)
-            .execute()
-        )
-        prev_unique_sessions = {m["session_id"] for m in (prev_msgs_for_count.data or [])}
-        prev_conversations = len(prev_unique_sessions)
-    except Exception:
-        logger.warning("Failed to fetch previous period conversations for %s", tenant_id, exc_info=True)
-        prev_conversations = 0
-
-    # Current period leads (leads use client_id, not tenant_id)
-    try:
-        curr_leads = (
-            tenant_table(db, "leads", tenant_id)
-            .select("id")
-            .eq("client_id", tenant_id)
-            .gte("created_at", start)
-            .lt("created_at", now_iso)
-            .limit(_QUERY_LIMIT)
-            .execute()
-        )
-        total_leads = len(curr_leads.data or [])
-    except Exception:
-        logger.warning("Failed to fetch current period leads for %s", tenant_id, exc_info=True)
-        total_leads = 0
-
-    # Previous period leads
-    try:
-        prev_leads_res = (
-            tenant_table(db, "leads", tenant_id)
-            .select("id")
-            .eq("client_id", tenant_id)
-            .gte("created_at", prev_start)
-            .lt("created_at", start)
-            .limit(_QUERY_LIMIT)
-            .execute()
-        )
-        prev_leads = len(prev_leads_res.data or [])
-    except Exception:
-        logger.warning("Failed to fetch previous period leads for %s", tenant_id, exc_info=True)
-        prev_leads = 0
-
-    # Conversion rate
-    conversion_rate = round((total_leads / total_conversations * 100), 1) if total_conversations > 0 else 0.0
-    prev_conversion = round((prev_leads / prev_conversations * 100), 1) if prev_conversations > 0 else 0.0
+    conversion_rate = (
+        round((period_leads / total_conversations * 100), 1)
+        if total_conversations > 0
+        else 0.0
+    )
+    prev_conversion = (
+        round((prev_leads / prev_conversations * 100), 1)
+        if prev_conversations > 0
+        else 0.0
+    )
 
     # Appointments
     try:
@@ -205,6 +159,8 @@ async def get_overview(
     result = {
         "total_conversations": total_conversations,
         "total_leads": total_leads,
+        "leads_all_time": leads_all_time,
+        "period_leads": period_leads,
         "conversion_rate": conversion_rate,
         "total_messages": total_messages,
         "avg_messages_per_conversation": avg_messages,
@@ -212,7 +168,7 @@ async def get_overview(
         "total_emails_sent": total_emails,
         "changes": {
             "conversations": _pct_change(total_conversations, prev_conversations),
-            "leads": _pct_change(total_leads, prev_leads),
+            "leads": _pct_change(period_leads, prev_leads),
             "conversion_rate": round(conversion_rate - prev_conversion, 1),
             "appointments": _pct_change(total_appointments, prev_appointments),
         },
@@ -230,7 +186,7 @@ async def get_overview(
 @router.get("/{tenant_id}/conversations")
 async def get_conversations_trend(
     tenant_id: str,
-    period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(month|7d|14d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     verify_tenant(claims, tenant_id)
@@ -240,42 +196,19 @@ async def get_conversations_trend(
     if cached:
         return cached
 
-    days = _period_to_days(period)
-    now_iso = datetime.now(timezone.utc).isoformat()
-    start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    start_dt, end_dt, _prev = activity_window(period)
+    days = max(1, (end_dt.date() - start_dt.date()).days + 1)
     db = get_service_supabase()
+    activity = load_activity_rows(db, tenant_id)
+    count_by_date = conversation_trend(
+        activity["conversations"], activity["messages"], start_dt, end_dt
+    )
 
-    try:
-        # Query chat_messages for session_id + created_at — conversations table
-        # is not reliably populated for all tenants, but chat_messages is the
-        # canonical message store and is always written to.
-        convos = (
-            tenant_table(db, "chat_messages", tenant_id)
-            .select("session_id, created_at")
-            .eq("tenant_id", tenant_id)
-            .gte("created_at", start)
-            .lt("created_at", now_iso)
-            .order("created_at")
-            .limit(_QUERY_LIMIT)
-            .execute()
-        )
-
-        # Count unique sessions by date (one conversation = one unique session_id per day)
-        date_sessions: dict[str, set] = defaultdict(set)
-        for row in convos.data or []:
-            date_str = row["created_at"][:10]
-            date_sessions[date_str].add(row["session_id"])
-        count_by_date: dict[str, int] = {d: len(s) for d, s in date_sessions.items()}
-
-        # Build full date range with zeroes for days with no activity
-        today = datetime.now(timezone.utc).date()
-        result_data = []
-        for i in range(days):
-            d = (today - timedelta(days=days - 1 - i)).isoformat()
-            result_data.append({"date": d, "count": count_by_date.get(d, 0)})
-    except Exception:
-        logger.warning("Failed to fetch conversation trends for %s", tenant_id, exc_info=True)
-        result_data = []
+    today = end_dt.date()
+    result_data = []
+    for i in range(days):
+        d = (today - timedelta(days=days - 1 - i)).isoformat()
+        result_data.append({"date": d, "count": count_by_date.get(d, 0)})
 
     result = {"data": result_data}
     _set_cache(cache_key, result)
@@ -290,7 +223,7 @@ async def get_conversations_trend(
 @router.get("/{tenant_id}/leads")
 async def get_leads_analytics(
     tenant_id: str,
-    period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(month|7d|14d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     verify_tenant(claims, tenant_id)
@@ -361,7 +294,7 @@ async def get_leads_analytics(
 @router.get("/{tenant_id}/widget")
 async def get_widget_analytics(
     tenant_id: str,
-    period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(month|7d|14d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     verify_tenant(claims, tenant_id)
@@ -459,32 +392,21 @@ async def analytics_health(
     verify_tenant(claims, tenant_id)
     db = get_service_supabase()
 
-    # Count unique sessions from chat_messages
-    try:
-        msgs = (
-            tenant_table(db, "chat_messages", tenant_id)
-            .select("session_id")
-            .eq("tenant_id", tenant_id)
-            .limit(5000)
-            .execute()
-        )
-        unique_sessions = len({m["session_id"] for m in (msgs.data or [])})
-    except Exception:
-        logger.warning("analytics_health: failed to count sessions for %s", tenant_id, exc_info=True)
-        unique_sessions = -1
-
-    # Count leads (uses client_id, not tenant_id)
-    try:
-        leads_res = (
-            tenant_table(db, "leads", tenant_id)
-            .select("id", count="exact")
-            .eq("client_id", tenant_id)
-            .execute()
-        )
-        lead_count = leads_res.count if leads_res.count is not None else len(leads_res.data or [])
-    except Exception:
-        logger.warning("analytics_health: failed to count leads for %s", tenant_id, exc_info=True)
-        lead_count = -1
+    activity = load_activity_rows(db, tenant_id)
+    month_start, month_end, _prev = activity_window("month")
+    unique_sessions = count_conversations(
+        activity["conversations"], activity["messages"], None, None
+    )
+    conversations_this_month = count_conversations(
+        activity["conversations"], activity["messages"], month_start, month_end
+    )
+    lead_count = exact_lead_count(db, tenant_id)
+    if lead_count is None:
+        lead_count = len(activity["leads"])
+    last_dt = last_activity_at(
+        activity["conversations"], activity["messages"], activity["leads"]
+    )
+    last_iso = last_dt.isoformat() if last_dt else None
 
     # Count appointments
     try:
@@ -499,28 +421,19 @@ async def analytics_health(
         logger.warning("analytics_health: failed to count appointments for %s", tenant_id, exc_info=True)
         appt_count = -1
 
-    # Most recent message timestamp
-    try:
-        recent = (
-            tenant_table(db, "chat_messages", tenant_id)
-            .select("created_at")
-            .eq("tenant_id", tenant_id)
-            .order("created_at", desc=True)
-            .limit(1)
-            .execute()
-        )
-        last_msg_at = recent.data[0]["created_at"] if recent.data else None
-    except Exception:
-        logger.warning("analytics_health: failed to fetch last message for %s", tenant_id, exc_info=True)
-        last_msg_at = None
-
     return {
         "tenant_id": tenant_id,
         "unique_widget_sessions": unique_sessions,
+        "conversations_this_month": conversations_this_month,
         "total_leads": lead_count,
         "total_appointments": appt_count,
-        "last_message_at": last_msg_at,
-        "note": "Use this to verify data exists before debugging dashboard card display",
+        "last_message_at": last_iso,
+        "last_activity_at": last_iso,
+        "note": (
+            "Conversations are distinct sessions from conversations (client_id) "
+            "and chat_messages (tenant_id). total_leads is the all-time lead stock. "
+            "last_activity_at is the newest timestamp across those rows."
+        ),
     }
 
 
@@ -529,7 +442,7 @@ async def analytics_health(
 async def get_tester_snapshot(
     request: Request,
     tenant_id: str,
-    period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(month|7d|14d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     """Generate a shareable performance snapshot for a tester/client."""

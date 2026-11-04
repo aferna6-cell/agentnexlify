@@ -45,7 +45,7 @@ async def run_task(db, task: dict) -> bool:
         return False
     thread = (
         tenant_table(db, "os_threads", client_id)
-        .insert({"title": f"Scheduled: {prompt[:60]}"})
+        .insert({"title": f"Scheduled: {prompt}"})
         .execute()
     ).data[0]
     message = (

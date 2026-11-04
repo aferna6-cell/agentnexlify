@@ -23,7 +23,9 @@ import AgentRunFlowchart from "../components/os/AgentRunFlowchart";
 import DeliverablePanel from "../components/os/DeliverablePanel";
 import DemoTour from "../components/os/DemoTour";
 import MemoryPanel from "../components/os/MemoryPanel";
+import GuidedSetup from "../components/os/GuidedSetup";
 import FirstRunStarters from "../components/os/FirstRunStarters";
+import ThreadList from "../components/os/ThreadList";
 import AiOfflineBanner from "../components/os/AiOfflineBanner";
 import { aiGenerationUnavailable } from "../components/os/aiAvailability";
 import SuiteHintChips from "../components/os/SuiteHintChips";
@@ -222,7 +224,8 @@ export default function AgentOS({ onNavigate }) {
     if (attachments.length > 0) {
       const blocks = attachments.map((a) => {
         let block = `[Attached: ${a.filename} - ${a.public_url}]`;
-        if (a.vision_summary) block += `\n[Image description: ${a.vision_summary}]`;
+        if (a.vision_summary)
+          block += `\n[Image description: ${a.vision_summary}]`;
         return block;
       });
       content = `${content}\n\n${blocks.join("\n")}`;
@@ -523,81 +526,17 @@ export default function AgentOS({ onNavigate }) {
               No threads match this source filter.
             </div>
           ) : (
-            visibleThreads.map((t) => {
-              const active = t.id === activeThreadId;
-              const sourceKey = t.source || "chat";
-              const sourceMeta = SOURCE_META[sourceKey] || SOURCE_META.chat;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => {
-                    setActiveThreadId(t.id);
-                    if (isMobile) setRailOpen(false);
-                  }}
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    textAlign: "left",
-                    border: "none",
-                    borderRadius: 8,
-                    padding: "9px 10px",
-                    marginBottom: 2,
-                    cursor: "pointer",
-                    background: active ? "var(--accent-dim)" : "transparent",
-                    color: active
-                      ? "var(--text-primary)"
-                      : "var(--text-secondary)",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "0.83rem",
-                      fontWeight: active ? 600 : 500,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {t.title || "Untitled task"}
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 3,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                    }}
-                  >
-                    {sourceMeta.show && (
-                      <span
-                        data-testid={`thread-source-${t.id}`}
-                        style={{
-                          fontSize: "0.62rem",
-                          fontWeight: 600,
-                          letterSpacing: "0.02em",
-                          textTransform: "uppercase",
-                          color: sourceMeta.color,
-                          border: `1px solid ${sourceMeta.color}`,
-                          borderRadius: 4,
-                          padding: "1px 5px",
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        {sourceMeta.label}
-                      </span>
-                    )}
-                    <span
-                      style={{
-                        fontSize: "0.68rem",
-                        color: "var(--text-muted)",
-                      }}
-                    >
-                      {relTime(t.updated_at || t.created_at)}
-                    </span>
-                  </div>
-                </button>
-              );
-            })
+            <ThreadList
+              threads={visibleThreads}
+              activeThreadId={activeThreadId}
+              onSelect={(id) => {
+                setActiveThreadId(id);
+                if (isMobile) setRailOpen(false);
+              }}
+              sourceMetaFor={(sourceKey) =>
+                SOURCE_META[sourceKey] || SOURCE_META.chat
+              }
+            />
           )}
         </div>
       </aside>
@@ -714,12 +653,20 @@ export default function AgentOS({ onNavigate }) {
             </div>
           ) : messages.length === 0 ? (
             threads.length === 0 && !activeThreadId ? (
-              <FirstRunStarters
-                businessType={user?.businessType || ""}
-                onSelectPrompt={setComposer}
-                composerRef={composerRef}
-                isMobile={isMobile}
-              />
+              <>
+                <GuidedSetup
+                  businessType={user?.businessType || ""}
+                  tenantId={user?.tenantId || ""}
+                  token={token}
+                  isMobile={isMobile}
+                />
+                <FirstRunStarters
+                  businessType={user?.businessType || ""}
+                  onSelectPrompt={setComposer}
+                  composerRef={composerRef}
+                  isMobile={isMobile}
+                />
+              </>
             ) : (
               <div
                 style={{

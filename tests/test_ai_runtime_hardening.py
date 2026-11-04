@@ -168,13 +168,15 @@ class TestWrapperCentralization:
         assert "#plumbing" in result["hashtags"]
         assert mock_call.await_count == 1
 
+    @patch("backend.services.ai_usage_guard.get_service_supabase")
     @patch("backend.routers.leads.call_claude_messages", new_callable=AsyncMock)
     @patch("backend.routers.leads.get_service_supabase")
-    async def test_lead_summary_uses_runtime_wrapper(self, mock_db, mock_call):
+    async def test_lead_summary_uses_runtime_wrapper(self, mock_db, mock_call, mock_guard_db):
         from backend.routers.leads import generate_lead_summary
 
         db = MagicMock()
         mock_db.return_value = db
+        mock_guard_db.return_value = db
 
         leads_table = MagicMock()
         conv_table = MagicMock()
@@ -189,6 +191,18 @@ class TestWrapperCentralization:
         update_result = MagicMock()
         update_result.data = [{"id": "lead-1"}]
 
+        tenants_table = MagicMock()
+        tenants_result = MagicMock()
+        tenants_result.data = [{
+            "id": "tenant-1",
+            "plan": "agent_os",
+            "ai_monthly_token_alert_threshold": 100_000,
+            "ai_monthly_token_hard_limit": 200_000,
+        }]
+        allowed = MagicMock()
+        allowed.data = True
+        db.rpc.return_value.execute.return_value = allowed
+
         def table(name):
             if name == "leads":
                 leads_table.select.return_value = leads_table
@@ -197,6 +211,18 @@ class TestWrapperCentralization:
                 leads_table.update.return_value = leads_table
                 leads_table.execute.side_effect = [leads_result, update_result]
                 return leads_table
+            if name == "tenants":
+                tenants_table.select.return_value = tenants_table
+                tenants_table.eq.return_value = tenants_table
+                tenants_table.limit.return_value = tenants_table
+                tenants_table.execute.return_value = tenants_result
+                return tenants_table
+            if name == "tenant_usage_packs":
+                packs = MagicMock()
+                packs.select.return_value = packs
+                packs.eq.return_value = packs
+                packs.execute.return_value = MagicMock(data=[])
+                return packs
             if name == "conversations":
                 conv_table.select.return_value = conv_table
                 conv_table.eq.return_value = conv_table

@@ -17,26 +17,43 @@ const PLATFORMS = [
   { id: "custom", label: "Custom / other" },
 ];
 
+const CONNECTED_COPY =
+  "Your website is connected and your AI receptionist is live.";
+
 const STATUS_META = {
-  connected: {
-    label: "AI receptionist is live",
-    color: "var(--green)",
-    bg: "var(--green-dim)",
+  not_started: {
+    label: "Connect your website",
+    reason:
+      "Enter your website address. We detect the platform, then you complete one install step and verify.",
+    color: "var(--text-secondary)",
+    bg: "var(--hover-overlay)",
   },
   needs_action: {
     label: "Install the widget, then verify",
+    reason:
+      "Finish the platform step below, publish the site, and click Verify. We only check the URL you submit.",
     color: "var(--yellow)",
     bg: "var(--yellow-dim)",
   },
+  verifying: {
+    label: "Verifying your website",
+    reason:
+      "Checking the URL you submitted for this account's widget key. This page updates when the check finishes.",
+    color: "var(--accent)",
+    bg: "var(--accent-dim)",
+  },
+  connected: {
+    label: CONNECTED_COPY,
+    reason: "",
+    color: "var(--green)",
+    bg: "var(--green-dim)",
+  },
   failed: {
     label: "We could not verify this site yet",
+    reason:
+      "We could not reach that page. Confirm it is public, publish the widget, and verify again.",
     color: "var(--red)",
     bg: "var(--red-dim)",
-  },
-  not_started: {
-    label: "Connect your website",
-    color: "var(--text-secondary)",
-    bg: "var(--hover-overlay)",
   },
 };
 
@@ -196,7 +213,15 @@ export default function WebsiteConnectPage() {
 
   if (loading) return <SkeletonLoader />;
 
-  const meta = statusMeta(status);
+  const displayStatus = verifying ? "verifying" : status;
+  const meta = statusMeta(displayStatus);
+  const serverDetail = connection?.verification_detail || "";
+  const reason =
+    displayStatus === "connected"
+      ? serverDetail
+      : verifying
+        ? STATUS_META.verifying.reason
+        : serverDetail || meta.reason;
   const action = connection?.next_action;
   const live = status === "connected";
   const showSnippet =
@@ -223,7 +248,12 @@ export default function WebsiteConnectPage() {
         }}
         data-testid="connect-status"
       >
-        <strong style={{ color: meta.color }}>{meta.label}</strong>
+        <strong
+          data-testid="connect-status-label"
+          style={{ color: meta.color }}
+        >
+          {meta.label}
+        </strong>
         {connection?.website_url && (
           <p className="settings-card-desc" style={{ marginBottom: 0 }}>
             {connection.website_url}
@@ -232,9 +262,17 @@ export default function WebsiteConnectPage() {
               : ""}
           </p>
         )}
-        {connection?.verification_detail && (
-          <p className="settings-card-desc" style={{ marginBottom: 0 }}>
-            {connection.verification_detail}
+        {reason && (
+          <p
+            className="settings-card-desc"
+            data-testid={
+              displayStatus === "connected"
+                ? undefined
+                : "connect-status-reason"
+            }
+            style={{ marginBottom: 0 }}
+          >
+            {reason}
           </p>
         )}
       </div>
@@ -245,25 +283,31 @@ export default function WebsiteConnectPage() {
           We detect the platform when we can. You can override it. We never ask
           for your CMS password.
         </p>
-        <label className="settings-label" htmlFor="website-url">
-          Site address
-        </label>
-        <input
-          id="website-url"
-          type="url"
-          required
-          placeholder="https://yourbusiness.com"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          autoComplete="url"
-        />
+        <div className="settings-field">
+          <label htmlFor="website-url">Site address</label>
+          <input
+            id="website-url"
+            className="settings-input"
+            type="url"
+            required
+            placeholder="https://yourbusiness.com"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            autoComplete="url"
+          />
+        </div>
 
-        <div className="platform-tabs" style={{ marginTop: 16 }}>
+        <div
+          className="platform-tabs"
+          role="group"
+          aria-label="Website platform"
+        >
           {PLATFORMS.map((p) => (
             <button
               key={p.id}
               type="button"
               className={`platform-tab${platform === p.id ? " active" : ""}`}
+              aria-pressed={platform === p.id}
               onClick={() => setPlatform(p.id)}
             >
               {p.label}
