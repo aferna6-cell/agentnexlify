@@ -8,6 +8,7 @@ Supported providers: "openai". The OpenAI call uses IMAGE_GEN_MODEL
 
 import base64
 import logging
+import os
 
 import httpx
 
@@ -16,7 +17,7 @@ from backend.config import settings
 logger = logging.getLogger(__name__)
 
 _OPENAI_IMAGES_URL = "https://api.openai.com/v1/images/generations"
-_TIMEOUT_SECONDS = 60.0
+_TIMEOUT_SECONDS = 120.0
 
 
 class ImageGenNotConfigured(Exception):
@@ -55,7 +56,7 @@ def is_configured() -> bool:
     return bool(_provider() and _api_key())
 
 
-def generate_image_png(prompt: str, size: str | None = None) -> bytes:
+async def generate_image_png(prompt: str, size: str | None = None) -> bytes:
     """Generate a PNG via the configured provider. Returns raw PNG bytes.
 
     ``size`` overrides the provider's default output size — like this:
@@ -77,27 +78,34 @@ def generate_image_png(prompt: str, size: str | None = None) -> bytes:
     logger.info("image_gen.generate provider=%s prompt_len=%d", provider, len(prompt))
 
     if provider == "openai":
-        return _generate_openai(prompt, api_key, size=size)
+        return await _generate_openai(prompt, api_key, size=size)
 
     raise ImageGenNotConfigured(f"Unsupported provider: {provider!r}")
 
 
-def _generate_openai(prompt: str, api_key: str, size: str | None = None) -> bytes:
+def _image_quality() -> str:
+    """gpt-image quality. IMAGE_GEN_QUALITY defaults to medium."""
+    return (os.getenv("IMAGE_GEN_QUALITY", "medium") or "medium").strip() or "medium"
+
+
+async def _generate_openai(prompt: str, api_key: str, size: str | None = None) -> bytes:
     # gpt-image-* always returns b64_json. Sending response_format is a 400
-    # ("Unknown parameter") on the current Images API.
+    # ("Unknown parameter") on the current Images API. AsyncClient so a 120s
+    # generation does not block the event loop.
     payload = {
         "model": _model(),
         "prompt": prompt,
         "n": 1,
         "size": size or "1024x1024",
+        "quality": _image_quality(),
     }
     try:
-        response = httpx.post(
-            _OPENAI_IMAGES_URL,
-            json=payload,
-            headers={"Authorization": f"Bearer {api_key}"},
-            timeout=_TIMEOUT_SECONDS,
-        )
+        async with httpx.AsyncClient(timeout=_TIMEOUT_SECONDS) as client:
+            response = await client.post(
+                _OPENAI_IMAGES_URL,
+                json=payload,
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
         response.raise_for_status()
     except httpx.HTTPStatusError as exc:
         status = exc.response.status_code

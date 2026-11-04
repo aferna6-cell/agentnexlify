@@ -8,9 +8,9 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { classifyHeuristic } from "./_classifier.ts";
+import { classify, classifyHeuristic, setClassifierModel } from "./_classifier.ts";
 import { readAskIntent } from "./_intent.ts";
-import { departmentSemanticScore, eligibleSkills } from "./_department.ts";
+import { departmentSemanticScore, eligibleSkills, pickSkill } from "./_department.ts";
 import { adminRecords, customerService, sales } from "./departments.ts";
 import { fakeEmitter, fullContext } from "./_testkit.ts";
 
@@ -97,6 +97,33 @@ test("a business-fact question is answered from the KB with no draft", async () 
   assert.equal(out.draft, undefined);
   assert.match(out.noDraftReason ?? "", /knowledge base/);
   assert.match(out.orchestratorNotes.join(" "), /oil changes/);
+});
+
+test("business facts short-circuit before Haiku even if the model picks admin_records", async () => {
+  setClassifierModel(async () => ({
+    text: JSON.stringify({
+      routed_to: "admin_records",
+      confidence: 0.99,
+      extracted_params: {},
+      alternates: [],
+    }),
+    model: "stub",
+    inputTokens: 1,
+    outputTokens: 1,
+    costUsd: 0,
+  }));
+  try {
+    const result = await classify("what services do we offer");
+    assert.equal(result.candidates[0]?.agentId, "customer_service");
+    assert.equal(result.candidates[0]?.confidence, 0.95);
+    assert.equal(result.params.customer_question, "what services do we offer");
+    assert.equal(
+      pickSkill(customerService.__department, "what services do we offer").agent.agent_id,
+      "customer_question",
+    );
+  } finally {
+    setClassifierModel(null);
+  }
 });
 
 test("replying to a customer and writing to one go to different departments", () => {

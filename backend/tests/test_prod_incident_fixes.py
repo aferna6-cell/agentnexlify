@@ -313,14 +313,24 @@ def test_openai_401_is_credential_rejection():
     request = httpx.Request("POST", "https://api.openai.com/v1/images/generations")
     response = httpx.Response(401, request=request)
 
-    def _post(*args, **kwargs):
-        raise httpx.HTTPStatusError("unauthorized", request=request, response=response)
+    class _Client:
+        def __init__(self, timeout=None, **kwargs):
+            self.timeout = timeout
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def post(self, *args, **kwargs):
+            raise httpx.HTTPStatusError("unauthorized", request=request, response=response)
 
     monkeypatch = pytest.MonkeyPatch()
-    monkeypatch.setattr(image_gen.httpx, "post", _post)
+    monkeypatch.setattr(image_gen.httpx, "AsyncClient", _Client)
     try:
         with pytest.raises(image_gen.ImageGenError) as exc:
-            image_gen._generate_openai("a cat", "sk-bad")
+            asyncio.run(image_gen._generate_openai("a cat", "sk-bad"))
     finally:
         monkeypatch.undo()
     assert exc.value.status_code == 401

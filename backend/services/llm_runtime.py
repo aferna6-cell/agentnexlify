@@ -16,6 +16,7 @@ from typing import Any
 import anthropic
 
 from backend.config import settings
+from backend.services.ai_live import normalize_api_key, sanitize_exception
 
 logger = logging.getLogger(__name__)
 
@@ -407,9 +408,10 @@ def _log_error(
 ) -> None:
     error_type = _safe_exception_type_name(exc)
     status_code = _proved_http_status(exc)
+    reason = sanitize_exception(exc)
     message = (
         "llm.call.error id=%s op=%s model=%s duration_ms=%d message_count=%d role_counts=%s "
-        "system_chars=%d message_chars=%d error_type=%s"
+        "system_chars=%d message_chars=%d error_type=%s reason=%s"
     )
     args: list[Any] = [
         call_id,
@@ -421,6 +423,7 @@ def _log_error(
         len(system or ""),
         _message_chars(messages),
         error_type,
+        reason,
     ]
     if status_code is not None:
         message += " status=%d"
@@ -436,6 +439,7 @@ def _log_error(
         "model": model,
         "duration_ms": duration_ms,
         "error_type": error_type,
+        "reason": reason,
         "message_count": len(messages),
         "role_counts": _message_role_counts(messages),
         "system_chars": len(system or ""),
@@ -479,7 +483,10 @@ def _call_single_model(
     while True:
         attempts += 1
         try:
-            client = anthropic.Anthropic(api_key=settings.anthropic_api_key, timeout=timeout)
+            client = anthropic.Anthropic(
+                api_key=normalize_api_key(settings.anthropic_api_key),
+                timeout=timeout,
+            )
             request_kwargs: dict[str, Any] = {
                 "model": model,
                 "max_tokens": max_tokens,
