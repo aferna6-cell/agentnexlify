@@ -62,7 +62,7 @@ export type DecisionStatus = "routed" | "needs_clarification" | "wishlist_fallba
 
 export interface HandleResult {
   status: DecisionStatus;
-  classifier: "haiku" | "heuristic" | "ml";
+  classifier: "haiku" | "heuristic" | "ml" | "capability_shortcut";
   decisionId: string;
   runId?: string;
   agentId?: string;
@@ -92,10 +92,10 @@ export async function handle(userId: string, ask: string, opts: HandleOptions = 
   // It is not a missed department, and the owner should never hear that it was filed away.
   if (!opts.forceAgentId && isCapabilityAsk(ask)) {
     const decision = await getRunStore().createRoutingDecision({
-      userId, ask, classifier: "heuristic", decision: "direct_answer", chosenAgent: "orchestrator", confidence: 1,
+      userId, ask, classifier: "capability_shortcut", decision: "direct_answer", chosenAgent: "orchestrator", confidence: 0,
     });
     return {
-      status: "direct_answer", classifier: "heuristic", decisionId: decision.id, confidence: 1, alternates: [], params: {}, orchestratorNotes: [],
+      status: "direct_answer", classifier: "capability_shortcut", decisionId: decision.id, confidence: 0, alternates: [], params: {}, orchestratorNotes: [],
       answer: capabilitiesAnswer(),
     };
   }

@@ -6,8 +6,13 @@
  * instead, in the owner's language.
  */
 
+/**
+ * The whole message must be one of these short product questions.
+ * A task that merely mentions the words ("list the capabilities of our shop",
+ * "what can you do about the overdue invoice") is still a business ask.
+ */
 const CAPABILITY_RE =
-  /\b(what can you (help(?: me with)?|do|handle)|how can you help|what (?:are you able to do|do you do|do you help with)|what are you capable of|your capabilities|the capabilities|how do you work|what can (?:this|the) (?:ai|assistant|workforce|staff)|show me what you can)\b/i;
+  /^(?:what can you (?:help(?: me with)?|do|handle)|how can you help|what (?:are you able to do|do you do|do you help with)|what are you capable of|what can (?:this|the) (?:ai|assistant|workforce|staff)(?: do| help(?: me with)?| handle)?|show me what you can(?: do)?)[.?!]*$/i;
 
 export function isCapabilityAsk(ask: string): boolean {
   const trimmed = ask.trim();
