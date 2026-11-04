@@ -4,6 +4,32 @@ import SkeletonLoader from "../components/SkeletonLoader";
 import { fetchPipelineBoard, movePipelineLead } from "../utils/api/pipeline";
 import { createLead } from "../utils/api/leads";
 
+const ALLOWED_LEAD_STATUSES = new Set([
+  "new",
+  "contacted",
+  "appointment_booked",
+  "closed",
+  "lost",
+]);
+
+/** Map a pipeline stage label onto leads.status. Unmapped labels stay in pipeline_stage and use "new". */
+export function mapStageToLeadStatus(stageName) {
+  const spaced = String(stageName || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+  if (!spaced) return "new";
+  const underscored = spaced.replace(/ /g, "_");
+  if (ALLOWED_LEAD_STATUSES.has(underscored)) return underscored;
+  if (spaced === "new lead" || spaced.startsWith("new lead")) return "new";
+  if (spaced.includes("contacted")) return "contacted";
+  if (spaced.includes("booked") || spaced.includes("appointment")) return "appointment_booked";
+  if (/\bwon\b/.test(spaced)) return "closed";
+  if (/\blost\b/.test(spaced)) return "lost";
+  return "new";
+}
+
 const FALLBACK_STAGES = [
   { name: "New Lead", sort_order: 0, color: "#3b82f6", is_won: false, is_lost: false },
   { name: "Contacted", sort_order: 1, color: "#8b5cf6", is_won: false, is_lost: false },
@@ -185,13 +211,15 @@ function PipelineCard({ lead, onMove, onSelect, movingId, stages }) {
 }
 
 function AddDealModal({ onClose, onSave, saving, stages }) {
+  const initialStage = stages[0]?.name || "New Lead";
   const [form, setForm] = useState({
     name: "",
     email: "",
     phone: "",
     deal_value: "",
     expected_close: "",
-    status: stages[0]?.name || "New Lead",
+    status: mapStageToLeadStatus(initialStage),
+    pipeline_stage: initialStage,
   });
 
   const handleSubmit = () => {
@@ -267,8 +295,15 @@ function AddDealModal({ onClose, onSave, saving, stages }) {
           <div>
             <label style={{ display: "block", fontSize: "0.8rem", marginBottom: 4, color: "var(--text-secondary)" }}>Initial Stage</label>
             <select
-              value={form.status}
-              onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+              value={form.pipeline_stage}
+              onChange={(e) => {
+                const pipeline_stage = e.target.value;
+                setForm((f) => ({
+                  ...f,
+                  pipeline_stage,
+                  status: mapStageToLeadStatus(pipeline_stage),
+                }));
+              }}
               style={{ width: "100%" }}
             >
               {stages.map((s) => (
@@ -418,7 +453,10 @@ export default function PipelinePage() {
   const handleMove = useCallback(async (leadId, newStage) => {
     setMovingId(leadId);
     try {
-      await movePipelineLead(user.tenantId, token, leadId, { status: newStage });
+      await movePipelineLead(user.tenantId, token, leadId, {
+        status: mapStageToLeadStatus(newStage),
+        pipeline_stage: newStage,
+      });
       setError(null);
       loadBoard();
     } catch (err) {
@@ -432,11 +470,13 @@ export default function PipelinePage() {
   const handleAddDeal = async (formData) => {
     setSavingDeal(true);
     try {
+      const stageName = formData.pipeline_stage || stages[0]?.name || "New Lead";
       const body = {
         name: formData.name.trim(),
         email: formData.email.trim() || null,
         phone: formData.phone.trim() || null,
-        status: formData.status || (stages[0]?.name || "New Lead"),
+        status: mapStageToLeadStatus(stageName),
+        pipeline_stage: stageName,
         deal_value: Number(formData.deal_value) || null,
         expected_close_date: formData.expected_close || null,
       };
@@ -462,8 +502,9 @@ export default function PipelinePage() {
   const lostNames = new Set(lostStages.map((s) => (s.name || "").toLowerCase()));
 
   const totalPipelineValue = allLeads.reduce((sum, l) => sum + (Number(l.deal_value) || 0), 0);
-  const wonLeads = allLeads.filter((l) => wonNames.has((l.status || "").toLowerCase()));
-  const closedLeads = allLeads.filter((l) => wonNames.has((l.status || "").toLowerCase()) || lostNames.has((l.status || "").toLowerCase()));
+  const stageLabel = (lead) => (lead.pipeline_stage || lead.status || "").toLowerCase();
+  const wonLeads = allLeads.filter((l) => wonNames.has(stageLabel(l)) || (l.status || "").toLowerCase() === "closed");
+  const closedLeads = allLeads.filter((l) => wonNames.has(stageLabel(l)) || lostNames.has(stageLabel(l)) || (l.status || "").toLowerCase() === "closed" || (l.status || "").toLowerCase() === "lost");
   const conversionRate = closedLeads.length > 0 ? Math.round((wonLeads.length / closedLeads.length) * 100) : 0;
   const leadsWithValue = allLeads.filter((l) => Number(l.deal_value) > 0);
   const avgDealValue = leadsWithValue.length > 0

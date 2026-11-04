@@ -169,6 +169,9 @@ class Settings(BaseSettings):
     # Agent OS image generation
     image_gen_provider: str = ""  # "openai" supported
     image_gen_api_key: str = ""
+    # gpt-image-1 400s on current keys ("model does not exist"). gpt-image-1.5
+    # is the default; override with IMAGE_GEN_MODEL.
+    image_gen_model: str = "gpt-image-1.5"
 
     facebook_app_id: str = ""
     facebook_app_secret: str = ""

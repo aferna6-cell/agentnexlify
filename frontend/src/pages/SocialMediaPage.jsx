@@ -540,11 +540,12 @@ function ImageGenField({ tenantId, token, platform, postId, value, onChange }) {
         setError("Image generation didn't return an image.");
       }
     } catch (e) {
-      const msg =
-        e?.status === 422
-          ? "AI image generation isn't set up for this account yet."
-          : e.message || "Image generation failed.";
-      setError(msg);
+      const detail = e?.body?.detail;
+      const serverDetail =
+        (typeof detail === "string" && detail.trim()) ||
+        (detail && typeof detail.message === "string" && detail.message.trim()) ||
+        "";
+      setError(serverDetail || e?.message || "Image generation failed.");
     } finally {
       setGenerating(false);
     }

@@ -1900,3 +1900,12 @@ check_violation. Rows 197 would cancel (L2 / approval-gated, keyless,
 pending_approval|running): staging 0, prod 0. Staging total rows: 39. Staging
 parked/running L2 rows: 7, all keyed. Prod total rows: 0. Already present since
 2026-08-30.
+
+## Migration 200_leads_pipeline_stage — pipeline display label
+
+Adds nullable `leads.pipeline_stage` (text) plus `idx_leads_client_pipeline_stage`
+on `(client_id, pipeline_stage)`. Pipeline column names ("New Lead", "Won")
+are not legal `leads.status` values. `leads_status_check` stays
+`new | contacted | appointment_booked | closed | lost`. The API maps stage
+labels onto that set and stores the label here so the board can group deals.
+`client_id` remains the tenant column on `leads`.

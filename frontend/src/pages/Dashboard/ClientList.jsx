@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { fetchClients, changeClientStage } from "../../utils/api/crm";
+import { QuickAddLeadModal } from "./QuickActions";
 import SkeletonLoader from "../../components/SkeletonLoader";
 import { leadTemperature } from "../../utils/leadTemperature";
 
@@ -33,6 +34,7 @@ export default function ClientList({ onNavigate }) {
   const [sortField, setSortField] = useState("created_at");
   const [sortOrder, setSortOrder] = useState("desc");
   const [selected, setSelected] = useState(new Set());
+  const [showAddLead, setShowAddLead] = useState(false);
 
   const load = useCallback(async () => {
     if (!user?.tenantId) return;
@@ -156,9 +158,20 @@ export default function ClientList({ onNavigate }) {
               ))}
             </select>
           )}
+          <button className="btn-sm" onClick={() => setShowAddLead(true)}>Add contact</button>
           <button className="btn-sm" onClick={exportCsv}>Export CSV</button>
         </div>
       </div>
+
+      {showAddLead && (
+        <QuickAddLeadModal
+          onClose={() => setShowAddLead(false)}
+          onSuccess={() => {
+            setShowAddLead(false);
+            load();
+          }}
+        />
+      )}
 
       {clients.length === 0 ? (
         <div className="client-empty">
