@@ -171,6 +171,19 @@ async def approve_deliverable(
     run = _load_run(db, client_id, run_id)
     _require_pending(run)
 
+    from backend.services.m8_action_flags import calendar_chat_enabled
+
+    if run.get("action_type") == "calendar.event.create" and calendar_chat_enabled(
+        client_id
+    ):
+        from backend.services.os_actions.calendar import claim_calendar_approval
+
+        claimed = claim_calendar_approval(db, client_id, run_id)
+        if not claimed:
+            # Lost the race or the card was already decided. Do not insert.
+            return _load_run(db, client_id, run_id)
+        run = claimed
+
     action_run_id = await queue_action_for_run(db, client_id, run, background)
 
     update_fields = {"deliverable_status": "approved", "updated_at": _now()}

@@ -240,9 +240,7 @@ export default function AdminReferralPage() {
   return (
     <div
       style={{
-        padding: "32px 32px 64px",
-        maxWidth: 1100,
-        margin: "0 auto",
+        paddingBottom: 64,
         color: "var(--text-primary, #f1f5f9)",
       }}
     >

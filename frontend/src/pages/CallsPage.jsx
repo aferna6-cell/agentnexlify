@@ -283,7 +283,7 @@ export default function CallsPage() {
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
 
   return (
-    <div style={{ padding: "24px 28px", maxWidth: 1100, margin: "0 auto" }}>
+    <div>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ margin: 0, fontSize: "1.5rem", color: "var(--text-primary)" }}>Calls</h1>
         <p style={{ margin: "6px 0 0", fontSize: "0.9rem", color: "var(--text-muted)" }}>

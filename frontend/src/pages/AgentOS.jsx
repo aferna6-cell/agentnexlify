@@ -25,6 +25,8 @@ import DemoTour from "../components/os/DemoTour";
 import MemoryPanel from "../components/os/MemoryPanel";
 import FirstRunStarters from "../components/os/FirstRunStarters";
 import ThreadList from "../components/os/ThreadList";
+import AiOfflineBanner from "../components/os/AiOfflineBanner";
+import { aiGenerationUnavailable } from "../components/os/aiAvailability";
 import SuiteHintChips from "../components/os/SuiteHintChips";
 import OsInsightsCard from "../components/os/OsInsightsCard";
 import OpportunityCards from "../components/os/OpportunityCards";
@@ -122,6 +124,7 @@ export default function AgentOS({ onNavigate }) {
 
   const capReached = Boolean(usage?.cap_reached);
   const runMap = Object.fromEntries(runs.map((r) => [r.id, r]));
+  const showOfflineBanner = aiGenerationUnavailable(messages, runs);
   const hasInFlight = runs.some(
     (r) => r.status === "queued" || r.status === "running",
   );
@@ -220,7 +223,8 @@ export default function AgentOS({ onNavigate }) {
     if (attachments.length > 0) {
       const blocks = attachments.map((a) => {
         let block = `[Attached: ${a.filename} - ${a.public_url}]`;
-        if (a.vision_summary) block += `\n[Image description: ${a.vision_summary}]`;
+        if (a.vision_summary)
+          block += `\n[Image description: ${a.vision_summary}]`;
         return block;
       });
       content = `${content}\n\n${blocks.join("\n")}`;
@@ -507,7 +511,7 @@ export default function AgentOS({ onNavigate }) {
                 lineHeight: 1.5,
               }}
             >
-              No tasks yet. Start one to hand work to the orchestrator.
+              No tasks yet. Start one and your AI staff will take it from there.
             </div>
           ) : visibleThreads.length === 0 ? (
             <div
@@ -528,7 +532,9 @@ export default function AgentOS({ onNavigate }) {
                 setActiveThreadId(id);
                 if (isMobile) setRailOpen(false);
               }}
-              sourceMetaFor={(sourceKey) => SOURCE_META[sourceKey] || SOURCE_META.chat}
+              sourceMetaFor={(sourceKey) =>
+                SOURCE_META[sourceKey] || SOURCE_META.chat
+              }
             />
           )}
         </div>
@@ -586,6 +592,7 @@ export default function AgentOS({ onNavigate }) {
             )}
           </div>
         )}
+        {showOfflineBanner && <AiOfflineBanner />}
         {capReached && (
           <div
             style={{
@@ -652,35 +659,39 @@ export default function AgentOS({ onNavigate }) {
                 isMobile={isMobile}
               />
             ) : (
-            <div
-              style={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                textAlign: "center",
-                color: "var(--text-muted)",
-                gap: 8,
-              }}
-            >
               <div
                 style={{
-                  fontSize: "1.05rem",
-                  fontWeight: 600,
-                  color: "var(--text-secondary)",
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textAlign: "center",
+                  color: "var(--text-muted)",
+                  gap: 8,
                 }}
               >
-                Hand a task to the orchestrator
+                <div
+                  style={{
+                    fontSize: "1.05rem",
+                    fontWeight: 600,
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  Hand a task to your AI staff
+                </div>
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    maxWidth: 420,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Describe what you need. Your AI staff answers directly, hands
+                  it to the right part of the business, or asks you when it is
+                  not sure.
+                </div>
               </div>
-              <div
-                style={{ fontSize: "0.85rem", maxWidth: 420, lineHeight: 1.6 }}
-              >
-                Describe what you need. The orchestrator answers directly,
-                routes it to a worker agent, or parks it for your decision when
-                nothing fits.
-              </div>
-            </div>
             )
           ) : (
             messages.map((m) => {
@@ -845,7 +856,7 @@ export default function AgentOS({ onNavigate }) {
             placeholder={
               capReached
                 ? "Agent-run cap reached for this cycle"
-                : "Describe a task for the orchestrator..."
+                : "Describe a task for your AI staff..."
             }
             style={{
               flex: 1,

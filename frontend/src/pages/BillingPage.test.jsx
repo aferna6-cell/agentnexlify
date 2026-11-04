@@ -60,21 +60,32 @@ describe("BillingPage upgrade funnel", () => {
     expect(screen.getByText(/AI Front Desk \$19.99/)).toBeInTheDocument();
     fireEvent.click(suiteBtn);
     await waitFor(() =>
-      expect(billingCheckout).toHaveBeenCalledWith("jwt", { plan: "agent_os", billing_interval: "monthly" }),
+      expect(billingCheckout).toHaveBeenCalledWith("jwt", {
+        plan: "agent_os",
+        billing_interval: "monthly",
+      }),
     );
   });
 
   it("falls back to checkout when change-plan says no subscription", async () => {
-    fetchDashboard.mockResolvedValue({ plan: "chatbot", plan_status: "active" });
+    fetchDashboard.mockResolvedValue({
+      plan: "chatbot",
+      plan_status: "active",
+    });
     fetchTrialStatus.mockResolvedValue(null);
     changePlan.mockRejectedValue({
-      body: { detail: "No active subscription found. Use checkout to subscribe." },
+      body: {
+        detail: "No active subscription found. Use checkout to subscribe.",
+      },
     });
     render(<BillingPage />);
     const switchBtn = await screen.findByText("Switch Plan");
     fireEvent.click(switchBtn);
     await waitFor(() =>
-      expect(billingCheckout).toHaveBeenCalledWith("jwt", { plan: "agent_os", billing_interval: "monthly" }),
+      expect(billingCheckout).toHaveBeenCalledWith("jwt", {
+        plan: "agent_os",
+        billing_interval: "monthly",
+      }),
     );
     expect(notify.error).not.toHaveBeenCalled();
     // The page recovers to its idle state - the switch button is back,
@@ -84,7 +95,10 @@ describe("BillingPage upgrade funnel", () => {
   });
 
   it("still surfaces genuine change-plan errors", async () => {
-    fetchDashboard.mockResolvedValue({ plan: "chatbot", plan_status: "active" });
+    fetchDashboard.mockResolvedValue({
+      plan: "chatbot",
+      plan_status: "active",
+    });
     fetchTrialStatus.mockResolvedValue(null);
     changePlan.mockRejectedValue({ body: { detail: "Card declined" } });
     render(<BillingPage />);
@@ -96,5 +110,52 @@ describe("BillingPage upgrade funnel", () => {
     // Still on the chatbot plan card - the failed switch changed nothing.
     expect(screen.getByText("Chatbot")).toBeInTheDocument();
     expect(screen.getByText("Switch Plan")).toBeInTheDocument();
+  });
+
+  function enterpriseFooterCell() {
+    const header = screen.getByRole("columnheader", { name: /Enterprise/ });
+    const headers = [...header.parentElement.children];
+    const index = headers.indexOf(header);
+    const footerCells = header.closest("table").querySelectorAll("tfoot td");
+    return footerCells[index];
+  }
+
+  it("shows a grandfathered Enterprise column with per-contract cells and no actions", async () => {
+    fetchDashboard.mockResolvedValue({
+      plan: "enterprise",
+      plan_status: "active",
+    });
+    fetchTrialStatus.mockResolvedValue(null);
+    render(<BillingPage />);
+    expect(await screen.findByText("Grandfathered")).toBeInTheDocument();
+    expect(screen.getAllByText("per contract")).toHaveLength(10);
+    const cell = enterpriseFooterCell();
+    expect(cell.querySelector("button")).toBeNull();
+    expect(cell.textContent.trim()).toBe("");
+    expect(
+      screen.queryByRole("button", { name: "Switch to Annual" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /checkout/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the grandfathered column free of actions when annual billing is selected", async () => {
+    fetchDashboard.mockResolvedValue({
+      plan: "enterprise",
+      plan_status: "active",
+    });
+    fetchTrialStatus.mockResolvedValue(null);
+    render(<BillingPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Annual" }));
+    const cell = enterpriseFooterCell();
+    expect(cell.querySelector("button")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Switch to Annual" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Select|Checkout|Upgrade/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByText("per contract")).toHaveLength(10);
   });
 });
