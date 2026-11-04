@@ -18,13 +18,19 @@ from backend.config import is_production, settings
 from backend.dependencies import _get_current_tenant
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
+from backend.services.referral import (
+    public_share_link,
+    resolve_public_click_ref,
+)
 from backend.services.referral_overview import compute_referral_overview
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/referral", tags=["referral"])
 
-_SHARE_BASE = "https://agentnexlify.com?ref={ref_code}&utm_source=widget"
+# Every click acknowledgment is this exact body. Valid and unknown anx_ keys
+# must not be distinguishable from the HTTP response.
+_CLICK_OK = {"ok": True}
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +108,7 @@ async def get_referral_overview(
         tenants[]:
             tenant_id        str — tenant UUID
             business_name    str — tenant's business name
-            ref_code         str — tenant's widget api_key (their referral identity)
+            ref_code         str — tenant's public referral code (never the widget api key)
             total_clicks     int — clicks on their watermark (referral_clicks table)
             referred_signups int — tenants who signed up via their ref link
         totals:
@@ -156,9 +162,10 @@ async def get_my_referral_stats(
 
     Resolution chain:
     1. Extract tenant_id from JWT claims (set by _get_current_tenant).
-    2. Look up widget_configs.api_key for that tenant_id — this is the
-       public embed key stored in referral_clicks.ref_tenant_id.
-    3. Aggregate click counts from referral_clicks.
+    2. Read tenants.referral_code. That public code is the only value returned.
+       A widget api_key is loaded only to count legacy clicks and signups;
+       it is never placed in the response.
+    3. Aggregate click counts for the public code and, when present, the legacy key.
     """
     tenant_id = claims.get("tenant_id")
     if not tenant_id:
@@ -166,7 +173,23 @@ async def get_my_referral_stats(
 
     db = get_service_supabase()
 
-    # Step 1: resolve ref_code from widget_configs
+    try:
+        tenant_result = (
+            db.table("tenants")
+            .select("referral_code")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.exception("Failed to fetch referral_code for tenant_id=%s", tenant_id)
+        raise HTTPException(status_code=500, detail="Failed to resolve referral code")
+
+    raw_code = (tenant_result.data or [{}])[0].get("referral_code") if tenant_result.data else None
+    # NULL or anx_ (pre-migration-202 rows) fall back to a link with no ref.
+    ref_code, share_link = public_share_link(raw_code)
+
+    legacy_key = ""
     try:
         wc_result = (
             db.table("widget_configs")
@@ -175,62 +198,75 @@ async def get_my_referral_stats(
             .limit(1)
             .execute()
         )
+        if wc_result.data:
+            legacy_key = wc_result.data[0].get("api_key") or ""
     except Exception:
         logger.exception("Failed to fetch widget_configs for tenant_id=%s", tenant_id)
-        raise HTTPException(status_code=500, detail="Failed to resolve referral code")
+        legacy_key = ""
 
-    if not wc_result.data:
-        raise HTTPException(
-            status_code=404,
-            detail="No widget config found — complete widget setup first",
-        )
-
-    ref_code: str = wc_result.data[0]["api_key"]
+    if not legacy_key.startswith("anx_"):
+        legacy_key = ""
 
     # Step 2: aggregate click counts
     now = datetime.now(timezone.utc)
     cutoff_7d = (now - timedelta(days=7)).isoformat()
     cutoff_30d = (now - timedelta(days=30)).isoformat()
 
+    click_ids = [ref_code] if ref_code else []
+    if legacy_key and legacy_key not in click_ids:
+        click_ids.append(legacy_key)
+
+    def _click_count(since: str | None) -> int:
+        total = 0
+        for ident in click_ids:
+            query = (
+                db.table("referral_clicks")
+                .select("id", count="exact")
+                .eq("ref_tenant_id", ident)
+            )
+            if since:
+                query = query.gte("created_at", since)
+            result = query.execute()
+            if result.count is not None:
+                total += int(result.count)
+            else:
+                total += len(result.data or [])
+        return total
+
     try:
-        total_result = (
-            db.table("referral_clicks")
-            .select("id", count="exact")
-            .eq("ref_tenant_id", ref_code)
-            .execute()
-        )
-        last_7d_result = (
-            db.table("referral_clicks")
-            .select("id", count="exact")
-            .eq("ref_tenant_id", ref_code)
-            .gte("created_at", cutoff_7d)
-            .execute()
-        )
-        last_30d_result = (
-            db.table("referral_clicks")
-            .select("id", count="exact")
-            .eq("ref_tenant_id", ref_code)
-            .gte("created_at", cutoff_30d)
-            .execute()
-        )
+        total_clicks = _click_count(None)
+        clicks_last_7d = _click_count(cutoff_7d)
+        clicks_last_30d = _click_count(cutoff_30d)
     except Exception:
-        logger.exception(
-            "Failed to aggregate referral_clicks for ref_code=%s", ref_code
-        )
+        logger.exception("Failed to aggregate referral_clicks for tenant_id=%s", tenant_id)
         raise HTTPException(status_code=500, detail="Failed to fetch referral stats")
 
-    # Step 3: count tenants that signed up via this widget's referral link
+    # Signups: new links set referred_by (tenant UUID). Old links stored the
+    # widget key on referred_by_widget_key. Count both. Never return the key.
     try:
-        signups_result = (
+        by_referrer = (
             db.table("tenants")
             .select("id", count="exact")
-            .eq("referred_by_widget_key", ref_code)
+            .eq("referred_by", tenant_id)
             .execute()
         )
-    except Exception:
-        logger.exception(
-            "Failed to count referred signups for ref_code=%s", ref_code
+        referred_signups = (
+            int(by_referrer.count)
+            if by_referrer.count is not None
+            else len(by_referrer.data or [])
         )
+        if legacy_key:
+            by_key = (
+                db.table("tenants")
+                .select("id", count="exact")
+                .eq("referred_by_widget_key", legacy_key)
+                .execute()
+            )
+            referred_signups += (
+                int(by_key.count) if by_key.count is not None else len(by_key.data or [])
+            )
+    except Exception:
+        logger.exception("Failed to count referred signups for tenant_id=%s", tenant_id)
         raise HTTPException(status_code=500, detail="Failed to fetch referral stats")
 
     # Step 4: sum the credit this tenant has earned as a referrer.
@@ -255,19 +291,13 @@ async def get_my_referral_stats(
             "Failed to aggregate referral_rewards for tenant_id=%s", tenant_id
         )
 
-    # Supabase count= returns count on the result object; data length as fallback
-    def _count(result) -> int:
-        if result.count is not None:
-            return int(result.count)
-        return len(result.data) if result.data else 0
-
     return ReferralStatsResponse(
         ref_code=ref_code,
-        share_link=_SHARE_BASE.format(ref_code=ref_code),
-        total_clicks=_count(total_result),
-        clicks_last_7d=_count(last_7d_result),
-        clicks_last_30d=_count(last_30d_result),
-        referred_signups=_count(signups_result),
+        share_link=share_link,
+        total_clicks=total_clicks,
+        clicks_last_7d=clicks_last_7d,
+        clicks_last_30d=clicks_last_30d,
+        referred_signups=referred_signups,
         rewards_count=rewards_count,
         rewards_earned_cents=rewards_earned_cents,
     )
@@ -281,22 +311,28 @@ async def record_referral_click(
 ):
     """Record a watermark click from an embedded widget.
 
-    `ref` is the tenant's API key (from the widget's data-api-key attribute).
-    `path` is the page path on the tenant's site where the click happened.
-    `referrer` is the HTTP Referer header captured by the widget.
+    ``ref`` is the tenant's public referral code. Legacy widget API keys are
+    accepted and rewritten to that public code. The key is not stored.
     """
     db = get_service_supabase()
+    try:
+        public_ref = resolve_public_click_ref(db, body.ref)
+    except Exception:
+        logger.exception("Failed to resolve referral click")
+        return _CLICK_OK
+    if not public_ref:
+        return _CLICK_OK
 
     try:
         db.table("referral_clicks").insert(
             {
-                "ref_tenant_id": body.ref,
+                "ref_tenant_id": public_ref,
                 "path": body.path,
                 "referrer": body.referrer,
             }
         ).execute()
     except Exception:
-        logger.exception("Failed to record referral click for ref=%s", body.ref)
+        logger.exception("Failed to record referral click")
 
-    # Always return 204-equivalent OK — don't leak errors to the browser
-    return {"ok": True}
+    # Same status and body for a stored click and a dropped unknown key.
+    return _CLICK_OK

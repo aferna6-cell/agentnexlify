@@ -1,13 +1,11 @@
 """Admin referral overview service.
 
 Computes per-tenant referral performance:
-  - total_clicks   — rows in referral_clicks where ref_tenant_id = tenant's api_key
-  - referred_signups — tenants whose referred_by_widget_key = this tenant's api_key
+  - total_clicks   — referral_clicks for the public code and any legacy widget key
+  - referred_signups — tenants.referred_by = this tenant, plus legacy
+    referred_by_widget_key matches
 
-Data model (verified against migrations 157 and 159):
-  referral_clicks.ref_tenant_id  TEXT → widget_configs.api_key of the referrer
-  tenants.referred_by_widget_key TEXT → widget_configs.api_key of whoever referred them
-  widget_configs.api_key         TEXT → each tenant's referral identity (ref_code)
+The public ref_code is tenants.referral_code. Widget API keys are never returned.
 
 Schema disciplines enforced:
   - widget_configs uses tenant_id (not client_id)
@@ -25,6 +23,7 @@ import logging
 from datetime import datetime, timezone
 
 from backend.models.database import get_service_supabase
+from backend.services.referral import is_public_referral_code
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +52,7 @@ def compute_referral_overview() -> dict:
     try:
         tenants_result = (
             db.table("tenants")
-            .select("id, business_name")
+            .select("id, business_name, referral_code")
             .execute()
         )
         tenant_rows = tenants_result.data or []
@@ -105,16 +104,22 @@ def compute_referral_overview() -> dict:
 
     # Step 4: Fetch referred signups (tenants.referred_by_widget_key)
     signups_by_api_key: dict[str, int] = {}
+    signups_by_referrer: dict[str, int] = {}
     try:
         signups_result = (
             db.table("tenants")
-            .select("referred_by_widget_key")
+            .select("referred_by, referred_by_widget_key")
             .execute()
         )
         for row in signups_result.data or []:
             wk = row.get("referred_by_widget_key")
             if wk:
                 signups_by_api_key[wk] = signups_by_api_key.get(wk, 0) + 1
+            referrer = row.get("referred_by")
+            if referrer:
+                signups_by_referrer[str(referrer)] = (
+                    signups_by_referrer.get(str(referrer), 0) + 1
+                )
     except Exception:
         logger.exception(
             "referral_overview: failed to fetch referred_signups — "
@@ -127,10 +132,16 @@ def compute_referral_overview() -> dict:
     for tenant in tenant_rows:
         tenant_id = tenant.get("id") or ""
         business_name = tenant.get("business_name") or ""
-        ref_code = api_key_by_tenant.get(tenant_id, "")
+        raw_code = tenant.get("referral_code")
+        ref_code = raw_code.strip() if is_public_referral_code(raw_code) else ""
+        legacy_key = api_key_by_tenant.get(tenant_id, "")
 
         total_clicks = total_clicks_by_api_key.get(ref_code, 0) if ref_code else 0
-        referred_signups = signups_by_api_key.get(ref_code, 0) if ref_code else 0
+        if legacy_key and legacy_key != ref_code:
+            total_clicks += total_clicks_by_api_key.get(legacy_key, 0)
+        referred_signups = signups_by_referrer.get(str(tenant_id), 0)
+        if legacy_key:
+            referred_signups += signups_by_api_key.get(legacy_key, 0)
 
         tenant_list.append(
             {
