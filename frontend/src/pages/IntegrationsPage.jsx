@@ -645,6 +645,7 @@ function GoogleCalendarSection({ token }) {
   const [status, setStatus] = useState(null);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [error, setError] = useState(null);
 
   const loadStatus = useCallback(async () => {
@@ -674,9 +675,14 @@ function GoogleCalendarSection({ token }) {
   };
 
   const handleDisconnect = async () => {
+    if (!confirmDisconnect) {
+      setConfirmDisconnect(true);
+      return;
+    }
     setDisconnecting(true);
     try {
       await disconnectGoogleCalendar(user.tenantId, token);
+      setConfirmDisconnect(false);
       await loadStatus();
     } catch (err) {
       setError("Failed to disconnect.");
@@ -719,15 +725,46 @@ function GoogleCalendarSection({ token }) {
           {error}
         </div>
       )}
+      {connected && confirmDisconnect && (
+        <div
+          role="alertdialog"
+          aria-label="Disconnect Google Calendar"
+          style={{
+            marginTop: "0.75rem",
+            fontSize: "0.8125rem",
+            lineHeight: 1.45,
+            color: "var(--text-secondary)",
+          }}
+        >
+          Disconnect Google Calendar? This removes the stored connection. Chat
+          will not read or book on this account until you connect it again.
+        </div>
+      )}
       <div style={gcStyles.cardActions}>
         {connected ? (
-          <button
-            className="btn-danger"
-            onClick={handleDisconnect}
-            disabled={disconnecting}
-          >
-            {disconnecting ? "Disconnecting..." : "Disconnect"}
-          </button>
+          <>
+            <button
+              className="btn-danger"
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+            >
+              {disconnecting
+                ? "Disconnecting..."
+                : confirmDisconnect
+                  ? "Confirm disconnect?"
+                  : "Disconnect"}
+            </button>
+            {confirmDisconnect && (
+              <button
+                className="btn-secondary"
+                type="button"
+                onClick={() => setConfirmDisconnect(false)}
+                style={{ fontSize: "0.8125rem" }}
+              >
+                Cancel
+              </button>
+            )}
+          </>
         ) : (
           <button
             className="btn-primary"
