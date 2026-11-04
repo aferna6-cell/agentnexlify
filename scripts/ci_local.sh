@@ -126,7 +126,7 @@ run_gate "managed agents preflight" 1 python scripts/managed_agents/preflight.py
 # webhook, …) was covered by CI but NOT by the local gate that is supposed to
 # stand in for it while Actions are dark. That is the parity gap most likely
 # to let a real regression through.
-run_gate "backend tests + coverage" 1 python -m pytest backend/tests/ tests/ -q --cov=backend --cov-report=xml:coverage-python.xml
+run_gate "backend tests + coverage" 1 sh -c "python -m pip install -q -r ops/db-backup/requirements.txt && python -m pytest backend/tests/ tests/ -q --cov=backend --cov-report=xml:coverage-python.xml"
 run_gate "key vault 100% coverage" 1 python -m pytest backend/tests/test_integration_key_vault.py -q \
   --cov=backend.services.integration_key_vault --cov-branch --cov-fail-under=100
 run_gate "JS coverage (when JS changed)" 1 js_coverage
