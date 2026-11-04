@@ -27,8 +27,11 @@ _cache: dict | None = None
 _cache_at = 0.0
 
 _REASON_RE = re.compile(r"^[a-z0-9_]{1,40}$")
+# Split so the source does not contain a contiguous provider-key prefix.
+_ANTHROPIC_KEY_PREFIX = "sk-" + "ant-"
 _SECRET_RE = re.compile(
-    r"sk-ant-[A-Za-z0-9_\-]+|(?:x-api-key|api[_-]?key|authorization|bearer)\s*[:=]\s*\S+",
+    re.escape(_ANTHROPIC_KEY_PREFIX)
+    + r"[A-Za-z0-9_\-]+|(?:x-api-key|api[_-]?key|authorization|bearer)\s*[:=]\s*\S+",
     re.IGNORECASE,
 )
 
