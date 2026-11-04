@@ -73,7 +73,7 @@ export default function SmsCompliance() {
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
 
   return (
-    <div style={{ padding: "24px 28px", maxWidth: 900, color: "var(--text-primary)" }}>
+    <div>
       <h1 style={{ margin: 0, fontSize: "1.5rem" }}>SMS Compliance</h1>
       <p style={{ color: "var(--text-muted)", margin: "6px 0 24px", fontSize: "0.9rem" }}>
         TCPA opt-out ledger. Every number here is suppressed from all outbound SMS.

@@ -437,6 +437,38 @@ INDUSTRY_FAQS: dict[str, list[dict]] = {
             "category": "Services",
         },
     ],
+    "warehouse_logistics": [
+        {
+            "question": "What warehouse services do you offer?",
+            "answer": "We handle pallet storage, inbound receiving, pick and pack fulfillment, cross-dock, and outbound freight. Tell us the commodity and volume and we will confirm which of those we can take.",
+            "category": "Services",
+        },
+        {
+            "question": "How do I book a dock appointment?",
+            "answer": "Send the carrier name, trailer type, pallet count, and the window you want. We confirm a door time and tell you which paperwork to bring: bill of lading, packing list, and PO numbers.",
+            "category": "Booking",
+        },
+        {
+            "question": "How do you price storage and freight?",
+            "answer": "Storage is quoted from pallet count and how long the goods stay. Freight is quoted from the lane, weight or pallet count, and whether you need LTL, full truckload, or local cartage. We send the number in writing before anything moves.",
+            "category": "Pricing",
+        },
+        {
+            "question": "What are your receiving hours?",
+            "answer": "Receiving is by appointment on weekdays. Live unloads and drop trailers need a confirmed door time so the dock is not holding a carrier. Ask us for the next open slot.",
+            "category": "About",
+        },
+        {
+            "question": "What is your policy on damaged or short freight?",
+            "answer": "Note the exception on the delivery receipt before the driver leaves, then send photos and the BOL or PRO number. We open the carrier claim and update you. We do not promise a claim payout in chat.",
+            "category": "Policy",
+        },
+        {
+            "question": "Do you ship customer orders for me?",
+            "answer": "Yes. We can store your inventory and pick, pack, and tender orders to your carrier. Share a typical week's order count and carton sizes so we can quote the handling fee.",
+            "category": "Services",
+        },
+    ],
 }
 
 

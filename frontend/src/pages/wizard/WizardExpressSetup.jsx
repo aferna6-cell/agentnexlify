@@ -45,6 +45,7 @@ const INDUSTRIES = [
   { value: "salon", label: "Salon" },
   { value: "tutoring", label: "Tutoring" },
   { value: "veterinary", label: "Veterinary" },
+  { value: "warehouse_logistics", label: "Warehouse / Logistics" },
 ];
 
 export default function WizardExpressSetup({ user, token, onCustomize }) {

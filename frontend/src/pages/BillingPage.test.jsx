@@ -97,4 +97,14 @@ describe("BillingPage upgrade funnel", () => {
     expect(screen.getByText("Chatbot")).toBeInTheDocument();
     expect(screen.getByText("Switch Plan")).toBeInTheDocument();
   });
+
+  it("lists a grandfathered Enterprise plan in the comparison table", async () => {
+    fetchDashboard.mockResolvedValue({ plan: "enterprise", plan_status: "active" });
+    fetchTrialStatus.mockResolvedValue(null);
+    render(<BillingPage />);
+    expect(await screen.findByText("Grandfathered")).toBeInTheDocument();
+    expect(screen.getAllByText("Enterprise").length).toBeGreaterThan(0);
+    expect(screen.getByText("AI Front Desk")).toBeInTheDocument();
+    expect(screen.getByText("AI Workforce")).toBeInTheDocument();
+  });
 });

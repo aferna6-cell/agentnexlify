@@ -122,6 +122,15 @@ _VERTICAL_ALIASES: dict[str, str] = {
     "veterinarian": "veterinary",
     "animal_hospital": "veterinary",
     "animal_clinic": "veterinary",
+    # warehouse_logistics
+    "warehouse": "warehouse_logistics",
+    "logistics": "warehouse_logistics",
+    "warehousing": "warehouse_logistics",
+    "freight": "warehouse_logistics",
+    "fulfillment": "warehouse_logistics",
+    "distribution": "warehouse_logistics",
+    "3pl": "warehouse_logistics",
+    "third_party_logistics": "warehouse_logistics",
 }
 
 

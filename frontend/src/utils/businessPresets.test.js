@@ -19,6 +19,12 @@ describe("getPresetWidgetDefaults", () => {
     expect(result.widget_primary_color).toBe("#2563eb");
   });
 
+  it("uses the warehouse preset for a logistics alias", () => {
+    const warehouse = getPresetWidgetDefaults("logistics", "Northwind");
+    expect(warehouse.widget_bot_name).toBe("Northwind Dispatch Desk");
+    expect(warehouse.widget_greeting_message).toMatch(/dock appointment/i);
+  });
+
   it("falls back to default preset and business name when values are missing", () => {
     const result = getPresetWidgetDefaults("", "   ");
 
