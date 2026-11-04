@@ -18894,3 +18894,34 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### fix(demo): clear high/critical npm audit on vitest, vite, shell-quote, and source-map-js (#1006)
+
+* fix(demo): patch flagged vitest, vite, shell-quote, and source-map-js
+
+The demo-platform audit step fails on vite 8.3.0-8.3.2, shell-quote
+1.8.4-1.10.0, and source-map-js <=1.2.1, and also reports vitest <5.0.3.
+Bump vitest and @vitest/coverage-v8 together to 5.1.0, vite to 8.3.5
+inside that peer range, and override the two transitive packages.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+* fix(frontend): patch high and critical npm audit findings
+
+Clear the frontend audit step without a major bump. Move vitest and
+@vitest/coverage-v8 to 4.1.12, vite to 8.3.5, and dompurify to 3.4.17,
+and override source-map-js 1.2.2 plus undici 8.12.3.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+---------
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+**Date:** 2026-11-04
+**Commit:** 35b5e13
+**Author:** aferna6-cell
+**Files Changed:** demo-platform/package-lock.json,demo-platform/package.json,frontend/package-lock.json,frontend/package.json
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
