@@ -401,6 +401,17 @@ async def generate_post_image_endpoint(
             db, tenant_id=tenant_id, prompt=req.prompt, platform=req.platform
         )
     except SocialImageGenError as exc:
+        if str(exc) == "image_gen_not_configured":
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "image_gen_not_configured",
+                    "message": (
+                        "Image generation rejected the API key. "
+                        "Check IMAGE_GEN_API_KEY for this deployment."
+                    ),
+                },
+            )
         raise HTTPException(status_code=422, detail=str(exc))
     except Exception:
         logger.exception("Social media image generation failed for tenant %s", tenant_id)

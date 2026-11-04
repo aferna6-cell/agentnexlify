@@ -25,6 +25,11 @@ from backend.services import record_audit
 from backend.services.email_sender import send_email
 from backend.limiter import limiter
 from backend.services.lead_scoring import score_all_leads, score_lead
+from backend.services.lead_status import (
+    UnknownLeadStatus,
+    canonical_lead_status,
+    is_check_violation,
+)
 from backend.services.tenant_scope import tenant_delete, tenant_insert, tenant_select, tenant_update
 from backend.services.webhook_dispatcher import fire_event_background
 
@@ -166,6 +171,7 @@ class LeadCreateRequest(BaseModel):
     email: str | None = None
     phone: str | None = None
     status: str | None = "new"
+    pipeline_stage: str | None = None
     lead_temperature: str | None = None
     areas_of_interest: str | None = None
     deal_value: float | None = None
@@ -185,13 +191,30 @@ async def create_lead(
     if not req.name and not req.email and not req.phone:
         raise HTTPException(status_code=400, detail="At least one of name, email, or phone is required")
 
+    raw_status = req.status or "new"
+    try:
+        status = canonical_lead_status(raw_status)
+    except UnknownLeadStatus as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Unknown lead status '{exc.raw}'. "
+                "Allowed: new, contacted, appointment_booked, closed, lost."
+            ),
+        )
+
+    stage_label = (req.pipeline_stage or "").strip() or None
+    if stage_label is None and raw_status.strip() and raw_status.strip() != status:
+        stage_label = raw_status.strip()
+
     db = get_service_supabase()
     lead_data = {
         "client_id": tenant_id,
         "name": req.name,
         "email": req.email,
         "phone": req.phone,
-        "status": req.status or "new",
+        "status": status,
+        "pipeline_stage": stage_label,
         "lead_temperature": req.lead_temperature,
         "areas_of_interest": req.areas_of_interest,
         "source": "manual",
@@ -204,7 +227,15 @@ async def create_lead(
     # Remove None values
     lead_data = {k: v for k, v in lead_data.items() if v is not None}
 
-    result = tenant_insert(db, "leads", tenant_id, lead_data).execute()
+    try:
+        result = tenant_insert(db, "leads", tenant_id, lead_data).execute()
+    except Exception as exc:
+        if is_check_violation(exc):
+            raise HTTPException(
+                status_code=422,
+                detail="Lead data violates a database check constraint",
+            ) from exc
+        raise
     if not result.data:
         raise HTTPException(status_code=500, detail="Failed to create lead")
 
@@ -233,8 +264,31 @@ async def update_lead(
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
 
+    if "status" in updates:
+        raw_status = updates["status"]
+        try:
+            updates["status"] = canonical_lead_status(raw_status)
+        except UnknownLeadStatus as exc:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Unknown lead status '{exc.raw}'. "
+                    "Allowed: new, contacted, appointment_booked, closed, lost."
+                ),
+            )
+        if "pipeline_stage" not in updates and str(raw_status).strip() != updates["status"]:
+            updates["pipeline_stage"] = str(raw_status).strip()
+
     db = get_service_supabase()
-    result = tenant_update(db, "leads", tenant_id, updates).eq("id", lead_id).execute()
+    try:
+        result = tenant_update(db, "leads", tenant_id, updates).eq("id", lead_id).execute()
+    except Exception as exc:
+        if is_check_violation(exc):
+            raise HTTPException(
+                status_code=422,
+                detail="Lead data violates a database check constraint",
+            ) from exc
+        raise
     if not result.data:
         raise HTTPException(status_code=404, detail="Lead not found")
 
