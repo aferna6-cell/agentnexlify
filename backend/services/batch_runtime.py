@@ -51,6 +51,7 @@ from typing import Any
 import anthropic
 
 from backend.config import settings
+from backend.services.ai_live import normalize_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ class BatchResultItem:
 
 
 def _client() -> anthropic.Anthropic:
-    return anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    return anthropic.Anthropic(api_key=normalize_api_key(settings.anthropic_api_key))
 
 
 def _extract_text(message: Any) -> str | None:

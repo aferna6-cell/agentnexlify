@@ -4,6 +4,18 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### Dashboard, billing, and analytics counted different activity (2026-11-04)
+
+**Symptom:** Analytics showed 0 conversations and 0 leads, billing showed a large "this month" conversation count, the dashboard proof metric showed opportunities, pipeline said "Total Deals N" with empty columns and $0, and "Last activity" was weeks old.
+
+**Root cause:** Three definitions. Analytics counted only `chat_messages.created_at` inside a rolling window. Billing and the dashboard conversation card showed `conversations_used_this_month` (an unbounded counter, then max'd with all-time chat sessions). Leads on the dashboard were all-time `client_id` rows, while analytics filtered `created_at`. Pipeline matched `status` to the stage name with exact case-folding, so stored `new` missed the stage `New Lead` and landed in `_unmatched`, which the total counts and the columns do not render. Last activity read only `chat_messages.created_at`, ignoring `conversations.started_at` / `last_message_at` and lead timestamps. `deal_value` defaults to 0, so an empty-looking board also showed $0.
+
+**Fix:** `backend/services/tenant_activity.py` is the counter. Conversations are distinct sessions from `conversations` (`client_id`) and `chat_messages` (`tenant_id`). Month usage is the UTC calendar month. Leads, opportunities, and deals are the all-time lead stock. `resolve_stage` maps canonical statuses onto stage names. Last activity is the newest timestamp across those rows.
+
+**Prevention:** New headline numbers go through `tenant_activity`. Do not display `conversations_used_this_month` as "this month". Do not compare lead `status` to stage names without `resolve_stage`.
+
+---
+
 ### connector_awareness zapier status queried tenant_api_keys with wrong column (Phase 1b connector registry, 2026-08-01)
 
 `backend/services/connector_awareness.connection_status()` queried

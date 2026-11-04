@@ -420,6 +420,7 @@ def _knowledge_gap_entry(
     gap_list = "; ".join(dict.fromkeys(gaps))
     return {
         "topic": "setup gaps — gather these from the owner",
+        "internal": True,
         "answer": (
             "Your knowledge about this business is incomplete. Still missing: "
             f"{gap_list}. When the owner chats with you, weave ONE of these "

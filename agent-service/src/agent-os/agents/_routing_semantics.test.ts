@@ -8,9 +8,9 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { classifyHeuristic } from "./_classifier.ts";
+import { classify, classifyHeuristic, setClassifierModel } from "./_classifier.ts";
 import { readAskIntent } from "./_intent.ts";
-import { departmentSemanticScore, eligibleSkills } from "./_department.ts";
+import { departmentSemanticScore, eligibleSkills, pickSkill } from "./_department.ts";
 import { adminRecords, customerService, sales } from "./departments.ts";
 import { fakeEmitter, fullContext } from "./_testkit.ts";
 
@@ -97,6 +97,66 @@ test("a business-fact question is answered from the KB with no draft", async () 
   assert.equal(out.draft, undefined);
   assert.match(out.noDraftReason ?? "", /knowledge base/);
   assert.match(out.orchestratorNotes.join(" "), /oil changes/);
+});
+
+test("business-fact answers omit gap text and do not dump fragments", async () => {
+  const { emitter } = fakeEmitter();
+  const out = await customerService.run({
+    input: {},
+    context: fullContext({
+      kb: [
+        {
+          topic: "setup gaps — gather these from the owner",
+          internal: true,
+          answer:
+            "Your knowledge about this business is incomplete. Still missing: the list of services offered.",
+        },
+        { topic: "frag", answer: "offer offers offer" },
+        { topic: "roadmap", answer: "What we are NOT building in v1 is a marketplace." },
+        {
+          topic: "Services",
+          answer:
+            "We offer oil changes, brake jobs, and tire rotations for drivers in town.",
+        },
+      ],
+    }),
+    emitTrace: emitter,
+    ownerAsk: "What services do we offer?",
+    runId: "",
+  });
+  const note = out.orchestratorNotes.join(" ");
+  assert.match(note, /oil changes/i);
+  assert.equal(out.draft, undefined);
+  assert.doesNotMatch(note, /incomplete/i);
+  assert.doesNotMatch(note, /NOT building/i);
+  assert.doesNotMatch(note, /offer offers offer/);
+});
+
+test("business facts short-circuit before Haiku even if the model picks admin_records", async () => {
+  setClassifierModel(async () => ({
+    text: JSON.stringify({
+      routed_to: "admin_records",
+      confidence: 0.99,
+      extracted_params: {},
+      alternates: [],
+    }),
+    model: "stub",
+    inputTokens: 1,
+    outputTokens: 1,
+    costUsd: 0,
+  }));
+  try {
+    const result = await classify("what services do we offer");
+    assert.equal(result.candidates[0]?.agentId, "customer_service");
+    assert.equal(result.candidates[0]?.confidence, 0.95);
+    assert.equal(result.params.customer_question, "what services do we offer");
+    assert.equal(
+      pickSkill(customerService.__department, "what services do we offer").agent.agent_id,
+      "customer_question",
+    );
+  } finally {
+    setClassifierModel(null);
+  }
 });
 
 test("replying to a customer and writing to one go to different departments", () => {
