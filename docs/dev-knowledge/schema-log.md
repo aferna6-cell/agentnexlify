@@ -4,6 +4,16 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 204_warehouse_logistics_business_type.sql (2026-11-04)
+
+**What:** Replaces `tenants_business_type_check` with the migration 142 allowlist plus `warehouse_logistics`. No new enum. `business_type` stays TEXT.
+
+**Why:** Settings and onboarding can store Warehouse / Logistics. Migration 142's CHECK list does not include that value, so an insert or update would fail.
+
+**Applied:** NOT applied. Shipped in the PR only. No production or Supabase write.
+
+---
+
 ## 203_public_referral_codes.sql (2026-11-04)
 
 **What:** Backfill `tenants.referral_code` when it is null, or when it equals that tenant's `widget_configs.api_key` / starts with `anx_`. New codes are 12 hex characters from `gen_random_uuid()`, not the widget key. Does not add a second unique index: prod already has UNIQUE constraint `tenants_referral_code_key` (0 duplicate codes, 3 NULLs).

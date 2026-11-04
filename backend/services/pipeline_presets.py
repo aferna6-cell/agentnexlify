@@ -73,6 +73,14 @@ _INDUSTRY_STAGES: dict[str, list[dict]] = {
         {"name": "At Risk", "sort_order": 3, "color": "#f59e0b", "is_won": False, "is_lost": False},
         {"name": "Churned", "sort_order": 4, "color": "#ef4444", "is_won": False, "is_lost": True},
     ],
+    "warehouse_logistics": [
+        {"name": "New Inquiry", "sort_order": 0, "color": "#3b82f6", "is_won": False, "is_lost": False},
+        {"name": "Quote Sent", "sort_order": 1, "color": "#8b5cf6", "is_won": False, "is_lost": False},
+        {"name": "Dock Booked", "sort_order": 2, "color": "#f59e0b", "is_won": False, "is_lost": False},
+        {"name": "In Warehouse", "sort_order": 3, "color": "#14b8a6", "is_won": False, "is_lost": False},
+        {"name": "Delivered", "sort_order": 4, "color": "#10b981", "is_won": True, "is_lost": False},
+        {"name": "Lost", "sort_order": 5, "color": "#ef4444", "is_won": False, "is_lost": True},
+    ],
 }
 
 _TYPE_ALIASES: dict[str, str] = {
@@ -92,12 +100,25 @@ _TYPE_ALIASES: dict[str, str] = {
     "health_wellness": "dental",
     "cleaning": "contractor",
     "landscaping": "contractor",
+    "warehouse": "warehouse_logistics",
+    "logistics": "warehouse_logistics",
+    "warehousing": "warehouse_logistics",
+    "freight": "warehouse_logistics",
+    "fulfillment": "warehouse_logistics",
+    "distribution": "warehouse_logistics",
+    "3pl": "warehouse_logistics",
 }
 
 
 def resolve_stages_for_business_type(business_type: str | None) -> list[dict]:
-    """Pick the best stage preset for a business_type, falling back to DEFAULT_STAGES."""
-    btype = (business_type or "").lower()
+    """Pick the best stage preset for a business_type, falling back to DEFAULT_STAGES.
+
+    Warehouse aliases resolve here even while ``WAREHOUSE_LOGISTICS_ENABLED`` is
+    off. That flag only controls the value stored on ``tenants.business_type``.
+    """
+    from backend.services.business_type_storage import normalize_business_type_token
+
+    btype = normalize_business_type_token(business_type)
     resolved = _TYPE_ALIASES.get(btype, btype)
     return _INDUSTRY_STAGES.get(resolved, DEFAULT_STAGES)
 

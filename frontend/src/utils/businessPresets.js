@@ -40,6 +40,13 @@ const PROFILE_ALIASES = {
   consulting: "professional_services",
   photography: "professional_services",
   tutoring: "professional_services",
+  warehouse: "warehouse_logistics",
+  logistics: "warehouse_logistics",
+  warehousing: "warehouse_logistics",
+  freight: "warehouse_logistics",
+  fulfillment: "warehouse_logistics",
+  distribution: "warehouse_logistics",
+  "3pl": "warehouse_logistics",
 };
 
 const WIDGET_PRESETS = {
@@ -107,6 +114,12 @@ const WIDGET_PRESETS = {
     suffix: "Member Desk",
     color: "#16a34a",
     greeting: (businessName) => `Hi! I'm the AI member desk for ${businessName}. Are you interested in a membership, class schedule, or personal training?`,
+    position: "bottom-right",
+  },
+  warehouse_logistics: {
+    suffix: "Dispatch Desk",
+    color: "#0369a1",
+    greeting: (businessName) => `Hi! I'm the dispatch desk for ${businessName}. Do you need storage, a freight quote, or a dock appointment?`,
     position: "bottom-right",
   },
   professional_services: {

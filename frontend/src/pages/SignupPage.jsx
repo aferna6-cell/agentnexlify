@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { trackEvent } from "../utils/analytics";
+import { businessTypeForForm } from "../utils/warehouseLogisticsFlag";
 
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL ||
@@ -61,7 +62,8 @@ export default function SignupPage() {
   const fromDemo = searchParams.get("from") === "demo";
   // Vertical toured in the demo - pre-selects the industry so onboarding
   // (FAQs, starters, widget defaults) matches what the visitor just saw.
-  const demoVertical = (searchParams.get("vertical") || "").trim().slice(0, 50);
+  const demoVerticalRaw = (searchParams.get("vertical") || "").trim().slice(0, 50);
+  const demoVertical = businessTypeForForm(demoVerticalRaw, "");
   // Business name from the personalized demo link - pre-fill it so a visitor
   // who just saw a demo framed for "Acme Roofing" confirms rather than retypes.
   const demoBusiness = (searchParams.get("business") || "").trim().slice(0, 80);

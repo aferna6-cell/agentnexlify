@@ -49,6 +49,12 @@ const STARTERS_BY_TYPE = {
     "Draft a reminder for tomorrow's appointments",
     "What do you know about my salon so far?",
   ],
+  warehouse: [
+    "Which inbound loads still need a dock appointment?",
+    "Draft a delay note for a late outbound shipment",
+    "What storage and freight quotes came in from the widget today?",
+    "Summarize open quotes that have not been booked",
+  ],
   // Subscription trading/alerts services (e.g. options alert memberships)
   financial: [
     "Who started a trial this week and hasn't engaged yet?",
@@ -94,6 +100,10 @@ function getStarters(businessType) {
   if (key.includes("dental") || key.includes("dentist")) return STARTERS_BY_TYPE.dental;
   if (key.includes("medical") || key.includes("doctor") || key.includes("clinic") || key.includes("health")) return STARTERS_BY_TYPE.medical;
   if (key.includes("salon") || key.includes("spa") || key.includes("beauty") || key.includes("hair")) return STARTERS_BY_TYPE.salon;
+  if (
+    key.includes("warehouse") || key.includes("logistics") || key.includes("freight") ||
+    key.includes("fulfillment") || key.includes("distribution") || key.includes("3pl")
+  ) return STARTERS_BY_TYPE.warehouse;
   if (key.includes("financ") || key.includes("trading") || key.includes("invest")) return STARTERS_BY_TYPE.financial;
   return STARTERS_BY_TYPE._default;
 }

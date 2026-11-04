@@ -38,6 +38,7 @@ from backend.services.industry_packs.professional_services import (
 )
 from backend.services.industry_packs.retail import RETAIL_PACK
 from backend.services.industry_packs.real_estate import REAL_ESTATE_PACK
+from backend.services.industry_packs.warehouse import WAREHOUSE_PACK
 
 _REGISTRY: dict[str, IndustryPack] = {
     "dental": DENTAL_PACK,
@@ -52,6 +53,7 @@ _REGISTRY: dict[str, IndustryPack] = {
     "professional_services": PROFESSIONAL_SERVICES_PACK,
     "retail": RETAIL_PACK,
     "real_estate": REAL_ESTATE_PACK,
+    "warehouse_logistics": WAREHOUSE_PACK,
     "default": DEFAULT_PACK,
 }
 

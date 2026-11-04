@@ -28,15 +28,15 @@ from backend.services.industry_packs.seed import (
 
 
 class TestRegistry:
-    def test_all_13_packs_load(self):
+    def test_all_packs_load(self):
         packs = list_available_packs()
-        assert len(packs) == 13
+        assert len(packs) == 14
         keys = {p["key"] for p in packs}
         assert keys == {
             "dental", "medical", "hvac", "home_services",
             "salon", "restaurant", "legal", "auto_shop",
             "fitness", "professional_services", "retail",
-            "real_estate", "default",
+            "real_estate", "warehouse_logistics", "default",
         }
 
     def test_every_pack_has_summary(self):
