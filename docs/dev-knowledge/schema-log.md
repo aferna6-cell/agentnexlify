@@ -4,7 +4,7 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
-## 202_warehouse_logistics_business_type.sql (2026-11-04)
+## 203_warehouse_logistics_business_type.sql (2026-11-04)
 
 **What:** Replaces `tenants_business_type_check` with the migration 142 allowlist plus `warehouse_logistics`. No new enum. `business_type` stays TEXT.
 

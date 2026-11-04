@@ -1,4 +1,4 @@
--- Migration 202: allow warehouse_logistics on tenants.business_type.
+-- Migration 203: allow warehouse_logistics on tenants.business_type.
 --
 -- Read-only review of migrations (not applied here):
 --   001 creates tenants.business_type as TEXT with a CHECK allowlist.

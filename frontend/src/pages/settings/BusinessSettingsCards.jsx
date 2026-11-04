@@ -1,4 +1,5 @@
 import { SaveButton } from "./shared";
+import { isWarehouseLogisticsEnabled } from "../../utils/warehouseLogisticsFlag";
 
 export function BusinessInformationCard({
   form,
@@ -48,7 +49,9 @@ export function BusinessInformationCard({
           <option value="cleaning">Cleaning Services</option>
           <option value="landscaping">Landscaping / Lawn Care</option>
           <option value="professional">Professional Services</option>
-          <option value="warehouse_logistics">Warehouse / Logistics</option>
+          {isWarehouseLogisticsEnabled() && (
+            <option value="warehouse_logistics">Warehouse / Logistics</option>
+          )}
           <option value="other">Other</option>
         </select>
       </div>

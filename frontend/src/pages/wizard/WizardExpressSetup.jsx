@@ -15,6 +15,7 @@ import {
   buildWizardPayload,
   trackWizardEvent,
 } from "../../utils/api/onboarding";
+import { businessTypeForForm, isWarehouseLogisticsEnabled } from "../../utils/warehouseLogisticsFlag";
 
 const INDUSTRIES = [
   { value: "other", label: "General Business / Not Sure Yet" },
@@ -50,7 +51,10 @@ const INDUSTRIES = [
 
 export default function WizardExpressSetup({ user, token, onCustomize }) {
   const [websiteUrl, setWebsiteUrl] = useState("");
-  const [industry, setIndustry] = useState(user?.businessType || "other");
+  const [industry, setIndustry] = useState(businessTypeForForm(user?.businessType || "other"));
+  const industries = INDUSTRIES.filter(
+    (item) => item.value !== "warehouse_logistics" || isWarehouseLogisticsEnabled(),
+  );
   const [working, setWorking] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -127,7 +131,7 @@ export default function WizardExpressSetup({ user, token, onCustomize }) {
             onChange={(e) => setIndustry(e.target.value)}
             disabled={working}
           >
-            {INDUSTRIES.map((i) => (
+            {industries.map((i) => (
               <option key={i.value} value={i.value}>{i.label}</option>
             ))}
           </select>

@@ -1,5 +1,6 @@
 // frontend/src/pages/wizard/WizardStepBusiness.jsx
 import { useState } from "react";
+import { businessTypeForForm, isWarehouseLogisticsEnabled } from "../../utils/warehouseLogisticsFlag";
 
 const INDUSTRIES = [
   "other",
@@ -42,9 +43,12 @@ function industryLabel(value) {
 }
 
 export default function WizardStepBusiness({ wizardData, onNext }) {
+  const industries = INDUSTRIES.filter(
+    (item) => item !== "warehouse_logistics" || isWarehouseLogisticsEnabled(),
+  );
   const [form, setForm] = useState({
     business_name: wizardData.business_name || "",
-    business_type: wizardData.business_type || "other",
+    business_type: businessTypeForForm(wizardData.business_type || "other"),
     city: wizardData.city || "",
     phone: wizardData.phone || "",
     website_url: wizardData.website_url || "",
@@ -92,7 +96,7 @@ export default function WizardStepBusiness({ wizardData, onNext }) {
         <label style={labelStyle}>
           Industry *
           <select style={inputStyle} value={form.business_type} onChange={set("business_type")}>
-            {INDUSTRIES.map(i => <option key={i} value={i}>{industryLabel(i)}</option>)}
+            {industries.map(i => <option key={i} value={i}>{industryLabel(i)}</option>)}
           </select>
           <span style={hintStyle}>
             Choose your trade so we can seed a better greeting, service suggestions, and dashboard defaults.
