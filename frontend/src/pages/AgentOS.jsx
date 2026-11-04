@@ -23,7 +23,7 @@ import AgentRunFlowchart from "../components/os/AgentRunFlowchart";
 import DeliverablePanel from "../components/os/DeliverablePanel";
 import DemoTour from "../components/os/DemoTour";
 import MemoryPanel from "../components/os/MemoryPanel";
-import FirstRunStarters from "../components/os/FirstRunStarters";
+import GuidedSetup from "../components/os/GuidedSetup";
 import SuiteHintChips from "../components/os/SuiteHintChips";
 import OsInsightsCard from "../components/os/OsInsightsCard";
 import OpportunityCards from "../components/os/OpportunityCards";
@@ -710,10 +710,10 @@ export default function AgentOS({ onNavigate }) {
             </div>
           ) : messages.length === 0 ? (
             threads.length === 0 && !activeThreadId ? (
-              <FirstRunStarters
+              <GuidedSetup
                 businessType={user?.businessType || ""}
-                onSelectPrompt={setComposer}
-                composerRef={composerRef}
+                tenantId={user?.tenantId || ""}
+                token={token}
                 isMobile={isMobile}
               />
             ) : (

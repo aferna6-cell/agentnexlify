@@ -75,7 +75,7 @@ describe("AgentOS shell", () => {
       expect(screen.getByText(/No tasks yet/i)).toBeInTheDocument(),
     );
     expect(
-      screen.getByText("Hand a task to the orchestrator"),
+      screen.getByText(/What kind of business is this/),
     ).toBeInTheDocument();
   });
 
