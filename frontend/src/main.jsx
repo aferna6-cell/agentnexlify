@@ -6,6 +6,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import App from "./components/App";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { initFrontendSentry } from "./utils/sentryClient";
 import RequirePaid from "./components/RequirePaid";
 import Home from "./pages/Home";
 import SignupPage from "./pages/SignupPage";
@@ -107,6 +108,8 @@ function OnboardingRoute() {
   // Not authenticated → signup
   return <Navigate to="/signup" replace />;
 }
+
+initFrontendSentry();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
