@@ -217,6 +217,43 @@ describe("AgentOS shell", () => {
     await waitFor(() => expect(screen.getByText("got it")).toBeInTheDocument());
   });
 
+  it("renders assistant markdown and leaves the owner message as text", async () => {
+    listOsThreads.mockResolvedValueOnce([
+      { id: "t1", title: "Task one", created_at: NOW },
+    ]);
+    orchestrateOsTurn.mockResolvedValueOnce({
+      user_message: {
+        id: "u1",
+        role: "user",
+        content: "keep **this** literal",
+      },
+      assistant_message: {
+        id: "a1",
+        role: "assistant",
+        content:
+          "**Two plans**\n- Chatbot is $19.99/month\n- AI Workforce is $99.99/month\n<script>alert(1)</script>",
+      },
+      agent_runs: [],
+    });
+    render(<AgentOS />);
+    await waitFor(() =>
+      expect(screen.getByText("Task one")).toBeInTheDocument(),
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText("Describe a task for your AI staff..."),
+      { target: { value: "plans" } },
+    );
+    fireEvent.click(screen.getByText("Send"));
+    await waitFor(() =>
+      expect(screen.getByText("Two plans")).toBeInTheDocument(),
+    );
+    expect(screen.getByText("Two plans").tagName).toBe("STRONG");
+    expect(screen.getByText("Chatbot is $19.99/month").tagName).toBe("LI");
+    expect(screen.getByText("AI Workforce is $99.99/month").tagName).toBe("LI");
+    expect(screen.getByText("keep **this** literal")).toBeInTheDocument();
+    expect(document.querySelector("script")).toBeNull();
+  });
+
   it("shows a cap error when the send is rejected with 429", async () => {
     listOsThreads.mockResolvedValueOnce([
       { id: "t1", title: "Task one", created_at: NOW },

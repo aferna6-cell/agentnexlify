@@ -32,6 +32,7 @@ import SuiteHintChips from "../components/os/SuiteHintChips";
 import OsInsightsCard from "../components/os/OsInsightsCard";
 import OpportunityCards from "../components/os/OpportunityCards";
 import ComposerAttachments from "../components/os/ComposerAttachments";
+import { renderAssistantMarkdown } from "../components/os/assistantMarkdown";
 import UsageUpgradeNudge from "../components/UsageUpgradeNudge";
 import UpgradePrompt from "../components/UpgradePrompt";
 import useIsMobile from "../hooks/useIsMobile";
@@ -703,79 +704,100 @@ export default function AgentOS({ onNavigate }) {
               </div>
             )
           ) : (
-            messages.map((m) => {
-              const meta = ROLE_META[m.role] || ROLE_META.assistant;
-              const run = m.agent_run_id ? runMap[m.agent_run_id] : null;
-              const showFlowchart = m.role === "assistant" && run;
-              // The engine writes a single assistant message carrying the run +
-              // its deliverable (no separate "agent" message), so gate the
-              // Review button on the deliverable itself, not the message role.
-              const showDraftButton = Boolean(run && run.deliverable);
-              return (
-                <div
-                  key={m.id}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: meta.align,
-                    marginBottom: 14,
-                  }}
-                >
-                  {meta.label && (
-                    <span
-                      style={{
-                        fontSize: "0.68rem",
-                        fontWeight: 600,
-                        color: "var(--text-muted)",
-                        marginBottom: 3,
-                      }}
-                    >
-                      {meta.label}
-                    </span>
-                  )}
+            <>
+              <style>{`
+                .os-assistant-md p { margin: 0 0 0.45em; }
+                .os-assistant-md ul, .os-assistant-md ol { margin: 0.2em 0 0.45em; padding-left: 1.2em; }
+                .os-assistant-md li { margin: 0.15em 0; }
+                .os-assistant-md :last-child { margin-bottom: 0; }
+              `}</style>
+              {messages.map((m) => {
+                const meta = ROLE_META[m.role] || ROLE_META.assistant;
+                const run = m.agent_run_id ? runMap[m.agent_run_id] : null;
+                const showFlowchart = m.role === "assistant" && run;
+                // The engine writes a single assistant message carrying the run +
+                // its deliverable (no separate "agent" message), so gate the
+                // Review button on the deliverable itself, not the message role.
+                const showDraftButton = Boolean(run && run.deliverable);
+                return (
                   <div
+                    key={m.id}
                     style={{
-                      maxWidth: "78%",
-                      background: meta.bg,
-                      border: "1px solid var(--border)",
-                      borderRadius: 12,
-                      padding: "9px 13px",
-                      fontSize: "0.86rem",
-                      lineHeight: 1.55,
-                      color: "var(--text-primary)",
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: meta.align,
+                      marginBottom: 14,
                     }}
                   >
-                    {m.content}
-                  </div>
-                  {showFlowchart && (
-                    <div style={{ width: "78%", maxWidth: "78%" }}>
-                      <AgentRunFlowchart run={run} />
-                    </div>
-                  )}
-                  {showDraftButton && (
-                    <button
-                      data-tour="deliverable-panel"
-                      onClick={() => setPanelRunId(run.id)}
+                    {meta.label && (
+                      <span
+                        style={{
+                          fontSize: "0.68rem",
+                          fontWeight: 600,
+                          color: "var(--text-muted)",
+                          marginBottom: 3,
+                        }}
+                      >
+                        {meta.label}
+                      </span>
+                    )}
+                    <div
                       style={{
-                        marginTop: 6,
-                        background: "transparent",
-                        border: "1px solid var(--accent)",
-                        borderRadius: 8,
-                        padding: "6px 14px",
-                        color: "var(--accent)",
-                        cursor: "pointer",
-                        fontSize: "0.8rem",
-                        fontWeight: 600,
+                        maxWidth: "78%",
+                        background: meta.bg,
+                        border: "1px solid var(--border)",
+                        borderRadius: 12,
+                        padding: "9px 13px",
+                        fontSize: "0.86rem",
+                        lineHeight: 1.55,
+                        color: "var(--text-primary)",
+                        wordBreak: "break-word",
+                        whiteSpace:
+                          m.role === "assistant" || m.role === "agent"
+                            ? "normal"
+                            : "pre-wrap",
                       }}
+                      {...(m.role === "assistant" || m.role === "agent"
+                        ? {
+                            className: "os-assistant-md",
+                            dangerouslySetInnerHTML: {
+                              __html: renderAssistantMarkdown(m.content),
+                            },
+                          }
+                        : {})}
                     >
-                      Review draft
-                    </button>
-                  )}
-                </div>
-              );
-            })
+                      {m.role === "assistant" || m.role === "agent"
+                        ? null
+                        : m.content}
+                    </div>
+                    {showFlowchart && (
+                      <div style={{ width: "78%", maxWidth: "78%" }}>
+                        <AgentRunFlowchart run={run} />
+                      </div>
+                    )}
+                    {showDraftButton && (
+                      <button
+                        data-tour="deliverable-panel"
+                        onClick={() => setPanelRunId(run.id)}
+                        style={{
+                          marginTop: 6,
+                          background: "transparent",
+                          border: "1px solid var(--accent)",
+                          borderRadius: 8,
+                          padding: "6px 14px",
+                          color: "var(--accent)",
+                          cursor: "pointer",
+                          fontSize: "0.8rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Review draft
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </>
           )}
         </div>
 
