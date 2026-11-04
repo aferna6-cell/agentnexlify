@@ -130,7 +130,7 @@ export default function FirstRunStarters({ businessType, onSelectPrompt, compose
             marginBottom: 8,
           }}
         >
-          Hand a task to the orchestrator
+          Hand a task to your AI staff
         </div>
         <div
           style={{
@@ -139,9 +139,8 @@ export default function FirstRunStarters({ businessType, onSelectPrompt, compose
             lineHeight: 1.6,
           }}
         >
-          Describe what you need. The orchestrator answers directly,
-          routes it to a worker agent, or parks it for your decision when
-          nothing fits.
+          Describe what you need. Your AI staff answers directly, hands it to
+          the right part of the business, or asks you when it is not sure.
         </div>
       </div>
 

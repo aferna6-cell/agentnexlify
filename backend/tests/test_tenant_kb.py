@@ -72,6 +72,43 @@ class TestExtractText:
         except tk.UnsupportedDocument as exc:
             assert "PDF" in str(exc)
 
+    def test_benign_pdf_extracts_the_same_text(self):
+        import io
+
+        from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
+        from pypdf import PdfWriter
+
+        writer = PdfWriter()
+        page = writer.add_blank_page(width=300, height=144)
+        font = DictionaryObject(
+            {
+                NameObject("/Type"): NameObject("/Font"),
+                NameObject("/Subtype"): NameObject("/Type1"),
+                NameObject("/BaseFont"): NameObject("/Helvetica"),
+            }
+        )
+        page[NameObject("/Resources")] = DictionaryObject(
+            {NameObject("/Font"): DictionaryObject({NameObject("/F1"): font})}
+        )
+        stream = DecodedStreamObject()
+        stream.set_data(b"BT /F1 24 Tf 50 100 Td (Hello KB) Tj ET")
+        page[NameObject("/Contents")] = stream
+        buf = io.BytesIO()
+        writer.write(buf)
+
+        assert tk.extract_text("faq.pdf", buf.getvalue()) == "Hello KB"
+
+    def test_oversized_pdf_is_rejected_before_the_parser(self, monkeypatch):
+        def boom(*_args, **_kwargs):
+            raise AssertionError("PdfReader must not run on an over-5MB file")
+
+        monkeypatch.setattr("pypdf.PdfReader", boom)
+        try:
+            tk.extract_text("big.pdf", b"%PDF" + b"x" * (tk.MAX_FILE_BYTES + 1))
+            assert False, "should have raised"
+        except tk.UnsupportedDocument as exc:
+            assert "5MB" in str(exc)
+
 
 class TestPiiScan:
     def test_counts_ssn_and_card_shapes(self):

@@ -84,7 +84,7 @@ function InstructionsCard({ token }) {
   const [departments, setDepartments] = useState([]);
   const [instructions, setInstructions] = useState({});
   const [drafts, setDrafts] = useState({});
-  const [savingKey, setSavingKey] = useState("");
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -102,16 +102,31 @@ function InstructionsCard({ token }) {
     };
   }, [token]);
 
-  const save = async (department) => {
-    setSavingKey(department);
+  const dirtyDepartments = departments.filter(
+    (department) =>
+      (drafts[department] ?? "") !== (instructions[department] || ""),
+  );
+
+  const saveAll = async () => {
+    if (dirtyDepartments.length === 0) return;
+    setSaving(true);
     setError("");
     try {
-      const out = await putOsInstruction(token, department, drafts[department] || "");
-      setInstructions(out.instructions || {});
+      let latest = instructions;
+      for (const department of dirtyDepartments) {
+        const out = await putOsInstruction(
+          token,
+          department,
+          drafts[department] || "",
+        );
+        latest = out.instructions || latest;
+      }
+      setInstructions(latest);
+      setDrafts(latest);
     } catch (err) {
       setError(err.message || "Save failed");
     } finally {
-      setSavingKey("");
+      setSaving(false);
     }
   };
 
@@ -123,34 +138,20 @@ function InstructionsCard({ token }) {
         Approvals and safety rules always apply and cannot be overridden here.
       </div>
       {error && (
-        <div style={{ color: "#f87171", fontSize: "0.85rem", marginBottom: 10 }}>
+        <div
+          style={{ color: "#f87171", fontSize: "0.85rem", marginBottom: 10 }}
+        >
           {error}
         </div>
       )}
       {departments.map((department) => {
-        const saved = instructions[department] || "";
         const draft = drafts[department] ?? "";
-        const dirty = draft !== saved;
         return (
           <div key={department} style={{ marginBottom: 14 }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 6,
-              }}
-            >
+            <div style={{ marginBottom: 6 }}>
               <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>
                 {DEPARTMENT_LABELS[department] || department}
               </span>
-              <button
-                style={dirty ? btnStyle : btnQuiet}
-                disabled={!dirty || savingKey === department}
-                onClick={() => save(department)}
-              >
-                {savingKey === department ? "Saving..." : "Save"}
-              </button>
             </div>
             <textarea
               style={{ ...inputStyle, minHeight: 54, resize: "vertical" }}
@@ -165,6 +166,13 @@ function InstructionsCard({ token }) {
           </div>
         );
       })}
+      <button
+        style={btnStyle}
+        disabled={saving || dirtyDepartments.length === 0}
+        onClick={saveAll}
+      >
+        {saving ? "Saving..." : "Save"}
+      </button>
     </div>
   );
 }
@@ -191,7 +199,8 @@ function UsageCard({ token }) {
     <div style={cardStyle}>
       <h3 style={headingStyle}>Usage this cycle</h3>
       <div style={{ ...mutedStyle, marginBottom: 14 }}>
-        Agent runs and AI tokens by department since {cycleStart || "cycle start"}.
+        Agent runs and AI tokens by department since{" "}
+        {cycleStart || "cycle start"}.
       </div>
       {rows === null ? (
         <div style={mutedStyle}>Loading...</div>
@@ -314,15 +323,16 @@ function GoldenQuestionsCard({ token }) {
           alignItems: "baseline",
         }}
       >
-        <h3 style={headingStyle}>Golden questions</h3>
+        <h3 style={headingStyle}>Answer checks</h3>
         <button style={btnQuiet} onClick={runNow} disabled={busy}>
           {busy ? "Working..." : "Run checks now"}
         </button>
       </div>
       <div style={{ ...mutedStyle, marginBottom: 14 }}>
-        Questions your customers ask, plus the phrases your knowledge must
-        contain to answer them. Checked automatically after every knowledge
-        update - you get alerted when an answer breaks.
+        Sample questions your customers ask, plus the phrases your saved
+        knowledge must include. These used to be called golden questions. They
+        are re-checked after every knowledge update, and you are told when an
+        answer breaks.
       </div>
       {latestRun && (
         <div style={{ ...mutedStyle, marginBottom: 12 }}>
@@ -336,13 +346,15 @@ function GoldenQuestionsCard({ token }) {
         </div>
       )}
       {error && (
-        <div style={{ color: "#f87171", fontSize: "0.85rem", marginBottom: 10 }}>
+        <div
+          style={{ color: "#f87171", fontSize: "0.85rem", marginBottom: 10 }}
+        >
           {error}
         </div>
       )}
       {questions.length === 0 && (
         <div style={{ ...mutedStyle, marginBottom: 12 }}>
-          No golden questions yet. Start with your three most common customer
+          No answer checks yet. Start with your three most common customer
           questions - hours, pricing, booking.
         </div>
       )}
@@ -412,6 +424,7 @@ function ExportCard() {
 
 export default function AgentControlsPage() {
   const { token } = useAuth();
+  const [tab, setTab] = useState("tasks");
 
   if (!token) {
     return (
@@ -421,8 +434,14 @@ export default function AgentControlsPage() {
     );
   }
 
+  const tabs = [
+    { id: "tasks", label: "Tasks" },
+    { id: "instructions", label: "Instructions" },
+    { id: "usage", label: "Usage" },
+  ];
+
   return (
-    <div style={{ padding: 24, display: "grid", gap: 18, maxWidth: 900 }}>
+    <div style={{ display: "grid", gap: 18 }}>
       <div>
         <h2
           style={{
@@ -434,18 +453,50 @@ export default function AgentControlsPage() {
           Agent Controls
         </h2>
         <div style={mutedStyle}>
-          Tune how your AI departments behave, watch what they spend, and keep
-          their answers honest.
+          Recurring tasks, standing instructions, and how much the AI staff has
+          used this cycle.
         </div>
       </div>
-      <AskDataCard token={token} />
-      <ResearchCard token={token} />
-      <ProjectsCard token={token} />
-      <ScheduledTasksCard token={token} />
-      <InstructionsCard token={token} />
-      <GoldenQuestionsCard token={token} />
-      <UsageCard token={token} />
-      <ExportCard />
+      <div
+        role="tablist"
+        aria-label="Agent controls"
+        style={{ display: "flex", gap: 8 }}
+      >
+        {tabs.map((item) => {
+          const active = tab === item.id;
+          return (
+            <button
+              key={item.id}
+              role="tab"
+              aria-selected={active}
+              onClick={() => setTab(item.id)}
+              style={active ? btnStyle : btnQuiet}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
+      {tab === "tasks" && (
+        <>
+          <ScheduledTasksCard token={token} />
+          <ProjectsCard token={token} />
+          <AskDataCard token={token} />
+        </>
+      )}
+      {tab === "instructions" && (
+        <>
+          <InstructionsCard token={token} />
+          <ResearchCard token={token} />
+          <GoldenQuestionsCard token={token} />
+        </>
+      )}
+      {tab === "usage" && (
+        <>
+          <UsageCard token={token} />
+          <ExportCard />
+        </>
+      )}
     </div>
   );
 }

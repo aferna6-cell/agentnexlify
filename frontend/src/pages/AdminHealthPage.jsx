@@ -125,7 +125,7 @@ export default function AdminHealthPage() {
 
   if (!_adminSecret) {
     return (
-      <div style={{ padding: "24px 32px", maxWidth: 1400 }}>
+      <div>
         <div
           style={{ ...cardStyle, textAlign: "center", padding: "60px 20px" }}
         >
@@ -142,7 +142,7 @@ export default function AdminHealthPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: "24px 32px", maxWidth: 1400 }}>
+      <div>
         <div
           style={{
             ...cardStyle,
@@ -166,7 +166,7 @@ export default function AdminHealthPage() {
   );
 
   return (
-    <div style={{ padding: "24px 32px", maxWidth: 1400 }}>
+    <div>
       <div
         style={{
           display: "flex",
