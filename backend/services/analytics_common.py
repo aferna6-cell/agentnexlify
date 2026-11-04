@@ -41,6 +41,10 @@ def _set_cache(key: str, data: dict) -> None:
 
 
 def _period_to_days(period: str) -> int:
+    if period == "month":
+        now = datetime.now(timezone.utc)
+        start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        return max(1, (now.date() - start.date()).days + 1)
     mapping = {"7d": 7, "14d": 14, "30d": 30, "90d": 90}
     return mapping.get(period, 30)
 

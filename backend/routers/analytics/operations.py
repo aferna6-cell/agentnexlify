@@ -1,7 +1,6 @@
 """Operations analytics endpoints: response-times, missed-opportunities, missed-calls."""
 
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Query
 
@@ -13,10 +12,10 @@ from backend.routers.analytics._common import (
     _QUERY_LIMIT,
     _get_cached,
     _set_cache,
-    _period_to_days,
     _PRICING_KEYWORDS,
     logger,
 )
+from backend.services.tenant_activity import activity_window
 
 router = APIRouter()
 
@@ -29,14 +28,14 @@ router = APIRouter()
 @router.get("/{tenant_id}/response-times")
 async def get_response_time_analytics(
     tenant_id: str,
-    period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(month|7d|14d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     """Get response time analytics from the response_metrics table."""
     verify_tenant(claims, tenant_id)
 
-    days = {"7d": 7, "14d": 14, "30d": 30, "90d": 90}[period]
-    start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    start_dt, _end_dt, _prev = activity_window(period)
+    start = start_dt.isoformat()
 
     db = get_service_supabase()
     try:
@@ -93,7 +92,7 @@ async def get_response_time_analytics(
 @router.get("/{tenant_id}/missed-opportunities")
 async def get_missed_opportunities(
     tenant_id: str,
-    period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(month|7d|14d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     """Detect conversations that represent missed business opportunities.
@@ -110,9 +109,9 @@ async def get_missed_opportunities(
     if cached:
         return cached
 
-    days = _period_to_days(period)
-    now_iso = datetime.now(timezone.utc).isoformat()
-    start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    start_dt, end_dt, _prev = activity_window(period)
+    now_iso = end_dt.isoformat()
+    start = start_dt.isoformat()
     db = get_service_supabase()
 
     # --- Batch query 1: All chat messages in the period ---
@@ -260,7 +259,7 @@ async def get_missed_opportunities(
 @router.get("/{tenant_id}/missed-calls")
 async def get_missed_call_analytics(
     tenant_id: str,
-    period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(month|7d|14d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     """Per-day missed call analytics from activity_log."""
@@ -271,8 +270,8 @@ async def get_missed_call_analytics(
     if cached:
         return cached
 
-    days = {"7d": 7, "14d": 14, "30d": 30, "90d": 90}[period]
-    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    start_dt, _end_dt, _prev = activity_window(period)
+    since = start_dt.isoformat()
 
     db = get_service_supabase()
     try:

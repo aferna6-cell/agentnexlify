@@ -8,7 +8,7 @@ verbatim from the widget_chat route body; the route orchestrates the order:
     handoff-mode -> content-mode -> junk/greeting -> null-state ->
     turn-budget -> input-screen
 
-Do NOT add 'from __future__ import annotations' — breaks Pydantic on FastAPI.
+Do not enable postponed annotation evaluation here; it breaks Pydantic on FastAPI.
 """
 
 import logging
@@ -66,7 +66,7 @@ def check_handoff_mode(
             handoff_active = "handoff" in tags
     except Exception:
         logger.warning(
-            "handoff check failed for session %s", req.session_id, exc_info=True
+            "handoff check failed for tenant %s", tenant["id"], exc_info=True
         )
 
     if not handoff_active:
@@ -99,8 +99,8 @@ def check_handoff_mode(
                 )
     except Exception:
         logger.warning(
-            "Failed to fetch latest team reply for session %s",
-            req.session_id,
+            "Failed to fetch latest team reply for tenant %s",
+            tenant["id"],
             exc_info=True,
         )
 
@@ -218,9 +218,8 @@ def junk_or_greeting_shortcircuit(
         canned_junk = "Could you type out your question? I'm happy to help!"
         _save_chat_messages(tenant["id"], req.session_id, req.message, canned_junk)
         logger.info(
-            "widget_chat: junk_shortcircuit=True session=%s msg=%r (skipped Claude API)",
-            req.session_id,
-            stripped,
+            "widget_chat: junk_shortcircuit=True msg_len=%d (skipped Claude API)",
+            len(stripped),
         )
         return WidgetChatResponse(
             response=canned_junk,
@@ -239,8 +238,7 @@ def junk_or_greeting_shortcircuit(
             )
             _save_chat_messages(tenant["id"], req.session_id, req.message, opening)
             logger.info(
-                "widget_chat: greeting_shortcircuit=True session=%s first_turn=True (skipped Claude API)",
-                req.session_id,
+                "widget_chat: greeting_shortcircuit=True first_turn=True (skipped Claude API)"
             )
             return WidgetChatResponse(
                 response=opening,
@@ -265,8 +263,7 @@ def junk_or_greeting_shortcircuit(
             )
             _save_chat_messages(tenant["id"], req.session_id, req.message, canned)
             logger.info(
-                "widget_chat: greeting_shortcircuit=True session=%s (skipped Claude API)",
-                req.session_id,
+                "widget_chat: greeting_shortcircuit=True (skipped Claude API)"
             )
             return WidgetChatResponse(
                 response=canned,
@@ -335,8 +332,7 @@ def null_state_guard(
     )
     _save_chat_messages(tenant["id"], req.session_id, req.message, setup_msg)
     logger.info(
-        "widget_chat: null_state_guard session=%s tenant=%s (no KB, CI, business_type, or FAQs)",
-        req.session_id,
+        "widget_chat: null_state_guard tenant=%s (no KB, CI, business_type, or FAQs)",
         tenant["id"],
     )
     return WidgetChatResponse(
@@ -357,8 +353,7 @@ def turn_budget_guard(
         turn_budget_ok = check_turn_budget(req.session_id)
     except Exception:
         logger.warning(
-            "widget_chat: turn budget check failed session=%s — proceeding normally",
-            req.session_id,
+            "widget_chat: turn budget check failed — proceeding normally",
             exc_info=True,
         )
         turn_budget_ok = True
@@ -372,8 +367,7 @@ def turn_budget_guard(
     )
     _save_chat_messages(tenant["id"], req.session_id, req.message, turn_budget_text)
     logger.info(
-        "widget_chat: turn_budget_exceeded session=%s (skipped Claude API)",
-        req.session_id,
+        "widget_chat: turn_budget_exceeded (skipped Claude API)",
     )
     return WidgetChatResponse(
         response=turn_budget_text,
@@ -396,9 +390,7 @@ async def input_screen_guard(
         )
     except Exception:
         logger.warning(
-            "widget_chat: input guard raised unexpectedly session=%s — "
-            "proceeding normally",
-            req.session_id,
+            "widget_chat: input guard raised unexpectedly — proceeding normally",
             exc_info=True,
         )
         guard_result = {"allow": True, "reason": "guard_exception"}
@@ -413,8 +405,7 @@ async def input_screen_guard(
     )
     _save_chat_messages(tenant["id"], req.session_id, req.message, guard_blocked_text)
     logger.info(
-        "widget_chat: input_guard_blocked session=%s reason=%s (skipped Claude API)",
-        req.session_id,
+        "widget_chat: input_guard_blocked reason=%s (skipped Claude API)",
         guard_result.get("reason"),
     )
     return WidgetChatResponse(

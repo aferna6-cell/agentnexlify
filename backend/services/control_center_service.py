@@ -2,12 +2,11 @@
 
 import logging
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from backend.models.database import get_service_supabase as _get_service_supabase
 from backend.services.analytics_common import (
     _build_control_center_recommendations,
-    _period_to_days,
 )
 from backend.services.control_center_fetch import (
     fetch_appointments,
@@ -72,9 +71,10 @@ def empty_response(period: str) -> dict:
 
 def build_control_center_response(tenant_id: str, period: str) -> dict:
     """Aggregate the full control-center analytics payload."""
-    days = _period_to_days(period)
-    now = datetime.now(timezone.utc)
-    start = (now - timedelta(days=days)).isoformat()
+    from backend.services.tenant_activity import activity_window
+
+    start_dt, now, _prev = activity_window(period)
+    start = start_dt.isoformat()
     db = _get_db()
 
     all_messages = fetch_chat_messages(db, tenant_id, start)
