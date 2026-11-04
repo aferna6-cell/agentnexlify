@@ -7,6 +7,7 @@ import {
   Component,
 } from "react";
 import { useAuth } from "../context/AuthContext";
+import { replaceLoginWithDashboard } from "../utils/postLoginRedirect";
 import { fetchTrialStatus } from "../utils/api/dashboard";
 import { fetchOsPendingDeliverables } from "../utils/api/os";
 import DemoBanner from "./DemoBanner";
@@ -354,6 +355,16 @@ export default function App() {
       clearInterval(id);
     };
   }, [token, activePlan, user?.plan]);
+
+  // A session that lands on /login (fresh sign-in or a stored token) should
+  // show /dashboard in the address bar. replaceState drops /login from history.
+  useEffect(() => {
+    if (!user) return;
+    if (replaceLoginWithDashboard(window.history, window.location.pathname)) {
+      setCurrentPage(pageFromPath("/dashboard") || "agent_os");
+      setPageData(null);
+    }
+  }, [user]);
 
   // Sync page state with browser back/forward buttons
   useEffect(() => {

@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 
 import AgentRunFlowchart from "./AgentRunFlowchart";
@@ -97,7 +97,9 @@ describe("AgentRunFlowchart", () => {
       screen.getByText("Routing to the Operations agent"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Loaded business profile (businessName, ownerName, city)"),
+      screen.getByText(
+        "Loaded business profile (businessName, ownerName, city)",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -117,9 +119,57 @@ describe("AgentRunFlowchart", () => {
       />,
     );
     expect(
+      screen.queryByText(
+        "Routed to operations · 92% · claude-haiku-4-5-20251001",
+      ),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+    expect(
       screen.getByText(
         "Routed to operations · 92% · claude-haiku-4-5-20251001",
       ),
+    ).toBeInTheDocument();
+  });
+
+  it("hides mode and skill names until Details is opened", () => {
+    render(
+      <AgentRunFlowchart
+        run={{
+          agent_name: "Operations",
+          status: "succeeded",
+          thought_process: [
+            {
+              step: "select_skill",
+              description: "Operations → Booking skill",
+              status: "work",
+            },
+            {
+              step: "compose_message",
+              description: "mode=propose, slot=none provided",
+              status: "work",
+            },
+            {
+              step: "load_business_profile",
+              description: "Loaded business profile (businessName)",
+              status: "completed",
+            },
+          ],
+        }}
+      />,
+    );
+    expect(
+      screen.getByText("Loaded business profile (businessName)"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Operations → Booking skill"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("mode=propose, slot=none provided"),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+    expect(screen.getByText("Operations → Booking skill")).toBeInTheDocument();
+    expect(
+      screen.getByText("mode=propose, slot=none provided"),
     ).toBeInTheDocument();
   });
 

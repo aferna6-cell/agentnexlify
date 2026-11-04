@@ -2,7 +2,7 @@
 
 Contract:
 - Claude spend uses reserve_ai_tokens → call_claude_messages →
-  record_ai_usage (release on provider error or record failure).
+  record_ai_usage (release on provider error; record failure retains accounting debt).
   llm_runtime does not record.
 - Hard cap and missing/unloadable tenant policy block before the provider.
   The helper returns the existing Claude-error fallback SMS; it must not
@@ -37,7 +37,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from backend.routers import twilio_webhooks
 from backend.services import sms_agent
-from backend.services.ai_usage_guard import AIUsageReservation, record_ai_usage
+from backend.services.ai_usage_guard import AIUsageAccountingDebt, AIUsageReservation, record_ai_usage
 from backend.services.idempotency import (
     check_and_record,
     compare_and_set_response,
@@ -469,7 +469,7 @@ def test_purchased_usage_pack_is_honored_on_reserve():
     assert rpc_limit["hard"] == 1_800_000
 
 
-def test_record_ai_usage_releases_reservation_on_persist_failure():
+def test_record_ai_usage_retains_debt_on_persist_failure():
     reservation = _allowed()
     with (
         patch("backend.services.ai_usage_guard.get_service_supabase") as mock_supa,
@@ -483,11 +483,13 @@ def test_record_ai_usage_releases_reservation_on_persist_failure():
             session_id=_SESSION_ID,
             model="claude-sonnet-5",
         )
-    assert recorded is None
-    release.assert_called_once_with(reservation)
+    assert isinstance(recorded, AIUsageAccountingDebt)
+    assert recorded.reason == "record_rpc_failed"
+    assert recorded.alert_triggered is False
+    release.assert_not_called()
 
 
-def test_path_releases_when_record_rpc_fails_and_keeps_reply():
+def test_path_retains_debt_when_record_rpc_fails_and_keeps_reply():
     reservation = _allowed()
 
     def fail_record(**kwargs):
@@ -503,7 +505,7 @@ def test_path_releases_when_record_rpc_fails_and_keeps_reply():
             mock_supa.return_value.rpc.side_effect = RuntimeError("record rpc down")
             result = _invoke()
     assert result == _REPLY
-    release.assert_called_once_with(reservation)
+    release.assert_not_called()
 
 
 def test_two_distinct_inbound_messages_account_independently():
@@ -913,7 +915,7 @@ def test_provider_exception_releases_and_leaves_fallback_retryable(caplog):
     assert sends == [_FALLBACK, _FALLBACK]
 
 
-def test_record_persist_failure_still_sends_once_and_cleans_reservation():
+def test_record_persist_failure_still_sends_once_and_retains_debt():
     ledger = _IdempotencyLedger()
     db = _ComboDB(_base_tables(), ledger)
     reservation = _allowed()
@@ -945,7 +947,7 @@ def test_record_persist_failure_still_sends_once_and_cleans_reservation():
     assert sent is True
     assert replay is None
     assert replay_sent is None
-    release.assert_called_once_with(reservation)
+    release.assert_not_called()
     assert sends == [_REPLY]
 
 

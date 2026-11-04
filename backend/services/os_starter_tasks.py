@@ -188,7 +188,7 @@ def suggest_recurring_tasks(db: Any, client_id: str) -> list[dict[str, Any]]:
         suggestions.append(
             {
                 "label": "Weekly business summary",
-                "department": "operations",
+                "department": "accounting",
                 "interval_days": 7,
                 "prompt": (
                     "Prepare my weekly business summary: leads, bookings, "
