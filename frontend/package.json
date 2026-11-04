@@ -10,7 +10,7 @@
     "test:coverage": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reportsDirectory=coverage"
   },
   "dependencies": {
-    "dompurify": "^3.4.15",
+    "dompurify": "^3.4.17",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-helmet-async": "^2.0.5",
@@ -21,9 +21,13 @@
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@vitejs/plugin-react": "^6.1.1",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.12",
     "jsdom": "^30.0.1",
-    "vite": "^8.3.0",
-    "vitest": "^4.1.9"
+    "vite": "^8.3.5",
+    "vitest": "^4.1.12"
+  },
+  "overrides": {
+    "source-map-js": "^1.2.2",
+    "undici": "^8.12.3"
   }
 }
