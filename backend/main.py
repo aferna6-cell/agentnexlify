@@ -173,18 +173,10 @@ logger = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
-# --- Sentry (optional) ---
-if settings.sentry_dsn:
-    import sentry_sdk
-    from sentry_sdk.integrations.fastapi import FastApiIntegration
-    from sentry_sdk.integrations.starlette import StarletteIntegration
+# --- Sentry (optional; no-op unless SENTRY_DSN is set) ---
+from backend.services.sentry_scrub import init_sentry
 
-    sentry_sdk.init(
-        dsn=settings.sentry_dsn,
-        integrations=[StarletteIntegration(), FastApiIntegration()],
-        traces_sample_rate=0.1,
-        send_default_pii=False,
-    )
+init_sentry(settings.sentry_dsn)
 
 _startup_time: float = 0.0
 _LOCK_OWNER = f"{socket.gethostname()}:{os.getpid()}:{uuid.uuid4().hex}"
