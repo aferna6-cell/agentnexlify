@@ -1,10 +1,10 @@
 """Nightly off-site backup of the Supabase Postgres database.
 
 Railway runs this as its own cron service (root directory ops/db-backup).
-It dumps with pg_dump custom format at gzip level 6, optionally encrypts,
-uploads to R2 or B2, then deletes this job's objects older than the
-retention window. A failure sends one Resend email and exits non-zero.
-Previous uploads are kept when a later step fails.
+It dumps with pg_dump custom format at gzip level 6, encrypts with age
+(preferred) or AES-256-GCM, and uploads to R2 or B2. A missing encryption
+key is a hard failure. The job never deletes objects; retention is a
+bucket lifecycle rule. A failure sends one Resend email and exits non-zero.
 
 pg_dump is read-only. This file does not apply migrations or write to the
 source database. Nothing here talks to Railway or Supabase until an
@@ -34,12 +34,10 @@ from backup_common import (
     DatabaseTarget,
     backup_object_name,
     encrypt_backup_file,
-    encryption_mode,
-    keys_to_delete,
     normalize_prefix,
     parse_database_url,
-    parse_retention_days,
     redact,
+    require_encryption,
     run_pg_dump,
     sha256_file,
 )
@@ -50,10 +48,6 @@ RESEND_URL = "https://api.resend.com/emails"
 
 class BackupStore(Protocol):
     def upload(self, key: str, path: Path) -> None: ...
-
-    def list_keys(self, prefix: str) -> list[str]: ...
-
-    def delete(self, keys: list[str]) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -72,7 +66,6 @@ class BackupConfig:
     database_url_var: str
     s3: S3Settings
     prefix: str
-    retention_days: int
     age_recipient: str
     alert_email: str
     alert_from: str
@@ -92,7 +85,6 @@ class BackupConfig:
 class BackupResult:
     key: str
     byte_count: int
-    deleted: int
     sha256: str
     encryption: str
 
@@ -165,14 +157,15 @@ def load_config() -> BackupConfig:
         raise ConfigError("BACKUP_AGE_RECIPIENT must be an age public key (age1...)")
     if age_recipient and shutil.which("age") is None:
         raise ConfigError("BACKUP_AGE_RECIPIENT is set but the age binary is not installed")
+    encryption_key = _present("BACKUP_ENCRYPTION_KEY")
+    require_encryption(age_recipient, encryption_key)
     return BackupConfig(
         target=parse_database_url(database_url),
         database_url_var="BACKUP_DATABASE_URL" if backup_url else "DATABASE_URL",
         s3=s3_settings_from_env(),
         prefix=normalize_prefix(os.environ.get("BACKUP_S3_PREFIX")),
-        retention_days=parse_retention_days(os.environ.get("BACKUP_RETENTION_DAYS")),
         age_recipient=age_recipient,
-        encryption_key=_present("BACKUP_ENCRYPTION_KEY"),
+        encryption_key=encryption_key,
         alert_email=alert_email,
         alert_from=alert_from,
         resend_api_key=resend_api_key,
@@ -218,27 +211,6 @@ class S3BackupStore:
             ExtraArgs={"ContentType": "application/octet-stream"},
         )
 
-    def list_keys(self, prefix: str) -> list[str]:
-        paginator = self.client.get_paginator("list_objects_v2")
-        keys: list[str] = []
-        for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix):
-            for obj in page.get("Contents") or []:
-                key = obj.get("Key")
-                if key:
-                    keys.append(key)
-        return keys
-
-    def delete(self, keys: list[str]) -> None:
-        for start in range(0, len(keys), 1000):
-            chunk = keys[start : start + 1000]
-            response = self.client.delete_objects(
-                Bucket=self.bucket,
-                Delete={"Objects": [{"Key": key} for key in chunk], "Quiet": True},
-            )
-            errors = response.get("Errors") or []
-            if errors:
-                raise RuntimeError(f"failed to delete {len(errors)} expired backup(s)")
-
 
 def send_failure_alert(detail: str, *, api_key: str, to_email: str, from_address: str) -> None:
     safe_detail = redact(detail)[-4000:]
@@ -283,7 +255,7 @@ def run_backup(
     moment = now or datetime.now(timezone.utc)
     if store is None:
         store = S3BackupStore(make_s3_client(cfg.s3), cfg.bucket)
-    mode = encryption_mode(cfg.age_recipient, cfg.encryption_key)
+    mode = require_encryption(cfg.age_recipient, cfg.encryption_key)
     if cfg.age_recipient and cfg.encryption_key:
         print("BACKUP_AGE_RECIPIENT is set, so BACKUP_ENCRYPTION_KEY is not used", flush=True)
     try:
@@ -301,8 +273,7 @@ def run_backup(
     if version.stdout.strip():
         print(version.stdout.strip(), flush=True)
     print(
-        f"database_url_var={cfg.database_url_var} "
-        f"retention_days={cfg.retention_days} encryption={mode}",
+        f"database_url_var={cfg.database_url_var} encryption={mode}",
         flush=True,
     )
     work = Path(tempfile.mkdtemp(prefix="anx-backup-"))
@@ -317,23 +288,9 @@ def run_backup(
         )
         key = cfg.prefix + backup_object_name(moment, used_mode)
         store.upload(key, payload)
-        existing = store.list_keys(cfg.prefix)
-        doomed = [
-            item
-            for item in keys_to_delete(
-                existing,
-                prefix=cfg.prefix,
-                now=moment,
-                retention_days=cfg.retention_days,
-            )
-            if item != key
-        ]
-        if doomed:
-            store.delete(doomed)
         return BackupResult(
             key=key,
             byte_count=payload.stat().st_size,
-            deleted=len(doomed),
             sha256=sha256_file(payload),
             encryption=used_mode,
         )
@@ -384,7 +341,7 @@ def main() -> int:
     print(
         "backup complete "
         f"key={result.key} bytes={result.byte_count} sha256={result.sha256} "
-        f"deleted={result.deleted} encryption={result.encryption}"
+        f"encryption={result.encryption}"
     )
     return 0
 

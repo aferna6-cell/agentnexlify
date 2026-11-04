@@ -5,11 +5,15 @@ restorable daily backups and no point-in-time recovery. This job is the copy
 that can be restored.
 
 The job is a separate Railway cron service. It runs `pg_dump` in custom
-format with gzip compression level 6, optionally encrypts the archive, uploads
-it to Cloudflare R2 or Backblaze B2, and deletes this job's own objects once
-they are older than the retention window (14–30 days, default 21). On failure
-it sends one email through Resend and exits non-zero. Objects already in the
-bucket stay there when a later step fails.
+format with gzip compression level 6, encrypts the archive, and uploads it
+to Cloudflare R2 or Backblaze B2. Age is the encryption to use.
+`BACKUP_ENCRYPTION_KEY` is the other accepted key. If neither is set, the
+job raises `ConfigError` and does not dump or upload. On failure it sends
+one email through Resend and exits non-zero.
+
+The job never deletes objects. Keep backups for 14 to 30 days with a bucket
+lifecycle rule (21 days is the setting to use). The backup credential must
+not have delete permission.
 
 `pg_dump` only reads the source database. The script does not apply
 migrations. Merging this repository change does not create the Railway
@@ -42,7 +46,7 @@ After this pull request is merged to `main`:
    railway link
    railway cron run
    ```
-   `railway cron list` shows recent runs. A successful run exits 0 and prints `backup complete key=...`. The bucket then has an object under `supabase/` whose name starts with `agentnexlify-` and ends in `.dump`, `.dump.enc`, or `.dump.age`.
+   `railway cron list` shows recent runs. A successful run exits 0 and prints `backup complete key=...`. The bucket then has an object under `supabase/` whose name starts with `agentnexlify-` and ends in `.dump.enc` or `.dump.age`.
 
 The container uses the Postgres 17 client, which can dump Postgres 15 and 17. If Supabase moves to a newer major version, bump the `FROM` line in `ops/db-backup/Dockerfile` before the next dump.
 
@@ -84,11 +88,12 @@ Set these on the Railway service `postgres-backup`. Do not put the age private k
 |---|---|---|
 | `BACKUP_S3_REGION` | `auto` | Use `auto` for R2. For B2, set the region id in the endpoint, for example `us-west-004`. |
 | `BACKUP_S3_PREFIX` | `supabase/` | Key prefix. A missing trailing slash is added. `..` and a leading slash are rejected. |
-| `BACKUP_RETENTION_DAYS` | `21` | Integer from 14 through 30. Objects whose filename timestamp is that old, or older, are deleted. |
 | `BACKUP_S3_ADDRESSING_STYLE` | `path` | `path` or `virtual`. `path` works for R2 and B2. |
-| `BACKUP_AGE_RECIPIENT` | unset | age public key (`age1...`). Preferred encryption. When this is set, `BACKUP_ENCRYPTION_KEY` is ignored. |
-| `BACKUP_ENCRYPTION_KEY` | unset | Passphrase for AES-256-GCM. Used only when `BACKUP_AGE_RECIPIENT` is unset. Store the same value in the password manager. |
 | `ALERT_FROM_ADDRESS` | `AgentNexLiFy Alerts <noreply@agentnexlify.com>` | Resend From header. The address must be on a verified domain. |
+
+### Required: one encryption key
+
+Set `BACKUP_AGE_RECIPIENT` (age public key, `age1...`). That is the key to use. If it is unset, set `BACKUP_ENCRYPTION_KEY` (AES-256-GCM passphrase, also stored in the password manager). When both are set, age is used and the passphrase is ignored. When neither is set, the job exits before `pg_dump`.
 | `DATABASE_URL` | unset | Fallback only when `BACKUP_DATABASE_URL` is empty. Same port rules. |
 
 ### Not set on Railway
@@ -98,7 +103,27 @@ Set these on the Railway service `postgres-backup`. Do not put the age private k
 | age identity file (`age-keygen` output) | Password manager and the restore workstation. Passed to `restore.py --age-identity`. Never upload it to Railway, GitHub, or the bucket. |
 | `BACKUP_ALLOW_REMOTE_RESTORE=yes` | Restore workstation only, and only when the target is a scratch Supabase project. The script still refuses project `pxserpybmajixqrmzaly`. |
 
-Give the R2 token or B2 key object read, write, and delete on this bucket only. Turn on the bucket's own encryption if the provider offers it. Do not add a lifecycle rule that deletes the entire bucket. The script deletes only keys named `agentnexlify-YYYYMMDDTHHMMSSZ.dump` with an optional `.enc` or `.age` suffix under the prefix. A lifecycle rule scoped to the `supabase/` prefix at 30 days is an optional backstop.
+One of `BACKUP_AGE_RECIPIENT` or `BACKUP_ENCRYPTION_KEY` is required. The job refuses to start when both are empty, and it never uploads a plaintext `.dump`.
+
+## Retention and the bucket credential
+
+The cron process only calls `PutObject`. It does not call `DeleteObject` or `ListObjects`. Expire old archives with a lifecycle rule on the `supabase/` prefix. Use 21 days. Any value from 14 through 30 is acceptable. Do not attach a rule that expires the whole bucket with no prefix.
+
+The backup credential must not be allowed to delete objects. Lifecycle expiration is performed by the storage provider, not by this key.
+
+### Cloudflare R2
+
+1. Open the bucket → **Settings** → **Object lifecycle rules** → **Add rule**.
+2. Prefix: `supabase/`. Action: expire objects after 21 days.
+3. Create an API token that can `s3:PutObject`, `s3:CreateMultipartUpload`, `s3:UploadPart`, `s3:CompleteMultipartUpload`, and `s3:AbortMultipartUpload` on this bucket. Omit `s3:DeleteObject`. Do not use the **Admin Read & Write** preset; that preset can delete. A separate restore token may also have `s3:GetObject` and `s3:ListBucket`.
+4. Optional: enable Object Lock so a newly uploaded object cannot be removed before its retention date. The lifecycle rule still expires it when the rule says so.
+
+### Backblaze B2
+
+1. Bucket → **Lifecycle Settings**. Prefix `supabase/`. `daysFromUploadingToHiding` and `daysFromHidingToDeleting` should add up to the retention you want, with the uploaded file gone after 21 days. A simple setting is hide after 21 days and delete 1 day after hiding.
+2. Application key capabilities: `listBuckets`, `writeFiles`. Leave `deleteFiles` unchecked. A restore key may add `listFiles` and `readFiles`. Restrict the key to this bucket.
+
+Turn on the bucket's own server-side encryption if the provider offers it. That is in addition to age or AES-GCM.
 
 Generate an age key on a workstation (this is the option to use):
 
@@ -163,21 +188,19 @@ export BACKUP_S3_ADDRESSING_STYLE='path'
 
 Create the empty database first: `createdb restore_drill`. `restore.py` passes the database password to `pg_restore` through libpq's environment, not on the process command line.
 
-For a `.dump.enc` object, pass `--encryption-key "$BACKUP_ENCRYPTION_KEY"` and omit `--age-identity`. For an unencrypted `.dump`, omit both.
+For a `.dump.enc` object, pass `--encryption-key "$BACKUP_ENCRYPTION_KEY"` and omit `--age-identity`. A plaintext `.dump` is refused.
 
 `--schema public` is the right check for a production archive. A full restore into vanilla Postgres fails on Supabase-only extensions (`supabase_vault`, `pg_net`, and the rest). The archive itself is still a full database dump.
 
 ### 2. What the local test already proved
 
-`ops/db-backup/tests/test_restore_local.py` starts Postgres on `127.0.0.1`, writes two rows (including `café`), dumps with the same `pg_dump` flags the cron uses, and restores three ways: plain custom format, AES-GCM (`.dump.enc`), and age (`.dump.age`). It checks both rows after each restore.
+`tests/test_postgres_offsite_restore.py` starts Postgres on `127.0.0.1`, writes two rows (including `café`), dumps with the same `pg_dump` flags the cron uses, and restores AES-GCM (`.dump.enc`) and age (`.dump.age`). It checks both rows after each restore. `tests/test_postgres_offsite_backup.py` checks that a plaintext `.dump` is refused and that a target containing `pxserpybmajixqrmzaly` is refused before any socket or `pg_restore` call.
 
-Run it locally:
+PR Validation runs `pytest tests`, which collects both files. The workflow installs PostgreSQL and `age` first. Do not point the test at a Supabase URL.
 
 ```bash
-python3 -m pytest ops/db-backup/tests -q
+python3 -m pytest tests/test_postgres_offsite_backup.py tests/test_postgres_offsite_restore.py -q
 ```
-
-`pytest.ini` sets `testpaths = tests`, and CI calls `pytest backend/tests/ tests/`. This directory is not in either list. Do not point the test at a Supabase URL.
 
 ### 3. Confirm a production archive
 

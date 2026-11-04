@@ -12,7 +12,7 @@ import os
 import re
 import subprocess
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
@@ -29,7 +29,6 @@ TAG_LEN = 16
 KDF_ITERATIONS = 200_000
 CHUNK = 1024 * 1024
 PRODUCTION_PROJECT_REF = "pxserpybmajixqrmzaly"
-KEY_RE = re.compile(r"^agentnexlify-(\d{8}T\d{6}Z)\.dump(\.enc|\.age)?$")
 AGE_RECIPIENT_RE = re.compile(r"age1[0-9a-z]{20,}")
 
 
@@ -183,18 +182,6 @@ def run_pg_restore(
     _run_pg_tool(cmd, env, target.password, "pg_restore failed")
 
 
-def parse_retention_days(raw: str | None) -> int:
-    if raw is None or raw.strip() == "":
-        return 21
-    try:
-        days = int(raw.strip())
-    except ValueError:
-        raise ConfigError("BACKUP_RETENTION_DAYS must be an integer from 14 to 30") from None
-    if days < 14 or days > 30:
-        raise ConfigError("BACKUP_RETENTION_DAYS must be an integer from 14 to 30")
-    return days
-
-
 def normalize_prefix(raw: str | None) -> str:
     if raw is None or raw.strip() == "":
         return "supabase/"
@@ -217,31 +204,8 @@ def _as_utc(now: datetime) -> datetime:
 
 def backup_object_name(now: datetime, mode: str) -> str:
     stamp = _as_utc(now).strftime("%Y%m%dT%H%M%SZ")
-    suffix = {"": "", "none": "", "aes-gcm": ".enc", "age": ".age"}[mode]
+    suffix = {"aes-gcm": ".enc", "age": ".age"}[mode]
     return f"agentnexlify-{stamp}.dump{suffix}"
-
-
-def keys_to_delete(keys: list[str], *, prefix: str, now: datetime, retention_days: int) -> list[str]:
-    """Return our own objects at or past the retention window.
-
-    Matching is on the filename timestamp. Objects outside the prefix, nested
-    keys, and names this job did not create are left alone.
-    """
-    cutoff = _as_utc(now) - timedelta(days=retention_days)
-    doomed: list[str] = []
-    for key in keys:
-        if not key.startswith(prefix):
-            continue
-        name = key[len(prefix):]
-        if "/" in name:
-            continue
-        match = KEY_RE.fullmatch(name)
-        if not match:
-            continue
-        stamped = datetime.strptime(match.group(1), "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
-        if stamped <= cutoff:
-            doomed.append(key)
-    return doomed
 
 
 def _derive_key(passphrase: str, salt: bytes) -> bytes:
@@ -356,18 +320,20 @@ def run_age_decrypt(src: Path, dst: Path, identity: Path) -> None:
     os.chmod(dst, 0o600)
 
 
-def encryption_mode(age_recipient: str, encryption_key: str) -> str:
+def require_encryption(age_recipient: str, encryption_key: str) -> str:
+    """Age is preferred. A missing key is a hard stop, not a plaintext upload."""
     if age_recipient:
         return "age"
     if encryption_key:
         return "aes-gcm"
-    return "none"
+    raise ConfigError(
+        "Refusing to run without encryption. Set BACKUP_AGE_RECIPIENT "
+        "(preferred) or BACKUP_ENCRYPTION_KEY."
+    )
 
 
 def encrypt_backup_file(src: Path, *, age_recipient: str, encryption_key: str) -> tuple[Path, str]:
-    mode = encryption_mode(age_recipient, encryption_key)
-    if mode == "none":
-        return src, mode
+    mode = require_encryption(age_recipient, encryption_key)
     suffix = ".age" if mode == "age" else ".enc"
     dst = src.with_name(src.name + suffix)
     if mode == "age":
@@ -384,9 +350,10 @@ def encryption_kind(path: Path) -> str:
         return "age"
     if name.endswith(".dump.enc"):
         return "aes-gcm"
-    if name.endswith(".dump"):
-        return "none"
-    raise ConfigError("Backup filename must end in .dump, .dump.enc, or .dump.age")
+    raise ConfigError(
+        "Backup filename must end in .dump.enc or .dump.age. "
+        "Plaintext .dump archives are not restored."
+    )
 
 
 def assert_custom_dump(path: Path) -> None:

@@ -10,8 +10,8 @@ file can override the API service.
 Operator steps, environment variables, and restore commands:
 `docs/ops/postgres-offsite-backup.md`.
 
-Local restore test (starts Postgres on 127.0.0.1 only; not collected by CI):
+PR Validation collects the tests under `tests/`:
 
 ```bash
-python3 -m pytest ops/db-backup/tests -q
+python3 -m pytest tests/test_postgres_offsite_backup.py tests/test_postgres_offsite_restore.py -q
 ```

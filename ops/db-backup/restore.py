@@ -15,6 +15,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from backup_common import (
+    PRODUCTION_PROJECT_REF,
     ConfigError,
     assert_custom_dump,
     assert_restore_target_allowed,
@@ -46,8 +47,8 @@ def _download_s3(url: str, dest: Path) -> None:
 def _materialize(source: str, work: Path) -> Path:
     if source.startswith("s3://"):
         suffixes = "".join(Path(urlparse(source).path).suffixes)
-        if not suffixes:
-            raise ConfigError("S3 object name must end in .dump, .dump.enc, or .dump.age")
+        if suffixes not in {".dump.enc", ".dump.age"}:
+            raise ConfigError("S3 object name must end in .dump.enc or .dump.age")
         dest = work / f"download{suffixes}"
         _download_s3(source, dest)
         return dest
@@ -65,6 +66,12 @@ def perform_restore(
     age_identity: str,
     schemas: list[str],
 ) -> None:
+    # Refuse the production project before parsing, file I/O, or any socket.
+    if PRODUCTION_PROJECT_REF in target_url:
+        raise ConfigError(
+            "Refusing to restore into production Supabase project "
+            f"{PRODUCTION_PROJECT_REF}. Use a local Postgres or a new scratch project."
+        )
     target = parse_database_url(target_url, allow_pooler=True)
     assert_restore_target_allowed(target)
     require_dumpable(target)

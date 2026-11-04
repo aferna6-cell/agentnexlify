@@ -1,8 +1,7 @@
 """Dump and restore against a Postgres that this file starts on 127.0.0.1.
 
-These tests are outside pytest's default testpaths (`tests/` and the CI
-invocation of `backend/tests/`), so GitHub Actions does not collect them.
-They never open a Supabase host.
+PR Validation collects this file because it lives under tests/. The fixture
+starts its own server and never opens a Supabase host.
 """
 
 from __future__ import annotations
@@ -17,9 +16,11 @@ from pathlib import Path
 
 import pytest
 
-import backup_common
+ROOT = Path(__file__).resolve().parents[1] / "ops" / "db-backup"
+sys.path.insert(0, str(ROOT))
 
-ROOT = Path(__file__).resolve().parents[1]
+import backup_common  # noqa: E402
+
 pytestmark = pytest.mark.timeout(180)
 
 
@@ -43,7 +44,10 @@ def free_port() -> int:
 def postgres_server():
     bin_dir = postgres_bin_dir()
     if bin_dir is None:
-        pytest.skip("PostgreSQL server binaries are not installed")
+        message = "PostgreSQL server binaries are not installed"
+        if os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true":
+            pytest.fail(message)
+        pytest.skip(message)
     data = Path(tempfile.mkdtemp(prefix="anx-pgdata-"))
     sock_dir = Path(tempfile.mkdtemp(prefix="anx-pgsock-"))
     env = os.environ.copy()
@@ -219,26 +223,6 @@ def assert_restored(server, dbname: str) -> None:
     assert psql(server, dbname, "SELECT count(*) FROM backup_sentinel") == "2"
 
 
-def test_plain_dump_restores_into_local_postgres(postgres_server, source_dump, tmp_path):
-    createdb(postgres_server, "backup_dst_plain")
-    archive = tmp_path / "agentnexlify-20261104T073000Z.dump"
-    shutil.copy(source_dump, archive)
-    completed = run_restore(
-        postgres_server,
-        [
-            "--input",
-            str(archive),
-            "--target-url",
-            local_url(postgres_server, "backup_dst_plain"),
-            "--schema",
-            "public",
-        ],
-    )
-    assert completed.returncode == 0, completed.stderr + completed.stdout
-    assert "restore complete" in completed.stdout
-    assert_restored(postgres_server, "backup_dst_plain")
-
-
 def test_encrypted_dump_restores_into_local_postgres(postgres_server, source_dump, tmp_path):
     createdb(postgres_server, "backup_dst_enc")
     src = tmp_path / "agentnexlify-20261104T073100Z.dump"
@@ -259,6 +243,8 @@ def test_encrypted_dump_restores_into_local_postgres(postgres_server, source_dum
             local_url(postgres_server, "backup_dst_enc"),
             "--encryption-key",
             "test-passphrase",
+            "--schema",
+            "public",
         ],
     )
     assert completed.returncode == 0, completed.stderr + completed.stdout
@@ -267,7 +253,10 @@ def test_encrypted_dump_restores_into_local_postgres(postgres_server, source_dum
 
 def test_age_dump_restores_into_local_postgres(postgres_server, source_dump, tmp_path):
     if shutil.which("age-keygen") is None or shutil.which("age") is None:
-        pytest.skip("age is not installed")
+        message = "age is not installed"
+        if os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true":
+            pytest.fail(message)
+        pytest.skip(message)
     createdb(postgres_server, "backup_dst_age")
     identity = tmp_path / "backup-age.key"
     keygen = subprocess.run(

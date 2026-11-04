@@ -1,14 +1,23 @@
-"""Unit tests for the off-site backup. No network and no production database."""
+"""Unit tests for the off-site backup. No network and no production database.
 
-from datetime import datetime, timedelta, timezone
+PR Validation collects this file because it lives under tests/.
+"""
+
+import socket
+import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
 
-import backup
-import backup_common
-from backup_common import ConfigError
+BACKUP_ROOT = Path(__file__).resolve().parents[1] / "ops" / "db-backup"
+sys.path.insert(0, str(BACKUP_ROOT))
+
+import backup  # noqa: E402
+import backup_common  # noqa: E402
+import restore  # noqa: E402
+from backup_common import ConfigError  # noqa: E402
 
 NOW = datetime(2026, 11, 4, 7, 30, tzinfo=timezone.utc)
 PREFIX = "supabase/"
@@ -25,7 +34,6 @@ def apply_env(monkeypatch, **overrides):
         "BACKUP_S3_REGION",
         "BACKUP_S3_PREFIX",
         "BACKUP_S3_ADDRESSING_STYLE",
-        "BACKUP_RETENTION_DAYS",
         "BACKUP_AGE_RECIPIENT",
         "BACKUP_ENCRYPTION_KEY",
         "RESEND_API_KEY",
@@ -44,6 +52,7 @@ def apply_env(monkeypatch, **overrides):
         "BACKUP_S3_SECRET_ACCESS_KEY": "test-secret",
         "RESEND_API_KEY": "test-resend-key",
         "BACKUP_ALERT_EMAIL": "ops@example.com",
+        "BACKUP_ENCRYPTION_KEY": "test-passphrase",
     }
     values.update(overrides)
     for name, value in values.items():
@@ -57,49 +66,23 @@ def stamp(moment: datetime) -> str:
     return moment.strftime("%Y%m%dT%H%M%SZ")
 
 
-def test_retention_bounds():
-    assert backup_common.parse_retention_days(None) == 21
-    assert backup_common.parse_retention_days(" 14 ") == 14
-    assert backup_common.parse_retention_days("30") == 30
-    with pytest.raises(ConfigError, match="14 to 30"):
-        backup_common.parse_retention_days("13")
-    with pytest.raises(ConfigError, match="14 to 30"):
-        backup_common.parse_retention_days("31")
-    with pytest.raises(ConfigError, match="14 to 30"):
-        backup_common.parse_retention_days("nope")
+def test_encryption_is_mandatory():
+    with pytest.raises(ConfigError, match="BACKUP_AGE_RECIPIENT"):
+        backup_common.require_encryption("", "")
+    assert backup_common.require_encryption("age1qqqqqqqqqqqqqqqqqqqq", "") == "age"
+    assert backup_common.require_encryption("", "test-passphrase") == "aes-gcm"
+    assert backup_common.require_encryption("age1qqqqqqqqqqqqqqqqqqqq", "test-passphrase") == "age"
 
 
-def test_keys_to_delete_only_expired_backup_objects():
-    exactly_21 = PREFIX + f"agentnexlify-{stamp(NOW - timedelta(days=21))}.dump"
-    inside_21 = PREFIX + f"agentnexlify-{stamp(NOW - timedelta(days=20, seconds=1))}.dump.enc"
-    exactly_14 = PREFIX + f"agentnexlify-{stamp(NOW - timedelta(days=14))}.dump.age"
-    inside_14 = PREFIX + f"agentnexlify-{stamp(NOW - timedelta(days=13) + timedelta(seconds=1))}.dump"
-    keys = [
-        exactly_21,
-        inside_21,
-        exactly_14,
-        inside_14,
-        PREFIX + "readme.txt",
-        PREFIX + "nested/agentnexlify-20200101T000000Z.dump",
-        "other/agentnexlify-20200101T000000Z.dump",
-    ]
-    doomed = backup_common.keys_to_delete(keys, prefix=PREFIX, now=NOW, retention_days=21)
-    assert doomed == [exactly_21]
-    doomed_14 = backup_common.keys_to_delete(keys, prefix=PREFIX, now=NOW, retention_days=14)
-    assert exactly_14 in doomed_14
-    assert exactly_21 in doomed_14
-    assert inside_21 in doomed_14
-    assert inside_14 not in doomed_14
-
-
-def test_prefix_and_object_name():
+def test_object_names_are_encrypted():
     assert backup_common.normalize_prefix(None) == "supabase/"
     assert backup_common.normalize_prefix("nightly") == "nightly/"
     with pytest.raises(ConfigError):
         backup_common.normalize_prefix("../secrets/")
-    assert backup_common.backup_object_name(NOW, "none").endswith(".dump")
     assert backup_common.backup_object_name(NOW, "aes-gcm").endswith(".dump.enc")
     assert backup_common.backup_object_name(NOW, "age").endswith(".dump.age")
+    with pytest.raises(KeyError):
+        backup_common.backup_object_name(NOW, "none")
 
 
 def test_parse_url_rejects_transaction_pooler_and_prefers_session_fields():
@@ -165,7 +148,7 @@ def test_redact_strips_url_and_env_secrets(monkeypatch):
 
 
 def test_aes_roundtrip_and_wrong_key(tmp_path):
-    src = tmp_path / "plain.dump"
+    src = tmp_path / "plain.bin"
     src.write_bytes(b"PGDMP" + b"x" * (1024 * 1024 + 100))
     enc = tmp_path / "agentnexlify-20261104T073000Z.dump.enc"
     backup_common.encrypt_aes_file(src, enc, "test-passphrase")
@@ -193,8 +176,8 @@ def test_load_config_rules(monkeypatch):
     cfg = backup.load_config()
     assert cfg.database_url_var == "DATABASE_URL"
     assert cfg.target.host == "db.internal"
-    assert cfg.retention_days == 21
     assert cfg.prefix == "supabase/"
+    assert cfg.encryption_key == "test-passphrase"
 
     apply_env(
         monkeypatch,
@@ -214,8 +197,8 @@ def test_load_config_rules(monkeypatch):
     with pytest.raises(ConfigError, match="https"):
         backup.load_config()
 
-    apply_env(monkeypatch, BACKUP_RETENTION_DAYS="31")
-    with pytest.raises(ConfigError, match="14 to 30"):
+    apply_env(monkeypatch, BACKUP_ENCRYPTION_KEY=None, BACKUP_AGE_RECIPIENT=None)
+    with pytest.raises(ConfigError, match="without encryption"):
         backup.load_config()
 
     apply_env(monkeypatch, BACKUP_AGE_RECIPIENT="not-a-key")
@@ -254,21 +237,68 @@ def test_restore_guards_do_not_connect(monkeypatch):
         backup_common.assert_restore_target_allowed(local)
 
 
+def test_restore_refuses_production_project_before_any_connection(monkeypatch, capsys):
+    attempts = []
+
+    def boom(*_args, **_kwargs):
+        attempts.append("called")
+        raise AssertionError("connection attempted")
+
+    monkeypatch.setattr(backup_common.subprocess, "run", boom)
+    monkeypatch.setattr(socket, "create_connection", boom)
+    monkeypatch.setattr(socket.socket, "connect", boom)
+    monkeypatch.setenv("BACKUP_ALLOW_REMOTE_RESTORE", "yes")
+    urls = (
+        "postgresql://postgres.pxserpybmajixqrmzaly:pw@aws-0-us-east-1.pooler.supabase.com:5432/postgres",
+        "postgresql://postgres:pw@db.pxserpybmajixqrmzaly.supabase.co:5432/postgres",
+    )
+    for url in urls:
+        code = restore.main(
+            [
+                "--input",
+                "/no/such/agentnexlify.dump.enc",
+                "--target-url",
+                url,
+                "--encryption-key",
+                "test-passphrase",
+            ]
+        )
+        assert code == 1
+        err = capsys.readouterr().err
+        assert "pxserpybmajixqrmzaly" in err
+        assert "Backup file not found" not in err
+    assert attempts == []
+
+
+def test_plaintext_dump_is_not_restored(monkeypatch, tmp_path, capsys):
+    attempts = []
+
+    def boom(*_args, **_kwargs):
+        attempts.append("called")
+        raise AssertionError("pg_restore attempted")
+
+    monkeypatch.setattr(backup_common.subprocess, "run", boom)
+    archive = tmp_path / "agentnexlify-20261104T073000Z.dump"
+    archive.write_bytes(b"PGDMP")
+    code = restore.main(
+        [
+            "--input",
+            str(archive),
+            "--target-url",
+            "postgresql://postgres@127.0.0.1:5432/restore_drill?sslmode=disable",
+        ]
+    )
+    assert code == 1
+    assert "Plaintext" in capsys.readouterr().err
+    assert attempts == []
+
+
 class MemoryStore:
     def __init__(self):
         self.objects = {}
-        self.deleted = []
 
     def upload(self, key, path):
         self.objects[key] = Path(path).read_bytes()
-
-    def list_keys(self, prefix):
-        return [key for key in self.objects if key.startswith(prefix)]
-
-    def delete(self, keys):
-        self.deleted.extend(keys)
-        for key in keys:
-            self.objects.pop(key, None)
 
 
 def _cfg(monkeypatch, **overrides):
@@ -276,13 +306,18 @@ def _cfg(monkeypatch, **overrides):
     return backup.load_config()
 
 
-def test_run_backup_uploads_then_prunes(monkeypatch, tmp_path):
+def test_job_has_no_delete_api():
+    source = Path(backup.__file__).read_text(encoding="utf-8")
+    assert "delete_objects" not in source
+    assert "keys_to_delete" not in source
+    assert not hasattr(backup.S3BackupStore, "delete")
+
+
+def test_run_backup_uploads_without_deleting(monkeypatch):
     cfg = _cfg(monkeypatch)
     store = MemoryStore()
-    old = PREFIX + f"agentnexlify-{stamp(NOW - timedelta(days=30))}.dump"
-    kept = PREFIX + "readme.txt"
-    store.objects[old] = b"old"
-    store.objects[kept] = b"notes"
+    old = PREFIX + "agentnexlify-20200101T000000Z.dump.enc"
+    store.objects[old] = b"keep-me"
 
     def fake_dump(target, output, pg_dump_bin="pg_dump"):
         output.write_bytes(b"PGDMP-unit")
@@ -290,18 +325,16 @@ def test_run_backup_uploads_then_prunes(monkeypatch, tmp_path):
 
     monkeypatch.setattr(backup, "run_pg_dump", fake_dump)
     result = backup.run_backup(cfg, store=store, now=NOW, pg_dump_bin="pg_dump")
-    assert result.key == PREFIX + f"agentnexlify-{stamp(NOW)}.dump"
-    assert store.objects[result.key].startswith(b"PGDMP")
-    assert old in store.deleted
-    assert kept in store.objects
-    assert result.encryption == "none"
-    assert result.deleted == 1
+    assert result.key == PREFIX + f"agentnexlify-{stamp(NOW)}.dump.enc"
+    assert store.objects[result.key].startswith(b"ANX1")
+    assert store.objects[old] == b"keep-me"
+    assert result.encryption == "aes-gcm"
 
 
-def test_upload_failure_does_not_delete(monkeypatch):
+def test_upload_failure_leaves_existing_objects(monkeypatch):
     cfg = _cfg(monkeypatch)
     store = MemoryStore()
-    old = PREFIX + "agentnexlify-20200101T000000Z.dump"
+    old = PREFIX + "agentnexlify-20200101T000000Z.dump.enc"
     store.objects[old] = b"old"
 
     def fake_dump(target, output, pg_dump_bin="pg_dump"):
@@ -314,8 +347,8 @@ def test_upload_failure_does_not_delete(monkeypatch):
     store.upload = boom
     with pytest.raises(RuntimeError, match="s3 down"):
         backup.run_backup(cfg, store=store, now=NOW, pg_dump_bin="pg_dump")
-    assert old in store.objects
-    assert store.deleted == []
+    assert store.objects[old] == b"old"
+    assert len(store.objects) == 1
 
 
 def test_encrypted_backup_roundtrip_in_memory(monkeypatch):
