@@ -262,6 +262,7 @@ export const customerService = defineDepartment({
   routes_here_when: [
     "Owner is responding to an inbound customer question",
     "Owner is responding to a complaint or service issue",
+    "business-facts: services, products, hours, pricing, and about the business are answered from the knowledge base",
   ],
   strong_signals: ["respond to a complaint", "customer asked", "reply to"],
   // Customer Service owns talking to customers when the subject is the

@@ -17,7 +17,6 @@ endpoint never returns a 500 because of an absent column.
 """
 
 from collections import Counter
-from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Query
 
@@ -43,7 +42,7 @@ _TOP_INTENTS_LIMIT = 5
 @router.get("/{tenant_id}/front-desk-health")
 async def get_front_desk_health(
     tenant_id: str,
-    period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(month|7d|14d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     """Conversation health overview for the dashboard home card.
@@ -59,8 +58,10 @@ async def get_front_desk_health(
     if cached:
         return cached
 
-    days = {"7d": 7, "14d": 14, "30d": 30, "90d": 90}.get(period, 30)
-    start = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    from backend.services.tenant_activity import activity_window
+
+    start_dt, _end_dt, _prev = activity_window(period)
+    start = start_dt.isoformat()
     db = get_service_supabase()
 
     # One read of the conversations rows for the period. Selecting the optional

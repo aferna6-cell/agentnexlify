@@ -280,8 +280,8 @@ def test_generate_success(client, mock_supabase):
     with (
         patch("backend.routers.os_files.is_configured", return_value=True),
         patch("backend.routers.os_files.get_service_supabase", return_value=db),
-        patch.object(image_gen_module, "generate_image_png", return_value=fake_png),
-        patch("backend.routers.os_files.generate_image_png", return_value=fake_png),
+        patch.object(image_gen_module, "generate_image_png", new=AsyncMock(return_value=fake_png)),
+        patch("backend.routers.os_files.generate_image_png", new=AsyncMock(return_value=fake_png)),
     ):
         resp = client.post(
             _GEN_URL,

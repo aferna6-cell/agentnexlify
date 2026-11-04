@@ -2,7 +2,8 @@
  * Minimal HTTP server for agent-service.
  *
  * Routes:
- *   GET  /health             -> 200 {"status":"ok"}
+ *   GET  /health             -> 200 {"status":"ok","ai_live"}  (no reason)
+ *   GET  /ai-live            -> 200 {"ai_live","ai_live_reason"} when authorized
  *   POST /orchestrate        -> one Agent OS turn (result + persistable record)
  *   POST /actions/approve    -> execute an action the owner approved
  *   POST /agents/:name/run   -> RunResult JSON
@@ -21,6 +22,7 @@ import type { TenantToolPolicy } from './agent-os/actions/policy.ts';
 import type { CustomerNoteRecord } from './agent-os/actions/ports.ts';
 import { isTokenAuthorized } from './auth.ts';
 import type { SharedContext } from './agent-os/types/agent.ts';
+import { authedAiLiveBody, publicHealthBody, readAiLiveStatus } from './agent-os/lib/provider-status.ts';
 
 const PORT = parseInt(process.env.PORT ?? '3100', 10);
 
@@ -70,7 +72,27 @@ function parseAgentName(url: string): string | null {
 const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
   try {
     if (req.method === 'GET' && req.url === '/health') {
-      json(res, 200, { status: 'ok' });
+      let aiLive = false;
+      try {
+        aiLive = (await readAiLiveStatus()).ai_live;
+      } catch {
+        console.warn('agent-service health: ai live status failed');
+      }
+      json(res, 200, publicHealthBody({ ai_live: aiLive, ai_live_reason: 'ok' }));
+      return;
+    }
+
+    if (req.method === 'GET' && req.url === '/ai-live') {
+      if (!isAuthorized(req)) {
+        json(res, 401, { error: 'unauthorized' });
+        return;
+      }
+      try {
+        json(res, 200, authedAiLiveBody(await readAiLiveStatus()));
+      } catch {
+        console.warn('agent-service ai-live: status failed');
+        json(res, 200, { ai_live: false, ai_live_reason: 'provider_status_unknown' });
+      }
       return;
     }
 

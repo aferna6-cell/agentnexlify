@@ -8,6 +8,12 @@ from fastapi import APIRouter, Depends, Query
 
 from backend.dependencies import verify_tenant
 from backend.models.database import get_service_supabase
+from backend.services.ai_usage_guard import (
+    estimate_widget_chat_tokens,
+    record_ai_usage,
+    release_ai_token_reservation,
+    reserve_ai_tokens,
+)
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.tenant_scope import tenant_table
 from backend.dependencies import _get_current_tenant
@@ -127,7 +133,10 @@ async def get_ai_insights(
 
     # Get tenant info for AI context
     try:
-        tenant_result = tenant_table(db, "tenants", tenant_id).select("business_name, business_type").eq("id", tenant_id).limit(1).execute()
+        tenant_result = tenant_table(db, "tenants", tenant_id).select(
+            "id, business_name, business_type, plan, "
+            "ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit"
+        ).eq("id", tenant_id).limit(1).execute()
         tenant_info = tenant_result.data[0] if tenant_result.data else {}
     except Exception:
         tenant_info = {}
@@ -135,19 +144,13 @@ async def get_ai_insights(
     biz_name = tenant_info.get("business_name") or "Your Business"
     biz_type = tenant_info.get("business_type") or "local business"
 
-    # Generate AI analysis
+    # Generate AI analysis. Missing budget state or a denied reservation
+    # skips the provider and still returns the metrics payload.
     ai_analysis = ""
     if settings.anthropic_api_key:
         lead_change = metrics["new_leads"] - metrics.get("prev_leads", 0)
         change_text = f"{'up' if lead_change > 0 else 'down'} {abs(lead_change)} from last week" if lead_change != 0 else "same as last week"
-
-        try:
-            response = await call_claude_messages(
-                operation="analytics.ai_insights",
-                model="claude-haiku-4-5-20251001",
-                max_tokens=400,
-                timeout=30.0,
-                messages=[{"role": "user", "content": f"""You are a business intelligence analyst for a {biz_type} called "{biz_name}".
+        insight_messages = [{"role": "user", "content": f"""You are a business intelligence analyst for a {biz_type} called "{biz_name}".
 
 This week's metrics:
 - New leads: {metrics['new_leads']} ({change_text}), {metrics['hot_leads']} hot
@@ -159,12 +162,76 @@ This week's metrics:
 - Reviews: {metrics['reviews']} (avg {metrics['avg_rating']})
 - Pending action items: {metrics['pending_actions']}
 
-Write 3-4 bullet points: what's going well, what needs attention, one actionable recommendation. Be specific with numbers. Keep it under 200 words."""}],
-                metadata={"tenant_id": tenant_id, "business_type": biz_type, "new_leads": metrics['new_leads'], "conversations": metrics['conversations']},
+Write 3-4 bullet points: what's going well, what needs attention, one actionable recommendation. Be specific with numbers. Keep it under 200 words."""}]
+        policy_ready = isinstance(tenant_info, dict) and any(
+            key in tenant_info
+            for key in (
+                "plan",
+                "ai_monthly_token_hard_limit",
+                "ai_monthly_token_alert_threshold",
             )
-            ai_analysis = response.text if response.text else ""
-        except Exception:
-            logger.warning("AI insights generation failed for tenant %s", tenant_id, exc_info=True)
+        )
+        reservation = None
+        if not policy_ready:
+            logger.warning(
+                "analytics.ai_insights missing policy tenant=%s — failing closed before provider",
+                tenant_id,
+            )
+        else:
+            try:
+                reservation = reserve_ai_tokens(
+                    tenant={**tenant_info, "id": tenant_id},
+                    estimated_tokens=estimate_widget_chat_tokens(
+                        system_prompt="",
+                        messages=insight_messages,
+                        max_tokens=400,
+                    ),
+                    operation="analytics.ai_insights",
+                    session_id=tenant_id,
+                )
+            except Exception:
+                logger.warning(
+                    "analytics.ai_insights guard unavailable tenant=%s",
+                    tenant_id,
+                )
+                reservation = None
+        if reservation is not None and (
+            not reservation.allowed or reservation.reason == "guard_unavailable"
+        ):
+            logger.warning(
+                "analytics.ai_insights blocked tenant=%s reason=%s",
+                tenant_id,
+                reservation.reason or "hard_limit",
+            )
+            reservation = None
+        if reservation is not None:
+            try:
+                response = await call_claude_messages(
+                    operation="analytics.ai_insights",
+                    model="claude-haiku-4-5-20251001",
+                    max_tokens=400,
+                    timeout=30.0,
+                    messages=insight_messages,
+                    metadata={
+                        "tenant_id": tenant_id,
+                        "business_type": biz_type,
+                        "new_leads": metrics["new_leads"],
+                        "conversations": metrics["conversations"],
+                    },
+                )
+                ai_analysis = response.text if response.text else ""
+                record_ai_usage(
+                    reservation=reservation,
+                    result=response,
+                    operation="analytics.ai_insights",
+                    session_id=tenant_id,
+                    model="claude-haiku-4-5-20251001",
+                )
+            except Exception:
+                release_ai_token_reservation(reservation)
+                logger.warning(
+                    "AI insights generation failed for tenant %s", tenant_id
+                )
 
     result = {
         "metrics": metrics,

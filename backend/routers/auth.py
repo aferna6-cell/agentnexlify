@@ -54,6 +54,12 @@ from backend.services.referral import (
     apply_widget_referral_attribution,
     notify_referrer_of_signup,
 )
+from backend.services.tenant_activity import (
+    activity_window,
+    count_conversations,
+    exact_lead_count,
+    load_activity_rows,
+)
 from backend.services.task_utils import safe_create_task
 
 logger = logging.getLogger(__name__)
@@ -630,20 +636,13 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
             position=widget_defaults["position"],
         )
 
-    # Leads count (live schema uses client_id, not tenant_id)
-    try:
-        leads_result = (
-            db.table("leads")
-            .select("id", count="exact")
-            .eq("client_id", tenant_id)
-            .execute()
-        )
-        leads_count = leads_result.count or 0
-    except Exception:
-        logger.warning(
-            "Leads count query failed for tenant %s", tenant_id, exc_info=True
-        )
-        leads_count = 0
+    # Leads and conversations share tenant_activity with analytics and billing.
+    # Leads/opportunities/deals are the all-time stock (client_id).
+    # "Conversations this month" is distinct sessions in the UTC calendar month,
+    # not the unbounded conversations_used_this_month counter.
+    activity = load_activity_rows(db, tenant_id)
+    lead_total = exact_lead_count(db, tenant_id)
+    leads_count = lead_total if lead_total is not None else len(activity["leads"])
 
     # Hot leads count (live schema: lead_score is 1-10, hot = 8+)
     try:
@@ -675,26 +674,10 @@ async def dashboard(tenant_id: str, claims: dict = Depends(_get_current_tenant))
         logger.warning("FAQ count query failed for tenant %s", tenant_id, exc_info=True)
         faq_count = 0
 
-    # Count actual conversations from chat_messages (distinct session_ids).
-    # Supabase REST doesn't support COUNT(DISTINCT), so we fetch session_ids
-    # and deduplicate in Python.  Limit raised to 5000 to avoid under-counting
-    # tenants with many messages per session (88 sessions × ~6 msgs = ~528 rows).
-    conversations_used = t.get("conversations_used_this_month") or 0
-    try:
-        chat_sessions = (
-            db.table("chat_messages")
-            .select("session_id")
-            .eq("tenant_id", tenant_id)
-            .limit(5000)
-            .execute()
-        )
-        if chat_sessions.data:
-            unique_sessions = len({r["session_id"] for r in chat_sessions.data})
-            conversations_used = max(conversations_used, unique_sessions)
-    except Exception:
-        logger.warning(
-            "chat_messages count failed for tenant %s", tenant_id, exc_info=True
-        )
+    month_start, month_end, _prev = activity_window("month")
+    conversations_used = count_conversations(
+        activity["conversations"], activity["messages"], month_start, month_end
+    )
 
     # Missed calls this week
     missed_calls = 0
