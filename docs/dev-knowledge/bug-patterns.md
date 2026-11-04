@@ -18894,3 +18894,16 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Fix image generation timeouts and business-fact routing (#1012)
+
+Follow-up to #1011. Social image calls wait 120 seconds on the client and server, send IMAGE_GEN_QUALITY, and generate through httpx.AsyncClient. Business-fact questions short-circuit to customer service before Haiku.
+
+The Vercel app.agentnexlify check failed on the account build rate limit, not this diff. GitHub PR Validation passed.
+**Date:** 2026-11-04
+**Commit:** a3e13c5
+**Author:** aferna6-cell
+**Files Changed:** agent-service/src/agent-os/agents/_classifier.ts,agent-service/src/agent-os/agents/_department.ts,agent-service/src/agent-os/agents/_routing_semantics.test.ts,agent-service/src/agent-os/agents/departments.ts,backend/routers/os_files.py,backend/services/image_gen.py,backend/services/social_media_images.py,backend/tests/test_os_files.py,backend/tests/test_prod_incident_fixes.py,backend/tests/test_social_media_images.py,frontend/src/utils/api/_client.js,frontend/src/utils/api/social.imageTimeout.test.js,frontend/src/utils/api/social.js
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
