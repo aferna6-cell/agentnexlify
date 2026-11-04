@@ -158,6 +158,11 @@ class Settings(BaseSettings):
     cloudflare_account_id: str = ""
     cloudflare_api_token: str = ""
     voyage_api_key: str = ""
+    # Free-tier Voyage rejects a 64-chunk body (429) while a single input
+    # succeeds. Keep each request under this many tokens, and space requests
+    # at VOYAGE_RPM (default 3, the free-tier requests-per-minute cap).
+    voyage_max_tokens_per_request: int = 8000
+    voyage_rpm: int = 3
     openrouter_api_key: str = ""
 
     # Prospecting (specs: lead prospecting phase 5) — Google Places API (New)

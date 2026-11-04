@@ -8,6 +8,8 @@ Usage:
   python scripts/reindex_tenant_kb.py --client-id <uuid>
 
 Requires VOYAGE_API_KEY and the Supabase service credentials in the environment.
+Requests are token-batched (VOYAGE_MAX_TOKENS_PER_REQUEST, default 8000) and
+paced at VOYAGE_RPM (default 3). A 429 does not delete existing chunks.
 """
 
 import argparse

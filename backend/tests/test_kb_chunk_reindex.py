@@ -177,7 +177,7 @@ def test_embed_chunk_texts_batches_and_rejects_a_short_reply(monkeypatch):
     texts = [f"chunk {i}" for i in range(70)]
     vectors = asyncio.run(embed_chunk_texts(texts))
     assert len(vectors) == 70
-    assert len(calls) == 2 and len(calls[0]) == 64
+    assert calls == [texts]
     assert asyncio.run(embed_chunk_texts([])) == []
 
     async def _short(texts):
