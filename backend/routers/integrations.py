@@ -7,7 +7,9 @@ between the two based on which row is present.
 """
 
 import logging
+import re
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlencode, urlparse
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -19,6 +21,7 @@ from backend.config import settings
 from backend.dependencies import _get_current_tenant
 from backend.services import hubspot_tenant, m365_calendar
 from backend.services.google_calendar import (
+    build_redirect_uri,
     delete_integration,
     exchange_code,
     get_auth_url,
@@ -106,12 +109,121 @@ def _decode_state(state: str) -> dict:
         raise HTTPException(status_code=400, detail=detail) from exc
 
 
+_THREAD_ID = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+_ALLOWED_RETURN_PREFIXES = ("/dashboard/", "/settings/")
+
+
 def _safe_return_to(return_to: str | None) -> str | None:
-    """Only accept a relative dashboard path - never an absolute URL,
-    which would turn ``return_to`` into an open redirect."""
-    if return_to and return_to.startswith("/") and not return_to.startswith("//"):
-        return return_to
+    """Relative dashboard path only. Absolute and protocol-relative values
+    would turn ``return_to`` into an open redirect."""
+    if not return_to or not return_to.startswith("/") or return_to.startswith(("//", "/\\")):
+        return None
+    if any(token in return_to for token in ("\\", "://", "@")):
+        return None
+    lowered = return_to.lower()
+    if lowered.startswith("/%2f") or "%5c" in lowered or "%00" in lowered:
+        return None
+    path = return_to.split("?", 1)[0].split("#", 1)[0]
+    if not path.startswith(_ALLOWED_RETURN_PREFIXES):
+        return None
+    return return_to
+
+
+def _safe_thread_id(os_thread_id: str | None) -> str | None:
+    if os_thread_id and _THREAD_ID.fullmatch(os_thread_id):
+        return os_thread_id
     return None
+
+
+# Query keys the integrations page already reads for its result toast.
+_OAUTH_STATUS_PARAMS = {
+    "google_calendar": "google",
+    "m365_calendar": "m365",
+    "hubspot": "hubspot",
+}
+
+
+def _frontend_origin() -> str | None:
+    """Scheme + host of ``FRONTEND_URL``. Userinfo, paths, and other schemes
+    are rejected so a callback cannot be aimed at an arbitrary host."""
+    raw = (settings.frontend_url or "").strip()
+    if not raw:
+        return None
+    parsed = urlparse(raw)
+    host = parsed.hostname
+    if parsed.scheme not in {"http", "https"} or not host:
+        return None
+    if parsed.username or parsed.password:
+        return None
+    if any(char in host for char in "\\ \t\r\n"):
+        return None
+    port = f":{parsed.port}" if parsed.port else ""
+    return f"{parsed.scheme}://{host}{port}"
+
+
+def _frontend_redirect(path: str) -> str | None:
+    """Build a redirect on the frontend origin, or None if the result would
+    leave that host."""
+    origin = _frontend_origin()
+    if origin is None:
+        return None
+    if not path.startswith("/") or path.startswith(("//", "/\\")):
+        return None
+    url = f"{origin}{path}"
+    target = urlparse(url)
+    allowed = urlparse(origin)
+    if target.scheme != allowed.scheme or target.hostname != allowed.hostname:
+        return None
+    if target.port != allowed.port:
+        return None
+    return url
+
+
+def _dashboard_integrations_path(provider_key: str, outcome: str) -> str:
+    """Dashboard path after an OAuth callback.
+
+    ``/#integrations`` is the marketing home page (``/`` plus a hash). The
+    integrations screen is ``/dashboard/integrations``, which reads
+    ``google|m365|hubspot=connected|error``.
+    """
+    param = _OAUTH_STATUS_PARAMS[provider_key]
+    return f"/dashboard/integrations?{param}={outcome}"
+
+
+def _post_callback_path(
+    provider_key: str,
+    *,
+    outcome: str,
+    os_thread_id: str | None = None,
+    return_to: str | None = None,
+) -> str:
+    if outcome == "connected":
+        thread_id = _safe_thread_id(os_thread_id)
+        if thread_id:
+            query = urlencode({"thread": thread_id, "connected": provider_key})
+            return f"/dashboard/agent-os?{query}"
+        safe_return_to = _safe_return_to(return_to)
+        if safe_return_to:
+            return safe_return_to
+    return _dashboard_integrations_path(provider_key, outcome)
+
+
+def _oauth_error_response(
+    provider_key: str,
+    *,
+    status_code: int,
+    detail: str,
+):
+    """Send the browser to Integrations with an error indicator.
+
+    With no allowlisted frontend origin, keep the JSON error for non-browser callers.
+    """
+    url = _frontend_redirect(
+        _post_callback_path(provider_key, outcome="error")
+    )
+    if url:
+        return RedirectResponse(url=url)
+    raise HTTPException(status_code=status_code, detail=detail)
 
 
 def _oauth_success_response(
@@ -120,24 +232,23 @@ def _oauth_success_response(
     provider_label: str,
     os_thread_id: str | None,
     return_to: str | None,
-    fallback_hash: str,
 ):
     """Redirect (or, with no frontend configured, a static HTML page) after
     a successful OAuth connect. When the request carried an
     ``os_thread_id`` the owner lands back in that Agent OS chat thread with
     ``?connected=<provider>`` so the UI can post a "connected, resuming"
-    message; otherwise falls back to ``return_to`` or the provider's
-    historical ``#integrations`` hash redirect.
+    message; otherwise falls back to ``return_to`` or the integrations page
+    with a connected indicator. The host is always the frontend origin.
     """
-    if settings.frontend_url:
-        if os_thread_id:
-            url = (
-                f"{settings.frontend_url}/dashboard/agent-os"
-                f"?thread={os_thread_id}&connected={provider_key}"
-            )
-        else:
-            safe_return_to = _safe_return_to(return_to)
-            url = f"{settings.frontend_url}{safe_return_to or fallback_hash}"
+    url = _frontend_redirect(
+        _post_callback_path(
+            provider_key,
+            outcome="connected",
+            os_thread_id=os_thread_id,
+            return_to=return_to,
+        )
+    )
+    if url:
         return RedirectResponse(url=url)
 
     return HTMLResponse(
@@ -160,7 +271,8 @@ async def google_auth(
     ),
 ):
     """Generate Google OAuth authorization URL."""
-    if not (settings.google_client_id and settings.google_client_secret and settings.google_redirect_uri):
+    redirect_uri = build_redirect_uri()
+    if not (settings.google_client_id and settings.google_client_secret and redirect_uri):
         raise HTTPException(
             status_code=503,
             detail={
@@ -170,15 +282,15 @@ async def google_auth(
         )
     tenant_id: str = claims["tenant_id"]
     state = _encode_state(tenant_id, os_thread_id=os_thread_id)
-    redirect_uri = settings.google_redirect_uri
     auth_url = get_auth_url(redirect_uri, state)
     return {"auth_url": auth_url}
 
 
 @router.get("/google/callback")
 async def google_callback(
-    code: str = Query(..., description="Authorization code from Google"),
+    code: str | None = None,
     state: str = Query(..., description="Signed state token encoding tenant_id"),
+    error: str | None = None,
 ):
     """Handle Google OAuth callback.
 
@@ -186,21 +298,38 @@ async def google_callback(
     is public (no JWT) because the browser arrives via a redirect from
     Google, not from the SPA.
     """
-    state_claims = _decode_state(state)
+    try:
+        state_claims = _decode_state(state)
+    except HTTPException as exc:
+        return _oauth_error_response(
+            "google_calendar",
+            status_code=exc.status_code,
+            detail=str(exc.detail),
+        )
     tenant_id = state_claims["tenant_id"]
     os_thread_id = state_claims["os_thread_id"]
     return_to = state_claims["return_to"]
-    redirect_uri = settings.google_redirect_uri
+
+    if error or not code:
+        return _oauth_error_response(
+            "google_calendar",
+            status_code=400,
+            detail="Google authorization was not completed",
+        )
+
+    redirect_uri = build_redirect_uri()
 
     try:
         creds = exchange_code(code, redirect_uri)
-    except Exception as exc:
+    except Exception:
         logger.exception(
             "Failed to exchange Google OAuth code for tenant %s", tenant_id
         )
-        raise HTTPException(
-            status_code=400, detail="Failed to exchange authorization code"
-        ) from exc
+        return _oauth_error_response(
+            "google_calendar",
+            status_code=400,
+            detail="Failed to exchange authorization code",
+        )
 
     # Fetch calendar email for display
     metadata = {}
@@ -224,20 +353,21 @@ async def google_callback(
             token_expiry=creds.expiry.isoformat() if creds.expiry else "",
             metadata=metadata,
         )
-    except Exception as exc:
+    except Exception:
         logger.exception(
             "Failed to save Google Calendar integration for tenant %s", tenant_id
         )
-        raise HTTPException(
-            status_code=500, detail="Failed to save integration"
-        ) from exc
+        return _oauth_error_response(
+            "google_calendar",
+            status_code=500,
+            detail="Failed to save integration",
+        )
 
     return _oauth_success_response(
         provider_key="google_calendar",
         provider_label="Google Calendar",
         os_thread_id=os_thread_id,
         return_to=return_to,
-        fallback_hash="/#integrations",
     )
 
 
@@ -246,7 +376,7 @@ async def google_status(claims: dict = Depends(_get_current_tenant)):
     """Check whether the tenant has a connected Google Calendar integration."""
     tenant_id: str = claims["tenant_id"]
     platform_configured = bool(
-        settings.google_client_id and settings.google_client_secret and settings.google_redirect_uri
+        settings.google_client_id and settings.google_client_secret and build_redirect_uri()
     )
     integration = get_integration(tenant_id)
 
@@ -336,8 +466,9 @@ async def m365_auth(
 
 @router.get("/m365/callback")
 async def m365_callback(
-    code: str = Query(..., description="Authorization code from Microsoft"),
+    code: str | None = None,
     state: str = Query(..., description="Signed state token encoding tenant_id"),
+    error: str | None = None,
 ):
     """Handle Microsoft 365 OAuth callback.
 
@@ -345,26 +476,44 @@ async def m365_callback(
     Tenant identity is recovered from the signed ``state`` token, not from a
     session cookie or Authorization header.
     """
-    state_claims = _decode_state(state)
+    try:
+        state_claims = _decode_state(state)
+    except HTTPException as exc:
+        return _oauth_error_response(
+            "m365_calendar",
+            status_code=exc.status_code,
+            detail=str(exc.detail),
+        )
     tenant_id = state_claims["tenant_id"]
     os_thread_id = state_claims["os_thread_id"]
     return_to = state_claims["return_to"]
+
+    if error or not code:
+        return _oauth_error_response(
+            "m365_calendar",
+            status_code=400,
+            detail="Microsoft authorization was not completed",
+        )
+
     redirect_uri = settings.m365_redirect_uri
 
     try:
         tokens = m365_calendar.exchange_code(code, redirect_uri)
-    except Exception as exc:
+    except Exception:
         logger.exception("m365: code exchange failed for tenant %s", tenant_id)
-        raise HTTPException(
-            status_code=400, detail="Failed to exchange authorization code"
-        ) from exc
+        return _oauth_error_response(
+            "m365_calendar",
+            status_code=400,
+            detail="Failed to exchange authorization code",
+        )
 
     access_token = tokens.get("access_token") or ""
     refresh_token = tokens.get("refresh_token") or ""
     if not access_token or not refresh_token:
         # Without a refresh token we cannot keep the integration alive past
         # the access-token TTL (~1 hour) — refuse to persist a half-broken row.
-        raise HTTPException(
+        return _oauth_error_response(
+            "m365_calendar",
             status_code=400,
             detail="Authorization missing tokens — re-consent with offline_access scope",
         )
@@ -384,18 +533,19 @@ async def m365_callback(
             token_expiry=token_expiry,
             metadata=metadata,
         )
-    except Exception as exc:
+    except Exception:
         logger.exception("m365: save integration failed for tenant %s", tenant_id)
-        raise HTTPException(
-            status_code=500, detail="Failed to save integration"
-        ) from exc
+        return _oauth_error_response(
+            "m365_calendar",
+            status_code=500,
+            detail="Failed to save integration",
+        )
 
     return _oauth_success_response(
         provider_key="m365_calendar",
         provider_label="Microsoft 365",
         os_thread_id=os_thread_id,
         return_to=return_to,
-        fallback_hash="/#integrations",
     )
 
 
@@ -470,34 +620,53 @@ async def hubspot_auth(
 
 @router.get("/hubspot/callback")
 async def hubspot_callback(
-    code: str = Query(..., description="Authorization code from HubSpot"),
+    code: str | None = None,
     state: str = Query(..., description="Signed state token encoding tenant_id"),
+    error: str | None = None,
 ):
     """Handle HubSpot OAuth callback.
 
     Public route — browser arrives via redirect from HubSpot, not from the SPA.
     Tenant identity is recovered from the signed ``state`` token.
     """
-    state_claims = _decode_state(state)
+    try:
+        state_claims = _decode_state(state)
+    except HTTPException as exc:
+        return _oauth_error_response(
+            "hubspot",
+            status_code=exc.status_code,
+            detail=str(exc.detail),
+        )
     tenant_id = state_claims["tenant_id"]
     os_thread_id = state_claims["os_thread_id"]
     return_to = state_claims["return_to"]
+
+    if error or not code:
+        return _oauth_error_response(
+            "hubspot",
+            status_code=400,
+            detail="HubSpot authorization was not completed",
+        )
+
     redirect_uri = settings.hubspot_redirect_uri
 
     try:
         tokens = hubspot_tenant.exchange_code(code, redirect_uri)
-    except Exception as exc:
+    except Exception:
         logger.exception("hubspot: code exchange failed for tenant %s", tenant_id)
-        raise HTTPException(
-            status_code=400, detail="Failed to exchange authorization code"
-        ) from exc
+        return _oauth_error_response(
+            "hubspot",
+            status_code=400,
+            detail="Failed to exchange authorization code",
+        )
 
     access_token = tokens.get("access_token") or ""
     refresh_token = tokens.get("refresh_token") or ""
     if not access_token or not refresh_token:
         # HubSpot OAuth always returns both — missing refresh_token means we
         # cannot keep the integration alive past the ~30 min access TTL.
-        raise HTTPException(
+        return _oauth_error_response(
+            "hubspot",
             status_code=400,
             detail="Authorization missing tokens — retry the connect flow",
         )
@@ -517,18 +686,19 @@ async def hubspot_callback(
             token_expiry=token_expiry,
             metadata=metadata,
         )
-    except Exception as exc:
+    except Exception:
         logger.exception("hubspot: save integration failed for tenant %s", tenant_id)
-        raise HTTPException(
-            status_code=500, detail="Failed to save integration"
-        ) from exc
+        return _oauth_error_response(
+            "hubspot",
+            status_code=500,
+            detail="Failed to save integration",
+        )
 
     return _oauth_success_response(
         provider_key="hubspot",
         provider_label="HubSpot",
         os_thread_id=os_thread_id,
         return_to=return_to,
-        fallback_hash="/?hubspot=connected#integrations",
     )
 
 

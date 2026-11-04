@@ -20,6 +20,12 @@ from slowapi.errors import RateLimitExceeded
 from starlette.datastructures import Headers, MutableHeaders
 
 from backend.config import is_production, settings
+from backend.oauth_access_log import (
+    install_oauth_callback_log_redaction,
+    logged_http_target,
+    sentry_before_breadcrumb,
+    sentry_before_send,
+)
 from backend.limiter import limiter
 from backend import mcp_server
 from backend.routers import (
@@ -167,6 +173,7 @@ _handler = logging.StreamHandler()
 _handler.setFormatter(JsonFormatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
 logging.root.handlers = [_handler]
 logging.root.setLevel(logging.INFO)
+install_oauth_callback_log_redaction(_handler)
 logger = logging.getLogger(__name__)
 
 # Suppress noisy httpx request logs — Railway misparses them as errors
@@ -184,6 +191,12 @@ if settings.sentry_dsn:
         integrations=[StarletteIntegration(), FastApiIntegration()],
         traces_sample_rate=0.1,
         send_default_pii=False,
+        include_local_variables=False,
+        # OAuth scrub first. sentry_before_send then calls
+        # backend.services.sentry_scrub.scrub_sentry_event when that module
+        # exists, so this does not replace PR #977's scrubber.
+        before_send=sentry_before_send,
+        before_breadcrumb=sentry_before_breadcrumb,
     )
 
 _startup_time: float = 0.0
@@ -903,6 +916,12 @@ class RequestContextMiddleware:
 
         method = scope["method"]
         path = scope["path"]
+        raw_query = scope.get("query_string") or b""
+        if isinstance(raw_query, (bytes, bytearray)):
+            query_text = raw_query.decode("latin-1", errors="replace")
+        else:
+            query_text = str(raw_query)
+        logged_path = logged_http_target(path, query_text)
         start = time.time()
         status_code = 500
 
@@ -921,7 +940,7 @@ class RequestContextMiddleware:
             duration_ms = (time.time() - start) * 1000
             log_data = {
                 "method": method,
-                "path": path,
+                "path": logged_path,
                 "status_code": status_code,
                 "duration_ms": round(duration_ms, 1),
                 "request_id": request_id,
