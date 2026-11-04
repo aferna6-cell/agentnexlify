@@ -271,6 +271,49 @@ def test_restore_refuses_production_project_before_any_connection(monkeypatch, c
     assert attempts == []
 
 
+def test_restore_refuses_pooler_and_other_production_url_shapes(monkeypatch, capsys):
+    """Every published production URL shape is refused before a socket opens."""
+    attempts = []
+
+    def boom(*_args, **_kwargs):
+        attempts.append("called")
+        raise AssertionError("connection attempted")
+
+    monkeypatch.setattr(backup_common.subprocess, "run", boom)
+    monkeypatch.setattr(socket, "create_connection", boom)
+    monkeypatch.setattr(socket.socket, "connect", boom)
+    monkeypatch.setenv("BACKUP_ALLOW_REMOTE_RESTORE", "yes")
+    urls = (
+        # Transaction pooler, postgres scheme, project ref only in the username.
+        "postgres://postgres.pxserpybmajixqrmzaly@aws-0-us-east-1.pooler.supabase.com:6543/postgres",
+        # Same pooler with a password and the pgbouncer query flag.
+        "postgresql://postgres.pxserpybmajixqrmzaly:s3cret@aws-0-us-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true",
+        # Session pooler on 5432, another region, no password.
+        "postgres://postgres.pxserpybmajixqrmzaly@aws-1-eu-central-1.pooler.supabase.com:5432/postgres",
+        # Direct host. The ref is in the hostname, not the user.
+        "postgres://postgres:s3cret@db.pxserpybmajixqrmzaly.supabase.co/postgres",
+        # Shared pooler host; the ref is only the database name.
+        "postgresql://postgres:s3cret@aws-0-us-east-1.pooler.supabase.com:6543/pxserpybmajixqrmzaly",
+    )
+    for url in urls:
+        code = restore.main(
+            [
+                "--input",
+                "/no/such/agentnexlify.dump.enc",
+                "--target-url",
+                url,
+                "--encryption-key",
+                "test-passphrase",
+            ]
+        )
+        assert code == 1, url
+        err = capsys.readouterr().err
+        assert "pxserpybmajixqrmzaly" in err
+        assert "Backup file not found" not in err
+        assert "transaction pooler" not in err
+    assert attempts == []
+
+
 def test_plaintext_dump_is_not_restored(monkeypatch, tmp_path, capsys):
     attempts = []
 
