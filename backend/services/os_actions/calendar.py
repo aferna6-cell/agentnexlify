@@ -81,39 +81,72 @@ async def _extract_event_payload(deliverable_body: str, client_id: str) -> dict:
     return payload
 
 
+def _calendar_event_from_deliverable(deliverable: dict) -> dict | None:
+    """Structured event parked by the chat draft. Skips the Haiku extract.
+
+    Present only after the owner approves: ``_run`` is the approve handler.
+    Chat never calls Google while the deliverable is still pending.
+    """
+    event = (deliverable or {}).get("calendar_event")
+    if not isinstance(event, dict):
+        return None
+    summary = str(event.get("summary") or "").strip()
+    start_utc = event.get("start_utc")
+    if not summary or not start_utc:
+        return None
+    end_utc = event.get("end_utc")
+    if not end_utc:
+        try:
+            start_dt = datetime.fromisoformat(str(start_utc).replace("Z", "+00:00"))
+            end_utc = (start_dt + timedelta(minutes=60)).astimezone(timezone.utc).isoformat()
+        except Exception:
+            return None
+    return {
+        "summary": summary,
+        "start_utc": start_utc,
+        "end_utc": end_utc,
+        "attendee_email": event.get("attendee_email"),
+        "description": event.get("description"),
+    }
+
+
 async def _run(ctx: ActionContext) -> ActionResult:
     body = (ctx.deliverable.get("body") or "").strip()
-    if not body:
+    structured = _calendar_event_from_deliverable(ctx.deliverable)
+    if structured is None and not body:
         return ActionResult(
             status="failed",
             error_detail={"message": "deliverable has empty body"},
         )
 
-    try:
-        payload = await _extract_event_payload(body, ctx.client_id)
-    except Exception as e:
-        logger.warning(
-            "os_action_calendar: extraction failed client_id=%s deliverable_id=%s",
-            ctx.client_id,
-            ctx.deliverable_id,
-            exc_info=True,
-        )
-        return ActionResult(
-            status="failed",
-            error_detail={"stage": "extract", "message": str(e)[:300]},
-        )
+    if structured is not None:
+        payload = structured
+    else:
+        try:
+            payload = await _extract_event_payload(body, ctx.client_id)
+        except Exception as e:
+            logger.warning(
+                "os_action_calendar: extraction failed client_id=%s deliverable_id=%s",
+                ctx.client_id,
+                ctx.deliverable_id,
+                exc_info=True,
+            )
+            return ActionResult(
+                status="failed",
+                error_detail={"stage": "extract", "message": str(e)[:300]},
+            )
 
-    if "error" in payload:
-        return ActionResult(
-            status="failed",
-            error_detail={"stage": "extract", "message": payload["error"]},
-        )
+        if "error" in payload:
+            return ActionResult(
+                status="failed",
+                error_detail={"stage": "extract", "message": payload["error"]},
+            )
 
     summary = payload.get("summary") or "Booking"
     start_utc = payload.get("start_utc")
     end_utc = payload.get("end_utc")
     attendee_email = payload.get("attendee_email")
-    description = payload.get("description") or body[:500]
+    description = payload.get("description") or (body[:500] if body else None)
 
     if not start_utc:
         return ActionResult(

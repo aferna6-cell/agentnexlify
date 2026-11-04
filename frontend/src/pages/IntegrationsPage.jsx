@@ -111,14 +111,7 @@ function InstagramIcon({ size = 40 }) {
         stroke="#fff"
         strokeWidth="3"
       />
-      <circle
-        cx="24"
-        cy="24"
-        r="6"
-        fill="none"
-        stroke="#fff"
-        strokeWidth="3"
-      />
+      <circle cx="24" cy="24" r="6" fill="none" stroke="#fff" strokeWidth="3" />
       <circle cx="31.5" cy="16.5" r="2" fill="#fff" />
     </svg>
   );
@@ -152,8 +145,18 @@ function GmailIcon({ size = 40 }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path d="M4 12v22" stroke="#4285F4" strokeWidth="3" strokeLinecap="round" />
-      <path d="M44 12v22" stroke="#34A853" strokeWidth="3" strokeLinecap="round" />
+      <path
+        d="M4 12v22"
+        stroke="#4285F4"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M44 12v22"
+        stroke="#34A853"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -531,9 +534,7 @@ function InstagramSection({ token }) {
                 fontWeight: 600,
                 fontSize: "0.875rem",
                 cursor:
-                  connecting || !platformConfigured
-                    ? "not-allowed"
-                    : "pointer",
+                  connecting || !platformConfigured ? "not-allowed" : "pointer",
                 opacity: connecting || !platformConfigured ? 0.7 : 1,
                 transition: "opacity 0.15s",
               }}
@@ -644,6 +645,7 @@ function GoogleCalendarSection({ token }) {
   const [status, setStatus] = useState(null);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [error, setError] = useState(null);
 
   const loadStatus = useCallback(async () => {
@@ -673,9 +675,14 @@ function GoogleCalendarSection({ token }) {
   };
 
   const handleDisconnect = async () => {
+    if (!confirmDisconnect) {
+      setConfirmDisconnect(true);
+      return;
+    }
     setDisconnecting(true);
     try {
       await disconnectGoogleCalendar(user.tenantId, token);
+      setConfirmDisconnect(false);
       await loadStatus();
     } catch (err) {
       setError("Failed to disconnect.");
@@ -718,15 +725,46 @@ function GoogleCalendarSection({ token }) {
           {error}
         </div>
       )}
+      {connected && confirmDisconnect && (
+        <div
+          role="alertdialog"
+          aria-label="Disconnect Google Calendar"
+          style={{
+            marginTop: "0.75rem",
+            fontSize: "0.8125rem",
+            lineHeight: 1.45,
+            color: "var(--text-secondary)",
+          }}
+        >
+          Disconnect Google Calendar? This removes the stored connection. Chat
+          will not read or book on this account until you connect it again.
+        </div>
+      )}
       <div style={gcStyles.cardActions}>
         {connected ? (
-          <button
-            className="btn-danger"
-            onClick={handleDisconnect}
-            disabled={disconnecting}
-          >
-            {disconnecting ? "Disconnecting..." : "Disconnect"}
-          </button>
+          <>
+            <button
+              className="btn-danger"
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+            >
+              {disconnecting
+                ? "Disconnecting..."
+                : confirmDisconnect
+                  ? "Confirm disconnect?"
+                  : "Disconnect"}
+            </button>
+            {confirmDisconnect && (
+              <button
+                className="btn-secondary"
+                type="button"
+                onClick={() => setConfirmDisconnect(false)}
+                style={{ fontSize: "0.8125rem" }}
+              >
+                Cancel
+              </button>
+            )}
+          </>
         ) : (
           <button
             className="btn-primary"
@@ -924,8 +962,8 @@ function GmailSection({ token }) {
             )}
           </div>
           <div style={gcStyles.cardDesc}>
-            Let the Agent OS read and send email through your Gmail account
-            for outreach and inbound replies
+            Let the Agent OS read and send email through your Gmail account for
+            outreach and inbound replies
           </div>
         </div>
       </div>

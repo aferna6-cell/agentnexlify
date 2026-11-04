@@ -84,7 +84,23 @@ async def process_user_turn(
     # instant, token-free, never hallucinated. Scheduled/project prompts
     # (force_agent_id set) always take the engine path.
     if force_agent_id is None:
-        from backend.services import os_chat_projects, os_data_answers
+        from backend.services import os_calendar_chat, os_chat_projects, os_data_answers
+
+        # Before the BI fast path. "appointment" / "book" used to match the
+        # appointment-count template and answer with internal rows.
+        calendar_turn = await os_calendar_chat.try_calendar_turn(
+            db, client_id, thread_id, user_message_row
+        )
+        if calendar_turn is not None:
+            await _mirror_to_channel(
+                db, client_id, thread_id, calendar_turn["assistant_message"]
+            )
+            runs = calendar_turn.get("agent_runs") or []
+            if runs:
+                await _notify_pending_approval(
+                    db, client_id, runs[0], background_tasks
+                )
+            return calendar_turn
 
         data_answer = await os_data_answers.try_data_answer(
             db, client_id, thread_id, user_message_row
@@ -199,25 +215,7 @@ async def process_user_turn(
     # Owner notification when a draft is parked for approval — without it,
     # approvals rot until the owner happens to open the dashboard. Background
     # + best-effort: never adds latency to or breaks the turn.
-    if agent_run and agent_run.get("deliverable_status") == "pending_approval":
-        deliverable = agent_run.get("deliverable") or {}
-        if background_tasks is not None:
-            background_tasks.add_task(
-                os_approval_notify.notify_pending_approval,
-                db,
-                client_id,
-                agent_name=agent_run.get("agent_name") or "assistant",
-                channel=deliverable.get("channel"),
-                title=deliverable.get("title"),
-            )
-        else:
-            await os_approval_notify.notify_pending_approval(
-                db,
-                client_id,
-                agent_name=agent_run.get("agent_name") or "assistant",
-                channel=deliverable.get("channel"),
-                title=deliverable.get("title"),
-            )
+    await _notify_pending_approval(db, client_id, agent_run, background_tasks)
 
     # Platform-owner alert when the turn failed or abstained on a low-confidence
     # match. Background + best-effort, full transcript attached. Routine
@@ -273,6 +271,40 @@ async def process_user_turn(
         "clarify_between": persisted.get("clarify_between") or [],
         "decision_id": persisted.get("decision_id"),
     }
+
+
+async def _notify_pending_approval(
+    db, client_id: str, agent_run: dict | None, background_tasks: BackgroundTasks | None
+) -> None:
+    """Email the owner when a draft is parked. Best-effort; never breaks the turn."""
+    if not agent_run or agent_run.get("deliverable_status") != "pending_approval":
+        return
+    deliverable = agent_run.get("deliverable") or {}
+    agent_name = agent_run.get("agent_name") or "assistant"
+    channel = deliverable.get("channel")
+    title = deliverable.get("title")
+    try:
+        if background_tasks is not None:
+            background_tasks.add_task(
+                os_approval_notify.notify_pending_approval,
+                db,
+                client_id,
+                agent_name=agent_name,
+                channel=channel,
+                title=title,
+            )
+        else:
+            await os_approval_notify.notify_pending_approval(
+                db,
+                client_id,
+                agent_name=agent_name,
+                channel=channel,
+                title=title,
+            )
+    except Exception:
+        logger.warning(
+            "approval notify failed client_id=%s", client_id, exc_info=True
+        )
 
 
 async def _post_connect_prompt(
