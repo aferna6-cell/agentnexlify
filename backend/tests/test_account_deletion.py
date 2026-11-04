@@ -100,6 +100,124 @@ def test_stripe_failure_does_not_block_purge(monkeypatch):
     assert report.tenant_row_deleted is True
 
 
+def test_os_workflow_tables_are_purged_child_before_parent():
+    steps_at = TENANT_DATA_TABLES.index("os_workflow_steps")
+    workflows_at = TENANT_DATA_TABLES.index("os_workflows")
+    assert steps_at < workflows_at
+
+
+class _ScopedQuery:
+    def __init__(self, db, name):
+        self._db = db
+        self._name = name
+        self._filters = []
+        self._deleting = False
+
+    def select(self, *_a, **_k):
+        return self
+
+    def eq(self, column, value):
+        self._filters.append((column, value))
+        return self
+
+    def limit(self, *_a, **_k):
+        return self
+
+    def delete(self):
+        self._deleting = True
+        return self
+
+    def execute(self):
+        if self._name in self._db.fail_tables:
+            raise RuntimeError(f"boom on {self._name}")
+        rows = self._db.rows.setdefault(self._name, [])
+        if not self._deleting:
+            return _Result(list(rows))
+
+        def matches(row):
+            return all(row.get(column) == value for column, value in self._filters)
+
+        kept = []
+        removed = []
+        for row in rows:
+            if matches(row):
+                removed.append(row)
+            else:
+                kept.append(row)
+        self._db.rows[self._name] = kept
+        self._db.deleted.setdefault(self._name, []).extend(removed)
+        return _Result(removed)
+
+
+class _ScopedDB:
+    def __init__(self, rows, fail_tables=()):
+        self.rows = {name: list(table_rows) for name, table_rows in rows.items()}
+        self.fail_tables = set(fail_tables)
+        self.deleted = {}
+
+    def table(self, name):
+        return _ScopedQuery(self, name)
+
+
+def test_workflow_purge_removes_target_tenant_only():
+    db = _ScopedDB(
+        rows={
+            "tenants": [
+                {"id": "t1", "stripe_customer_id": None},
+                {"id": "t2", "stripe_customer_id": None},
+            ],
+            "os_workflow_steps": [
+                {"id": "s1", "client_id": "t1", "workflow_id": "w1"},
+                {"id": "s2", "client_id": "t2", "workflow_id": "w2"},
+            ],
+            "os_workflows": [
+                {"id": "w1", "client_id": "t1"},
+                {"id": "w2", "client_id": "t2"},
+            ],
+        }
+    )
+    report = delete_tenant_account(db, "t1")
+    assert "os_workflow_steps" not in report.tables_skipped
+    assert "os_workflows" not in report.tables_skipped
+    assert db.rows["os_workflow_steps"] == [
+        {"id": "s2", "client_id": "t2", "workflow_id": "w2"}
+    ]
+    assert db.rows["os_workflows"] == [{"id": "w2", "client_id": "t2"}]
+    assert db.rows["tenants"] == [{"id": "t2", "stripe_customer_id": None}]
+    removed_steps = [row["id"] for row in db.deleted["os_workflow_steps"]]
+    removed_workflows = [row["id"] for row in db.deleted["os_workflows"]]
+    assert removed_steps == ["s1"]
+    assert removed_workflows == ["w1"]
+    assert db.deleted["os_workflow_steps"]
+    # Child delete is recorded before the parent delete.
+    assert list(db.deleted).index("os_workflow_steps") < list(db.deleted).index(
+        "os_workflows"
+    )
+
+
+def test_workflow_table_failure_is_reported_and_rerun_is_safe():
+    db = _ScopedDB(
+        rows={
+            "tenants": [{"id": "t1", "stripe_customer_id": None}],
+            "os_workflow_steps": [{"id": "s1", "client_id": "t1"}],
+            "os_workflows": [{"id": "w1", "client_id": "t1"}],
+        },
+        fail_tables={"os_workflows"},
+    )
+    first = delete_tenant_account(db, "t1")
+    assert "os_workflows" in first.tables_skipped
+    assert "os_workflow_steps" not in first.tables_skipped
+    assert db.rows["os_workflow_steps"] == []
+    assert db.rows["os_workflows"] == [{"id": "w1", "client_id": "t1"}]
+    assert first.tenant_row_deleted is True
+
+    db.fail_tables.clear()
+    second = delete_tenant_account(db, "t1")
+    assert "os_workflows" not in second.tables_skipped
+    assert db.rows["os_workflows"] == []
+    assert second.tenant_row_deleted is False
+
+
 def test_table_list_covers_all_client_id_data_tables():
     """Every data-bearing client_id table from tenant_scope must be purged.
 

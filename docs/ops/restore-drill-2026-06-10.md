@@ -1,5 +1,7 @@
 # Restore Drill — 2026-06-10 (rubric 6.1)
 
+> Supabase project `pxserpybmajixqrmzaly` is on the Free plan, which has no restorable managed backups and no PITR. The nightly off-site dump is the artifact you can restore. Follow `docs/ops/postgres-offsite-backup.md`. The dashboard steps below apply only after the project is on a paid plan that includes backups.
+
 ## What was verified today (logical restore mechanics)
 
 Performed live against project `pxserpybmajixqrmzaly` via Supabase MCP:
