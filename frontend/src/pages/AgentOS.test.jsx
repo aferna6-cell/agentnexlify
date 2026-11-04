@@ -77,6 +77,9 @@ describe("AgentOS shell", () => {
     expect(
       screen.getByText(/What kind of business is this/),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText("Hand a task to your AI staff"),
+    ).toBeInTheDocument();
   });
 
   it("surfaces a load error when the thread fetch fails", async () => {
@@ -150,7 +153,7 @@ describe("AgentOS shell", () => {
       expect(screen.getByText("Task one")).toBeInTheDocument(),
     );
     fireEvent.change(
-      screen.getByPlaceholderText("Describe a task for the orchestrator..."),
+      screen.getByPlaceholderText("Describe a task for your AI staff..."),
       { target: { value: "do the thing" } },
     );
     fireEvent.click(screen.getByText("Send"));
@@ -168,7 +171,11 @@ describe("AgentOS shell", () => {
     orchestrateOsTurn.mockRejectedValueOnce(err);
     postOsMessage.mockResolvedValueOnce({
       user_message: { id: "u1", role: "user", content: "legacy path" },
-      assistant_message: { id: "a1", role: "assistant", content: "legacy reply" },
+      assistant_message: {
+        id: "a1",
+        role: "assistant",
+        content: "legacy reply",
+      },
       agent_runs: [],
     });
     render(<AgentOS />);
@@ -176,7 +183,7 @@ describe("AgentOS shell", () => {
       expect(screen.getByText("Task one")).toBeInTheDocument(),
     );
     fireEvent.change(
-      screen.getByPlaceholderText("Describe a task for the orchestrator..."),
+      screen.getByPlaceholderText("Describe a task for your AI staff..."),
       { target: { value: "legacy path" } },
     );
     fireEvent.click(screen.getByText("Send"));
@@ -203,7 +210,7 @@ describe("AgentOS shell", () => {
       expect(screen.getByText("Task one")).toBeInTheDocument(),
     );
     const composer = screen.getByPlaceholderText(
-      "Describe a task for the orchestrator...",
+      "Describe a task for your AI staff...",
     );
     fireEvent.change(composer, { target: { value: "via enter" } });
     fireEvent.keyDown(composer, { key: "Enter", shiftKey: false });
@@ -222,7 +229,7 @@ describe("AgentOS shell", () => {
       expect(screen.getByText("Task one")).toBeInTheDocument(),
     );
     fireEvent.change(
-      screen.getByPlaceholderText("Describe a task for the orchestrator..."),
+      screen.getByPlaceholderText("Describe a task for your AI staff..."),
       { target: { value: "overflow" } },
     );
     fireEvent.click(screen.getByText("Send"));
@@ -368,7 +375,10 @@ describe("AgentOS routing clarification", () => {
       },
       agent_runs: [],
       status: "needs_clarification",
-      clarify_between: [{ agent_id: "sales" }, { agent_id: "customer_service" }],
+      clarify_between: [
+        { agent_id: "sales" },
+        { agent_id: "customer_service" },
+      ],
       decision_id: "dec1",
     });
     render(<AgentOS />);
@@ -376,7 +386,7 @@ describe("AgentOS routing clarification", () => {
       expect(screen.getByText("Task one")).toBeInTheDocument(),
     );
     fireEvent.change(
-      screen.getByPlaceholderText("Describe a task for the orchestrator..."),
+      screen.getByPlaceholderText("Describe a task for your AI staff..."),
       { target: { value: "follow up with them" } },
     );
     fireEvent.click(screen.getByText("Send"));
@@ -396,7 +406,11 @@ describe("AgentOS routing clarification", () => {
     await sendAmbiguous();
     orchestrateOsTurn.mockResolvedValueOnce({
       user_message: { id: "u2", role: "user", content: "follow up with them" },
-      assistant_message: { id: "a2", role: "assistant", content: "On it, Sales here." },
+      assistant_message: {
+        id: "a2",
+        role: "assistant",
+        content: "On it, Sales here.",
+      },
       agent_runs: [],
       status: "routed",
     });
@@ -438,11 +452,33 @@ describe("AgentOS routing clarification", () => {
       expect(screen.getByText("Task one")).toBeInTheDocument(),
     );
     fireEvent.change(
-      screen.getByPlaceholderText("Describe a task for the orchestrator..."),
+      screen.getByPlaceholderText("Describe a task for your AI staff..."),
       { target: { value: "email the invoice" } },
     );
     fireEvent.click(screen.getByText("Send"));
     await waitFor(() => expect(screen.getByText("Done.")).toBeInTheDocument());
     expect(screen.queryByTestId("clarify-picker")).toBeNull();
+  });
+});
+
+describe("AgentOS offline banner", () => {
+  it("stays visible when the latest reply was not live AI", async () => {
+    listOsThreads.mockResolvedValueOnce([
+      { id: "t1", title: "Task one", created_at: NOW },
+    ]);
+    fetchOsThreadMessages.mockResolvedValueOnce({
+      messages: [
+        {
+          id: "m1",
+          role: "assistant",
+          content: "Heads up - I'm running in offline mode right now.",
+        },
+      ],
+      agent_runs: [],
+    });
+    render(<AgentOS />);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "AI generation is unavailable",
+    );
   });
 });

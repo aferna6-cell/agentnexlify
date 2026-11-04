@@ -19,6 +19,7 @@ import { createTraceEmitter } from "./_trace.ts";
 import { registry } from "./_registry.ts";
 import { classify, type Candidate } from "./_classifier.ts";
 import { readAskIntent } from "./_intent.ts";
+import { capabilitiesAnswer, isCapabilityAsk } from "./_capabilities.ts";
 import type { AgentOutput, StreamedTraceStep } from "../types/agent.ts";
 
 const CONFIDENCE_FLOOR = 0.5;
@@ -61,7 +62,7 @@ export type DecisionStatus = "routed" | "needs_clarification" | "wishlist_fallba
 
 export interface HandleResult {
   status: DecisionStatus;
-  classifier: "haiku" | "heuristic" | "ml";
+  classifier: "haiku" | "heuristic" | "ml" | "capability_shortcut";
   decisionId: string;
   runId?: string;
   agentId?: string;
@@ -87,6 +88,18 @@ export interface HandleOptions {
 }
 
 export async function handle(userId: string, ask: string, opts: HandleOptions = {}): Promise<HandleResult> {
+  // --- Direct answer: "what can you help me with?" is about the product.
+  // It is not a missed department, and the owner should never hear that it was filed away.
+  if (!opts.forceAgentId && isCapabilityAsk(ask)) {
+    const decision = await getRunStore().createRoutingDecision({
+      userId, ask, classifier: "capability_shortcut", decision: "direct_answer", chosenAgent: "orchestrator", confidence: 0,
+    });
+    return {
+      status: "direct_answer", classifier: "capability_shortcut", decisionId: decision.id, confidence: 0, alternates: [], params: {}, orchestratorNotes: [],
+      answer: capabilitiesAnswer(),
+    };
+  }
+
   // --- Direct answer: widget-activity questions the orchestrator answers itself
   // (no worker agent), per the product plan's "what came in through the widget?".
   if (!opts.forceAgentId && isWidgetQuery(ask)) {
@@ -101,7 +114,10 @@ export async function handle(userId: string, ask: string, opts: HandleOptions = 
   // --- Direct answer: a cross-department "weekly briefing" the orchestrator
   // aggregates from all 8 departments (v2 Decision 1). A department-specific
   // briefing ("the Sales briefing") falls through to normal routing.
-  if (!opts.forceAgentId && isAggregateBriefingQuery(ask)) {
+  // A scheduled task can force a department. A business summary must still
+  // come back as a summary: forcing Operations used to draft a customer
+  // appointment because the prompt mentions bookings.
+  if (isAggregateBriefingQuery(ask)) {
     const ctx = await loadSharedContext(userId);
     const answer = aggregateBriefing(ctx);
     const decision = await getRunStore().createRoutingDecision({
@@ -231,7 +247,7 @@ export async function handle(userId: string, ask: string, opts: HandleOptions = 
         alternates: [],
         params: cls.params,
         orchestratorNotes: [
-          "I couldn't confidently match that to one of your departments, so I saved it to your wishlist. Could you rephrase it, or tell me which department should handle it?",
+          "I couldn't match that to something I know how to do. Try rephrasing it, or tell me which part of the business it belongs to: sales, marketing, customers, scheduling, invoices, money, records, or hiring.",
         ],
       };
     }
@@ -242,7 +258,7 @@ export async function handle(userId: string, ask: string, opts: HandleOptions = 
       ? ` Other options I considered: ${otherAlts.map((a) => registry.get(a.agentId).display_name).join(" and ")}.`
       : "";
     res.orchestratorNotes = [
-      `I wasn't fully sure which department fits, so I saved it to your wishlist and ran the closest match, ${nearest}.${others} Pick another above if that's not right.`,
+      `I wasn't fully sure which part of the business this belongs to, so I used the closest match, ${nearest}.${others} Pick another above if that's not right.`,
       ...res.orchestratorNotes,
     ];
     return res;
@@ -396,7 +412,7 @@ async function runAndLog(
  */
 export function isAggregateBriefingQuery(ask: string): boolean {
   const a = ask.toLowerCase();
-  const wantsBriefing = /\b(weekly briefing|my briefing|briefing|recap|summary of (the )?(week|business)|how'?s business|what happened (this|last) week)\b/.test(a);
+  const wantsBriefing = /\b(weekly briefing|my briefing|briefing|recap|weekly business summary|daily business summary|business summary|summary of (the )?(week|business)|how'?s business|what happened (this|last) week)\b/.test(a);
   if (!wantsBriefing) return false;
   // If a specific department is named, let it route there instead.
   const dept = /\b(sales|marketing|customer service|operations|invoicing|collections|accounting|finance|admin|records|people|hr|hiring)\b/.test(a);

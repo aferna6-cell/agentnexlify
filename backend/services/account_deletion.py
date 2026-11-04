@@ -53,6 +53,11 @@ TENANT_DATA_TABLES: tuple[str, ...] = (
     "os_scheduled_tasks",
     "os_project_steps",
     "os_projects",
+    # Workflow steps reference os_workflows (ON DELETE CASCADE). Delete the
+    # child explicitly first so a parent-only purge cannot leave step payloads
+    # behind if the cascade is absent in an older environment.
+    "os_workflow_steps",
+    "os_workflows",
     # Communications + CRM
     "chat_messages",
     "conversations",
