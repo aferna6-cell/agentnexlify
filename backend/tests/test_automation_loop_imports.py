@@ -42,6 +42,7 @@ def test_loop_import_block_resolves():
         run_churn_watch,
         purge_photo_quote_images_30d,
     )
+    from backend.services.quiet_client_alert import run_quiet_client_alert  # noqa: F401
     from backend.services.weekly_funnel_report import send_weekly_funnel_report  # noqa: F401
     from backend.services.os_sync import run_due_syncs  # noqa: F401
     from backend.services.os_opportunities import run_opportunity_scan  # noqa: F401
