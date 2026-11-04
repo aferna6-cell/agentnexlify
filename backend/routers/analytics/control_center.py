@@ -16,7 +16,7 @@ router = APIRouter()
 async def get_agent_control_center(
     request: Request,
     tenant_id: str,
-    period: str = Query("30d", pattern="^(7d|14d|30d|90d)$"),
+    period: str = Query("30d", pattern="^(month|7d|14d|30d|90d)$"),
     claims: dict = Depends(_get_current_tenant),
 ):
     """Operational view of assistant performance across QA, recovery, and ROI."""
