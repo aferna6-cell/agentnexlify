@@ -250,15 +250,12 @@ def test_testing_refresh_skips_network_and_service_url_is_measured():
 
 
 def test_batch_client_strips_wrapped_key(monkeypatch):
-    from unittest.mock import patch
-
     from backend.config import settings
     from backend.services.batch_runtime import _client
 
     monkeypatch.setattr(settings, "anthropic_api_key", '  "sk-ant-batch" ')
-    with patch("backend.services.batch_runtime.anthropic.Anthropic") as client_cls:
-        _client()
-    assert client_cls.call_args.kwargs["api_key"] == "sk-ant-batch"
+    client = _client()
+    assert client.api_key == "sk-ant-batch"
 
 
 def test_llm_error_log_records_reason_not_secret(caplog):
