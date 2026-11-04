@@ -368,3 +368,30 @@ class TestGenerateImageEndpoint:
             )
         assert resp.status_code == 200
         assert resp.json()["url"] == fake_result["url"]
+
+
+def test_provider_401_becomes_image_gen_not_configured():
+    db, _bucket = _fake_storage_db()
+    with patch.object(images, "generate_image_png", side_effect=ImageGenError("no", status_code=401)):
+        try:
+            run(images.generate_post_image(db, tenant_id=_TENANT, prompt="x", platform="instagram"))
+            assert False, "expected SocialImageGenError"
+        except images.SocialImageGenError as exc:
+            assert str(exc) == "image_gen_not_configured"
+
+
+def test_generate_image_auth_failure_returns_not_configured_code():
+    client = _client()
+    try:
+        with patch(
+            "backend.routers.social_media.generate_post_image",
+            AsyncMock(side_effect=images.SocialImageGenError("image_gen_not_configured")),
+        ):
+            resp = client.post(
+                f"/api/v1/social/{_TENANT}/generate-image",
+                json={"prompt": "a coffee cup", "platform": "instagram"},
+            )
+        assert resp.status_code == 422, resp.text
+        assert resp.json()["detail"]["error"] == "image_gen_not_configured"
+    finally:
+        _teardown()
