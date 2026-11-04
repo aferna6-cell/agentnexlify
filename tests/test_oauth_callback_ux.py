@@ -13,7 +13,11 @@ import pytest
 from fastapi import HTTPException
 from uvicorn.logging import AccessFormatter
 
-from backend.oauth_access_log import install_oauth_callback_log_redaction, sentry_before_send
+from backend.oauth_access_log import (
+    install_oauth_callback_log_redaction,
+    sentry_before_breadcrumb,
+    sentry_before_send,
+)
 from backend.routers import integrations as integrations_router
 from backend.services import google_calendar
 
@@ -391,6 +395,144 @@ def test_sentry_callback_exception_event_has_no_code_or_state(provider, url_incl
     assert sent["request"]["query_string"] == ""
     assert sent["request"]["url"] == f"https://app.agentnexlify.com{path}"
     assert sent["exception"]["values"][0]["type"] == "RuntimeError"
+
+
+@pytest.mark.asyncio
+async def test_sentry_event_from_callback_handler_has_no_code_or_state(monkeypatch):
+    """Raise inside the callback while ``code`` and ``state`` are locals.
+
+    ``include_local_variables`` is left on so frame vars would leak without
+    the before_send hook. The event that the transport would send must not
+    contain those values, ``code=``, or ``state=``.
+    """
+    import sentry_sdk
+    from sentry_sdk.transport import Transport
+
+    secret_code = "oauth-code-SENTINEL-9f3a2c7b"
+    state = integrations_router._encode_state("tenant-9")
+
+    class _Capture(Transport):
+        def __init__(self, options=None):
+            super().__init__(options)
+            self.events = []
+
+        def capture_envelope(self, envelope):
+            event = envelope.get_event()
+            if event is not None:
+                self.events.append(event)
+
+    transport = _Capture()
+    sentry_sdk.init(
+        dsn="https://public@o0.ingest.sentry.io/1",
+        transport=transport,
+        before_send=sentry_before_send,
+        before_breadcrumb=sentry_before_breadcrumb,
+        include_local_variables=True,
+        send_default_pii=False,
+    )
+
+    def _exchange(code, redirect_uri):
+        raise RuntimeError(
+            "token exchange failed "
+            f"code={code}&state={state} "
+            f"https://app.agentnexlify.com/api/v1/integrations/google/callback"
+            f"?code={code}&state={state}"
+        )
+
+    monkeypatch.setattr(integrations_router, "exchange_code", _exchange)
+    monkeypatch.setattr(integrations_router.settings, "frontend_url", _FRONTEND)
+    try:
+        await integrations_router.google_callback(code=secret_code, state=state)
+        sentry_sdk.flush(timeout=2)
+    finally:
+        sentry_sdk.init()
+
+    assert transport.events, "callback exception was not sent to Sentry"
+    blob = json.dumps(transport.events)
+    assert secret_code not in blob
+    assert state not in blob
+    assert "code=" not in blob
+    assert "state=" not in blob
+
+
+def test_sentry_before_send_chains_pii_scrubber(monkeypatch):
+    import sys
+    import types
+
+    module = types.ModuleType("backend.services.sentry_scrub")
+    seen = {}
+
+    def scrub_sentry_event(event, _hint):
+        seen["event"] = event
+        event["tags"] = {"pii_scrubber": "kept"}
+        return event
+
+    def scrub_sentry_breadcrumb(crumb, _hint):
+        seen["crumb"] = crumb
+        crumb["data"] = {"pii_scrubber": "kept"}
+        return crumb
+
+    module.scrub_sentry_event = scrub_sentry_event
+    module.scrub_sentry_breadcrumb = scrub_sentry_breadcrumb
+    previous = sys.modules.get("backend.services.sentry_scrub")
+    sys.modules["backend.services.sentry_scrub"] = module
+    try:
+        event = {
+            "exception": {
+                "values": [
+                    {
+                        "type": "RuntimeError",
+                        "value": "code=oauth-code-SENTINEL-9f3a2c7b",
+                        "stacktrace": {
+                            "frames": [
+                                {
+                                    "function": "google_callback",
+                                    "vars": {
+                                        "code": "oauth-code-SENTINEL-9f3a2c7b",
+                                        "state": "oauth-state-SENTINEL-9f3a2c7b",
+                                    },
+                                }
+                            ]
+                        },
+                    }
+                ]
+            },
+            "breadcrumbs": {
+                "values": [
+                    {
+                        "message": (
+                            "https://app.agentnexlify.com/api/v1/integrations/google/callback"
+                            "?code=oauth-code-SENTINEL-9f3a2c7b&state=oauth-state-SENTINEL-9f3a2c7b"
+                        )
+                    }
+                ]
+            },
+            "request": {
+                "url": (
+                    "https://app.agentnexlify.com/api/v1/integrations/google/callback"
+                    "?code=oauth-code-SENTINEL-9f3a2c7b&state=oauth-state-SENTINEL-9f3a2c7b"
+                ),
+                "query_string": (
+                    "code=oauth-code-SENTINEL-9f3a2c7b&state=oauth-state-SENTINEL-9f3a2c7b"
+                ),
+            },
+        }
+        sent = sentry_before_send(event, {})
+        crumb = sentry_before_breadcrumb({"message": "code=oauth-code-SENTINEL-9f3a2c7b"}, {})
+    finally:
+        if previous is None:
+            sys.modules.pop("backend.services.sentry_scrub", None)
+        else:
+            sys.modules["backend.services.sentry_scrub"] = previous
+
+    blob = json.dumps({"event": sent, "crumb": crumb})
+    assert "oauth-code-SENTINEL-9f3a2c7b" not in blob
+    assert "oauth-state-SENTINEL-9f3a2c7b" not in blob
+    assert "code=" not in blob
+    assert "state=" not in blob
+    assert sent["tags"]["pii_scrubber"] == "kept"
+    assert crumb["data"]["pii_scrubber"] == "kept"
+    assert "vars" not in sent["exception"]["values"][0]["stacktrace"]["frames"][0]
 
 
 def test_sentry_before_send_leaves_other_requests_unchanged():

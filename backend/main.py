@@ -23,6 +23,7 @@ from backend.config import is_production, settings
 from backend.oauth_access_log import (
     install_oauth_callback_log_redaction,
     logged_http_target,
+    sentry_before_breadcrumb,
     sentry_before_send,
 )
 from backend.limiter import limiter
@@ -190,7 +191,12 @@ if settings.sentry_dsn:
         integrations=[StarletteIntegration(), FastApiIntegration()],
         traces_sample_rate=0.1,
         send_default_pii=False,
+        include_local_variables=False,
+        # OAuth scrub first. sentry_before_send then calls
+        # backend.services.sentry_scrub.scrub_sentry_event when that module
+        # exists, so this does not replace PR #977's scrubber.
         before_send=sentry_before_send,
+        before_breadcrumb=sentry_before_breadcrumb,
     )
 
 _startup_time: float = 0.0
