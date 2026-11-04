@@ -45,10 +45,49 @@ def test_healthz_readyz_and_version_are_registered():
     assert health_response.status_code == 200
     assert health_response.json()["status"] == "ok"
     assert ready_response.status_code == 200
-    assert ready_response.json()["status"] == "ready"
+    ready_body = ready_response.json()
+    assert ready_body["status"] == "ready"
+    optional = ready_body["checks"]["optional"]
+    assert isinstance(optional["ai_live"], bool)
+    assert "ai_live_reason" not in optional
+    assert "ai_live_ok" not in optional
+    assert "sk-" not in ready_response.text
     assert version_response.status_code == 200
     assert version_response.json()["service"] == "agentnexlify"
     assert version_response.json()["version"]
+
+
+def test_ai_live_reason_is_admin_only(monkeypatch):
+    """Public /health and /readyz expose the boolean. The reason requires admin."""
+    monkeypatch.setattr(
+        "backend.services.ai_live.current_ai_live",
+        lambda **_kwargs: {"ai_live": False, "ai_live_reason": "invalid_api_key"},
+    )
+    from backend.routers import admin_health
+
+    monkeypatch.setattr(admin_health.settings, "admin_api_secret_key", "x" * 32)
+    client = TestClient(app)
+
+    health = client.get("/api/health")
+    ready = client.get("/api/v1/readyz")
+    assert health.json()["checks"]["ai_live"] is False
+    assert ready.json()["checks"]["optional"]["ai_live"] is False
+    assert "invalid_api_key" not in health.text
+    assert "ai_live_reason" not in ready.text
+
+    denied = client.get(
+        "/api/v1/admin/ai-live",
+        headers={"x-api-secret": "y" * 32},
+    )
+    assert denied.status_code == 401
+    assert "invalid_api_key" not in denied.text
+
+    allowed = client.get(
+        "/api/v1/admin/ai-live",
+        headers={"x-api-secret": "x" * 32},
+    )
+    assert allowed.status_code == 200
+    assert allowed.json() == {"ai_live": False, "ai_live_reason": "invalid_api_key"}
 
 
 def test_version_metadata_prefers_explicit_release_env(monkeypatch):

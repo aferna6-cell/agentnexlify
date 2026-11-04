@@ -14,6 +14,7 @@
 
 import { getRunStore } from "./providers/run-store.ts";
 import { complete, isModelAvailable } from "./anthropic.ts";
+import { sanitizeProviderReason } from "./provider-status.ts";
 
 export type DraftSource = "model" | "local";
 
@@ -49,6 +50,7 @@ export async function generateDraft(opts: GenerateDraftOpts): Promise<GeneratedD
     return null;
   }
 
+  let fallbackReason = "no_api_key";
   if (isModelAvailable()) {
     try {
       const r = await complete({
@@ -59,15 +61,18 @@ export async function generateDraft(opts: GenerateDraftOpts): Promise<GeneratedD
         maxTokens: opts.maxTokens ?? 1024,
       });
       return { text: r.text, source: "model", model: r.model, costUsd: r.costUsd };
-    } catch {
-      // Real model failed. Fall back to local if we have one; else it's an outage.
+    } catch (err) {
+      // Real model failed (invalid key, retired model id, rate limit, or
+      // another provider error). Fall back to the local composer when one exists.
+      fallbackReason = sanitizeProviderReason(err);
+      console.warn(`draft provider failed; local composer reason=${fallbackReason}`);
       if (!opts.local) return null;
     }
   }
 
   if (opts.local) {
     const text = opts.local();
-    await logLocalCall(opts.runId, "local-composer", true);
+    await logLocalCall(opts.runId, "local-composer", true, `fallback_${fallbackReason}`);
     return { text, source: "local", model: "local-composer", costUsd: 0 };
   }
   return null;

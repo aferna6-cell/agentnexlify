@@ -271,6 +271,18 @@ def _cors_origins() -> list[str]:
     return origins
 
 
+
+def _public_ai_live() -> bool:
+    """Unauthenticated health bit. The reason stays on the admin route."""
+    try:
+        from backend.services.ai_live import current_ai_live
+
+        return bool(current_ai_live()["ai_live"])
+    except Exception:
+        logger.warning("health ai_live failed")
+        return False
+
+
 def _readiness_snapshot() -> dict:
     effective_jwt_secret = settings.jwt_secret_key or settings.api_secret_key
     effective_admin_secret = settings.admin_api_secret_key or settings.api_secret_key
@@ -288,8 +300,17 @@ def _readiness_snapshot() -> dict:
             }
         )
 
+    from backend.services.ai_live import current_ai_live, normalize_api_key
+
+    try:
+        live = current_ai_live()
+    except Exception:
+        logger.warning("readyz ai_live failed")
+        live = {"ai_live": False, "ai_live_reason": "provider_status_unknown"}
+    # Public readiness gets the boolean only. The reason is admin-only.
     optional_checks = {
-        "anthropic_configured": bool(settings.anthropic_api_key),
+        "anthropic_configured": bool(normalize_api_key(settings.anthropic_api_key)),
+        "ai_live": bool(live["ai_live"]),
         "resend_configured": bool(settings.resend_api_key),
         "sentry_configured": bool(settings.sentry_dsn),
         "widget_allowed_origins_explicit": _cors_origins() != ["*"],
@@ -1161,6 +1182,8 @@ async def health():
             # None = loop never ticked in this process (dead or TESTING);
             # a healthy loop keeps this under ~120s.
             "automation_tick_age_seconds": _automation_tick_age_seconds(),
+            # Boolean only. ai_live_reason is on GET /api/v1/admin/ai-live.
+            "ai_live": _public_ai_live(),
         },
     }
 

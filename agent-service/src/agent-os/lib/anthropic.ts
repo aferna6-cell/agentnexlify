@@ -12,6 +12,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getRunStore } from "./providers/run-store.ts";
 import { isCapExceeded } from "./usage.ts";
+import { normalizeApiKey, noteProviderResult, sanitizeProviderReason } from "./provider-status.ts";
 
 export type ModelPurpose = "routing" | "draft" | "other";
 
@@ -56,7 +57,7 @@ export class UsageCapExceededError extends Error {
 let client: Anthropic | null | undefined;
 function getClient(): Anthropic | null {
   if (client !== undefined) return client;
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = normalizeApiKey(process.env.ANTHROPIC_API_KEY);
   client = apiKey ? new Anthropic({ apiKey }) : null;
   return client;
 }
@@ -91,6 +92,7 @@ export async function complete(args: CompleteArgs): Promise<CompleteResult> {
   const anthropic = getClient();
 
   if (!anthropic) {
+    noteProviderResult(false, "no_api_key");
     await logCall({ runId: args.runId, purpose: args.purpose, model, inputTokens: 0, outputTokens: 0, costUsd: 0, ok: false, error: "no_api_key" });
     throw new ModelUnavailableError();
   }
@@ -98,6 +100,7 @@ export async function complete(args: CompleteArgs): Promise<CompleteResult> {
   // Hard daily cap (demo spend protection). When hit, refuse BEFORE calling
   // Anthropic so the agent falls back to the offline composer honestly.
   if ((args.purpose === "routing" || args.purpose === "draft") && (await isCapExceeded(args.purpose))) {
+    noteProviderResult(false, "usage_cap_exceeded");
     await logCall({ runId: args.runId, purpose: args.purpose, model, inputTokens: 0, outputTokens: 0, costUsd: 0, ok: false, error: "usage_cap_exceeded" });
     throw new UsageCapExceededError(args.purpose);
   }
@@ -116,11 +119,14 @@ export async function complete(args: CompleteArgs): Promise<CompleteResult> {
       .filter((b): b is Anthropic.TextBlock => b.type === "text")
       .map((b) => b.text)
       .join("");
+    noteProviderResult(true, "ok");
     await logCall({ runId: args.runId, purpose: args.purpose, model, inputTokens, outputTokens, costUsd, ok: true });
     return { text, model, inputTokens, outputTokens, costUsd };
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    await logCall({ runId: args.runId, purpose: args.purpose, model, inputTokens: 0, outputTokens: 0, costUsd: 0, ok: false, error: message });
+    const reason = sanitizeProviderReason(err);
+    noteProviderResult(false, reason);
+    console.warn(`anthropic complete failed purpose=${args.purpose} model=${model} reason=${reason}`);
+    await logCall({ runId: args.runId, purpose: args.purpose, model, inputTokens: 0, outputTokens: 0, costUsd: 0, ok: false, error: reason });
     throw err;
   }
 }
@@ -202,10 +208,12 @@ export async function completeWithWebSearch(args: WebSearchCompleteArgs): Promis
   const anthropic = getClient();
 
   if (!anthropic) {
+    noteProviderResult(false, "no_api_key");
     await logCall({ runId: args.runId, purpose: "draft", model, inputTokens: 0, outputTokens: 0, costUsd: 0, ok: false, error: "no_api_key" });
     throw new ModelUnavailableError();
   }
   if (await isCapExceeded("draft")) {
+    noteProviderResult(false, "usage_cap_exceeded");
     await logCall({ runId: args.runId, purpose: "draft", model, inputTokens: 0, outputTokens: 0, costUsd: 0, ok: false, error: "usage_cap_exceeded" });
     throw new UsageCapExceededError("draft");
   }
@@ -231,11 +239,14 @@ export async function completeWithWebSearch(args: WebSearchCompleteArgs): Promis
     const costUsd =
       estimateCostUsd(model, loop.inputTokens, loop.outputTokens) +
       (loop.webSearches / 1000) * WEB_SEARCH_USD_PER_1000;
+    noteProviderResult(true, "ok");
     await logCall({ runId: args.runId, purpose: "draft", model, inputTokens: loop.inputTokens, outputTokens: loop.outputTokens, costUsd, ok: true });
     return { text: loop.text, model, inputTokens: loop.inputTokens, outputTokens: loop.outputTokens, costUsd };
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    await logCall({ runId: args.runId, purpose: "draft", model, inputTokens: 0, outputTokens: 0, costUsd: 0, ok: false, error: message });
+    const reason = sanitizeProviderReason(err);
+    noteProviderResult(false, reason);
+    console.warn(`anthropic web search failed model=${model} reason=${reason}`);
+    await logCall({ runId: args.runId, purpose: "draft", model, inputTokens: 0, outputTokens: 0, costUsd: 0, ok: false, error: reason });
     throw err;
   }
 }
