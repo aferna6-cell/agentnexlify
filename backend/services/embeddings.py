@@ -204,7 +204,6 @@ async def _post_embeddings(client, key: str, texts: list[str], input_type: str) 
             continue
         response.raise_for_status()
         return response.json()
-    raise RuntimeError("Voyage retries ended without a response")
 
 
 def _prepare(text: str) -> str:

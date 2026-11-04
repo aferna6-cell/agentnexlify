@@ -225,6 +225,77 @@ class _Docs:
         return SimpleNamespace(data=[])
 
 
+def test_embed_batch_rejects_a_short_vector_list(monkeypatch):
+    client = _Client([_Response(200, [])])
+    _install(monkeypatch, client, [])
+    with pytest.raises(RuntimeError):
+        asyncio.run(embed_batch(["oil changes"]))
+
+
+def test_embed_batch_empty_inputs_do_not_call_voyage(monkeypatch):
+    client = _Client([])
+    _install(monkeypatch, client, [])
+    assert asyncio.run(embed_batch([])) == []
+    assert client.inputs == []
+
+
+def test_setting_parsers_and_retry_after_fallbacks(monkeypatch):
+    class _Odd:
+        voyage_rpm = None
+        voyage_max_tokens_per_request = True
+        voyage_api_key = "voy-test"
+
+    monkeypatch.setattr(emb, "settings", _Odd())
+    assert emb._int_setting("voyage_rpm", 3) == 3
+    assert emb._int_setting("voyage_max_tokens_per_request", 8000) == 8000
+
+    class _Text:
+        voyage_rpm = "12"
+        voyage_max_tokens_per_request = "nope"
+
+    monkeypatch.setattr(emb, "settings", _Text())
+    assert emb._int_setting("voyage_rpm", 3) == 12
+    assert emb._int_setting("voyage_max_tokens_per_request", 8000) == 8000
+
+    assert emb._retry_after_seconds(_Response(429, retry_after="soon")) is None
+    naive = emb._retry_after_seconds(_Response(429, retry_after="4 Nov 2026 18:00:00"))
+    assert naive is None or naive >= 0
+
+    monkeypatch.setenv("VOYAGE_RPM", "0")
+    monkeypatch.setattr(emb, "settings", _Limits())
+    limits = _Limits()
+    limits.voyage_rpm = 0
+    monkeypatch.setattr(emb, "settings", limits)
+    assert emb._pacing_enabled() is False
+
+    limits.voyage_rpm = 3
+    assert emb._pacing_enabled() is True
+
+    monkeypatch.delenv("VOYAGE_RPM", raising=False)
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    assert emb._pacing_enabled() is True
+
+
+def test_pace_skips_when_rpm_is_zero(monkeypatch):
+    sleeps = []
+
+    async def _record(seconds):
+        sleeps.append(seconds)
+
+    limits = _Limits()
+    limits.voyage_rpm = 0
+    monkeypatch.setattr(emb, "settings", limits)
+    monkeypatch.setattr(emb, "_pacing_enabled", lambda: True)
+    monkeypatch.setattr(emb, "_sleep", _record)
+    asyncio.run(emb._pace())
+    assert sleeps == []
+
+
+def test_real_sleep_waits_only_when_asked():
+    asyncio.run(emb._sleep(0))
+    asyncio.run(emb._sleep(0.001))
+
+
 def test_reindex_keeps_chunks_when_voyage_keeps_returning_429(monkeypatch):
     db = _Docs()
     sleeps = []
