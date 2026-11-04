@@ -203,3 +203,37 @@ def test_signup_stores_other_while_flag_off(monkeypatch, raw):
     )
     tenant_row = next(row for table, row in sink["inserts"] if table == "tenants")
     assert tenant_row["business_type"] == "other"
+
+
+def test_blank_business_type_stores_other():
+    from backend.services.business_type_storage import stored_business_type
+
+    assert stored_business_type(None) == "other"
+    assert stored_business_type("   ") == "other"
+
+
+def test_vertical_preset_hides_warehouse_until_enabled(monkeypatch):
+    from backend.services.vertical_presets import get_vertical_preset
+
+    _flag(monkeypatch, False)
+    assert get_vertical_preset("warehouse") is None
+    _flag(monkeypatch, True)
+    preset = get_vertical_preset("freight")
+    assert preset["services"][0] == "Pallet storage"
+
+
+def test_alias_of_non_token_stays_hidden_when_flag_off(monkeypatch):
+    import backend.services.vertical_presets as presets
+
+    _flag(monkeypatch, False)
+    monkeypatch.setitem(presets._ALIASES, "dock_yard", "warehouse_logistics")
+    assert presets.get_vertical_preset("dock_yard") is None
+
+
+def test_loader_alias_stays_generic_when_flag_off(monkeypatch):
+    import backend.services.vertical_preset_loader as loader
+
+    _flag(monkeypatch, False)
+    monkeypatch.setitem(loader._VERTICAL_ALIASES, "dock_yard", "warehouse")
+    preset = loader.load_vertical_preset("dock_yard")
+    assert preset.get("greeting") or preset.get("faqs") is not None
