@@ -22,6 +22,10 @@ const SUGGESTION_ALIASES = {
   tutoring: "professional_services",
   automotive: "auto_shop",
   auto_detailing: "auto_shop",
+  warehouse: "warehouse_logistics",
+  logistics: "warehouse_logistics",
+  freight: "warehouse_logistics",
+  fulfillment: "warehouse_logistics",
 };
 
 const SUGGESTIONS = {
@@ -36,7 +40,25 @@ const SUGGESTIONS = {
   restaurant: ["Dine In", "Takeout", "Delivery", "Catering", "Private Events"],
   professional_services: ["Consultation", "Custom Quote", "Monthly Service", "Project Work", "Audit"],
   retail: ["Product Questions", "Order Help", "Returns", "Store Hours", "Promotions"],
+  warehouse_logistics: ["Pallet Storage", "Dock Appointment", "Pick and Pack", "LTL Freight", "Cross-dock"],
   default: ["Consultation", "Custom Quote", "Emergency Service", "Maintenance", "Installation"],
+};
+
+const FAQ_SUGGESTIONS = {
+  warehouse_logistics: [
+    {
+      question: "How do I book a dock appointment?",
+      answer: "Send the carrier, trailer type, pallet count, and the window you want. We confirm a door time and the paperwork to bring.",
+    },
+    {
+      question: "How do you price storage and freight?",
+      answer: "Storage is based on pallet count and length of stay. Freight is based on the lane, weight, and whether you need LTL, truckload, or local cartage. We send the quote in writing.",
+    },
+    {
+      question: "What if freight arrives damaged?",
+      answer: "Note it on the delivery receipt before the driver leaves, then send photos and the BOL or PRO number so we can open a carrier claim.",
+    },
+  ],
 };
 
 function resolveSuggestionKey(businessType) {
@@ -52,7 +74,9 @@ export default function WizardStepServices({ wizardData, onNext, onBack }) {
     wizardData.faqs?.length ? wizardData.faqs : [{ question: "", answer: "" }]
   );
 
-  const suggestions = SUGGESTIONS[resolveSuggestionKey(wizardData.business_type)] || SUGGESTIONS.default;
+  const suggestionKey = resolveSuggestionKey(wizardData.business_type);
+  const suggestions = SUGGESTIONS[suggestionKey] || SUGGESTIONS.default;
+  const faqSuggestions = FAQ_SUGGESTIONS[suggestionKey] || [];
 
   function addService(name) {
     const trimmed = name.trim();
@@ -76,6 +100,17 @@ export default function WizardStepServices({ wizardData, onNext, onBack }) {
 
   function updateFaq(i, field, value) {
     setFaqs(f => f.map((faq, idx) => idx === i ? { ...faq, [field]: value } : faq));
+  }
+
+  function useFaqSuggestion(suggestion) {
+    setFaqs((current) => {
+      const emptyIndex = current.findIndex((faq) => !faq.question.trim() && !faq.answer.trim());
+      if (emptyIndex >= 0) {
+        return current.map((faq, idx) => (idx === emptyIndex ? suggestion : faq));
+      }
+      if (current.length >= 8) return current;
+      return [...current, suggestion];
+    });
   }
 
   function handleNext() {
@@ -128,6 +163,14 @@ export default function WizardStepServices({ wizardData, onNext, onBack }) {
       {/* FAQs */}
       <div>
         <div style={{ fontWeight: 600, marginBottom: 12 }}>Common customer questions <span style={{ color: "rgba(255,255,255,0.4)", fontWeight: 400, fontSize: "0.85rem" }}>(optional)</span></div>
+        {faqSuggestions.length > 0 && (
+          <div style={{ marginTop: 4, marginBottom: 12 }}>
+            <span style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.4)", marginRight: 8 }}>Suggested FAQs:</span>
+            {faqSuggestions.filter((suggestion) => !faqs.some((faq) => faq.question === suggestion.question)).map((suggestion) => (
+              <button key={suggestion.question} type="button" onClick={() => useFaqSuggestion(suggestion)} style={suggStyle}>{suggestion.question}</button>
+            ))}
+          </div>
+        )}
         {faqs.map((faq, i) => (
           <div key={i} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 16, marginBottom: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>

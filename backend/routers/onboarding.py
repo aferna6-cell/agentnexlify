@@ -112,6 +112,7 @@ class GenerateKbResponse(BaseModel):
 
 class AutoKbRequest(BaseModel):
     url: str = Field(..., min_length=5, max_length=500)
+    inferred_industry: str | None = Field(None, max_length=50)
 
 
 class AutoKbFaqEntry(BaseModel):
@@ -505,6 +506,10 @@ async def complete_onboarding(
     )
     if not tenant_result.data:
         raise HTTPException(status_code=404, detail="Tenant not found")
+
+    from backend.services.business_type_storage import business_type_for_wizard_write
+
+    req = req.model_copy(update={"business_type": business_type_for_wizard_write(req.business_type)})
 
     configured = {
         "business_info": False,
@@ -997,6 +1002,10 @@ async def auto_populate_kb(
         # Onboarding v2: fall back to vertical preset before giving up.
         from backend.services.vertical_presets import get_vertical_preset
         db = get_service_supabase()
+        if req.inferred_industry:
+            from backend.services.business_type_storage import apply_website_inferred_business_type
+
+            apply_website_inferred_business_type(db, tenant_id, req.inferred_industry)
         tenant_for_preset = db.table("tenants").select("business_type").eq("id", tenant_id).single().execute()
         bt = (tenant_for_preset.data or {}).get("business_type") if tenant_for_preset else None
         preset = get_vertical_preset(bt)
@@ -1030,6 +1039,10 @@ async def auto_populate_kb(
 
     # 3. Get tenant info for context
     db = get_service_supabase()
+    if req.inferred_industry:
+        from backend.services.business_type_storage import apply_website_inferred_business_type
+
+        apply_website_inferred_business_type(db, tenant_id, req.inferred_industry)
     tenant = db.table("tenants").select("business_name, business_type, city, phone").eq("id", tenant_id).single().execute()
     t = tenant.data or {}
 

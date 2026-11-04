@@ -140,7 +140,9 @@ def test_canonical_schema_log_accepts_prod_195_unprefixed_name():
         {"version": "20260902000000", "name": "199_os_workflows"},
         {"version": "20260902010000", "name": "200_os_workflows_integrity"},
     ]
-    findings = compare(docs, live, deferred=EXPLICIT_201, watch_from=195)
+    # 202_leads_pipeline_stage has no applied/unapplied marker.
+    # 203 and 204 ship unapplied, same as deferred 201.
+    findings = compare(docs, live, deferred=frozenset({201, 203, 204}), watch_from=195)
     assert findings == []
 
 
@@ -257,11 +259,11 @@ def test_redact_secrets_strips_urls_and_keys():
     assert "sk-live" not in cleaned
 
 
-def test_default_allowlist_is_201_only():
+def test_default_allowlist_is_deferred_unapplied_only():
     assert not hasattr(checker, "DEFAULT_DEFERRED")
     assert DEFAULT_WATCH_FROM == 195
     loaded = load_deferred_allowlist(REPO_ROOT / "ops" / "schema" / "deferred-migrations.json")
-    assert loaded == frozenset({201})
+    assert loaded == frozenset({201, 203, 204})
 
 
 def test_year_date_headings_are_not_migration_202():

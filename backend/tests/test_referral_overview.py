@@ -137,9 +137,9 @@ def _make_db(
 # ---------------------------------------------------------------------------
 
 # Tenant rows (id, business_name)
-_T1 = {"id": "t1", "business_name": "Acme Plumbing"}
-_T2 = {"id": "t2", "business_name": "Bright Dental"}
-_T3 = {"id": "t3", "business_name": "Green Lawn Care"}
+_T1 = {"id": "t1", "business_name": "Acme Plumbing", "referral_code": "acme1234"}
+_T2 = {"id": "t2", "business_name": "Bright Dental", "referral_code": "bright12"}
+_T3 = {"id": "t3", "business_name": "Green Lawn Care", "referral_code": "green1234"}
 
 # Widget config rows (tenant_id, api_key)
 _WC1 = {"tenant_id": "t1", "api_key": "anx_t1_key"}
@@ -185,7 +185,8 @@ class TestComputeReferralOverviewUnit:
         row = data["tenants"][0]
         assert row["tenant_id"] == "t1"
         assert row["business_name"] == "Acme Plumbing"
-        assert row["ref_code"] == "anx_t1_key"
+        assert row["ref_code"] == "acme1234"
+        assert not row["ref_code"].startswith("anx_")
         assert row["total_clicks"] == 0
         assert row["referred_signups"] == 0
 
@@ -303,15 +304,25 @@ class TestComputeReferralOverviewUnit:
 
     # --- No widget config edge case ---
 
-    def test_tenant_with_no_widget_config_gets_empty_ref_code(self):
-        # t1 has widget config; t2 does not
+    def test_missing_public_code_does_not_fall_back_to_widget_key(self):
+        bare = {"id": "t9", "business_name": "No Code"}
+        db = _make_db(
+            tenant_rows=[bare],
+            widget_config_rows=[{"tenant_id": "t9", "api_key": "anx_secret_key"}],
+        )
+        data = self._call(db)
+        row = data["tenants"][0]
+        assert row["ref_code"] == ""
+        assert "anx_" not in row["ref_code"]
+
+    def test_public_code_without_widget_config_is_still_returned(self):
         db = _make_db(
             tenant_rows=[_T1, _T2],
             widget_config_rows=[_WC1],  # no WC2
         )
         data = self._call(db)
         rows_by_tid = {r["tenant_id"]: r for r in data["tenants"]}
-        assert rows_by_tid["t2"]["ref_code"] == ""
+        assert rows_by_tid["t2"]["ref_code"] == "bright12"
         assert rows_by_tid["t2"]["total_clicks"] == 0
         assert rows_by_tid["t2"]["referred_signups"] == 0
 
