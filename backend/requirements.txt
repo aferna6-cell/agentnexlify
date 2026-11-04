@@ -54,5 +54,8 @@ qrcode[pil]>=8.2,<9
 # python-dateutil — relativedelta used in routers/invoices.py + automation/scheduled_jobs_ext.py
 # (lazy imports). Missing it 500s those paths. Audit 2026-06-23.
 python-dateutil>=2.8,<3
-pypdf==6.14.2
+# 6.14.2 matched the 14 resource-exhaustion advisories in #937. Later
+# advisories (GHSA-5849-834g-hvw5 and siblings) are fixed only in 6.21.4.
+# Do not float this pin.
+pypdf==6.21.4
 python-docx==1.1.2
