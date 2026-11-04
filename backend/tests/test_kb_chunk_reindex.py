@@ -10,12 +10,15 @@ from types import SimpleNamespace
 
 import pytest
 
+from backend.services.business_retrieval import CorpusChunk
 from backend.services.embeddings import EmbeddingUnavailable
 from backend.services.tenant_kb_index import (
+    KbIndexPersistError,
     embed_chunk_texts,
     index_after_compile,
     pack_text,
     reindex_tenant,
+    replace_chunks_for_tenant,
 )
 from backend.tests.conftest import _make_auth_token
 
@@ -220,8 +223,8 @@ def test_compile_index_stores_embeddings_and_fail_opens(monkeypatch):
 
     monkeypatch.setattr("backend.services.tenant_kb_index.embed_chunk_texts", _down)
     index_after_compile(TENANT)
-    assert db.deleted is True
     assert db.inserted and "embedding" not in db.inserted[0]
+    assert db.deleted is False
 
 
 class _Docs:
@@ -296,3 +299,167 @@ def test_reindex_endpoint_is_tenant_scoped(client, monkeypatch):
     monkeypatch.setattr("backend.services.tenant_kb_index.reindex_tenant", _bad)
     refused = client.post(f"/api/v1/kb/{TENANT}/reindex", headers=headers)
     assert refused.status_code == 422
+
+
+DOC = "22222222-2222-2222-2222-222222222222"
+OLD = "33333333-3333-3333-3333-333333333333"
+
+
+def _faq_chunk():
+    return CorpusChunk(
+        "faq-0",
+        DOC,
+        TENANT,
+        "Services",
+        "faq",
+        "We offer oil changes and brake jobs.",
+        "faq",
+        "FAQ",
+    )
+
+
+class _ChunkTable:
+    """Records insert vs delete. Insert can be told to fail."""
+
+    def __init__(self, fail_insert=False):
+        self.fail_insert = fail_insert
+        self.mode = ""
+        self.ops = []
+        self.inserted = []
+        self.deleted_ids = []
+        self.updates = []
+        self._pending = []
+
+    def table(self, name):
+        return self
+
+    def select(self, *args, **kwargs):
+        self.mode = "select"
+        return self
+
+    def eq(self, *args, **kwargs):
+        return self
+
+    def range(self, *args, **kwargs):
+        return self
+
+    def delete(self):
+        self.mode = "delete"
+        self.ops.append("delete")
+        return self
+
+    def in_(self, col, values):
+        if col == "id":
+            self.deleted_ids.extend(values)
+        return self
+
+    def update(self, values):
+        self.mode = "update"
+        self.updates.append(dict(values))
+        return self
+
+    def insert(self, rows):
+        self.mode = "insert"
+        self.ops.append("insert")
+        self._pending = rows
+        self.inserted.extend(rows)
+        return self
+
+    def execute(self):
+        if self.mode == "insert":
+            if self.fail_insert:
+                raise RuntimeError("insert failed")
+            return SimpleNamespace(data=[{"id": "new-id"}])
+        if self.mode == "select":
+            return SimpleNamespace(data=[{
+                "id": OLD,
+                "document_id": DOC,
+                "chunk_index": 0,
+            }])
+        return SimpleNamespace(data=[])
+
+
+def test_faq_chunk_id_is_stored_by_position_and_old_rows_survive_until_insert():
+    db = _ChunkTable()
+    written = replace_chunks_for_tenant(db, TENANT, [_faq_chunk()])
+    assert written == 1
+    assert db.inserted[0]["chunk_index"] != 0
+    assert db.ops.index("insert") < db.ops.index("delete")
+    assert db.deleted_ids == [OLD]
+    assert db.updates == [{"chunk_index": 0}]
+
+
+def test_insert_failure_does_not_delete_existing_chunks():
+    db = _ChunkTable(fail_insert=True)
+    with pytest.raises(KbIndexPersistError):
+        replace_chunks_for_tenant(db, TENANT, [_faq_chunk()])
+    assert "delete" not in db.ops
+    assert db.inserted[0]["chunk_index"] != 0
+
+
+def test_existing_chunk_pages_stop_when_the_client_cannot_page():
+    class _Wide:
+        def __init__(self):
+            self.mode = ""
+            self.selects = 0
+            self.deleted = []
+
+        def table(self, name):
+            return self
+
+        def select(self, *args, **kwargs):
+            self.mode = "select"
+            return self
+
+        def eq(self, *args, **kwargs):
+            return self
+
+        def insert(self, rows):
+            self.mode = "insert"
+            return self
+
+        def delete(self):
+            self.mode = "delete"
+            return self
+
+        def in_(self, col, values):
+            if col == "id":
+                self.deleted.extend(values)
+            return self
+
+        def update(self, values):
+            self.mode = "update"
+            return self
+
+        def execute(self):
+            if self.mode == "select":
+                self.selects += 1
+                if self.selects == 1:
+                    return SimpleNamespace(data=[
+                        {"id": f"old-{i}", "document_id": DOC, "chunk_index": 1000 + i}
+                        for i in range(1000)
+                    ])
+                return SimpleNamespace(data=[])
+            return SimpleNamespace(data=[])
+
+    db = _Wide()
+    written = replace_chunks_for_tenant(db, TENANT, [_faq_chunk()])
+    assert written == 1
+    assert db.selects == 1
+    assert len(db.deleted) == 1000
+
+
+def test_reindex_script_exits_nonzero_when_persist_fails(monkeypatch):
+    import importlib.util
+
+    path = "scripts/reindex_tenant_kb.py"
+    spec = importlib.util.spec_from_file_location("reindex_tenant_kb_script", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    def _boom(client_id):
+        raise KbIndexPersistError("existing chunks were kept")
+
+    monkeypatch.setattr(module, "reindex_tenant", _boom)
+    monkeypatch.setattr("sys.argv", ["reindex_tenant_kb.py", "--client-id", TENANT])
+    assert module.main() == 1

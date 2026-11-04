@@ -85,7 +85,7 @@ class RagM7Tests(unittest.TestCase):
         self.assertEqual(db.table_name, "tenant_kb_chunks")
 
     def test_replace_chunks_clears_orphans_on_reindex(self):
-        """Soft-deleted docs are dropped by compile; replace deletes all then inserts active."""
+        """Active chunks are inserted. With no prior rows there is nothing to delete."""
 
         class _Sink:
             def __init__(self):
@@ -93,6 +93,10 @@ class RagM7Tests(unittest.TestCase):
 
             def table(self, name):
                 self.ops.append(("table", name))
+                return self
+
+            def select(self, *args, **kwargs):
+                self.ops.append(("select",))
                 return self
 
             def delete(self):
@@ -130,9 +134,8 @@ class RagM7Tests(unittest.TestCase):
             ],
         )
         self.assertEqual(n, 1)
-        self.assertIn(("delete",), db.ops)
-        self.assertIn(("eq", "client_id", "client-a"), db.ops)
         self.assertTrue(any(op[0] == "insert" for op in db.ops))
+        self.assertNotIn(("delete",), db.ops)
 
     def test_inactive_documents_are_not_chunked(self):
         chunks = documents_to_chunks(
