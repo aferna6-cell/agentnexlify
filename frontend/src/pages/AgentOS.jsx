@@ -23,6 +23,7 @@ import AgentRunFlowchart from "../components/os/AgentRunFlowchart";
 import DeliverablePanel from "../components/os/DeliverablePanel";
 import DemoTour from "../components/os/DemoTour";
 import MemoryPanel from "../components/os/MemoryPanel";
+import GuidedSetup from "../components/os/GuidedSetup";
 import FirstRunStarters from "../components/os/FirstRunStarters";
 import AiOfflineBanner from "../components/os/AiOfflineBanner";
 import { aiGenerationUnavailable } from "../components/os/aiAvailability";
@@ -222,7 +223,8 @@ export default function AgentOS({ onNavigate }) {
     if (attachments.length > 0) {
       const blocks = attachments.map((a) => {
         let block = `[Attached: ${a.filename} - ${a.public_url}]`;
-        if (a.vision_summary) block += `\n[Image description: ${a.vision_summary}]`;
+        if (a.vision_summary)
+          block += `\n[Image description: ${a.vision_summary}]`;
         return block;
       });
       content = `${content}\n\n${blocks.join("\n")}`;
@@ -714,12 +716,20 @@ export default function AgentOS({ onNavigate }) {
             </div>
           ) : messages.length === 0 ? (
             threads.length === 0 && !activeThreadId ? (
-              <FirstRunStarters
-                businessType={user?.businessType || ""}
-                onSelectPrompt={setComposer}
-                composerRef={composerRef}
-                isMobile={isMobile}
-              />
+              <>
+                <GuidedSetup
+                  businessType={user?.businessType || ""}
+                  tenantId={user?.tenantId || ""}
+                  token={token}
+                  isMobile={isMobile}
+                />
+                <FirstRunStarters
+                  businessType={user?.businessType || ""}
+                  onSelectPrompt={setComposer}
+                  composerRef={composerRef}
+                  isMobile={isMobile}
+                />
+              </>
             ) : (
               <div
                 style={{
