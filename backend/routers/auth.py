@@ -164,9 +164,12 @@ def _provision_tenant_account(
     if existing.data:
         raise HTTPException(status_code=409, detail="Email already registered")
 
+    from backend.services.business_type_storage import stored_business_type
+
+    saved_industry = stored_business_type(industry)
     tenant_data = {
         "business_name": business_name,
-        "business_type": industry,
+        "business_type": saved_industry,
         "owner_email": normalized_email,
         "owner_name": owner_name,
         "password_hash": password_hash,
@@ -197,7 +200,7 @@ def _provision_tenant_account(
             )
 
     api_key = f"anx_{secrets.token_urlsafe(32)}"
-    widget_defaults = get_widget_defaults(industry, business_name)
+    widget_defaults = get_widget_defaults(saved_industry, business_name)
     try:
         wc_result = (
             db.table("widget_configs")
@@ -221,7 +224,7 @@ def _provision_tenant_account(
         )
         if not wc_result.data:
             raise RuntimeError("widget_configs insert returned no data")
-        _seed_industry_faqs(tenant_id, industry, business_name, city)
+        _seed_industry_faqs(tenant_id, saved_industry, business_name, city)
     except Exception:
         # Compensating rollback: the tenants row was inserted above. If
         # widget_configs or FAQ seeding fails, delete the orphan — otherwise the
