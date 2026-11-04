@@ -318,7 +318,7 @@ class TestGatherSources:
         assert kinds == [
             "department instructions",
             "knowledge base",
-            "learned memory",
+            "notes from past conversations",
             "connected tools (MCP)",
         ]
         assert "8-5 daily" in corpus

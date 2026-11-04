@@ -157,7 +157,7 @@ export default function MarketingDashboardPage() {
   if (loading) return <SkeletonLoader />;
 
   return (
-    <div style={{ padding: "24px 32px", maxWidth: 1400 }}>
+    <div>
       <div
         style={{
           display: "flex",
