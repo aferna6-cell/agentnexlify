@@ -31,6 +31,31 @@ const PLANS = [
   },
 ];
 
+// Grandfathered contracts still show on Billing. They stay out of the
+// pricing table unless this account is actually on one.
+const GRANDFATHERED_PLANS = {
+  enterprise: "Enterprise",
+  growth: "Growth",
+  professional: "Professional",
+  autopilot: "Autopilot",
+  agent_os_managed: PLAN_DISPLAY.agent_os_managed,
+};
+
+function plansForComparison(currentPlan) {
+  const label = GRANDFATHERED_PLANS[currentPlan];
+  if (!label) return PLANS;
+  return [
+    ...PLANS,
+    {
+      key: currentPlan,
+      name: label,
+      price: "Grandfathered",
+      period: "",
+      legacy: true,
+    },
+  ];
+}
+
 // Data-driven feature comparison matrix
 // value can be: true (checkmark), false (dash), or a string (custom label)
 const FEATURE_MATRIX = [
@@ -250,6 +275,8 @@ export default function BillingPage() {
   }
 
   const currentPlan = dashData?.plan || user?.plan || "free";
+  const visiblePlans = plansForComparison(currentPlan);
+  const grandfatheredLabel = GRANDFATHERED_PLANS[currentPlan];
   const planStatus = dashData?.plan_status || "active";
   const used = dashData?.conversations_used_this_month ?? 0;
 
@@ -330,7 +357,12 @@ export default function BillingPage() {
       <div className="billing-current">
         <div className="settings-card">
           <h3>Current Plan</h3>
-          <div className="billing-plan-name">{currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)}</div>
+          <div className="billing-plan-name">{grandfatheredLabel || (currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1))}</div>
+          {grandfatheredLabel && (
+            <p style={{ marginTop: 8, fontSize: "0.8rem", lineHeight: 1.5, color: "var(--text-secondary)" }}>
+              {grandfatheredLabel} is a grandfathered contract. It appears in the plan comparison and is not offered to new customers.
+            </p>
+          )}
           <div className="billing-plan-status" data-status={planStatus}>
             {planStatus === "active" ? "Active" : planStatus === "paused" ? "Payment Issue" : planStatus}
           </div>
@@ -363,7 +395,7 @@ export default function BillingPage() {
               }}
             >
               Need help with a billing mistake or accidental renewal? Email{" "}
-              <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>{" "}
+              <a className="billing-support-link" href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>{" "}
               within 5 business days. Duplicate charges and service-activation
               billing errors are eligible for manual review.
             </div>
@@ -386,7 +418,7 @@ export default function BillingPage() {
               ) : (
                 <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: 10 }}>
                   Not getting value yet? We can help you set it up. Email{" "}
-                  <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>{" "}
+                  <a className="billing-support-link" href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>{" "}
                   and we will get your AI working for you.
                 </p>
               )}
@@ -592,7 +624,7 @@ export default function BillingPage() {
               }}>
                 Feature
               </th>
-              {PLANS.map((plan) => {
+              {visiblePlans.map((plan) => {
                 const isCurrent = plan.key === currentPlan;
                 return (
                   <th key={plan.key} style={{
@@ -680,9 +712,9 @@ export default function BillingPage() {
                 }}>
                   {row.feature}
                 </td>
-                {PLANS.map((plan) => {
+                {visiblePlans.map((plan) => {
                   const isCurrent = plan.key === currentPlan;
-                  const val = row[plan.key];
+                  const val = plan.legacy ? "per contract" : row[plan.key];
                   let cell;
                   if (val === true) {
                     cell = (
@@ -716,10 +748,14 @@ export default function BillingPage() {
           <tfoot>
             <tr>
               <td style={{ padding: "16px 20px", borderTop: "1px solid var(--border)" }} />
-              {PLANS.map((plan) => {
+              {visiblePlans.map((plan) => {
                 const isCurrent = plan.key === currentPlan;
                 let btn;
-                if (isCurrent && billingInterval === "annual") {
+                if (plan.legacy) {
+                  // Grandfathered contracts are display-only. No checkout,
+                  // plan switch, or annual interval change.
+                  btn = null;
+                } else if (isCurrent && billingInterval === "annual") {
                   // Current plan but annual selected: offer the interval switch
                   // (backend prorates monthly -> annual on the same plan).
                   btn = <button className="btn-primary" onClick={() => handleChangePlan(plan.key)} disabled={changingPlan === plan.key} style={{ width: "100%", fontSize: "0.8rem", padding: "8px 0" }}>

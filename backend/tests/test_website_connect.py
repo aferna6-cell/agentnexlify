@@ -265,11 +265,14 @@ class TestNormalizeAndSecrets:
             with pytest.raises(ValueError):
                 normalize_website_url(raw)
 
-    def test_strips_userinfo_so_credentials_are_not_stored(self):
-        assert (
-            normalize_website_url("https://admin:cms-password@example.com/shop/")
-            == "https://example.com/shop"
-        )
+    def test_rejects_userinfo_so_credentials_are_not_stored(self):
+        for raw in (
+            "https://u:p@x.com",
+            "https://admin:cms-password@example.com/shop/",
+            "https://only-user@example.com",
+        ):
+            with pytest.raises(ValueError, match="username or password"):
+                normalize_website_url(raw)
 
     def test_keeps_explicit_port_and_rejects_empty_host(self):
         assert (
@@ -280,6 +283,25 @@ class TestNormalizeAndSecrets:
             normalize_website_url("https://")
         with pytest.raises(ValueError):
             normalize_website_url("   ")
+
+    def test_upsert_rejects_userinfo_and_writes_nothing(self):
+        db = FakeDB()
+        fetched = []
+
+        def fetch_page(url):
+            fetched.append(url)
+            raise AssertionError("userinfo URL must not be fetched")
+
+        with pytest.raises(ValueError, match="username or password"):
+            upsert_connection(
+                db,
+                TENANT_A,
+                "https://u:p@x.com",
+                fetch_page=fetch_page,
+            )
+        assert db.tables["website_connections"] == []
+        assert db.tables["tenants"] == []
+        assert fetched == []
 
     def test_rejects_credential_fields(self):
         with pytest.raises(ValueError, match="not accepted"):
@@ -888,6 +910,31 @@ class TestWebsiteConnectRouter:
         body = resp.json()
         assert body.get("connection") is None
         assert body.get("status") != "connected"
+
+    def test_userinfo_url_is_rejected_and_not_stored(
+        self, client, auth_headers_for
+    ):
+        db = FakeDB()
+
+        def fake_fetch(_url):
+            raise AssertionError("userinfo URL must not be fetched")
+
+        with patch(
+            "backend.routers.website_connect.get_service_supabase",
+            return_value=db,
+        ), patch(
+            "backend.services.website_connect.fetch_public_page",
+            side_effect=fake_fetch,
+        ):
+            resp = client.post(
+                "/api/v1/website-connect",
+                headers=auth_headers_for(TENANT_A),
+                json={"website_url": "https://u:p@x.com"},
+            )
+        assert resp.status_code == 400
+        assert "u:p" not in resp.text
+        assert db.tables["website_connections"] == []
+        assert db.tables["tenants"] == []
 
     def test_password_field_is_rejected(self, client, auth_headers_for):
         resp = client.post(
