@@ -349,30 +349,6 @@ async def widget_chat(
                 "prompt_profile": ctx.prompt_profile,
             },
         )
-        assistant_text = llm_result.text or (
-            "I'm sorry, I'm having trouble right now. "
-            "Please try again in a moment or contact us directly."
-        )
-        logger.info(
-            "widget_chat: Anthropic success, response_len=%d llm_ms=%d input_tokens=%s output_tokens=%s",
-            len(assistant_text),
-            llm_result.duration_ms,
-            llm_result.input_tokens,
-            llm_result.output_tokens,
-        )
-        usage_record = record_ai_usage(
-            reservation=usage_reservation,
-            result=llm_result,
-            operation="widget_chat.reply",
-            session_id=req.session_id,
-            model=widget_model,
-        )
-        if usage_record and usage_record.alert_triggered:
-            logger.warning(
-                "widget_chat: tenant=%s crossed AI usage alert threshold total_tokens=%s",
-                tenant["id"],
-                usage_record.total_tokens,
-            )
     except anthropic.AuthenticationError as exc:
         release_ai_token_reservation(usage_reservation)
         _log_widget_provider_failure(exc)
@@ -401,6 +377,37 @@ async def widget_chat(
             "I'm sorry, I'm having trouble right now. "
             "Please try again in a moment or contact us directly."
         )
+    else:
+        usage_record = record_ai_usage(
+            reservation=usage_reservation,
+            result=llm_result,
+            operation="widget_chat.reply",
+            session_id=req.session_id,
+            model=widget_model,
+        )
+        assistant_text = llm_result.text or (
+            "I'm sorry, I'm having trouble right now. "
+            "Please try again in a moment or contact us directly."
+        )
+        try:
+            logger.info(
+                "widget_chat: Anthropic success, response_len=%d llm_ms=%d input_tokens=%s output_tokens=%s",
+                len(assistant_text),
+                llm_result.duration_ms,
+                llm_result.input_tokens,
+                llm_result.output_tokens,
+            )
+        except Exception:
+            pass
+        if usage_record and usage_record.alert_triggered:
+            try:
+                logger.warning(
+                    "widget_chat: tenant=%s crossed AI usage alert threshold total_tokens=%s",
+                    tenant["id"],
+                    usage_record.total_tokens,
+                )
+            except Exception:
+                pass
 
     # 9. Extract order from AI response (restaurant ordering flow)
     order_data = _extract_order_from_response(assistant_text)

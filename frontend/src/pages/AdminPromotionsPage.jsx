@@ -465,7 +465,7 @@ export default function AdminPromotionsPage() {
 
   if (!_adminSecret) {
     return (
-      <div style={{ padding: "24px 32px", maxWidth: 1400 }}>
+      <div>
         <div
           style={{ ...cardStyle, textAlign: "center", padding: "60px 20px" }}
         >
@@ -483,7 +483,7 @@ export default function AdminPromotionsPage() {
   if (loading && promotions.length === 0) return <SkeletonLoader />;
 
   return (
-    <div style={{ padding: "24px 32px", maxWidth: 1200 }}>
+    <div>
       <div
         style={{
           display: "flex",

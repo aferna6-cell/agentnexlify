@@ -158,6 +158,9 @@ SUPPORTED = [
 
 
 def match_template(question: str) -> str | None:
+    # This library stays the main-branch metric matcher. Owner-calendar
+    # reads are intercepted earlier by the flagged chat path, not by
+    # dropping templates here.
     for name, pattern in TEMPLATES:
         if pattern.search(question or ""):
             return name
