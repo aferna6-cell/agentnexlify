@@ -18906,3 +18906,14 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Merge pull request #1000 from aferna6-cell/cursor/website-connect-503-ui-3ce3
+
+Fix website connect missing-table error and form styling
+**Date:** 2026-11-04
+**Commit:** 2862c54
+**Author:** cursor[bot]
+**Files Changed:** 
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
