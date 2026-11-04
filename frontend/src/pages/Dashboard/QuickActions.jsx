@@ -7,7 +7,7 @@ const Ico = ({ d }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
 );
 
-function QuickAddLeadModal({ onClose, onSuccess }) {
+export function QuickAddLeadModal({ onClose, onSuccess }) {
   const { user, token } = useAuth();
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [saving, setSaving] = useState(false);

@@ -14,6 +14,11 @@ from backend.services.pipeline_analytics import (
     compute_pipeline_metrics,
     group_leads_by_stage,
 )
+from backend.services.lead_status import (
+    UnknownLeadStatus,
+    canonical_lead_status,
+    is_check_violation,
+)
 from backend.services.pipeline_presets import (
     DEFAULT_STAGES,
     _INDUSTRY_STAGES,
@@ -52,6 +57,7 @@ class StageUpdateRequest(BaseModel):
 
 class MoveleadRequest(BaseModel):
     status: str = Field(..., min_length=1, max_length=100)
+    pipeline_stage: str | None = Field(default=None, max_length=100)
     deal_value: float | None = Field(default=None, ge=0)
 
 
@@ -184,14 +190,21 @@ async def delete_stage(
     stage_name = stage_result.data[0]["name"]
 
     try:
-        leads_check = (
+        by_label = (
+            db.table("leads")
+            .select("id", count="exact")
+            .eq("client_id", tenant_id)
+            .eq("pipeline_stage", stage_name)
+            .execute()
+        )
+        by_status = (
             db.table("leads")
             .select("id", count="exact")
             .eq("client_id", tenant_id)
             .ilike("status", stage_name)
             .execute()
         )
-        lead_count = leads_check.count or 0
+        lead_count = (by_label.count or 0) + (by_status.count or 0)
     except Exception:
         logger.exception("Failed to check leads in stage %s for tenant %s", stage_id, tenant_id)
         raise HTTPException(status_code=500, detail="Failed to check stage occupancy")
@@ -247,7 +260,8 @@ async def get_pipeline_board(
             db.table("leads")
             .select(
                 "id, name, email, deal_value, expected_close_date, "
-                "lead_score, lead_temperature, status, stage_changed_at, created_at"
+                "lead_score, lead_temperature, status, pipeline_stage, "
+                "stage_changed_at, created_at"
             )
             .eq("client_id", tenant_id)
             .execute()
@@ -325,7 +339,7 @@ async def move_lead(
     try:
         lead_result = (
             db.table("leads")
-            .select("id, status, name, email")
+            .select("id, status, pipeline_stage, name, email")
             .eq("id", lead_id)
             .eq("client_id", tenant_id)
             .limit(1)
@@ -340,15 +354,33 @@ async def move_lead(
 
     lead = lead_result.data[0]
     old_status = lead.get("status", "")
-    new_status = req.status
+    stage_label = (req.pipeline_stage or "").strip() or None
+    try:
+        new_status = canonical_lead_status(req.status)
+    except UnknownLeadStatus as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Unknown lead status '{exc.raw}'. "
+                "Allowed: new, contacted, appointment_booked, closed, lost."
+            ),
+        )
+    if stage_label is None and req.status.strip() != new_status:
+        stage_label = req.status.strip()
 
-    if old_status == new_status and req.deal_value is None:
+    if (
+        old_status == new_status
+        and (lead.get("pipeline_stage") or None) == stage_label
+        and req.deal_value is None
+    ):
         return lead
 
     updates: dict = {
         "status": new_status,
         "stage_changed_at": datetime.now(timezone.utc).isoformat(),
     }
+    if stage_label is not None:
+        updates["pipeline_stage"] = stage_label
     if req.deal_value is not None:
         updates["deal_value"] = req.deal_value
 
@@ -360,7 +392,12 @@ async def move_lead(
             .eq("client_id", tenant_id)
             .execute()
         )
-    except Exception:
+    except Exception as exc:
+        if is_check_violation(exc):
+            raise HTTPException(
+                status_code=422,
+                detail="Lead data violates a database check constraint",
+            ) from exc
         logger.exception("Failed to update lead %s stage for tenant %s", lead_id, tenant_id)
         raise HTTPException(status_code=500, detail="Failed to move lead")
 

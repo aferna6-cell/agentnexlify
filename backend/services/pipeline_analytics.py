@@ -75,16 +75,17 @@ def resolve_stage(status: str | None, stages: list[dict]) -> dict | None:
 
 
 def group_leads_by_stage(leads: list[dict], stages: list[dict]) -> dict[str, list]:
-    """Place each lead on the stage ``resolve_stage`` picks.
+    """Place each lead on the stage its pipeline label or status maps to.
 
     Keys are stage names. Leads with no stage are returned under ``_unmatched``
     so the total still includes them and the UI can see they were not dropped.
     """
+    from backend.services.lead_status import stage_label_for_lead
+
     grouped: dict[str, list] = {stage["name"]: [] for stage in stages}
     unmatched: list = []
     for lead in leads:
-        stage = resolve_stage(lead.get("status"), stages)
-        name = stage.get("name") if stage else None
+        name = stage_label_for_lead(lead, stages)
         if name in grouped:
             grouped[name].append(lead)
         else:
