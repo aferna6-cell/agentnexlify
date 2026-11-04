@@ -10,6 +10,12 @@ from pydantic import BaseModel, Field
 
 from backend.limiter import limiter
 from backend.models.database import get_service_supabase
+from backend.services.ai_usage_guard import (
+    estimate_widget_chat_tokens,
+    record_ai_usage,
+    release_ai_token_reservation,
+    reserve_ai_tokens,
+)
 from backend.services.llm_runtime import call_claude_messages
 from backend.dependencies import _get_current_tenant
 from backend.services.email_sender import send_email, build_unsubscribe_url
@@ -320,22 +326,83 @@ async def generate_ai_draft(
 
     review = review_result.data[0]
 
-    # Get business name for context
-    tenant_result = (
-        db.table("tenants")
-        .select("business_name, business_type")
-        .eq("id", tenant_id)
-        .limit(1)
-        .execute()
-    )
-    business_name = tenant_result.data[0]["business_name"] if tenant_result.data else "our business"
-    business_type = (tenant_result.data[0].get("business_type") or "") if tenant_result.data else ""
+    # Get business name for context, plus the budget fields the reservation needs.
+    try:
+        tenant_result = (
+            db.table("tenants")
+            .select(
+                "id, business_name, business_type, plan, "
+                "ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit"
+            )
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.warning("review draft tenant load failed tenant=%s", tenant_id)
+        raise HTTPException(status_code=503, detail="AI usage guard unavailable")
+    if not tenant_result.data or not any(
+        key in tenant_result.data[0]
+        for key in (
+            "plan",
+            "ai_monthly_token_hard_limit",
+            "ai_monthly_token_alert_threshold",
+        )
+    ):
+        logger.warning(
+            "review draft missing policy tenant=%s — failing closed before provider",
+            tenant_id,
+        )
+        raise HTTPException(status_code=503, detail="AI usage guard unavailable")
+    tenant_row = tenant_result.data[0]
+    business_name = tenant_row["business_name"] if tenant_row.get("business_name") else "our business"
+    business_type = tenant_row.get("business_type") or ""
 
     tone_desc = {
         "professional": "professional and courteous",
         "friendly": "warm and friendly, like talking to a neighbor",
         "casual": "casual and personable",
     }.get(req.tone, "professional and courteous")
+
+    draft_system = (
+        f"You are writing a review response for {business_name}"
+        f"{f', a {business_type}' if business_type else ''}. "
+        f"Tone: {tone_desc}. "
+        "Keep it concise (2-4 sentences). "
+        "Thank the reviewer by name. "
+        "If the review is positive, express gratitude and invite them back. "
+        "If negative, apologize sincerely, acknowledge the issue, and offer to make it right. "
+        "Never be defensive. Never use generic templates. Make it personal."
+    )
+    draft_messages = [{
+        "role": "user",
+        "content": (
+            f"Review from {review['author_name']} "
+            f"({review['rating']}/5 stars):\n\n"
+            f"{review.get('review_text', 'No text provided')}"
+        ),
+    }]
+    try:
+        reservation = reserve_ai_tokens(
+            tenant={**tenant_row, "id": tenant_id},
+            estimated_tokens=estimate_widget_chat_tokens(
+                system_prompt=draft_system,
+                messages=draft_messages,
+                max_tokens=300,
+            ),
+            operation="reviews.generate_draft",
+            session_id=review_id,
+        )
+    except Exception:
+        logger.warning("review draft guard unavailable tenant=%s", tenant_id)
+        raise HTTPException(status_code=503, detail="AI usage guard unavailable")
+    if reservation.reason == "guard_unavailable":
+        raise HTTPException(status_code=503, detail="AI usage guard unavailable")
+    if not reservation.allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="Monthly AI usage limit reached — add a usage pack or wait for the next cycle",
+        )
 
     try:
         resp = await call_claude_messages(
@@ -344,38 +411,34 @@ async def generate_ai_draft(
             max_tokens=300,
             temperature=0.7,
             timeout=30.0,
-            system=(
-                f"You are writing a review response for {business_name}"
-                f"{f', a {business_type}' if business_type else ''}. "
-                f"Tone: {tone_desc}. "
-                "Keep it concise (2-4 sentences). "
-                "Thank the reviewer by name. "
-                "If the review is positive, express gratitude and invite them back. "
-                "If negative, apologize sincerely, acknowledge the issue, and offer to make it right. "
-                "Never be defensive. Never use generic templates. Make it personal."
-            ),
-            messages=[{
-                "role": "user",
-                "content": (
-                    f"Review from {review['author_name']} "
-                    f"({review['rating']}/5 stars):\n\n"
-                    f"{review.get('review_text', 'No text provided')}"
-                ),
-            }],
+            system=draft_system,
+            messages=draft_messages,
             metadata={"tenant_id": tenant_id, "review_id": review_id, "tone": req.tone},
         )
         draft = resp.text.strip()
     except anthropic.RateLimitError:
+        release_ai_token_reservation(reservation)
         raise HTTPException(status_code=429, detail="AI service rate limited — please try again in a moment")
     except anthropic.AuthenticationError:
+        release_ai_token_reservation(reservation)
         logger.error("Anthropic API auth failure during review draft")
         raise HTTPException(status_code=502, detail="AI service configuration error")
-    except anthropic.APIError as e:
-        logger.error("Anthropic API error during review draft: %s", str(e))
+    except anthropic.APIError:
+        release_ai_token_reservation(reservation)
+        logger.error("Anthropic API error during review draft")
         raise HTTPException(status_code=502, detail="AI service temporarily unavailable")
     except Exception:
-        logger.error("AI draft generation failed for review %s", review_id, exc_info=True)
+        release_ai_token_reservation(reservation)
+        logger.error("AI draft generation failed for review %s", review_id)
         raise HTTPException(status_code=500, detail="Failed to generate AI draft")
+
+    record_ai_usage(
+        reservation=reservation,
+        result=resp,
+        operation="reviews.generate_draft",
+        session_id=review_id,
+        model="claude-sonnet-4-6",
+    )
 
     # Save the draft
     db.table("reviews").update({

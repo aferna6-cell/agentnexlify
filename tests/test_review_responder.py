@@ -42,7 +42,14 @@ def _db_mock(business_name="Acme Plumbing", business_type="plumbing"):
     for m in ["select", "eq", "limit"]:
         getattr(tenant_chain, m).return_value = tenant_chain
     tenant_chain.execute.return_value = MagicMock(
-        data=[{"business_name": business_name, "business_type": business_type}]
+        data=[{
+            "id": "t1",
+            "business_name": business_name,
+            "business_type": business_type,
+            "plan": "agent_os",
+            "ai_monthly_token_alert_threshold": 100_000,
+            "ai_monthly_token_hard_limit": 200_000,
+        }]
     )
     db.table.return_value = tenant_chain
     return db
@@ -83,9 +90,19 @@ def _lookup_update_chain(existing_row, updated_row=None, found=True):
 # ---------------------------------------------------------------------------
 
 
+def _allow_usage_guard():
+    """Supabase client whose budget RPCs allow the call."""
+    client = MagicMock()
+    allowed = MagicMock()
+    allowed.data = True
+    client.rpc.return_value.execute.return_value = allowed
+    return client
+
+
+@patch("backend.services.ai_usage_guard.get_service_supabase", return_value=_allow_usage_guard())
 @patch("backend.services.review_responder.tenant_table")
 @patch("backend.services.review_responder.call_claude_messages", new_callable=AsyncMock)
-def test_draft_response_stores_status_draft(mock_llm, mock_tt):
+def test_draft_response_stores_status_draft(mock_llm, mock_tt, _guard):
     mock_llm.return_value = MagicMock(text="Thanks for the kind words!")
     inserted_row = {
         "id": "resp-1",
@@ -114,9 +131,10 @@ def test_draft_response_stores_status_draft(mock_llm, mock_tt):
     assert inserted_arg["review_rating"] == 5
 
 
+@patch("backend.services.ai_usage_guard.get_service_supabase", return_value=_allow_usage_guard())
 @patch("backend.services.review_responder.tenant_table")
 @patch("backend.services.review_responder.call_claude_messages", new_callable=AsyncMock)
-def test_draft_response_passes_optional_review_id_and_external_ref(mock_llm, mock_tt):
+def test_draft_response_passes_optional_review_id_and_external_ref(mock_llm, mock_tt, _guard):
     mock_llm.return_value = MagicMock(text="Thanks!")
     mock_tt.return_value = _insert_chain({"id": "resp-1", "status": "draft"})
     db = _db_mock()
@@ -144,9 +162,10 @@ def test_draft_response_passes_optional_review_id_and_external_ref(mock_llm, moc
 # ---------------------------------------------------------------------------
 
 
+@patch("backend.services.ai_usage_guard.get_service_supabase", return_value=_allow_usage_guard())
 @patch("backend.services.review_responder.tenant_table")
 @patch("backend.services.review_responder.call_claude_messages", new_callable=AsyncMock)
-def test_draft_response_low_rating_uses_apologetic_tone(mock_llm, mock_tt):
+def test_draft_response_low_rating_uses_apologetic_tone(mock_llm, mock_tt, _guard):
     mock_llm.return_value = MagicMock(text="We're sorry to hear this.")
     mock_tt.return_value = _insert_chain({"id": "resp-2", "status": "draft"})
     db = _db_mock()
@@ -163,9 +182,10 @@ def test_draft_response_low_rating_uses_apologetic_tone(mock_llm, mock_tt):
     assert "apolog" in kwargs["system"].lower()
 
 
+@patch("backend.services.ai_usage_guard.get_service_supabase", return_value=_allow_usage_guard())
 @patch("backend.services.review_responder.tenant_table")
 @patch("backend.services.review_responder.call_claude_messages", new_callable=AsyncMock)
-def test_draft_response_high_rating_uses_gracious_tone(mock_llm, mock_tt):
+def test_draft_response_high_rating_uses_gracious_tone(mock_llm, mock_tt, _guard):
     mock_llm.return_value = MagicMock(text="Thank you so much!")
     mock_tt.return_value = _insert_chain({"id": "resp-3", "status": "draft"})
     db = _db_mock()

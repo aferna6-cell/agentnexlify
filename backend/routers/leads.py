@@ -12,6 +12,12 @@ from pydantic import BaseModel, Field
 
 from backend.models.database import get_service_supabase as _get_service_supabase
 from backend.models.schemas import LeadScoreResponse, LeadUpdateRequest, ScoreAllResponse
+from backend.services.ai_usage_guard import (
+    estimate_widget_chat_tokens,
+    record_ai_usage,
+    release_ai_token_reservation,
+    reserve_ai_tokens,
+)
 from backend.services.llm_runtime import call_claude_messages
 from backend.dependencies import _get_current_tenant
 from backend.services.activity import log_activity
@@ -19,6 +25,11 @@ from backend.services import record_audit
 from backend.services.email_sender import send_email
 from backend.limiter import limiter
 from backend.services.lead_scoring import score_all_leads, score_lead
+from backend.services.lead_status import (
+    UnknownLeadStatus,
+    canonical_lead_status,
+    is_check_violation,
+)
 from backend.services.tenant_scope import tenant_delete, tenant_insert, tenant_select, tenant_update
 from backend.services.webhook_dispatcher import fire_event_background
 
@@ -160,6 +171,7 @@ class LeadCreateRequest(BaseModel):
     email: str | None = None
     phone: str | None = None
     status: str | None = "new"
+    pipeline_stage: str | None = None
     lead_temperature: str | None = None
     areas_of_interest: str | None = None
     deal_value: float | None = None
@@ -179,13 +191,30 @@ async def create_lead(
     if not req.name and not req.email and not req.phone:
         raise HTTPException(status_code=400, detail="At least one of name, email, or phone is required")
 
+    raw_status = req.status or "new"
+    try:
+        status = canonical_lead_status(raw_status)
+    except UnknownLeadStatus as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Unknown lead status '{exc.raw}'. "
+                "Allowed: new, contacted, appointment_booked, closed, lost."
+            ),
+        )
+
+    stage_label = (req.pipeline_stage or "").strip() or None
+    if stage_label is None and raw_status.strip() and raw_status.strip() != status:
+        stage_label = raw_status.strip()
+
     db = get_service_supabase()
     lead_data = {
         "client_id": tenant_id,
         "name": req.name,
         "email": req.email,
         "phone": req.phone,
-        "status": req.status or "new",
+        "status": status,
+        "pipeline_stage": stage_label,
         "lead_temperature": req.lead_temperature,
         "areas_of_interest": req.areas_of_interest,
         "source": "manual",
@@ -198,7 +227,15 @@ async def create_lead(
     # Remove None values
     lead_data = {k: v for k, v in lead_data.items() if v is not None}
 
-    result = tenant_insert(db, "leads", tenant_id, lead_data).execute()
+    try:
+        result = tenant_insert(db, "leads", tenant_id, lead_data).execute()
+    except Exception as exc:
+        if is_check_violation(exc):
+            raise HTTPException(
+                status_code=422,
+                detail="Lead data violates a database check constraint",
+            ) from exc
+        raise
     if not result.data:
         raise HTTPException(status_code=500, detail="Failed to create lead")
 
@@ -227,8 +264,31 @@ async def update_lead(
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
 
+    if "status" in updates:
+        raw_status = updates["status"]
+        try:
+            updates["status"] = canonical_lead_status(raw_status)
+        except UnknownLeadStatus as exc:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Unknown lead status '{exc.raw}'. "
+                    "Allowed: new, contacted, appointment_booked, closed, lost."
+                ),
+            )
+        if "pipeline_stage" not in updates and str(raw_status).strip() != updates["status"]:
+            updates["pipeline_stage"] = str(raw_status).strip()
+
     db = get_service_supabase()
-    result = tenant_update(db, "leads", tenant_id, updates).eq("id", lead_id).execute()
+    try:
+        result = tenant_update(db, "leads", tenant_id, updates).eq("id", lead_id).execute()
+    except Exception as exc:
+        if is_check_violation(exc):
+            raise HTTPException(
+                status_code=422,
+                detail="Lead data violates a database check constraint",
+            ) from exc
+        raise
     if not result.data:
         raise HTTPException(status_code=404, detail="Lead not found")
 
@@ -945,7 +1005,61 @@ async def generate_lead_summary(
         for m in messages[-30:]
     )
 
-    # Generate AI summary
+    # Generate AI summary. Missing budget state fails closed before the provider.
+    summary_system = (
+        "Summarize this customer conversation in 1-2 sentences. Focus on: "
+        "what the customer needs, any decisions made, and next steps. Be concise."
+    )
+    summary_messages = [{"role": "user", "content": transcript[:3000]}]
+    try:
+        tenant_rows = (
+            db.table("tenants")
+            .select(
+                "id, plan, ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit"
+            )
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        ).data or []
+    except Exception:
+        logger.warning("lead summary tenant load failed tenant=%s", tenant_id)
+        raise HTTPException(status_code=503, detail="AI usage guard unavailable")
+    if not tenant_rows or not any(
+        key in tenant_rows[0]
+        for key in (
+            "plan",
+            "ai_monthly_token_hard_limit",
+            "ai_monthly_token_alert_threshold",
+        )
+    ):
+        logger.warning(
+            "lead summary missing policy tenant=%s — failing closed before provider",
+            tenant_id,
+        )
+        raise HTTPException(status_code=503, detail="AI usage guard unavailable")
+
+    try:
+        reservation = reserve_ai_tokens(
+            tenant={**tenant_rows[0], "id": tenant_id},
+            estimated_tokens=estimate_widget_chat_tokens(
+                system_prompt=summary_system,
+                messages=summary_messages,
+                max_tokens=150,
+            ),
+            operation="leads.generate_summary",
+            session_id=lead_id,
+        )
+    except Exception:
+        logger.warning("lead summary guard unavailable tenant=%s", tenant_id)
+        raise HTTPException(status_code=503, detail="AI usage guard unavailable")
+    if reservation.reason == "guard_unavailable":
+        raise HTTPException(status_code=503, detail="AI usage guard unavailable")
+    if not reservation.allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="Monthly AI usage limit reached — add a usage pack or wait for the next cycle",
+        )
+
     try:
         resp = await call_claude_messages(
             operation="leads.generate_summary",
@@ -953,14 +1067,23 @@ async def generate_lead_summary(
             max_tokens=150,
             temperature=0,
             timeout=15.0,
-            system="Summarize this customer conversation in 1-2 sentences. Focus on: what the customer needs, any decisions made, and next steps. Be concise.",
-            messages=[{"role": "user", "content": transcript[:3000]}],
+            system=summary_system,
+            messages=summary_messages,
             metadata={"tenant_id": tenant_id, "lead_id": lead_id, "message_count": len(messages)},
         )
         summary = resp.text.strip()
     except Exception:
-        logger.exception("Failed to generate AI summary for lead %s", lead_id)
+        release_ai_token_reservation(reservation)
+        logger.warning("Failed to generate AI summary tenant=%s", tenant_id)
         raise HTTPException(status_code=502, detail="AI summary generation failed")
+
+    record_ai_usage(
+        reservation=reservation,
+        result=resp,
+        operation="leads.generate_summary",
+        session_id=lead_id,
+        model="claude-sonnet-4-6",
+    )
 
     # Save the summary
     tenant_update(db, "leads", tenant_id, {"conversation_summary": summary}).eq("id", lead_id).execute()

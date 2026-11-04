@@ -23,6 +23,7 @@ import AgentRunFlowchart from "../components/os/AgentRunFlowchart";
 import DeliverablePanel from "../components/os/DeliverablePanel";
 import DemoTour from "../components/os/DemoTour";
 import MemoryPanel from "../components/os/MemoryPanel";
+import GuidedSetup from "../components/os/GuidedSetup";
 import FirstRunStarters from "../components/os/FirstRunStarters";
 import ThreadList from "../components/os/ThreadList";
 import AiOfflineBanner from "../components/os/AiOfflineBanner";
@@ -652,12 +653,20 @@ export default function AgentOS({ onNavigate }) {
             </div>
           ) : messages.length === 0 ? (
             threads.length === 0 && !activeThreadId ? (
-              <FirstRunStarters
-                businessType={user?.businessType || ""}
-                onSelectPrompt={setComposer}
-                composerRef={composerRef}
-                isMobile={isMobile}
-              />
+              <>
+                <GuidedSetup
+                  businessType={user?.businessType || ""}
+                  tenantId={user?.tenantId || ""}
+                  token={token}
+                  isMobile={isMobile}
+                />
+                <FirstRunStarters
+                  businessType={user?.businessType || ""}
+                  onSelectPrompt={setComposer}
+                  composerRef={composerRef}
+                  isMobile={isMobile}
+                />
+              </>
             ) : (
               <div
                 style={{

@@ -187,3 +187,20 @@ async def get_tenant_health(
         )
     )
     return rows
+
+
+@router.get("/ai-live")
+@limiter.limit("10/minute")
+async def admin_ai_live(
+    request: Request,
+    x_api_secret: str | None = Header(None),
+):
+    """Sanitized model-probe reason. Unauthenticated /health returns only ai_live."""
+    _verify_admin_secret(x_api_secret)
+    from backend.services.ai_live import read_ai_live_cache
+
+    live = read_ai_live_cache()
+    return {
+        "ai_live": bool(live["ai_live"]),
+        "ai_live_reason": live["ai_live_reason"],
+    }

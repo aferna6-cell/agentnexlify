@@ -63,15 +63,90 @@ def test_unknown_platform_falls_back_to_default_size():
 def test_generate_image_png_openai_provider_passes_size_through():
     """generate_image_png's openai-provider dispatch branch -- covers the
     size kwarg being forwarded to _generate_openai untouched."""
+    import asyncio
+
+    gen_openai = AsyncMock(return_value=b"PNGDATA")
     with patch.object(image_gen.settings, "image_gen_provider", "openai"), patch.object(
         image_gen.settings, "image_gen_api_key", "sk-test"
-    ), patch.object(
-        image_gen, "_generate_openai", return_value=b"PNGDATA"
-    ) as gen_openai:
-        result = image_gen.generate_image_png("a cat", size="1024x1536")
+    ), patch.object(image_gen, "_generate_openai", gen_openai):
+        result = asyncio.run(image_gen.generate_image_png("a cat", size="1024x1536"))
 
     assert result == b"PNGDATA"
-    gen_openai.assert_called_once_with("a cat", "sk-test", size="1024x1536")
+    gen_openai.assert_awaited_once_with("a cat", "sk-test", size="1024x1536")
+
+
+def test_openai_payload_omits_response_format_and_uses_image_gen_model(monkeypatch):
+    """gpt-image models 400 on response_format and on the retired gpt-image-1 id."""
+    import asyncio
+    import base64
+
+    captured = {}
+
+    class _Resp:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"data": [{"b64_json": base64.b64encode(b"PNG").decode()}]}
+
+    class _Client:
+        def __init__(self, timeout=None, **kwargs):
+            captured["timeout"] = timeout
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def post(self, url, json=None, headers=None):
+            captured["url"] = url
+            captured["json"] = json
+            captured["headers"] = headers
+            return _Resp()
+
+    monkeypatch.setenv("IMAGE_GEN_QUALITY", "medium")
+    with patch.object(image_gen.settings, "image_gen_model", "gpt-image-1.5"), patch.object(
+        image_gen.httpx, "AsyncClient", _Client
+    ):
+        png = asyncio.run(image_gen._generate_openai("a cat", "sk-test", size="1024x1024"))
+
+    assert png == b"PNG"
+    assert captured["timeout"] == 120
+    assert captured["json"]["model"] == "gpt-image-1.5"
+    assert captured["json"]["prompt"] == "a cat"
+    assert captured["json"]["size"] == "1024x1024"
+    assert captured["json"]["n"] == 1
+    assert captured["json"]["quality"] == "medium"
+    assert "response_format" not in captured["json"]
+    assert captured["headers"]["Authorization"] == "Bearer sk-test"
+
+    captured.clear()
+    monkeypatch.setenv("IMAGE_GEN_QUALITY", "high")
+    with patch.object(image_gen.settings, "image_gen_model", "gpt-image-1-mini"), patch.object(
+        image_gen.httpx, "AsyncClient", _Client
+    ):
+        asyncio.run(image_gen._generate_openai("a dog", "sk-other"))
+
+    assert captured["json"]["model"] == "gpt-image-1-mini"
+    assert captured["json"]["quality"] == "high"
+    assert "response_format" not in captured["json"]
+
+    captured.clear()
+    monkeypatch.delenv("IMAGE_GEN_QUALITY", raising=False)
+    with patch.object(image_gen.settings, "image_gen_model", "  "), patch.object(
+        image_gen.httpx, "AsyncClient", _Client
+    ):
+        asyncio.run(image_gen._generate_openai("a bird", "sk-test"))
+    assert captured["json"]["model"] == "gpt-image-1.5"
+    assert captured["json"]["quality"] == "medium"
+    assert "response_format" not in captured["json"]
+
+
+def test_image_gen_model_setting_defaults_to_gpt_image_1_5():
+    from backend.config import Settings
+
+    assert Settings.model_fields["image_gen_model"].default == "gpt-image-1.5"
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +156,7 @@ def test_generate_image_png_openai_provider_passes_size_through():
 
 def test_generate_post_image_uploads_and_returns_dimensions():
     db, bucket = _fake_storage_db()
-    with patch.object(images, "generate_image_png", return_value=b"PNGDATA") as gen:
+    with patch.object(images, "generate_image_png", new=AsyncMock(return_value=b"PNGDATA")) as gen:
         result = run(
             images.generate_post_image(
                 db, tenant_id=_TENANT, prompt="a cat drinking coffee", platform="instagram"
@@ -105,7 +180,7 @@ def test_generate_post_image_uploads_and_returns_dimensions():
 
 def test_generate_post_image_uses_default_size_for_unknown_platform():
     db, bucket = _fake_storage_db()
-    with patch.object(images, "generate_image_png", return_value=b"PNGDATA") as gen:
+    with patch.object(images, "generate_image_png", new=AsyncMock(return_value=b"PNGDATA")) as gen:
         result = run(
             images.generate_post_image(
                 db, tenant_id=_TENANT, prompt="x", platform="twitter"
@@ -149,7 +224,7 @@ def test_generate_post_image_provider_error_raises_clean_error():
 def test_generate_post_image_storage_failure_raises_clean_error():
     db, bucket = _fake_storage_db()
     bucket.upload.side_effect = RuntimeError("storage down")
-    with patch.object(images, "generate_image_png", return_value=b"PNGDATA"):
+    with patch.object(images, "generate_image_png", new=AsyncMock(return_value=b"PNGDATA")):
         try:
             run(
                 images.generate_post_image(
@@ -312,3 +387,30 @@ class TestGenerateImageEndpoint:
             )
         assert resp.status_code == 200
         assert resp.json()["url"] == fake_result["url"]
+
+
+def test_provider_401_becomes_image_gen_not_configured():
+    db, _bucket = _fake_storage_db()
+    with patch.object(images, "generate_image_png", side_effect=ImageGenError("no", status_code=401)):
+        try:
+            run(images.generate_post_image(db, tenant_id=_TENANT, prompt="x", platform="instagram"))
+            assert False, "expected SocialImageGenError"
+        except images.SocialImageGenError as exc:
+            assert str(exc) == "image_gen_not_configured"
+
+
+def test_generate_image_auth_failure_returns_not_configured_code():
+    client = _client()
+    try:
+        with patch(
+            "backend.routers.social_media.generate_post_image",
+            AsyncMock(side_effect=images.SocialImageGenError("image_gen_not_configured")),
+        ):
+            resp = client.post(
+                f"/api/v1/social/{_TENANT}/generate-image",
+                json={"prompt": "a coffee cup", "platform": "instagram"},
+            )
+        assert resp.status_code == 422, resp.text
+        assert resp.json()["detail"]["error"] == "image_gen_not_configured"
+    finally:
+        _teardown()

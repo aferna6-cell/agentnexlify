@@ -1,12 +1,14 @@
 """Image generation provider abstraction for Agent OS.
 
-Reads IMAGE_GEN_PROVIDER and IMAGE_GEN_API_KEY from settings.
-Supported providers: "openai" (gpt-image-1).
-Returns b64-encoded PNG bytes on success.
+Reads IMAGE_GEN_PROVIDER, IMAGE_GEN_API_KEY, and IMAGE_GEN_MODEL from settings.
+Supported providers: "openai". The OpenAI call uses IMAGE_GEN_MODEL
+(default gpt-image-1.5). gpt-image models reject ``response_format``
+(HTTP 400 Unknown parameter) and return ``b64_json`` without it.
 """
 
 import base64
 import logging
+import os
 
 import httpx
 
@@ -15,7 +17,7 @@ from backend.config import settings
 logger = logging.getLogger(__name__)
 
 _OPENAI_IMAGES_URL = "https://api.openai.com/v1/images/generations"
-_TIMEOUT_SECONDS = 60.0
+_TIMEOUT_SECONDS = 120.0
 
 
 class ImageGenNotConfigured(Exception):
@@ -24,6 +26,15 @@ class ImageGenNotConfigured(Exception):
 
 class ImageGenError(Exception):
     """Raised when the provider call fails."""
+
+    def __init__(self, message: str, status_code: int | None = None):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+def provider_rejected_credentials(exc: BaseException) -> bool:
+    """True when the image provider answered 401 or 403 (bad or missing key)."""
+    return isinstance(exc, ImageGenError) and getattr(exc, "status_code", None) in (401, 403)
 
 
 def _provider() -> str:
@@ -34,12 +45,18 @@ def _api_key() -> str:
     return (getattr(settings, "image_gen_api_key", "") or "").strip()
 
 
+def _model() -> str:
+    """OpenAI image model. Blank IMAGE_GEN_MODEL falls back to gpt-image-1.5."""
+    configured = (getattr(settings, "image_gen_model", "") or "").strip()
+    return configured or "gpt-image-1.5"
+
+
 def is_configured() -> bool:
     """Return True when a usable provider + key is present."""
     return bool(_provider() and _api_key())
 
 
-def generate_image_png(prompt: str, size: str | None = None) -> bytes:
+async def generate_image_png(prompt: str, size: str | None = None) -> bytes:
     """Generate a PNG via the configured provider. Returns raw PNG bytes.
 
     ``size`` overrides the provider's default output size — like this:
@@ -61,32 +78,42 @@ def generate_image_png(prompt: str, size: str | None = None) -> bytes:
     logger.info("image_gen.generate provider=%s prompt_len=%d", provider, len(prompt))
 
     if provider == "openai":
-        return _generate_openai(prompt, api_key, size=size)
+        return await _generate_openai(prompt, api_key, size=size)
 
     raise ImageGenNotConfigured(f"Unsupported provider: {provider!r}")
 
 
-def _generate_openai(prompt: str, api_key: str, size: str | None = None) -> bytes:
+def _image_quality() -> str:
+    """gpt-image quality. IMAGE_GEN_QUALITY defaults to medium."""
+    return (os.getenv("IMAGE_GEN_QUALITY", "medium") or "medium").strip() or "medium"
+
+
+async def _generate_openai(prompt: str, api_key: str, size: str | None = None) -> bytes:
+    # gpt-image-* always returns b64_json. Sending response_format is a 400
+    # ("Unknown parameter") on the current Images API. AsyncClient so a 120s
+    # generation does not block the event loop.
     payload = {
-        "model": "gpt-image-1",
+        "model": _model(),
         "prompt": prompt,
         "n": 1,
         "size": size or "1024x1024",
-        "response_format": "b64_json",
+        "quality": _image_quality(),
     }
     try:
-        response = httpx.post(
-            _OPENAI_IMAGES_URL,
-            json=payload,
-            headers={"Authorization": f"Bearer {api_key}"},
-            timeout=_TIMEOUT_SECONDS,
-        )
+        async with httpx.AsyncClient(timeout=_TIMEOUT_SECONDS) as client:
+            response = await client.post(
+                _OPENAI_IMAGES_URL,
+                json=payload,
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
         response.raise_for_status()
     except httpx.HTTPStatusError as exc:
-        logger.warning(
-            "image_gen.openai.http_error status=%d", exc.response.status_code
-        )
-        raise ImageGenError(f"OpenAI images API returned {exc.response.status_code}") from exc
+        status = exc.response.status_code
+        logger.warning("image_gen.openai.http_error status=%d", status)
+        raise ImageGenError(
+            f"OpenAI images API returned {status}",
+            status_code=status,
+        ) from exc
     except httpx.RequestError as exc:
         logger.warning("image_gen.openai.request_error error_type=%s", type(exc).__name__)
         raise ImageGenError("Network error calling OpenAI images API") from exc

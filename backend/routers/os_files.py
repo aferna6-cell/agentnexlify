@@ -27,6 +27,7 @@ from backend.services.image_gen import (
     ImageGenNotConfigured,
     generate_image_png,
     is_configured,
+    provider_rejected_credentials,
 )
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.tenant_scope import tenant_table
@@ -332,7 +333,7 @@ async def generate_image(
         "os_files.image_gen.start tenant=%s prompt_len=%d", client_id, len(req.prompt)
     )
     try:
-        png_bytes = generate_image_png(req.prompt)
+        png_bytes = await generate_image_png(req.prompt)
     except ImageGenNotConfigured:
         raise HTTPException(
             status_code=503,
@@ -343,6 +344,17 @@ async def generate_image(
         )
     except ImageGenError as exc:
         logger.warning("os_files.image_gen.provider_error tenant=%s error=%s", client_id, exc)
+        if provider_rejected_credentials(exc):
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "image_gen_not_configured",
+                    "message": (
+                        "Image generation rejected the API key. "
+                        "Check IMAGE_GEN_API_KEY for this deployment."
+                    ),
+                },
+            )
         raise HTTPException(status_code=502, detail="Image generation failed. Please retry.")
 
     # ── store in bucket ───────────────────────────────────────────────────────

@@ -14,9 +14,18 @@
 
 import { registry } from "./_registry.ts";
 import { extractParams } from "./_extract.ts";
-import { readAskIntent } from "./_intent.ts";
+import { isBusinessKnowledgeQuestion, readAskIntent } from "./_intent.ts";
 import { departmentSemanticScore, type DepartmentAgent } from "./_department.ts";
-import { complete, isModelAvailable, ModelUnavailableError } from "../lib/anthropic.ts";
+import { complete, isModelAvailable, ModelUnavailableError, type CompleteResult } from "../lib/anthropic.ts";
+
+type ClassifierComplete = (args: Parameters<typeof complete>[0]) => Promise<CompleteResult>;
+let classifierComplete: ClassifierComplete = complete;
+
+/** Test seam. A stub is used instead of Haiku. Pass null to restore. */
+export function setClassifierModel(fn: ClassifierComplete | null): void {
+  classifierComplete = fn ?? complete;
+}
+
 
 export interface Candidate {
   agentId: string;
@@ -141,6 +150,15 @@ export function classifyHeuristic(ask: string): Classification {
     if (p) p.score += 8; // decisive: a job/HR post is People, not Marketing
   }
 
+  // Services, products, hours, pricing, and "about the business" are facts
+  // Customer Service answers from the knowledge base (no draft). Score this
+  // before the admin_records boost so a retrieve-shaped question is not
+  // drafted as a record or a document.
+  if (isBusinessKnowledgeQuestion(ask)) {
+    const cs = scored.find((c) => c.agentId === "customer_service");
+    if (cs) cs.score += 12;
+  }
+
   // Document / contract / CRM language → Customer Data & Administration.
   if (/\b(contract|agreement|intake form|service agreement|refund policy|one[- ]?pager|sop|template|update (his|her|their|the) record)\b/i.test(ask)) {
     const ar = scored.find((c) => c.agentId === "admin_records");
@@ -216,10 +234,11 @@ function toRoutableId(id: string | undefined): string | undefined {
 }
 
 export async function classifyWithHaiku(ask: string, runId?: string): Promise<Classification | null> {
-  if (!isModelAvailable()) return null;
+  const stubbed = classifierComplete !== complete;
+  if (!stubbed && !isModelAvailable()) return null;
   const { system, prompt } = buildRoutingPrompt(ask);
   try {
-    const res = await complete({ purpose: "routing", system, prompt, maxTokens: 400, runId });
+    const res = await classifierComplete({ purpose: "routing", system, prompt, maxTokens: 400, runId });
     const parsed = parseHaiku(res.text);
     if (!parsed) return null;
     const routedTo = toRoutableId(parsed.routed_to);
@@ -284,6 +303,16 @@ export async function classify(ask: string, runId?: string): Promise<Classificat
     if (candidates && candidates.length > 0) {
       return { classifier: "ml", candidates, params: extractParams(ask) };
     }
+  }
+
+  // Business-fact questions are a rule, not a model guess. Haiku runs before
+  // the heuristic, so the customer_service boost never applied in production.
+  if (isBusinessKnowledgeQuestion(ask)) {
+    return {
+      classifier: "heuristic",
+      candidates: [{ agentId: "customer_service", confidence: 0.95 }],
+      params: { ...extractParams(ask), customer_question: ask },
+    };
   }
 
   const viaHaiku = await classifyWithHaiku(ask, runId);
