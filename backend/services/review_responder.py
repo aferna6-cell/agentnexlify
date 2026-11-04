@@ -19,6 +19,12 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
+from backend.services.ai_usage_guard import (
+    estimate_widget_chat_tokens,
+    record_ai_usage,
+    release_ai_token_reservation,
+    reserve_ai_tokens,
+)
 from backend.services.llm_runtime import call_claude_messages
 from backend.services.tenant_scope import tenant_table
 
@@ -95,25 +101,39 @@ async def draft_response(
         )
         return None
 
-    business_name = "our business"
-    business_type = ""
     try:
         tenant_result = (
             db.table("tenants")
-            .select("business_name, business_type")
+            .select(
+                "id, business_name, business_type, plan, "
+                "ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit"
+            )
             .eq("id", tenant_id)
             .limit(1)
             .execute()
         )
-        if tenant_result.data:
-            business_name = tenant_result.data[0].get("business_name") or business_name
-            business_type = tenant_result.data[0].get("business_type") or ""
+        tenant_row = tenant_result.data[0] if tenant_result.data else None
     except Exception:
         logger.warning(
-            "review_responder: tenant lookup failed tenant=%s — using generic business name",
+            "review_responder: tenant lookup failed tenant=%s — failing closed before provider",
             tenant_id,
-            exc_info=True,
         )
+        return None
+    if not isinstance(tenant_row, dict) or not any(
+        key in tenant_row
+        for key in (
+            "plan",
+            "ai_monthly_token_hard_limit",
+            "ai_monthly_token_alert_threshold",
+        )
+    ):
+        logger.warning(
+            "review_responder: missing policy tenant=%s — failing closed before provider",
+            tenant_id,
+        )
+        return None
+    business_name = tenant_row.get("business_name") or "our business"
+    business_type = tenant_row.get("business_type") or ""
 
     system_prompt = (
         f"You are drafting a review response for {business_name}"
@@ -127,6 +147,37 @@ async def draft_response(
         "what you would write."
     )
 
+    draft_messages = [
+        {
+            "role": "user",
+            "content": f"Customer review ({rating}/5 stars):\n\n{review_text}",
+        }
+    ]
+    try:
+        reservation = reserve_ai_tokens(
+            tenant={**tenant_row, "id": tenant_id},
+            estimated_tokens=estimate_widget_chat_tokens(
+                system_prompt=system_prompt,
+                messages=draft_messages,
+                max_tokens=300,
+            ),
+            operation="review_responder.draft",
+            session_id=str(review.get("review_id") or tenant_id),
+        )
+    except Exception:
+        logger.warning(
+            "review_responder: guard unavailable tenant=%s — failing closed before provider",
+            tenant_id,
+        )
+        return None
+    if not reservation.allowed or reservation.reason == "guard_unavailable":
+        logger.warning(
+            "review_responder: blocked tenant=%s reason=%s",
+            tenant_id,
+            reservation.reason or "hard_limit",
+        )
+        return None
+
     try:
         result = await call_claude_messages(
             operation="review_responder.draft",
@@ -135,22 +186,25 @@ async def draft_response(
             temperature=0.7,
             timeout=30.0,
             system=system_prompt,
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"Customer review ({rating}/5 stars):\n\n{review_text}",
-                }
-            ],
+            messages=draft_messages,
             metadata={"tenant_id": tenant_id, "rating": rating},
         )
         draft_reply = result.text.strip()
     except Exception:
+        release_ai_token_reservation(reservation)
         logger.error(
             "review_responder: draft generation failed tenant=%s",
             tenant_id,
-            exc_info=True,
         )
         return None
+
+    record_ai_usage(
+        reservation=reservation,
+        result=result,
+        operation="review_responder.draft",
+        session_id=str(review.get("review_id") or tenant_id),
+        model="claude-sonnet-4-6",
+    )
 
     if not draft_reply:
         logger.warning(
