@@ -333,7 +333,7 @@ async def generate_image(
         "os_files.image_gen.start tenant=%s prompt_len=%d", client_id, len(req.prompt)
     )
     try:
-        png_bytes = generate_image_png(req.prompt)
+        png_bytes = await generate_image_png(req.prompt)
     except ImageGenNotConfigured:
         raise HTTPException(
             status_code=503,
