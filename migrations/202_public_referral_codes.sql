@@ -11,9 +11,12 @@
 -- new share links or referral_clicks rows.
 --
 -- NOT applied by this PR. Do not run this file against production from an
--- agent session. Before applying, run the read-only duplicate pre-check in
--- the pull request body. tenants already has rows (migration 135 backfilled
--- referral_code); this index is not created on an empty table.
+-- agent session.
+--
+-- Uniqueness already exists: prod constraint tenants_referral_code_key
+-- (migration 135, referral_code TEXT UNIQUE). A second unique index is not
+-- created here. Prod has rows on tenants: 0 duplicate referral_code values
+-- and 3 NULLs. The read-only count in the pull request body matches that.
 
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS referral_code TEXT;
 
@@ -40,10 +43,8 @@ BEGIN
   END LOOP;
 END $$;
 
--- One public code per tenant. NULLs stay allowed (multiple NULLs are
--- distinct under a unique index) so a row can exist before backfill.
-CREATE UNIQUE INDEX IF NOT EXISTS tenants_referral_code_unique
-    ON tenants (referral_code);
+-- No new unique index. tenants_referral_code_key already enforces
+-- uniqueness. Multiple NULLs remain allowed.
 
 COMMENT ON COLUMN tenants.referral_code IS
   'Public referral code. Never a widget API key. Share links use this value.';

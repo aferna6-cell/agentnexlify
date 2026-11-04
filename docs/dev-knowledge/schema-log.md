@@ -6,7 +6,7 @@ Every database schema change. Claude Code checks this when working with database
 
 ## 202_public_referral_codes.sql (2026-11-04)
 
-**What:** Backfill `tenants.referral_code` when it is null, or when it equals that tenant's `widget_configs.api_key` / starts with `anx_`. New codes are 12 hex characters from `gen_random_uuid()`, not the widget key. Adds `UNIQUE INDEX tenants_referral_code_unique` on `tenants.referral_code`.
+**What:** Backfill `tenants.referral_code` when it is null, or when it equals that tenant's `widget_configs.api_key` / starts with `anx_`. New codes are 12 hex characters from `gen_random_uuid()`, not the widget key. Does not add a second unique index: prod already has UNIQUE constraint `tenants_referral_code_key` (0 duplicate codes, 3 NULLs).
 
 **Why:** Share links and `GET /api/v1/referral/my-stats` were publishing the widget API key as the referral code. The public code stays `tenants.referral_code`. Legacy `?ref=anx_...` links resolve server-side to that code and are not echoed back.
 

@@ -125,10 +125,10 @@ def test_widget_copies_are_byte_identical():
     assert b"ref=${" not in powered
 
 
-def test_migration_202_declares_unique_referral_code_index():
+def test_migration_202_does_not_add_a_second_unique_index():
     sql = (ROOT / "migrations" / "202_public_referral_codes.sql").read_text()
-    assert "CREATE UNIQUE INDEX IF NOT EXISTS tenants_referral_code_unique" in sql
-    assert "ON tenants (referral_code)" in sql
+    assert "CREATE UNIQUE INDEX" not in sql
+    assert "tenants_referral_code_key" in sql
 
 
 def test_my_stats_never_returns_anx_for_null_or_widget_key():
