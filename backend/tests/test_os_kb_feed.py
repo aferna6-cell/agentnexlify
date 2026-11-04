@@ -216,6 +216,7 @@ def test_thin_knowledge_emits_gap_nudge():
 
     gap = [e for e in entries if "setup gaps" in e["topic"]]
     assert len(gap) == 1
+    assert gap[0]["internal"] is True
     assert "services" in gap[0]["answer"]
     assert "ONE of these" in gap[0]["answer"]
 

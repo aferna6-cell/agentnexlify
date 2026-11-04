@@ -5,33 +5,78 @@ indexing failed. If tenant_kb_chunks is missing (migration not applied),
 request-time retrieval still chunks documents in memory.
 """
 
+import asyncio
 import hashlib
 import logging
-from typing import Any
-
 import re
+from typing import Any
 
 from backend.services.business_retrieval import CorpusChunk
 
-_HEADING = re.compile(r"^(#{1,3})\s+(.+)$", re.M)
+_CHUNK_MIN = 500
+_CHUNK_MAX = 1000
+_CHUNK_OVERLAP = 120
+_EMBED_BATCH = 64
+_UUID = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
 
 
-def _chunk_sections(text: str) -> list[tuple[int, str, str]]:
-    matches = list(_HEADING.finditer(text))
-    if not matches:
-        parts = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
-        return [(i, "", p) for i, p in enumerate(parts)] or [(0, "", text.strip())]
-    out: list[tuple[int, str, str]] = []
-    idx = 0
-    for n, m in enumerate(matches):
-        start = m.end()
-        end = matches[n + 1].start() if n + 1 < len(matches) else len(text)
-        body = text[start:end].strip()
-        if not body:
+def pack_text(text: str) -> list[str]:
+    """Pack a document into ~500-1000 character windows with overlap.
+
+    A document shorter than the max stays one chunk. Tiny heading bodies are
+    merged instead of stored as their own 30-character rows.
+    """
+    text = (text or "").replace("\r\n", "\n").strip()
+    if not text:
+        return []
+    if len(text) <= _CHUNK_MAX:
+        return [text]
+
+    pieces = [p.strip() for p in re.split(r"\n+", text) if p.strip()]
+    chunks: list[str] = []
+    buf = ""
+
+    def _hard_split(block: str) -> None:
+        start = 0
+        while start < len(block):
+            end = min(len(block), start + _CHUNK_MAX)
+            piece = block[start:end].strip()
+            if piece:
+                chunks.append(piece)
+            if end >= len(block):
+                break
+            start = max(end - _CHUNK_OVERLAP, start + 1)
+
+    for piece in pieces:
+        if len(piece) > _CHUNK_MAX:
+            if buf:
+                chunks.append(buf)
+                buf = ""
+            _hard_split(piece)
             continue
-        out.append((idx, m.group(2).strip(), body))
-        idx += 1
-    return out or [(0, "", text.strip())]
+        candidate = f"{buf} {piece}".strip() if buf else piece
+        if len(candidate) <= _CHUNK_MAX:
+            buf = candidate
+            continue
+        chunks.append(buf)
+        tail = buf[-_CHUNK_OVERLAP:].strip()
+        room = _CHUNK_MAX - len(piece) - 1
+        if room > 0 and tail:
+            buf = f"{tail[-room:]} {piece}".strip()
+        else:
+            buf = piece
+    if buf:
+        chunks.append(buf)
+    if (
+        len(chunks) >= 2
+        and len(chunks[-1]) < _CHUNK_MIN
+        and len(chunks[-2]) + 1 + len(chunks[-1]) <= _CHUNK_MAX
+    ):
+        chunks[-2] = f"{chunks[-2]} {chunks[-1]}".strip()
+        chunks.pop()
+    return [c for c in chunks if c]
 
 logger = logging.getLogger(__name__)
 
@@ -51,17 +96,17 @@ def documents_to_chunks(client_id: str, docs: list[dict[str, Any]]) -> list[Corp
         if not body:
             continue
         source = doc.get("source") or "upload"
-        for idx, section, content in _chunk_sections(body):
+        for idx, content in enumerate(pack_text(body)):
             out.append(
                 CorpusChunk(
                     chunk_id=f"{doc_id}#{idx}",
                     document_id=doc_id,
                     account_id=client_id,
                     title=title,
-                    section=section,
+                    section="",
                     content=content,
                     source_type=source,
-                    citation_label=f"{title} §{section or idx}",
+                    citation_label=f"{title} §{idx}",
                     status="active",
                 )
             )
@@ -139,32 +184,38 @@ def load_corpus_from_documents(db: Any, client_id: str) -> list[CorpusChunk]:
     return chunks + _load_faq_chunks(db, client_id)
 
 
-def replace_chunks_for_tenant(db: Any, client_id: str, chunks: list[CorpusChunk]) -> int:
+def replace_chunks_for_tenant(
+    db: Any,
+    client_id: str,
+    chunks: list[CorpusChunk],
+    embeddings: list[list[float] | None] | None = None,
+) -> int:
     """Delete + insert tenant_kb_chunks. Fail-open if table missing."""
     try:
         db.table("tenant_kb_chunks").delete().eq("client_id", client_id).execute()
         if not chunks:
             return 0
         rows = []
-        for c in chunks:
-            rows.append(
-                {
-                    "client_id": client_id,
-                    "document_id": c.document_id if _looks_uuid(c.document_id) else None,
-                    "chunk_index": int(c.chunk_id.rsplit("#", 1)[-1] or 0),
-                    "source_type": c.source_type,
-                    "title": c.title,
-                    "section": c.section,
-                    "content": c.content,
-                    "content_sha256": _sha(c.content),
-                    "status": "active",
-                    "citation_label": c.citation_label,
-                }
-            )
+        for i, c in enumerate(chunks):
+            row = {
+                "client_id": client_id,
+                "document_id": c.document_id if _looks_uuid(c.document_id) else None,
+                "chunk_index": int(c.chunk_id.rsplit("#", 1)[-1] or 0),
+                "source_type": c.source_type,
+                "title": c.title,
+                "section": c.section,
+                "content": c.content,
+                "content_sha256": _sha(c.content),
+                "status": "active",
+                "citation_label": c.citation_label,
+            }
+            if embeddings and i < len(embeddings) and embeddings[i]:
+                row["embedding"] = embeddings[i]
+            rows.append(row)
         # document_id is uuid in schema — skip persist when ids are eval strings
         persistable = [r for r in rows if r["document_id"]]
-        if persistable:
-            db.table("tenant_kb_chunks").insert(persistable).execute()
+        for start in range(0, len(persistable), 40):
+            db.table("tenant_kb_chunks").insert(persistable[start : start + 40]).execute()
         return len(persistable)
     except Exception:
         logger.warning("tenant_kb_index: persist skipped client_id=%s", client_id, exc_info=True)
@@ -175,12 +226,64 @@ def _looks_uuid(value: str) -> bool:
     return len(value) == 36 and value.count("-") == 4
 
 
+async def embed_chunk_texts(texts: list[str]) -> list[list[float]]:
+    """Voyage embeddings for chunk bodies. Raises EmbeddingUnavailable if unset."""
+    from backend.services.embeddings import embed_batch
+
+    if not texts:
+        return []
+    vectors: list[list[float]] = []
+    for start in range(0, len(texts), _EMBED_BATCH):
+        vectors.extend(await embed_batch(texts[start : start + _EMBED_BATCH]))
+    if len(vectors) != len(texts):
+        raise RuntimeError("Voyage returned a different number of embeddings than chunks")
+    return vectors
+
+
+async def reindex_tenant(client_id: str) -> dict:
+    """Rebuild one tenant's chunks and embeddings. Does not touch other tenants.
+
+    Embeddings are computed before the old rows are deleted. A Voyage failure
+    leaves the existing index in place.
+    """
+    if not _UUID.match(client_id or ""):
+        raise ValueError("client_id must be a UUID")
+
+    from backend.models.database import get_service_supabase
+    from backend.services.embeddings import EmbeddingUnavailable
+
+    db = get_service_supabase()
+    chunks = load_corpus_from_documents(db, client_id)
+    try:
+        vectors = await embed_chunk_texts([c.content for c in chunks])
+    except EmbeddingUnavailable:
+        raise
+    except Exception as exc:
+        logger.warning("tenant_kb_index: reindex embed failed client_id=%s", client_id, exc_info=True)
+        raise EmbeddingUnavailable("Voyage embeddings failed; existing chunks were kept") from exc
+
+    written = replace_chunks_for_tenant(db, client_id, chunks, embeddings=vectors)
+    return {
+        "client_id": client_id,
+        "chunks": written,
+        "embedded": len(vectors),
+        "with_embeddings": sum(1 for v in vectors if v),
+    }
+
+
 def index_after_compile(client_id: str) -> None:
     from backend.models.database import get_service_supabase
 
     try:
         db = get_service_supabase()
         chunks = load_corpus_from_documents(db, client_id)
-        replace_chunks_for_tenant(db, client_id, chunks)
+        embeddings = None
+        try:
+            embeddings = asyncio.run(embed_chunk_texts([c.content for c in chunks]))
+        except Exception:
+            logger.warning(
+                "tenant_kb_index: embeddings skipped client_id=%s", client_id, exc_info=True
+            )
+        replace_chunks_for_tenant(db, client_id, chunks, embeddings=embeddings)
     except Exception:
         logger.warning("tenant_kb_index: index_after_compile failed", exc_info=True)
