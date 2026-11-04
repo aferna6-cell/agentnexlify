@@ -73,7 +73,7 @@ def build_control_center_response(tenant_id: str, period: str) -> dict:
     """Aggregate the full control-center analytics payload."""
     from backend.services.tenant_activity import activity_window
 
-    start_dt, _end_dt, _prev = activity_window(period)
+    start_dt, now, _prev = activity_window(period)
     start = start_dt.isoformat()
     db = _get_db()
 
