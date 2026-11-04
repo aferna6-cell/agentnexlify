@@ -298,6 +298,28 @@ async def recompile(
     return {"compiled": await run_in_threadpool(compile_tenant_kb, tenant_id)}
 
 
+@router.post("/{tenant_id}/reindex")
+async def reindex_kb(
+    tenant_id: str,
+    claims: dict = Depends(_get_kb_claims),
+):
+    """Rebuild this tenant's KB chunks and Voyage embeddings only.
+
+    Other tenants are not touched. If Voyage is unavailable the existing
+    chunks stay in place and the request returns 503.
+    """
+    _require_tenant(claims, tenant_id)
+    from backend.services.embeddings import EmbeddingUnavailable
+    from backend.services.tenant_kb_index import reindex_tenant
+
+    try:
+        return await reindex_tenant(tenant_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except EmbeddingUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+
 @router.post("/{tenant_id}/sync-token")
 async def create_sync_token(
     tenant_id: str,
