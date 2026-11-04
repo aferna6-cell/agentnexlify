@@ -138,9 +138,10 @@ def test_canonical_schema_log_accepts_prod_195_unprefixed_name():
         {"version": "20260830024346", "name": "197_os_tool_executions_l2_idempotency_required"},
         {"version": "20260830030000", "name": "198_tenant_kb_chunks"},
         {"version": "20260902000000", "name": "199_os_workflows"},
-        {"version": "20260902010000", "name": "200_os_workflows_integrity"},
+            {"version": "20260902010000", "name": "200_os_workflows_integrity"},
     ]
-    findings = compare(docs, live, deferred=EXPLICIT_201, watch_from=195)
+    # 202_public_referral_codes ships unapplied, same as deferred 201.
+    findings = compare(docs, live, deferred=EXPLICIT_201 | {202}, watch_from=195)
     assert findings == []
 
 
