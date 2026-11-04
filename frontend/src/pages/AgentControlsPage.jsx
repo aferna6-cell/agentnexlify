@@ -422,7 +422,7 @@ export default function AgentControlsPage() {
   }
 
   return (
-    <div style={{ padding: 24, display: "grid", gap: 18, maxWidth: 900 }}>
+    <div style={{ display: "grid", gap: 18 }}>
       <div>
         <h2
           style={{

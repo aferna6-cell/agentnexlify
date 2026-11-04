@@ -1041,16 +1041,18 @@ function ConnectorsStrip({ token }) {
                 window.location.href = c.connect_path;
               }
             }}
+            aria-label={c.connected ? `${c.label || c.key}, connected` : (c.label || c.key)}
             style={{
               display: "flex",
               alignItems: "center",
               gap: 6,
               padding: "5px 12px",
               borderRadius: 16,
-              border: "1px solid var(--border)",
-              background: "var(--bg-secondary)",
+              border: c.connected ? "1px solid var(--green)" : "1px solid var(--border)",
+              background: c.connected ? "var(--green-dim)" : "var(--bg-secondary)",
               fontSize: "0.78rem",
-              color: "var(--text-secondary)",
+              fontWeight: c.connected ? 600 : 500,
+              color: c.connected ? "var(--green)" : "var(--text-secondary)",
               cursor: c.connected ? "default" : "pointer",
             }}
           >
@@ -1064,6 +1066,7 @@ function ConnectorsStrip({ token }) {
               }}
             />
             {c.label || c.key}
+            {c.connected && <span>Connected</span>}
           </div>
         ))}
       </div>
@@ -1466,7 +1469,7 @@ function InboundBridgesSection({ token }) {
                 type="email"
                 value={emailAddress}
                 onChange={(e) => setEmailAddress(e.target.value)}
-                placeholder="replies@tenant.example.com"
+                placeholder="replies@yourbusiness.com"
                 style={{
                   width: "100%",
                   padding: "0.5rem 0.75rem",

@@ -363,7 +363,7 @@ export default function BillingPage() {
               }}
             >
               Need help with a billing mistake or accidental renewal? Email{" "}
-              <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>{" "}
+              <a className="billing-support-link" href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>{" "}
               within 5 business days. Duplicate charges and service-activation
               billing errors are eligible for manual review.
             </div>
@@ -386,7 +386,7 @@ export default function BillingPage() {
               ) : (
                 <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: 10 }}>
                   Not getting value yet? We can help you set it up. Email{" "}
-                  <a href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>{" "}
+                  <a className="billing-support-link" href="mailto:support@agentnexlify.com">support@agentnexlify.com</a>{" "}
                   and we will get your AI working for you.
                 </p>
               )}
