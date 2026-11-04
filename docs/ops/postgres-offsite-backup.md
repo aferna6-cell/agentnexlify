@@ -7,9 +7,10 @@ that can be restored.
 The job is a separate Railway cron service. It runs `pg_dump` in custom
 format with gzip compression level 6, encrypts the archive, and uploads it
 to Cloudflare R2 or Backblaze B2. Age is the encryption to use.
-`BACKUP_ENCRYPTION_KEY` is the other accepted key. If neither is set, the
-job raises `ConfigError` and does not dump or upload. On failure it sends
-one email through Resend and exits non-zero.
+`BACKUP_ENCRYPTION_KEY` is the other accepted key. If neither is set, or a
+bucket secret is unset, the process prints one `ConfigError:` line and exits 0.
+That skip does not dump, upload, or restart. Any other failure sends one
+email through Resend and exits non-zero.
 
 The job never deletes objects. Keep backups for 14 to 30 days with a bucket
 lifecycle rule (21 days is the setting to use). The backup credential must
@@ -93,7 +94,7 @@ Set these on the Railway service `postgres-backup`. Do not put the age private k
 
 ### Required: one encryption key
 
-Set `BACKUP_AGE_RECIPIENT` (age public key, `age1...`). That is the key to use. If it is unset, set `BACKUP_ENCRYPTION_KEY` (AES-256-GCM passphrase, also stored in the password manager). When both are set, age is used and the passphrase is ignored. When neither is set, the job exits before `pg_dump`.
+Set `BACKUP_AGE_RECIPIENT` (age public key, `age1...`). That is the key to use. If it is unset, set `BACKUP_ENCRYPTION_KEY` (AES-256-GCM passphrase, also stored in the password manager). When both are set, age is used and the passphrase is ignored. When neither is set, or when any bucket secret is unset, the process prints one `ConfigError:` line and exits 0. That is a clean skip, not a crash, so Railway's on-failure restart does not loop. The next scheduled run tries again. The web service is a different image (`backend/Dockerfile`, start command `python -m backend.railway_entrypoint`) and does not read these variables.
 | `DATABASE_URL` | unset | Fallback only when `BACKUP_DATABASE_URL` is empty. Same port rules. |
 
 ### Not set on Railway

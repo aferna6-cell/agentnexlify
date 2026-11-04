@@ -44,6 +44,20 @@ from backup_common import (
 
 DEFAULT_FROM = "AgentNexLiFy Alerts <noreply@agentnexlify.com>"
 RESEND_URL = "https://api.resend.com/emails"
+BUCKET_SECRET_NAMES = (
+    "BACKUP_S3_ENDPOINT_URL",
+    "BACKUP_S3_BUCKET",
+    "BACKUP_S3_ACCESS_KEY_ID",
+    "BACKUP_S3_SECRET_ACCESS_KEY",
+)
+
+
+class MissingSecrets(ConfigError):
+    """Encryption or bucket credentials are unset.
+
+    main() exits 0 on this error. A deploy that lands before those secrets
+    exist must not crash and must not trip Railway's ON_FAILURE restart loop.
+    """
 
 
 class BackupStore(Protocol):
@@ -133,7 +147,26 @@ def s3_settings_from_env() -> S3Settings:
     )
 
 
+def missing_secrets_error() -> MissingSecrets | None:
+    """One error when encryption or the bucket credential is absent."""
+    parts: list[str] = []
+    if not _present("BACKUP_AGE_RECIPIENT") and not _present("BACKUP_ENCRYPTION_KEY"):
+        parts.append(
+            "Refusing to run without encryption. Set BACKUP_AGE_RECIPIENT "
+            "(preferred) or BACKUP_ENCRYPTION_KEY."
+        )
+    missing_bucket = [name for name in BUCKET_SECRET_NAMES if not _present(name)]
+    if missing_bucket:
+        parts.append("Missing bucket secrets: " + ", ".join(missing_bucket))
+    if not parts:
+        return None
+    return MissingSecrets(" ".join(parts))
+
+
 def load_config() -> BackupConfig:
+    absent = missing_secrets_error()
+    if absent is not None:
+        raise absent
     backup_url = _present("BACKUP_DATABASE_URL")
     database_url = backup_url or _present("DATABASE_URL")
     resend_api_key = _present("RESEND_API_KEY")
@@ -314,6 +347,10 @@ def main() -> int:
     try:
         cfg = load_config()
         result = run_backup(cfg)
+    except MissingSecrets as exc:
+        # One line, exit 0. No traceback, no alert, no restart.
+        print(f"ConfigError: {exc}", file=sys.stderr)
+        return 0
     except Exception as exc:
         detail = redact(f"{type(exc).__name__}: {exc}")
         print(f"backup failed: {detail}", file=sys.stderr)

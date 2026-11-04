@@ -3,6 +3,7 @@
 PR Validation collects this file because it lives under tests/.
 """
 
+import json
 import socket
 import sys
 from datetime import datetime, timezone
@@ -447,6 +448,50 @@ def test_alert_failure_still_exits_nonzero(monkeypatch):
     monkeypatch.setattr(backup, "run_backup", boom)
     monkeypatch.setattr(backup.urllib.request, "urlopen", fake_urlopen)
     assert backup.main() == 1
+
+
+def test_missing_encryption_or_bucket_secrets_exit_without_retry(monkeypatch, capsys):
+    """A deploy before secrets exist logs one ConfigError and does not restart."""
+
+    def forbid(*_args, **_kwargs):
+        raise AssertionError("scheduled job continued past missing secrets")
+
+    monkeypatch.setattr(backup, "run_backup", forbid)
+    monkeypatch.setattr(backup, "send_failure_alert", forbid)
+    apply_env(
+        monkeypatch,
+        BACKUP_AGE_RECIPIENT=None,
+        BACKUP_ENCRYPTION_KEY=None,
+        BACKUP_S3_ENDPOINT_URL=None,
+        BACKUP_S3_BUCKET=None,
+        BACKUP_S3_ACCESS_KEY_ID=None,
+        BACKUP_S3_SECRET_ACCESS_KEY=None,
+        BACKUP_DATABASE_URL=None,
+        DATABASE_URL=None,
+        RESEND_API_KEY=None,
+        BACKUP_ALERT_EMAIL=None,
+    )
+    assert backup.main() == 0
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    lines = captured.err.splitlines()
+    assert lines == [
+        "ConfigError: Refusing to run without encryption. Set BACKUP_AGE_RECIPIENT "
+        "(preferred) or BACKUP_ENCRYPTION_KEY. Missing bucket secrets: "
+        "BACKUP_S3_ENDPOINT_URL, BACKUP_S3_BUCKET, BACKUP_S3_ACCESS_KEY_ID, "
+        "BACKUP_S3_SECRET_ACCESS_KEY"
+    ]
+    assert "Traceback" not in captured.err
+
+    repo = Path(__file__).resolve().parents[1]
+    railway = json.loads((repo / "railway.json").read_text(encoding="utf-8"))
+    assert railway["build"]["dockerfilePath"] == "backend/Dockerfile"
+    assert railway["deploy"]["startCommand"] == "python -m backend.railway_entrypoint"
+    entrypoint = (repo / "backend" / "railway_entrypoint.py").read_text(encoding="utf-8")
+    image = (repo / "backend" / "Dockerfile").read_text(encoding="utf-8")
+    assert "BACKUP_" not in entrypoint
+    assert "ops/db-backup" not in entrypoint
+    assert "ops/db-backup" not in image
 
 
 def test_missing_alert_config_exits_nonzero_without_email(monkeypatch, capsys):
