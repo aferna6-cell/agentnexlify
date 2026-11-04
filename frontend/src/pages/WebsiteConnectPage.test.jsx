@@ -37,6 +37,7 @@ beforeEach(() => {
   verifyWebsiteConnection.mockReset();
   fetchDashboard.mockReset();
   fetchDashboard.mockResolvedValue({ widget_api_key: "wk_test_key" });
+  window.history.replaceState({}, "", "/dashboard/website-connect");
 });
 
 describe("WebsiteConnectPage", () => {
@@ -145,5 +146,118 @@ describe("WebsiteConnectPage", () => {
     expect(
       screen.queryByText("AI receptionist is live"),
     ).not.toBeInTheDocument();
+  });
+
+  it("rejects an onboarding url that contains userinfo", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/dashboard/website-connect?url=" +
+        encodeURIComponent("https://u:p@x.com"),
+    );
+    getWebsiteConnection.mockResolvedValue({
+      connection: null,
+      status: "not_started",
+    });
+    render(<WebsiteConnectPage />);
+    expect(await screen.findByLabelText("Site address")).toHaveValue("");
+    expect(connectWebsite).not.toHaveBeenCalled();
+  });
+
+  it("does not submit a site address that contains a username or password", async () => {
+    getWebsiteConnection.mockResolvedValue({
+      connection: null,
+      status: "not_started",
+    });
+    render(<WebsiteConnectPage />);
+    const input = await screen.findByLabelText("Site address");
+    fireEvent.change(input, { target: { value: "https://u:p@x.com" } });
+    fireEvent.click(screen.getByRole("button", { name: "Connect website" }));
+    expect(
+      await screen.findByText(
+        "Enter the site address without a username or password.",
+      ),
+    ).toBeInTheDocument();
+    expect(connectWebsite).not.toHaveBeenCalled();
+  });
+
+  it("hides troubleshooting tips while verifying", async () => {
+    getWebsiteConnection.mockResolvedValue({
+      status: "verifying",
+      connection: {
+        website_url: "https://salon.example",
+        platform: "wordpress",
+        status: "verifying",
+      },
+    });
+    const view = render(<WebsiteConnectPage />);
+    expect(await screen.findByTestId("connect-status")).toHaveTextContent(
+      "https://salon.example",
+    );
+    expect(
+      screen.queryByTestId("connect-troubleshooting"),
+    ).not.toBeInTheDocument();
+    view.unmount();
+
+    getWebsiteConnection.mockResolvedValue({
+      status: "failed",
+      connection: {
+        website_url: "https://salon.example",
+        platform: "custom",
+        status: "failed",
+      },
+    });
+    let resolveVerify;
+    verifyWebsiteConnection.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveVerify = resolve;
+        }),
+    );
+    render(<WebsiteConnectPage />);
+    expect(
+      await screen.findByTestId("connect-troubleshooting"),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Verify now" }));
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("connect-troubleshooting"),
+      ).not.toBeInTheDocument();
+    });
+    resolveVerify({
+      id: "row1",
+      website_url: "https://salon.example",
+      platform: "custom",
+      status: "needs_action",
+    });
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("connect-troubleshooting"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows troubleshooting tips when the API status is failed", async () => {
+    getWebsiteConnection.mockResolvedValue({
+      status: "failed",
+      connection: {
+        website_url: "https://salon.example",
+        platform: "wix",
+        status: "failed",
+        verification_detail: "Could not reach the website to verify.",
+      },
+    });
+    render(<WebsiteConnectPage />);
+    expect(
+      await screen.findByTestId("connect-troubleshooting"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Troubleshooting" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Use the site address only, with no username or password in it.",
+      ),
+    ).toBeInTheDocument();
   });
 });

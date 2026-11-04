@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { DASHBOARD_PATH } from "../utils/postLoginRedirect";
 
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL ||
@@ -8,6 +9,7 @@ const API_BASE =
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -40,6 +42,8 @@ export default function LoginPage() {
       const { token, tenant_id } = await res.json();
       localStorage.setItem("anx_tenant_id", tenant_id);
       login(token);
+      // Replace /login so Back does not return to the signed-in login URL.
+      navigate(DASHBOARD_PATH, { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -151,7 +155,11 @@ export default function LoginPage() {
           </Link>
         </p>
         <p className="login-footer" style={{ marginTop: "0.5rem" }}>
-          <Link to="/demo" className="login-link" style={{ fontWeight: 400, color: "var(--text-secondary)" }}>
+          <Link
+            to="/demo"
+            className="login-link"
+            style={{ fontWeight: 400, color: "var(--text-secondary)" }}
+          >
             Try the live demo &rarr; no signup needed
           </Link>
         </p>

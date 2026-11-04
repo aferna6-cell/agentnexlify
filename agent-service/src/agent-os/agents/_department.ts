@@ -21,6 +21,7 @@
  */
 
 import { defineAgent, PLAIN_TEXT_CHANNELS, type Agent, type AgentBucket, type AgentChannel } from "./_schema.ts";
+import { isPracticeAdviceAsk, namesDeliverable, practiceAdviceAnswer } from "./_advice.ts";
 import { readAskIntent, type AskIntent, type SubjectType, type TaskIntent } from "./_intent.ts";
 import type { AgentOutput, AgentRunArgs, SharedContext } from "../types/agent.ts";
 import { executeAction } from "../actions/executor.ts";
@@ -291,6 +292,39 @@ export function defineDepartment(spec: DepartmentSpec): DepartmentAgent {
       // every decision below. Skill choice, action eligibility and clarification
       // all need it, and re-deriving it per consumer is how they drift apart.
       const intent = readAskIntent(args.ownerAsk);
+
+      // Checklist only for the fallthrough that used to inherit defaultSkillId
+      // (Operations → Booking). A scored skill, a detected action, or a named
+      // deliverable (text, SMS, email, message, reply, post, promo) still runs.
+      const skillScore = eligibleSkills(spec, intent).reduce(
+        (max, skill) => Math.max(max, scoreSkill(args.ownerAsk, skill)),
+        0,
+      );
+      const detectedAction = spec.resolveAction?.({
+        ownerAsk: args.ownerAsk,
+        params: args.input,
+        context: args.context,
+        intent,
+      });
+      const forcedSkillId = spec.resolveSkill?.({
+        ownerAsk: args.ownerAsk,
+        params: args.input,
+        context: args.context,
+        intent,
+      });
+      if (
+        isPracticeAdviceAsk(args.ownerAsk) &&
+        skillScore === 0 &&
+        !forcedSkillId &&
+        !detectedAction &&
+        !namesDeliverable(args.ownerAsk)
+      ) {
+        await args.emitTrace.work("advisory_answer", `${spec.display_name} → generic checklist, no skill or action matched`);
+        return {
+          orchestratorNotes: [practiceAdviceAnswer(args.ownerAsk)],
+          noDraftReason: "generic checklist — no skill matched and no action was detected",
+        };
+      }
 
       // Action path first: some asks are things to DO, not things to draft.
       // This runs BEFORE composition on purpose. Resolving an action from
