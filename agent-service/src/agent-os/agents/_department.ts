@@ -21,6 +21,7 @@
  */
 
 import { defineAgent, PLAIN_TEXT_CHANNELS, type Agent, type AgentBucket, type AgentChannel } from "./_schema.ts";
+import { isPracticeAdviceAsk, practiceAdviceAnswer } from "./_advice.ts";
 import { readAskIntent, type AskIntent, type SubjectType, type TaskIntent } from "./_intent.ts";
 import type { AgentOutput, AgentRunArgs, SharedContext } from "../types/agent.ts";
 import { executeAction } from "../actions/executor.ts";
@@ -291,6 +292,18 @@ export function defineDepartment(spec: DepartmentSpec): DepartmentAgent {
       // every decision below. Skill choice, action eligibility and clarification
       // all need it, and re-deriving it per consumer is how they drift apart.
       const intent = readAskIntent(args.ownerAsk);
+
+      // Advice is not a skill. A zero-score ask otherwise inherits defaultSkillId
+      // (Operations → Booking), and an incidental keyword ("late", "book") can
+      // select a draft skill the owner did not ask for. Answer in plain text
+      // and do not run an action or a draft skill.
+      if (isPracticeAdviceAsk(args.ownerAsk)) {
+        await args.emitTrace.work("advisory_answer", `${spec.display_name} → advice, not a draft skill`);
+        return {
+          orchestratorNotes: [practiceAdviceAnswer(args.ownerAsk)],
+          noDraftReason: "advice request — answered directly, no customer draft",
+        };
+      }
 
       // Action path first: some asks are things to DO, not things to draft.
       // This runs BEFORE composition on purpose. Resolving an action from
