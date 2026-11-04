@@ -278,9 +278,11 @@ async def google_disconnect(claims: dict = Depends(_get_current_tenant)):
 
     try:
         from backend.models.database import get_service_supabase
+        from backend.services.m8_action_flags import calendar_chat_enabled
         from backend.services.os_calendar_chat import cancel_pending_calendar_approvals
 
-        cancel_pending_calendar_approvals(get_service_supabase(), tenant_id)
+        if calendar_chat_enabled(tenant_id):
+            cancel_pending_calendar_approvals(get_service_supabase(), tenant_id)
         delete_integration(tenant_id)
     except Exception as exc:
         logger.exception(

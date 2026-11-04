@@ -129,14 +129,29 @@ def _patches(google, integration):
     )
 
 
+@pytest.fixture(autouse=True)
+def _calendar_chat_flag_on(monkeypatch):
+    """Existing chat tests exercise the path. Flag-off tests override this."""
+    monkeypatch.setenv("CALENDAR_CHAT_ENABLED", "1")
+    monkeypatch.setenv("CALENDAR_CHAT_TENANT_ALLOWLIST", "")
+
+
 class TestRoutingRegression:
-    def test_production_prompts_are_calendar_not_metrics(self):
+    def test_production_prompts_and_customer_bookings(self):
         assert os_calendar_chat.classify_calendar_ask(READ_PROMPT) == "read"
         assert os_calendar_chat.classify_calendar_ask(WEEK_PROMPT) == "read"
         assert os_calendar_chat.classify_calendar_ask(BOOK_PROMPT) == "book"
-        assert biz_answers.match_template(READ_PROMPT) is None
+        assert os_calendar_chat.classify_calendar_ask("Book Maria Tuesday at 3pm") is None
+        assert os_calendar_chat.classify_calendar_ask("schedule Dana for 10am") is None
+        assert (
+            os_calendar_chat.classify_calendar_ask("book a cleaning Tuesday 3pm")
+            is None
+        )
+        assert os_calendar_chat.classify_calendar_ask("book me Tuesday at 3pm") == "book"
+        # The metric library is unchanged. The flagged chat path runs first.
+        assert biz_answers.match_template(READ_PROMPT) == "appointment_count"
+        assert biz_answers.match_template(BOOK_PROMPT) == "appointment_count"
         assert biz_answers.match_template(WEEK_PROMPT) is None
-        assert biz_answers.match_template(BOOK_PROMPT) is None
 
     def test_metric_questions_stay_on_the_count_template(self):
         metric = "how many appointments were booked this month?"
@@ -154,18 +169,23 @@ class TestRoutingRegression:
             "How many appointments this week?"
         ) is None
 
-    def test_data_fast_path_does_not_steal_either_prompt(self):
-        from backend.services import os_data_answers
-
-        for prompt in (READ_PROMPT, BOOK_PROMPT, WEEK_PROMPT):
-            assert (
-                _run_async(
-                    os_data_answers.try_data_answer(
-                        _db({}), "c1", "th1", {"content": prompt}
+    def test_customer_bookings_do_not_become_calendar_cards(self):
+        google = FakeGoogle()
+        database = _owner_db()
+        patches = _patches(google, {"id": "int-1"})
+        for prompt in (
+            "Book Maria Tuesday at 3pm",
+            "schedule Dana for 10am",
+            "book a cleaning Tuesday 3pm",
+        ):
+            with patches[0], patches[1], patches[2], patches[3], patches[4]:
+                out = _run_async(
+                    os_calendar_chat.try_calendar_turn(
+                        database, "c1", "th1", {"content": prompt}, now=NOW
                     )
                 )
-                is None
-            )
+            assert out is None
+            assert google.events().inserts == []
 
 
 class TestCalendarRead:
@@ -673,14 +693,76 @@ class TestCardAndDisconnect:
         assert google.events().inserts == []
 
 
-class TestBizAnswerSplit:
-    def test_calendar_wording_is_not_an_appointment_count(self):
-        database = _db({"appointments": [{"id": "a1"}, {"id": "a2"}]})
-        for prompt in (READ_PROMPT, WEEK_PROMPT, BOOK_PROMPT):
-            out = biz_answers.answer_question(database, "c1", prompt)
-            assert out["matched"] is False
-            assert "appointment(s) were created" not in out["answer"]
+class TestCalendarChatFlag:
+    def test_flag_off_leaves_main_behavior(self, monkeypatch):
+        monkeypatch.setenv("CALENDAR_CHAT_ENABLED", "0")
+        google = FakeGoogle()
+        database = _owner_db()
+        patches = _patches(google, {"id": "int-1"})
+        with patches[0], patches[1], patches[2], patches[3], patches[4]:
+            booked = _run_async(
+                os_calendar_chat.try_calendar_turn(
+                    database, "c1", "th1", {"content": BOOK_PROMPT}, now=NOW
+                )
+            )
+            listed = _run_async(
+                os_calendar_chat.try_calendar_turn(
+                    database, "c1", "th1", {"content": READ_PROMPT}, now=NOW
+                )
+            )
+        assert booked is None and listed is None
+        assert google.events().inserts == []
+        assert google.events().lists == []
+        counted = biz_answers.answer_question(
+            _db({"appointments": [{"id": "a1"}]}), "c1", READ_PROMPT
+        )
+        assert counted["template"] == "appointment_count"
+        refused = google_calendar.insert_approved_calendar_event(
+            MemoryDB({"os_agent_runs": [_approved_run()]}), "c1", "run-1"
+        )
+        assert refused["code"] == "disabled"
+        assert refused["event_id"] is None
 
+    def test_allowlist_includes_only_the_named_tenant(self, monkeypatch):
+        monkeypatch.setenv("CALENDAR_CHAT_ENABLED", "1")
+        monkeypatch.setenv("CALENDAR_CHAT_TENANT_ALLOWLIST", "c1")
+        google = FakeGoogle()
+        patches = _patches(google, {"id": "int-1"})
+        with patches[0], patches[1], patches[2], patches[3], patches[4]:
+            allowed = _run_async(
+                os_calendar_chat.try_calendar_turn(
+                    _owner_db(), "c1", "th1", {"content": BOOK_PROMPT}, now=NOW
+                )
+            )
+            blocked = _run_async(
+                os_calendar_chat.try_calendar_turn(
+                    _owner_db(), "c2", "th1", {"content": BOOK_PROMPT}, now=NOW
+                )
+            )
+        assert allowed["calendar_booking_draft"] is True
+        assert blocked is None
+        assert google.events().inserts == []
+        with patch("backend.services.google_calendar._build_service", return_value=google):
+            created = google_calendar.insert_approved_calendar_event(
+                MemoryDB({"os_agent_runs": [_approved_run()]}), "c1", "run-1"
+            )
+            skipped = google_calendar.insert_approved_calendar_event(
+                MemoryDB(
+                    {
+                        "os_agent_runs": [
+                            {**_approved_run(), "client_id": "c2", "id": "run-1"}
+                        ]
+                    }
+                ),
+                "c2",
+                "run-1",
+            )
+        assert created["ok"] is True
+        assert skipped["code"] == "disabled"
+        assert len(google.events().inserts) == 1
+
+
+class TestBizAnswerSplit:
     def test_real_appointment_count_still_counts(self):
         database = _db({"appointments": [{"id": "a1"}, {"id": "a2"}]})
         out = biz_answers.answer_question(

@@ -35,6 +35,47 @@ _METRIC_RE = re.compile(
 )
 _BOOK_RE = re.compile(r"\b(book|schedule)\b", re.I)
 _DONT_BOOK_RE = re.compile(r"\b(don'?t|do not)\s+(book|schedule)\b", re.I)
+# Owner's own calendar, not a customer job for the Booking skill.
+_OWNER_CALENDAR_RE = re.compile(r"\b(calendar|event|my|me)\b", re.I)
+_TITLED_EVENT_RE = re.compile(
+    r"(?:called|named|titled)\s+['\"“]",
+    re.I,
+)
+# A named customer, or a pronoun for one, is a Booking-skill ask.
+_THIRD_PARTY_PRONOUN_RE = re.compile(
+    r"\b(her|him|his|hers|them|their|she|he)\b",
+    re.I,
+)
+_NOT_A_PERSON = frozenset(
+    {
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+        "january",
+        "february",
+        "march",
+        "april",
+        "may",
+        "june",
+        "july",
+        "august",
+        "september",
+        "october",
+        "november",
+        "december",
+        "google",
+        "calendar",
+        "oauth",
+        "today",
+        "tomorrow",
+        "appointment",
+        "event",
+    }
+)
 _CLOCK_RE = re.compile(
     r"\b(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)\b",
     re.I,
@@ -65,8 +106,52 @@ _WEEKDAYS = (
 )
 
 
+def _without_quoted_titles(question: str) -> str:
+    return re.sub(r"['\"“”][^'\"“”]+['\"“”]", " ", question)
+
+
+def has_third_party_name(question: str) -> bool:
+    """True when the ask names someone other than the owner.
+
+    Quoted titles (``called "OAuth demo"``) are not people. Weekdays are not
+    people. ``Book Maria`` and ``schedule Dana`` are.
+    """
+    text = _without_quoted_titles(question or "")
+    if _THIRD_PARTY_PRONOUN_RE.search(text):
+        return True
+    for match in re.finditer(r"\b([A-Z][a-z]+)(?:'s)?\b", text):
+        if match.start() == 0:
+            continue
+        prefix = text[: match.start()].rstrip()
+        if not prefix or prefix[-1] in ".!?":
+            continue
+        if match.group(1).lower() in _NOT_A_PERSON:
+            continue
+        return True
+    return False
+
+
+def _owner_calendar_booking(question: str) -> bool:
+    """True for the owner's calendar, not a customer booking.
+
+    A customer name (``Book Maria``, ``schedule Dana``) is never this.
+    Otherwise the ask must mention calendar/event/my/me, or name a titled
+    event (``called "OAuth demo"``). A bare service booking such as
+    ``book a cleaning Tuesday 3pm`` stays with the Booking skill.
+    """
+    if has_third_party_name(question):
+        return False
+    if _OWNER_CALENDAR_RE.search(question):
+        return True
+    return _TITLED_EVENT_RE.search(question) is not None
+
+
 def classify_calendar_ask(question: str) -> str | None:
-    """Return ``read``, ``book``, or None. Pure — no I/O, no model."""
+    """Return ``read``, ``book``, or None. Pure — no I/O, no model.
+
+    ``book`` is only the owner's own calendar. Connection and
+    ``CALENDAR_CHAT_ENABLED`` are checked by ``try_calendar_turn``.
+    """
     q = (question or "").strip()
     if not q or len(q) > _MAX_LEN:
         return None
@@ -78,6 +163,7 @@ def classify_calendar_ask(question: str) -> str | None:
         and _BOOK_RE.search(q)
         and not _DONT_BOOK_RE.search(q)
         and _CLOCK_RE.search(q)
+        and _owner_calendar_booking(q)
     ):
         return "book"
     if is_read:
@@ -324,6 +410,10 @@ async def try_calendar_turn(
     kind = classify_calendar_ask(content)
     if kind is None:
         return None
+    from backend.services.m8_action_flags import calendar_chat_enabled
+
+    if not calendar_chat_enabled(client_id):
+        return None
     if not _is_owner_thread(db, client_id, thread_id):
         return None
 
@@ -343,6 +433,9 @@ async def try_calendar_turn(
         )
         connected = False
 
+    # A booking with no connected calendar stays on the Booking skill.
+    if kind == "book" and not connected:
+        return None
     if kind == "read":
         return await _answer_read(
             db, client_id, thread_id, user_message_row, content,

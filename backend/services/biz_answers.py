@@ -158,13 +158,9 @@ SUPPORTED = [
 
 
 def match_template(question: str) -> str | None:
-    # Calendar reads and bookings are not internal appointment counts. The
-    # appointment_count template matches the bare word "appointment", which
-    # used to answer "what's on my calendar" with "N were created".
-    from backend.services.os_calendar_chat import classify_calendar_ask
-
-    if classify_calendar_ask(question):
-        return None
+    # This library stays the main-branch metric matcher. Owner-calendar
+    # reads are intercepted earlier by the flagged chat path, not by
+    # dropping templates here.
     for name, pattern in TEMPLATES:
         if pattern.search(question or ""):
             return name

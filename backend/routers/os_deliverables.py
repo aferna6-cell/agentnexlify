@@ -171,7 +171,11 @@ async def approve_deliverable(
     run = _load_run(db, client_id, run_id)
     _require_pending(run)
 
-    if run.get("action_type") == "calendar.event.create":
+    from backend.services.m8_action_flags import calendar_chat_enabled
+
+    if run.get("action_type") == "calendar.event.create" and calendar_chat_enabled(
+        client_id
+    ):
         from backend.services.os_actions.calendar import claim_calendar_approval
 
         claimed = claim_calendar_approval(db, client_id, run_id)

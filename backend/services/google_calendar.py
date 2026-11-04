@@ -509,9 +509,21 @@ def insert_approved_calendar_event(db, tenant_id: str, approval_id: str) -> dict
     and does not call ``events.insert`` again.
 
     The returned ``message`` is safe to show to the owner: it never includes
-    token material or the provider error body.
+    token material or the provider error body. The call is refused unless
+    ``CALENDAR_CHAT_ENABLED`` allows this tenant.
     """
+    from backend.services.m8_action_flags import calendar_chat_enabled
     from backend.services.tenant_scope import tenant_table
+
+    if not calendar_chat_enabled(tenant_id):
+        return {
+            "ok": False,
+            "code": "disabled",
+            "event_id": None,
+            "message": (
+                "Calendar chat is turned off for this account. No event was created."
+            ),
+        }
 
     rows = (
         tenant_table(db, "os_agent_runs", tenant_id)
