@@ -20,6 +20,7 @@ from backend.limiter import limiter
 from backend.models.database import get_service_supabase
 from backend.models.schemas import OnlineStatusRequest, WidgetConfigResponse
 from backend.services.email_sender import _make_unsub_sig
+from backend.services.referral import is_public_referral_code
 from backend.routers.widget_chat_helpers import (
     _check_origin,
     _get_tenant,
@@ -35,6 +36,13 @@ from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/widget", tags=["widget"])
+
+def _public_referral_code(code: str | None) -> str | None:
+    """Return the code only when it is safe to embed in the widget watermark."""
+    if not is_public_referral_code(code):
+        return None
+    return code.strip()
+
 
 # leads.id is a UUID. A non-UUID lid makes PostgREST raise 22P02, which
 # previously escaped this handler as HTTP 500.
@@ -201,6 +209,7 @@ async def get_config(request: Request, api_key: str):
         plan=tenant_plan,
         pre_chat_form=widget.get("pre_chat_form"),
         proactive=widget.get("proactive"),
+        referral_code=_public_referral_code(tenant.get("referral_code")),
     )
 
 

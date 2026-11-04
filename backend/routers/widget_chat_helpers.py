@@ -292,7 +292,7 @@ def _get_tenant(tenant_id: str) -> dict[str, Any]:
                 "sms_notifications_enabled, notification_phone, owner_email, "
                 "conversation_email_notify_enabled, conversation_notify_email, "
                 "ai_monthly_token_alert_threshold, ai_monthly_token_hard_limit, "
-                "business_slug"
+                "business_slug, referral_code"
             )
             .eq("id", tenant_id)
             .limit(1)

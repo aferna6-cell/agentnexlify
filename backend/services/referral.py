@@ -23,11 +23,158 @@ Security contract for all:
 """
 
 import logging
+import re
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
 _MAX_CODE_LEN = 200  # guard against oversized input
+# Public share codes are short alphanumeric tokens minted at signup
+# (secrets.token_hex) or by migration 203. Widget API keys start with anx_
+# and must never be treated as a public code.
+_PUBLIC_CODE_RE = re.compile(r"^[A-Za-z0-9]{6,32}$")
+
+
+def is_public_referral_code(code: str | None) -> bool:
+    """True when ``code`` is safe to put in a URL or API response."""
+    if not code:
+        return False
+    text = code.strip()
+    if text.startswith("anx_"):
+        return False
+    return _PUBLIC_CODE_RE.match(text) is not None
+
+
+# Before migration 203, referral_code may be NULL or still equal the widget
+# key. Those tenants get a link with no ref= parameter. The key is never used.
+SHARE_LINK_NO_REF = "https://agentnexlify.com?utm_source=widget"
+SHARE_LINK_WITH_REF = "https://agentnexlify.com?ref={ref_code}&utm_source=widget"
+
+
+def public_share_link(code: str | None) -> tuple[str, str]:
+    """Return ``(public_code, share_link)``.
+
+    A NULL or ``anx_`` code yields an empty code and a link with no ``ref``.
+    """
+    if is_public_referral_code(code):
+        public = code.strip()
+        return public, SHARE_LINK_WITH_REF.format(ref_code=public)
+    return "", SHARE_LINK_NO_REF
+
+
+# In-process counter. Logged at error when a real pre-202 click cannot be
+# stored under a public code. Tests read this; it is not a customer charge.
+referral_click_metrics = {"referral_click_unrecordable_total": 0}
+
+
+def record_unrecordable_referral_click(tenant_id: str) -> int:
+    """Count and error-log a valid click that has no public code yet.
+
+    The raw widget key is never included. ``tenant_id`` is the non-secret
+    owner of the embed, used only so the log can be traced.
+    """
+    referral_click_metrics["referral_click_unrecordable_total"] += 1
+    value = referral_click_metrics["referral_click_unrecordable_total"]
+    logger.error(
+        "referral_click_unrecordable metric=referral_click_unrecordable_total value=%s tenant_id=%s reason=no_public_referral_code",
+        value,
+        tenant_id,
+    )
+    return value
+
+
+class ReferralClickDecision:
+    """How POST /referral/click should persist one ref.
+
+    ``store_as`` is the value written to referral_clicks.ref_tenant_id.
+    It is never a widget API key. ``loud_unrecordable`` is true when the
+    key is real but the tenant has no public code yet (NULL or ``anx_``).
+    """
+
+    def __init__(self, store_as: str | None, loud_unrecordable: bool, tenant_id: str | None):
+        self.store_as = store_as
+        self.loud_unrecordable = loud_unrecordable
+        self.tenant_id = tenant_id
+
+
+def decide_referral_click(db, ref: str | None) -> ReferralClickDecision:
+    """Classify a click ref without ever returning the widget key.
+
+    Unknown refs store nothing. A public code is stored as itself. A real
+    ``anx_`` key whose tenant still has no public code is stored under that
+    tenant id so the click is not dropped.
+    """
+    empty = ReferralClickDecision(None, False, None)
+    if not ref:
+        return empty
+    raw = ref.strip()[:_MAX_CODE_LEN]
+    if not raw:
+        return empty
+
+    if is_public_referral_code(raw):
+        try:
+            found = (
+                db.table("tenants")
+                .select("id")
+                .eq("referral_code", raw)
+                .limit(1)
+                .execute()
+            )
+        except Exception:
+            logger.warning("referral: public code lookup failed", exc_info=True)
+            return empty
+        if not found.data:
+            return empty
+        return ReferralClickDecision(raw, False, str(found.data[0].get("id") or ""))
+
+    if not raw.startswith("anx_"):
+        return empty
+
+    try:
+        wc = (
+            db.table("widget_configs")
+            .select("tenant_id")
+            .eq("api_key", raw)
+            .limit(1)
+            .execute()
+        )
+        if not wc.data:
+            return empty
+        tenant_id = wc.data[0].get("tenant_id")
+        if not tenant_id:
+            return empty
+        tenant = (
+            db.table("tenants")
+            .select("referral_code")
+            .eq("id", tenant_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.warning("referral: legacy key resolution failed", exc_info=True)
+        return empty
+    if not tenant.data:
+        return empty
+    code = tenant.data[0].get("referral_code")
+    tenant_id = str(tenant_id)
+    if is_public_referral_code(code):
+        return ReferralClickDecision(code.strip(), False, tenant_id)
+    # Pre-203: the embed key is real, but there is no safe public code.
+    # Park the click on the tenant id. Caller logs and increments the metric.
+    return ReferralClickDecision(tenant_id, True, tenant_id)
+
+
+def resolve_public_click_ref(db, ref: str | None) -> str | None:
+    """Map a click or share ``ref`` to the public referral code.
+
+    A legacy ``anx_`` widget key still resolves, but the returned value is
+    the tenant's public code. The key itself is never returned or stored.
+    Unknown refs, and real keys with no public code yet, return None.
+    """
+    decision = decide_referral_click(db, ref)
+    if decision.loud_unrecordable:
+        return None
+    return decision.store_as
 
 
 def apply_referral_attribution(
@@ -219,6 +366,39 @@ async def notify_referrer_of_signup(
     try:
         from backend.services.platform_mailer import send_platform_email
         from backend.config import settings as _settings
+
+        # Public codes resolve on tenants.referral_code. Legacy widget keys
+        # still resolve through widget_configs, but the key is not emailed.
+        if is_public_referral_code(widget_key):
+            public_result = (
+                db.table("tenants")
+                .select("id, owner_email")
+                .eq("referral_code", widget_key.strip())
+                .limit(1)
+                .execute()
+            )
+            if public_result.data and public_result.data[0].get("id"):
+                referring_tenant_id = str(public_result.data[0]["id"])
+                owner_email = (public_result.data[0].get("owner_email") or "").strip()
+                if owner_email:
+                    frontend_url = (_settings.frontend_url or "").rstrip("/")
+                    referral_dashboard_url = f"{frontend_url}/dashboard/referral"
+                    body_html = (
+                        "<p>Good news — someone just signed up for AgentNexLiFy through "
+                        "your referral link.</p>"
+                        f'<p>View your referral stats: <a href="{referral_dashboard_url}">'
+                        f"{referral_dashboard_url}</a></p>"
+                    )
+                    await send_platform_email(
+                        subject="Someone signed up through your referral link",
+                        body_html=body_html,
+                        recipient=owner_email,
+                    )
+                    logger.info(
+                        "referral-notify: email sent to referrer tenant %s",
+                        referring_tenant_id,
+                    )
+                return
 
         # Resolve widget_key → referrer tenant_id
         wc_result = (

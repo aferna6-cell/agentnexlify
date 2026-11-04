@@ -4,6 +4,16 @@ Every database schema change. Claude Code checks this when working with database
 
 ---
 
+## 203_public_referral_codes.sql (2026-11-04)
+
+**What:** Backfill `tenants.referral_code` when it is null, or when it equals that tenant's `widget_configs.api_key` / starts with `anx_`. New codes are 12 hex characters from `gen_random_uuid()`, not the widget key. Does not add a second unique index: prod already has UNIQUE constraint `tenants_referral_code_key` (0 duplicate codes, 3 NULLs).
+
+**Why:** Share links and `GET /api/v1/referral/my-stats` were publishing the widget API key as the referral code. The public code stays `tenants.referral_code`. Legacy `?ref=anx_...` links resolve server-side to that code and are not echoed back.
+
+**Applied:** NOT applied. This PR ships the file only. Do not run it against production from an agent session.
+
+---
+
 ## 201_website_connections.sql (2026-09-03)
 
 **What:** New `website_connections` table — one row per tenant (`UNIQUE (tenant_id)`). Columns: `tenant_id` **FK → tenants(id) ON DELETE CASCADE**, `website_url`, `platform` / `detected_platform` (`wordpress|wix|squarespace|godaddy|custom|unknown`), `platform_override`, `status` (`needs_action|verifying|connected|failed`), verification timestamps/detail, `next_action_code`. RLS on + deny-public + explicit `service_role` policy. Index `(tenant_id, status)`.
