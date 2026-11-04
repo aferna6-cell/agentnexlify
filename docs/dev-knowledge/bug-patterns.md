@@ -18894,3 +18894,35 @@ fix(security): central demo-role mutation middleware (GH #669)
 **Author:** cursor[bot]
 **Files Changed:** 
 **Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
+
+---
+
+### Fix lead create, SMS, routing, Places key, and image generation (#1011)
+
+* Fix lead status, SMS, routing, Places keys, and image generation
+
+Map pipeline stage labels onto the leads status check and keep the label in pipeline_stage. Allow phone-only SMS with opt-out checks. Route business-fact questions to customer service and index FAQs. Reject non-ASCII Places keys. Treat image-provider 401/403 as not configured, drop response_format, and default the image model to gpt-image-1.5.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+* Renumber pipeline_stage migration to 202
+
+200 is already used by os_workflows_integrity. The schema-log duplicate number failed PR validation.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+* Cover the new lead, SMS, FAQ, and image-gen branches
+
+Changed-line coverage was under 85% because the new status, SMS, pipeline, and FAQ paths were only partly exercised.
+
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+
+---------
+
+Co-authored-by: Cursor Agent <cursoragent@cursor.com>
+Co-authored-by: aferna6-cell <aferna6-cell@users.noreply.github.com>
+**Date:** 2026-11-04
+**Commit:** a0672df
+**Author:** aferna6-cell
+**Files Changed:** .github/workflows/pr-check.yml,agent-service/src/agent-os/agents/_classifier.ts,agent-service/src/agent-os/agents/_intent.ts,agent-service/src/agent-os/agents/_routing_semantics.test.ts,agent-service/src/agent-os/agents/customer_question/agent.ts,backend/config.py,backend/models/schemas.py,backend/routers/leads.py,backend/routers/os_files.py,backend/routers/pipeline.py,backend/routers/prospecting.py,backend/routers/sms.py,backend/routers/social_media.py,backend/services/image_gen.py,backend/services/lead_status.py,backend/services/prospecting.py,backend/services/social_media_images.py,backend/services/tenant_kb.py,backend/services/tenant_kb_index.py,backend/tests/test_prod_incident_fixes.py,backend/tests/test_social_media_images.py,docs/dev-knowledge/canonical-schema.md,docs/dev-knowledge/schema-log.md,frontend/src/pages/ConversationsPage.jsx,frontend/src/pages/Dashboard/ClientList.jsx,frontend/src/pages/Dashboard/QuickActions.jsx,frontend/src/pages/PipelinePage.jsx,frontend/src/pages/SocialMediaPage.jsx,migrations/202_leads_pipeline_stage.sql
+**Details:** Auto-logged from commit message. Run /log-bug in Claude Code to add root cause and prevention details.
