@@ -55,22 +55,6 @@ const ENGINEERING =
 const PROMPT_INJECTION =
   /ignore (?:all |any |previous |prior |above |the ){0,4}instructions|\byou are now\b|\bsystem override\b|\bdisable approval\b|\bsend without approval\b|\bsystem prompt\b|\breveal (?:the |your )?(?:hidden |system )?(?:prompt|instructions|rules)\b/i;
 
-/** Function words only. Content words, negations, and quantifiers stay checkable. */
-const GLUE = new Set(
-  "a an the and or we our you your i is are was were be it its this that these those of to for in on at with during from as by".split(
-    " ",
-  ),
-);
-
-const MAX_ANSWER_CHARS = 2000;
-const MAX_SNIPPET_CHARS = 8000;
-const MAX_CLAIMS = 400;
-
-const ANSWER_SYSTEM =
-  "Answer only from these snippets. Be concise and customer-facing. " +
-  "No internal notes, no implementation plans, no template placeholders, and do not repeat the question. " +
-  "If the snippets do not contain the answer, say you do not have that yet.";
-
 /** FAQ rows store the question on the topic. The model only sees the answer. */
 export function faqAnswerText(entry: KbEntry): string {
   const topic = (entry.topic || "").replace(/\s+/g, " ").trim();
@@ -165,68 +149,33 @@ export function businessAnswerPrompt(
   return `Question: ${question}\n\nSnippets:\n${body}`;
 }
 
-function normalizeSpace(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
-}
-
-type ClaimIndex = { words: string[]; markers: string[] };
-
-/** Prices, ratios, clock times, and other numbers are atomic. Words are split after. */
-function claimIndex(text: string): ClaimIndex {
-  let rest = text.toLowerCase();
-  const markers: string[] = [];
-  const take = (pattern: RegExp, normalize: (match: string) => string) => {
-    rest = rest.replace(pattern, (match) => {
-      markers.push(normalize(match));
-      return " ";
-    });
-  };
-  take(/\$\d{1,3}(?:,\d{3})*(?:\.\d+)?|\$\d+(?:\.\d+)?/g, (match) =>
-    match.replace(/[$,]/g, ""),
-  );
-  take(/\b\d+\s*\/\s*\d+\b/g, (match) => match.replace(/\s+/g, ""));
-  take(/\b\d{1,2}:\d{2}\s*(?:a\.?m\.?|p\.?m\.?)?\b/gi, (match) =>
-    match.replace(/[\s.]/g, ""),
-  );
-  take(/\b\d{1,2}\s*(?:a\.?m\.?|p\.?m\.?)\b/gi, (match) =>
-    match.replace(/[\s.]/g, ""),
-  );
-  take(/\b\d+\.\d+\b/g, (match) => match);
-  take(/\b\d+\b/g, (match) => match);
-  const words = rest
-    .split(/[^a-z']+/)
-    .map((word) => word.replace(/^'+|'+$/g, ""))
-    .filter((word) => word.length > 0 && !GLUE.has(word));
-  return { words, markers };
+function normalizeIdentity(text: string): string {
+  return text.replace(/\s+/g, " ").trim().toLowerCase();
 }
 
 /**
- * Every content word and every number in the answer must occur in the snippets.
- * A new word is an unsupported claim. This is closed-world overlap, not a
- * denylist of particular phrases.
+ * Grounded only when the answer is the same whole snippet, not a rearrangement
+ * of its words. Relation, polarity, role, and price swaps fail this check.
  */
 export function isGroundedInSnippets(
   text: string,
   snippets: string[],
 ): boolean {
-  const answer = normalizeSpace(text);
-  if (!answer || answer.length > MAX_ANSWER_CHARS) return false;
-  if (isExcludedCustomerText(answer)) return false;
-  const support = claimIndex(
-    normalizeSpace(snippets.join("\n")).slice(0, MAX_SNIPPET_CHARS),
+  const answer = normalizeIdentity(text);
+  if (!answer || isExcludedCustomerText(text)) return false;
+  return snippets.some(
+    (snippet) =>
+      isWholeCustomerAnswer(snippet) && normalizeIdentity(snippet) === answer,
   );
-  const words = new Set(support.words);
-  const markers = new Set(support.markers);
-  const claims = claimIndex(answer);
-  const total = claims.words.length + claims.markers.length;
-  if (total === 0 || total > MAX_CLAIMS) return false;
-  for (const word of claims.words) {
-    if (!words.has(word)) return false;
-  }
-  for (const marker of claims.markers) {
-    if (!markers.has(marker)) return false;
-  }
-  return true;
+}
+
+/** One verbatim whole snippet, or an explicit abstention. No model call. */
+export function directKbAnswer(question: string, hits: KbEntry[]): string {
+  const whole = customerFacingSnippets(question, hits).find(
+    isWholeCustomerAnswer,
+  );
+  if (!whole) return "I don't have that in your knowledge base yet.";
+  return whole;
 }
 
 /** Used only when the model is down. Whole FAQ answers, never spliced spans. */
@@ -247,20 +196,9 @@ export function synthesizeKbAnswer(question: string, hits: KbEntry[]): string {
 async function answerFromKnowledge(
   question: string,
   hits: KbEntry[],
-  runId: string,
+  _runId: string,
 ): Promise<string> {
-  const snippets = customerFacingSnippets(question, hits);
-  const generated = await generateDraft({
-    system: ANSWER_SYSTEM,
-    prompt: businessAnswerPrompt(question, snippets),
-    runId,
-    maxTokens: 400,
-  });
-  const text = generated?.text?.replace(/\s+/g, " ").trim() ?? "";
-  // One provider attempt. Unsupported claims are discarded here; there is
-  // no verifier call and no second draft.
-  if (text && isGroundedInSnippets(text, snippets)) return text;
-  return extractiveKbAnswer(question, snippets);
+  return directKbAnswer(question, hits);
 }
 
 function deriveTopic(q: string): string {

@@ -11,9 +11,36 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
+import { createRequire } from "node:module";
 import { before, after, test } from "node:test";
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
+
+const require = createRequire(import.meta.url);
+const dns = require("node:dns") as {
+  lookup: (hostname: unknown, ...rest: unknown[]) => unknown;
+  promises: {
+    lookup: (hostname: unknown, ...rest: unknown[]) => Promise<unknown>;
+  };
+};
+let dnsCalls = 0;
+function noteDns(hostname: unknown) {
+  dnsCalls += 1;
+  const host = String(hostname);
+  if (host !== "127.0.0.1" && host !== "::1" && host !== "localhost") {
+    outsideLoopback += 1;
+  }
+}
+const originalLookup = dns.lookup;
+dns.lookup = (hostname: unknown, ...rest: unknown[]) => {
+  noteDns(hostname);
+  return originalLookup(hostname, ...rest);
+};
+const originalPromiseLookup = dns.promises.lookup;
+dns.promises.lookup = (hostname: unknown, ...rest: unknown[]) => {
+  noteDns(hostname);
+  return originalPromiseLookup(hostname, ...rest);
+};
 
 const OIL = "We offer oil changes for $79.99 during normal business hours.";
 const ASK = "What services do we offer?";
@@ -165,6 +192,8 @@ before(async () => {
     server.listen(0, "127.0.0.1", () => resolve());
   });
   const address = server.address() as AddressInfo;
+  dnsCalls = 0;
+  outsideLoopback = 0;
   process.env.ANTHROPIC_API_KEY = "offline-fake-key";
   process.env.ANTHROPIC_BASE_URL = `http://127.0.0.1:${address.port}`;
   delete process.env.AGENT_OS_DRAFTS_DISABLED;
@@ -225,7 +254,6 @@ type Case = {
   require: RegExp[];
   kb?: KbRow[];
   expectExact?: string;
-  expectModelKept?: boolean;
 };
 
 const CASES: Case[] = [
@@ -320,7 +348,6 @@ const CASES: Case[] = [
     forbid: [/24\/7/, /warranty/i, /guarantee/i],
     require: [/oil changes/i, /\$79\.99/, /normal business hours/i],
     expectExact: OIL,
-    expectModelKept: true,
   },
   {
     id: "supported-reorder",
@@ -328,22 +355,19 @@ const CASES: Case[] = [
     text: "During normal business hours, we offer oil changes for $79.99.",
     forbid: [/24\/7/, /warranty/i],
     require: [/oil changes/i, /\$79\.99/, /normal business hours/i],
-    expectExact:
-      "During normal business hours, we offer oil changes for $79.99.",
-    expectModelKept: true,
+    expectExact: OIL,
   },
   {
     id: "supported-glue",
     adversarial: false,
     text: "The oil changes are $79.99.",
     forbid: [/24\/7/, /warranty/i],
-    require: [/oil changes/i, /\$79\.99/],
-    expectExact: "The oil changes are $79.99.",
-    expectModelKept: true,
+    require: [/oil changes/i, /\$79\.99/, /normal business hours/i],
+    expectExact: OIL,
   },
 ];
 
-test("direct KB answers reject unsupported claims from one fake provider call", async () => {
+test("direct KB answers are one whole snippet and make no provider call", async () => {
   const started = performance.now();
   const adversarial = CASES.filter((row) => row.adversarial);
   let leaked = 0;
@@ -353,41 +377,19 @@ test("direct KB answers reject unsupported claims from one fake provider call", 
     queue.push(message(row.text, FIXTURE_USAGE));
     const out = await loaded.run(row.kb ?? defaultKb);
     const posts = bodies.length - postsBefore;
-    assert.equal(posts, 1, `${row.id} provider posts`);
+    assert.equal(posts, 0, `${row.id} provider posts`);
+    assert.equal(modelCalls.length, 0, `${row.id} model-call records`);
     assert.equal(out.draft, undefined, row.id);
     assert.match(out.noDraftReason ?? "", /knowledge base/, row.id);
-    assert.equal(
-      modelCalls.length,
-      1,
-      `${row.id} model-call records ${JSON.stringify(modelCalls)}`,
-    );
-    assert.equal(modelCalls[0]?.ok, true, row.id);
-    assert.equal(modelCalls[0]?.purpose, "draft", row.id);
-    assert.equal(modelCalls[0]?.runId, "ground-1", row.id);
-    assert.equal(modelCalls[0]?.inputTokens, 11, row.id);
-    assert.equal(modelCalls[0]?.outputTokens, 13, row.id);
-    const prompt = bodies.at(-1) ?? "";
-    assert.equal(
-      prompt.includes(TENANT_B),
-      false,
-      `${row.id} cross-tenant prompt`,
-    );
-    assert.equal(
-      /ignore previous instructions/i.test(prompt),
-      false,
-      `${row.id} injection prompt`,
-    );
-    assert.equal(
-      /nearest_specialist|New behavior/.test(prompt),
-      false,
-      `${row.id} spec prompt`,
-    );
-    assert.equal(
-      /knowledge about this business is incomplete/i.test(prompt),
-      false,
+    assert.equal(out.note.includes(TENANT_B), false, row.id);
+    assert.doesNotMatch(out.note, /ignore previous instructions/i, row.id);
+    assert.doesNotMatch(out.note, /nearest_specialist|New behavior/, row.id);
+    assert.doesNotMatch(
+      out.note,
+      /knowledge about this business is incomplete/i,
       row.id,
     );
-    assert.equal(/NOT building/i.test(prompt), false, row.id);
+    assert.doesNotMatch(out.note, /NOT building/i, row.id);
     for (const pattern of row.forbid) {
       if (pattern.test(out.note)) leaked += row.adversarial ? 1 : 0;
       assert.doesNotMatch(out.note, pattern, `${row.id} leaked ${pattern}`);
@@ -396,7 +398,9 @@ test("direct KB answers reject unsupported claims from one fake provider call", 
       assert.match(out.note, pattern, row.id);
     }
     if (row.expectExact) assert.equal(out.note, row.expectExact, row.id);
-    if (row.expectModelKept) assert.equal(out.note, row.text, row.id);
+    if (row.text !== OIL) {
+      assert.notEqual(out.note, row.text, `${row.id} paraphrase`);
+    }
   }
 
   const fragmentKb: KbRow[] = [
@@ -410,8 +414,8 @@ test("direct KB answers reject unsupported claims from one fake provider call", 
     ),
   );
   const abstained = await loaded.run(fragmentKb);
-  assert.equal(bodies.length - postsBefore, 1, "abstention posts");
-  assert.equal(modelCalls.length, 1, "abstention accounting");
+  assert.equal(bodies.length - postsBefore, 0, "abstention posts");
+  assert.equal(modelCalls.length, 0, "abstention accounting");
   assert.equal(abstained.note, ABSTENTION);
   assert.doesNotMatch(
     abstained.note,
@@ -421,28 +425,18 @@ test("direct KB answers reject unsupported claims from one fake provider call", 
   const failurePosts = bodies.length;
   queue.push(providerError);
   const failed = await loaded.run(defaultKb);
-  assert.equal(bodies.length - failurePosts, 1, "model failure posts");
-  assert.match(failed.note, /oil changes/i);
-  assert.match(failed.note, /\$79\.99/);
-  assert.doesNotMatch(failed.note, /24\/7|warranty/i);
-  assert.equal(modelCalls.length, 1, "model failure accounting");
-  assert.equal(modelCalls[0]?.ok, false, "model failure stays failed");
-  assert.equal(
-    modelCalls.filter((call) => call.ok && call.outputTokens > 0).length,
-    0,
-    "model failure must not record an accepted completion",
-  );
+  assert.equal(bodies.length - failurePosts, 0, "model failure posts");
+  assert.equal(modelCalls.length, 0, "model failure accounting");
+  assert.equal(failed.note, OIL);
 
   const missingPosts = bodies.length;
   queue.push(
     message("We offer 24/7 emergency service and a lifetime warranty.", null),
   );
   const missingUsage = await loaded.run(defaultKb);
-  assert.equal(bodies.length - missingPosts, 1, "missing usage posts");
-  assert.equal(modelCalls.length, 1, "missing usage accounting");
-  assert.match(missingUsage.note, /oil changes/i);
-  assert.doesNotMatch(missingUsage.note, /24\/7|lifetime warranty/i);
-  assert.equal(queue.length, 0, "no unused scripted response");
+  assert.equal(bodies.length - missingPosts, 0, "missing usage posts");
+  assert.equal(modelCalls.length, 0, "missing usage accounting");
+  assert.equal(missingUsage.note, OIL);
 
   const relationA = "We offer oil changes that include tire rotation.";
   const relationB = "We offer brake service that includes battery testing.";
@@ -493,14 +487,29 @@ test("direct KB answers reject unsupported claims from one fake provider call", 
     queue.push(message(row.text, FIXTURE_USAGE));
     const out = await loaded.run(row.kb);
     const snippets = row.kb.map((entry) => entry.answer);
+    const posts = bodies.length - postsBefore;
     const realLeak = row.forbid.some((pattern) => pattern.test(out.note));
     const exportLeak = isGroundedInSnippets(row.text, snippets);
     if (realLeak) realAccepted += 1;
     if (exportLeak) exportAccepted += 1;
+    assert.equal(posts, 0, `${row.id} provider posts`);
+    assert.equal(modelCalls.length, 0, `${row.id} accounting`);
+    const allowed = new Set(
+      snippets.filter((snippet) => snippet.endsWith(".")),
+    );
+    assert.equal(allowed.has(out.note), true, `${row.id} note=${out.note}`);
     console.log(
-      `semantic ${row.id} posts=${bodies.length - postsBefore} accounting=${modelCalls.length} realLeak=${realLeak} exportLeak=${exportLeak} note=${JSON.stringify(out.note)}`,
+      `semantic ${row.id} posts=${posts} accounting=${modelCalls.length} realLeak=${realLeak} exportLeak=${exportLeak} note=${JSON.stringify(out.note)}`,
     );
   }
+  assert.equal(isGroundedInSnippets(relationA, [relationA, relationB]), true);
+  assert.equal(
+    isGroundedInSnippets(
+      "During normal business hours, we offer oil changes for $79.99.",
+      [OIL],
+    ),
+    false,
+  );
   assert.equal(
     realAccepted,
     0,
@@ -512,7 +521,9 @@ test("direct KB answers reject unsupported claims from one fake provider call", 
     `exported-boundary unsupported acceptance ${exportAccepted}/4`,
   );
 
-  assert.equal(outsideLoopback, 0, "real provider or DNS lookup");
+  assert.equal(outsideLoopback, 0, "non-loopback fetch");
+  assert.equal(dnsCalls, 0, "DNS lookups");
+  assert.equal(bodies.length, 0, "provider posts");
   assert.equal(
     leaked,
     0,
@@ -520,7 +531,8 @@ test("direct KB answers reject unsupported claims from one fake provider call", 
   );
   const elapsedMs = Math.round(performance.now() - started);
   console.log(
-    `grounding-boundary adversarial=${adversarial.length} leaked=${leaked} rate=${leaked}/${adversarial.length} elapsed_ms=${elapsedMs} posts=${bodies.length} outside_loopback=${outsideLoopback}`,
+    `grounding-boundary adversarial=${adversarial.length} leaked=${leaked} rate=${leaked}/${adversarial.length} semantic=0/4 posts=${bodies.length} accounting=0 dns=${dnsCalls} outside_loopback=${outsideLoopback} elapsed_ms=${elapsedMs} live_spend_usd=0`,
   );
   assert.equal(adversarial.length, 12);
+  assert.equal(semantic.length, 4);
 });
