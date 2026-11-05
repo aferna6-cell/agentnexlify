@@ -52,6 +52,20 @@ function isEchoFragment(text: string, terms: string[]): boolean {
 const ENGINEERING =
   /\{[A-Za-z_][A-Za-z0-9_]*\}|new behavior\s*:|\b\d+\.\s+if the\b/i;
 
+const PROMPT_INJECTION =
+  /ignore (?:all |any |previous |prior |above |the ){0,4}instructions|\byou are now\b|\bsystem override\b|\bdisable approval\b|\bsend without approval\b|\bsystem prompt\b|\breveal (?:the |your )?(?:hidden |system )?(?:prompt|instructions|rules)\b/i;
+
+/** Function words only. Content words, negations, and quantifiers stay checkable. */
+const GLUE = new Set(
+  "a an the and or we our you your i is are was were be it its this that these those of to for in on at with during from as by".split(
+    " ",
+  ),
+);
+
+const MAX_ANSWER_CHARS = 2000;
+const MAX_SNIPPET_CHARS = 8000;
+const MAX_CLAIMS = 400;
+
 const ANSWER_SYSTEM =
   "Answer only from these snippets. Be concise and customer-facing. " +
   "No internal notes, no implementation plans, no template placeholders, and do not repeat the question. " +
@@ -79,6 +93,15 @@ export function isEngineeringSnippet(text: string): boolean {
   return ENGINEERING.test(text);
 }
 
+/** Spec notes, internal copy, prompt injection, and template placeholders. */
+export function isExcludedCustomerText(text: string): boolean {
+  return (
+    isEngineeringSnippet(text) ||
+    INTERNAL_KB.test(text) ||
+    PROMPT_INJECTION.test(text)
+  );
+}
+
 /** A complete customer sentence. Truncated spans and bare questions are not. */
 export function isWholeCustomerAnswer(text: string): boolean {
   const trimmed = text.trim();
@@ -87,7 +110,7 @@ export function isWholeCustomerAnswer(text: string): boolean {
   if (!/[.!]["']?$/.test(trimmed)) return false;
   if (/^[a-z(]/.test(trimmed)) return false;
   if (/\?\s*$/.test(trimmed)) return false;
-  if (isEngineeringSnippet(trimmed)) return false;
+  if (isExcludedCustomerText(trimmed)) return false;
   return true;
 }
 
@@ -106,7 +129,7 @@ export function customerFacingSnippets(
     .filter(
       (text) =>
         text &&
-        !isEngineeringSnippet(text) &&
+        !isExcludedCustomerText(text) &&
         !isEchoFragment(text, terms) &&
         !/^\s*[^?]{0,160}\?\s*$/.test(text),
     )
@@ -142,6 +165,70 @@ export function businessAnswerPrompt(
   return `Question: ${question}\n\nSnippets:\n${body}`;
 }
 
+function normalizeSpace(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+type ClaimIndex = { words: string[]; markers: string[] };
+
+/** Prices, ratios, clock times, and other numbers are atomic. Words are split after. */
+function claimIndex(text: string): ClaimIndex {
+  let rest = text.toLowerCase();
+  const markers: string[] = [];
+  const take = (pattern: RegExp, normalize: (match: string) => string) => {
+    rest = rest.replace(pattern, (match) => {
+      markers.push(normalize(match));
+      return " ";
+    });
+  };
+  take(/\$\d{1,3}(?:,\d{3})*(?:\.\d+)?|\$\d+(?:\.\d+)?/g, (match) =>
+    match.replace(/[$,]/g, ""),
+  );
+  take(/\b\d+\s*\/\s*\d+\b/g, (match) => match.replace(/\s+/g, ""));
+  take(/\b\d{1,2}:\d{2}\s*(?:a\.?m\.?|p\.?m\.?)?\b/gi, (match) =>
+    match.replace(/[\s.]/g, ""),
+  );
+  take(/\b\d{1,2}\s*(?:a\.?m\.?|p\.?m\.?)\b/gi, (match) =>
+    match.replace(/[\s.]/g, ""),
+  );
+  take(/\b\d+\.\d+\b/g, (match) => match);
+  take(/\b\d+\b/g, (match) => match);
+  const words = rest
+    .split(/[^a-z']+/)
+    .map((word) => word.replace(/^'+|'+$/g, ""))
+    .filter((word) => word.length > 0 && !GLUE.has(word));
+  return { words, markers };
+}
+
+/**
+ * Every content word and every number in the answer must occur in the snippets.
+ * A new word is an unsupported claim. This is closed-world overlap, not a
+ * denylist of particular phrases.
+ */
+export function isGroundedInSnippets(
+  text: string,
+  snippets: string[],
+): boolean {
+  const answer = normalizeSpace(text);
+  if (!answer || answer.length > MAX_ANSWER_CHARS) return false;
+  if (isExcludedCustomerText(answer)) return false;
+  const support = claimIndex(
+    normalizeSpace(snippets.join("\n")).slice(0, MAX_SNIPPET_CHARS),
+  );
+  const words = new Set(support.words);
+  const markers = new Set(support.markers);
+  const claims = claimIndex(answer);
+  const total = claims.words.length + claims.markers.length;
+  if (total === 0 || total > MAX_CLAIMS) return false;
+  for (const word of claims.words) {
+    if (!words.has(word)) return false;
+  }
+  for (const marker of claims.markers) {
+    if (!markers.has(marker)) return false;
+  }
+  return true;
+}
+
 /** Used only when the model is down. Whole FAQ answers, never spliced spans. */
 export function extractiveKbAnswer(
   _question: string,
@@ -168,10 +255,11 @@ async function answerFromKnowledge(
     prompt: businessAnswerPrompt(question, snippets),
     runId,
     maxTokens: 400,
-    local: () => extractiveKbAnswer(question, snippets),
   });
   const text = generated?.text?.replace(/\s+/g, " ").trim() ?? "";
-  if (text && !isEngineeringSnippet(text)) return text;
+  // One provider attempt. Unsupported claims are discarded here; there is
+  // no verifier call and no second draft.
+  if (text && isGroundedInSnippets(text, snippets)) return text;
   return extractiveKbAnswer(question, snippets);
 }
 
