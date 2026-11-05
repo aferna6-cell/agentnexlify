@@ -6,6 +6,13 @@ from unittest.mock import MagicMock
 
 # MUST be set before any backend import — backend.config reads env at import time.
 os.environ.setdefault("TESTING", "1")
+# Same neutral test secrets as tests/conftest.py. This file imports
+# backend.main below, which freezes settings and JWT verification. If a
+# backend test is collected first, seeding here is the only chance to install
+# them before that freeze. setdefault keeps an explicit environment intact.
+os.environ.setdefault("API_SECRET_KEY", "test-secret-key-for-jwt")
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-jwt")
+os.environ.setdefault("ADMIN_API_SECRET_KEY", "test-admin-secret-key-for-jwt")
 
 import httpx
 import pytest
