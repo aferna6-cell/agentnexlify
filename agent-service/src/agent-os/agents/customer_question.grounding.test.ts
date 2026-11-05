@@ -444,6 +444,74 @@ test("direct KB answers reject unsupported claims from one fake provider call", 
   assert.doesNotMatch(missingUsage.note, /24\/7|lifetime warranty/i);
   assert.equal(queue.length, 0, "no unused scripted response");
 
+  const relationA = "We offer oil changes that include tire rotation.";
+  const relationB = "We offer brake service that includes battery testing.";
+  const negation = "We do not offer emergency service.";
+  const roles = "Our technicians serve customers.";
+  const oilPrice = "We offer oil changes for $79.99.";
+  const brakePrice = "We offer brake service for $249.99.";
+  const semantic = [
+    {
+      id: "relation-swap",
+      kb: [
+        { topic: "Services", answer: relationA },
+        { topic: "Services", answer: relationB },
+      ],
+      text: "We offer oil changes that include battery testing and brake service that includes tire rotation.",
+      forbid: [
+        /oil changes that include battery testing/i,
+        /brake service that includes tire rotation/i,
+      ],
+    },
+    {
+      id: "omitted-negation",
+      kb: [{ topic: "Services", answer: negation }],
+      text: "We offer emergency service.",
+      forbid: [/^We offer emergency service\.?$/i],
+    },
+    {
+      id: "subject-object-swap",
+      kb: [{ topic: "Services we offer", answer: roles }],
+      text: "Our customers serve technicians.",
+      forbid: [/customers serve technicians/i],
+    },
+    {
+      id: "cross-snippet-price",
+      kb: [
+        { topic: "Services", answer: oilPrice },
+        { topic: "Services", answer: brakePrice },
+      ],
+      text: "We offer oil changes for $249.99.",
+      forbid: [/oil changes for \$249\.99/i, /brake service for \$79\.99/i],
+    },
+  ];
+  const { isGroundedInSnippets } = await import("./customer_question/agent.ts");
+  let realAccepted = 0;
+  let exportAccepted = 0;
+  for (const row of semantic) {
+    const postsBefore = bodies.length;
+    queue.push(message(row.text, FIXTURE_USAGE));
+    const out = await loaded.run(row.kb);
+    const snippets = row.kb.map((entry) => entry.answer);
+    const realLeak = row.forbid.some((pattern) => pattern.test(out.note));
+    const exportLeak = isGroundedInSnippets(row.text, snippets);
+    if (realLeak) realAccepted += 1;
+    if (exportLeak) exportAccepted += 1;
+    console.log(
+      `semantic ${row.id} posts=${bodies.length - postsBefore} accounting=${modelCalls.length} realLeak=${realLeak} exportLeak=${exportLeak} note=${JSON.stringify(out.note)}`,
+    );
+  }
+  assert.equal(
+    realAccepted,
+    0,
+    `real-path unsupported acceptance ${realAccepted}/4`,
+  );
+  assert.equal(
+    exportAccepted,
+    0,
+    `exported-boundary unsupported acceptance ${exportAccepted}/4`,
+  );
+
   assert.equal(outsideLoopback, 0, "real provider or DNS lookup");
   assert.equal(
     leaked,
