@@ -38,13 +38,19 @@ class SyncASGITestClient:
         app,
         base_url="http://testserver",
         raise_server_exceptions=True,
-        **_,
+        **kwargs,
     ):
         self.app = app
         self.base_url = base_url
         self.raise_server_exceptions = raise_server_exceptions
+        # Starlette/FastAPI TestClient follows redirects unless the caller
+        # passes follow_redirects=False. This class replaces both TestClient
+        # symbols at collection time, so the default has to match or backend
+        # router tests change whenever the root tree is collected.
+        self.follow_redirects = kwargs.pop("follow_redirects", True)
 
     async def _request(self, method, url, **kwargs):
+        follow_redirects = kwargs.pop("follow_redirects", self.follow_redirects)
         transport = _REAL_ASGI_TRANSPORT(
             app=self.app,
             raise_app_exceptions=self.raise_server_exceptions,
@@ -52,6 +58,7 @@ class SyncASGITestClient:
         async with _REAL_ASYNC_CLIENT(
             transport=transport,
             base_url=self.base_url,
+            follow_redirects=follow_redirects,
         ) as client:
             return await client.request(method, url, **kwargs)
 

@@ -33,6 +33,8 @@ from backend.services.tenant_scope import (
 client = TestClient(app)
 
 _JWT_SECRET = "test-secret-key-for-jwt"
+# Distinct from the neutral test secret and the dev fallback. Not a credential.
+_WRONG_SIGNATURE_KEY = "distinct-wrong-signature-test-key"
 _TENANT = "tenant-001"
 _ROUTER_MODS = (
     "os_threads",
@@ -1528,6 +1530,28 @@ class TestUsageRouter:
         assert body["agent_runs"] == 0
         assert body["cap"] == usage_meter.DEFAULT_AGENT_RUN_CAP
         assert body["cap_reached"] is False
+
+    def test_get_usage_rejects_wrong_signature(self):
+        """A structurally valid unexpired HS256 token signed with another key is rejected."""
+        from jose import jwt
+
+        payload = {
+            "tenant_id": _TENANT,
+            "sub": _TENANT,
+            "email": "owner@example.com",
+            "role": "owner",
+            "plan": "professional",
+            "business_name": "Test Biz",
+            "exp": datetime.now(timezone.utc) + timedelta(days=1),
+        }
+        token = jwt.encode(payload, _WRONG_SIGNATURE_KEY, algorithm="HS256")
+        fake = FakeSupabase()
+        with patched_db(fake):
+            resp = client.get(
+                "/api/v1/os/usage",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+        assert resp.status_code == 401
 
     def test_get_usage_requires_auth(self):
         resp = client.get("/api/v1/os/usage")
