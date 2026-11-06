@@ -26,16 +26,32 @@ function isInternalKnowledge(entry: KbEntry): boolean {
   return INTERNAL_KB.test(`${entry.topic} ${entry.answer}`);
 }
 
+const MATCH_STOP = new Set(
+  "the our you for and are was can how what when does with that this from your who why did has have about do we not".split(
+    " ",
+  ),
+);
+
+/** Query tokens plus a trailing-s stem so "changes" matches "change". */
+function matchTokens(text: string): string[] {
+  const out: string[] = [];
+  for (const raw of text.toLowerCase().split(/\W+/)) {
+    if (raw.length < 3 || MATCH_STOP.has(raw)) continue;
+    out.push(raw);
+    if (raw.length > 4 && raw.endsWith("s") && !raw.endsWith("ss")) {
+      out.push(raw.slice(0, -1));
+    }
+  }
+  return out;
+}
+
 function searchKb(kb: KbEntry[], query: string): KbEntry[] {
-  const terms = query
-    .toLowerCase()
-    .split(/\W+/)
-    .filter((t) => t.length > 3);
+  const terms = matchTokens(query);
   if (terms.length === 0) return [];
-  return kb.filter((e) => {
-    if (isInternalKnowledge(e)) return false;
-    const hay = `${e.topic} ${e.answer}`.toLowerCase();
-    return terms.some((t) => hay.includes(t));
+  return kb.filter((entry) => {
+    if (isInternalKnowledge(entry)) return false;
+    const hay = new Set(matchTokens(`${entry.topic} ${entry.answer}`));
+    return terms.some((term) => hay.has(term));
   });
 }
 
@@ -52,10 +68,29 @@ function isEchoFragment(text: string, terms: string[]): boolean {
 const ENGINEERING =
   /\{[A-Za-z_][A-Za-z0-9_]*\}|new behavior\s*:|\b\d+\.\s+if the\b/i;
 
-const ANSWER_SYSTEM =
-  "Answer only from these snippets. Be concise and customer-facing. " +
-  "No internal notes, no implementation plans, no template placeholders, and do not repeat the question. " +
-  "If the snippets do not contain the answer, say you do not have that yet.";
+const PROMPT_INJECTION =
+  /ignore (?:all |any |previous |prior |above |the ){0,4}instructions|\byou are now\b|\bsystem override\b|\bdisable approval\b|\bsend without approval\b|\bsystem prompt\b|\breveal (?:the |your )?(?:hidden |system )?(?:prompt|instructions|rules)\b/i;
+
+const DIRECT_KB_EXCLUDE =
+  /\b(draft|write|compose|post|blog|one[- ]?pager|contract|agreement|intake form|note on|add a note|reply|respond)\b/i;
+
+const DIRECT_KB_EXTRA =
+  /\b(warrant(?:y|ies)|guarantees?|guaranteed)\b|\bwhere (?:are|is) (?:we|our)\b|\bhow many\b|\bdo we (?:not )?offer\b|\bwhat do we not\b|\b(?:shop|business) (?:address|location)\b/i;
+
+function isQuestionForm(ask: string): boolean {
+  const trimmed = ask.trim();
+  if (trimmed.endsWith("?")) return true;
+  return /^\s*(what|which|who|when|where|why|how|do|does|did|can|could|should|is|are)\b/i.test(
+    trimmed,
+  );
+}
+
+/** Direct KB answers, including fact questions the shared intent regex misses. */
+export function isDirectKnowledgeAsk(ask: string): boolean {
+  if (DIRECT_KB_EXCLUDE.test(ask)) return false;
+  if (isBusinessKnowledgeQuestion(ask)) return true;
+  return isQuestionForm(ask) && DIRECT_KB_EXTRA.test(ask);
+}
 
 /** FAQ rows store the question on the topic. The model only sees the answer. */
 export function faqAnswerText(entry: KbEntry): string {
@@ -79,6 +114,15 @@ export function isEngineeringSnippet(text: string): boolean {
   return ENGINEERING.test(text);
 }
 
+/** Spec notes, internal copy, prompt injection, and template placeholders. */
+export function isExcludedCustomerText(text: string): boolean {
+  return (
+    isEngineeringSnippet(text) ||
+    INTERNAL_KB.test(text) ||
+    PROMPT_INJECTION.test(text)
+  );
+}
+
 /** A complete customer sentence. Truncated spans and bare questions are not. */
 export function isWholeCustomerAnswer(text: string): boolean {
   const trimmed = text.trim();
@@ -87,7 +131,7 @@ export function isWholeCustomerAnswer(text: string): boolean {
   if (!/[.!]["']?$/.test(trimmed)) return false;
   if (/^[a-z(]/.test(trimmed)) return false;
   if (/\?\s*$/.test(trimmed)) return false;
-  if (isEngineeringSnippet(trimmed)) return false;
+  if (isExcludedCustomerText(trimmed)) return false;
   return true;
 }
 
@@ -96,33 +140,29 @@ export function customerFacingSnippets(
   question: string,
   hits: KbEntry[],
 ): string[] {
-  const terms = question
-    .toLowerCase()
-    .split(/\W+/)
-    .filter((term) => term.length > 3);
+  const terms = matchTokens(question);
   const ranked = hits
     .filter((entry) => !isInternalKnowledge(entry))
-    .map((entry) => faqAnswerText(entry))
+    .map((entry) => ({ entry, text: faqAnswerText(entry) }))
     .filter(
-      (text) =>
+      ({ text }) =>
         text &&
-        !isEngineeringSnippet(text) &&
-        !isEchoFragment(text, terms) &&
+        !isExcludedCustomerText(text) &&
+        (isWholeCustomerAnswer(text) || !isEchoFragment(text, terms)) &&
         !/^\s*[^?]{0,160}\?\s*$/.test(text),
     )
-    .map((text) => {
-      const hay = text.toLowerCase();
-      const score = terms.reduce(
-        (n, term) => n + (hay.includes(term) ? 1 : 0),
-        0,
-      );
+    .map(({ entry, text }) => {
+      const hay = new Set(matchTokens(`${entry.topic} ${text}`));
+      let score = 0;
+      for (const term of terms) if (hay.has(term)) score += 1;
       return { text, score };
     })
-    .sort((a, b) => b.score - a.score || b.text.length - a.text.length);
+    .sort((a, b) => b.score - a.score);
 
   const picked: string[] = [];
   const seen = new Set<string>();
   for (const row of ranked) {
+    if (row.score <= 0) continue;
     const key = row.text.toLowerCase().slice(0, 96);
     if (seen.has(key)) continue;
     seen.add(key);
@@ -142,6 +182,59 @@ export function businessAnswerPrompt(
   return `Question: ${question}\n\nSnippets:\n${body}`;
 }
 
+function normalizeIdentity(text: string): string {
+  return text.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+/**
+ * Grounded only when the answer is the same whole snippet, not a rearrangement
+ * of its words. Relation, polarity, role, and price swaps fail this check.
+ */
+export function isGroundedInSnippets(
+  text: string,
+  snippets: string[],
+): boolean {
+  const answer = normalizeIdentity(text);
+  if (!answer || isExcludedCustomerText(text)) return false;
+  return snippets.some(
+    (snippet) =>
+      isWholeCustomerAnswer(snippet) && normalizeIdentity(snippet) === answer,
+  );
+}
+
+const DIRECT_ABSTAIN = "I don't have that in your knowledge base yet.";
+
+/** One verbatim whole snippet, or abstention when nothing unique wins. */
+export function directKbAnswer(question: string, hits: KbEntry[]): string {
+  const terms = matchTokens(question);
+  const scored: { text: string; score: number }[] = [];
+  for (const entry of hits) {
+    if (isInternalKnowledge(entry)) continue;
+    const text = faqAnswerText(entry);
+    if (!text || isExcludedCustomerText(text) || !isWholeCustomerAnswer(text)) {
+      continue;
+    }
+    const hay = new Set(matchTokens(`${entry.topic} ${text}`));
+    let score = 0;
+    for (const term of terms) if (hay.has(term)) score += 1;
+    if (score > 0) scored.push({ text, score });
+  }
+  if (scored.length === 0) return DIRECT_ABSTAIN;
+  let best = 0;
+  for (const row of scored) if (row.score > best) best = row.score;
+  const winners: string[] = [];
+  const seen = new Set<string>();
+  for (const row of scored) {
+    if (row.score !== best) continue;
+    const key = normalizeIdentity(row.text);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    winners.push(row.text);
+  }
+  if (winners.length !== 1) return DIRECT_ABSTAIN;
+  return winners[0];
+}
+
 /** Used only when the model is down. Whole FAQ answers, never spliced spans. */
 export function extractiveKbAnswer(
   _question: string,
@@ -155,24 +248,6 @@ export function extractiveKbAnswer(
 
 export function synthesizeKbAnswer(question: string, hits: KbEntry[]): string {
   return extractiveKbAnswer(question, customerFacingSnippets(question, hits));
-}
-
-async function answerFromKnowledge(
-  question: string,
-  hits: KbEntry[],
-  runId: string,
-): Promise<string> {
-  const snippets = customerFacingSnippets(question, hits);
-  const generated = await generateDraft({
-    system: ANSWER_SYSTEM,
-    prompt: businessAnswerPrompt(question, snippets),
-    runId,
-    maxTokens: 400,
-    local: () => extractiveKbAnswer(question, snippets),
-  });
-  const text = generated?.text?.replace(/\s+/g, " ").trim() ?? "";
-  if (text && !isEngineeringSnippet(text)) return text;
-  return extractiveKbAnswer(question, snippets);
 }
 
 function deriveTopic(q: string): string {
@@ -230,28 +305,29 @@ export const customerQuestion = defineAgent(
     ownerAsk,
     runId,
   }): Promise<AgentOutput> => {
-    const a = new Authoring(context.businessProfile);
-    const p = Input.safeParse(input);
-    const params = p.success ? p.data : {};
-    const question = (params.customer_question ?? "").trim() || ownerAsk;
-    const customerName = params.customer_name?.trim();
-
+    const questionPreview = ownerAsk.trim();
     // Factual questions about the business itself are answered from the KB.
     // They are not a customer-facing draft waiting on approval.
-    if (isBusinessKnowledgeQuestion(ownerAsk)) {
-      const kbHits = searchKb(context.kb, question);
+    if (isDirectKnowledgeAsk(questionPreview)) {
+      const kbHits = searchKb(context.kb, questionPreview);
       await emitTrace.emit("knowledge_base", {
         description: kbHits.length
           ? `Answered from ${kbHits.length} knowledge-base entr${kbHits.length === 1 ? "y" : "ies"}`
           : "No knowledge-base entry matched this question",
         data: kbHits,
       });
-      const answer = await answerFromKnowledge(question, kbHits, runId);
+      const answer = directKbAnswer(questionPreview, kbHits);
       return {
         orchestratorNotes: [answer],
         noDraftReason: "answered directly from the knowledge base",
       };
     }
+
+    const a = new Authoring(context.businessProfile);
+    const p = Input.safeParse(input);
+    const params = p.success ? p.data : {};
+    const question = (params.customer_question ?? "").trim() || ownerAsk;
+    const customerName = params.customer_name?.trim();
 
     await emitTrace.emit("load_business_profile", {
       description: `Loaded business profile (${presentProfileFields(context.businessProfile).join(", ")})`,
