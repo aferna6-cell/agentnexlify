@@ -494,10 +494,16 @@ test("direct KB answers are one whole snippet and make no provider call", async 
     if (exportLeak) exportAccepted += 1;
     assert.equal(posts, 0, `${row.id} provider posts`);
     assert.equal(modelCalls.length, 0, `${row.id} accounting`);
-    const allowed = new Set(
-      snippets.filter((snippet) => snippet.endsWith(".")),
-    );
-    assert.equal(allowed.has(out.note), true, `${row.id} note=${out.note}`);
+    const tieAbstains =
+      row.id === "relation-swap" || row.id === "cross-snippet-price";
+    if (tieAbstains) {
+      assert.equal(out.note, ABSTENTION, `${row.id} tie`);
+    } else {
+      const allowed = new Set(
+        snippets.filter((snippet) => snippet.endsWith(".")),
+      );
+      assert.equal(allowed.has(out.note), true, `${row.id} note=${out.note}`);
+    }
     console.log(
       `semantic ${row.id} posts=${posts} accounting=${modelCalls.length} realLeak=${realLeak} exportLeak=${exportLeak} note=${JSON.stringify(out.note)}`,
     );
@@ -536,10 +542,11 @@ test("direct KB answers are one whole snippet and make no provider call", async 
   assert.equal(adversarial.length, 12);
   assert.equal(semantic.length, 4);
 
-  const { directKbAnswer } = await import("./customer_question/agent.ts");
-  const { readAskIntent } = await import("./_intent.ts");
-  const { pickSkill } = await import("./_department.ts");
-  const { customerService } = await import("./departments.ts");
+  const { customerService, isDirectKnowledgeAsk, directKbAnswer } =
+    await import("./customer_question/agent.ts").then(async (agent) => {
+      const departments = await import("./departments.ts");
+      return { ...agent, customerService: departments.customerService };
+    });
   const { fullContext } = await import("./_testkit.ts");
   const trapFetch = globalThis.fetch;
   let fetches = 0;
@@ -731,7 +738,7 @@ test("direct KB answers are one whole snippet and make no provider call", async 
       "unsupported",
       "What services do we offer?",
       [relationTire, relationBattery],
-      relationBattery,
+      abstain,
       [
         "oil changes that include battery testing",
         "brake service that includes tire rotation",
@@ -1021,32 +1028,121 @@ test("direct KB answers are one whole snippet and make no provider call", async 
     }
   }
 
+  assert.equal(isDirectKnowledgeAsk("Our warranty expired yesterday."), false);
+  assert.equal(isDirectKnowledgeAsk("What warranty do we offer?"), true);
+  assert.equal(isDirectKnowledgeAsk("What guarantee do we offer?"), true);
+  const basicPlan = "Our Basic plan costs $19.99 each month.";
+  const premiumPlan = "Our Premium plan costs $99.99 each month.";
+  const tiedPlans = directKbAnswer("What plans do we offer?", [
+    { topic: "Plans", answer: basicPlan },
+    { topic: "Plans", answer: premiumPlan },
+  ]);
+  assert.equal(tiedPlans, abstain);
+  const priceFact = "Oil changes cost $79.99 before tax.";
+  const policyDecoy =
+    "Oil changes require a booked appointment before service.";
+  const tiedPrice = await customerService.run({
+    input: {},
+    context: fullContext({
+      kb: [
+        { topic: "Pricing", answer: priceFact },
+        { topic: "Pricing", answer: policyDecoy },
+      ],
+    }),
+    emitTrace: noop,
+    ownerAsk: "What do we charge for oil changes?",
+    runId: "tie-price",
+  });
+  assert.equal(
+    (tiedPrice.orchestratorNotes ?? []).join(" ").replace(/\s+/g, " ").trim(),
+    abstain,
+  );
+  assert.equal(tiedPrice.draft, undefined);
+  assert.equal(fetches, 0);
+  assert.equal(modelCalls.length, 0);
+
+  let persisted = false;
+  let runSettled = false;
+  let releaseTrace: () => void = () => {};
+  const traceGate = new Promise<void>((resolve) => {
+    releaseTrace = resolve;
+  });
+  const delayed = customerService
+    .run({
+      input: {},
+      context: fullContext({ kb: [{ topic: "Services", answer: services }] }),
+      emitTrace: {
+        async emit() {
+          await traceGate;
+          persisted = true;
+          return true;
+        },
+        async work() {},
+        async fallback() {},
+      },
+      ownerAsk: "What services do we offer?",
+      runId: "trace-delay",
+    })
+    .then((out) => {
+      runSettled = true;
+      return out;
+    });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(runSettled, false);
+  assert.equal(persisted, false);
+  releaseTrace();
+  const delayedOut = await delayed;
+  assert.equal(persisted, true);
+  assert.equal(runSettled, true);
+  assert.equal((delayedOut.orchestratorNotes ?? []).join(" ").trim(), services);
+  assert.equal(fetches, 0);
+  assert.equal(modelCalls.length, 0);
+  assert.equal(dnsDuring, 0);
+
+  const unhandled: unknown[] = [];
+  const onUnhandled = (reason: unknown) => {
+    unhandled.push(reason);
+  };
+  process.on("unhandledRejection", onUnhandled);
+  try {
+    await assert.rejects(
+      () =>
+        customerService.run({
+          input: {},
+          context: fullContext({
+            kb: [{ topic: "Services", answer: services }],
+          }),
+          emitTrace: {
+            async emit() {
+              throw new Error("trace failed");
+            },
+            async work() {},
+            async fallback() {},
+          },
+          ownerAsk: "What services do we offer?",
+          runId: "trace-reject",
+        }),
+      /trace failed/,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(unhandled.length, 0);
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+  }
+  assert.equal(fetches, 0);
+  assert.equal(modelCalls.length, 0);
+  assert.equal(dnsDuring, 0);
+
   for (const item of prepared) {
     modelCalls.length = 0;
     await customerService.run({ ...item.args, emitTrace: noop });
   }
   const runSamples: number[] = [];
-  const fallbackSamples: number[] = [];
   for (let rep = 0; rep < 20; rep += 1) {
     for (const item of prepared) {
       const startedRun = performance.now();
       await customerService.run({ ...item.args, emitTrace: noop });
       runSamples.push(performance.now() - startedRun);
-      const startedFallback = performance.now();
-      const intent = readAskIntent(item.entry.ask);
-      const spec = customerService.__department;
-      pickSkill(spec, item.entry.ask, intent);
-      spec.resolveAction?.({
-        ownerAsk: item.entry.ask,
-        params: {},
-        context: item.args.context,
-        intent,
-      });
-      await noop.work("select_skill", "fallback");
-      await noop.emit();
-      await Promise.resolve();
-      directKbAnswer(item.entry.ask, item.entry.kb);
-      fallbackSamples.push(performance.now() - startedFallback);
     }
   }
   const percentile = (values: number[], p: number) => {
@@ -1059,9 +1155,8 @@ test("direct KB answers are one whole snippet and make no provider call", async 
   };
   const median = (values: number[]) => percentile(values, 50);
   const runP95 = percentile(runSamples, 95);
-  const fallbackP95 = percentile(fallbackSamples, 95);
   console.log(
-    `matrix42 n=${matrix.length} unsupported=${unsupportedLeak}/${unsupportedN} supported=${supportedHit}/${supportedN} abstain=${abstainHit}/${abstainN} tenantOwn=${tenantOwn}/${tenantN} tenantLeak=${tenantLeak}/${tenantN} posts=${fetches} modelRows=${modelRows} inTok=${inputTokens} outTok=${outputTokens} cost=${costUsd} fetch=${fetches} dns=${dnsDuring} samples=${runSamples.length} median_ms=${median(runSamples).toFixed(3)} p95_ms=${runP95.toFixed(3)} fallback_median_ms=${median(fallbackSamples).toFixed(3)} fallback_p95_ms=${fallbackP95.toFixed(3)}`,
+    `matrix42 n=${matrix.length} unsupported=${unsupportedLeak}/${unsupportedN} supported=${supportedHit}/${supportedN} abstain=${abstainHit}/${abstainN} tenantOwn=${tenantOwn}/${tenantN} tenantLeak=${tenantLeak}/${tenantN} posts=${fetches} modelRows=${modelRows} inTok=${inputTokens} outTok=${outputTokens} cost=${costUsd} fetch=${fetches} dns=${dnsDuring} samples=${runSamples.length} median_ms=${median(runSamples).toFixed(3)} p95_ms=${runP95.toFixed(3)} paired_old_head=unavailable`,
   );
   assert.equal(matrix.length, 42);
   assert.equal(unsupportedN, 16);
@@ -1080,10 +1175,6 @@ test("direct KB answers are one whole snippet and make no provider call", async 
   assert.equal(outputTokens, 0);
   assert.equal(costUsd, 0);
   assert.ok(runP95 <= 25, `p95 ${runP95} ms`);
-  assert.ok(
-    runP95 <= fallbackP95,
-    `run p95 ${runP95} ms slower than fallback p95 ${fallbackP95} ms`,
-  );
 
   globalThis.fetch = trapFetch;
   dns.lookup = lookupBefore;

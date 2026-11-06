@@ -77,10 +77,19 @@ const DIRECT_KB_EXCLUDE =
 const DIRECT_KB_EXTRA =
   /\b(warrant(?:y|ies)|guarantees?|guaranteed)\b|\bwhere (?:are|is) (?:we|our)\b|\bhow many\b|\bdo we (?:not )?offer\b|\bwhat do we not\b|\b(?:shop|business) (?:address|location)\b/i;
 
+function isQuestionForm(ask: string): boolean {
+  const trimmed = ask.trim();
+  if (trimmed.endsWith("?")) return true;
+  return /^\s*(what|which|who|when|where|why|how|do|does|did|can|could|should|is|are)\b/i.test(
+    trimmed,
+  );
+}
+
 /** Direct KB answers, including fact questions the shared intent regex misses. */
 export function isDirectKnowledgeAsk(ask: string): boolean {
   if (DIRECT_KB_EXCLUDE.test(ask)) return false;
-  return isBusinessKnowledgeQuestion(ask) || DIRECT_KB_EXTRA.test(ask);
+  if (isBusinessKnowledgeQuestion(ask)) return true;
+  return isQuestionForm(ask) && DIRECT_KB_EXTRA.test(ask);
 }
 
 /** FAQ rows store the question on the topic. The model only sees the answer. */
@@ -148,7 +157,7 @@ export function customerFacingSnippets(
       for (const term of terms) if (hay.has(term)) score += 1;
       return { text, score };
     })
-    .sort((a, b) => b.score - a.score || b.text.length - a.text.length);
+    .sort((a, b) => b.score - a.score);
 
   const picked: string[] = [];
   const seen = new Set<string>();
@@ -193,13 +202,37 @@ export function isGroundedInSnippets(
   );
 }
 
-/** One verbatim whole snippet, or an explicit abstention. No model call. */
+const DIRECT_ABSTAIN = "I don't have that in your knowledge base yet.";
+
+/** One verbatim whole snippet, or abstention when nothing unique wins. */
 export function directKbAnswer(question: string, hits: KbEntry[]): string {
-  const whole = customerFacingSnippets(question, hits).find(
-    isWholeCustomerAnswer,
-  );
-  if (!whole) return "I don't have that in your knowledge base yet.";
-  return whole;
+  const terms = matchTokens(question);
+  const scored: { text: string; score: number }[] = [];
+  for (const entry of hits) {
+    if (isInternalKnowledge(entry)) continue;
+    const text = faqAnswerText(entry);
+    if (!text || isExcludedCustomerText(text) || !isWholeCustomerAnswer(text)) {
+      continue;
+    }
+    const hay = new Set(matchTokens(`${entry.topic} ${text}`));
+    let score = 0;
+    for (const term of terms) if (hay.has(term)) score += 1;
+    if (score > 0) scored.push({ text, score });
+  }
+  if (scored.length === 0) return DIRECT_ABSTAIN;
+  let best = 0;
+  for (const row of scored) if (row.score > best) best = row.score;
+  const winners: string[] = [];
+  const seen = new Set<string>();
+  for (const row of scored) {
+    if (row.score !== best) continue;
+    const key = normalizeIdentity(row.text);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    winners.push(row.text);
+  }
+  if (winners.length !== 1) return DIRECT_ABSTAIN;
+  return winners[0];
 }
 
 /** Used only when the model is down. Whole FAQ answers, never spliced spans. */
@@ -277,7 +310,7 @@ export const customerQuestion = defineAgent(
     // They are not a customer-facing draft waiting on approval.
     if (isDirectKnowledgeAsk(questionPreview)) {
       const kbHits = searchKb(context.kb, questionPreview);
-      void emitTrace.emit("knowledge_base", {
+      await emitTrace.emit("knowledge_base", {
         description: kbHits.length
           ? `Answered from ${kbHits.length} knowledge-base entr${kbHits.length === 1 ? "y" : "ies"}`
           : "No knowledge-base entry matched this question",
