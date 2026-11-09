@@ -474,7 +474,7 @@ async def widget_chat(
     # 9c. Detect handoff request from AI response (tag + owner notify)
     assistant_text, handoff_triggered = (
         await widget_chat_effects.handle_handoff_detection(
-            db, tenant, req, conversation_id, assistant_text
+            db, tenant, req, conversation_id, assistant_text, messages
         )
     )
 

@@ -548,13 +548,25 @@ def test_existing_lead_capture_threads_tenant_and_persists_tags():
         ]
     )
 
+    # Not an escalated conversation: the escalations lookup finds nothing.
+    no_escalation_chain = MagicMock()
+    no_escalation_chain.eq.return_value.limit.return_value.execute.return_value = (
+        MagicMock(data=[])
+    )
+
     with (
         patch(
             "backend.routers.widget_chat_helpers._load_chat_history",
             return_value=_MESSAGES,
         ),
         patch.object(extract, "get_service_supabase", return_value=_fixture()),
-        patch.object(extract, "tenant_select", return_value=select_chain),
+        patch.object(
+            extract,
+            "tenant_select",
+            side_effect=lambda _db, table, *_a, **_k: (
+                select_chain if table == "leads" else no_escalation_chain
+            ),
+        ),
         patch.object(extract, "tenant_update", side_effect=fake_update),
         patch.object(extract, "log_activity"),
         patch.object(extract, "fire_event_background"),

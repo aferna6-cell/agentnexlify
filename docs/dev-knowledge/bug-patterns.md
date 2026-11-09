@@ -4,6 +4,18 @@ Bugs that have been found and fixed. Claude Code reads this to avoid re-discover
 
 ---
 
+### Widget promised a support handoff that never happened, then pitched a trial to the customer (2026-11-09)
+
+**Symptom:** An existing MTOptions customer said their text alerts had stopped. The bot replied "I'll pass this along to support@..." but no `escalations` row was created, `conversations.notified_at` stayed null, and nobody was told. Three minutes later lead capture enrolled them in the `lead_captured` welcome sequence, which pitched a free trial to a paying subscriber.
+
+**Root cause:** Escalation and owner alerts only ran on the literal `HANDOFF_REQUESTED` marker, and the prompt only asked for it when a visitor requested a human. The model freely promised handoffs in plain text. `_capture_leads_from_session` treated every new contact as a sales lead and always ran `trigger_sequence("new_lead")` and `enroll_lead_in_sequences`.
+
+**Fix:** `backend/services/support_intent.py` detects existing-customer issues and first-person handoff promises. `widget_chat_effects.handle_handoff_detection` now escalates on the marker, on a promise, or on a support issue with contact details. It emails `conversation_notify_email` (or `owner_email`) and SMS when enabled, sends the issue and the visitor's contact details, stamps `notified_at` once, and replaces a promise with an honest reply when nobody could be notified. Lead capture tags support or escalated chats `support` and skips both sequence entry points. The prompt now routes support issues through `HANDOFF_REQUESTED` and forbids naming addresses it forwarded to.
+
+**Prevention:** Never let reply text claim a side effect the code did not perform. Gate nurture/sales automation on the conversation being a sales conversation.
+
+---
+
 ### Dashboard, billing, and analytics counted different activity (2026-11-04)
 
 **Symptom:** Analytics showed 0 conversations and 0 leads, billing showed a large "this month" conversation count, the dashboard proof metric showed opportunities, pipeline said "Total Deals N" with empty columns and $0, and "Last activity" was weeks old.

@@ -344,11 +344,16 @@ class TestLlmPath:
             mock_supabase,
             tenant_id="p2000000-0000-4000-8000-000000000002",
             api_key="anx_pipe_marker",
+            # A reachable owner: the "getting a human" reply is only kept
+            # when someone was actually notified.
+            tenant_overrides={"owner_email": "owner@pipe.test"},
         )
         llm_patch, kb_patch, llm = _patch_llm(
             "Let me get a human for you.\nHANDOFF_REQUESTED"
         )
-        with llm_patch, kb_patch:
+        with llm_patch, kb_patch, patch(
+            "backend.services.email_sender.send_email", new=AsyncMock()
+        ):
             resp = _post_chat(
                 client, "anx_pipe_marker", "I want to talk to a person", "sess-marker"
             )

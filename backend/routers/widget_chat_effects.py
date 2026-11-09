@@ -16,6 +16,7 @@ from fastapi import BackgroundTasks
 from backend.models.database import get_service_supabase
 from backend.models.schemas import WidgetChatRequest
 from backend.services.escalations import create_escalation
+from backend.services.support_intent import promises_handoff, support_issue
 from backend.services.os_inbound_bridge import bridge_widget, is_bridge_enabled
 from backend.services.webhook_dispatcher import fire_event_background
 from backend.routers.widget_chat_helpers import _record_response_metric
@@ -28,6 +29,12 @@ from backend.routers.widget_lead_helpers import (
 )
 
 logger = logging.getLogger(__name__)
+
+HANDOFF_NOT_NOTIFIED_TEXT = (
+    "Thanks, I've saved your message in our team inbox, but I wasn't able to "
+    "alert the team directly just now. If this is urgent, please contact the "
+    "business directly so they can help right away."
+)
 
 
 def on_new_conversation(
@@ -97,35 +104,82 @@ def increment_usage_counter(db, tenant: dict) -> None:
         )
 
 
-async def handle_handoff_detection(
-    db, tenant: dict, req: WidgetChatRequest, conversation_id, assistant_text: str
-) -> tuple[str, bool]:
-    """Stage 9c — detect HANDOFF_REQUESTED in the model reply.
+def _handoff_notice_html(issue: str, contact: dict[str, str]) -> str:
+    """Email body for a widget handoff: the issue plus how to reach the visitor."""
+    import html
 
-    Strips the marker, tags the conversation, and notifies the owner via
-    SMS + email + webhook. Returns (clean_text, handoff_triggered).
+    rows = [
+        f"<li><strong>{label}:</strong> {html.escape(contact[key])}</li>"
+        for key, label in (("name", "Name"), ("email", "Email"), ("phone", "Phone"))
+        if contact.get(key)
+    ]
+    contact_block = (
+        f"<p>Customer contact:</p><ul>{''.join(rows)}</ul>"
+        if rows
+        else "<p>The customer has not shared contact details yet.</p>"
+    )
+    issue_block = (
+        f"<p><strong>Issue:</strong><br>{html.escape(issue)}</p>" if issue else ""
+    )
+    return (
+        "<p>A customer on your website chat needs a team member to follow up.</p>"
+        f"{issue_block}{contact_block}"
+        "<p>Open the <a href='https://app.agentnexlify.com/dashboard/conversations'>"
+        "Conversations inbox</a> to reply.</p>"
+    )
+
+
+async def handle_handoff_detection(
+    db,
+    tenant: dict,
+    req: WidgetChatRequest,
+    conversation_id,
+    assistant_text: str,
+    messages: list[dict] | None = None,
+) -> tuple[str, bool]:
+    """Stage 9c — turn a human handoff into a real escalation.
+
+    Fires when the model emits HANDOFF_REQUESTED, when its reply promises to
+    pass the issue to a person ("I'll pass this along to support"), or when
+    an existing-customer support issue arrives with contact details. Creates
+    an escalation row, notifies the tenant's alert contact with the issue and
+    the visitor's contact details, and stamps ``conversations.notified_at``.
+    If nobody could be notified, a reply that promised a handoff is replaced
+    with an honest one. Only the explicit marker tags the conversation
+    "handoff" (which pauses the bot). Returns (clean_text, handoff_triggered).
     """
-    if "HANDOFF_REQUESTED" not in assistant_text:
+    session = list(messages or []) + [{"role": "user", "content": req.message or ""}]
+    contact: dict[str, str] = {}
+    for m in session:
+        if m.get("role") == "user":
+            contact.update(_extract_lead_info(m.get("content") or ""))
+    issue = support_issue(session)
+
+    marker = "HANDOFF_REQUESTED" in assistant_text
+    promised = promises_handoff(assistant_text)
+    support_with_contact = bool(issue) and bool(contact.get("email") or contact.get("phone"))
+    if not (marker or promised or support_with_contact):
         return assistant_text, False
 
     assistant_text = assistant_text.replace("HANDOFF_REQUESTED", "").strip()
-    # Tag conversation as handoff
+
+    conv_row: dict = {}
     try:
         conv_result = (
             db.table("conversations")
-            .select("id, tags")
+            .select("id, tags, notified_at")
             .eq("client_id", tenant["id"])
             .eq("session_id", req.session_id)
             .limit(1)
             .execute()
         )
         if conv_result.data:
-            existing_tags = conv_result.data[0].get("tags") or []
-            if "handoff" not in existing_tags:
-                updated_tags = existing_tags + ["handoff"]
-                db.table("conversations").update({"tags": updated_tags}).eq(
-                    "id", conv_result.data[0]["id"]
-                ).execute()
+            conv_row = conv_result.data[0]
+        existing_tags = conv_row.get("tags") or []
+        if marker and conv_row and "handoff" not in existing_tags:
+            db.table("conversations").update(
+                {"tags": existing_tags + ["handoff"]}
+            ).eq("id", conv_row["id"]).execute()
     except Exception:
         logger.warning(
             "Failed to tag conversation as handoff for tenant %s",
@@ -133,48 +187,69 @@ async def handle_handoff_detection(
             exc_info=True,
         )
 
-    # Send notification to team (SMS + email + webhook)
-    try:
-        owner_phone = tenant.get("notification_phone")
-        if owner_phone and tenant.get("sms_notifications_enabled"):
-            from backend.services.twilio_service import send_sms
+    # Notify once per conversation: a later turn that repeats the promise
+    # must not re-alert the team (notified_at is the exactly-once claim).
+    notified = bool(conv_row.get("notified_at"))
+    if not notified:
+        biz = tenant.get("business_name") or "Your business"
+        who = contact.get("name") or contact.get("email") or contact.get("phone") or "A customer"
+        try:
+            owner_phone = tenant.get("notification_phone")
+            if owner_phone and tenant.get("sms_notifications_enabled"):
+                from backend.services.twilio_service import send_sms
 
-            await send_sms(
-                owner_phone,
-                f"[{tenant.get('business_name') or 'Business'}] A customer requested to speak with a team member. Check your inbox.",
-                tenant_id=tenant.get("id"),
-            )
-    except Exception:
-        logger.warning("Failed to send handoff SMS notification", exc_info=True)
+                reach = contact.get("phone") or contact.get("email")
+                await send_sms(
+                    owner_phone,
+                    f"[{biz}] {who} needs a team member"
+                    + (f" (reach them at {reach})" if reach else "")
+                    + ". Check your inbox.",
+                    tenant_id=tenant.get("id"),
+                )
+                notified = True
+        except Exception:
+            logger.warning("Failed to send handoff SMS notification", exc_info=True)
 
-    try:
-        owner_email = tenant.get("owner_email")
-        if owner_email:
-            from backend.services.email_sender import send_email
+        try:
+            alert_email = tenant.get("conversation_notify_email") or tenant.get("owner_email")
+            if alert_email:
+                from backend.services.email_sender import send_email
 
-            biz = tenant.get("business_name") or "Your business"
-            await send_email(
-                to=owner_email,
-                subject=f"[{biz}] Customer requesting a human",
-                body_html=(
-                    "<p>A customer on your website chat is asking to speak with a team member.</p>"
-                    "<p>Open the <a href='https://app.agentnexlify.com/dashboard/conversations'>Conversations inbox</a> to reply.</p>"
-                ),
-                tenant_id=tenant["id"],
-            )
-    except Exception:
-        logger.warning("Failed to send handoff email notification", exc_info=True)
+                await send_email(
+                    to=alert_email,
+                    subject=f"[{biz}] Customer needs a team member",
+                    body_html=_handoff_notice_html(issue or req.message or "", contact),
+                    tenant_id=tenant["id"],
+                )
+                notified = True
+        except Exception:
+            logger.warning("Failed to send handoff email notification", exc_info=True)
 
-    # Persist a first-class escalation row alongside the tag (Phase 1a of
+        if notified and conv_row.get("id"):
+            try:
+                from datetime import datetime, timezone
+
+                db.table("conversations").update(
+                    {"notified_at": datetime.now(timezone.utc).isoformat()}
+                ).eq("id", conv_row["id"]).execute()
+            except Exception:
+                logger.warning(
+                    "Failed to stamp notified_at for tenant %s",
+                    tenant["id"],
+                    exc_info=True,
+                )
+
+    if not notified and (marker or promised):
+        # Nobody was actually told — don't let the visitor believe otherwise.
+        assistant_text = HANDOFF_NOT_NOTIFIED_TEXT
+
+    # First-class escalation row (Phase 1a of
     # plans/nexlify-capabilities-roadmap_plan.md). notify=False: the SMS +
-    # email blocks above already notified the owner for this widget
-    # handoff — create_escalation's own notify path exists for sources
-    # (email/sms/os) that don't have an inline block like this one.
-    # source_ref=conversation_id keeps create_escalation idempotent if this
-    # detection ever fires twice for the same conversation. conversation_id
-    # can fall back to a non-UUID session_id when the conversations insert
-    # failed upstream (see widget_chat_helpers._get_or_create_conversation);
-    # only pass it through as the FK column when it's a real UUID.
+    # email blocks above already notified the owner. source_ref=conversation_id
+    # keeps create_escalation idempotent across turns. conversation_id can fall
+    # back to a non-UUID session_id when the conversations insert failed
+    # upstream (see widget_chat_helpers._get_or_create_conversation); only pass
+    # it through as the FK column when it's a real UUID.
     from uuid import UUID as _UUID
 
     try:
@@ -188,7 +263,12 @@ async def handle_handoff_detection(
         source="widget",
         source_ref=str(conversation_id),
         conversation_id=safe_conversation_id,
-        reason=req.message[:280] if req.message else "",
+        reason=(issue or req.message or "")[:280],
+        metadata={
+            "trigger": "marker" if marker else ("promise" if promised else "support_request"),
+            "contact": contact,
+            "notified": notified,
+        },
         notify=False,
     )
 
@@ -201,7 +281,7 @@ async def handle_handoff_detection(
         },
     )
 
-    return assistant_text, True
+    return assistant_text, marker
 
 
 def schedule_post_response_effects(
