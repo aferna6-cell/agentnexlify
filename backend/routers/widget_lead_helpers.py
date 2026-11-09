@@ -27,6 +27,7 @@ from backend.services.ai_usage_guard import (
 )
 from backend.services.lead_scoring import score_lead_background
 from backend.services.llm_runtime import call_claude_messages_sync
+from backend.services.support_intent import is_support_request
 from backend.services.tenant_scope import tenant_insert, tenant_select, tenant_update
 from backend.services.webhook_dispatcher import fire_event_background
 
@@ -687,6 +688,34 @@ def _extract_action_items(tenant_id: str, session_id: str, messages: list[dict])
 # ---------------------------------------------------------------------------
 
 
+SUPPORT_TAG = "support"
+
+
+def _is_support_conversation(
+    db: Any, tenant_id: str, conversation_id: str, messages: list[dict]
+) -> bool:
+    """True for existing-customer support chats or chats already escalated
+    to a human — contacts from these are tagged support, not sales leads."""
+    if is_support_request(messages):
+        return True
+    try:
+        from uuid import UUID
+        UUID(str(conversation_id))
+    except (ValueError, AttributeError, TypeError):
+        return False
+    try:
+        result = (
+            tenant_select(db, "escalations", tenant_id, "id")
+            .eq("conversation_id", conversation_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception:
+        logger.warning("lead_capture: escalation lookup failed for conversation %s", conversation_id, exc_info=True)
+        return False
+    return bool(result.data)
+
+
 async def _capture_leads_from_session(
     tenant_id: str, session_id: str, conversation_id: str,
     attribution: dict | None = None,
@@ -733,6 +762,7 @@ async def _capture_leads_from_session(
             return
 
         db = get_service_supabase()
+        support_chat = _is_support_conversation(db, tenant_id, conversation_id, messages)
 
         # Dedup: check by email + client_id first
         if combined.get("email"):
@@ -803,6 +833,8 @@ async def _capture_leads_from_session(
                     tags = await asyncio.to_thread(
                         _extract_tags_from_conversation, tenant_id, session_id, messages
                     )
+                    if support_chat:
+                        tags = [SUPPORT_TAG] + [t for t in (tags or []) if t != SUPPORT_TAG]
                     if tags:
                         tenant_update(db, "leads", tenant_id, {"tags": tags}).eq("id", lead["id"]).execute()
                         logger.info("lead_capture: tagged existing lead %s with %s", lead["id"], tags)
@@ -898,6 +930,8 @@ async def _capture_leads_from_session(
         summary = _build_conversation_summary(messages)
         if summary:
             lead_fields["conversation_summary"] = summary
+        if support_chat:
+            lead_fields["tags"] = [SUPPORT_TAG]
 
         # First-touch attribution (utm_*, referrer, landing_path, source).
         # Reuse the same sanitizer as the explicit /widget/lead form path so
@@ -958,20 +992,26 @@ async def _capture_leads_from_session(
             except Exception:
                 logger.warning("lead_capture: fire_event_background failed", exc_info=True)
 
-            logger.info("lead_capture: about to call trigger_sequence for lead %s", lead_id)
-            try:
-                from backend.services.automation_engine import trigger_sequence
-                await trigger_sequence(tenant_id, lead_id, "new_lead")
-                logger.info("lead_capture: trigger_sequence completed for lead %s", lead_id)
-            except Exception:
-                logger.warning("Failed to trigger automation for lead %s", lead_id, exc_info=True)
+            # Support / existing-customer / escalated chats keep the contact
+            # but must never enter sales or nurture sequences (a paying
+            # MTOptions subscriber got a free-trial pitch, 2026-11-09).
+            if support_chat:
+                logger.info("lead_capture: support conversation, skipping sequences for lead %s", lead_id)
+            else:
+                logger.info("lead_capture: about to call trigger_sequence for lead %s", lead_id)
+                try:
+                    from backend.services.automation_engine import trigger_sequence
+                    await trigger_sequence(tenant_id, lead_id, "new_lead")
+                    logger.info("lead_capture: trigger_sequence completed for lead %s", lead_id)
+                except Exception:
+                    logger.warning("Failed to trigger automation for lead %s", lead_id, exc_info=True)
 
-            try:
-                from backend.routers.email_enrollment import enroll_lead_in_sequences
-                await enroll_lead_in_sequences(tenant_id, lead_id)
-                logger.info("lead_capture: enroll_lead_in_sequences completed for lead %s", lead_id)
-            except Exception:
-                logger.warning("lead_capture: enroll_lead_in_sequences failed for lead %s", lead_id, exc_info=True)
+                try:
+                    from backend.routers.email_enrollment import enroll_lead_in_sequences
+                    await enroll_lead_in_sequences(tenant_id, lead_id)
+                    logger.info("lead_capture: enroll_lead_in_sequences completed for lead %s", lead_id)
+                except Exception:
+                    logger.warning("lead_capture: enroll_lead_in_sequences failed for lead %s", lead_id, exc_info=True)
 
             logger.info("LEAD_ALERT: about to fire owner alert for lead %s email=%s", lead_id, combined.get("email"))
             try:
@@ -988,6 +1028,8 @@ async def _capture_leads_from_session(
                 tags = await asyncio.to_thread(
                     _extract_tags_from_conversation, tenant_id, session_id, messages
                 )
+                if support_chat:
+                    tags = [SUPPORT_TAG] + [t for t in (tags or []) if t != SUPPORT_TAG]
                 if tags:
                     tenant_update(db, "leads", tenant_id, {"tags": tags}).eq("id", lead_id).execute()
                     logger.info("lead_capture: tagged new lead %s with %s", lead_id, tags)
