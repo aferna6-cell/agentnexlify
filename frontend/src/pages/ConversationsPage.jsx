@@ -13,6 +13,7 @@ import {
   createConversationNote,
   deleteConversationNote,
   replyToConversation,
+  setConversationsSpam,
 } from "../utils/api/inbox";
 import { addClientNote } from "../utils/api/crm";
 import { fetchSnippets } from "../utils/api/snippets";
@@ -34,6 +35,10 @@ const CHANNEL_BADGE = {
   sms: { label: "SMS", color: "#10b981", bg: "rgba(16,185,129,0.12)" },
   facebook: { label: "FB", color: "#1877f2", bg: "rgba(24,119,242,0.12)" },
 };
+
+// Reserved tag the backend uses to hide a conversation from the inbox.
+const SPAM_TAG = "spam";
+const SPAM_MANAGER_ROLES = ["owner", "admin"];
 
 function timeAgo(dateStr) {
   if (!dateStr) return "";
@@ -136,6 +141,13 @@ export default function ConversationsPage({ pageData }) {
 
   // Shared inbox state
   const [inboxFilter, setInboxFilter] = useState("all"); // "all" | "mine"
+  // "inbox" hides conversations marked as spam; "spam" lists only those.
+  const [view, setView] = useState("inbox");
+  const [spamCount, setSpamCount] = useState(0);
+  const [checkedIds, setCheckedIds] = useState(() => new Set());
+  const [spamBusy, setSpamBusy] = useState(false);
+  const [spamNotice, setSpamNotice] = useState(null); // { ids, spam } for Undo
+  const [spamError, setSpamError] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
   const [teamMemberMap, setTeamMemberMap] = useState({}); // id -> { name, email }
   const [assigning, setAssigning] = useState(false);
@@ -207,11 +219,13 @@ export default function ConversationsPage({ pageData }) {
         fetchConversations(user.tenantId, token, {
           channel: channelFilter || undefined,
           search: serverSearch.length >= 3 ? serverSearch : undefined,
+          view,
         }),
         fetchTagDefinitions(user.tenantId, token).catch(() => ({ tags: [] })),
         fetchTeamMembers(user.tenantId, token).catch(() => ({ members: [] })),
       ]);
       setConversations(convRes.conversations || []);
+      setSpamCount(convRes.spam_count || 0);
       setTagDefs(tagRes.tags || []);
 
       const members = teamRes.members || teamRes || [];
@@ -237,7 +251,7 @@ export default function ConversationsPage({ pageData }) {
     } finally {
       setLoading(false);
     }
-  }, [user?.tenantId, token, channelFilter, serverSearch]);
+  }, [user?.tenantId, token, channelFilter, serverSearch, view]);
 
   useEffect(() => {
     load();
@@ -485,6 +499,58 @@ export default function ConversationsPage({ pageData }) {
     );
   });
 
+  const canManageSpam = SPAM_MANAGER_ROLES.includes(user?.role || "owner");
+
+  const switchView = (next) => {
+    setView(next);
+    setSelected(null);
+    setCheckedIds(new Set());
+    setSpamNotice(null);
+    setSpamError(null);
+  };
+
+  const toggleChecked = (sessionId) => {
+    setCheckedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sessionId)) next.delete(sessionId);
+      else next.add(sessionId);
+      return next;
+    });
+  };
+
+  // Mark (spam=true) or restore (spam=false); the rows leave the current view.
+  const handleSpam = async (ids, spam, { isUndo = false } = {}) => {
+    if (!ids.length) return;
+    setSpamBusy(true);
+    setSpamError(null);
+    try {
+      const res = await setConversationsSpam(user.tenantId, token, ids, spam);
+      const updated = res?.updated || [];
+      const moved = new Set(updated);
+      const leavesView = (view === "inbox") === spam;
+      if (leavesView) {
+        setConversations((prev) => prev.filter((c) => !moved.has(c.session_id)));
+        if (moved.has(selected)) setSelected(null);
+      } else {
+        // Undo puts rows back in this view; reload to restore them in order.
+        load();
+      }
+      setSpamCount((n) => Math.max(0, n + (spam ? updated.length : -updated.length)));
+      setCheckedIds(new Set());
+      setSpamNotice(isUndo || !updated.length ? null : { ids: updated, spam });
+      if (res?.not_found?.length) {
+        setSpamError(
+          `${res.not_found.length} conversation${res.not_found.length !== 1 ? "s" : ""} could not be updated.`,
+        );
+      }
+    } catch (err) {
+      console.error("Failed to update spam status", err);
+      setSpamError(err?.message || "Couldn't update. Please try again.");
+    } finally {
+      setSpamBusy(false);
+    }
+  };
+
   // Assign conversation to a team member
   const handleAssign = async (sessionId, assignedTo) => {
     setAssigning(true);
@@ -635,6 +701,7 @@ export default function ConversationsPage({ pageData }) {
   const tagCounts = {};
   conversations.forEach((c) => {
     (c.tags || []).forEach((t) => {
+      if (t === SPAM_TAG) return;
       tagCounts[t] = (tagCounts[t] || 0) + 1;
     });
   });
@@ -801,7 +868,7 @@ export default function ConversationsPage({ pageData }) {
         </div>
       )}
 
-      {conversations.length === 0 ? (
+      {conversations.length === 0 && view === "inbox" && spamCount === 0 ? (
         <div
           style={{
             background: "var(--bg-secondary)",
@@ -913,6 +980,131 @@ export default function ConversationsPage({ pageData }) {
               </button>
             </div>
 
+            {canManageSpam && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 8,
+                  fontSize: "0.75rem",
+                  color: "var(--text-muted)",
+                }}
+              >
+                {view === "spam" ? (
+                  <>
+                    <span>Spam is hidden from your team&apos;s inbox.</span>
+                    <button
+                      className="btn-sm"
+                      onClick={() => switchView("inbox")}
+                      style={{ whiteSpace: "nowrap" }}
+                    >
+                      Back to inbox
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span />
+                    <button
+                      className="btn-sm"
+                      onClick={() => switchView("spam")}
+                      style={{ whiteSpace: "nowrap" }}
+                    >
+                      Spam ({spamCount})
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {spamNotice && (
+              <div
+                role="status"
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 8,
+                  padding: "6px 10px",
+                  borderRadius: 6,
+                  fontSize: "0.78rem",
+                  background: "rgba(34,197,94,0.08)",
+                  border: "1px solid rgba(34,197,94,0.2)",
+                  color: "var(--text-primary)",
+                }}
+              >
+                <span>
+                  {spamNotice.spam
+                    ? `Marked ${spamNotice.ids.length} as spam`
+                    : `Restored ${spamNotice.ids.length} to inbox`}
+                </span>
+                <button
+                  className="btn-sm"
+                  disabled={spamBusy}
+                  onClick={() =>
+                    handleSpam(spamNotice.ids, !spamNotice.spam, { isUndo: true })
+                  }
+                >
+                  Undo
+                </button>
+              </div>
+            )}
+
+            {spamError && (
+              <div
+                role="alert"
+                style={{
+                  marginBottom: 8,
+                  padding: "6px 10px",
+                  borderRadius: 6,
+                  fontSize: "0.78rem",
+                  background: "rgba(239,68,68,0.08)",
+                  border: "1px solid rgba(239,68,68,0.2)",
+                  color: "var(--red, #ef4444)",
+                }}
+              >
+                {spamError}
+              </div>
+            )}
+
+            {canManageSpam && checkedIds.size > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 8,
+                  padding: "6px 10px",
+                  borderRadius: 6,
+                  fontSize: "0.78rem",
+                  background: "var(--bg-secondary)",
+                  border: "1px solid var(--border)",
+                  color: "var(--text-primary)",
+                }}
+              >
+                <span>{checkedIds.size} selected</span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button
+                    className="btn-sm"
+                    disabled={spamBusy}
+                    onClick={() => handleSpam([...checkedIds], view === "inbox")}
+                  >
+                    {view === "inbox" ? "Mark as spam" : "Restore"}
+                  </button>
+                  <button
+                    className="btn-sm"
+                    disabled={spamBusy}
+                    onClick={() => setCheckedIds(new Set())}
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            )}
+
             <input
               className="conv-search"
               placeholder="Search conversations... (Enter to search messages)"
@@ -980,7 +1172,20 @@ export default function ConversationsPage({ pageData }) {
                     onClick={() => handleSelect(c)}
                   >
                     <div className="conv-item-header">
-                      <span className="conv-item-name">
+                      <span
+                        className="conv-item-name"
+                        style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+                      >
+                        {canManageSpam && (
+                          <input
+                            type="checkbox"
+                            aria-label={`Select conversation with ${c.lead_name || "Visitor"}`}
+                            checked={checkedIds.has(c.session_id)}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={() => toggleChecked(c.session_id)}
+                            style={{ margin: 0, cursor: "pointer" }}
+                          />
+                        )}
                         {c.lead_name || "Visitor"}
                       </span>
                       <span className="conv-item-time">
@@ -1063,7 +1268,7 @@ export default function ConversationsPage({ pageData }) {
                         {assigneeName || "Unassigned"}
                       </span>
                     </div>
-                    {(c.tags || []).length > 0 && (
+                    {(c.tags || []).some((t) => t !== SPAM_TAG) && (
                       <div
                         style={{
                           display: "flex",
@@ -1072,7 +1277,7 @@ export default function ConversationsPage({ pageData }) {
                           marginTop: 4,
                         }}
                       >
-                        {c.tags.map((tag) => (
+                        {c.tags.filter((t) => t !== SPAM_TAG).map((tag) => (
                           <span key={tag} style={tagPillStyle(tag)}>
                             {tag}
                           </span>
@@ -1090,7 +1295,9 @@ export default function ConversationsPage({ pageData }) {
                     fontSize: "0.85rem",
                   }}
                 >
-                  {inboxFilter === "mine" && myCount === 0
+                  {view === "spam" && !search && !tagFilter && !channelFilter
+                    ? "No spam. Conversations you mark as spam move here and stay hidden from your team's inbox."
+                    : inboxFilter === "mine" && myCount === 0
                     ? 'No conversations assigned to you yet. Assign conversations from the conversation view, or switch to "All" to see all conversations.'
                     : channelFilter
                       ? `No ${CHANNEL_BADGE[channelFilter]?.label || channelFilter} conversations found. Switch to "All Channels" to see all conversations.`
@@ -1183,7 +1390,7 @@ export default function ConversationsPage({ pageData }) {
                     />
 
                     {/* Tags */}
-                    {(selectedConv?.tags || []).map((tag) => {
+                    {(selectedConv?.tags || []).filter((t) => t !== SPAM_TAG).map((tag) => {
                       const color = getTagColor(tag);
                       const pillBg = color
                         ? color + "26"
@@ -1275,6 +1482,20 @@ export default function ConversationsPage({ pageData }) {
                     {messages.length > 0 && (
                       <button className="btn-sm" onClick={exportConversation}>
                         Export
+                      </button>
+                    )}
+                    {canManageSpam && (
+                      <button
+                        className="btn-sm"
+                        disabled={spamBusy}
+                        onClick={() => handleSpam([selected], view === "inbox")}
+                        title={
+                          view === "inbox"
+                            ? "Hide this conversation from your team's inbox"
+                            : "Move this conversation back to the inbox"
+                        }
+                      >
+                        {view === "inbox" ? "Mark as spam" : "Restore"}
                       </button>
                     )}
                   </div>

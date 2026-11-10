@@ -187,6 +187,11 @@ async def handle_handoff_detection(
             exc_info=True,
         )
 
+    # A conversation the tenant marked as spam never alerts the team or opens
+    # an escalation again.
+    if "spam" in (conv_row.get("tags") or []):
+        return assistant_text, marker
+
     # Notify once per conversation: a later turn that repeats the promise
     # must not re-alert the team (notified_at is the exactly-once claim).
     notified = bool(conv_row.get("notified_at"))

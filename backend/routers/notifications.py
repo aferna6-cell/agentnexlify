@@ -77,6 +77,10 @@ async def get_notifications(
             .execute()
         )
         session_ids = set(r["session_id"] for r in (convos_res.data or []))
+        if session_ids:
+            from backend.services.conversation_spam import spam_session_ids
+
+            session_ids -= spam_session_ids(db, tenant_id)
         new_conversations_count = len(session_ids)
     except Exception:
         logger.warning("Notifications: failed to fetch new conversations for %s", tenant_id, exc_info=True)

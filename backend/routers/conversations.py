@@ -2,11 +2,14 @@
 
 import logging
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.dependencies import block_demo_role
 from backend.services.auth_service import get_current_tenant as _get_current_tenant
 from backend.services import conversations_service as _conv_svc
+from backend.services.conversation_spam import can_manage_spam
 
 logger = logging.getLogger(__name__)
 
@@ -18,11 +21,16 @@ async def list_conversations(
     tenant_id: str,
     channel: str | None = None,
     search: str | None = Query(None, max_length=200),
+    view: Literal["inbox", "spam"] = "inbox",
     claims: dict = Depends(_get_current_tenant),
 ):
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    return _conv_svc.list_conversations(tenant_id, channel=channel, search=search)
+    if view == "spam" and not can_manage_spam(claims):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    return _conv_svc.list_conversations(
+        tenant_id, channel=channel, search=search, view=view
+    )
 
 
 @router.get("/conversations/{tenant_id}/{session_id}")
@@ -33,7 +41,9 @@ async def get_conversation_messages(
 ):
     if claims["tenant_id"] != tenant_id:
         raise HTTPException(status_code=403, detail="Not authorized")
-    return _conv_svc.get_conversation_messages(tenant_id, session_id)
+    return _conv_svc.get_conversation_messages(
+        tenant_id, session_id, include_spam=can_manage_spam(claims)
+    )
 
 
 @router.put("/conversations/{tenant_id}/{session_id}/tags")
