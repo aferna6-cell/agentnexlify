@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from backend.models.database import get_service_supabase
 from backend.dependencies import _get_current_tenant, require_role
 from backend.services.activity import log_activity
+from backend.services.conversation_spam import SPAM_MANAGER_ROLES, set_spam
 from backend.services.tenant_scope import tenant_delete, tenant_insert, tenant_select, tenant_update
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,15 @@ class NoteCreate(BaseModel):
 
 class ReplyCreate(BaseModel):
     content: str = Field(..., min_length=1, max_length=5000)
+
+
+class SpamUpdate(BaseModel):
+    spam: bool = True
+
+
+class BulkSpamUpdate(BaseModel):
+    conversation_ids: list[str] = Field(..., min_length=1, max_length=100)
+    spam: bool = True
 
 
 def _verify_tenant(claims: dict, tenant_id: str) -> None:
@@ -200,6 +210,60 @@ async def assign_conversation(
         )
 
     return {"assigned_to": req.assigned_to, "message": action}
+
+
+# --- Spam (hide from the shared inbox, with undo) ---
+
+def _log_spam_activity(tenant_id: str, spam: bool, count: int) -> None:
+    noun = "conversation" if count == 1 else "conversations"
+    log_activity(
+        tenant_id=tenant_id,
+        activity_type="conversation_spam" if spam else "conversation_restored",
+        description=(
+            f"Marked {count} {noun} as spam" if spam else f"Restored {count} {noun} from spam"
+        ),
+    )
+
+
+@router.post("/{tenant_id}/conversations/spam")
+async def bulk_mark_spam(
+    tenant_id: str,
+    req: BulkSpamUpdate,
+    claims: dict = Depends(require_role(*SPAM_MANAGER_ROLES)),
+):
+    """Mark (spam=true) or restore (spam=false) several conversations.
+
+    Ids that are not this tenant's are reported in ``not_found`` and untouched.
+    """
+    _verify_tenant(claims, tenant_id)
+    db = get_service_supabase()
+    updated, not_found = [], []
+    for conversation_id in dict.fromkeys(req.conversation_ids):
+        result = set_spam(db, tenant_id, conversation_id, req.spam)
+        if result is None:
+            not_found.append(conversation_id)
+        else:
+            updated.append(result["session_id"])
+    if updated:
+        _log_spam_activity(tenant_id, req.spam, len(updated))
+    return {"spam": req.spam, "updated": updated, "not_found": not_found}
+
+
+@router.put("/{tenant_id}/conversations/{conversation_id}/spam")
+async def mark_spam(
+    tenant_id: str,
+    conversation_id: str,
+    req: SpamUpdate,
+    claims: dict = Depends(require_role(*SPAM_MANAGER_ROLES)),
+):
+    """Mark one conversation as spam (hidden from the inbox) or restore it."""
+    _verify_tenant(claims, tenant_id)
+    db = get_service_supabase()
+    result = set_spam(db, tenant_id, conversation_id, req.spam)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    _log_spam_activity(tenant_id, req.spam, 1)
+    return result
 
 
 # --- Internal Notes ---

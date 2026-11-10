@@ -5,6 +5,7 @@ import logging
 from fastapi import HTTPException
 
 from backend.models.database import get_service_supabase as _get_service_supabase
+from backend.services.conversation_spam import SPAM_TAG, is_spam, spam_session_ids
 
 logger = logging.getLogger(__name__)
 
@@ -17,20 +18,31 @@ def list_conversations(
     tenant_id: str,
     channel: str | None = None,
     search: str | None = None,
+    view: str = "inbox",
 ) -> dict:
-    """Return paginated conversation list with lead name enrichment."""
+    """Return the conversation list with lead name enrichment.
+
+    ``view="inbox"`` (default) hides conversations marked as spam;
+    ``view="spam"`` returns only those, so they can be restored.
+    """
     db = _get_db()
-    result = (
+    spam_ids = spam_session_ids(db, tenant_id)
+    if view == "spam" and not spam_ids:
+        return {"conversations": [], "spam_count": 0}
+    msg_query = (
         db.table("chat_messages")
         .select("session_id, role, content, created_at")
         .eq("tenant_id", tenant_id)
-        .order("created_at", desc=True)
-        .limit(500)
-        .execute()
     )
+    if view == "spam":
+        msg_query = msg_query.in_("session_id", sorted(spam_ids))
+    result = msg_query.order("created_at", desc=True).limit(500).execute()
+    messages = result.data or []
+    if view != "spam" and spam_ids:
+        messages = [m for m in messages if m["session_id"] not in spam_ids]
 
     sessions: dict = {}
-    for msg in result.data or []:
+    for msg in messages:
         sid = msg["session_id"]
         if sid not in sessions:
             sessions[sid] = {
@@ -102,7 +114,7 @@ def list_conversations(
     if search:
         search_lower = search.lower()
         matching_sessions: set = set()
-        for msg in result.data or []:
+        for msg in messages:
             if search_lower in (msg.get("content") or "").lower():
                 matching_sessions.add(msg["session_id"])
         for sid, name in lead_map.items():
@@ -120,13 +132,21 @@ def list_conversations(
         c["tags"] = tags_map.get(c["session_id"], [])
         c["channel"] = channel_map.get(c["session_id"], "widget")
         c["assigned_to"] = assigned_map.get(c["session_id"])
+        c["is_spam"] = c["session_id"] in spam_ids
 
-    return {"conversations": conv_list}
+    return {"conversations": conv_list, "spam_count": len(spam_ids)}
 
 
-def get_conversation_messages(tenant_id: str, session_id: str) -> dict:
-    """Return messages for a single conversation session."""
+def get_conversation_messages(
+    tenant_id: str, session_id: str, include_spam: bool = True
+) -> dict:
+    """Return messages for a single conversation session.
+
+    With ``include_spam=False`` a spam-marked session reads as not found.
+    """
     db = _get_db()
+    if not include_spam and session_id in spam_session_ids(db, tenant_id):
+        raise HTTPException(status_code=404, detail="Conversation not found")
     result = (
         db.table("chat_messages")
         .select("id, role, content, created_at")
@@ -142,17 +162,21 @@ def update_conversation_tags(tenant_id: str, session_id: str, tags: list) -> dic
     """Upsert tags on a conversation row. Uses client_id (conversations table rule)."""
     if not isinstance(tags, list):
         raise HTTPException(status_code=400, detail="tags must be a list")
-    tags = [str(t)[:30] for t in tags if isinstance(t, str)][:10]
+    # The spam marker is owned by the spam endpoints (owner/admin only); the
+    # tag editor can neither add nor drop it.
+    tags = [str(t)[:30] for t in tags if isinstance(t, str) and t != SPAM_TAG][:10]
 
     db = _get_db()
     existing = (
         db.table("conversations")
-        .select("id")
+        .select("id, tags")
         .eq("client_id", tenant_id)
         .eq("session_id", session_id)
         .limit(1)
         .execute()
     )
+    if existing.data and is_spam(existing.data[0].get("tags")):
+        tags = tags + [SPAM_TAG]
     if existing.data:
         db.table("conversations").update({"tags": tags}).eq(
             "id", existing.data[0]["id"]

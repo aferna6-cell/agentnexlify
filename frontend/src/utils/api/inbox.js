@@ -29,3 +29,13 @@ export function replyToConversation(tenantId, token, conversationId, content) {
   });
 }
 
+
+/**
+ * Mark conversations as spam (spam=true, hidden from the team inbox) or
+ * restore them (spam=false). Accepts session ids or conversation ids.
+ */
+export function setConversationsSpam(tenantId, token, conversationIds, spam = true) {
+  return request(`/api/v1/inbox/${tenantId}/conversations/spam`, {
+    method: "POST", token, body: { conversation_ids: conversationIds, spam },
+  });
+}

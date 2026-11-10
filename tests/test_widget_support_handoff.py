@@ -187,6 +187,18 @@ def test_already_notified_conversation_is_not_re_alerted():
     assert text == PROMISE_REPLY
 
 
+def test_conversation_marked_spam_never_alerts_or_escalates():
+    db = _FakeDB(_conversation_row(notified_at=None, tags=["spam"]))
+
+    text, handoff, email, sms = _run_handoff(db, _tenant(), PROMISE_REPLY)
+
+    email.assert_not_awaited()
+    sms.assert_not_awaited()
+    assert "escalations" not in db.inserts
+    assert not any(u.get("notified_at") for u in db.updates.get("conversations", []))
+    assert text == PROMISE_REPLY and handoff is False
+
+
 def test_support_issue_with_contact_escalates_even_without_promise():
     db = _FakeDB(_conversation_row(notified_at=None))
 
