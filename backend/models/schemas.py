@@ -364,7 +364,8 @@ class WidgetChatRequest(BaseModel):
     api_key: str = Field(..., max_length=100)
     session_id: str = Field(..., max_length=200)
     message: str = Field(..., max_length=10000)
-    content_mode: bool = False
+    # No content_mode: the public widget never runs owner tools. Older cached
+    # widget scripts still send it; Pydantic ignores the unknown field.
     visitor_info: dict[str, Any] | None = None
     # First-touch attribution captured by the widget at page load (utm_*,
     # referrer, landing_path, source). Sanitized + stored on the lead when

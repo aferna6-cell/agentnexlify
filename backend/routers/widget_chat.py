@@ -4,8 +4,13 @@ Split per issue #472: this module keeps the route orchestration + the
 Claude call; the pipeline stages live in sibling modules:
 
   - widget_chat_guards.py   — pre-LLM short-circuits (handoff-mode,
-                              content-mode, junk/greeting, null-state,
-                              turn-budget, input screen)
+                              junk/greeting, null-state, turn-budget,
+                              input screen)
+
+This endpoint is public and anonymous. It answers business questions from the
+tenant's own grounding and can capture leads, book, order, and hand off to a
+human. It must never run an owner/dashboard tool such as content repurpose;
+those live behind authenticated dashboard routes (e.g. /api/v1/repurpose).
   - widget_chat_context.py  — grounding loads + system-prompt assembly
   - widget_chat_effects.py  — usage counter, handoff detection/notify,
                               post-response background fan-out
@@ -173,13 +178,6 @@ async def widget_chat(
 
     # 4b. Check if conversation is in handoff mode (team member handling)
     guard_response = widget_chat_guards.check_handoff_mode(db, tenant, widget, req)
-    if guard_response is not None:
-        return guard_response
-
-    # 4c. Content mode detection — repurpose content instead of chatting
-    guard_response = await widget_chat_guards.maybe_run_content_mode(
-        db, tenant, widget, req
-    )
     if guard_response is not None:
         return guard_response
 
