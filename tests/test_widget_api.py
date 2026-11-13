@@ -263,36 +263,6 @@ class TestWidgetChat:
         assert response.json()["response"] == widget_config["greeting_message"]
         mock_call_claude.assert_not_awaited()
 
-    @patch("backend.routers.widget_chat.call_claude_messages", new_callable=AsyncMock)
-    def test_chat_respects_explicit_content_mode_flag(self, mock_call_claude, test_client):
-        client, db_mock = test_client
-
-        widget_config = _make_widget_config()
-        tenant = _make_tenant()
-        tenant["plan"] = "free"
-
-        _setup_table_mock(db_mock, {
-            "widget_configs": [widget_config],
-            "tenants": [tenant],
-            "chat_messages": [],
-            "conversations": [],
-            "faq_entries": [],
-            "chat_flows": [],
-            "website_content": [],
-            "menu_items": [],
-        })
-
-        response = client.post("/api/v1/widget/chat", json={
-            "api_key": VALID_API_KEY,
-            "session_id": "sess-content-mode",
-            "message": "Please help with this short note.",
-            "content_mode": True,
-        })
-
-        assert response.status_code == 200
-        assert "Content repurposing" in response.json()["response"]
-        mock_call_claude.assert_not_awaited()
-
 
 class TestWidgetUpload:
     """Test widget file upload contract."""

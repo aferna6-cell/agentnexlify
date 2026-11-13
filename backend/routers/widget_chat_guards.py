@@ -5,8 +5,11 @@ finished `WidgetChatResponse` (returned to the visitor without ever paying
 for a Claude call) or returns None so the pipeline continues. Moved
 verbatim from the widget_chat route body; the route orchestrates the order:
 
-    handoff-mode -> content-mode -> junk/greeting -> null-state ->
-    turn-budget -> input-screen
+    handoff-mode -> junk/greeting -> null-state -> turn-budget -> input-screen
+
+The public widget is customer-facing: no guard here may run an owner/dashboard
+tool (content repurpose, campaigns, settings, ...). See
+backend/tests/test_widget_public_scope.py.
 
 Do not enable postponed annotation evaluation here; it breaks Pydantic on FastAPI.
 """
@@ -25,14 +28,6 @@ from backend.routers.widget_chat_helpers import (
 )
 
 logger = logging.getLogger(__name__)
-
-_CONTENT_MODE_KEYWORDS = [
-    "repurpose",
-    "content mode",
-    "turn this into",
-    "create content from",
-]
-_YT_PATTERN = re.compile(r"(?:youtube\.com/watch|youtu\.be/)")
 
 _GREETINGS = {"hi", "hey", "hello", "yo", "sup", "hiya", "howdy", "hii", "helo"}
 
@@ -112,93 +107,6 @@ def check_handoff_mode(
         lead_captured=False,
         show_watermark=widget.get("show_watermark", True),
         handoff=True,
-    )
-
-
-async def maybe_run_content_mode(
-    db, tenant: dict, widget: dict, req: WidgetChatRequest
-) -> WidgetChatResponse | None:
-    """Stage 4c — content-mode detection: repurpose content instead of chat.
-
-    Plan-gated to professional/enterprise; runs the repurposer inline and
-    stores a repurpose_jobs row. Returns None when the message is a normal
-    chat turn.
-    """
-    msg_lower = req.message.lower()
-    content_mode = req.content_mode
-    if not content_mode:
-        for kw in _CONTENT_MODE_KEYWORDS:
-            if kw in msg_lower:
-                content_mode = True
-                break
-    if not content_mode and _YT_PATTERN.search(req.message):
-        content_mode = True
-    if not content_mode and len(req.message) > 500 and "?" not in req.message:
-        content_mode = True
-
-    if not content_mode:
-        return None
-
-    plan = tenant.get("plan") or "free"
-    if plan not in ("professional", "enterprise"):
-        _save_chat_messages(tenant["id"], req.session_id, req.message, None)
-        return WidgetChatResponse(
-            response="Content repurposing is available on Professional and Enterprise plans. Upgrade to unlock this feature!",
-            session_id=req.session_id,
-            lead_captured=False,
-            show_watermark=widget.get("show_watermark", True),
-        )
-    # Determine source type
-    if _YT_PATTERN.search(req.message):
-        src_type = "youtube"
-    elif req.message.strip().startswith(("http://", "https://")):
-        src_type = "url"
-    else:
-        src_type = "text"
-    # Create repurpose job
-    try:
-        from backend.services.content_repurposer import (
-            extract_source,
-            repurpose as do_repurpose,
-        )
-
-        source = await extract_source(src_type, req.message.strip())
-        outputs = await do_repurpose(
-            source_content=source["content"],
-            title=source["title"],
-            tenant_id=tenant["id"],
-            tone="professional",
-        )
-        db.table("repurpose_jobs").insert(
-            {
-                "tenant_id": tenant["id"],
-                "source_type": src_type,
-                "source_url": source["source_url"],
-                "source_content": source["content"],
-                "source_title": source["title"],
-                "outputs": outputs,
-                "status": "completed",
-                "created_via": "widget",
-            }
-        ).execute()
-        resp_text = (
-            f"Done! I've repurposed \"{source['title']}\" into:\n\n"
-            "- X/Twitter thread (7-10 tweets)\n"
-            "- LinkedIn carousel\n"
-            "- Email sequence (3-5 emails)\n"
-            "- TikTok/Reels scripts\n"
-            "- Social posts (Facebook, Instagram, Google Business)\n\n"
-            "View and edit your results in the Content Repurpose page on your dashboard."
-        )
-    except Exception as e:
-        logger.error("Content mode repurpose failed: %s", e, exc_info=True)
-        resp_text = "Sorry, I had trouble repurposing that content. Please try again or paste the text directly."
-    _save_chat_messages(tenant["id"], req.session_id, req.message, resp_text)
-    return WidgetChatResponse(
-        response=resp_text,
-        session_id=req.session_id,
-        lead_captured=False,
-        show_watermark=widget.get("show_watermark", True),
     )
 
 

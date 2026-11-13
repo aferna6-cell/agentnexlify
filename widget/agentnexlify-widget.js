@@ -32,7 +32,6 @@
       inputPlaceholder: "Type a message...",
       sendTitle: "Send",
       attachTitle: "Attach file",
-      contentModePlaceholder: "Paste content, URL, or YouTube link to repurpose...",
       fillFormFirst: "Fill out the form above to start chatting...",
       teamMemberWillRespond: "A team member will respond...",
       trialExpired: "Your free trial has expired.",
@@ -43,7 +42,6 @@
       openChat: "Open chat",
       viewMenuTitle: "View Menu",
       bookTitle: "Book Appointment",
-      contentModeTitle: "Content Mode",
       currentlyOffline: "Currently offline",
       // Errors / notices
       connectError: "Sorry, I'm having trouble connecting. Please try again in a moment!",
@@ -105,7 +103,6 @@
       inputPlaceholder: "Escribe tu mensaje…",
       sendTitle: "Enviar",
       attachTitle: "Adjuntar archivo",
-      contentModePlaceholder: "Pega contenido, URL o enlace de YouTube para reutilizar…",
       fillFormFirst: "Completa el formulario de arriba para comenzar a chatear…",
       teamMemberWillRespond: "Un miembro del equipo te responderá…",
       trialExpired: "Tu prueba gratuita ha vencido.",
@@ -116,7 +113,6 @@
       openChat: "Abrir chat",
       viewMenuTitle: "Ver menú",
       bookTitle: "Agendar una cita",
-      contentModeTitle: "Modo contenido",
       currentlyOffline: "Actualmente sin conexión",
       // Errors / notices
       connectError: "Lo siento, tengo problemas para conectarme. ¡Por favor intenta de nuevo en un momento!",
@@ -449,24 +445,6 @@
       #anx-header-actions button:hover {
         background: rgba(255,255,255,0.12);
         color: #fff;
-      }
-
-      #anx-content-mode-btn.active {
-        background: rgba(255,255,255,0.2);
-        color: #fff;
-      }
-
-      #anx-content-mode-badge {
-        display: none;
-        position: absolute;
-        top: -2px;
-        right: -2px;
-        font-size: 7px;
-        background: #22c55e;
-        color: #fff;
-        border-radius: 50%;
-        width: 10px;
-        height: 10px;
       }
 
       #anx-messages {
@@ -972,7 +950,6 @@
             </div>
           </div>
           <div id="anx-header-actions">
-            <button id="anx-content-mode-btn" title="${t('contentModeTitle')}" style="display:none;position:relative;">&#9998;<span id="anx-content-mode-badge"></span></button>
             <button id="anx-menu-btn" title="${t('viewMenuTitle')}" style="display:none;">&#127860;</button>
             <button id="anx-booking-btn" title="${t('bookTitle')}">&#128197;</button>
             <button id="anx-minimize" title="${t('minimizeTitle')}">&#8722;</button>
@@ -1009,7 +986,6 @@
   let isLoading = false;
   let hasAutoOpened = false;
   let unreadCount = 0;
-  let contentMode = false;
   let msgCounter = 0;
   let botName = "Aria";
   let agentName = "Agent";
@@ -1055,7 +1031,6 @@
   let availableSlots = [];
   let selectedSlot = null;
   let bookingMaxDays = 30;
-  let tenantPlan = "free";
   // Public referral code from widget config. Never the embed api key.
   let referralCode = "";
 
@@ -1092,7 +1067,6 @@
         if (data.proactive.once_per_session !== undefined)
           proactiveOncePerSession = !!data.proactive.once_per_session;
       }
-      if (data.plan) tenantPlan = data.plan;
       if (data.referral_code && String(data.referral_code).indexOf("anx_") !== 0) {
         referralCode = String(data.referral_code);
         const powered = document.querySelector("#anx-powered a");
@@ -1167,7 +1141,6 @@
         api_key: API_KEY,
         session_id: getSessionId(),
         message: text,
-        content_mode: contentMode,
         attribution: getAttribution(),
       }),
     });
@@ -2291,26 +2264,6 @@
       if (bookBtn) {
         bookBtn.style.display = "flex";
         bookBtn.addEventListener("click", () => showBooking("date"));
-      }
-    }
-
-    // Show content mode button for professional+ plans
-    const _plan = tenantPlan;
-    if (_plan === "professional" || _plan === "enterprise") {
-      const cmBtn = document.getElementById("anx-content-mode-btn");
-      if (cmBtn) {
-        cmBtn.style.display = "flex";
-        cmBtn.addEventListener("click", function () {
-          contentMode = !contentMode;
-          cmBtn.classList.toggle("active", contentMode);
-          const badge = document.getElementById("anx-content-mode-badge");
-          if (badge) badge.style.display = contentMode ? "block" : "none";
-          const input = document.getElementById("anx-input");
-          if (input)
-            input.placeholder = contentMode
-              ? "Paste content, URL, or YouTube link to repurpose..."
-              : "Type a message...";
-        });
       }
     }
 

@@ -299,24 +299,113 @@ class TestShortCircuits:
         assert body["handoff"] is True
         llm.assert_not_awaited()
 
-    def test_content_mode_gated_below_professional(self, client, mock_supabase):
+
+class TestPublicWidgetNeverRunsOwnerTools:
+    """Regression: the public widget once ran the owner's Content Repurpose
+    tool for anonymous visitors (MTOptions, 2026-11-13). Visitor turns must
+    get a normal business answer and never touch repurpose machinery."""
+
+    @staticmethod
+    def _post(client, api_key, message, session_id, **extra):
+        return client.post(
+            "/api/v1/widget/chat",
+            json={
+                "api_key": api_key,
+                "message": message,
+                "session_id": session_id,
+                **extra,
+            },
+        )
+
+    def _assert_no_repurpose(self, mock_supabase, extract, repurpose):
+        extract.assert_not_awaited()
+        repurpose.assert_not_awaited()
+        touched = {c.args[0] for c in mock_supabase.table.call_args_list if c.args}
+        assert "repurpose_jobs" not in touched
+
+    def _repurpose_spies(self):
+        extract = AsyncMock(side_effect=AssertionError("extract_source called"))
+        repurpose = AsyncMock(side_effect=AssertionError("repurpose called"))
+        return (
+            extract,
+            repurpose,
+            patch("backend.services.content_repurposer.extract_source", new=extract),
+            patch("backend.services.content_repurposer.repurpose", new=repurpose),
+        )
+
+    def test_content_mode_flag_from_old_widget_is_ignored(
+        self, client, mock_supabase
+    ):
+        # The exact incident turn: Professional tenant, cached widget JS
+        # still sending content_mode=true.
         _seed(
             mock_supabase,
-            tenant_id="p1000000-0000-4000-8000-000000000008",
-            api_key="anx_pipe_cmode",
-            tenant_overrides={"plan": "chatbot"},
+            tenant_id="p3000000-0000-4000-8000-000000000001",
+            api_key="anx_pipe_scope1",
         )
-        llm_patch, kb_patch, llm = _patch_llm()
-        with llm_patch, kb_patch:
-            resp = _post_chat(
+        extract, repurpose, p_extract, p_repurpose = self._repurpose_spies()
+        llm_patch, kb_patch, llm = _patch_llm("Withdrawals have no fee.")
+        with llm_patch, kb_patch, p_extract, p_repurpose:
+            resp = self._post(
                 client,
-                "anx_pipe_cmode",
-                "repurpose this blog post into social content",
-                "sess-cmode",
+                "anx_pipe_scope1",
+                "No problewhen taking out loney tho????",
+                "sess-scope1",
+                content_mode=True,
             )
         assert resp.status_code == 200, resp.text
-        assert "Professional and Enterprise" in resp.json()["response"]
-        llm.assert_not_awaited()
+        body = resp.json()
+        assert body["response"] == "Withdrawals have no fee."
+        assert "repurpos" not in body["response"].lower()
+        llm.assert_awaited()
+        self._assert_no_repurpose(mock_supabase, extract, repurpose)
+
+    def test_repurpose_keywords_get_business_answer(self, client, mock_supabase):
+        _seed(
+            mock_supabase,
+            tenant_id="p3000000-0000-4000-8000-000000000002",
+            api_key="anx_pipe_scope2",
+        )
+        extract, repurpose, p_extract, p_repurpose = self._repurpose_spies()
+        llm_patch, kb_patch, llm = _patch_llm("I can help with questions about us.")
+        with llm_patch, kb_patch, p_extract, p_repurpose:
+            for n, msg in enumerate(
+                [
+                    "repurpose this blog post into social content",
+                    "turn this into a LinkedIn carousel",
+                    "https://youtu.be/abc123 watch this",
+                    "x" * 600,  # long, no question mark
+                ]
+            ):
+                resp = self._post(client, "anx_pipe_scope2", msg, f"sess-scope2-{n}")
+                assert resp.status_code == 200, resp.text
+                assert "repurposed" not in resp.json()["response"].lower()
+        assert llm.await_count == 4
+        self._assert_no_repurpose(mock_supabase, extract, repurpose)
+
+    def test_missing_email_complaint_still_hands_off(self, client, mock_supabase):
+        _seed(
+            mock_supabase,
+            tenant_id="p3000000-0000-4000-8000-000000000003",
+            api_key="anx_pipe_scope3",
+            tenant_overrides={"owner_email": "owner@pipe.test"},
+        )
+        llm_patch, kb_patch, _llm = _patch_llm(
+            "Sorry about that, I'm passing this to the team.\nHANDOFF_REQUESTED"
+        )
+        with llm_patch, kb_patch, patch(
+            "backend.services.email_sender.send_email", new=AsyncMock()
+        ):
+            resp = self._post(
+                client,
+                "anx_pipe_scope3",
+                "I didn't receive any email today",
+                "sess-scope3",
+            )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["handoff"] is True
+        assert "HANDOFF_REQUESTED" not in body["response"]
 
 
 class TestLlmPath:
@@ -581,56 +670,6 @@ class TestGuardsUnit:
         assert result is not None
         assert result.response == "Team here - yes we can help!"
         assert result.handoff is True
-
-    def test_content_mode_youtube_url_repurposes(self, mock_supabase):
-        db = MagicMock()
-        db.table.side_effect = lambda name: MagicMock(
-            insert=MagicMock(side_effect=lambda *a, **k: _Chain(_result([])))
-        )
-        source = {
-            "content": "video transcript",
-            "title": "How to fix leaks",
-            "source_url": "https://youtu.be/abc123",
-        }
-        with patch(
-            "backend.services.content_repurposer.extract_source",
-            new=AsyncMock(return_value=source),
-        ), patch(
-            "backend.services.content_repurposer.repurpose",
-            new=AsyncMock(return_value={"twitter": "thread"}),
-        ), patch(
-            "backend.routers.widget_chat_guards._save_chat_messages",
-            return_value=[],
-        ):
-            result = _run(
-                widget_chat_guards.maybe_run_content_mode(
-                    db,
-                    _tenant(),
-                    _widget(),
-                    _req(message="https://youtu.be/abc123 watch this"),
-                )
-            )
-        assert result is not None
-        assert "How to fix leaks" in result.response
-
-    def test_content_mode_repurpose_failure_apologizes(self, mock_supabase):
-        with patch(
-            "backend.services.content_repurposer.extract_source",
-            new=AsyncMock(side_effect=RuntimeError("fetch failed")),
-        ), patch(
-            "backend.routers.widget_chat_guards._save_chat_messages",
-            return_value=[],
-        ):
-            result = _run(
-                widget_chat_guards.maybe_run_content_mode(
-                    MagicMock(),
-                    _tenant(),
-                    _widget(),
-                    _req(message="repurpose this: my article text"),
-                )
-            )
-        assert result is not None
-        assert "trouble repurposing" in result.response
 
     def test_null_state_faq_probe_error_treated_as_zero(self, mock_supabase):
         mock_supabase.table.side_effect = lambda name: _RaiseChain()
